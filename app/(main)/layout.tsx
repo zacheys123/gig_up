@@ -12,11 +12,11 @@ import { useEffect, useMemo } from "react";
 // import { useBannedRedirect } from "@/hooks/useBannedRefirect";
 
 const MainLayout = ({
-  contact,
+
   children,
 }: Readonly<{
   children: React.ReactNode;
-  contact: React.ReactNode;
+  // contact: React.ReactNode;
 }>) => {
   // Check ban status immediately on first render
   // useInitialBanCheck();
@@ -82,7 +82,7 @@ const MainLayout = ({
       {/* <Nav />
       <NotificationHandler /> <TrialExpiredModal />
       <TrialRemainingModal /> */}
-      {contact}
+      {/* {contact} */}
       {children}
     </div>
   );

@@ -14,7 +14,6 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as controllers_user from "../controllers/user.js";
-import type * as models_userTable from "../models/userTable.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -26,7 +25,6 @@ import type * as models_userTable from "../models/userTable.js";
  */
 declare const fullApi: ApiFromModules<{
   "controllers/user": typeof controllers_user;
-  "models/userTable": typeof models_userTable;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

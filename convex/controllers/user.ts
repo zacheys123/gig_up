@@ -1,6 +1,16 @@
-
+// convex/controllers/user.ts
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
+
+// Define types for better TypeScript support
+interface CreateUserArgs {
+  clerkId: string;
+  email: string;
+  username: string;
+  picture?: string;
+  firstname?: string;
+  lastname?: string;
+}
 
 export const createOrUpdateUser = mutationGeneric({
   args: {
@@ -11,14 +21,14 @@ export const createOrUpdateUser = mutationGeneric({
     firstname: v.optional(v.string()),
     lastname: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args: CreateUserArgs) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     // Check if user already exists
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.clerkId))
       .first();
 
     const now = Date.now();
@@ -74,6 +84,30 @@ export const createOrUpdateUser = mutationGeneric({
   },
 });
 
+interface UpdateProfileArgs {
+  userId: any; // Use v.id("users") type
+  updates: {
+    firstname?: string;
+    lastname?: string;
+    city?: string;
+    address?: string;
+    phone?: string;
+    instrument?: string;
+    experience?: string;
+    bio?: string;
+    roleType?: string;
+    isMusician?: boolean;
+    isClient?: boolean;
+    musiciangenres?: string[];
+    rate?: {
+      regular?: string;
+      function?: string;
+      concert?: string;
+      corporate?: string;
+    };
+  };
+}
+
 export const updateUserProfile = mutationGeneric({
   args: {
     userId: v.id("users"),
@@ -98,7 +132,7 @@ export const updateUserProfile = mutationGeneric({
       })),
     }),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args: UpdateProfileArgs) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
@@ -117,13 +151,13 @@ export const followUser = mutationGeneric({
   args: {
     targetUserId: v.id("users"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args: { targetUserId: any }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
       .first();
     if (!currentUser) throw new Error("User not found");
 
@@ -155,13 +189,13 @@ export const addReview = mutationGeneric({
     comment: v.optional(v.string()),
     gigId: v.optional(v.id("gigs")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args: { targetUserId: any; rating: number; comment?: string; gigId?: any }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
       .first();
     if (!currentUser) throw new Error("User not found");
 
@@ -203,18 +237,24 @@ export const getCurrentUser = queryGeneric({
 
     return await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
       .first();
   },
 });
 
 export const getUserById = queryGeneric({
   args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args: { userId: any }) => {
     return await ctx.db.get(args.userId);
   },
 });
 
+interface SearchUsersArgs {
+  query: string;
+  isMusician?: boolean;
+  city?: string;
+  instrument?: string;
+}
 export const searchUsers = queryGeneric({
   args: {
     query: v.string(),
@@ -222,40 +262,29 @@ export const searchUsers = queryGeneric({
     city: v.optional(v.string()),
     instrument: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    let usersQuery = ctx.db.query("users");
+  handler: async (ctx, args: SearchUsersArgs) => {
+    // Get all users (or use an index if you have many users)
+    const allUsers = await ctx.db.query("users").collect();
 
-    // Apply filters
-    if (args.isMusician !== undefined) {
-      usersQuery = usersQuery.withIndex("by_isMusician", (q) => 
-        q.eq("isMusician", args.isMusician!)
-      );
-    }
+    // Apply all filters
+    return allUsers.filter(user => {
+      // Text search
+      const searchTerm = args.query.toLowerCase();
+      const matchesSearch = 
+        user.firstname?.toLowerCase().includes(searchTerm) ||
+        user.lastname?.toLowerCase().includes(searchTerm) ||
+        user.username.toLowerCase().includes(searchTerm) ||
+        user.email.toLowerCase().includes(searchTerm) ||
+        user.city?.toLowerCase().includes(searchTerm) ||
+        user.instrument?.toLowerCase().includes(searchTerm);
 
-    if (args.city) {
-      usersQuery = usersQuery.withIndex("by_city", (q) => 
-        q.eq("city", args.city!)
-      );
-    }
+      // Boolean filters
+      const matchesMusician = args.isMusician === undefined || user.isMusician === args.isMusician;
+      const matchesCity = !args.city || user.city === args.city;
+      const matchesInstrument = !args.instrument || user.instrument === args.instrument;
 
-    if (args.instrument) {
-      usersQuery = usersQuery.withIndex("by_instrument", (q) => 
-        q.eq("instrument", args.instrument!)
-      );
-    }
-
-    const users = await usersQuery.collect();
-
-    // Simple text search (Convex will have better search features soon)
-    const searchTerm = args.query.toLowerCase();
-    return users.filter(user => 
-      user.firstname?.toLowerCase().includes(searchTerm) ||
-      user.lastname?.toLowerCase().includes(searchTerm) ||
-      user.username.toLowerCase().includes(searchTerm) ||
-      user.email.toLowerCase().includes(searchTerm) ||
-      user.city?.toLowerCase().includes(searchTerm) ||
-      user.instrument?.toLowerCase().includes(searchTerm)
-    );
+      return matchesSearch && matchesMusician && matchesCity && matchesInstrument;
+    });
   },
 });
 
@@ -271,14 +300,14 @@ export const updateUserTier = mutationGeneric({
     ),
     nextBillingDate: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args: { userId: any; tier: string; tierStatus: string; nextBillingDate?: number }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     // Check if user is admin or the user themselves
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
       .first();
     
     if (!currentUser) throw new Error("User not found");
