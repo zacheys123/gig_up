@@ -8,7 +8,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -17,11 +17,17 @@
       {
         "name": "next"
       }
-    ],
+    ],   
+     "types": ["@clerk/nextjs"],
     "paths": {
       "@/*": ["./*"]
     }
+  }, 
+   "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "types": ["@ducanh2912/next-pwa/types"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "utils/index.js", "app/api/user/register/route.js", "app/zustand/useStore.ts", "lib/connectDb.js"],
   "exclude": ["node_modules"]
 }

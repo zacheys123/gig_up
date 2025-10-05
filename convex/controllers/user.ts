@@ -12,7 +12,99 @@ interface CreateUserArgs {
   lastname?: string;
 }
 
-export const createOrUpdateUser = mutationGeneric({
+// convex/controllers/user.ts
+
+// export const createOrUpdateUser = mutationGeneric({
+//   args: {
+//     clerkId: v.string(),
+//     email: v.string(),
+//     username: v.string(),
+//     picture: v.optional(v.string()),
+//     firstname: v.optional(v.string()),
+//     lastname: v.optional(v.string()),
+//   },
+//   handler: async (ctx, args) => {
+//     // Debug: Check what's available in the auth context
+//     console.log('Auth context:', ctx.auth);
+    
+//     try {
+//       const identity = await ctx.auth.getUserIdentity();
+//       console.log('User identity:', identity);
+      
+//       if (!identity) {
+//         throw new Error("Unauthorized - No identity found");
+//       }
+
+//       // Verify the clerkId matches the authenticated user
+//       if (identity.subject !== args.clerkId) {
+//         throw new Error("Unauthorized - Clerk ID mismatch");
+//       }
+
+//       // Check if user already exists
+//       const existingUser = await ctx.db
+//         .query("users")
+//         .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+//         .first();
+
+//       const now = Date.now();
+//       const userData = {
+//         ...args,
+//         lastActive: now,
+//         updatedAt: now,
+//       };
+
+//       if (existingUser) {
+//         // Update existing user
+//         return await ctx.db.patch(existingUser._id, userData);
+//       } else {
+//         // Create new user with defaults
+//         return await ctx.db.insert("users", {
+//           ...userData,
+//           isMusician: false,
+//           isClient: false,
+//           isAdmin: false,
+//           isBanned: false,
+//           followers: [],
+//           followings: [],
+//           refferences: [],
+//           allreviews: [],
+//           myreviews: [],
+//           videosProfile: [],
+//           musicianhandles: [],
+//           musiciangenres: [],
+//           tier: "free",
+//           earnings: 0,
+//           totalSpent: 0,
+//           monthlyGigsPosted: 0,
+//           monthlyMessages: 0,
+//           monthlyGigsBooked: 0,
+//           completedGigsCount: 0,
+//           reportsCount: 0,
+//           cancelgigCount: 0,
+//           savedGigs: [],
+//           favoriteGigs: [],
+//           likedVideos: [],
+//           bookingHistory: [],
+//           gigsBookedThisWeek: { count: 0, weekStart: now },
+//           theme: "system",
+//           firstLogin: true,
+//           onboardingComplete: false,
+//           firstTimeInProfile: true,
+//           renewalAttempts: 0,
+//           adminPermissions: [],
+//           createdAt: now,
+//         });
+//       }
+//     } catch (error) {
+//       console.error('Error in createOrUpdateUser:', error);
+//       throw error;
+//     }
+//   },
+// });
+// convex/controllers/user.ts - Add this function
+// convex/controllers/user.ts
+
+export const createOrUpdateUserPublic = mutationGeneric({
   args: {
     clerkId: v.string(),
     email: v.string(),
@@ -21,14 +113,12 @@ export const createOrUpdateUser = mutationGeneric({
     firstname: v.optional(v.string()),
     lastname: v.optional(v.string()),
   },
-  handler: async (ctx, args: CreateUserArgs) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    // Check if user already exists
+  handler: async (ctx, args) => {
+    console.log('Creating user publicly:', args.clerkId);
+    
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     const now = Date.now();
@@ -39,51 +129,71 @@ export const createOrUpdateUser = mutationGeneric({
     };
 
     if (existingUser) {
-      // Update existing user
-      return await ctx.db.patch(existingUser._id, userData);
+      // Update only the fields that exist in the schema
+      return await ctx.db.patch(existingUser._id, {
+        ...userData,
+        // Only include fields that exist in schema
+        phone: existingUser.phone,
+        city: existingUser.city,
+        address: existingUser.address,
+        instrument: existingUser.instrument,
+        experience: existingUser.experience,
+        roleType: existingUser.roleType,
+        bio: existingUser.bio,
+      });
     } else {
-      // Create new user with defaults
+      // Create new user with schema-compliant defaults
       return await ctx.db.insert("users", {
         ...userData,
-        // Default values
+        // Required fields with defaults
         isMusician: false,
         isClient: false,
         isAdmin: false,
         isBanned: false,
+        
+        // Arrays
         followers: [],
         followings: [],
         refferences: [],
-        allreviews: [],
-        myreviews: [],
-        videosProfile: [],
         musicianhandles: [],
         musiciangenres: [],
-        tier: "free",
-        earnings: 0,
-        totalSpent: 0,
-        monthlyGigsPosted: 0,
-        monthlyMessages: 0,
-        monthlyGigsBooked: 0,
-        completedGigsCount: 0,
-        reportsCount: 0,
-        cancelgigCount: 0,
         savedGigs: [],
         favoriteGigs: [],
         likedVideos: [],
         bookingHistory: [],
+        adminPermissions: [],
+        
+        // Business
+        tier: "free",
+        earnings: 0,
+        totalSpent: 0,
+        
+        // Monthly stats
+        monthlyGigsPosted: 0,
+        monthlyMessages: 0,
+        monthlyGigsBooked: 0,
+        
+        // Counters
+        completedGigsCount: 0,
+        reportsCount: 0,
+        cancelgigCount: 0,
+        renewalAttempts: 0,
+        
+        // Weekly stats
         gigsBookedThisWeek: { count: 0, weekStart: now },
+        
+        // Preferences
         theme: "system",
         firstLogin: true,
         onboardingComplete: false,
         firstTimeInProfile: true,
-        renewalAttempts: 0,
-        adminPermissions: [],
+        
+        // Timestamps
         createdAt: now,
       });
     }
   },
 });
-
 interface UpdateProfileArgs {
   userId: any; // Use v.id("users") type
   updates: {
@@ -230,6 +340,7 @@ export const addReview = mutationGeneric({
   },
 });
 
+// convex/controllers/user.ts - Add this query function
 export const getCurrentUser = queryGeneric({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -237,7 +348,7 @@ export const getCurrentUser = queryGeneric({
 
     return await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .first();
   },
 });

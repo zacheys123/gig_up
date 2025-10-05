@@ -1,0 +1,65 @@
+// middleware.ts
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+// 1. Define route matchers
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/banned",
+  "/unauthorized",
+  "/api/stkcallback", // MPesa callback
+  "/api/cron(.*)", // All cron jobs
+  "/api/public(.*)", // Any other public APIs
+]);
+
+const isAdminRoute = createRouteMatcher([
+  "/admin(.*)",
+  "/api/admin(.*)"
+]);
+
+export default clerkMiddleware(async (auth, request) => {
+  const { userId, sessionClaims, redirectToSignIn } = await auth();
+  const path = request.nextUrl.pathname;
+ console.log('Middleware running for:', request.nextUrl.pathname);
+  // 2. Skip middleware for public routes
+  if (isPublicRoute(request)) {   console.log('Protecting route:', request.nextUrl.pathname);
+    // Redirect authenticated users away from auth pages
+    if (userId && (path.startsWith("/sign-in") || path.startsWith("/sign-up"))) {
+      return Response.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // 3. PROTECT ALL OTHER ROUTES
+  if (!userId) {
+    return redirectToSignIn();
+  }
+
+  // 4. Additional checks
+  const { isBanned, role } = sessionClaims?.metadata as any || {};
+  
+  if (isBanned && path !== "/banned") {
+    return Response.redirect(new URL("/banned", request.url));
+  }
+
+  // 5. Admin route checks
+  if (isAdminRoute(request)) {
+    if (role !== "admin") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+  }
+
+  return NextResponse.next();
+});
+
+// 6. Matcher config
+export const config = {
+  matcher: [
+    // Skip Next.js internals and all static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
+};

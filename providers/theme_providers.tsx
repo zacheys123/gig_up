@@ -1,9 +1,12 @@
+// providers/theme_providers.tsx
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useTheme as useNextTheme } from "next-themes";
-import { ThemeContextType } from "@/types/theme";
-import { darkColors } from "@/theme/darkTheme";
-import { lightColors } from "@/theme/lightTheme";
+
+interface ThemeContextType {
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+}
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
@@ -11,7 +14,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Ensure component is mounted to avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -22,9 +24,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(isDarkMode ? "light" : "dark");
   };
 
-  const colors = isDarkMode ? darkColors : lightColors;
-
-  // Prevent flash of unstyled content
   if (!mounted) {
     return (
       <div style={{ visibility: "hidden" }}>
@@ -36,7 +35,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const value: ThemeContextType = {
     isDarkMode,
     toggleDarkMode,
-    colors,
   };
 
   return (
