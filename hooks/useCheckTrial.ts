@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import useStore from "@/app/zustand/useStore";
 import { useSubscription } from "./useSubscription";
-import { User } from "@/types/userTypes";
+
 // import { UserProps } from "@/types/userinterfaces";
 // import { useSubscription } from "./useSubscription";
 
