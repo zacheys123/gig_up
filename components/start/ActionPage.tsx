@@ -2,37 +2,16 @@
 import React, { useCallback, useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-// import BallLoader from "../loaders/BallLoader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { motion, AnimatePresence } from "framer-motion";
 
+import { motion, AnimatePresence } from "framer-motion";
 import { MusicIcon, Settings, UsersIcon } from "lucide-react";
 import { HiSwitchHorizontal } from "react-icons/hi";
 import { IoArrowBack } from "react-icons/io5";
 import { useUser } from "@clerk/nextjs";
-
 import { experiences, instruments } from "@/data";
 import Modal from "../modals/Modal";
-
-// interface UserEmail {
-//   emailAddress: string;
-//   verification?: {
-//     status: string | null | undefined;
-//   };
-// }
-
-// interface UserPhone {
-//   phoneNumber: string;
-// }
-
-// // interface UserInput {
-// //   firstName?: string | null | undefined;
-// //   lastName?: string | null | undefined;
-// //   imageUrl?: string | null | undefined;
-// //   username?: string | null | undefined;
-// //   emailAddresses: UserEmail[];
-// //   phoneNumbers: UserPhone[];
-// // }
+import { useUserMutations } from "@/hooks/useUserMutation";
 
 type Error = string[];
 type RoleSteps = {
@@ -41,27 +20,21 @@ type RoleSteps = {
   mc: string[];
   vocalist: string[];
   client: string[];
-
   default: string[];
 };
 
-// Helper function to safely check email against whitelist
-// function isWhitelistedAdmin(email?: string | null): boolean {
-//   if (!email) return false;
-//   const whitelist = process.env.ADMIN_WHITELIST?.split(",") || [];
-//   return whitelist.includes(email.trim().toLowerCase());
-// }
-// Define a type for valid role types
-type RoleType = keyof Omit<RoleSteps, "default">; // 'instrumentalist' | 'dj' | 'mc'
+type RoleType = keyof Omit<RoleSteps, "default">;
 
 const ActionPage = () => {
   const { user, isSignedIn } = useUser();
-
   const router = useRouter();
   const [musicianload, setMusicianLoad] = useState(false);
   const [clientload, setClientLoad] = useState(false);
   const [userload, setUserload] = useState(false);
   const { user: myuser } = useCurrentUser();
+  const { registerAsMusician, registerAsClient, registerAsAdmin } =
+    useUserMutations();
+
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [city, setCity] = useState("");
   const [instrument, setInstrument] = useState("");
@@ -106,7 +79,6 @@ const ActionPage = () => {
       errors.push("Genre is required");
     if (roleType === "vocalist" && !experience)
       errors.push(" Experience  is required");
-
     if (roleType === "mc" && (!mcType || !mcLanguages))
       errors.push("MCType or Languages is required");
     if (!talentbio) errors.push("bio is required");
@@ -126,7 +98,6 @@ const ActionPage = () => {
     vocalistGenre,
   ]);
 
-  // const regAsAdmin = isWhitelistedAdmin(user?.emailAddresses[0]?.emailAddress);
   const validateClientFields = useCallback(() => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
@@ -136,72 +107,47 @@ const ActionPage = () => {
 
   const registerUser = useCallback(
     async (isMusician: boolean) => {
-      if (!transformedUser || !isSignedIn) {
-        console.error("No user data or not signed in");
+      if (!isSignedIn) {
+        console.error("Not signed in");
         return false;
       }
-      if (!roleType) {
-        error.push("No role type selected");
-        return false;
-      }
+
       const errors = isMusician
         ? validateMusicianFields()
-        : validateClientFields(); 
+        : validateClientFields();
       if (errors.length > 0) {
         setError(errors);
         return false;
       }
-              if (!isMusician && !organization || organization ==='undefined') { toast.error("Organization is Required");
-                 return false}
-  
+
+      if ((!isMusician && !organization) || organization === "undefined") {
+        toast.error("Organization is Required");
+        return false;
+      }
 
       try {
-        const res = await fetch(`/api/user/register`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            transformedUser,
-            isMusician,
-            isClient: !isMusician,
+        if (isMusician) {
+          await registerAsMusician({
             city,
-            ...(isMusician && {
-              instrument,
-              experience,
-              roleType,
-              djGenre,
-              djEquipment,
-              mcType,
-              mcLanguages,
-              talentbio,
-              vocalistGenre,
-              tier: "free", // Default to free tier
-              nextBillingDate: Date.now(),
-              monthlyGigsPosted: 0,
-              monthlyMessages: 0,
-              monthlyGigsBooked: 0,
-              gigsBookedThisWeek: { count: 0, weekStart: Date.now() },
-              lastBookingDate: Date.now(), // To track weekly reset
-              earnings: 0,
-              totalSpent: 0,
-              firstLogin: true,
-              organization,
-              onboardingComplete: false,
-              lastActive: new Date(),
-              isBanned: false,
-              banReason: "",
-              bannedAt: new Date(),
-              lastAdminAction: new Date(),
-              theme: "lightMode",
-            }),
-          }),
-        });
+            instrument,
+            experience,
+            roleType,
+            djGenre,
+            djEquipment,
+            mcType,
+            mcLanguages,
+            talentbio,
+            vocalistGenre,
+            organization,
+          });
+        } else {
+          await registerAsClient({
+            city,
+            organization,
+            talentbio,
+          });
+        }
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Registration failed");
-
-        window.localStorage.setItem("user", JSON.stringify(data.results));
         return true;
       } catch (err) {
         console.error(err);
@@ -210,64 +156,51 @@ const ActionPage = () => {
       }
     },
     [
-      transformedUser,
       isSignedIn,
+      validateMusicianFields,
+      validateClientFields,
       city,
       instrument,
       experience,
-      validateMusicianFields,
-      validateClientFields,
       roleType,
       djGenre,
       djEquipment,
       mcType,
       mcLanguages,
       talentbio,
-      error,
       vocalistGenre,
       organization,
+      registerAsMusician,
+      registerAsClient,
     ]
   );
+
   const [modal, setModal] = useState(false);
-
   const [adminRole, setAdminRoles] = useState("");
-
   const [adminCity, setAdminCity] = useState("");
-
   const [adminLoad, setAdminLoad] = useState(false);
+
   const connectAsAdmin = useCallback(async () => {
     setAdminLoad(true);
     if (!adminCity) error.push("Your City is required");
-
     if (!adminRole) error.push("Admin Role is required");
-    try {
-      const res = await fetch(`/api/admin/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          transformedUser,
-          adminCity,
-          tier: "pro",
-          adminRole,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Registration failed");
 
-      window.localStorage.setItem("user", JSON.stringify(data.results));
+    try {
+      await registerAsAdmin({
+        adminCity,
+        adminRole,
+      });
+
       setModal(false);
       toast.success("Successfully Registered you as Admin");
-      router.push("/admin/dashboard"); // Unified dashboard redirect
+      router.push("/admin/dashboard");
     } catch (err) {
       console.error(err);
       toast.error("Registration failed");
-      return false;
     } finally {
       setAdminLoad(false);
     }
-  }, [router, transformedUser, adminCity, adminRole, error]);
+  }, [router, adminCity, adminRole, error, registerAsAdmin]);
 
   const connectAsMusician = useCallback(async () => {
     setMusicianLoad(true);
@@ -280,28 +213,28 @@ const ActionPage = () => {
             roleType === "instrumentalist"
               ? "Successfully Registered as an Instrumentalist"
               : roleType === "dj"
-              ? "Successfully Registered as a Dj"
-              : roleType === "mc"
-              ? "Successfully Registered as a EMcee"
-              : roleType === "vocalist"
-              ? "Successfully Registered as a Vocalist"
-              : ""
+                ? "Successfully Registered as a Dj"
+                : roleType === "mc"
+                  ? "Successfully Registered as a EMcee"
+                  : roleType === "vocalist"
+                    ? "Successfully Registered as a Vocalist"
+                    : ""
           }`
         );
-        router.push("/dashboard"); // Unified dashboard redirect
+        router.push("/dashboard");
       }
     } finally {
       setMusicianLoad(false);
     }
   }, [registerUser, router, roleType]);
-  // Register as client
+
   const connectAsClient = useCallback(async () => {
     setClientLoad(true);
     try {
       const success = await registerUser(false);
       if (success) {
         toast.success("Registration successful!");
-        router.push("/dashboard"); // Unified dashboard redirect
+        router.push("/dashboard");
       }
     } finally {
       setClientLoad(false);
@@ -322,7 +255,7 @@ const ActionPage = () => {
 
   const handleRoleSelection = useCallback(
     (isMusician: boolean) => {
-      if (myuser?.user?.isMusician || myuser?.user?.isClient) {
+      if (myuser?.isMusician || myuser?.isClient) {
         setMoreInfo(true);
         return;
       }
@@ -400,13 +333,13 @@ const ActionPage = () => {
       </Modal>
     );
   };
+
   // More Information Modal starts here
   const renderMoreInfoModal = () => {
     const roleSteps: RoleSteps = {
       instrumentalist: ["city", "instrument", "experience", "talentbio"],
       dj: ["city", "genre", "equipment", "experience", "talentbio"],
       mc: ["city", "type", "languages", "experience", "talentbio"],
-
       client: ["organization", "talentbio"],
       vocalist: ["city", "vocalistgenre", "experience", "talentbio"],
       default: ["city", "talentbio"],
@@ -417,6 +350,7 @@ const ActionPage = () => {
       : roleSteps.default;
     const handleNext = () => setCurrentStep((prev) => prev + 1);
     const handleBack = () => setCurrentStep((prev) => prev - 1);
+
     if (!myuser) {
       return (
         <div className="h-full w-full bg-black">
@@ -426,6 +360,7 @@ const ActionPage = () => {
         </div>
       );
     }
+
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
         <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
@@ -611,8 +546,8 @@ const ActionPage = () => {
             {musicianload || clientload
               ? "Processing..."
               : currentStep === steps.length - 1
-              ? "Complete Registration"
-              : "Next"}
+                ? "Complete Registration"
+                : "Next"}
           </button>
 
           {error.length > 0 && (
@@ -626,6 +561,9 @@ const ActionPage = () => {
       </div>
     );
   };
+
+  // ... rest of your component remains the same ...
+  // The JSX part of your component stays exactly the same
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[#050505] px-4 py-16 overflow-hidden">
@@ -758,8 +696,8 @@ const ActionPage = () => {
           card.accent === "orange"
             ? "from-orange-500/20 to-amber-600/10"
             : card.accent === "blue"
-            ? "from-blue-500/20 to-cyan-600/10"
-            : "from-gray-700/20 to-gray-800/10"
+              ? "from-blue-500/20 to-cyan-600/10"
+              : "from-gray-700/20 to-gray-800/10"
         }
       `}
               ></div>
@@ -774,8 +712,8 @@ const ActionPage = () => {
             card.accent === "orange"
               ? "bg-orange-500"
               : card.accent === "blue"
-              ? "bg-blue-500"
-              : "bg-gray-600"
+                ? "bg-blue-500"
+                : "bg-gray-600"
           }
         `}
                 ></div>
@@ -792,8 +730,8 @@ const ActionPage = () => {
               card.accent === "orange"
                 ? "bg-orange-500/10 text-orange-400"
                 : card.accent === "blue"
-                ? "bg-blue-500/10 text-blue-400"
-                : "bg-gray-600/10 text-gray-400"
+                  ? "bg-blue-500/10 text-blue-400"
+                  : "bg-gray-600/10 text-gray-400"
             }
           `}
                   >
@@ -828,12 +766,12 @@ const ActionPage = () => {
               card.disabled
                 ? "cursor-not-allowed bg-neutral-800 text-neutral-500"
                 : card.accent === "orange"
-                ? "bg-orange-600 text-white hover:bg-orange-700"
-                : card.accent === "blue"
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : card.accent === "emerald"
-                ? "bg-emerald-600 text-white hover:bg-orange-700"
-                : "bg-neutral-800 text-neutral-400"
+                  ? "bg-orange-600 text-white hover:bg-orange-700"
+                  : card.accent === "blue"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : card.accent === "emerald"
+                      ? "bg-emerald-600 text-white hover:bg-orange-700"
+                      : "bg-neutral-800 text-neutral-400"
             }
           `}
                   >

@@ -27,8 +27,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <NextThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <ClerkProvider
         publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-        signInForceRedirectUrl="/authenticate"
-        signUpForceRedirectUrl="/authenticate"
+        signInForceRedirectUrl="/about"
+        signUpForceRedirectUrl="/about"
         appearance={{
           baseTheme: undefined,
           variables: {
