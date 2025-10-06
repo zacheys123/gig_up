@@ -1,7 +1,7 @@
 // hooks/useUserMutations.ts
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextj";
 
 export function useUserMutations() {
   const { userId } = useAuth();
