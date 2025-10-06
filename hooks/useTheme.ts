@@ -16,7 +16,7 @@ export function useThemeColors() {
   const colors = {
     // Background colors
     background: isDarkMode ? "bg-gray-900" : "bg-white",
-    backgroundMuted: isDarkMode ? "bg-gray-800" : "bg-gray-50",
+    backgroundMuted: isDarkMode ? "bg-gray-800" : "bg-gray-60",
     
     // Text colors
     text: isDarkMode ? "text-gray-100" : "text-gray-900",
