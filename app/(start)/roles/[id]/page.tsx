@@ -2,6 +2,7 @@
 import FloatingNotesLoader from "@/components/loaders/FloatingNotes";
 import ActionPage from "@/components/start/ActionPage";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -9,16 +10,16 @@ import React, { useEffect, useState } from "react";
 const Actions = () => {
   const router = useRouter();
   const { isLoaded: isAuthLoaded, userId } = useAuth();
-  const { user, loading } = useCurrentUser();
+  const { user, isLoading:loading } = useCurrentUser();
   const [status, setStatus] = useState<
     "loading" | "unregistered" | "registered" | "no-user"
   >("loading");
 
-  console.log("my userdata here", user?.user);
+  console.log("my userdata here", user);
   useEffect(() => {
     // Only proceed when auth and user data are fully loaded
     if (!isAuthLoaded || loading || !user || user?.user === undefined) return;
-    if (user?.user?.isAdmin) {
+    if (user?.isAdmin) {
       router.push("/admin/dashboard");
     } else {
       // Case 1: No userId means not logged in (should be caught by middleware)
@@ -27,7 +28,7 @@ const Actions = () => {
         return;
       }
       // Case 2: We have a userId but no user record in MongoDB
-      if (!user?.user?.firstname) {
+      if (!user?.firstname) {
         setStatus("unregistered");
         return;
       }
@@ -35,9 +36,9 @@ const Actions = () => {
       // Case 3: User exists but hasn't completed registration (missing roles)
       if (
         user?.user &&
-        (user.user?.isMusician === undefined ||
-          user?.user?.isClient === undefined ||
-          (user?.user?.isMusician === false && user?.user?.isClient === false))
+        (user?.isMusician === undefined ||
+          user?.isClient === undefined ||
+          (user?.isMusician === false && user?.isClient === false))
       ) {
         setStatus("unregistered");
         return;
@@ -45,16 +46,16 @@ const Actions = () => {
 
       // Case 4: User has completed registration
       if (
-        typeof user?.user?.isMusician === "boolean" &&
-        typeof user?.user?.isClient === "boolean"
+        typeof user?.isMusician === "boolean" &&
+        typeof user?.isClient === "boolean"
       ) {
         setStatus("registered");
 
         // Handle first login onboarding
         if (
-          user?.user?.firstLogin &&
-          !user?.user?.onboardingComplete &&
-          !user?.user?.isAdmin
+          user?.firstLogin &&
+          !user?.onboardingComplete &&
+          !user?.isAdmin
         ) {
           router.push("/about");
         } else {

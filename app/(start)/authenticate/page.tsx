@@ -4,6 +4,8 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { ReturningExperience } from "@/components/(main)/mainloaders/ReturningLoaders";
+import { FirstTimLoader } from "@/components/(main)/mainloaders/FirstTimeLoader";
 
 
 // Component for returning users

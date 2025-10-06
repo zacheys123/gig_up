@@ -1,7 +1,6 @@
 "use client";
 import Image from "next/image";
-import postimage from "../../public/assets/post.jpg";
-import reactimage from "../../public/assets/svg/logo-no-background.svg";
+
 import { CircularProgress } from "@mui/material";
 import { useAuth, SignInButton, SignUpButton } from "@clerk/nextjs";
 import Link from "next/link";
@@ -9,7 +8,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import thumbnailImage from "../../public/assets/discover4.webp";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { SaveAll, Play, Music, Users, Star, ArrowRight } from "lucide-react";
+import { SaveAll, Play, Music, Users, Star, ArrowRight, Calendar, TrendingUp } from "lucide-react";
 import LoadingSpinner from "./loading";
 // import { useCheckTrial } from "@/hooks/useCheckTrials";
 // import ScrollToTopButton from "@/components/ScrollUp";
@@ -32,10 +31,13 @@ export default function Home() {
 
   useEffect(() => {
     setIsClientSide(true);
-    if (!isLoaded && !userId) {
-      localStorage.removeItem("user");
-    }
-  }, [isLoaded, userId]);
+  }, []);
+
+  // User status conditions
+  const isAuthenticated = !!userId;
+  const hasCompleteProfile = user?.firstname && (user?.isClient || user?.isMusician);
+  const needsRoleSelection = isAuthenticated && user?.firstname && !user?.isClient && !user?.isMusician;
+  const isNewUser = isAuthenticated && !user?.firstname;
 
   const getDynamicHref = () => {
     if (!userId || !user?.firstname || (!user?.isClient && !user?.isMusician))
@@ -59,7 +61,8 @@ export default function Home() {
     );
   }
 
-  const features = [
+  // Features for different user types
+  const guestFeatures = [
     {
       icon: <Music className="w-12 h-12 text-amber-500" />,
       title: "Share Your Music",
@@ -82,10 +85,58 @@ export default function Home() {
     }
   ];
 
+  const musicianFeatures = [
+    {
+      icon: <Calendar className="w-12 h-12 text-green-500" />,
+      title: "Find Gigs",
+      description: "Discover performance opportunities in your area."
+    },
+    {
+      icon: <TrendingUp className="w-12 h-12 text-blue-500" />,
+      title: "Grow Your Audience",
+      description: "Connect with fans and build your following."
+    },
+    {
+      icon: <Users className="w-12 h-12 text-purple-500" />,
+      title: "Collaborate",
+      description: "Find other musicians for your next project."
+    },
+    {
+      icon: <Star className="w-12 h-12 text-amber-500" />,
+      title: "Get Discovered",
+      description: "Showcase your talent to venues and event organizers."
+    }
+  ];
+
+  const clientFeatures = [
+    {
+      icon: <Music className="w-12 h-12 text-green-500" />,
+      title: "Find Talent",
+      description: "Discover perfect musicians for your event."
+    },
+    {
+      icon: <Calendar className="w-12 h-12 text-blue-500" />,
+      title: "Post Gigs",
+      description: "Create listings and find the right performers."
+    },
+    {
+      icon: <Users className="w-12 h-12 text-purple-500" />,
+      title: "Manage Bookings",
+      description: "Easy scheduling and communication tools."
+    },
+    {
+      icon: <Star className="w-12 h-12 text-amber-500" />,
+      title: "Quality Assurance",
+      description: "Read reviews and listen to artist portfolios."
+    }
+  ];
+
+  const currentFeatures = isAuthenticated 
+    ? (user?.isMusician ? musicianFeatures : user?.isClient ? clientFeatures : guestFeatures)
+    : guestFeatures;
+
   return (
     <div className="bg-gray-950 text-white font-sans min-h-screen overflow-y-scroll snap-mandatory snap-y scroll-smooth">
-      {/* <MetaTags /> */}
-
       {/* Hero Section */}
       <section className="relative flex flex-col items-center justify-center min-h-screen text-center snap-start px-4">
         <video
@@ -114,11 +165,21 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
-            Discover.
-            <br />
-            Create.
-            <br />
-            Perform.
+            {isAuthenticated ? (
+              <>
+                Welcome{user?.firstname ? `, ${user.firstname}` : ' Back'}!
+                <br />
+                {hasCompleteProfile ? 'Ready to Create?' : 'Complete Your Profile'}
+              </>
+            ) : (
+              <>
+                Discover.
+                <br />
+                Create.
+                <br />
+                Perform.
+              </>
+            )}
           </motion.h1>
           
           <motion.p
@@ -127,7 +188,15 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.8 }}
           >
-            Join the ultimate platform connecting musicians, venues, and music lovers worldwide.
+            {isAuthenticated ? (
+              hasCompleteProfile 
+                ? "Continue your music journey and discover new opportunities."
+                : needsRoleSelection
+                  ? "Tell us about yourself to unlock all features."
+                  : "Let's set up your profile to get started."
+            ) : (
+              "Join the ultimate platform connecting musicians, venues, and music lovers worldwide."
+            )}
           </motion.p>
 
           <motion.div
@@ -136,14 +205,24 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.8 }}
           >
-            {userId && user?.firstname ? (
-              <Link
-                href={getDynamicHref()}
-                className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
-              >
-                Continue to Dashboard
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
+            {isAuthenticated ? (
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link
+                  href={getDynamicHref()}
+                  className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                >
+                  {hasCompleteProfile ? 'Go to Dashboard' : needsRoleSelection ? 'Choose Role' : 'Complete Profile'}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                {hasCompleteProfile && (
+                  <Link
+                    href={user?.isMusician ? "/discover" : "/browse"}
+                    className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
+                  >
+                    {user?.isMusician ? "Find Gigs" : "Find Artists"}
+                  </Link>
+                )}
+              </div>
             ) : (
               <>
                 <SignInButton mode="modal">
@@ -160,28 +239,43 @@ export default function Home() {
             )}
           </motion.div>
 
-          {/* Stats */}
+          {/* User-specific stats */}
           <motion.div
             className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t border-white/10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.8 }}
           >
-            {[
-              { number: "10K+", label: "Active Musicians" },
-              { number: "5K+", label: "Gigs Posted" },
-              { number: "50K+", label: "Music Lovers" }
-            ].map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-amber-400">{stat.number}</div>
-                <div className="text-sm text-gray-400 mt-1">{stat.label}</div>
-              </div>
-            ))}
+            {isAuthenticated && hasCompleteProfile ? (
+              // User-specific stats for logged-in users with complete profiles
+              [
+                { number: user?.completedGigsCount?.toString() || "0", label: "Gigs Completed" },
+                { number: user?.followers?.length.toString() || "0", label: "Followers" },
+                { number: user?.monthlyGigsBooked?.toString() || "0", label: "This Month" }
+              ].map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-amber-400">{stat.number}</div>
+                  <div className="text-sm text-gray-400 mt-1">{stat.label}</div>
+                </div>
+              ))
+            ) : (
+              // General stats for guests and incomplete profiles
+              [
+                { number: "10K+", label: "Active Musicians" },
+                { number: "5K+", label: "Gigs Posted" },
+                { number: "50K+", label: "Music Lovers" }
+              ].map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-amber-400">{stat.number}</div>
+                  <div className="text-sm text-gray-400 mt-1">{stat.label}</div>
+                </div>
+              ))
+            )}
           </motion.div>
         </motion.div>
       </section>
 
-      {/* Features Section */}
+      {/* Features Section - Dynamic based on user type */}
       <section className="min-h-screen flex flex-col justify-center items-center snap-start bg-gradient-to-b from-gray-900 to-gray-950 py-20 px-4">
         <motion.div
           className="text-center max-w-6xl mx-auto"
@@ -190,14 +284,21 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-amber-400 to-pink-500 bg-clip-text">
-            Why Choose GigUp?
+            {isAuthenticated 
+              ? (hasCompleteProfile 
+                  ? `Features for ${user?.isMusician ? 'Musicians' : 'Clients'}`
+                  : 'Why Join GigUp?'
+                )
+              : 'Why Choose GigUp?'}
           </h2>
           <p className="text-xl text-gray-400 mb-16 max-w-2xl mx-auto">
-            Everything you need to grow your music career in one place
+            {isAuthenticated && hasCompleteProfile
+              ? `Everything you need to ${user?.isMusician ? 'grow your music career' : 'find amazing talent'}`
+              : 'Everything you need to grow your music career in one place'}
           </p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
+            {currentFeatures.map((feature, index) => (
               <motion.div
                 key={index}
                 className="group bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-white/10 hover:border-amber-500/30 hover:bg-gray-800/70 transition-all duration-500 hover:scale-105"
@@ -226,10 +327,12 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-yellow-500 to-pink-600 bg-clip-text">
-            How It Works
+            {isAuthenticated && hasCompleteProfile ? 'Next Steps' : 'How It Works'}
           </h2>
           <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-            Get started in just a few simple steps
+            {isAuthenticated && hasCompleteProfile 
+              ? 'Make the most of your GigUp experience'
+              : 'Get started in just a few simple steps'}
           </p>
 
           <div className="flex justify-center mb-12">
@@ -274,30 +377,52 @@ export default function Home() {
             )}
           </div>
 
-          {/* Steps */}
+          {/* Dynamic steps based on user status */}
           <div className="grid md:grid-cols-3 gap-8 mt-12">
-            {[
-              { step: "01", title: "Create Profile", description: "Sign up and set up your musician or client profile" },
-              { step: "02", title: "Connect", description: "Find musicians or gigs that match your needs" },
-              { step: "03", title: "Perform", description: "Book gigs, share music, and grow your audience" }
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                className="text-center p-6"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.2, duration: 0.6 }}
-              >
-                <div className="text-4xl font-black text-amber-500 mb-4">{item.step}</div>
-                <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
-                <p className="text-gray-400">{item.description}</p>
-              </motion.div>
-            ))}
+            {(isAuthenticated && hasCompleteProfile) ? (
+              // Steps for users with complete profiles
+              [
+                { step: "01", title: "Explore", description: user?.isMusician ? "Browse available gigs in your area" : "Discover talented musicians" },
+                { step: "02", title: "Connect", description: user?.isMusician ? "Apply for gigs and message clients" : "Post gigs and review applications" },
+                { step: "03", title: "Grow", description: user?.isMusician ? "Build your portfolio and reputation" : "Build your network of reliable talent" }
+              ].map((item, index) => (
+                <motion.div
+                  key={index}
+                  className="text-center p-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.2, duration: 0.6 }}
+                >
+                  <div className="text-4xl font-black text-amber-500 mb-4">{item.step}</div>
+                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-gray-400">{item.description}</p>
+                </motion.div>
+              ))
+            ) : (
+              // Steps for guests and incomplete profiles
+              [
+                { step: "01", title: "Create Profile", description: "Sign up and set up your musician or client profile" },
+                { step: "02", title: "Connect", description: "Find musicians or gigs that match your needs" },
+                { step: "03", title: "Perform", description: "Book gigs, share music, and grow your audience" }
+              ].map((item, index) => (
+                <motion.div
+                  key={index}
+                  className="text-center p-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.2, duration: 0.6 }}
+                >
+                  <div className="text-4xl font-black text-amber-500 mb-4">{item.step}</div>
+                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-gray-400">{item.description}</p>
+                </motion.div>
+              ))
+            )}
           </div>
         </motion.div>
 
         {/* CTA Button for logged-in users */}
-        {userId && user?.firstname && (
+        {isAuthenticated && (
           <motion.div
             className="mt-12"
             initial={{ opacity: 0, y: 20 }}
@@ -309,7 +434,7 @@ export default function Home() {
               className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
             >
               <SaveAll className="w-5 h-5" />
-              Open GigUp
+              {hasCompleteProfile ? 'Open Dashboard' : needsRoleSelection ? 'Choose Your Role' : 'Complete Profile'}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
@@ -325,13 +450,19 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <h2 className="text-5xl md:text-6xl font-black mb-6 text-transparent bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text">
-            Ready to Start?
+            {isAuthenticated 
+              ? (hasCompleteProfile ? 'Ready to Create?' : 'Ready to Complete Your Profile?')
+              : 'Ready to Start?'}
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of musicians and music lovers already on GigUp
+            {isAuthenticated
+              ? (hasCompleteProfile
+                  ? `Continue your journey as a ${user?.isMusician ? 'musician' : 'client'}`
+                  : 'Complete your setup to unlock all features')
+              : 'Join thousands of musicians and music lovers already on GigUp'}
           </p>
 
-          {!userId ? (
+          {!isAuthenticated ? (
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <SignUpButton mode="modal">
                 <button className="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300">
@@ -345,13 +476,23 @@ export default function Home() {
               </SignInButton>
             </div>
           ) : (
-            <Link
-              href={getDynamicHref()}
-              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
-            >
-              Go to Dashboard
-              <ArrowRight className="w-5 h-5" />
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href={getDynamicHref()}
+                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
+              >
+                {hasCompleteProfile ? 'Go to Dashboard' : needsRoleSelection ? 'Choose Role' : 'Complete Profile'}
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              {hasCompleteProfile && (
+                <Link
+                  href={user?.isMusician ? "/profile" : "/my-gigs"}
+                  className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
+                >
+                  {user?.isMusician ? "My Profile" : "My Gigs"}
+                </Link>
+              )}
+            </div>
           )}
         </motion.div>
       </section>
@@ -365,9 +506,12 @@ export default function Home() {
             Connecting the world through music
           </span>
         </p>
+        {isAuthenticated && (
+          <p className="text-sm text-gray-600 mt-4">
+            Logged in as {user?.firstname || user?.username}
+          </p>
+        )}
       </footer>
-
-      {/* <ScrollToTopButton /> */}
     </div>
   );
 }

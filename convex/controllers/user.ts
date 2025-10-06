@@ -340,16 +340,35 @@ export const addReview = mutationGeneric({
   },
 });
 
-// convex/controllers/user.ts - Add this query function
 export const getCurrentUser = queryGeneric({
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    try {
+      // Get the identity directly
+      const identity = await ctx.auth.getUserIdentity();
+      
+      console.log("Clerk Identity:", identity);
+      
+      if (!identity) {
+        console.log("No identity found - user not authenticated");
+        return null;
+      }
 
-    return await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+      const clerkId = identity.subject;
+      console.log("Clerk User ID:", clerkId);
+
+      // Query your users table
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
+        .first();
+
+      console.log("Database user result:", user);
+      
+      return user;
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      return null;
+    }
   },
 });
 

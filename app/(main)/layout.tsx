@@ -3,6 +3,8 @@ import { Toaster } from "sonner";
 // import Nav from "../../components/Nav";
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useMemo } from "react";
+import { MobileNavigation } from "@/components/(main)/MobileNav";
+
 // import { useCurrentUser } from "@/hooks/useCurrentUser";
 // import NotificationHandler from "@/components/NotificationHandler";
 // import { TrialExpiredModal } from "@/components/sub/TrialExpired";
@@ -12,11 +14,11 @@ import { useEffect, useMemo } from "react";
 // import { useBannedRedirect } from "@/hooks/useBannedRefirect";
 
 const MainLayout = ({
-
+contact,
   children,
 }: Readonly<{
   children: React.ReactNode;
-  // contact: React.ReactNode;
+  contact: React.ReactNode;
 }>) => {
   // Check ban status immediately on first render
   // useInitialBanCheck();
@@ -39,7 +41,7 @@ const MainLayout = ({
   }, [user]);
   // useEffect(() => {
   //   if (!user || !myuser) return;
-  //   localStorage.setItem("tier", JSON.stringify(myuser?.user?.tier));
+  //   localStorage.("tier", JSON.stringify(myuser?.user?.tier));
 
   //   // Transform the user data as needed
   //   if (
@@ -69,6 +71,7 @@ const MainLayout = ({
   //       });
   //   }
   // }, [user]); // This effect runs when the user object changes
+// Add this temporary debug component to your layout or navigation
 
   return (
     <div className="h-screen overflow-x-hidden">
@@ -78,11 +81,11 @@ const MainLayout = ({
           duration: 2000,
           className: "toast",
         }}
-      />
+      /><MobileNavigation />
       {/* <Nav />
       <NotificationHandler /> <TrialExpiredModal />
       <TrialRemainingModal /> */}
-      {/* {contact} */}
+      {contact}
       {children}
     </div>
   );
