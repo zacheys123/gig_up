@@ -13,7 +13,8 @@ export function useUserMutations() {
     api.controllers.user.updateUserAsClient
   );
   const updateUserAsAdmin = useMutation(api.controllers.user.updateUserAsAdmin);
-
+  // hooks/useUserMutations.ts
+  // hooks/useUserMutations.ts
   const registerAsMusician = async (musicianData: {
     city: string;
     instrument?: string;
@@ -30,8 +31,8 @@ export function useUserMutations() {
     if (!userId) throw new Error("No user ID available");
 
     const updates = {
-      isMusician: true,
-      isClient: false,
+      isMusician: true as const,
+      isClient: false as const,
       city: musicianData.city,
       instrument: musicianData.instrument,
       experience: musicianData.experience,
@@ -43,7 +44,7 @@ export function useUserMutations() {
       talentbio: musicianData.talentbio,
       vocalistGenre: musicianData.vocalistGenre,
       organization: musicianData.organization,
-      tier: "free",
+      tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
       monthlyMessages: 0,
@@ -52,19 +53,24 @@ export function useUserMutations() {
       lastBookingDate: Date.now(),
       earnings: 0,
       totalSpent: 0,
-      firstLogin: true,
-      onboardingComplete: false,
+      firstLogin: true as const,
+      onboardingComplete: false as const,
       lastActive: Date.now(),
-      isBanned: false,
+      isBanned: false as const,
       banReason: "",
       bannedAt: undefined,
       lastAdminAction: Date.now(),
-      theme: "lightMode",
+      theme: "lightMode" as const,
+      // REMOVE THESE - they're not in the mutation schema and have default values anyway
+      // allreviews: [],
+      // myreviews: [],
+      // videosProfile: [],
     };
 
     return await updateUserAsMusician({ clerkId: userId, updates });
   };
 
+  // hooks/useUserMutations.ts
   const registerAsClient = async (clientData: {
     city: string;
     organization: string;
@@ -73,12 +79,12 @@ export function useUserMutations() {
     if (!userId) throw new Error("No user ID available");
 
     const updates = {
-      isMusician: false,
-      isClient: true,
+      isMusician: false as const,
+      isClient: true as const,
       city: clientData.city,
       organization: clientData.organization,
       talentbio: clientData.talentbio,
-      tier: "free",
+      tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
       monthlyMessages: 0,
@@ -87,14 +93,15 @@ export function useUserMutations() {
       lastBookingDate: Date.now(),
       earnings: 0,
       totalSpent: 0,
-      firstLogin: true,
-      onboardingComplete: false,
+      firstLogin: true as const,
+      onboardingComplete: false as const,
       lastActive: Date.now(),
-      isBanned: false,
+      isBanned: false as const,
       banReason: "",
       bannedAt: undefined,
       lastAdminAction: Date.now(),
-      theme: "lightMode",
+      theme: "lightMode" as const,
+      // REMOVE array fields here too
     };
 
     return await updateUserAsClient({ clerkId: userId, updates });
@@ -102,15 +109,15 @@ export function useUserMutations() {
 
   const registerAsAdmin = async (adminData: {
     adminCity: string;
-    adminRole: string;
+    adminRole: "super" | "content" | "support" | "analytics";
   }) => {
     if (!userId) throw new Error("No user ID available");
 
     const updates = {
-      isAdmin: true,
+      isAdmin: true as const,
       adminCity: adminData.adminCity,
       adminRole: adminData.adminRole,
-      tier: "pro",
+      tier: "pro" as const,
     };
 
     return await updateUserAsAdmin({ clerkId: userId, updates });

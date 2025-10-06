@@ -176,7 +176,12 @@ const ActionPage = () => {
   );
 
   const [modal, setModal] = useState(false);
-  const [adminRole, setAdminRoles] = useState("");
+  // In your ActionPage component, update the adminRole state
+  // Add this at the top of your file
+  type AdminRole = "super" | "content" | "support" | "analytics";
+
+  // Then use it in your state
+  const [adminRole, setAdminRoles] = useState<AdminRole | null>(null);
   const [adminCity, setAdminCity] = useState("");
   const [adminLoad, setAdminLoad] = useState(false);
 
@@ -188,7 +193,7 @@ const ActionPage = () => {
     try {
       await registerAsAdmin({
         adminCity,
-        adminRole,
+        adminRole: adminRole!,
       });
 
       setModal(false);
@@ -294,7 +299,7 @@ const ActionPage = () => {
         description="Register as Admin"
         dep="admin"
       >
-        <div className="flex flex-col gap-4 ">
+        <div className="flex flex-col gap-4">
           <input
             type="text"
             placeholder="Your City"
@@ -303,18 +308,30 @@ const ActionPage = () => {
             className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
           />
           <select
-            value={adminRole}
-            onChange={(e) => setAdminRoles(e.target.value)}
+            value={adminRole || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (
+                value === "super" ||
+                value === "content" ||
+                value === "support" ||
+                value === "analytics"
+              ) {
+                setAdminRoles(value);
+              } else {
+                setAdminRoles(null);
+              }
+            }}
             className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
           >
             <option value="" className="text-neutral-300" disabled>
-              Admin Roles
-            </option>{" "}
-            <option value="super">Super</option>{" "}
+              Select Admin Role
+            </option>
+            <option value="super">Super</option>
             <option value="content">Content</option>
-            <option value="support">Support</option>{" "}
+            <option value="support">Support</option>
             <option value="analytics">Analytics</option>
-          </select>{" "}
+          </select>
           {error.length > 0 && (
             <div className="mt-4 text-red-400 text-sm">
               {error.map((err, index) => (
@@ -323,9 +340,9 @@ const ActionPage = () => {
             </div>
           )}
           <button
-            onClick={() => connectAsAdmin()}
+            onClick={connectAsAdmin}
             className="w-[80%] mx-auto py-2 bg-amber-700 rounded hover:bg-orange-600 text-white text-[13px]"
-            disabled={adminLoad || clientload}
+            disabled={adminLoad || !adminRole || !adminCity}
           >
             {adminLoad ? "Processing..." : "Complete Registration"}
           </button>

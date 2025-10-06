@@ -38,6 +38,7 @@ export const updateFirstLogin = mutationGeneric({
     }
   },
 });
+
 export const createOrUpdateUserPublic = mutationGeneric({
   args: {
     clerkId: v.string(),
@@ -59,22 +60,11 @@ export const createOrUpdateUserPublic = mutationGeneric({
     const userData = {
       ...args,
       lastActive: now,
-      updatedAt: now,
     };
 
     if (existingUser) {
-      // Update only the fields that exist in the schema
-      return await ctx.db.patch(existingUser._id, {
-        ...userData,
-        // Only include fields that exist in schema
-        phone: existingUser.phone,
-        city: existingUser.city,
-        address: existingUser.address,
-        instrument: existingUser.instrument,
-        experience: existingUser.experience,
-        roleType: existingUser.roleType,
-        bio: existingUser.bio,
-      });
+      // Update existing user
+      return await ctx.db.patch(existingUser._id, userData);
     } else {
       // Create new user with schema-compliant defaults
       return await ctx.db.insert("users", {
@@ -85,7 +75,7 @@ export const createOrUpdateUserPublic = mutationGeneric({
         isAdmin: false,
         isBanned: false,
 
-        // Arrays
+        // Arrays (all optional in schema)
         followers: [],
         followings: [],
         refferences: [],
@@ -96,6 +86,9 @@ export const createOrUpdateUserPublic = mutationGeneric({
         likedVideos: [],
         bookingHistory: [],
         adminPermissions: [],
+        allreviews: [],
+        myreviews: [],
+        videosProfile: [],
 
         // Business
         tier: "free",
@@ -122,35 +115,13 @@ export const createOrUpdateUserPublic = mutationGeneric({
         onboardingComplete: false,
         firstTimeInProfile: true,
 
-        // Timestamps
-        createdAt: now,
+        // Ban info
+        banReason: "",
+        bannedAt: now,
       });
     }
   },
 });
-interface UpdateProfileArgs {
-  userId: any; // Use v.id("users") type
-  updates: {
-    firstname?: string;
-    lastname?: string;
-    city?: string;
-    address?: string;
-    phone?: string;
-    instrument?: string;
-    experience?: string;
-    bio?: string;
-    roleType?: string;
-    isMusician?: boolean;
-    isClient?: boolean;
-    musiciangenres?: string[];
-    rate?: {
-      regular?: string;
-      function?: string;
-      concert?: string;
-      corporate?: string;
-    };
-  };
-}
 
 // Update user with musician info
 export const updateUserAsMusician = mutationGeneric({
@@ -169,7 +140,8 @@ export const updateUserAsMusician = mutationGeneric({
       mcLanguages: v.optional(v.string()),
       talentbio: v.string(),
       vocalistGenre: v.optional(v.string()),
-      tier: v.string(),
+      organization: v.optional(v.string()),
+      tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.number(),
       monthlyGigsPosted: v.number(),
       monthlyMessages: v.number(),
@@ -182,21 +154,23 @@ export const updateUserAsMusician = mutationGeneric({
       earnings: v.number(),
       totalSpent: v.number(),
       firstLogin: v.boolean(),
-      organization: v.optional(v.string()),
       onboardingComplete: v.boolean(),
       lastActive: v.number(),
       isBanned: v.boolean(),
-      banReason: v.optional(v.string()),
+      banReason: v.string(),
       bannedAt: v.optional(v.number()),
       lastAdminAction: v.number(),
-      theme: v.string(),
+      theme: v.union(
+        v.literal("lightMode"),
+        v.literal("darkMode"),
+        v.literal("system")
+      ),
     }),
   },
   handler: async (ctx, args) => {
     try {
       console.log("Updating user as musician:", args.clerkId);
 
-      // Find user by clerkId
       const user = await ctx.db
         .query("users")
         .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
@@ -206,7 +180,6 @@ export const updateUserAsMusician = mutationGeneric({
         throw new Error("User not found");
       }
 
-      // Update user with musician data
       await ctx.db.patch(user._id, args.updates);
 
       console.log("Successfully updated user as musician");
@@ -219,6 +192,7 @@ export const updateUserAsMusician = mutationGeneric({
 });
 
 // Update user as client
+// convex/controllers/user.ts - updateUserAsClient
 export const updateUserAsClient = mutationGeneric({
   args: {
     clerkId: v.string(),
@@ -228,7 +202,7 @@ export const updateUserAsClient = mutationGeneric({
       city: v.string(),
       organization: v.string(),
       talentbio: v.string(),
-      tier: v.string(),
+      tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.number(),
       monthlyGigsPosted: v.number(),
       monthlyMessages: v.number(),
@@ -244,33 +218,19 @@ export const updateUserAsClient = mutationGeneric({
       onboardingComplete: v.boolean(),
       lastActive: v.number(),
       isBanned: v.boolean(),
-      banReason: v.optional(v.string()),
+      banReason: v.string(),
       bannedAt: v.optional(v.number()),
       lastAdminAction: v.number(),
-      theme: v.string(),
+      theme: v.union(
+        v.literal("lightMode"),
+        v.literal("darkMode"),
+        v.literal("system")
+      ),
+      // Don't include array fields here either unless they're in the schema
     }),
   },
   handler: async (ctx, args) => {
-    try {
-      console.log("Updating user as client:", args.clerkId);
-
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-        .first();
-
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      await ctx.db.patch(user._id, args.updates);
-
-      console.log("Successfully updated user as client");
-      return { success: true, userId: user._id };
-    } catch (error) {
-      console.error("Error updating user as client:", error);
-      throw error;
-    }
+    // ... handler code
   },
 });
 
@@ -281,8 +241,13 @@ export const updateUserAsAdmin = mutationGeneric({
     updates: v.object({
       isAdmin: v.boolean(),
       adminCity: v.string(),
-      adminRole: v.string(),
-      tier: v.string(),
+      adminRole: v.union(
+        v.literal("super"),
+        v.literal("content"),
+        v.literal("support"),
+        v.literal("analytics")
+      ),
+      tier: v.union(v.literal("free"), v.literal("pro")),
     }),
   },
   handler: async (ctx, args) => {
@@ -335,7 +300,7 @@ export const updateUserProfile = mutationGeneric({
       ),
     }),
   },
-  handler: async (ctx, args: UpdateProfileArgs) => {
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
@@ -345,7 +310,7 @@ export const updateUserProfile = mutationGeneric({
 
     return await ctx.db.patch(args.userId, {
       ...args.updates,
-      updatedAt: Date.now(),
+      lastActive: Date.now(),
     });
   },
 });
@@ -354,30 +319,36 @@ export const followUser = mutationGeneric({
   args: {
     targetUserId: v.id("users"),
   },
-  handler: async (ctx, args: { targetUserId: any }) => {
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .first();
     if (!currentUser) throw new Error("User not found");
 
+    // Ensure arrays exist
+    const currentFollowings = currentUser.followings || [];
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) throw new Error("Target user not found");
+
+    const targetFollowers = targetUser.followers || [];
+
     // Add to current user's followings
-    if (!currentUser.followings.includes(args.targetUserId)) {
+    if (!currentFollowings.includes(args.targetUserId)) {
       await ctx.db.patch(currentUser._id, {
-        followings: [...currentUser.followings, args.targetUserId],
-        updatedAt: Date.now(),
+        followings: [...currentFollowings, args.targetUserId],
+        lastActive: Date.now(),
       });
     }
 
     // Add to target user's followers
-    const targetUser = await ctx.db.get(args.targetUserId);
-    if (targetUser && !targetUser.followers.includes(currentUser._id)) {
+    if (!targetFollowers.includes(currentUser._id)) {
       await ctx.db.patch(args.targetUserId, {
-        followers: [...targetUser.followers, currentUser._id],
-        updatedAt: Date.now(),
+        followers: [...targetFollowers, currentUser._id],
+        lastActive: Date.now(),
       });
     }
 
@@ -392,18 +363,18 @@ export const addReview = mutationGeneric({
     comment: v.optional(v.string()),
     gigId: v.optional(v.id("gigs")),
   },
-  handler: async (
-    ctx,
-    args: { targetUserId: any; rating: number; comment?: string; gigId?: any }
-  ) => {
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .first();
     if (!currentUser) throw new Error("User not found");
+
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) throw new Error("Target user not found");
 
     const reviewId = crypto.randomUUID();
     const review = {
@@ -417,19 +388,20 @@ export const addReview = mutationGeneric({
       updatedAt: Date.now(),
     };
 
+    // Ensure arrays exist and add review
+    const targetAllReviews = targetUser.allreviews || [];
+    const currentMyReviews = currentUser.myreviews || [];
+
     // Add to target user's allreviews
-    const targetUser = await ctx.db.get(args.targetUserId);
-    if (targetUser) {
-      await ctx.db.patch(args.targetUserId, {
-        allreviews: [...targetUser.allreviews, review],
-        updatedAt: Date.now(),
-      });
-    }
+    await ctx.db.patch(args.targetUserId, {
+      allreviews: [...targetAllReviews, review],
+      lastActive: Date.now(),
+    });
 
     // Add to current user's myreviews
     await ctx.db.patch(currentUser._id, {
-      myreviews: [...currentUser.myreviews, review],
-      updatedAt: Date.now(),
+      myreviews: [...currentMyReviews, review],
+      lastActive: Date.now(),
     });
 
     return reviewId;
@@ -441,7 +413,6 @@ export const getCurrentUser = queryGeneric({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    console.log("Getting user by Clerk ID:", args.clerkId);
     try {
       console.log("Getting user by Clerk ID:", args.clerkId);
 
@@ -451,7 +422,6 @@ export const getCurrentUser = queryGeneric({
         .first();
 
       console.log("Found user:", user);
-
       return user;
     } catch (error) {
       console.error("Error in getCurrentUser:", error);
@@ -460,27 +430,21 @@ export const getCurrentUser = queryGeneric({
   },
 });
 
-interface SearchUsersArgs {
-  query: string;
-  isMusician?: boolean;
-  city?: string;
-  instrument?: string;
-}
 export const searchUsers = queryGeneric({
   args: {
-    query: v.string(),
+    queryGeneric: v.string(),
     isMusician: v.optional(v.boolean()),
     city: v.optional(v.string()),
     instrument: v.optional(v.string()),
   },
-  handler: async (ctx, args: SearchUsersArgs) => {
+  handler: async (ctx, args) => {
     // Get all users (or use an index if you have many users)
     const allUsers = await ctx.db.query("users").collect();
 
     // Apply all filters
     return allUsers.filter((user) => {
       // Text search
-      const searchTerm = args.query.toLowerCase();
+      const searchTerm = args.queryGeneric.toLowerCase();
       const matchesSearch =
         user.firstname?.toLowerCase().includes(searchTerm) ||
         user.lastname?.toLowerCase().includes(searchTerm) ||
@@ -515,22 +479,14 @@ export const updateUserTier = mutationGeneric({
     ),
     nextBillingDate: v.optional(v.number()),
   },
-  handler: async (
-    ctx,
-    args: {
-      userId: any;
-      tier: string;
-      tierStatus: string;
-      nextBillingDate?: number;
-    }
-  ) => {
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     // Check if user is admin or the user themselves
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .first();
 
     if (!currentUser) throw new Error("User not found");
@@ -542,7 +498,7 @@ export const updateUserTier = mutationGeneric({
       tier: args.tier,
       tierStatus: args.tierStatus,
       nextBillingDate: args.nextBillingDate,
-      updatedAt: Date.now(),
+      lastActive: Date.now(),
     });
   },
 });
