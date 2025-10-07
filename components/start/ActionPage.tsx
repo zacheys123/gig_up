@@ -46,18 +46,6 @@ const ActionPage = () => {
     client: false,
   });
 
-  const transformedUser = useMemo(() => {
-    if (!user) return null;
-    return {
-      firstName: user.firstName ?? undefined,
-      lastName: user.lastName ?? undefined,
-      imageUrl: user.imageUrl ?? undefined,
-      username: user.username ?? undefined,
-      emailAddresses: user.emailAddresses,
-      phoneNumbers: user.phoneNumbers,
-    };
-  }, [user]);
-
   const [roleType, setRoleType] = useState<RoleType>("instrumentalist");
   const [djGenre, setDjGenre] = useState("");
   const [vocalistGenre, setVocalistGenre] = useState("");
@@ -578,9 +566,6 @@ const ActionPage = () => {
       </div>
     );
   };
-
-  // ... rest of your component remains the same ...
-  // The JSX part of your component stays exactly the same
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[#050505] px-4 py-16 overflow-hidden">

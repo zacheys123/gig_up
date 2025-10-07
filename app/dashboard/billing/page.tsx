@@ -4,13 +4,15 @@ import { MobileUsageMeter } from "@/components/dashboard/MobileUsageMeter";
 import GigChart from "@/components/dashboard/GigChart";
 import BillingComponent from "@/components/dashboard/BillingComponent";
 import { useAuth, UserButton } from "@clerk/nextjs";
-import { useSubscription } from "@/hooks/useSubscription";
+
 import { motion } from "framer-motion";
 import { Sparkles, Zap, CreditCard, BarChart2, RefreshCw } from "lucide-react";
+import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 
 export default function BillingPage() {
   const { userId } = useAuth();
-  const { subscription } = useSubscription(userId as string);
+  const { subscription } = useSubscriptionStore();
+  console.log(subscription);
 
   if (!subscription) {
     return (

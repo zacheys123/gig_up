@@ -1,45 +1,49 @@
-// hooks/useCurrentUser.ts
-import { useQuery } from "convex/react";
+import { useUserStore } from "@/app/stores";
+import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
+// Import your subscription store
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
-import { useUserStore } from "@/stores/useUserStore";
+import { useQuery } from "convex/react";
 import { useEffect } from "react";
 
+// hooks/useCurrentUser.ts
 export function useCurrentUser() {
   const { userId, isLoaded } = useAuth();
-  const { setUser, setLoading, user: storeUser } = useUserStore();
+  const { setUser } = useUserStore();
+  const { setSubscription } = useSubscriptionStore(); // Get subscription store setter
 
   const user = useQuery(
     api.controllers.user.getCurrentUser,
     userId ? { clerkId: userId } : "skip"
   );
 
-  console.log("useCurrentUser debug:", {
-    clerkUserId: userId,
-    convexUser: user,
-    isLoaded,
-    storeUser: storeUser?._id
-  });
-
-  // Sync user data to Zustand store
+  // Sync to Zustand user store
   useEffect(() => {
     if (isLoaded && userId && user) {
-      console.log("🔄 Syncing user to Zustand store");
       setUser(user);
     } else if (isLoaded && !userId) {
-      console.log("🔄 Clearing user from Zustand store (no userId)");
       setUser(null);
     }
   }, [user, userId, isLoaded, setUser]);
 
-  // Sync loading state
+  // Sync subscription data to subscription store
+  // Updated hook without plan/price IDs
   useEffect(() => {
-    const isLoading = !isLoaded || (userId && user === undefined);
-    setLoading(isLoading);
-  }, [isLoaded, userId, user, setLoading]);
-
+    if (user) {
+      const subscriptionData = {
+        tier: user.tier,
+        status: user.tierStatus,
+        currentPeriodStart: user._creationTime,
+        currentPeriodEnd: user.nextBillingDate,
+        cancelAtPeriodEnd: user.tierStatus === "canceled",
+      };
+      setSubscription(subscriptionData);
+    } else {
+      setSubscription(null);
+    }
+  }, [user, setSubscription]);
   return {
-    user,
+    user, // From Convex - source of truth
     isLoading: !isLoaded || (userId && user === undefined),
     isAuthenticated: !!userId,
   };

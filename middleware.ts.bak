@@ -9,24 +9,22 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/banned",
   "/unauthorized",
-  "/api/stkcallback", // MPesa callback
-  "/api/cron(.*)", // All cron jobs
-  "/api/public(.*)", // Any other public APIs
 ]);
 
-const isAdminRoute = createRouteMatcher([
-  "/admin(.*)",
-  "/api/admin(.*)"
-]);
+const isAdminRoute = createRouteMatcher(["/admin(.*)", "/api/admin(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
   const path = request.nextUrl.pathname;
- console.log('Middleware running for:', request.nextUrl.pathname);
+  console.log("Middleware running for:", request.nextUrl.pathname);
   // 2. Skip middleware for public routes
-  if (isPublicRoute(request)) {   console.log('Protecting route:', request.nextUrl.pathname);
+  if (isPublicRoute(request)) {
+    console.log("Protecting route:", request.nextUrl.pathname);
     // Redirect authenticated users away from auth pages
-    if (userId && (path.startsWith("/sign-in") || path.startsWith("/sign-up"))) {
+    if (
+      userId &&
+      (path.startsWith("/sign-in") || path.startsWith("/sign-up"))
+    ) {
       return Response.redirect(new URL("/", request.url));
     }
     return NextResponse.next();
@@ -38,8 +36,8 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // 4. Additional checks
-  const { isBanned, role } = sessionClaims?.metadata as any || {};
-  
+  const { isBanned, role } = (sessionClaims?.metadata as any) || {};
+
   if (isBanned && path !== "/banned") {
     return Response.redirect(new URL("/banned", request.url));
   }
@@ -58,8 +56,8 @@ export default clerkMiddleware(async (auth, request) => {
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     // Always run for API routes
-    '/(api|trpc)(.*)',
+    "/(api|trpc)(.*)",
   ],
 };

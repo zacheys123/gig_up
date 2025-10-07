@@ -26,10 +26,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  
   return (
-   <html lang="en">
-      <body className="bg-white dark:bg-gray-900">
+    <html lang="en" suppressHydrationWarning>
+      <body>
         <Providers>
           <AuthSync />
           {children}

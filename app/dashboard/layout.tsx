@@ -1,6 +1,6 @@
 import { MobileNav } from "@/components/dashboard/MobileNav";
 import { Sidebar } from "@/components/dashboard/SideBar";
-import NotificationHandler from "@/components/NotificationHandler";
+// import NotificationHandler from "@/components/NotificationHandler";
 
 export default function DashboardLayout({
   children,
@@ -8,7 +8,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-black  ">
+    <div className="flex flex-col md:flex-row h-screen  ">
       {/* Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
@@ -16,7 +16,8 @@ export default function DashboardLayout({
 
       <main className="flex-1 overflow-y-auto  md:pb-0">
         {" "}
-        <NotificationHandler /> {children}
+        {/* <NotificationHandler /> */}
+        {children}
       </main>
       {/* Mobile navigation */}
       <div className="md:hidden">
