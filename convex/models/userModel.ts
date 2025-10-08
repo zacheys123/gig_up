@@ -68,6 +68,8 @@ export const userModel = defineTable({
         url: v.string(),
         title: v.string(),
         createdAt: v.optional(v.number()),
+        isPublic: v.optional(v.boolean()),
+        description: v.optional(v.string()),
       })
     )
   ),

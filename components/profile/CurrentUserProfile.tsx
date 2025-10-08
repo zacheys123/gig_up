@@ -125,8 +125,8 @@ const CurrentUserProfile = () => {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [newVideoTitle, setNewVideoTitle] = useState("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
-  const [videoLoading, setVideoLoading] = useState(false);
 
+  const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true); // Default to public
   // Constants
   const months = [
     "January",
@@ -172,7 +172,18 @@ const CurrentUserProfile = () => {
       setIsMusician(user.isMusician || false);
       setIsClient(user.isClient || false);
       setClientHandles(user.handles || "");
-      setVideos(user.videosProfile || []);
+      // Handle videos with proper privacy settings
+      const userVideos = user.videosProfile || [];
+      const videosWithPrivacy: VideoProfileProps[] = userVideos.map(
+        (video, index) => ({
+          _id: video._id,
+          title: video.title || `Performance Video ${index + 1}`,
+          url: video.url,
+          isPublic: video.isPublic !== undefined ? video.isPublic : true, // Default to public for existing videos
+          createdAt: video.createdAt,
+        })
+      );
+      setVideos(videosWithPrivacy);
       // Fix for rate object - handle partial objects and undefined values
       const userRate = user.rate || {};
       setRate({
@@ -229,6 +240,7 @@ const CurrentUserProfile = () => {
   };
 
   // Video handlers (LOCAL STATE ONLY - no separate API calls)
+  // Video handlers (LOCAL STATE ONLY - no separate API calls)
   const addVideo = () => {
     if (!newVideoTitle.trim() || !newVideoUrl.trim()) {
       toast.error("Please enter both title and URL");
@@ -239,12 +251,14 @@ const CurrentUserProfile = () => {
       _id: Date.now().toString(), // Temporary ID
       title: newVideoTitle,
       url: newVideoUrl,
+      isPublic: newVideoPrivacy, // Add this line
       createdAt: Date.now(), // Use timestamp instead of Date object
     };
 
     setVideos((prev) => [...prev, newVideo]);
     setNewVideoTitle("");
     setNewVideoUrl("");
+    setNewVideoPrivacy(true); // Reset to public for next video
     setShowVideoModal(false);
     toast.success("Video added! Don't forget to save your profile.");
   };
@@ -469,10 +483,14 @@ const CurrentUserProfile = () => {
                     const videoWithId: VideoProfileProps = {
                       ...newVideo,
                       _id: Date.now().toString(),
+                      isPublic:
+                        newVideo.isPublic !== undefined
+                          ? newVideo.isPublic
+                          : true, // Default to public if not provided
                     };
                     setVideos((prev) => [...prev, videoWithId]);
                   }}
-                  onRemoveVideo={(videoId: String) => {
+                  onRemoveVideo={(videoId: string) => {
                     setVideos((prev) =>
                       prev.filter((video) => video._id !== videoId)
                     );
@@ -890,9 +908,15 @@ const CurrentUserProfile = () => {
       </Modal>
 
       {/* Video Upload Modal */}
+      {/* Video Upload Modal */}
       <Modal
         isOpen={showVideoModal}
-        onClose={() => setShowVideoModal(false)}
+        onClose={() => {
+          setShowVideoModal(false);
+          setNewVideoTitle("");
+          setNewVideoUrl("");
+          setNewVideoPrivacy(true); // Reset to public
+        }}
         title="Add Performance Video"
       >
         <div className="space-y-4">
@@ -903,6 +927,129 @@ const CurrentUserProfile = () => {
             placeholder="My Amazing Performance"
             Icon={<Music size={16} />}
           />
+
+          {/* Privacy Settings */}
+          <div>
+            <Label
+              className={cn("text-sm font-medium mb-3 block", colors.text)}
+            >
+              Privacy Settings
+            </Label>
+            <div className="space-y-3">
+              {/* Public Option */}
+              <div
+                onClick={() => setNewVideoPrivacy(true)}
+                className={cn(
+                  "border-2 rounded-lg p-4 cursor-pointer transition-all duration-200",
+                  newVideoPrivacy
+                    ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn(
+                      "p-2 rounded-full",
+                      newVideoPrivacy ? "text-amber-600" : "text-gray-500"
+                    )}
+                  >
+                    <Globe size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h4
+                      className={cn(
+                        "font-semibold",
+                        newVideoPrivacy
+                          ? "text-amber-900 dark:text-amber-100"
+                          : "text-gray-900 dark:text-gray-100"
+                      )}
+                    >
+                      Public
+                    </h4>
+                    <p
+                      className={cn(
+                        "text-sm mt-1",
+                        newVideoPrivacy
+                          ? "text-amber-700 dark:text-amber-300"
+                          : "text-gray-600 dark:text-gray-400"
+                      )}
+                    >
+                      Visible to everyone on the platform
+                    </p>
+                  </div>
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                      newVideoPrivacy
+                        ? "border-amber-500 bg-amber-500"
+                        : "border-gray-400"
+                    )}
+                  >
+                    {newVideoPrivacy && (
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Private Option */}
+              <div
+                onClick={() => setNewVideoPrivacy(false)}
+                className={cn(
+                  "border-2 rounded-lg p-4 cursor-pointer transition-all duration-200",
+                  !newVideoPrivacy
+                    ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn(
+                      "p-2 rounded-full",
+                      !newVideoPrivacy ? "text-amber-600" : "text-gray-500"
+                    )}
+                  >
+                    <Lock size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h4
+                      className={cn(
+                        "font-semibold",
+                        !newVideoPrivacy
+                          ? "text-amber-900 dark:text-amber-100"
+                          : "text-gray-900 dark:text-gray-100"
+                      )}
+                    >
+                      Followers Only
+                    </h4>
+                    <p
+                      className={cn(
+                        "text-sm mt-1",
+                        !newVideoPrivacy
+                          ? "text-amber-700 dark:text-amber-300"
+                          : "text-gray-600 dark:text-gray-400"
+                      )}
+                    >
+                      Only visible to your mutual followers
+                    </p>
+                  </div>
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                      !newVideoPrivacy
+                        ? "border-amber-500 bg-amber-500"
+                        : "border-gray-400"
+                    )}
+                  >
+                    {!newVideoPrivacy && (
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <TextInput
             label="Video URL"
             value={newVideoUrl}
@@ -922,12 +1069,14 @@ const CurrentUserProfile = () => {
           </div>
         </div>
         <ModalActions
-          onCancel={() => setShowVideoModal(false)}
+          onCancel={() => {
+            setShowVideoModal(false);
+            setNewVideoTitle("");
+            setNewVideoUrl("");
+            setNewVideoPrivacy(true);
+          }}
           onConfirm={addVideo}
           confirmText="Add Video"
-          // confirmDisabled={
-          //   !newVideoTitle.trim() || !newVideoUrl.trim() || videoLoading
-          // }
         />
       </Modal>
     </div>

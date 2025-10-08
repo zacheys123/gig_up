@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
-
+import { Globe, Lock, Users } from "lucide-react";
 interface VideoProfileComponentProps {
   videos: VideoProfileProps[];
   onAddVideo: (video: VideoProfileProps) => void;
@@ -38,7 +38,9 @@ const VideoProfileComponent = ({
   const [videomenu, setVideomenu] = useState<boolean>(false);
   const [currentvideo, setCurrentVideo] = useState<VideoProfileProps>();
   const [addedVideos, setAddedVideos] = useState<string[]>([]);
-
+  const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [newVideoDescription, setNewVideoDescription] = useState("");
+  const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true); // Default to public
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const dep = "video";
@@ -50,20 +52,34 @@ const VideoProfileComponent = ({
         return;
       }
 
+      if (!newVideoTitle.trim()) {
+        toast.error("Please enter a video title first");
+        return;
+      }
+
       fileupload(
         event,
         (file: string) => {
           if (file) {
-            // Create a new video object and add it
+            // Create a new video object with privacy settings
             const newVideo: VideoProfileProps = {
               _id: Date.now().toString(),
-              title: `Performance Video ${videos.length + 1}`,
+              title: newVideoTitle,
+              description: newVideoDescription || undefined,
               url: file,
+              isPublic: newVideoPrivacy,
+              createdAt: Date.now(),
             };
             onAddVideo(newVideo);
             setAddedVideos((prev) =>
               prev.length < 3 ? [...prev, file] : prev
             );
+
+            // Reset form
+            setNewVideoTitle("");
+            setNewVideoDescription("");
+            setNewVideoPrivacy(true);
+            setUploadModal(false);
           }
         },
         toast,
@@ -79,7 +95,15 @@ const VideoProfileComponent = ({
         user
       );
     },
-    [fileUrl, addedVideos, videos.length, onAddVideo, user]
+    [
+      fileUrl,
+      addedVideos,
+      newVideoTitle,
+      newVideoDescription,
+      newVideoPrivacy,
+      onAddVideo,
+      user,
+    ]
   );
 
   const deleteVideo = (videoId: string) => {
@@ -112,6 +136,70 @@ const VideoProfileComponent = ({
     return "Video";
   };
 
+  const PrivacyOption = ({
+    isSelected,
+    onClick,
+    icon,
+    title,
+    description,
+  }: {
+    isSelected: boolean;
+    onClick: () => void;
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+  }) => (
+    <div
+      onClick={onClick}
+      className={cn(
+        "border-2 rounded-lg p-4 cursor-pointer transition-all duration-200",
+        isSelected
+          ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "p-2 rounded-full",
+            isSelected ? "text-amber-600" : "text-gray-500"
+          )}
+        >
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h4
+            className={cn(
+              "font-semibold",
+              isSelected
+                ? "text-amber-900 dark:text-amber-100"
+                : "text-gray-900 dark:text-gray-100"
+            )}
+          >
+            {title}
+          </h4>
+          <p
+            className={cn(
+              "text-sm mt-1",
+              isSelected
+                ? "text-amber-700 dark:text-amber-300"
+                : "text-gray-600 dark:text-gray-400"
+            )}
+          >
+            {description}
+          </p>
+        </div>
+        <div
+          className={cn(
+            "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+            isSelected ? "border-amber-500 bg-amber-500" : "border-gray-400"
+          )}
+        >
+          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+        </div>
+      </div>
+    </div>
+  );
   return (
     <>
       <div className="space-y-4">
@@ -178,6 +266,25 @@ const VideoProfileComponent = ({
                       </p>
                     </div>
                   </div>
+                  {/* Privacy Badge */}
+                  <div className="absolute top-2 left-2">
+                    <Badge
+                      variant={video.isPublic ? "default" : "secondary"}
+                      className={cn(
+                        "text-xs",
+                        video.isPublic
+                          ? "bg-green-500 hover:bg-green-600"
+                          : "bg-blue-500 hover:bg-blue-600"
+                      )}
+                    >
+                      {video.isPublic ? (
+                        <Globe size={12} className="mr-1" />
+                      ) : (
+                        <Users size={12} className="mr-1" />
+                      )}
+                      {video.isPublic ? "Public" : "Private"}
+                    </Badge>
+                  </div>
 
                   {/* Delete Button */}
                   <button
@@ -222,43 +329,104 @@ const VideoProfileComponent = ({
         )}
       </div>
 
-      {/* Upload Modal */}
       {uploadModal && (
         <div className="flex justify-center items-center fixed inset-0 z-50 bg-black/40">
-          <div className="relative w-[80%] mx-auto max-w-2xl bg-neutral-700 rounded-lg p-6 shadow-lg">
+          <div className="relative w-[90%] mx-auto max-w-2xl bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
             {/* Close Button */}
             <button
-              onClick={() => setUploadModal(false)}
-              className="absolute right-4 top-4 text-white text-2xl font-bold hover:text-gray-300"
+              onClick={() => {
+                setUploadModal(false);
+                setNewVideoTitle("");
+                setNewVideoDescription("");
+                setNewVideoPrivacy(true);
+              }}
+              className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold"
             >
               &times;
             </button>
 
-            {(videos.length || 0) < 3 && addedVideos.length < 3 && (
-              <h2 className="text-center text-white text-xl font-semibold mb-4">
-                Upload Your Video
-              </h2>
-            )}
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+              Upload Performance Video
+            </h2>
 
-            {videos.length < 3 && addedVideos.length < 3 ? (
-              <div className="flex flex-col items-center gap-4">
-                {addedVideos.length < 3 && (
-                  <>
+            <div className="space-y-6">
+              {/* Video Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Video Title *
+                </label>
+                <input
+                  type="text"
+                  value={newVideoTitle}
+                  onChange={(e) => setNewVideoTitle(e.target.value)}
+                  placeholder="My Amazing Piano Performance"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              {/* Video Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={newVideoDescription}
+                  onChange={(e) => setNewVideoDescription(e.target.value)}
+                  placeholder="Describe your performance..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+              </div>
+
+              {/* Privacy Settings */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Privacy Settings
+                </label>
+                <div className="space-y-3">
+                  <PrivacyOption
+                    isSelected={newVideoPrivacy === true}
+                    onClick={() => setNewVideoPrivacy(true)}
+                    icon={<Globe size={20} />}
+                    title="Public"
+                    description="Visible to everyone on the platform"
+                  />
+                  <PrivacyOption
+                    isSelected={newVideoPrivacy === false}
+                    onClick={() => setNewVideoPrivacy(false)}
+                    icon={<Users size={20} />}
+                    title="Followers Only"
+                    description="Only visible to your mutual followers"
+                  />
+                </div>
+              </div>
+
+              {/* File Upload Section */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Upload Video
+                </h3>
+
+                {(videos.length || 0) < 3 ? (
+                  <div className="flex flex-col items-center gap-4">
                     <label
                       htmlFor="postvideo"
                       className={
                         !uploading
-                          ? "bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-5 rounded-lg cursor-pointer transition"
-                          : "pointer-events-none"
+                          ? "bg-amber-500 hover:bg-amber-600 text-white font-medium py-3 px-6 rounded-lg cursor-pointer transition-colors duration-200"
+                          : "bg-gray-400 cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg"
                       }
                     >
                       {!uploading ? (
-                        "Upload Video"
+                        "Choose Video File"
                       ) : (
-                        <CircularProgress
-                          size="16px"
-                          style={{ color: "white" }}
-                        />
+                        <div className="flex items-center gap-2">
+                          <CircularProgress
+                            size={16}
+                            style={{ color: "white" }}
+                          />
+                          Uploading...
+                        </div>
                       )}
                     </label>
                     <input
@@ -267,63 +435,51 @@ const VideoProfileComponent = ({
                       type="file"
                       accept="video/*"
                       onChange={handleFileChange}
-                      disabled={uploading}
+                      disabled={uploading || !newVideoTitle.trim()}
                     />
-                  </>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                      Maximum 3 videos allowed • MP4, WebM, OGG formats • 60MB
+                      max
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-amber-600 dark:text-amber-400 text-center py-4">
+                    You've reached the maximum number of videos (3). Delete one
+                    to upload another.
+                  </p>
                 )}
               </div>
-            ) : (
-              <p className="text-neutral-400 text-center">
-                {`You've reached the maximum number of clips (3). Delete one to upload another.`}
-              </p>
-            )}
 
-            {/* Display Added Videos */}
-            {addedVideos.length > 0 && videos.length < 4 && (
-              <div className="mt-6">
-                <h3 className="text-white text-md font-semibold mb-2">
-                  Recently Added Videos
-                </h3>
-                <div className="flex gap-3 overflow-x-auto">
-                  {addedVideos.map((vid, index) => (
-                    <div
-                      key={index}
-                      className="relative group w-24 h-24 rounded-lg overflow-hidden border"
-                    >
-                      <video
-                        className="w-full h-full object-cover"
-                        src={vid}
-                        muted
-                      />
-                    </div>
-                  ))}
-                </div>
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setUploadModal(false);
+                    setNewVideoTitle("");
+                    setNewVideoDescription("");
+                    setNewVideoPrivacy(true);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    // This will be handled by the file upload
+                    document.getElementById("postvideo")?.click();
+                  }}
+                  disabled={uploading || !newVideoTitle.trim()}
+                  className={cn(
+                    "flex-1 px-4 py-2 rounded-md transition-colors",
+                    !newVideoTitle.trim() || uploading
+                      ? "bg-gray-400 cursor-not-allowed text-white"
+                      : "bg-amber-500 hover:bg-amber-600 text-white"
+                  )}
+                >
+                  Upload Video
+                </button>
               </div>
-            )}
-
-            {/* Display Permanent Videos */}
-            {videos.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-white text-lg font-semibold mb-2">
-                  Your Videos
-                </h3>
-                <div className="flex gap-3 overflow-x-auto">
-                  {videos.map((vid) => (
-                    <div
-                      onClick={() => openVideoPreview(vid)}
-                      key={vid._id}
-                      className="relative group w-24 h-24 rounded-lg overflow-hidden border cursor-pointer"
-                    >
-                      <video
-                        className="w-full h-full object-cover"
-                        src={vid.url}
-                        muted
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -387,9 +543,7 @@ const VideoProfileComponent = ({
                   <li className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600 cursor-pointer transition-transform transform hover:translate-x-2">
                     🔒 <span>Share Privately</span>
                   </li>
-                  <li className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600 cursor-pointer transition-transform transform hover:translate-x-2">
-                    👥 <span>Share with Clients</span>
-                  </li>
+
                   <li
                     className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-800 cursor-pointer transition-transform transform hover:translate-x-2"
                     onClick={() => deleteVideo(currentvideo?._id || "")}

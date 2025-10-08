@@ -61,10 +61,12 @@ export interface UserSearchFilters {
   instrument?: string;
 }
 
-// Tier Update Types
+// In your userTypes.ts
 export interface VideoProfileProps {
   _id: string;
   title: string;
   url: string;
   createdAt?: number;
+  isPublic: boolean; // true = public, false = private (followers only)
+  description?: string; // Optional description field
 }
