@@ -47,6 +47,8 @@ import { ModalActions } from "./ModalActions";
 import { Modal } from "./Modal";
 import { VideoProfileProps } from "@/types/userTypes";
 import VideoProfileComponent from "./VideoProfileComponent";
+import { getFieldDisplayName, ValidationSummary } from "./ValidationSummary";
+import { VALIDATION_MESSAGES, ValidationError } from "@/types/validation";
 
 // Types
 interface RateProps {
@@ -127,6 +129,11 @@ const CurrentUserProfile = () => {
   const [newVideoUrl, setNewVideoUrl] = useState("");
 
   const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true); // Default to public
+
+  // Add this to your state declarations
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
+    []
+  );
   // Constants
   const months = [
     "January",
@@ -143,13 +150,6 @@ const CurrentUserProfile = () => {
     "December",
   ];
   const daysOfMonth = Array.from({ length: 31 }, (_, i) => i + 1);
-
-  const updateRateField = (field: keyof RateProps, value: string) => {
-    setRate((prev) => ({
-      ...prev,
-      [field]: value || "",
-    }));
-  };
 
   useEffect(() => {
     if (user) {
@@ -195,12 +195,155 @@ const CurrentUserProfile = () => {
     }
   }, [user]);
 
+  // Add this helper function
+  const scrollToField = (field: string) => {
+    const fieldSelectors: Record<string, string> = {
+      dateOfBirth: '[data-field="dateOfBirth"]',
+      rates: '[data-field="rates"]',
+      videos: '[data-field="videos"]',
+      firstname: '[data-field="personalInfo"]',
+      lastname: '[data-field="personalInfo"]',
+      city: '[data-field="location"]',
+      talentbio: '[data-field="about"]',
+      profile: '[data-field="personalInfo"]',
+    };
+
+    const selector = fieldSelectors[field];
+    if (selector) {
+      const element = document.querySelector(selector);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Add highlight effect
+      element?.classList.add("ring-2", "ring-amber-500");
+      setTimeout(() => {
+        element?.classList.remove("ring-2", "ring-amber-500");
+      }, 2000);
+    }
+  };
+  // Add this function inside your component
+  const validateProfile = (): ValidationError[] => {
+    const errors: ValidationError[] = [];
+
+    // Validate Date of Birth (for musicians)
+    if (isMusician) {
+      if (!age || !month || !year) {
+        errors.push({
+          field: "dateOfBirth",
+          message: VALIDATION_MESSAGES.dateOfBirth.required,
+          importance: "high",
+        });
+      } else if (
+        isNaN(Number(year)) ||
+        Number(year) < 1900 ||
+        Number(year) > new Date().getFullYear()
+      ) {
+        errors.push({
+          field: "dateOfBirth",
+          message: VALIDATION_MESSAGES.dateOfBirth.invalid,
+          importance: "high",
+        });
+      }
+    }
+
+    // Validate Rates (for musicians)
+    if (isMusician) {
+      const hasValidRates = Object.values(rate).some(
+        (value) =>
+          value &&
+          !isNaN(Number(value.replace(/[$,]/g, ""))) &&
+          Number(value.replace(/[$,]/g, "")) > 0
+      );
+
+      if (!hasValidRates) {
+        errors.push({
+          field: "rates",
+          message: VALIDATION_MESSAGES.rates.required,
+          importance: "high",
+        });
+      }
+    }
+
+    // Validate Videos (recommended but not required)
+    if (isMusician && videos.length === 0) {
+      errors.push({
+        field: "videos",
+        message: VALIDATION_MESSAGES.videos.recommended,
+        importance: "medium",
+      });
+    }
+
+    // Validate essential profile fields
+    const essentialFields = [
+      { value: firstname, field: "firstname", name: "First Name" },
+      { value: lastname, field: "lastname", name: "Last Name" },
+      { value: city, field: "city", name: "City" },
+      { value: talentbio, field: "talentbio", name: "Bio" },
+    ];
+
+    const missingEssential = essentialFields.filter(
+      (field) => !field.value?.trim()
+    );
+    if (missingEssential.length > 0) {
+      errors.push({
+        field: "profile",
+        message: `Complete your ${missingEssential.map((f) => f.name).join(", ")} to make your profile stand out. ${VALIDATION_MESSAGES.profile.incomplete}`,
+        importance: "high",
+      });
+    }
+
+    return errors;
+  };
+
   const handleUpdate = async () => {
     if (!user) return;
 
+    // Run validation
+    const validationErrors = validateProfile();
+    const blockingErrors = validationErrors.filter(
+      (error) => error.importance === "high"
+    );
+
+    // If there are errors, handle them
+    if (validationErrors.length > 0) {
+      setValidationErrors(validationErrors);
+
+      // Scroll to validation summary with highlight
+      scrollToValidationSummary();
+
+      // Different toast messages based on error type
+      if (blockingErrors.length > 0) {
+        toast.error(
+          `Complete ${blockingErrors.length} required field(s) to save`,
+          {
+            description: "Scroll up to see what's missing",
+            action: {
+              label: "View Issues",
+              onClick: () => scrollToValidationSummary(),
+            },
+          }
+        );
+      } else {
+        toast.warning(
+          `Profile can be saved, but ${validationErrors.length} recommendation(s) found`,
+          {
+            description: "Consider completing these for better results",
+            action: {
+              label: "View Tips",
+              onClick: () => scrollToValidationSummary(),
+            },
+          }
+        );
+
+        const shouldContinue = await showConfirmationDialog(validationErrors);
+        if (!shouldContinue) return;
+      }
+
+      return;
+    }
+
+    // Proceed with saving if no errors or user confirmed
     try {
       setLoading(true);
-
       const updateData = {
         firstname,
         lastname,
@@ -222,7 +365,7 @@ const CurrentUserProfile = () => {
         isMusician,
         isClient,
         rate,
-        videosProfile: videos, // ✅ Videos included in main update
+        videosProfile: videos,
       };
 
       await updateUser({
@@ -230,6 +373,7 @@ const CurrentUserProfile = () => {
         updates: updateData,
       });
 
+      setValidationErrors([]);
       toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -237,6 +381,60 @@ const CurrentUserProfile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Enhanced scroll function with highlight animation
+  const scrollToValidationSummary = () => {
+    const validationElement = document.getElementById("validation-summary");
+    if (validationElement) {
+      validationElement.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+
+      // Add highlight animation
+      validationElement.animate(
+        [
+          { backgroundColor: "transparent" },
+          {
+            backgroundColor: colors.warningBg?.replace("bg-", "") || "#fef3c7",
+          },
+          { backgroundColor: "transparent" },
+        ],
+        {
+          duration: 2000,
+          easing: "ease-in-out",
+        }
+      );
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // Custom confirmation dialog (optional)
+  const showConfirmationDialog = (
+    errors: ValidationError[]
+  ): Promise<boolean> => {
+    return new Promise((resolve) => {
+      // You can use a custom modal here instead of window.confirm
+      const shouldContinue = window.confirm(
+        `💡 Profile Recommendations\n\n` +
+          `Your profile can be saved, but we recommend:\n\n` +
+          `${errors.map((error) => `• ${getFieldDisplayName(error.field)}`).join("\n")}\n\n` +
+          `These improvements can help you get more bookings.\n` +
+          `Save anyway?`
+      );
+      resolve(shouldContinue);
+    });
+  };
+
+  // Add this scroll function
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   // Video handlers (LOCAL STATE ONLY - no separate API calls)
@@ -404,7 +602,10 @@ const CurrentUserProfile = () => {
             </Link>
           </div>
         </motion.div>
-
+        <ValidationSummary
+          errors={validationErrors}
+          onFieldClick={scrollToField}
+        />
         {/* Stats Overview */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -907,8 +1108,6 @@ const CurrentUserProfile = () => {
         />
       </Modal>
 
-      {/* Video Upload Modal */}
-      {/* Video Upload Modal */}
       <Modal
         isOpen={showVideoModal}
         onClose={() => {
@@ -919,7 +1118,7 @@ const CurrentUserProfile = () => {
         }}
         title="Add Performance Video"
       >
-        <div className="space-y-4">
+        <div className="space-y-4 pb-[35px]">
           <TextInput
             label="Video Title"
             value={newVideoTitle}

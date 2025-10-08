@@ -67,10 +67,14 @@ export function useThemeColors() {
     destructiveBg: isDarkMode ? "bg-red-900/20" : "bg-red-50",
     destructiveHover: isDarkMode ? "hover:bg-red-900/30" : "hover:bg-red-100",
 
-    // Warning colors
-    warningText: isDarkMode ? "text-yellow-300" : "text-red-600",
-    warningBg: isDarkMode ? "bg-yellow-900/20" : "bg-yellow-50",
-    warningBorder: isDarkMode ? "border-yellow-700" : "border-yellow-200",
+    // ADD WARNING COLORS HERE:
+    warning: isDarkMode
+      ? "bg-amber-900/20 border-amber-800 text-amber-200 hover:bg-amber-900/30"
+      : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100",
+    warningText: isDarkMode ? "text-amber-400" : "text-amber-600",
+    warningBg: isDarkMode ? "bg-amber-900/20" : "bg-amber-50",
+    warningBorder: isDarkMode ? "border-amber-800" : "border-amber-200",
+    warningHover: isDarkMode ? "hover:bg-amber-900/30" : "hover:bg-amber-100",
 
     // Success colors
     successText: isDarkMode ? "text-green-400" : "text-green-600",
@@ -118,6 +122,9 @@ export function useThemeColors() {
     disabledText: isDarkMode ? "text-gray-500" : "text-gray-400",
     disabledBg: isDarkMode ? "bg-gray-700" : "bg-gray-200",
     disabledBorder: isDarkMode ? "border-gray-600" : "border-gray-300",
+    danger: isDarkMode
+      ? "bg-red-900/20 border-red-800 text-red-200 hover:bg-red-900/30"
+      : "bg-red-50 border-red-200 text-red-800 hover:bg-red-100",
   };
 
   return {
