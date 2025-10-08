@@ -21,7 +21,7 @@ interface GigWithUsers extends Gig {
 const ProfilePage = () => {
   const { user, isLoading } = useCurrentUser();
   const router = useRouter();
-  const { colors } = useThemeColors();
+  const { colors, mounted } = useThemeColors();
 
   // Use Convex query to get all gigs with user data
   const gigs = useQuery(api.controllers.gigs.getGigsWithUsers) as
@@ -32,7 +32,7 @@ const ProfilePage = () => {
     if (!isLoading && !user) router.push("/sign-in");
   }, [user, isLoading, router]);
 
-  if (isLoading || !user) {
+  if (isLoading || (!user && mounted)) {
     return (
       <div className={cn("min-h-screen w-full p-4", colors.background)}>
         <div className="max-w-6xl mx-auto space-y-6">
@@ -50,27 +50,11 @@ const ProfilePage = () => {
               )}
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton
-                key={i}
-                className={cn(
-                  "h-10 rounded-lg md:h-12",
-                  colors.backgroundMuted
-                )}
-              />
-            ))}
-          </div>
-
           <div className="grid grid-cols-2 gap-4 mt-6 md:grid-cols-4 md:gap-6">
             {[...Array(4)].map((_, i) => (
               <Skeleton
                 key={i}
-                className={cn(
-                  "h-40 rounded-xl md:h-54",
-                  colors.backgroundMuted
-                )}
+                className={cn("h-32 rounded-xl", colors.backgroundMuted)}
               />
             ))}
           </div>
@@ -82,14 +66,14 @@ const ProfilePage = () => {
   // Calculate user-specific stats
   const userGigsCount =
     gigs?.filter((gig) =>
-      user.isClient
-        ? gig.postedByUser?.clerkId === user.clerkId
-        : gig.bookedByUser?.clerkId === user.clerkId
+      user?.isClient
+        ? gig.postedByUser?.clerkId === user?.clerkId
+        : gig.bookedByUser?.clerkId === user?.clerkId
     ).length || 0;
 
   const totalConnections =
-    (user.followers?.length || 0) + (user.followings?.length || 0);
-
+    (user?.followers?.length || 0) + (user?.followings?.length || 0);
+  console.log(user?.isClient, user?.isMusician);
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -97,374 +81,204 @@ const ProfilePage = () => {
       transition={{ duration: 0.5 }}
       className={cn("min-h-screen w-full p-4 md:p-8", colors.background)}
     >
-      <div className="max-w-6xl mx-auto">
-        {/* Profile Header */}
-        <motion.header
-          initial={{ y: -20 }}
-          animate={{ y: 0 }}
-          className="mb-8 md:mb-12"
-        >
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div>
-              <h1
-                className={cn(
-                  "text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-500"
-                )}
-              >
-                Welcome to Your Profile Page
-              </h1>
-              <p className={cn("text-lg mt-2", colors.textMuted)}>
-                Hello,{" "}
-                <span className={cn("font-medium", colors.text)}>
-                  {user.firstname}!
-                </span>
-              </p>
-            </div>
-
-            <div
+      <div className="max-w-4xl mx-auto">
+        {/* Simplified Header */}
+        <motion.header initial={{ y: -20 }} animate={{ y: 0 }} className="mb-8">
+          <div className="text-center">
+            <h1
               className={cn(
-                "flex items-center gap-3 px-4 py-2 rounded-full border transition-all",
-                colors.secondaryBackground,
-                colors.border
+                "text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-500 mb-2"
               )}
             >
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500/10 to-purple-500/10 flex items-center justify-center">
-                <Icons.user className="h-5 w-5 text-amber-400" />
-              </div>
-              <div>
-                <p className={cn("text-sm font-medium", colors.textMuted)}>
-                  Member since
-                </p>
-                <p className="text-xs text-amber-400">
-                  {new Date(user._creationTime).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
+              Welcome Back, {user?.firstname}!
+            </h1>
+            <p className={cn("text-lg", colors.textMuted)}>
+              {user?.isMusician
+                ? "Musician"
+                : user?.isClient
+                  ? "Client"
+                  : "Member"}{" "}
+              • Joined{" "}
+              {user?._creationTime
+                ? new Date(user._creationTime).toLocaleDateString()
+                : "Recently"}
+            </p>
           </div>
         </motion.header>
 
-        {/* Profile Section */}
+        {/* Quick Stats Overview */}
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="mb-8 md:mb-14"
+          className="mb-8"
+        >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              {
+                icon: <Icons.gig className="h-5 w-5" />,
+                title: user?.isClient ? "Gigs Posted" : "Gigs Booked",
+                value: userGigsCount,
+                color: "from-blue-500/10 to-blue-500/20",
+              },
+              {
+                icon: <Icons.earnings className="h-5 w-5" />,
+                title: "Earnings",
+                value: `KES ${user?.earnings?.toFixed(0) || "0"}`,
+                color: "from-green-500/10 to-green-500/20",
+              },
+              {
+                icon: <Icons.connections className="h-5 w-5" />,
+                title: "Connections",
+                value: totalConnections,
+                color: "from-purple-500/10 to-purple-500/20",
+              },
+              {
+                icon: <Icons.user className="h-5 w-5" />,
+                title: "Account Type",
+                value: user?.isMusician
+                  ? "Musician"
+                  : user?.isClient
+                    ? "Client"
+                    : "Not Set",
+                color: "from-amber-500/10 to-amber-500/20",
+              },
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ y: -2 }}
+                className={cn(
+                  "rounded-xl p-4 border text-center",
+                  colors.card,
+                  colors.border
+                )}
+              >
+                <div
+                  className={cn(
+                    "p-2 rounded-lg bg-gradient-to-br mx-auto w-12 mb-2",
+                    stat.color
+                  )}
+                >
+                  {stat.icon}
+                </div>
+                <p className={cn("text-2xl font-bold", colors.text)}>
+                  {stat.value}
+                </p>
+                <p className={cn("text-sm mt-1", colors.textMuted)}>
+                  {stat.title}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* Profile Completion */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8"
         >
           <div
-            className={cn(
-              "rounded-2xl border p-6 md:p-8 backdrop-blur-sm",
-              colors.card,
-              colors.border
-            )}
+            className={cn("rounded-xl border p-6", colors.card, colors.border)}
           >
-            {/* Replace with your RouteProfile component */}
-            <div className="text-center py-8">
-              <h3 className={cn("text-xl font-semibold mb-4", colors.text)}>
-                Profile Management
-              </h3>
-              <p className={colors.textMuted}>
-                Your profile management section will appear here
+            <h2 className={cn("text-xl font-semibold mb-4", colors.text)}>
+              Profile Completion
+            </h2>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className={cn("text-sm", colors.textMuted)}>
+                  Progress
+                </span>
+                <span className="text-amber-400 font-bold">
+                  {Math.round(
+                    (((user?.firstname ? 1 : 0) +
+                      (user?.date ? 1 : 0) +
+                      (user?.month ? 1 : 0) +
+                      (user?.year ? 1 : 0) +
+                      (user?.isMusician || user?.isClient ? 1 : 0)) /
+                      5) *
+                      100
+                  )}
+                  %
+                </span>
+              </div>
+              <div
+                className={cn(
+                  "w-full rounded-full h-2",
+                  colors.backgroundMuted
+                )}
+              >
+                <div
+                  className="bg-gradient-to-r from-amber-500 to-orange-600 h-2 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${
+                      (((user?.firstname ? 1 : 0) +
+                        (user?.date ? 1 : 0) +
+                        (user?.month ? 1 : 0) +
+                        (user?.year ? 1 : 0) +
+                        (user?.isMusician || user?.isClient ? 1 : 0)) /
+                        5) *
+                      100
+                    }%`,
+                  }}
+                />
+              </div>
+              <p className={cn("text-xs text-center", colors.textMuted)}>
+                Complete your profile to unlock all features
               </p>
             </div>
           </div>
         </motion.section>
 
-        {/* Musicians Section - Only show if user is a musician */}
-        {user.isMusician && (
-          <motion.section
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mb-8 md:mb-16"
-          >
-            <div
-              className={cn(
-                "rounded-2xl border p-6 md:p-8 backdrop-blur-sm",
-                colors.card,
-                colors.border
-              )}
-            >
-              <h2
-                className={cn(
-                  "text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400 mb-6"
-                )}
-              >
-                Musician Dashboard
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div
-                  className={cn(
-                    "p-4 rounded-xl border",
-                    colors.secondaryBackground,
-                    colors.border
-                  )}
-                >
-                  <h3 className={cn("text-lg font-semibold mb-2", colors.text)}>
-                    Your Gigs
-                  </h3>
-                  <p className={colors.textMuted}>
-                    Manage your booked performances
-                  </p>
-                </div>
-                <div
-                  className={cn(
-                    "p-4 rounded-xl border",
-                    colors.secondaryBackground,
-                    colors.border
-                  )}
-                >
-                  <h3 className={cn("text-lg font-semibold mb-2", colors.text)}>
-                    Your Portfolio
-                  </h3>
-                  <p className={colors.textMuted}>
-                    Showcase your work and skills
-                  </p>
-                </div>
-              </div>
-            </div>
-          </motion.section>
-        )}
-
-        {/* Stats Section */}
+        {/* Quick Actions */}
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="mb-12 md:mb-16"
         >
           <div
             className={cn(
-              "rounded-2xl border p-6 md:p-8 backdrop-blur-sm",
+              "mb-[70px] rounded-xl border p-6",
               colors.card,
               colors.border
             )}
           >
-            <h2
-              className={cn(
-                "text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400 mb-6 flex items-center gap-3"
-              )}
-            >
-              <Icons.activity className="h-6 w-6 text-amber-400" />
-              Your Activity Overview
+            <h2 className={cn("text-xl font-semibold mb-4", colors.text)}>
+              Quick Actions
             </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-              {[
-                {
-                  icon: <Icons.gig className="h-5 w-5" />,
-                  title: user.isClient ? "Gigs Posted" : "Gigs Booked",
-                  value: userGigsCount,
-                  change: "+12%",
-                  color: "from-blue-500/10 to-blue-500/20",
-                },
-                {
-                  icon: <Icons.earnings className="h-5 w-5" />,
-                  title: "Earnings",
-                  value: `KES ${user.earnings?.toFixed(0) || "0"}`,
-                  change: "+8%",
-                  color: "from-green-500/10 to-green-500/20",
-                },
-                {
-                  icon: <Icons.connections className="h-5 w-5" />,
-                  title: "Connections",
-                  value: totalConnections,
-                  change: "+5",
-                  color: "from-purple-500/10 to-purple-500/20",
-                },
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  whileHover={{ y: -5 }}
-                  className={cn(
-                    "rounded-xl p-5 border transition-all group",
-                    colors.secondaryBackground,
-                    colors.border,
-                    "hover:border-amber-400/30"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div
-                      className={cn(
-                        "p-2 rounded-lg bg-gradient-to-br group-hover:opacity-80 transition-colors",
-                        stat.color
-                      )}
-                    >
-                      {stat.icon}
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-900/30 text-green-400">
-                      {stat.change}
-                    </span>
-                  </div>
-                  <h3 className={cn("text-sm mt-4", colors.textMuted)}>
-                    {stat.title}
-                  </h3>
-                  <p className={cn("text-2xl font-bold mt-2", colors.text)}>
-                    {stat.value}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Additional Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
                 className={cn(
-                  "rounded-xl p-4 border",
+                  "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105",
                   colors.secondaryBackground,
-                  colors.border
+                  colors.border,
+                  "hover:border-amber-400/30"
                 )}
               >
-                <h3 className={cn("text-lg font-semibold mb-3", colors.text)}>
-                  Account Type
-                </h3>
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "px-3 py-1 rounded-full text-sm font-medium border",
-                      user.isMusician
-                        ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                        : user.isClient
-                          ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                          : "bg-gray-500/20 text-gray-400 border-gray-500/30"
-                    )}
-                  >
-                    {user.isMusician
-                      ? "Musician"
-                      : user.isClient
-                        ? "Client"
-                        : "Not Set"}
-                  </div>
-                  <span className={cn("text-sm", colors.textMuted)}>
-                    {user.tier === "pro" ? "Pro Member" : "Free Tier"}
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className={cn(
-                  "rounded-xl p-4 border",
-                  colors.secondaryBackground,
-                  colors.border
-                )}
-              >
-                <h3 className={cn("text-lg font-semibold mb-3", colors.text)}>
-                  Profile Completion
-                </h3>
-                <div
-                  className={cn(
-                    "w-full rounded-full h-2 mb-2",
-                    colors.backgroundMuted
-                  )}
-                >
-                  <div
-                    className="bg-gradient-to-r from-amber-500 to-orange-600 h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${
-                        (((user.firstname ? 1 : 0) +
-                          (user.date ? 1 : 0) +
-                          (user.month ? 1 : 0) +
-                          (user.year ? 1 : 0) +
-                          (user.isMusician || user.isClient ? 1 : 0)) /
-                          5) *
-                        100
-                      }%`,
-                    }}
-                  ></div>
-                </div>
+                <Icons.user className="h-6 w-6 mx-auto mb-2 text-amber-400" />
+                <h3 className={cn("font-medium", colors.text)}>Edit Profile</h3>
                 <p className={cn("text-sm", colors.textMuted)}>
-                  {Math.round(
-                    (((user.firstname ? 1 : 0) +
-                      (user.date ? 1 : 0) +
-                      (user.month ? 1 : 0) +
-                      (user.year ? 1 : 0) +
-                      (user.isMusician || user.isClient ? 1 : 0)) /
-                      5) *
-                      100
-                  )}
-                  % Complete
+                  Update your information
+                </p>
+              </div>
+              <div
+                className={cn(
+                  "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105 ",
+                  colors.secondaryBackground,
+                  colors.border,
+                  "hover:border-amber-400/30"
+                )}
+              >
+                <Icons.gig className="h-6 w-6 mx-auto mb-2 text-amber-400" />
+                <h3 className={cn("font-medium", colors.text)}>
+                  {user?.isClient ? "Post Gig" : "Find Gigs"}
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  {user?.isClient ? "Create a new gig" : "Browse opportunities"}
                 </p>
               </div>
             </div>
-          </div>
-        </motion.section>
-
-        {/* Recent Activity Section */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mb-12"
-        >
-          <div
-            className={cn(
-              "rounded-2xl border p-6 md:p-8 backdrop-blur-sm",
-              colors.card,
-              colors.border
-            )}
-          >
-            <h2
-              className={cn(
-                "text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400 mb-6"
-              )}
-            >
-              Recent Activity
-            </h2>
-
-            {gigs && gigs.length > 0 ? (
-              <div className="space-y-4">
-                {gigs
-                  .filter((gig) =>
-                    user.isClient
-                      ? gig.postedByUser?.clerkId === user.clerkId
-                      : gig.bookedByUser?.clerkId === user.clerkId
-                  )
-                  .slice(0, 5)
-                  .map((gig, index) => (
-                    <motion.div
-                      key={gig._id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className={cn(
-                        "flex items-center gap-4 p-4 rounded-xl border transition-all",
-                        colors.secondaryBackground,
-                        colors.border,
-                        "hover:border-amber-400/30"
-                      )}
-                    >
-                      <div className="w-3 h-3 bg-amber-400 rounded-full"></div>
-                      <div className="flex-1">
-                        <h3 className={cn("font-semibold", colors.text)}>
-                          {gig.title}
-                        </h3>
-                        <p className={cn("text-sm", colors.textMuted)}>
-                          {user.isClient ? "Posted" : "Booked"} •{" "}
-                          {new Date(gig.date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div
-                        className={cn(
-                          "px-3 py-1 rounded-full text-xs font-medium",
-                          gig.isTaken
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-yellow-500/20 text-yellow-400"
-                        )}
-                      >
-                        {gig.isTaken ? "Completed" : "Active"}
-                      </div>
-                    </motion.div>
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className={colors.textMuted}>No recent activity found.</p>
-                <p className={cn("text-sm mt-2", colors.textMuted)}>
-                  {user.isClient
-                    ? "Post your first gig to get started!"
-                    : "Book your first gig to get started!"}
-                </p>
-              </div>
-            )}
           </div>
         </motion.section>
       </div>
@@ -474,7 +288,7 @@ const ProfilePage = () => {
 
 export default ProfilePage;
 
-// Icons component
+// Icons component (unchanged)
 const Icons = {
   user: (props: SVGProps<SVGSVGElement>) => (
     <svg

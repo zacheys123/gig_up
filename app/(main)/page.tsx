@@ -1,7 +1,12 @@
 "use client";
 import Image from "next/image";
 import { CircularProgress } from "@mui/material";
-import { useAuth, SignInButton, SignUpButton } from "@clerk/nextjs";
+import {
+  useAuth,
+  SignInButton,
+  SignUpButton,
+  SignOutButton,
+} from "@clerk/nextjs";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -21,6 +26,10 @@ import {
   User,
   Calendar as CalendarIcon,
   Check,
+  LogOut,
+  Settings,
+  Shield,
+  Bell,
 } from "lucide-react";
 import LoadingSpinner from "./loading";
 
@@ -47,48 +56,44 @@ export default function Home() {
     setIsClientSide(true);
   }, []);
 
-  // Check if profile needs completion
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      const hasIncompleteProfile =
-        user.firstTimeInProfile === true ||
-        !user.date ||
-        !user.month ||
-        !user.year ||
-        (!user.isMusician && !user.isClient);
+  const isNewUser = isAuthenticated && !user?.firstname;
 
-      if (hasIncompleteProfile) {
-        setShowProfileModal(true);
-      }
-    }
-  }, [isAuthenticated, user]);
-
-  // User status conditions - now using Zustand state
-  const hasCompleteProfile =
-    user?.firstname &&
-    user?.date &&
-    user?.month &&
-    user?.year &&
-    (user?.isClient || user?.isMusician) &&
-    user?.firstTimeInProfile === false;
+  const hascompleteProfile =
+    isAuthenticated &&
+    user &&
+    user.firstTimeInProfile === false &&
+    user.date &&
+    user.month &&
+    user.year &&
+    (user.isMusician || user.isClient);
 
   const needsRoleSelection =
     isAuthenticated && user?.firstname && !user?.isClient && !user?.isMusician;
 
-  const isNewUser = isAuthenticated && !user?.firstname;
-
-  const hasIncompleteProfile =
+  const shouldShowProfileModal =
     isAuthenticated &&
     user &&
-    (user.firstTimeInProfile === true ||
-      !user.date ||
-      !user.month ||
-      !user.year ||
-      (!user.isMusician && !user.isClient));
+    (user.isMusician || user.isClient) &&
+    !hascompleteProfile;
 
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Only show modal if user has a role BUT profile is incomplete
+      const shouldShow =
+        (user.isMusician || user.isClient) &&
+        (user.firstTimeInProfile === true ||
+          !user.date ||
+          !user.month ||
+          !user.year);
+
+      if (shouldShow) {
+        setShowProfileModal(true);
+      }
+    }
+  }, [isAuthenticated, user]);
   const getDynamicHref = () => {
-    if (!userId || !user?.firstname || (!user?.isClient && !user?.isMusician))
-      return `/roles/${userId}`;
+    if (!userId || !user?.firstname) return `/profile`; // Basic profile setup
+    if (!user?.isClient && !user?.isMusician) return `/roles/${userId}`; // Role selection
     return !user?.onboardingComplete
       ? `/dashboard`
       : user?.isClient
@@ -99,7 +104,7 @@ export default function Home() {
   };
 
   // Show loading spinner while auth or user data is loading
-  if (!isLoaded || isLoading) {
+  if (!isLoaded) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gray-950 text-white">
         <CircularProgress size="30px" />
@@ -110,6 +115,16 @@ export default function Home() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-950 text-white">
+        <CircularProgress size="30px" />
+        <span className="mt-2 text-lg font-medium text-gray-300">
+          Loading...
+        </span>
+      </div>
+    );
+  }
   // Features for different user types
   const guestFeatures = [
     {
@@ -225,7 +240,7 @@ export default function Home() {
                 <>
                   Welcome{user?.firstname ? `, ${user.firstname}` : " Back"}!
                   <br />
-                  {hasCompleteProfile
+                  {hascompleteProfile
                     ? "Ready to Create?"
                     : "Complete Your Profile"}
                 </>
@@ -247,7 +262,7 @@ export default function Home() {
               transition={{ delay: 0.4, duration: 0.8 }}
             >
               {isAuthenticated
-                ? hasCompleteProfile
+                ? hascompleteProfile
                   ? "Continue your music journey and discover new opportunities."
                   : needsRoleSelection
                     ? "Tell us about yourself to unlock all features."
@@ -267,14 +282,15 @@ export default function Home() {
                     href={getDynamicHref()}
                     className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
                   >
-                    {hasCompleteProfile
+                    {hascompleteProfile
                       ? "Go to Dashboard"
                       : needsRoleSelection
-                        ? "Choose Role"
+                        ? "Choose Your Role"
                         : "Complete Profile"}
+
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
-                  {hasCompleteProfile && (
+                  {hascompleteProfile && (
                     <Link
                       href={user?.isMusician ? "/discover" : "/browse"}
                       className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
@@ -306,7 +322,7 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8, duration: 0.8 }}
             >
-              {isAuthenticated && hasCompleteProfile
+              {isAuthenticated && hascompleteProfile
                 ? // User-specific stats for logged-in users with complete profiles
                   [
                     {
@@ -360,13 +376,13 @@ export default function Home() {
           >
             <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-amber-400 to-pink-500 bg-clip-text">
               {isAuthenticated
-                ? hasCompleteProfile
+                ? hascompleteProfile
                   ? `Features for ${user?.isMusician ? "Musicians" : "Clients"}`
                   : "Why Join GigUp?"
                 : "Why Choose GigUp?"}
             </h2>
             <p className="text-xl text-gray-400 mb-16 max-w-2xl mx-auto">
-              {isAuthenticated && hasCompleteProfile
+              {isAuthenticated && hascompleteProfile
                 ? `Everything you need to ${user?.isMusician ? "grow your music career" : "find amazing talent"}`
                 : "Everything you need to grow your music career in one place"}
             </p>
@@ -403,12 +419,12 @@ export default function Home() {
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-yellow-500 to-pink-600 bg-clip-text">
-              {isAuthenticated && hasCompleteProfile
+              {isAuthenticated && hascompleteProfile
                 ? "Next Steps"
                 : "How It Works"}
             </h2>
             <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-              {isAuthenticated && hasCompleteProfile
+              {isAuthenticated && hascompleteProfile
                 ? "Make the most of your GigUp experience"
                 : "Get started in just a few simple steps"}
             </p>
@@ -457,7 +473,7 @@ export default function Home() {
 
             {/* Dynamic steps based on user status */}
             <div className="grid md:grid-cols-3 gap-8 mt-12">
-              {isAuthenticated && hasCompleteProfile
+              {isAuthenticated && hascompleteProfile
                 ? // Steps for users with complete profiles
                   [
                     {
@@ -551,7 +567,7 @@ export default function Home() {
                 className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
               >
                 <SaveAll className="w-5 h-5" />
-                {hasCompleteProfile
+                {hascompleteProfile
                   ? "Open Dashboard"
                   : needsRoleSelection
                     ? "Choose Your Role"
@@ -572,14 +588,14 @@ export default function Home() {
           >
             <h2 className="text-5xl md:text-6xl font-black mb-6 text-transparent bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text">
               {isAuthenticated
-                ? hasCompleteProfile
+                ? hascompleteProfile
                   ? "Ready to Create?"
                   : "Ready to Complete Your Profile?"
                 : "Ready to Start?"}
             </h2>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
               {isAuthenticated
-                ? hasCompleteProfile
+                ? hascompleteProfile
                   ? `Continue your journey as a ${user?.isMusician ? "musician" : "client"}`
                   : "Complete your setup to unlock all features"
                 : "Join thousands of musicians and music lovers already on GigUp"}
@@ -604,14 +620,14 @@ export default function Home() {
                   href={getDynamicHref()}
                   className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
                 >
-                  {hasCompleteProfile
+                  {hascompleteProfile
                     ? "Go to Dashboard"
                     : needsRoleSelection
                       ? "Choose Role"
                       : "Complete Profile"}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                {hasCompleteProfile && (
+                {hascompleteProfile && (
                   <Link
                     href={user?.isMusician ? "/profile" : "/my-gigs"}
                     className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
@@ -641,122 +657,147 @@ export default function Home() {
         </footer>
       </div>
 
-      {/* Profile Completion Modal */}
+      {/* Professional Floating Profile Completion Modal */}
+      {/* Professional Floating Profile Completion Modal */}
       <AnimatePresence>
         {showProfileModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
+            {/* Enhanced backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-md"
+              onClick={() => setShowProfileModal(false)}
+            />
+
+            {/* Floating Modal Card */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-2xl bg-gray-900 rounded-3xl shadow-2xl border border-amber-500/20 overflow-hidden"
+              transition={{
+                type: "spring",
+                damping: 25,
+                stiffness: 300,
+              }}
+              className="relative w-full max-w-2xl bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6 text-center">
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <AlertCircle className="w-8 h-8 text-white" />
-                  <h3 className="text-2xl font-bold text-white">
-                    Complete Your Profile
-                  </h3>
+              <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                      <AlertCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">
+                        Complete Your Profile
+                      </h3>
+                      <p className="text-amber-100 text-sm">
+                        Finish setup to unlock all features
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setShowProfileModal(false)}
+                    className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-all duration-200"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
                 </div>
-                <p className="text-amber-100">
-                  You need to complete your profile to access all features
-                </p>
               </div>
 
-              {/* Content */}
-              <div className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* Content Area - Improved visibility */}
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   {/* Missing Information */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <div className="space-y-3">
+                    <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                       <User className="w-5 h-5 text-amber-500" />
                       Missing Information
                     </h4>
 
-                    {!user?.date && (
-                      <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span className="text-red-300">
-                          Date of birth (Day)
-                        </span>
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      {!user?.date && (
+                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-red-300 text-sm">
+                            Birth Date (Day)
+                          </span>
+                        </div>
+                      )}
 
-                    {!user?.month && (
-                      <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span className="text-red-300">
-                          Date of birth (Month)
-                        </span>
-                      </div>
-                    )}
+                      {!user?.month && (
+                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-red-300 text-sm">
+                            Birth Date (Month)
+                          </span>
+                        </div>
+                      )}
 
-                    {!user?.year && (
-                      <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span className="text-red-300">
-                          Date of birth (Year)
-                        </span>
-                      </div>
-                    )}
+                      {!user?.year && (
+                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-red-300 text-sm">
+                            Birth Date (Year)
+                          </span>
+                        </div>
+                      )}
 
-                    {!user?.isMusician && !user?.isClient && (
-                      <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span className="text-red-300">
-                          Account type (Musician/Client)
-                        </span>
-                      </div>
-                    )}
+                      {!user?.isMusician && !user?.isClient && (
+                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-red-300 text-sm">
+                            Account Type
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Benefits */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <div className="space-y-3">
+                    <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                       <Star className="w-5 h-5 text-green-500" />
-                      What You'll Get
+                      Unlock Benefits
                     </h4>
 
-                    <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span className="text-green-300">
-                        Access to all features
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span className="text-green-300">
-                        Find gigs or talent
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span className="text-green-300">
-                        Connect with community
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span className="text-green-300">Build your profile</span>
+                    <div className="space-y-2">
+                      {[
+                        "Full platform access",
+                        "Find gigs or talent",
+                        "Connect with community",
+                        "Build your profile",
+                      ].map((benefit, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg"
+                        >
+                          <Check className="w-4 h-4 text-green-500" />
+                          <span className="text-green-300 text-sm">
+                            {benefit}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Progress */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-300">Profile Completion</span>
-                    <span className="text-amber-400 font-semibold">
+                {/* Progress Section */}
+                <div className="mb-6 p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-gray-300 font-medium">
+                      Profile Completion
+                    </span>
+                    <span className="text-amber-400 font-bold">
                       {Math.round(
                         (((user?.firstname ? 1 : 0) +
                           (user?.date ? 1 : 0) +
@@ -769,9 +810,9 @@ export default function Home() {
                       %
                     </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-3">
+                  <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
-                      className="bg-gradient-to-r from-amber-500 to-orange-600 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-amber-500 to-orange-600 h-2 rounded-full transition-all duration-500"
                       style={{
                         width: `${
                           (((user?.firstname ? 1 : 0) +
@@ -787,22 +828,27 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Action Button */}
-                <div className="flex justify-center">
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
                   <Link
                     href="/profile"
-                    className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
+                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 font-semibold rounded-lg hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2 justify-center"
                     onClick={() => setShowProfileModal(false)}
                   >
-                    <User className="w-5 h-5" />
-                    Complete Profile Now
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    <User className="w-4 h-4" />
+                    Complete Profile
                   </Link>
+
+                  <SignOutButton>
+                    <button className="w-full sm:w-auto px-4 py-2 border border-gray-600 text-gray-400 hover:text-red-400 hover:border-red-500 text-sm font-medium rounded-lg hover:bg-red-500/10 transition-all duration-300 flex items-center gap-2 justify-center">
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </SignOutButton>
                 </div>
 
-                <p className="text-center text-gray-400 text-sm mt-4">
-                  This step is required to ensure the best experience for you
-                  and our community
+                <p className="text-center text-gray-500 text-xs mt-4">
+                  Complete your profile for the best experience
                 </p>
               </div>
             </motion.div>

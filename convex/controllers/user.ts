@@ -33,7 +33,142 @@ export const updateFirstLogin = mutation({
 });
 
 // convex/controllers/user.ts
+// For syncing only basic profile data
+export const syncUserProfile = mutation({
+  args: {
+    clerkId: v.string(),
+    email: v.string(),
+    username: v.string(),
+    picture: v.optional(v.string()),
+    firstname: v.optional(v.string()),
+    lastname: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
 
+    const now = Date.now();
+
+    if (existingUser) {
+      // Only update these specific fields
+      const updates: any = {
+        lastActive: now,
+      };
+
+      // Only update if the value is different or missing
+      if (args.email && args.email !== existingUser.email) {
+        updates.email = args.email;
+      }
+      if (args.username && args.username !== existingUser.username) {
+        updates.username = args.username;
+      }
+      if (args.picture && args.picture !== existingUser.picture) {
+        updates.picture = args.picture;
+      }
+      if (args.firstname && args.firstname !== existingUser.firstname) {
+        updates.firstname = args.firstname;
+      }
+      if (args.lastname && args.lastname !== existingUser.lastname) {
+        updates.lastname = args.lastname;
+      }
+
+      // Only patch if there are actual updates
+      if (Object.keys(updates).length > 1) {
+        // More than just lastActive
+        return await ctx.db.patch(existingUser._id, updates);
+      }
+      return existingUser; // No changes needed
+    } else {
+      // Create new user with full defaults
+      const userData = createUserData(args, now);
+      return await ctx.db.insert("users", {
+        ...userData,
+        followers: [],
+        followings: [],
+        refferences: [],
+        musicianhandles: [],
+        musiciangenres: [],
+        savedGigs: [],
+        favoriteGigs: [],
+        likedVideos: [],
+        bookingHistory: [],
+        adminPermissions: [],
+        allreviews: [],
+        myreviews: [],
+        videosProfile: [],
+        gigsBookedThisWeek: { count: 0, weekStart: now },
+      });
+    }
+  },
+});
+// Add to convex/user.ts
+export const updateUserProfile = mutation({
+  args: {
+    userId: v.id("users"),
+    updates: v.object({
+      firstname: v.optional(v.string()),
+      lastname: v.optional(v.string()),
+      email: v.optional(v.string()),
+      username: v.optional(v.string()),
+      city: v.optional(v.string()),
+      instrument: v.optional(v.string()),
+      experience: v.optional(v.string()),
+      date: v.optional(v.string()),
+      month: v.optional(v.string()),
+      year: v.optional(v.string()),
+      address: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      organization: v.optional(v.string()),
+      musicianhandles: v.optional(
+        v.array(
+          v.object({
+            platform: v.string(),
+            handle: v.string(),
+          })
+        )
+      ),
+      musiciangenres: v.optional(v.array(v.string())),
+      talentbio: v.optional(v.string()),
+      handles: v.optional(v.string()),
+      isMusician: v.optional(v.boolean()),
+      isClient: v.optional(v.boolean()),
+      rate: v.optional(
+        v.object({
+          regular: v.string(),
+          function: v.string(),
+          concert: v.string(),
+          corporate: v.string(),
+        })
+      ),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // Verify the user is updating their own profile
+    if (user.clerkId !== identity.subject) {
+      throw new Error("Unauthorized to update this profile");
+    }
+
+    // Filter out undefined values
+    const cleanUpdates = Object.fromEntries(
+      Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+    );
+
+    await ctx.db.patch(args.userId, {
+      ...cleanUpdates,
+      lastActive: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
 // Helper function to create type-safe user data
 const createUserData = (args: any, now: number) => {
   return {
@@ -72,54 +207,56 @@ const createUserData = (args: any, now: number) => {
     bannedAt: 0,
   };
 };
-
-export const createOrUpdateUserPublic = mutation({
+export const getAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("users").collect();
+  },
+});
+export const getCurrentUser = query({
   args: {
     clerkId: v.string(),
-    email: v.string(),
-    username: v.string(),
-    picture: v.optional(v.string()),
-    firstname: v.optional(v.string()),
-    lastname: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    console.log("Creating user publicly:", args.clerkId);
-
-    const existingUser = await ctx.db
+    const user = await ctx.db
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
-    const now = Date.now();
-    const userData = createUserData(args, now);
+    if (!user) return null;
 
-    if (existingUser) {
-      return await ctx.db.patch(existingUser._id, userData);
-    } else {
-      return await ctx.db.insert("users", {
-        ...userData,
-        // Array fields
-        followers: [],
-        followings: [],
-        refferences: [],
-        musicianhandles: [],
-        musiciangenres: [],
-        savedGigs: [],
-        favoriteGigs: [],
-        likedVideos: [],
-        bookingHistory: [],
-        adminPermissions: [],
-        allreviews: [],
-        myreviews: [],
-        videosProfile: [],
-        // Weekly stats
-        gigsBookedThisWeek: { count: 0, weekStart: now },
-      });
-    }
+    // Ensure rate has all properties with safe defaults
+    const safeRate = user.rate
+      ? {
+          regular: user.rate.regular || "",
+          function: user.rate.function || "",
+          concert: user.rate.concert || "",
+          corporate: user.rate.corporate || "",
+        }
+      : {
+          regular: "",
+          function: "",
+          concert: "",
+          corporate: "",
+        };
+
+    return {
+      ...user,
+      rate: safeRate,
+      // ... other safe defaults
+      followers: user.followers || [],
+      followings: user.followings || [],
+      allreviews: user.allreviews || [],
+      myreviews: user.myreviews || [],
+      firstLogin: user.firstLogin ?? true,
+      onboardingComplete: user.onboardingComplete ?? false,
+      isMusician: user.isMusician ?? false,
+      isClient: user.isClient ?? false,
+      tier: user.tier ?? "free",
+    };
   },
 });
 
-// Update the other mutation functions to use proper literal types
 export const updateUserAsMusician = mutation({
   args: {
     clerkId: v.string(),
@@ -159,11 +296,7 @@ export const updateUserAsMusician = mutation({
       bannedAt: v.optional(v.number()),
       lastAdminAction: v.optional(v.number()),
       theme: v.optional(
-        v.union(
-          v.literal("lightMode"),
-          v.literal("darkMode"),
-          v.literal("system")
-        )
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
       ),
     }),
   },
@@ -195,7 +328,6 @@ export const updateUserAsMusician = mutation({
     }
   },
 });
-
 export const updateUserAsClient = mutation({
   args: {
     clerkId: v.string(),
@@ -227,11 +359,7 @@ export const updateUserAsClient = mutation({
       bannedAt: v.optional(v.number()),
       lastAdminAction: v.optional(v.number()),
       theme: v.optional(
-        v.union(
-          v.literal("lightMode"),
-          v.literal("darkMode"),
-          v.literal("system")
-        )
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
       ),
     }),
   },
@@ -260,6 +388,97 @@ export const updateUserAsClient = mutation({
       console.error("Error updating user as client:", error);
       throw error;
     }
+  },
+});
+export const updateUserAsAdmin = mutation({
+  args: {
+    clerkId: v.string(),
+    updates: v.object({
+      isAdmin: v.optional(v.boolean()),
+      adminCity: v.optional(v.string()),
+      adminRole: v.optional(
+        v.union(
+          v.literal("super"),
+          v.literal("content"),
+          v.literal("support"),
+          v.literal("analytics")
+        )
+      ),
+      tier: v.optional(v.union(v.literal("free"), v.literal("pro"))),
+      theme: v.optional(
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
+      ),
+    }),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+        .first();
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+      );
+
+      await ctx.db.patch(user._id, {
+        ...cleanUpdates,
+        lastActive: Date.now(),
+      });
+
+      return { success: true, userId: user._id };
+    } catch (error) {
+      console.error("Error updating user as admin:", error);
+      throw error;
+    }
+  },
+});
+// Add this utility function for user search
+export const searchUsers = query({
+  args: {
+    query: v.string(),
+    isMusician: v.optional(v.boolean()),
+    city: v.optional(v.string()),
+    instrument: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    let users = await ctx.db.query("users").collect();
+
+    const searchTerm = args.query.toLowerCase();
+
+    return users
+      .filter((user) => {
+        const matchesSearch =
+          user.firstname?.toLowerCase().includes(searchTerm) ||
+          user.lastname?.toLowerCase().includes(searchTerm) ||
+          user.username.toLowerCase().includes(searchTerm) ||
+          user.email.toLowerCase().includes(searchTerm) ||
+          user.city?.toLowerCase().includes(searchTerm) ||
+          user.instrument?.toLowerCase().includes(searchTerm);
+
+        const matchesMusician =
+          args.isMusician === undefined || user.isMusician === args.isMusician;
+
+        const matchesCity =
+          !args.city ||
+          user.city?.toLowerCase().includes(args.city.toLowerCase());
+
+        const matchesInstrument =
+          !args.instrument ||
+          user.instrument
+            ?.toLowerCase()
+            .includes(args.instrument.toLowerCase());
+
+        return (
+          matchesSearch && matchesMusician && matchesCity && matchesInstrument
+        );
+      })
+      .slice(0, args.limit || 50);
   },
 });
 
@@ -316,82 +535,156 @@ export const followUser = mutation({
   },
 });
 
-export const getAllUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
-  },
-});
-
-export const getCurrentUser = query({
+export const likeVideo = mutation({
   args: {
-    clerkId: v.string(),
+    videoId: v.string(),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .first();
 
-    if (!user) return null;
+    if (!user) throw new Error("User not found");
 
-    return {
-      ...user,
-      // Safe defaults for all fields
-      followers: user.followers || [],
-      followings: user.followings || [],
-      allreviews: user.allreviews || [],
-      myreviews: user.myreviews || [],
-      firstLogin: user.firstLogin ?? true,
-      onboardingComplete: user.onboardingComplete ?? false,
-      isMusician: user.isMusician ?? false,
-      isClient: user.isClient ?? false,
-      tier: user.tier ?? "free",
-    };
+    const likedVideos = user.likedVideos || [];
+
+    if (!likedVideos.includes(args.videoId)) {
+      await ctx.db.patch(user._id, {
+        likedVideos: [...likedVideos, args.videoId],
+        lastActive: Date.now(),
+      });
+    }
+
+    return { success: true };
   },
 });
 
-// Add this utility function for user search
-export const searchUsers = query({
+export const unlikeVideo = mutation({
   args: {
-    query: v.string(),
-    isMusician: v.optional(v.boolean()),
-    city: v.optional(v.string()),
-    instrument: v.optional(v.string()),
-    limit: v.optional(v.number()),
+    videoId: v.string(),
   },
   handler: async (ctx, args) => {
-    let users = await ctx.db.query("users").collect();
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
 
-    const searchTerm = args.query.toLowerCase();
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
 
-    return users
-      .filter((user) => {
-        const matchesSearch =
-          user.firstname?.toLowerCase().includes(searchTerm) ||
-          user.lastname?.toLowerCase().includes(searchTerm) ||
-          user.username.toLowerCase().includes(searchTerm) ||
-          user.email.toLowerCase().includes(searchTerm) ||
-          user.city?.toLowerCase().includes(searchTerm) ||
-          user.instrument?.toLowerCase().includes(searchTerm);
+    if (!user) throw new Error("User not found");
 
-        const matchesMusician =
-          args.isMusician === undefined || user.isMusician === args.isMusician;
+    const likedVideos = user.likedVideos || [];
 
-        const matchesCity =
-          !args.city ||
-          user.city?.toLowerCase().includes(args.city.toLowerCase());
+    await ctx.db.patch(user._id, {
+      likedVideos: likedVideos.filter((id) => id !== args.videoId),
+      lastActive: Date.now(),
+    });
 
-        const matchesInstrument =
-          !args.instrument ||
-          user.instrument
-            ?.toLowerCase()
-            .includes(args.instrument.toLowerCase());
-
-        return (
-          matchesSearch && matchesMusician && matchesCity && matchesInstrument
-        );
-      })
-      .slice(0, args.limit || 50);
+    return { success: true };
   },
 });
+
+export const likeGig = mutation({
+  args: {
+    gigId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) throw new Error("User not found");
+
+    const favoriteGigs = user.favoriteGigs || [];
+
+    if (!favoriteGigs.includes(args.gigId)) {
+      await ctx.db.patch(user._id, {
+        favoriteGigs: [...favoriteGigs, args.gigId],
+        lastActive: Date.now(),
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+export const unlikeGig = mutation({
+  args: {
+    gigId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) throw new Error("User not found");
+
+    const favoriteGigs = user.favoriteGigs || [];
+
+    await ctx.db.patch(user._id, {
+      favoriteGigs: favoriteGigs.filter((id) => id !== args.gigId),
+      lastActive: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// export const createOrUpdateUserPublic = mutation({
+//   args: {
+//     clerkId: v.string(),
+//     email: v.string(),
+//     username: v.string(),
+//     picture: v.optional(v.string()),
+//     firstname: v.optional(v.string()),
+//     lastname: v.optional(v.string()),
+//   },
+//   handler: async (ctx, args) => {
+//     console.log("Creating user publicly:", args.clerkId);
+
+//     const existingUser = await ctx.db
+//       .query("users")
+//       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+//       .first();
+
+//     const now = Date.now();
+//     const userData = createUserData(args, now);
+
+//     if (existingUser) {
+//       return await ctx.db.patch(existingUser._id, userData);
+//     } else {
+//       return await ctx.db.insert("users", {
+//         ...userData,
+//         // Array fields
+//         followers: [],
+//         followings: [],
+//         refferences: [],
+//         musicianhandles: [],
+//         musiciangenres: [],
+//         savedGigs: [],
+//         favoriteGigs: [],
+//         likedVideos: [],
+//         bookingHistory: [],
+//         adminPermissions: [],
+//         allreviews: [],
+//         myreviews: [],
+//         videosProfile: [],
+//         // Weekly stats
+//         gigsBookedThisWeek: { count: 0, weekStart: now },
+//       });
+//     }
+//   },
+// });

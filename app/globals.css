@@ -26,3 +26,136 @@ body {
 }
 /* Ensure dark mode works with Tailwind's built-in classes */
 /* No custom CSS needed - let Tailwind handle everything */
+/* app/global.css */
+:root {
+  /* Clerk Color Variables - Match your app's theme */
+  --clerk-primary: #667eea;
+  --clerk-primary-hover: #5a6fd8;
+  --clerk-text: #1f2937;
+  --clerk-text-secondary: #6b7280;
+  --clerk-background: #ffffff;
+  --clerk-border: #e5e7eb;
+  --clerk-error: #ef4444;
+  --clerk-success: #10b981;
+}
+
+/* Clerk Modal Backdrop */
+.clerk-modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Clerk Modal Content */
+.clerk-modal-content {
+  background-color: var(--clerk-background) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Clerk User Button */
+.cl-userButton-popup {
+  background-color: var(--clerk-background) !important;
+  border: 1px solid var(--clerk-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.cl-userButton-popup * {
+  color: var(--clerk-text) !important;
+}
+
+.cl-userButton-popupActionButton {
+  color: var(--clerk-text) !important;
+}
+
+.cl-userButton-popupActionButton:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Clerk Form Elements */
+.cl-form {
+  background-color: var(--clerk-background) !important;
+}
+
+.cl-formFieldInput {
+  background-color: #f8fafc !important;
+  border: 1px solid var(--clerk-border) !important;
+  border-radius: 8px !important;
+  color: var(--clerk-text) !important;
+}
+
+.cl-formFieldInput:focus {
+  border-color: var(--clerk-primary) !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+.cl-formButtonPrimary {
+  background-color: var(--clerk-primary) !important;
+  border-radius: 8px !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.cl-formButtonPrimary:hover {
+  background-color: var(--clerk-primary-hover) !important;
+}
+
+/* Clerk Text Colors */
+.cl-headerTitle,
+.cl-headerSubtitle,
+.cl-formFieldLabel,
+.cl-userButton-popupActionButtonText {
+  color: var(--clerk-text) !important;
+}
+
+.cl-formFieldHint {
+  color: var(--clerk-text-secondary) !important;
+}
+
+/* Clerk Links */
+.cl-footerActionLink {
+  color: var(--clerk-primary) !important;
+}
+
+.cl-footerActionLink:hover {
+  color: var(--clerk-primary-hover) !important;
+}
+
+/* Clerk Alert Messages */
+.cl-alert {
+  border-radius: 8px !important;
+}
+
+.cl-alertError {
+  background-color: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  color: var(--clerk-error) !important;
+}
+
+.cl-alertSuccess {
+  background-color: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  color: var(--clerk-success) !important;
+}
+
+/* Clerk Avatar */
+.cl-userButtonAvatarBox {
+  border-radius: 50% !important;
+}
+
+/* Clerk Card Components */
+.cl-card {
+  background-color: var(--clerk-background) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Clerk OAuth Buttons */
+.cl-socialButtonsBlockButton {
+  border: 1px solid var(--clerk-border) !important;
+  border-radius: 8px !important;
+  color: var(--clerk-text) !important;
+}
+
+.cl-socialButtonsBlockButton:hover {
+  background-color: #f8fafc !important;
+}

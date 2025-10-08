@@ -1,103 +1,25 @@
-// import Image from "next/image";
-// import Modal from "./Modal";
-// import { User } from "lucide-react";
-// import { UserProps } from "@/types/userinterfaces";
-
-// const UserListModal = ({
-//   isOpen,
-//   onClose,
-//   title,
-//   users,
-//   dep,
-// }: {
-//   isOpen: boolean;
-//   onClose: () => void;
-//   title: string;
-//   dep: string;
-//   users:
-//     | {
-//         firstname: string;
-//         email?: string;
-//         picture: string;
-//         lastname: string;
-//         city: string;
-//       }[]
-//     | UserProps[];
-// }) => {
-//   console.log(users);
-//   return (
-//     <Modal isOpen={isOpen} onClose={onClose} title={title}>
-//       <div className="max-h-[60vh] overflow-y-auto">
-//         {users.length === 0 ? (
-//           <p className="text-neutral-400 text-center py-4">
-//             No {title.toLowerCase()} found
-//           </p>
-//         ) : (
-//           <ul className="divide-y divide-neutral-700">
-//             {users.map((user, index) => (
-//               <li
-//                 key={index}
-//                 className="py-3 px-2 hover:bg-neutral-800/50 rounded"
-//               >
-//                 <div className="flex items-center gap-3">
-//                   <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center">
-//                     {user?.picture && user?.firstname ? (
-//                       <Image
-//                         src={user?.picture}
-//                         alt={user?.firstname[0]}
-//                         height={25}
-//                         width={25}
-//                         className="object-cover rounded-full"
-//                       />
-//                     ) : (
-//                       <User size={16} className="text-neutral-400" />
-//                     )}
-//                   </div>
-//                   <div className="flex justify-between items-center w-full">
-//                     <div className="flex flex-col w-full">
-//                       <p className="text-white font-medium">
-//                         {user.firstname || "Unknown User"} {user?.lastname}
-//                       </p>
-//                       {user.email && (
-//                         <p className="text-neutral-400 text-sm">{user.email}</p>
-//                       )}{" "}
-//                     </div>
-//                     {user.city && (
-//                       <p className="text-neutral-400 text-sm whitespace-nowrap">
-//                         <span className="text-yellow-500 text-[10px]">
-//                           Currently in:{" "}
-//                         </span>
-//                         {user.city}
-//                       </p>
-//                     )}
-//                   </div>
-//                 </div>
-//               </li>
-//             ))}
-//           </ul>
-//         )}
-//       </div>
-//     </Modal>
-//   );
-// };
-// export default UserListModal;
 "use client";
 import Image from "next/image";
 import Modal from "./Modal";
 import { User, MessageSquare } from "lucide-react";
-import { UserProps } from "@/types/userinterfaces";
 import { useRouter } from "next/navigation";
-import { IoAdd } from "react-icons/io5";
+import { IoAdd, IoCheckmark } from "react-icons/io5";
 import { useState } from "react";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import {
-  handleFollow,
-  handleFollowing,
-  handleUnfollow,
-  handleUnFollowingCurrent,
-} from "@/utils";
-import { mutate } from "swr";
-import CheckModal from "@/components/CheckModal";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Doc, Id } from "@/convex/_generated/dataModel";
+
+import { useAuth } from "@clerk/nextjs";
+import CheckModal from "./CheckModal";
+
+type UserProps = Doc<"users">;
+interface UserListModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  dep: string;
+  users: UserProps[];
+}
 
 const UserListModal = ({
   isOpen,
@@ -105,291 +27,254 @@ const UserListModal = ({
   title,
   users,
   dep,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  dep: string;
-  users: UserProps[];
-}) => {
+}: UserListModalProps) => {
   const router = useRouter();
-  const { user: myuser } = useCurrentUser();
+  const { userId: clerkId } = useAuth();
 
-  const handleUserClick = (name: string) => {
-    router.push(`/search/${name}`);
-    onClose();
-  };
+  // Get current user from Convex
+  const currentUser = useQuery(
+    api.controllers.user.getCurrentUser,
+    clerkId ? { clerkId } : "skip"
+  );
 
-  const [showX, setShowX] = useState(false);
-  // //   const forget = () => forgetBookings(userId || "", currentgig);
-  // const handleBookUser = (bookingId: string) => {
-  //   setSelectedUser(bookingId);
-  //   console.log(`User ${userId} booked. Others disqualified.`);
-  //   bookgig(router, currentgig, userId || "", bookingId as string);
-  // };
+  // Convex mutations
+  const followUserMutation = useMutation(api.controllers.user.followUser);
+  const [isMutating, setIsMutating] = useState<string | null>(null);
 
-  // Define the onOpenX function
-  const handleOpenX = () => {
-    setShowX(false); // Reset the showX state
-  };
-  console.log(showX);
   const [modal, setModal] = useState<{
     type: "chat" | "video";
     user: UserProps;
   } | null>(null);
-  const [follow, setFollow] = useState(false);
-  const [isMutating, setIsMutating] = useState(false);
 
-  // const handleFollow = async (friend) => {
-  //   if (!friend?._id || !myuser?.user?._id || isMutating) return;
-  //   setIsMutating(true);
-  //   setFollow(true);
-  //   try {
-  //
-  //   } catch (error) {
-  //     setFollow(false);
-  //
-  //     console.error("Error following:", error);
-  //   } finally {
-  //     setIsMutating(false);
-  //   }
-  // };
+  const handleUserClick = (username: string) => {
+    router.push(`/search/${username}`);
+    onClose();
+  };
 
-  // const handleUnfollowClick = async (friend: UserProps) => {
-  //   if (!friend?._id || !myuser?.user?._id || isMutating) return;
-  //   setIsMutating(true);
-  //   setFollow(true);
-  //   try {
-  //
-  //   } catch (error) {
-  //     setFollow(false);
-  //
-  //     console.error("Error following:", error);
-  //   } finally {
-  //     setIsMutating(false);
-  //   }
-  // };
+  const handleOpenX = () => {
+    // Reset any state if needed
+  };
+
+  const handleFollowUser = async (user: UserProps) => {
+    if (!user?._id || !currentUser?._id || isMutating) return;
+
+    setIsMutating(user._id);
+    try {
+      // Convert string to Convex ID and call mutation
+      const targetUserId = user._id as Id<"users">;
+      await followUserMutation({ targetUserId });
+
+      // No need for manual optimistic updates - Convex handles it automatically!
+    } catch (error) {
+      console.error("Error toggling follow:", error);
+    } finally {
+      setIsMutating(null);
+    }
+  };
+
+  const handleChatClick = (e: React.MouseEvent, user: UserProps) => {
+    e.stopPropagation();
+    setModal({
+      type: "chat",
+      user,
+    });
+  };
+
+  const isFollowing = (user: UserProps) => {
+    return currentUser?.followings?.includes(user._id) || false;
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div
         className={
           dep === "musician"
             ? "max-h-[60vh] overflow-y-auto"
-            : "fixed max-h-[60vh] overflow-y-auto"
+            : "max-h-[60vh] overflow-y-auto"
         }
       >
         {users.length === 0 ? (
-          <p className="text-neutral-400 text-center py-4">
-            No {title.toLowerCase()} found
-          </p>
+          <div className="text-center py-8">
+            <p className="text-neutral-400">No {title.toLowerCase()} found</p>
+          </div>
         ) : (
           <ul className="divide-y divide-neutral-700">
             {users.map((user, index) => (
-              <li
-                key={index}
-                className="py-3 px-2 hover:bg-neutral-800/50 rounded cursor-pointer"
-                onClick={() => handleUserClick(user?.username)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center">
-                    {user?.picture && user?.firstname ? (
-                      <Image
-                        src={user?.picture}
-                        alt={user?.firstname[0]}
-                        height={25}
-                        width={25}
-                        className="object-cover rounded-full"
-                      />
-                    ) : (
-                      <User size={16} className="text-neutral-400" />
-                    )}
-                  </div>
-                  <div className="flex justify-between items-center w-full">
-                    <div className="flex flex-col w-full">
-                      <p className="text-white font-medium">
-                        {user.firstname || "Unknown User"} {user?.lastname}
-                      </p>
-                      {user.email && (
-                        <p className="text-neutral-400 text-sm">{user.email}</p>
-                      )}
-
-                      <div className="flex items-center gap-2">
-                        {user.city && dep === "musician" && (
-                          <p className="text-neutral-400 text-sm whitespace-nowrap">
-                            <span className="text-yellow-500 text-[10px]">
-                              Currently in:{" "}
-                            </span>
-                            {user.city}
-                          </p>
-                        )}{" "}
-                      </div>
-                    </div>{" "}
-                    <div className="flex flex-col gap-2 items-center">
-                      {dep === "musician" && (
-                        <button
-                          className=" rounded-full hover:bg-neutral-700 bg-neutral-600 p-2 "
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Handle chat functionality here
-                            alert("chat");
-                          }}
-                        >
-                          <MessageSquare
-                            size={16}
-                            className="text-yellow-500"
-                            onClick={() =>
-                              setModal({
-                                type: "chat",
-                                user,
-                              })
-                            }
-                          />
-                        </button>
-                      )}
-                      {dep === "musician" && (
-                        <div
-                          className={`flex  gap-1 text-black rounded-xl title items-center px-2 py-1 ${
-                            !user?.followers?.includes(myuser?.user?._id)
-                              ? "bg-orange-300"
-                              : "bg-neutral-400"
-                          }`}
-                        >
-                          {!follow &&
-                          user?.followers?.includes(myuser?.user?._id) ? (
-                            <div
-                              onClick={async (ev) => {
-                                ev.preventDefault();
-                                ev.stopPropagation();
-                                setIsMutating(true);
-                                if (
-                                  !user?._id ||
-                                  !myuser?.user?._id ||
-                                  isMutating
-                                )
-                                  return;
-
-                                setFollow((prev: boolean) => !prev);
-                                setIsMutating(true);
-
-                                try {
-                                  const optimisticData = {
-                                    ...user,
-                                    user: {
-                                      ...user,
-                                      followers: [
-                                        ...(user.followers || []),
-                                        myuser?.user?._id,
-                                      ],
-                                    },
-                                  };
-
-                                  mutate(
-                                    `/api/user/getuser/${user?.username}`,
-                                    optimisticData,
-                                    false
-                                  );
-
-                                  await Promise.all([
-                                    handleUnfollow(user._id, myuser?.user),
-                                    handleUnFollowingCurrent(
-                                      user._id,
-                                      myuser?.user
-                                    ),
-                                  ]);
-
-                                  mutate(`/api/user/getuser/${user?.username}`);
-                                } catch (error) {
-                                  mutate(
-                                    `/api/user/getuser/${user?.username}`,
-                                    user,
-                                    false
-                                  );
-
-                                  console.error("Error following:", error);
-                                } finally {
-                                  setIsMutating(false);
-                                }
-                              }}
-                            >
-                              Following
-                            </div>
-                          ) : (
-                            <div
-                              onClick={async (ev) => {
-                                ev.preventDefault();
-                                ev.stopPropagation();
-                                console.log(user?.followers);
-                                if (
-                                  !user?._id ||
-                                  !myuser?.user?._id ||
-                                  isMutating
-                                )
-                                  return;
-                                setFollow((prev: boolean) => !prev);
-                                setIsMutating(true);
-
-                                try {
-                                  const optimisticData = {
-                                    ...user,
-                                    user: {
-                                      ...user,
-                                      followers: [
-                                        ...(user.followers || []),
-                                        myuser?.user?._id,
-                                      ],
-                                    },
-                                  };
-
-                                  mutate(
-                                    `/api/user/getuser/${user?.username}`,
-                                    optimisticData,
-                                    false
-                                  );
-
-                                  await Promise.all([
-                                    handleFollow(user._id, myuser?.user),
-                                    handleFollowing(user._id, myuser?.user),
-                                  ]);
-
-                                  mutate(`/api/user/getuser/${user?.username}`);
-                                } catch (error) {
-                                  mutate(
-                                    `/api/user/getuser/${user?.username}`,
-                                    user,
-                                    false
-                                  );
-
-                                  console.error("Error following:", error);
-                                } finally {
-                                  setIsMutating(false);
-                                }
-                              }}
-                            >
-                              <div className="flex items-center whitespace-nowrap justify-between px-2">
-                                Follow
-                                <IoAdd size="16" className="text-blue-500" />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </li>
+              <UserListItem
+                key={user._id || index}
+                user={user}
+                dep={dep}
+                isFollowing={isFollowing(user)}
+                isMutating={isMutating === user._id}
+                onUserClick={() => handleUserClick(user.username)}
+                onFollowClick={(e) => handleFollowUser(user)}
+                onChatClick={(e) => handleChatClick(e, user)}
+                currentUserId={currentUser?._id}
+              />
             ))}
           </ul>
         )}
       </div>
+
       {dep === "musician" && modal && (
         <CheckModal
           onClose={() => setModal(null)}
           modal={modal}
-          user={myuser?.user}
+          user={currentUser}
           onOpenX={handleOpenX}
         />
       )}
     </Modal>
+  );
+};
+
+interface UserListItemProps {
+  user: UserProps;
+  dep: string;
+  isFollowing: boolean;
+  isMutating: boolean;
+  onUserClick: () => void;
+  onFollowClick: (e: React.MouseEvent) => void;
+  onChatClick: (e: React.MouseEvent) => void;
+  currentUserId?: string;
+}
+
+const UserListItem = ({
+  user,
+  dep,
+  isFollowing,
+  isMutating,
+  onUserClick,
+  onFollowClick,
+  onChatClick,
+  currentUserId,
+}: UserListItemProps) => {
+  return (
+    <li
+      className="py-3 px-2 hover:bg-neutral-800/50 rounded cursor-pointer transition-colors duration-200"
+      onClick={onUserClick}
+    >
+      <div className="flex items-center gap-3">
+        {/* User Avatar */}
+        <div className="flex-shrink-0">
+          <UserAvatar user={user} />
+        </div>
+
+        {/* User Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start w-full">
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-medium truncate">
+                {user.firstname || "Unknown User"} {user.lastname}
+              </p>
+              {user.email && (
+                <p className="text-neutral-400 text-sm truncate">
+                  {user.email}
+                </p>
+              )}
+              {user.city && dep === "musician" && (
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-neutral-400 text-sm truncate">
+                    <span className="text-yellow-500 text-[10px]">
+                      Currently in:{" "}
+                    </span>
+                    {user.city}
+                  </p>
+                </div>
+              )}
+              {user.instrument && dep === "musician" && (
+                <p className="text-amber-400 text-xs mt-1 truncate">
+                  {user.instrument}
+                </p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2 items-end pl-2">
+              {dep === "musician" && (
+                <>
+                  <button
+                    className="rounded-full hover:bg-neutral-700 bg-neutral-600 p-2 transition-colors duration-200"
+                    onClick={onChatClick}
+                    disabled={isMutating}
+                  >
+                    <MessageSquare size={16} className="text-yellow-500" />
+                  </button>
+
+                  <FollowButton
+                    isFollowing={isFollowing}
+                    isMutating={isMutating}
+                    onClick={onFollowClick}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+};
+
+const UserAvatar = ({ user }: { user: UserProps }) => {
+  if (user.picture && user.firstname) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-neutral-700 overflow-hidden">
+        <Image
+          src={user.picture}
+          alt={`${user.firstname}'s avatar`}
+          width={40}
+          height={40}
+          className="object-cover w-full h-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center">
+      <User size={20} className="text-neutral-400" />
+    </div>
+  );
+};
+
+interface FollowButtonProps {
+  isFollowing: boolean;
+  isMutating: boolean;
+  onClick: (e: React.MouseEvent) => void;
+}
+
+const FollowButton = ({
+  isFollowing,
+  isMutating,
+  onClick,
+}: FollowButtonProps) => {
+  const buttonClass = isFollowing
+    ? "bg-neutral-400 hover:bg-neutral-500"
+    : "bg-orange-300 hover:bg-orange-400";
+
+  return (
+    <button
+      className={`flex items-center gap-1 text-black rounded-xl px-3 py-1.5 text-sm font-medium transition-all duration-200 min-w-[80px] justify-center ${
+        isMutating ? "opacity-50 cursor-not-allowed" : ""
+      } ${buttonClass}`}
+      onClick={onClick}
+      disabled={isMutating}
+    >
+      {isMutating ? (
+        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      ) : isFollowing ? (
+        <>
+          <IoCheckmark size={14} className="text-blue-500" />
+          <span>Following</span>
+        </>
+      ) : (
+        <>
+          <span>Follow</span>
+          <IoAdd size={14} className="text-blue-500" />
+        </>
+      )}
+    </button>
   );
 };
 

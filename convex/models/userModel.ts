@@ -66,6 +66,7 @@ export const userModel = defineTable({
       v.object({
         _id: v.string(),
         url: v.string(),
+        title: v.string(),
         createdAt: v.optional(v.number()),
       })
     )
@@ -177,11 +178,7 @@ export const userModel = defineTable({
   reportsCount: v.number(),
 
   // UI and preferences
-  theme: v.union(
-    v.literal("lightMode"),
-    v.literal("darkMode"),
-    v.literal("system")
-  ),
+  theme: v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
 
   // First time flags
   firstTimeInProfile: v.optional(v.boolean()),

@@ -143,7 +143,7 @@ interface User {
   reportsCount: number;
 
   // UI and preferences
-  theme: "lightMode" | "darkMode" | "system";
+  theme: "light" | "dark" | "system";
 
   // First time flags
   firstTimeInProfile?: boolean;
@@ -232,6 +232,7 @@ export const useUserActions = () =>
   useUserStore((state) => ({
     setUser: state.setUser,
     updateUser: state.updateUser,
+
     setLoading: state.setLoading,
   }));
 

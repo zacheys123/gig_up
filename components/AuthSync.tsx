@@ -7,28 +7,34 @@ import { useEffect, useState } from "react";
 
 export function AuthSync() {
   const { user, isLoaded } = useUser();
-  const createOrUpdateUser = useMutation(api.controllers.user.createOrUpdateUserPublic);
+  const syncUserProfile = useMutation(api.controllers.user.syncUserProfile); // Use the new mutation
   const [hasSynced, setHasSynced] = useState(false);
 
   useEffect(() => {
     if (isLoaded && user && !hasSynced) {
-      createOrUpdateUser({
+      syncUserProfile({
         clerkId: user.id,
-        email: user.primaryEmailAddress?.emailAddress || user.emailAddresses[0]?.emailAddress || "",
-        username: user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || `user_${user.id.slice(0, 8)}`,
+        email:
+          user.primaryEmailAddress?.emailAddress ||
+          user.emailAddresses[0]?.emailAddress ||
+          "",
+        username:
+          user.username ||
+          user.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+          `user_${user.id.slice(0, 8)}`,
         picture: user.imageUrl,
         firstname: user.firstName || "",
         lastname: user.lastName || "",
       })
         .then(() => {
-          console.log('User synced successfully');
+          console.log("User synced successfully (profile only)");
           setHasSynced(true);
         })
         .catch((error) => {
-          console.error('Error syncing user:', error);
+          console.error("Error syncing user:", error);
         });
     }
-  }, [user, isLoaded, createOrUpdateUser, hasSynced]);
+  }, [user, isLoaded, syncUserProfile, hasSynced]);
 
   return null;
 }

@@ -60,7 +60,7 @@ export function useUserMutations() {
       banReason: "",
       bannedAt: undefined,
       lastAdminAction: Date.now(),
-      theme: "lightMode" as const,
+      theme: "light" as const,
       // REMOVE THESE - they're not in the mutation schema and have default values anyway
       // allreviews: [],
       // myreviews: [],
@@ -100,7 +100,7 @@ export function useUserMutations() {
       banReason: "",
       bannedAt: undefined,
       lastAdminAction: Date.now(),
-      theme: "lightMode" as const,
+      theme: "light" as const,
       // REMOVE array fields here too
     };
 

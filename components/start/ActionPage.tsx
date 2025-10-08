@@ -643,7 +643,7 @@ const ActionPage = () => {
               description:
                 "Create gigs and book top-tier musicians, DJs, and performers",
               buttonText: "Join as Client",
-              disabled: !!myuser?.user?.isClient,
+              disabled: !!myuser?.isClient,
               onClick: () => handleRoleSelection(false),
             },
             {
@@ -654,7 +654,7 @@ const ActionPage = () => {
                 "Showcase your talent and connect with premium opportunities",
               buttonText: "Join as Talent",
               onClick: () => handleRoleSelection(true),
-              disabled: !!myuser?.user?.isMusician,
+              disabled: !!myuser?.isMusician,
             },
             {
               role: "both",

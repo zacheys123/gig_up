@@ -1,10 +1,27 @@
 // hooks/useThemeColors.ts
 import { useTheme as useNextTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/nextjs";
 
 export function useThemeColors() {
-  const { theme, resolvedTheme } = useNextTheme();
+  const { theme, setTheme, resolvedTheme } = useNextTheme();
+  const { userId } = useAuth();
   const [mounted, setMounted] = useState(false);
+
+  // Get user's theme preference from Convex
+  const userTheme = useQuery(
+    api.controllers.theme.getUserTheme,
+    userId ? { clerkId: userId } : "skip"
+  );
+
+  // Sync Convex theme with next-themes
+  useEffect(() => {
+    if (mounted && userTheme && userTheme !== theme) {
+      setTheme(userTheme);
+    }
+  }, [userTheme, theme, setTheme, mounted]);
 
   useEffect(() => {
     setMounted(true);
@@ -12,7 +29,6 @@ export function useThemeColors() {
 
   const isDarkMode = resolvedTheme === "dark";
 
-  // Return color classes based on theme
   const colors = {
     // Background colors
     background: isDarkMode ? "bg-gray-900" : "bg-white",
@@ -113,10 +129,13 @@ export function useThemeColors() {
   };
 }
 
-// Convenience hook for just the toggle functionality
+// Updated toggle hook with Convex persistence
 export function useThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useNextTheme();
+  const { userId } = useAuth();
   const [mounted, setMounted] = useState(false);
+
+  const updateTheme = useMutation(api.controllers.theme.updateUserTheme);
 
   useEffect(() => {
     setMounted(true);
@@ -124,13 +143,47 @@ export function useThemeToggle() {
 
   const isDarkMode = resolvedTheme === "dark";
 
-  const toggleDarkMode = () => {
-    setTheme(isDarkMode ? "light" : "dark");
+  const toggleDarkMode = async () => {
+    const newTheme = isDarkMode ? "light" : "dark";
+
+    // Update local state immediately for responsiveness
+    setTheme(newTheme);
+
+    // Persist to Convex if user is logged in
+    if (userId) {
+      try {
+        await updateTheme({
+          clerkId: userId,
+          theme: newTheme,
+        });
+      } catch (error) {
+        console.error("Failed to save theme preference:", error);
+      }
+    }
+  };
+
+  const setThemeWithPersistence = async (
+    newTheme: "light" | "dark" | "system"
+  ) => {
+    setTheme(newTheme);
+
+    if (userId && newTheme !== "system") {
+      try {
+        await updateTheme({
+          clerkId: userId,
+          theme: newTheme,
+        });
+      } catch (error) {
+        console.error("Failed to save theme preference:", error);
+      }
+    }
   };
 
   return {
     toggleDarkMode,
+    setTheme: setThemeWithPersistence,
     isDarkMode: mounted ? isDarkMode : false,
     mounted,
+    currentTheme: mounted ? theme : "light",
   };
 }

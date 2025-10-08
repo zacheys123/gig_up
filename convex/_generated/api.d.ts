@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as controllers_gigs from "../controllers/gigs.js";
 import type * as controllers_subscription from "../controllers/subscription.js";
+import type * as controllers_theme from "../controllers/theme.js";
 import type * as controllers_user from "../controllers/user.js";
 import type * as models_gigModel from "../models/gigModel.js";
 import type * as models_userModel from "../models/userModel.js";
@@ -30,6 +31,7 @@ import type * as models_userModel from "../models/userModel.js";
 declare const fullApi: ApiFromModules<{
   "controllers/gigs": typeof controllers_gigs;
   "controllers/subscription": typeof controllers_subscription;
+  "controllers/theme": typeof controllers_theme;
   "controllers/user": typeof controllers_user;
   "models/gigModel": typeof models_gigModel;
   "models/userModel": typeof models_userModel;

@@ -1,4 +1,3 @@
-// app/(main)/components/MobileNavigation.tsx
 "use client";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
@@ -7,21 +6,61 @@ import { Sun, Moon } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import MobileSheet from "../MobileSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Skeleton } from "@/components/ui/skeleton"; // Make sure to import Skeleton
 
 export function MobileNavigation() {
-  const { isSignedIn, user: clerkUser } = useUser();
-  const { user: currentUser } = useCurrentUser();
+  const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
+  const { user: currentUser, isLoading: currentUserLoading } = useCurrentUser();
   const { colors, isDarkMode } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
 
-  // Check if user has a role (isClient or isMusician)
+  // Check if user has a role (isClient or isMusician) only when data is loaded
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
 
-  // Navigation links for users without roles
-  const navigation = [
-    { name: "Home", href: "/" },
-    { name: "Contact", href: "/contact" },
-  ];
+  // Show loading state while data is being fetched
+  if (!clerkLoaded || (isSignedIn && currentUserLoading)) {
+    return (
+      <>
+        <nav
+          className={`fixed top-0 left-0 right-0 z-50 ${colors.navBackground} backdrop-blur-md border-b ${colors.navBorder}`}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              {/* Logo */}
+              <Link href="/" className="flex items-center space-x-2">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center space-x-2"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">G</span>
+                  </div>
+                  <span className={`text-xl font-bold ${colors.text}`}>
+                    GigUp
+                  </span>
+                </motion.div>
+              </Link>
+
+              {/* Right side loading state */}
+              <div className="flex items-center space-x-4">
+                {/* Theme Toggle Skeleton */}
+                <Skeleton className="w-10 h-10 rounded-md" />
+
+                {/* User info skeleton */}
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="w-16 h-4 rounded" />
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <Skeleton className="w-8 h-8 rounded-md" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <div className="h-16" />
+      </>
+    );
+  }
 
   return (
     <>
@@ -45,21 +84,6 @@ export function MobileNavigation() {
                 </span>
               </motion.div>
             </Link>
-
-            {/* Desktop Navigation - Show only if user has no role */}
-            {!hasRole && (
-              <div className="hidden md:flex items-center space-x-8">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${`${colors.text} ${colors.hoverBg} ${colors.primary}`}`}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
-            )}
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
@@ -92,70 +116,36 @@ export function MobileNavigation() {
                     </span>
                     <UserButton />
 
-                    {/* Show MobileSheet only if user has a role */}
-                    {hasRole ? (
-                      <MobileSheet />
-                    ) : (
-                      // Show simple navigation for users without roles
-                      <div className="flex items-center space-x-2">
-                        {navigation.map((item) => (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            className={`px-3 py-1 text-sm font-medium ${colors.text} ${colors.hoverBg} transition-colors`}
-                          >
-                            {item.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
+                    {/* Show MobileSheet ONLY if user has a role AND data is loaded */}
+                    {hasRole && <MobileSheet />}
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Desktop Sign In/Sign Up - Show only if user has no role */}
-                  {!hasRole && (
-                    <div className="hidden md:flex space-x-2">
-                      <Link
-                        href="/sign-in"
-                        className={`px-4 py-2 text-sm font-medium ${colors.text} ${colors.primary} transition-colors`}
-                      >
-                        Sign In
-                      </Link>
-                      <Link
-                        href="/sign-up"
-                        className={`px-4 py-2 ${colors.primaryBg} text-white text-sm font-medium rounded-md ${colors.primaryBgHover} transition-colors`}
-                      >
-                        Sign Up
-                      </Link>
-                    </div>
-                  )}
+                  {/* Desktop Sign In/Sign Up - Show for ALL non-signed-in users */}
+                  <div className="hidden md:flex space-x-2">
+                    <Link
+                      href="/sign-in"
+                      className={`px-4 py-2 text-sm font-medium ${colors.text} ${colors.primary} transition-colors`}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/sign-up"
+                      className={`px-4 py-2 ${colors.primaryBg} text-white text-sm font-medium rounded-md ${colors.primaryBgHover} transition-colors`}
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
 
-                  {/* Mobile */}
+                  {/* Mobile - Show navigation + auth for non-signed-in users */}
                   <div className="md:hidden flex items-center space-x-2">
-                    {hasRole ? (
-                      // Show MobileSheet for users with roles
-                      <MobileSheet />
-                    ) : (
-                      // Show navigation + auth for users without roles
-                      <>
-                        {navigation.map((item) => (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            className={`px-3 py-1 text-sm font-medium ${colors.text} ${colors.hoverBg} transition-colors`}
-                          >
-                            {item.name}
-                          </Link>
-                        ))}
-                        <Link
-                          href="/sign-in"
-                          className={`px-3 py-1 text-sm font-medium ${colors.text} ${colors.primary} transition-colors`}
-                        >
-                          Sign In
-                        </Link>
-                      </>
-                    )}
+                    <Link
+                      href="/sign-in"
+                      className={`px-3 py-1 text-sm font-medium ${colors.text} ${colors.primary} transition-colors`}
+                    >
+                      Sign In
+                    </Link>
                   </div>
                 </>
               )}
