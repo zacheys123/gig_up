@@ -343,6 +343,11 @@ const CurrentUserProfile = () => {
   const handleUpdate = async () => {
     if (!user) return;
 
+    // Add debugging
+    console.log("Current user:", user);
+    console.log("User clerkId:", user.clerkId);
+    console.log("Clerk user:", userdata);
+
     // Run validation
     const validationErrors = validateProfile();
     const blockingErrors = validationErrors.filter(
@@ -352,11 +357,8 @@ const CurrentUserProfile = () => {
     // If there are errors, handle them
     if (validationErrors.length > 0) {
       setValidationErrors(validationErrors);
-
-      // Scroll to validation summary with highlight
       scrollToValidationSummary();
 
-      // Different toast messages based on error type
       if (blockingErrors.length > 0) {
         toast.error(
           `Complete ${blockingErrors.length} required field(s) to save`,
@@ -383,7 +385,6 @@ const CurrentUserProfile = () => {
         const shouldContinue = await showConfirmationDialog(validationErrors);
         if (!shouldContinue) return;
       }
-
       return;
     }
 
@@ -412,10 +413,15 @@ const CurrentUserProfile = () => {
         isClient,
         rate,
         videosProfile: videos,
+        firstTimeInProfile: false,
       };
+
+      console.log("Sending update data:", updateData);
+      console.log("User ID:", user._id);
 
       await updateUser({
         userId: user._id as Id<"users">,
+        clerkId: user.clerkId, // Pass Clerk ID for verification
         updates: updateData,
       });
 

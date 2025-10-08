@@ -107,7 +107,9 @@ export const syncUserProfile = mutation({
 export const updateUserProfile = mutation({
   args: {
     userId: v.id("users"),
+    clerkId: v.string(), // Add this parameter
     updates: v.object({
+      // ... your existing fields ...
       firstname: v.optional(v.string()),
       lastname: v.optional(v.string()),
       email: v.optional(v.string()),
@@ -121,6 +123,7 @@ export const updateUserProfile = mutation({
       address: v.optional(v.string()),
       phone: v.optional(v.string()),
       organization: v.optional(v.string()),
+      firstTimeInProfile: v.optional(v.boolean()),
       musicianhandles: v.optional(
         v.array(
           v.object({
@@ -157,14 +160,11 @@ export const updateUserProfile = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // Verify the user is updating their own profile
-    if (user.clerkId !== identity.subject) {
+    // Verify using the passed clerkId instead of auth context
+    if (user.clerkId !== args.clerkId) {
       throw new Error("Unauthorized to update this profile");
     }
 
@@ -173,8 +173,11 @@ export const updateUserProfile = mutation({
       Object.entries(args.updates).filter(([_, value]) => value !== undefined)
     );
 
+    console.log("Clean updates:", cleanUpdates);
+
     await ctx.db.patch(args.userId, {
       ...cleanUpdates,
+
       lastActive: Date.now(),
     });
 

@@ -163,11 +163,12 @@ interface UserStore {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-
+  searchQuery: string;
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   updateUser: (updates: Partial<User>) => void;
+  setSearchQuery: (data: string) => void;
 }
 
 export const useUserStore = create<UserStore>()(
@@ -177,8 +178,10 @@ export const useUserStore = create<UserStore>()(
       user: null,
       isLoading: false,
       isAuthenticated: false,
-
+      searchQuery: "",
       // Actions
+      setSearchQuery: (data: string) => set(() => ({ searchQuery: data })),
+
       setUser: (user) =>
         set({
           user,

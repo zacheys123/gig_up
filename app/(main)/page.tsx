@@ -58,7 +58,7 @@ export default function Home() {
 
   const isNewUser = isAuthenticated && !user?.firstname;
 
-  const hascompleteProfile =
+  const isProfileComplete =
     isAuthenticated &&
     user &&
     user.firstTimeInProfile === false &&
@@ -70,27 +70,32 @@ export default function Home() {
   const needsRoleSelection =
     isAuthenticated && user?.firstname && !user?.isClient && !user?.isMusician;
 
+  // Show modal only if authenticated, has role, but profile is incomplete
   const shouldShowProfileModal =
     isAuthenticated &&
     user &&
     (user.isMusician || user.isClient) &&
-    !hascompleteProfile;
+    !isProfileComplete;
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Only show modal if user has a role BUT profile is incomplete
-      const shouldShow =
-        (user.isMusician || user.isClient) &&
-        (user.firstTimeInProfile === true ||
-          !user.date ||
-          !user.month ||
-          !user.year);
-
-      if (shouldShow) {
+      if (shouldShowProfileModal) {
         setShowProfileModal(true);
+      } else {
+        setShowProfileModal(false);
       }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, shouldShowProfileModal]);
+  const completionPercentage = Math.round(
+    (((user?.firstname ? 1 : 0) +
+      (user?.date ? 1 : 0) +
+      (user?.month ? 1 : 0) +
+      (user?.year ? 1 : 0) +
+      (user?.isMusician || user?.isClient ? 1 : 0) +
+      (user?.firstTimeInProfile === false ? 1 : 0)) /
+      6) *
+      100
+  );
   const getDynamicHref = () => {
     if (!userId || !user?.firstname) return `/profile`; // Basic profile setup
     if (!user?.isClient && !user?.isMusician) return `/roles/${userId}`; // Role selection
@@ -240,7 +245,7 @@ export default function Home() {
                 <>
                   Welcome{user?.firstname ? `, ${user.firstname}` : " Back"}!
                   <br />
-                  {hascompleteProfile
+                  {isProfileComplete
                     ? "Ready to Create?"
                     : "Complete Your Profile"}
                 </>
@@ -262,7 +267,7 @@ export default function Home() {
               transition={{ delay: 0.4, duration: 0.8 }}
             >
               {isAuthenticated
-                ? hascompleteProfile
+                ? isProfileComplete
                   ? "Continue your music journey and discover new opportunities."
                   : needsRoleSelection
                     ? "Tell us about yourself to unlock all features."
@@ -282,7 +287,7 @@ export default function Home() {
                     href={getDynamicHref()}
                     className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
                   >
-                    {hascompleteProfile
+                    {isProfileComplete
                       ? "Go to Dashboard"
                       : needsRoleSelection
                         ? "Choose Your Role"
@@ -290,7 +295,7 @@ export default function Home() {
 
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
-                  {hascompleteProfile && (
+                  {isProfileComplete && (
                     <Link
                       href={user?.isMusician ? "/discover" : "/browse"}
                       className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
@@ -322,7 +327,7 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8, duration: 0.8 }}
             >
-              {isAuthenticated && hascompleteProfile
+              {isAuthenticated && isProfileComplete
                 ? // User-specific stats for logged-in users with complete profiles
                   [
                     {
@@ -376,13 +381,13 @@ export default function Home() {
           >
             <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-amber-400 to-pink-500 bg-clip-text">
               {isAuthenticated
-                ? hascompleteProfile
+                ? isProfileComplete
                   ? `Features for ${user?.isMusician ? "Musicians" : "Clients"}`
                   : "Why Join GigUp?"
                 : "Why Choose GigUp?"}
             </h2>
             <p className="text-xl text-gray-400 mb-16 max-w-2xl mx-auto">
-              {isAuthenticated && hascompleteProfile
+              {isAuthenticated && isProfileComplete
                 ? `Everything you need to ${user?.isMusician ? "grow your music career" : "find amazing talent"}`
                 : "Everything you need to grow your music career in one place"}
             </p>
@@ -419,12 +424,12 @@ export default function Home() {
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-yellow-500 to-pink-600 bg-clip-text">
-              {isAuthenticated && hascompleteProfile
+              {isAuthenticated && isProfileComplete
                 ? "Next Steps"
                 : "How It Works"}
             </h2>
             <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-              {isAuthenticated && hascompleteProfile
+              {isAuthenticated && isProfileComplete
                 ? "Make the most of your GigUp experience"
                 : "Get started in just a few simple steps"}
             </p>
@@ -473,7 +478,7 @@ export default function Home() {
 
             {/* Dynamic steps based on user status */}
             <div className="grid md:grid-cols-3 gap-8 mt-12">
-              {isAuthenticated && hascompleteProfile
+              {isAuthenticated && isProfileComplete
                 ? // Steps for users with complete profiles
                   [
                     {
@@ -567,7 +572,7 @@ export default function Home() {
                 className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
               >
                 <SaveAll className="w-5 h-5" />
-                {hascompleteProfile
+                {isProfileComplete
                   ? "Open Dashboard"
                   : needsRoleSelection
                     ? "Choose Your Role"
@@ -588,14 +593,14 @@ export default function Home() {
           >
             <h2 className="text-5xl md:text-6xl font-black mb-6 text-transparent bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text">
               {isAuthenticated
-                ? hascompleteProfile
+                ? isProfileComplete
                   ? "Ready to Create?"
                   : "Ready to Complete Your Profile?"
                 : "Ready to Start?"}
             </h2>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
               {isAuthenticated
-                ? hascompleteProfile
+                ? isProfileComplete
                   ? `Continue your journey as a ${user?.isMusician ? "musician" : "client"}`
                   : "Complete your setup to unlock all features"
                 : "Join thousands of musicians and music lovers already on GigUp"}
@@ -620,14 +625,14 @@ export default function Home() {
                   href={getDynamicHref()}
                   className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
                 >
-                  {hascompleteProfile
+                  {isProfileComplete
                     ? "Go to Dashboard"
                     : needsRoleSelection
                       ? "Choose Role"
                       : "Complete Profile"}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                {hascompleteProfile && (
+                {isProfileComplete && (
                   <Link
                     href={user?.isMusician ? "/profile" : "/my-gigs"}
                     className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
@@ -798,16 +803,7 @@ export default function Home() {
                       Profile Completion
                     </span>
                     <span className="text-amber-400 font-bold">
-                      {Math.round(
-                        (((user?.firstname ? 1 : 0) +
-                          (user?.date ? 1 : 0) +
-                          (user?.month ? 1 : 0) +
-                          (user?.year ? 1 : 0) +
-                          (user?.isMusician || user?.isClient ? 1 : 0)) /
-                          5) *
-                          100
-                      )}
-                      %
+                      {completionPercentage}%
                     </span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
