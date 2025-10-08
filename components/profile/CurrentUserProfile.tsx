@@ -47,8 +47,13 @@ import { ModalActions } from "./ModalActions";
 import { Modal } from "./Modal";
 import { VideoProfileProps } from "@/types/userTypes";
 import VideoProfileComponent from "./VideoProfileComponent";
-import { getFieldDisplayName, ValidationSummary } from "./ValidationSummary";
+import {
+  getFieldDisplayName,
+  validateKenyanPhone,
+  ValidationSummary,
+} from "./ValidationSummary";
 import { VALIDATION_MESSAGES, ValidationError } from "@/types/validation";
+import { KenyanPhoneInput } from "./kenyanPhoneInput";
 
 // Types
 interface RateProps {
@@ -220,10 +225,57 @@ const CurrentUserProfile = () => {
       }, 2000);
     }
   };
+
+  // FIXED: Enhanced rate validation function
+
+  const isValidRateValue = (value: string): boolean => {
+    if (!value || value.trim() === "") return false;
+
+    // Remove any currency symbols, commas, spaces
+    let numericValue = value.replace(/[$,£€¥\s]/g, "").toLowerCase();
+
+    // Handle k/K for thousands and m/M for millions
+    if (numericValue.includes("k")) {
+      numericValue = numericValue.replace("k", "");
+      const num = Number(numericValue);
+      return !isNaN(num) && num > 0 && num * 1000 > 0;
+    }
+
+    if (numericValue.includes("m")) {
+      numericValue = numericValue.replace("m", "");
+      const num = Number(numericValue);
+      return !isNaN(num) && num > 0 && num * 1000000 > 0;
+    }
+
+    // Regular number validation
+    const num = Number(numericValue);
+    return !isNaN(num) && num > 0;
+  };
+
   // Add this function inside your component
   const validateProfile = (): ValidationError[] => {
     const errors: ValidationError[] = [];
 
+    if (phone && phone.trim() !== "") {
+      const phoneValidation = validateKenyanPhone(phone);
+      if (!phoneValidation.isValid) {
+        errors.push({
+          field: "phone",
+          message:
+            phoneValidation.error || "Please enter a valid Kenyan phone number",
+          importance: "medium",
+        });
+      }
+    }
+
+    // Make phone required for musicians
+    if (isMusician && (!phone || phone.trim() === "")) {
+      errors.push({
+        field: "phone",
+        message: "Phone number is required for musicians",
+        importance: "high",
+      });
+    }
     // Validate Date of Birth (for musicians)
     if (isMusician) {
       if (!age || !month || !year) {
@@ -245,14 +297,8 @@ const CurrentUserProfile = () => {
       }
     }
 
-    // Validate Rates (for musicians)
     if (isMusician) {
-      const hasValidRates = Object.values(rate).some(
-        (value) =>
-          value &&
-          !isNaN(Number(value.replace(/[$,]/g, ""))) &&
-          Number(value.replace(/[$,]/g, "")) > 0
-      );
+      const hasValidRates = Object.values(rate).some(isValidRateValue);
 
       if (!hasValidRates) {
         errors.push({
@@ -669,6 +715,7 @@ const CurrentUserProfile = () => {
               <SectionContainer
                 icon={<Music size={18} />}
                 title="Video Profile"
+                data-field="videos"
                 // action={
                 //   <Button
                 //     onClick={() => setShowVideoModal(true)}
@@ -703,7 +750,11 @@ const CurrentUserProfile = () => {
             )}
 
             {/* About Section */}
-            <SectionContainer icon={<User size={18} />} title="About">
+            <SectionContainer
+              icon={<User size={18} />}
+              title="About"
+              data-field="about"
+            >
               <Textarea
                 value={talentbio}
                 onChange={(e) => setTalentbio(e.target.value)}
@@ -805,6 +856,7 @@ const CurrentUserProfile = () => {
             <SectionContainer
               icon={<User size={18} />}
               title="Personal Information"
+              data-field="personalInfo"
             >
               <div className="space-y-4">
                 <TextInput
@@ -827,7 +879,7 @@ const CurrentUserProfile = () => {
                 />
 
                 {isMusician && (
-                  <div>
+                  <div data-field="dateOfBirth">
                     <Label className={cn("text-sm font-medium", colors.text)}>
                       Date of Birth
                     </Label>
@@ -881,12 +933,13 @@ const CurrentUserProfile = () => {
                   disabled
                   Icon={<Mail size={16} />}
                 />
-                <TextInput
-                  label="Phone"
+
+                {/* Replace the existing phone input with Kenyan phone input */}
+                <KenyanPhoneInput
                   value={phone}
                   onChange={setPhone}
-                  Icon={<Phone size={16} />}
-                  placeholder="+1 (123) 456-7890"
+                  label="Phone Number"
+                  required={isMusician} // Required for musicians, optional for clients
                 />
               </div>
             </SectionContainer>
@@ -896,6 +949,7 @@ const CurrentUserProfile = () => {
               <SectionContainer
                 icon={<DollarSign size={18} />}
                 title="Performance Rates"
+                data-field="rates"
                 action={
                   <button onClick={() => setShowRates(!showRates)}>
                     {showRates ? (
@@ -963,7 +1017,11 @@ const CurrentUserProfile = () => {
             )}
 
             {/* Location Information */}
-            <SectionContainer icon={<MapPin size={18} />} title="Location">
+            <SectionContainer
+              icon={<MapPin size={18} />}
+              title="Location"
+              data-field="location"
+            >
               <div className="space-y-4">
                 <TextInput
                   label="City"

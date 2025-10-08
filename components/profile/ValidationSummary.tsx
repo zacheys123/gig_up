@@ -1,6 +1,6 @@
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { ValidationError } from "@/types/validation";
+import { VALIDATION_MESSAGES, ValidationError } from "@/types/validation";
 import { motion } from "framer-motion";
 import { Briefcase, ChevronRight, X } from "lucide-react";
 
@@ -187,6 +187,7 @@ export const ValidationSummary = ({
 // Helper function to get display names
 export const getFieldDisplayName = (field: string): string => {
   const displayNames: Record<string, string> = {
+    phone: "Phone Number",
     dateOfBirth: "Date of Birth",
     rates: "Performance Rates",
     videos: "Performance Videos",
@@ -197,7 +198,6 @@ export const getFieldDisplayName = (field: string): string => {
     talentbio: "Bio",
     instrument: "Primary Instrument",
     experience: "Experience Level",
-    genre: "Music Genres",
   };
   return displayNames[field] || field;
 };
@@ -213,4 +213,43 @@ const calculateCompletionPercentage = (errors: ValidationError[]): number => {
     ((totalFields - highPriorityErrors) / totalFields) * 100
   );
   return Math.round(completion);
+};
+
+export const validateKenyanPhone = (
+  phone: string
+): { isValid: boolean; formatted?: string; error?: string } => {
+  if (!phone || phone.trim() === "") {
+    return { isValid: false, error: "Phone number is required" };
+  }
+
+  const cleaned = phone.replace(/[^\d+]/g, "");
+
+  const patterns = {
+    local: /^(07\d{8}|01\d{8})$/,
+    international: /^\+2547\d{8}$/,
+    formatted:
+      /^(07\d{1}[\s-]?\d{3}[\s-]?\d{3,4}|01\d{1}[\s-]?\d{3}[\s-]?\d{3,4})$/,
+  };
+
+  const isValid =
+    patterns.local.test(cleaned) ||
+    patterns.international.test(cleaned) ||
+    patterns.formatted.test(phone);
+
+  if (!isValid) {
+    return {
+      isValid: false,
+      error: "Please enter a valid Kenyan phone number",
+    };
+  }
+
+  let formatted = cleaned;
+  if (patterns.international.test(cleaned)) {
+    formatted = "0" + cleaned.slice(4);
+  }
+  if (patterns.local.test(formatted)) {
+    formatted = formatted.replace(/(\d{3})(\d{3})(\d{3,4})/, "$1 $2 $3");
+  }
+
+  return { isValid: true, formatted };
 };

@@ -6,6 +6,14 @@ export interface ValidationError {
 }
 
 export const VALIDATION_MESSAGES = {
+  // Phone Number
+  phone: {
+    required: "Phone number is required for clients to contact you about gigs.",
+    invalid:
+      "Please enter a valid Kenyan phone number (e.g., 0712 345 678, +254712345678)",
+    format:
+      "Kenyan numbers should start with 07, 01, or +254 followed by 9 digits",
+  },
   // Date of Birth
   dateOfBirth: {
     required:

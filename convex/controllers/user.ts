@@ -136,11 +136,23 @@ export const updateUserProfile = mutation({
       isClient: v.optional(v.boolean()),
       rate: v.optional(
         v.object({
-          regular: v.string(),
-          function: v.string(),
-          concert: v.string(),
-          corporate: v.string(),
+          regular: v.optional(v.string()),
+          function: v.optional(v.string()),
+          concert: v.optional(v.string()),
+          corporate: v.optional(v.string()),
         })
+      ),
+      videosProfile: v.optional(
+        v.array(
+          v.object({
+            _id: v.string(),
+            url: v.string(),
+            title: v.string(),
+            createdAt: v.optional(v.number()),
+            isPublic: v.optional(v.boolean()),
+            description: v.optional(v.string()),
+          })
+        )
       ),
     }),
   },

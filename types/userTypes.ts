@@ -70,3 +70,19 @@ export interface VideoProfileProps {
   isPublic: boolean; // true = public, false = private (followers only)
   description?: string; // Optional description field
 }
+
+// You can create a types file for privacy settings
+export type VideoPrivacy = "public" | "private";
+
+export const VIDEO_PRIVACY_OPTIONS = {
+  PUBLIC: {
+    value: true,
+    label: "Public",
+    description: "Visible to everyone on the platform",
+  },
+  PRIVATE: {
+    value: false,
+    label: "Private",
+    description: "Only visible to your mutual followers",
+  },
+} as const;
