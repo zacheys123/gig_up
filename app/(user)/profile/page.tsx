@@ -249,6 +249,7 @@ const ProfilePage = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
+                onClick={() => router.push(`/profile/${user?.clerkId}/user`)}
                 className={cn(
                   "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105",
                   colors.secondaryBackground,
@@ -262,22 +263,30 @@ const ProfilePage = () => {
                   Update your information
                 </p>
               </div>
-              <div
-                className={cn(
-                  "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105 ",
-                  colors.secondaryBackground,
-                  colors.border,
-                  "hover:border-amber-400/30"
+              {user?.date &&
+                user?.month &&
+                user?.year &&
+                user?.videosProfile && (
+                  <div
+                    onClick={() => router.push(`/av_gigs/${user?.clerkId}`)}
+                    className={cn(
+                      "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105 ",
+                      colors.secondaryBackground,
+                      colors.border,
+                      "hover:border-amber-400/30"
+                    )}
+                  >
+                    <Icons.gig className="h-6 w-6 mx-auto mb-2 text-amber-400" />
+                    <h3 className={cn("font-medium", colors.text)}>
+                      {user?.isClient ? "Post Gig" : "Find Gigs"}
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      {user?.isClient
+                        ? "Create a new gig"
+                        : "Browse opportunities"}
+                    </p>
+                  </div>
                 )}
-              >
-                <Icons.gig className="h-6 w-6 mx-auto mb-2 text-amber-400" />
-                <h3 className={cn("font-medium", colors.text)}>
-                  {user?.isClient ? "Post Gig" : "Find Gigs"}
-                </h3>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  {user?.isClient ? "Create a new gig" : "Browse opportunities"}
-                </p>
-              </div>
             </div>
           </div>
         </motion.section>

@@ -111,8 +111,10 @@ export function useThemeColors() {
     gradientPrimary: isDarkMode
       ? "bg-gradient-to-r from-orange-500 to-red-500"
       : "bg-gradient-to-r from-orange-400 to-red-400",
-
-    // Shadow colors
+    gradientSecondary: isDarkMode
+      ? "bg-gradient-to-br from-gray-900 via-gray-800 to-black"
+      : "bg-gradient-to-br from-gray-50 via-white to-gray-100",
+    // Shadow colos
     shadow: isDarkMode ? "shadow-gray-900/50" : "shadow-gray-400/20",
 
     // Overlay colors
@@ -125,6 +127,7 @@ export function useThemeColors() {
     danger: isDarkMode
       ? "bg-red-900/20 border-red-800 text-red-200 hover:bg-red-900/30"
       : "bg-red-50 border-red-200 text-red-800 hover:bg-red-100",
+    skeleton: isDarkMode ? "border-gray-600/30" : "border-gray-300",
   };
 
   return {

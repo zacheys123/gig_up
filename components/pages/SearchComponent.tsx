@@ -1,258 +1,427 @@
 "use client";
-import { useAuth } from "@clerk/nextjs";
-import { searchFunc } from "@/utils";
-import MainUser from "./MainUser";
-import { useAllUsers } from "@/hooks/useAllUsers";
-import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
-import { FiSearch, FiUsers } from "react-icons/fi";
-import { calculateReliability } from "@/lib/reliability";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import SearchFilters from "./SearchFilters";
-import { experiences } from "@/data";
-import { useUserStore } from "@/app/stores";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import {
+  FiUser,
+  FiMail,
+  FiAtSign,
+  FiStar,
+  FiCalendar,
+  FiXCircle,
+  FiDollarSign,
+  FiClock,
+  FiMoreVertical,
+  FiMapPin,
+  FiBriefcase,
+  FiAward,
+} from "react-icons/fi";
+import { useAllGigs } from "@/hooks/useAllGigs";
+import FollowButton from "./FollowButton";
+import { ArrowRight, X } from "lucide-react";
+import { UserProps } from "@/types/userTypes";
+import { useThemeColors } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 
-const SearchComponent = () => {
-  const { userId } = useAuth();
-  const { searchQuery } = useUserStore();
-  const { users } = useAllUsers();
-  const { user: myuser } = useCurrentUser();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [activeFilters, setActiveFilters] = useState({
-    roleType: [] as string[],
-    instrument: [] as string[],
-    experience: [] as string[],
-    clientOnly: false,
-    musicianOnly: false,
-  });
+interface PaymentConfirmation {
+  gigId: string;
+  confirmPayment: boolean;
+  confirmedAt?: Date | string;
+  temporaryConfirm?: boolean;
+  code?: string;
+}
 
-  // Get experience options for filtering (excluding "Choose Experience")
-  const experienceOptions = experiences().filter((exp) => exp.id !== 0);
+interface GigWithUsers {
+  _id: string;
+  postedBy: string;
+  bookedBy?: string;
+  postedByUser: UserProps;
+  bookedByUser?: UserProps;
+  musicianConfirmPayment?: PaymentConfirmation;
+  clientConfirmPayment?: PaymentConfirmation;
+}
 
-  // Auto-scroll to top when search changes
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [searchQuery]);
+const MainUser = ({
+  _id,
+  email,
+  firstname,
+  lastname,
+  username,
+  followers,
+  picture,
+  isClient,
+  isMusician,
+  organization,
+  roleType,
+  instrument,
+  completedGigsCount,
+  cancelgigCount,
+  location,
+  experience,
+  bio,
+}: UserProps) => {
+  const router = useRouter();
+  const { isLoading: gigsLoading, gigs } = useAllGigs();
+  const [rating, setRating] = useState<number>(0);
+  const [showModal, setShowModal] = useState(false);
+  const { colors, isDarkMode } = useThemeColors();
 
-  const isMusician = myuser?.user?.isMusician;
+  // Get gigs where this user is the poster
+  const postedGigs = useMemo(() => {
+    if (!_id || !gigs) return [];
+    return gigs.filter((gig: GigWithUsers) => gig.postedByUser?._id === _id);
+  }, [gigs, _id]);
 
-  // Process users with reliability data
-  const processedUsers =
-    users?.users
-      ?.filter((user: UserProps) => {
-        const isNotCurrentUser = user.clerkId !== userId;
-        const isNotAdmin = !user.isAdmin;
+  // Get gigs where this user is the booker/musician
+  const bookedGigs = useMemo(() => {
+    if (!_id || !gigs) return [];
+    return gigs.filter((gig: GigWithUsers) => gig.bookedByUser?._id === _id);
+  }, [gigs, _id]);
 
-        return isNotCurrentUser && isNotAdmin;
-      })
-      .map((user: UserProps) => ({
-        ...user,
-        reliabilityScore: calculateReliability(
-          user.completedGigsCount || 0,
-          user.cancelgigCount || 0
-        ),
-      })) || [];
+  // Calculate payment stats and rating
+  const stats = useMemo(() => {
+    const postedGigsPaymentStats = {
+      totalPosted: postedGigs.length,
+      bothConfirmed: postedGigs.filter(
+        (gig: GigWithUsers) =>
+          gig.musicianConfirmPayment?.confirmPayment &&
+          gig.clientConfirmPayment?.confirmPayment
+      ).length,
+    };
 
-  // Filter users based on search
-  const filteredUsers = searchQuery
-    ? searchFunc(processedUsers, searchQuery)
-    : processedUsers;
+    // Calculate rating
+    const reviews = bookedGigs.flatMap(
+      (gig: GigWithUsers) => gig.bookedByUser?.allreviews || []
+    );
+    const calculatedRating = calculateRating(reviews, bookedGigs.length);
 
-  // Apply additional filters
-  // Apply additional filters
-  const applyAdditionalFilters = (users: UserProps[]) => {
-    return users.filter((user) => {
-      // Client/Musician filter - this is the crucial fix
-      if (activeFilters.clientOnly && !user.isClient) return false;
-      if (activeFilters.musicianOnly && !user.isMusician) return false;
+    return { postedGigsPaymentStats, calculatedRating };
+  }, [postedGigs, bookedGigs]);
 
-      // Role type filter
-      if (
-        activeFilters.roleType.length > 0 &&
-        (!user.roleType || !activeFilters.roleType.includes(user.roleType))
-      ) {
-        return false;
-      }
-
-      // Instrument filter
-      if (
-        activeFilters.instrument.length > 0 &&
-        (!user.instrument ||
-          !activeFilters.instrument.includes(user.instrument))
-      ) {
-        return false;
-      }
-
-      // Experience filter
-      if (activeFilters.experience.length > 0) {
-        if (!user.experience) return false;
-
-        const userExp = experienceOptions.find(
-          (exp) => exp.val === user.experience
-        );
-
-        if (!userExp || !activeFilters.experience.includes(userExp.name)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
+  const handleCardClick = () => {
+    const path = isMusician
+      ? `/search/${username}`
+      : `/client/search/${username}`;
+    router.push(path);
   };
 
-  const finalFilteredUsers = applyAdditionalFilters(filteredUsers);
-
-  const handleFilterChange = (filters: {
-    roleType: string[];
-    instrument: string[];
-    experience: string[];
-    musicianOnly: boolean;
-    clientOnly: boolean;
-  }) => {
-    setActiveFilters(filters);
+  const handleMoreClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowModal(true);
   };
+
+  // Simple card stats for the main view
+  const simpleStats = [
+    {
+      icon: <FiCalendar className="text-green-400" />,
+      value: completedGigsCount || 0,
+      label: "Completed",
+    },
+    {
+      icon: <FiStar className="text-amber-400" />,
+      value: isMusician
+        ? stats.calculatedRating.toFixed(1)
+        : stats.postedGigsPaymentStats.bothConfirmed,
+      label: isMusician ? "Rating" : "Paid",
+    },
+  ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="w-full h-[calc(100vh-80px)] bg-gradient-to-br from-gray-900 via-gray-800 to-black"
-    >
-      <div
-        ref={containerRef}
-        className="overflow-y-auto h-full w-full py-6 px-4 sm:px-8 pb-24 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
-      >
-        {/* Search and Filter Controls */}
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4"
-        >
-          <div className="flex items-center gap-2">
-            <FiUsers className="text-gray-400 text-xl" />
-            <h2 className="text-xl font-semibold text-white">
-              {finalFilteredUsers.length}{" "}
-              {finalFilteredUsers.length === 1 ? "Musician" : "Musicians"}
-            </h2>
-            {Object.values(activeFilters).flat().length > 0 && (
-              <span className="text-sm text-gray-400 ml-2">
-                {`(${
-                  Object.values(activeFilters).flat().length
-                } filter(s) active`}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            {searchQuery && (
-              <div className="flex items-center gap-2 text-gray-400">
-                <FiSearch />
-                <span className="text-sm">{`"${searchQuery}"`}</span>
-              </div>
-            )}
-
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
-              className="fixed top-[115px] right-3 z-50 w-72"
-            >
-              <SearchFilters
-                isMusician={isMusician}
-                onFilterChange={handleFilterChange}
-              />
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* User Grid */}
-        <AnimatePresence>
-          {finalFilteredUsers.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pt-[50px]">
-              {finalFilteredUsers
-                ?.filter(
-                  (u: UserProps) => myuser?.user?.isMusician && u?.isMusician
-                )
-                .map((user: UserProps, index: number) => (
-                  <motion.div
-                    key={user._id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 25,
-                      delay: index * 0.03,
-                    }}
-                  >
-                    <MainUser {...user} />
-                  </motion.div>
-                ))}
-            </div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col items-center justify-center h-[50vh] text-gray-400"
-            >
-              <div className="relative mb-6">
-                <FiUsers className="text-6xl opacity-20" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-500 animate-spin-slow"></div>
-                </div>
-              </div>
-              <h3 className="text-2xl font-medium mb-2 text-center">
-                {Object.values(activeFilters).flat().length > 0
-                  ? "No musicians meet your criteria"
-                  : "No musicians found"}
-              </h3>
-              <p className="text-sm text-center max-w-md">
-                {Object.values(activeFilters).flat().length > 0
-                  ? "Try adjusting your filters."
-                  : "Check back later or try a different search."}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Loading state */}
-        {!users && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-gray-800/50 rounded-2xl p-5 h-64 animate-pulse"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-700"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-700 rounded w-1/2"></div>
-                  </div>
-                </div>
-                <div className="mt-4 h-8 bg-gray-700 rounded-lg"></div>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  <div className="h-16 bg-gray-700 rounded-lg"></div>
-                  <div className="h-16 bg-gray-700 rounded-lg"></div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+    <>
+      {/* Simple User Card */}
+      <motion.div
+        onClick={handleCardClick}
+        whileHover={{ y: -2, scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        className={cn(
+          "relative overflow-hidden rounded-xl p-4 cursor-pointer backdrop-blur-md border transition-all duration-300",
+          "bg-white/5 hover:bg-white/10",
+          colors.border
         )}
-      </div>
-    </motion.div>
+      >
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          <div className="relative">
+            {picture ? (
+              <img
+                src={picture}
+                alt={`${firstname} ${lastname}`}
+                className="w-12 h-12 rounded-full border-2 border-white/20 object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white font-medium">
+                {firstname?.[0]}
+                {lastname?.[0]}
+              </div>
+            )}
+          </div>
+
+          {/* User Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white truncate">
+                {firstname} {lastname}
+              </h3>
+              <button
+                onClick={handleMoreClick}
+                className={cn(
+                  "p-1 rounded-md transition-colors",
+                  "hover:bg-white/10 text-gray-400 hover:text-white"
+                )}
+              >
+                <FiMoreVertical size={14} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-gray-300 mt-1">
+              <FiAtSign size={10} />
+              <span className="font-mono truncate">@{username}</span>
+            </div>
+
+            <div className="mt-2">
+              <span
+                className={cn(
+                  "text-xs font-medium px-2 py-1 rounded-full",
+                  isClient
+                    ? "bg-blue-500/20 text-blue-300"
+                    : "bg-amber-500/20 text-amber-300"
+                )}
+              >
+                {isClient ? "Client" : instrument || "Musician"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Simple Stats */}
+        <div className="flex justify-between mt-3 pt-3 border-t border-white/10">
+          {simpleStats.map((stat, index) => (
+            <div key={index} className="flex flex-col items-center">
+              {stat.icon}
+              <span className="text-white text-sm font-bold mt-1">
+                {stat.value}
+              </span>
+              <span className="text-gray-400 text-xs">{stat.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Follow Button */}
+        <div className="mt-3 flex justify-center">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FollowButton _id={_id} followers={followers} />
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Detailed Modal */}
+      {showModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className={cn(
+              "relative rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto",
+              colors.card,
+              colors.border,
+              "border"
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowModal(false)}
+              className={cn(
+                "absolute top-4 right-4 p-2 rounded-full transition-colors",
+                colors.hoverBg,
+                "text-gray-400 hover:text-white"
+              )}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Modal Content */}
+            <div className="flex flex-col items-center text-center mb-6">
+              {/* Avatar */}
+              <div className="relative mb-4">
+                {picture ? (
+                  <img
+                    src={picture}
+                    alt={`${firstname} ${lastname}`}
+                    className="w-20 h-20 rounded-full border-2 border-white/20 object-cover"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white font-medium text-2xl">
+                    {firstname?.[0]}
+                    {lastname?.[0]}
+                  </div>
+                )}
+              </div>
+
+              <h2 className={cn("text-xl font-bold mb-2", colors.text)}>
+                {firstname} {lastname}
+              </h2>
+
+              <div
+                className={cn("flex items-center gap-2 mb-1", colors.textMuted)}
+              >
+                <FiAtSign size={14} />
+                <span className="font-mono">@{username}</span>
+              </div>
+
+              <div
+                className={cn(
+                  "text-sm px-3 py-1 rounded-full font-medium mb-4",
+                  isClient
+                    ? "bg-blue-500/20 text-blue-300"
+                    : "bg-amber-500/20 text-amber-300"
+                )}
+              >
+                {isClient ? "Client" : `${instrument} ${roleType}`}
+              </div>
+
+              {bio && (
+                <p className={cn("text-sm mb-4 text-center", colors.textMuted)}>
+                  {bio}
+                </p>
+              )}
+            </div>
+
+            {/* Detailed Stats Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <StatCard
+                icon={<FiCalendar className="text-green-400" />}
+                value={completedGigsCount || 0}
+                label="Completed Gigs"
+                color="text-green-400"
+              />
+              <StatCard
+                icon={<FiXCircle className="text-red-400" />}
+                value={cancelgigCount || 0}
+                label="Canceled Gigs"
+                color="text-red-400"
+              />
+              <StatCard
+                icon={<FiStar className="text-amber-400" />}
+                value={
+                  isMusician
+                    ? stats.calculatedRating.toFixed(1)
+                    : stats.postedGigsPaymentStats.bothConfirmed
+                }
+                label={isMusician ? "Rating" : "Paid Gigs"}
+                color="text-amber-400"
+              />
+              <StatCard
+                icon={<FiBriefcase className="text-blue-400" />}
+                value={stats.postedGigsPaymentStats.totalPosted}
+                label="Total Gigs"
+                color="text-blue-400"
+              />
+            </div>
+
+            {/* Additional Info */}
+            <div
+              className={cn(
+                "space-y-3 p-4 rounded-lg",
+                colors.secondaryBackground
+              )}
+            >
+              {location && (
+                <div className="flex items-center gap-3">
+                  <FiMapPin className={cn("text-gray-400")} />
+                  <span className={cn("text-sm", colors.text)}>{location}</span>
+                </div>
+              )}
+              {experience && (
+                <div className="flex items-center gap-3">
+                  <FiAward className={cn("text-gray-400")} />
+                  <span className={cn("text-sm", colors.text)}>
+                    {experience} experience
+                  </span>
+                </div>
+              )}
+              {email && (
+                <div className="flex items-center gap-3">
+                  <FiMail className={cn("text-gray-400")} />
+                  <span className={cn("text-sm truncate", colors.text)}>
+                    {email}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCardClick}
+                className={cn(
+                  "flex-1 py-2 px-4 rounded-lg font-medium transition-colors",
+                  "bg-blue-500 hover:bg-blue-600 text-white"
+                )}
+              >
+                View Profile
+              </button>
+              <div className="flex-1">
+                <FollowButton _id={_id} followers={followers} />
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </>
   );
 };
 
-export default SearchComponent;
+// Stat Card Component for Modal
+const StatCard = ({
+  icon,
+  value,
+  label,
+  color,
+}: {
+  icon: React.ReactNode;
+  value: string | number;
+  label: string;
+  color: string;
+}) => (
+  <div
+    className={cn(
+      "bg-white/5 p-4 rounded-lg border border-white/10 text-center"
+    )}
+  >
+    <div className="flex justify-center mb-2">{icon}</div>
+    <div className={cn("text-lg font-bold", color)}>{value}</div>
+    <div className={cn("text-xs text-gray-400 mt-1")}>{label}</div>
+  </div>
+);
+
+// Utility function
+const calculateRating = (
+  reviews: { rating: number }[],
+  gigCount: number
+): number => {
+  if (!reviews || reviews.length === 0) return 0;
+  const avgReviewRating =
+    reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const experienceFactor = Math.log10(gigCount + 0.5) * 1.0;
+  return (
+    Math.round(
+      Math.min(5, avgReviewRating * 0.7 + experienceFactor * 0.3) * 10
+    ) / 10
+  );
+};
+
+export default MainUser;

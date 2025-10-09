@@ -4,10 +4,13 @@ import { debounce } from "lodash";
 import { searchFunc } from "@/utils";
 import { useAllUsers } from "@/hooks/useAllUsers";
 import { useUserStore } from "@/app/stores";
+import { useThemeColors } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 
 const SearchInput = () => {
   const { searchQuery, setSearchQuery } = useUserStore();
   const { users } = useAllUsers();
+  const { colors } = useThemeColors();
 
   const handleInputChange = useCallback(
     debounce((value: string) => setSearchQuery(value), 100),
@@ -19,7 +22,11 @@ const SearchInput = () => {
       autoComplete="off"
       onChange={(ev) => handleInputChange(ev.target.value)}
       value={searchQuery}
-      className="w-full bg-transparent text-orange-200 px-3 placeholder-gray-500 focus:outline-none text-sm md:text-base font-medium tracking-wide"
+      className={cn(
+        "w-full bg-transparent px-3 placeholder-gray-500 focus:outline-none",
+        "text-sm md:text-base font-medium tracking-wide",
+        colors.text
+      )}
       id="search"
       type="text"
       data-autofocus
@@ -30,4 +37,4 @@ const SearchInput = () => {
   );
 };
 
-export default SearchInput; // Fixed: Using default export
+export default SearchInput;

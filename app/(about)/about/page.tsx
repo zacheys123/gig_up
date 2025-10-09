@@ -24,6 +24,7 @@ import { useState, useEffect } from "react"; // Add useState and useEffect
 import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import LoadingSpinner from "@/app/auth/loading";
 
 // Animation variants
 const fadeInUp = {
@@ -96,6 +97,11 @@ export default function AboutPage() {
 
     markFirstLoginComplete();
   }, [userId]);
+  if (!userId) {
+    <div>
+      <LoadingSpinner />
+    </div>;
+  }
   return (
     <div className="bg-gray-50 h-screen overflow-y-auto">
       {/* Hero Section */}

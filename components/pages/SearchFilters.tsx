@@ -19,7 +19,6 @@ interface FilterState {
 }
 
 interface SearchFiltersProps {
-  isMusician: boolean;
   onFilterChange: (filters: FilterState) => void;
 }
 

@@ -2,7 +2,6 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import {
   FiUser,
   FiMail,
@@ -12,11 +11,17 @@ import {
   FiXCircle,
   FiDollarSign,
   FiClock,
+  FiMoreVertical,
+  FiMapPin,
+  FiBriefcase,
+  FiAward,
 } from "react-icons/fi";
 import { useAllGigs } from "@/hooks/useAllGigs";
 import FollowButton from "./FollowButton";
-import { UserProps } from "@/types/userinterfaces";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
+import { UserProps } from "@/types/userTypes";
+import { useThemeColors } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 
 interface PaymentConfirmation {
   gigId: string;
@@ -26,10 +31,12 @@ interface PaymentConfirmation {
   code?: string;
 }
 
-interface MyGigProps {
+interface GigWithUsers {
   _id: string;
-  postedBy: UserProps;
-  bookedBy?: UserProps;
+  postedBy: string;
+  bookedBy?: string;
+  postedByUser: UserProps;
+  bookedByUser?: UserProps;
   musicianConfirmPayment?: PaymentConfirmation;
   clientConfirmPayment?: PaymentConfirmation;
 }
@@ -49,346 +56,338 @@ const MainUser = ({
   instrument,
   completedGigsCount,
   cancelgigCount,
+  city,
+  experience,
+  bio,
 }: UserProps) => {
   const router = useRouter();
-  const { loading: gigsLoading, gigs } = useAllGigs();
+  const { isLoading: gigsLoading, gigs } = useAllGigs();
   const [rating, setRating] = useState<number>(0);
+  const [showModal, setShowModal] = useState(false);
+  const { colors, isDarkMode } = useThemeColors();
 
-  // Memoize calculations to prevent unnecessary recomputations
-  // const { confirmedPayments } = useMemo(() => {
-  //   if (gigsLoading || !gigs)
-  //     return { confirmedPayments: 0, clientPaymentHistory: [] };
-
-  //   return {
-  //     confirmedPayments: calculateConfirmedPayments(gigs, _id || ""),
-  //   };
-  // }, [gigs, gigsLoading, _id]);
-
-  // Inside your MainUser component
+  // Get gigs where this user is the poster
   const postedGigs = useMemo(() => {
     if (!_id || !gigs) return [];
-    return calculateConfirmedPayments(gigs, _id);
+    return gigs.filter((gig) => gig.postedByUser?._id === _id);
   }, [gigs, _id]);
 
-  // For debugging - log the results
-  const postedGigsPaymentStats = useMemo(() => {
-    const now = Date.now();
-    const fiveDaysInMs = 5 * 24 * 60 * 60 * 1000; // 5 days in milliseconds
+  // Get gigs where this user is the booker/musician
+  const bookedGigs = useMemo(() => {
+    if (!_id || !gigs) return [];
+    return gigs.filter((gig) => gig.bookedByUser?._id === _id);
+  }, [gigs, _id]);
 
-    const musicianConfirmedOnly = postedGigs.filter((gig) => {
-      const musicianConfirmed = gig.musicianConfirmPayment?.confirmPayment;
-      const clientConfirmed = gig.clientConfirmPayment?.confirmPayment;
-      const musicianConfirmDate = gig.musicianConfirmPayment?.confirmedAt
-        ? new Date(gig.musicianConfirmPayment.confirmedAt).getTime()
-        : null;
-      const clientConfirmDate = gig.clientConfirmPayment?.confirmedAt
-        ? new Date(gig.clientConfirmPayment.confirmedAt).getTime()
-        : null;
-
-      return (
-        musicianConfirmed &&
-        !clientConfirmed &&
-        musicianConfirmDate &&
-        now - musicianConfirmDate > fiveDaysInMs &&
-        (!clientConfirmDate || clientConfirmDate < musicianConfirmDate)
-      );
-    });
-
-    return {
+  // Calculate payment stats and rating
+  const stats = useMemo(() => {
+    const postedGigsPaymentStats = {
       totalPosted: postedGigs.length,
       bothConfirmed: postedGigs.filter(
         (gig) =>
           gig.musicianConfirmPayment?.confirmPayment &&
           gig.clientConfirmPayment?.confirmPayment
       ).length,
-      onlyMusicianConfirmed: postedGigs.filter(
-        (gig) =>
-          gig.musicianConfirmPayment?.temporaryConfirm &&
-          !gig.clientConfirmPayment?.temporaryConfirm
-      ).length,
-      onlyClientConfirmed: postedGigs.filter(
-        (gig) =>
-          !gig.musicianConfirmPayment?.temporaryConfirm &&
-          gig.clientConfirmPayment?.temporaryConfirm
-      ).length,
-
-      noneConfirmed: postedGigs.filter(
-        (gig) =>
-          !gig.musicianConfirmPayment?.confirmPayment &&
-          !gig.clientConfirmPayment?.confirmPayment
-      ).length,
-      // New fields for date-based analysis
-      musicianConfirmedOver5DaysAgo: musicianConfirmedOnly.length,
-      musicianConfirmedOver5DaysAgoDetails: musicianConfirmedOnly.map(
-        (gig) => ({
-          gigId: gig._id,
-          musicianConfirmedAt: gig.musicianConfirmPayment?.confirmedAt,
-          daysSinceMusicianConfirmation: gig.musicianConfirmPayment?.confirmedAt
-            ? Math.floor(
-                (now -
-                  new Date(gig.musicianConfirmPayment.confirmedAt).getTime()) /
-                  (1000 * 60 * 60 * 24)
-              )
-            : null,
-          clientLastUpdated: gig.clientConfirmPayment?.confirmedAt,
-        })
-      ),
     };
-  }, [postedGigs]);
 
-  // Log these stats
-  useEffect(() => {
-    console.log("Posted Gigs Payment Stats:", postedGigsPaymentStats);
-  }, [postedGigsPaymentStats]);
-
-  // Log these stats
-
-  // Combined effect for all gig-related calculations
-  useEffect(() => {
-    if (gigsLoading || !gigs || !isMusician) return;
-
-    const bookedGigs =
-      gigs.gigs?.filter((gig: MyGigProps) => gig?.bookedBy?._id === _id) || [];
-    setRating(
-      calculateRating(
-        bookedGigs.flatMap((gig: MyGigProps) =>
-          gig?.bookedBy?.allreviews && Array.isArray(gig?.bookedBy?.allreviews)
-            ? gig?.bookedBy?.allreviews
-            : []
-        ),
-        bookedGigs.length
-      )
+    // Calculate rating
+    const reviews = bookedGigs.flatMap(
+      (gig) => gig.bookedByUser?.allreviews || []
     );
-  }, [_id, isMusician, gigs, gigsLoading]);
+    // const calculatedRating = calculateRating(reviews, bookedGigs.length);
+    const calculatedRating = 5;
 
-  const handleClick = () => {
+    return { postedGigsPaymentStats, calculatedRating };
+  }, [postedGigs, bookedGigs]);
+
+  const handleCardClick = () => {
     const path = isMusician
       ? `/search/${username}`
       : `/client/search/${username}`;
     router.push(path);
   };
 
-  // Stats configuration for dynamic rendering
-  // Update your stats configuration to include the new metrics
-  const stats = [
-    ...(isClient
-      ? [
-          {
-            icon: <FiDollarSign className="text-green-400 mb-1" />,
-            value: postedGigsPaymentStats.bothConfirmed,
-            label: "Gigs Paid",
-            color: "text-green-400",
-            tooltip: "Gigs with both confirmations",
-          },
-          {
-            icon: <FiClock className="text-amber-400 mb-1" />,
-            value:
-              postedGigsPaymentStats.musicianConfirmedOver5DaysAgo +
-              postedGigsPaymentStats.onlyMusicianConfirmed,
-            label: "Pending Payment",
-            color: "text-amber-400",
-            tooltip: "Musician confirmed but awaiting client (5+ days)",
-          },
-        ]
-      : [
-          {
-            icon: <FiCalendar className="text-green-400 mb-1" />,
-            value: completedGigsCount || 0,
-            label: "Completed Gigs",
-            color: "text-green-400",
-            tooltip: "Successfully completed gigs",
-          },
-        ]),
+  const handleMoreClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowModal(true);
+  };
+
+  // Simple card stats for the main view
+  const simpleStats = [
     {
-      icon: <FiXCircle className="text-red-400 mb-1" />,
-      value: cancelgigCount || 0,
-      label: "Canceled Gigs",
-      color: "text-red-400",
-      tooltip: "Canceled gigs",
+      icon: <FiCalendar className="text-green-400" />,
+      value: completedGigsCount || 0,
+      label: "Completed",
     },
     {
-      icon: (
-        <FiStar
-          className={isMusician ? "text-amber-400 mb-1" : "text-blue-400 mb-1"}
-        />
-      ),
+      icon: <FiStar className="text-amber-400" />,
       value: isMusician
-        ? rating.toFixed(1)
-        : `${postedGigsPaymentStats.bothConfirmed}/${postedGigs.length}`,
-      label: isMusician ? "Rating" : "Paid/Total",
-      color: isMusician ? "text-amber-400" : "text-blue-400",
-      tooltip: isMusician
-        ? "Performance rating"
-        : `Paid: ${postedGigsPaymentStats.bothConfirmed} of ${postedGigs.length}`,
+        ? stats.calculatedRating.toFixed(1)
+        : stats.postedGigsPaymentStats.bothConfirmed,
+      label: isMusician ? "Rating" : "Paid",
     },
   ];
 
   return (
-    <motion.div
-      onClick={handleClick}
-      whileHover={{ y: -4, scale: 1.015 }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className={`
-        relative overflow-hidden rounded-xl p-6 cursor-pointer backdrop-blur-md border transition-all duration-300
-        ${
-          isMusician
-            ? "bg-gradient-to-br from-amber-900/20 to-yellow-700/10 hover:shadow-amber-500/20 border-amber-900/30"
-            : "bg-gradient-to-br from-slate-800/20 to-slate-700/10 hover:shadow-slate-500/10 border-slate-700/30"
-        }
-      `}
-      aria-label={`View profile of ${firstname} ${lastname}`}
-    >
-      <div className="flex flex-col gap-4">
-        {/* Header Section */}
-        <div className="flex items-start gap-4">
-          <Avatar
-            picture={picture ? picture : ""}
-            firstname={firstname}
-            lastname={lastname}
-          />
+    <>
+      {/* Simple User Card */}
+      <motion.div
+        onClick={handleCardClick}
+        whileHover={{ y: -2, scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        className={cn(
+          "relative overflow-hidden rounded-xl p-4 cursor-pointer backdrop-blur-md border transition-all duration-300",
+          "bg-white/5 hover:bg-white/10",
+          colors.border
+        )}
+      >
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          <div className="relative">
+            {picture ? (
+              <img
+                src={picture}
+                alt={`${firstname} ${lastname}`}
+                className="w-12 h-12 rounded-full border-2 border-white/20 object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white font-medium">
+                {firstname?.[0]}
+                {lastname?.[0]}
+              </div>
+            )}
+          </div>
 
+          {/* User Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white truncate">
+              <h3 className="text-sm font-semibold text-white truncate">
                 {firstname} {lastname}
               </h3>
-              <h5
-                className="font-mono text-[12px] items-center whitespace-nowrap text-neutral-400 flex  gap-2"
-                onClick={handleClick}
+              <button
+                onClick={handleMoreClick}
+                className={cn(
+                  "p-1 rounded-md transition-colors",
+                  "hover:bg-white/10 text-gray-400 hover:text-white"
+                )}
               >
-                View more <ArrowRight size={13} />
-              </h5>
+                <FiMoreVertical size={14} />
+              </button>
             </div>
 
-            <UserInfo
-              isClient={isClient}
-              email={email}
-              organization={organization}
-              firstname={firstname}
-              roleType={roleType}
-              instrument={instrument}
-            />
+            <div className="flex items-center gap-2 text-xs text-gray-300 mt-1">
+              <FiAtSign size={10} />
+              <span className="font-mono truncate">@{username}</span>
+            </div>
+
+            <div className="mt-2">
+              <span
+                className={cn(
+                  "text-xs font-medium px-2 py-1 rounded-full",
+                  isClient
+                    ? "bg-blue-500/20 text-blue-300"
+                    : "bg-amber-500/20 text-amber-300"
+                )}
+              >
+                {isClient ? "Client" : instrument || "Musician"}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Stats Section */}
-        <div className="grid grid-cols-3 gap-3 mt-2">
-          {stats.map((stat, index) => (
-            <Tooltip key={index} content={stat.tooltip}>
-              <StatBox
-                icon={stat.icon}
-                value={stat.value}
-                label={stat.label}
-                color={stat.color}
-              />
-            </Tooltip>
+        {/* Simple Stats */}
+        <div className="flex justify-between mt-3 pt-3 border-t border-white/10">
+          {simpleStats.map((stat, index) => (
+            <div key={index} className="flex flex-col items-center">
+              {stat.icon}
+              <span className="text-white text-sm font-bold mt-1">
+                {stat.value}
+              </span>
+              <span className="text-gray-400 text-xs">{stat.label}</span>
+            </div>
           ))}
         </div>
 
-        {/* Footer Section */}
-        <div className="flex items-center justify-between mt-2 px-2 py-2 rounded-lg bg-white/5 border border-white/10">
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <FiAtSign className="opacity-70" />
-            <span className="font-mono">@{username}</span>
-          </div>
-
-          {_id && (
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={(ev) => ev.stopPropagation()}
-            >
-              <FollowButton _id={_id} followers={followers} />
-            </motion.div>
-          )}
+        {/* Follow Button */}
+        <div className="mt-3 flex justify-center">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FollowButton _id={_id} followers={followers} />
+          </motion.div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {/* Detailed Modal */}
+      {showModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className={cn(
+              "relative rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto",
+              colors.card,
+              colors.border,
+              "border"
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowModal(false)}
+              className={cn(
+                "absolute top-4 right-4 p-2 rounded-full transition-colors",
+                colors.hoverBg,
+                "text-gray-400 hover:text-white"
+              )}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Modal Content */}
+            <div className="flex flex-col items-center text-center mb-6">
+              {/* Avatar */}
+              <div className="relative mb-4">
+                {picture ? (
+                  <img
+                    src={picture}
+                    alt={`${firstname} ${lastname}`}
+                    className="w-20 h-20 rounded-full border-2 border-white/20 object-cover"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white font-medium text-2xl">
+                    {firstname?.[0]}
+                    {lastname?.[0]}
+                  </div>
+                )}
+              </div>
+
+              <h2 className={cn("text-xl font-bold mb-2", colors.text)}>
+                {firstname} {lastname}
+              </h2>
+
+              <div
+                className={cn("flex items-center gap-2 mb-1", colors.textMuted)}
+              >
+                <FiAtSign size={14} />
+                <span className="font-mono">@{username}</span>
+              </div>
+
+              <div
+                className={cn(
+                  "text-sm px-3 py-1 rounded-full font-medium mb-4",
+                  isClient
+                    ? "bg-blue-500/20 text-blue-300"
+                    : "bg-amber-500/20 text-amber-300"
+                )}
+              >
+                {isClient ? "Client" : `${instrument} ${roleType}`}
+              </div>
+
+              {bio && (
+                <p className={cn("text-sm mb-4 text-center", colors.textMuted)}>
+                  {bio}
+                </p>
+              )}
+            </div>
+
+            {/* Detailed Stats Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <StatCard
+                icon={<FiCalendar className="text-green-400" />}
+                value={completedGigsCount || 0}
+                label="Completed Gigs"
+                color="text-green-400"
+              />
+              <StatCard
+                icon={<FiXCircle className="text-red-400" />}
+                value={cancelgigCount || 0}
+                label="Canceled Gigs"
+                color="text-red-400"
+              />
+              <StatCard
+                icon={<FiStar className="text-amber-400" />}
+                value={
+                  isMusician
+                    ? stats.calculatedRating.toFixed(1)
+                    : stats.postedGigsPaymentStats.bothConfirmed
+                }
+                label={isMusician ? "Rating" : "Paid Gigs"}
+                color="text-amber-400"
+              />
+              <StatCard
+                icon={<FiBriefcase className="text-blue-400" />}
+                value={stats.postedGigsPaymentStats.totalPosted}
+                label="Total Gigs"
+                color="text-blue-400"
+              />
+            </div>
+
+            {/* Additional Info */}
+            <div
+              className={cn(
+                "space-y-3 p-4 rounded-lg",
+                colors.secondaryBackground
+              )}
+            >
+              {city && (
+                <div className="flex items-center gap-3">
+                  <FiMapPin className={cn("text-gray-400")} />
+                  <span className={cn("text-sm", colors.text)}>{city}</span>
+                </div>
+              )}
+              {experience && (
+                <div className="flex items-center gap-3">
+                  <FiAward className={cn("text-gray-400")} />
+                  <span className={cn("text-sm", colors.text)}>
+                    {experience} experience
+                  </span>
+                </div>
+              )}
+              {email && (
+                <div className="flex items-center gap-3">
+                  <FiMail className={cn("text-gray-400")} />
+                  <span className={cn("text-sm truncate", colors.text)}>
+                    {email}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCardClick}
+                className={cn(
+                  "flex-1 py-2 px-4 rounded-lg font-medium transition-colors",
+                  "bg-blue-500 hover:bg-blue-600 text-white"
+                )}
+              >
+                View Profile
+              </button>
+              <div className="flex-1">
+                <FollowButton _id={_id} followers={followers} />
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </>
   );
 };
 
-// Sub-components for better readability
-const Avatar = ({
-  picture,
-  firstname,
-  lastname,
-}: {
-  picture?: string;
-  firstname?: string;
-  lastname?: string;
-}) => (
-  <div className="relative">
-    {picture ? (
-      <Image
-        src={picture}
-        alt={`${firstname} ${lastname}`}
-        width={48}
-        height={48}
-        className="rounded-full border-2 border-white/20 object-cover"
-      />
-    ) : (
-      <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white font-medium">
-        {firstname?.[0]}
-        {lastname?.[0]}
-      </div>
-    )}
-  </div>
-);
-
-const UserInfo = ({
-  isClient,
-  email,
-  organization,
-  firstname,
-  roleType,
-  instrument,
-}: {
-  isClient?: boolean;
-  email?: string;
-  organization?: string;
-  firstname?: string;
-  roleType?: string;
-  instrument?: string;
-}) => (
-  <>
-    <div className="flex items-center gap-2 text-sm text-gray-300 mt-1 truncate">
-      {isClient ? (
-        <>
-          <FiUser className="text-xs opacity-70" />
-          <span>{organization || `${firstname}'s Organization`}</span>
-        </>
-      ) : (
-        <>
-          <FiMail className="text-xs opacity-70" />
-          <span className="truncate">{email}</span>
-        </>
-      )}
-    </div>
-
-    <div className="mt-2">
-      <span
-        className={`text-xs font-medium ${
-          isClient ? "text-blue-400" : "text-amber-400"
-        }`}
-      >
-        {isClient
-          ? "Client"
-          : roleType === "instrumentalist"
-          ? `${instrument} Player`
-          : roleType === "dj"
-          ? "DJ"
-          : roleType === "mc"
-          ? "MC"
-          : roleType === "vocalist"
-          ? "Vocalist"
-          : "Musician"}
-      </span>
-    </div>
-  </>
-);
-
-const StatBox = ({
+// Stat Card Component for Modal
+const StatCard = ({
   icon,
   value,
   label,
@@ -399,74 +398,23 @@ const StatBox = ({
   label: string;
   color: string;
 }) => (
-  <div className="bg-white/5 p-3 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-    <div className="flex flex-col items-center">
-      {icon}
-      <span className={`${color} font-bold`}>{value}</span>
-      <span className="text-xs text-gray-400 mt-0.5 whitespace-nowrap">
-        {label}
-      </span>
-    </div>
+  <div
+    className={cn(
+      "bg-white/5 p-4 rounded-lg border border-white/10 text-center"
+    )}
+  >
+    <div className="flex justify-center mb-2">{icon}</div>
+    <div className={cn("text-lg font-bold", color)}>{value}</div>
+    <div className={cn("text-xs text-gray-400 mt-1")}>{label}</div>
   </div>
 );
 
-// Tooltip component remains the same as in your original code
-const Tooltip = ({
-  content,
-  children,
-  position = "top",
-}: {
-  content: string;
-  children: React.ReactNode;
-  position?: "top" | "bottom" | "left" | "right";
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  const positionClasses = {
-    top: "bottom-full mb-2",
-    bottom: "top-full mt-2",
-    left: "right-full mr-2",
-    right: "left-full ml-2",
-  };
-
-  return (
-    <div className="relative inline-block">
-      <div
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-        className="inline-block"
-      >
-        {children}
-      </div>
-      {isVisible && (
-        <div
-          className={`absolute ${positionClasses[position]} z-50 px-3 py-2 text-sm text-white bg-gray-800 rounded-md shadow-lg whitespace-nowrap`}
-        >
-          {content}
-          <div
-            className={`absolute w-2 h-2 bg-gray-800 rotate-45 ${
-              position === "top"
-                ? "-bottom-1 left-1/2 -translate-x-1/2"
-                : position === "bottom"
-                ? "-top-1 left-1/2 -translate-x-1/2"
-                : position === "left"
-                ? "-right-1 top-1/2 -translate-y-1/2"
-                : "-left-1 top-1/2 -translate-y-1/2"
-            }`}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Utility functions
+// Utility function
 const calculateRating = (
   reviews: { rating: number }[],
   gigCount: number
 ): number => {
   if (!reviews || reviews.length === 0) return 0;
-
   const avgReviewRating =
     reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
   const experienceFactor = Math.log10(gigCount + 0.5) * 1.0;
@@ -475,11 +423,6 @@ const calculateRating = (
       Math.min(5, avgReviewRating * 0.7 + experienceFactor * 0.3) * 10
     ) / 10
   );
-};
-
-const calculateConfirmedPayments = (gigs: MyGigProps[], userId: string) => {
-  if (!gigs || !Array.isArray(gigs)) return [];
-  return gigs.filter((gig) => gig?.postedBy?._id === userId);
 };
 
 export default MainUser;

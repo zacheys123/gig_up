@@ -1,3 +1,5 @@
+import { UserProps } from "./userTypes";
+
 // types/gig.ts
 export interface Gig {
   _id: string;
@@ -86,21 +88,8 @@ export interface Gig {
   // Rating
   gigRating: number;
 }
-// types/gig.ts
-export interface User {
-  _id: string;
-  _creationTime: number;
-  clerkId: string;
-  email: string;
-  firstname?: string;
-  lastname?: string;
-  username: string;
-  isMusician: boolean;
-  isClient: boolean;
-  // ... include other user fields you need
-}
 
 export interface GigWithUsers extends Gig {
-  postedByUser: User | null;
-  bookedByUser: User | null;
+  postedByUser: UserProps | null;
+  bookedByUser: UserProps | null;
 }

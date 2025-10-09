@@ -1,10 +1,9 @@
-// Instead of useUserStore, use this:
+// hooks/useCurrentUser.ts
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { toUserId } from "@/utils";
 import { useUserStore } from "@/app/stores";
-import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useEffect } from "react";
 
 // Get current user
@@ -35,17 +34,17 @@ export function useCurrentUser() {
 
 // Social actions as custom hooks
 export const useSocialActions = () => {
-  const follow = useMutation(api.controllers.user.followUser);
+  const toggleFollowMutation = useMutation(api.controllers.user.followUser);
   const likeVideo = useMutation(api.controllers.user.likeVideo);
   const unlikeVideo = useMutation(api.controllers.user.unlikeVideo);
 
   return {
     toggleFollow: async (targetId: string) => {
-      const targetUserId = toUserId(targetId);
-      await follow({ targetUserId });
+      const tId = toUserId(targetId);
+      await toggleFollowMutation({ targetUserId: tId });
     },
+
     toggleVideoLike: async (videoId: string) => {
-      // You'd need to check current state or create a toggle mutation
       const { user: currentUser } = useCurrentUser();
       const isLiked = currentUser?.likedVideos?.includes(videoId);
 
@@ -58,7 +57,7 @@ export const useSocialActions = () => {
   };
 };
 
-// Selector-style hooks
+// Selector-style hook for checking if current user is following target user
 export const useIsFollowing = (targetUserId: string) => {
   const { user: currentUser } = useCurrentUser();
   return currentUser?.followings?.includes(targetUserId) || false;

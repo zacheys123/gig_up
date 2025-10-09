@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { useMemo } from "react";
 
 export function useAllGigs() {
-  const gigs = useQuery(api.controllers.gigs.getAllGigs);
+  const gigs = useQuery(api.controllers.gigs.getGigsWithUsers);
 
   const activeGigs = useMemo(
     () => gigs?.filter((gig) => !gig.isTaken) || [],
@@ -31,7 +31,7 @@ export function useAllGigs() {
   );
 
   return {
-    // All gigs
+    // All gigs with user data
     gigs: gigs || [],
 
     // Filtered gigs

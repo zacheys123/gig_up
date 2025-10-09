@@ -14,7 +14,12 @@ type PWACustomConfig = {
   workboxOptions?: object;
   runtimeCaching?: Array<{
     urlPattern: RegExp | string;
-    handler: "NetworkFirst" | "CacheFirst" | "NetworkOnly" | "CacheOnly" | "StaleWhileRevalidate";
+    handler:
+      | "NetworkFirst"
+      | "CacheFirst"
+      | "NetworkOnly"
+      | "CacheOnly"
+      | "StaleWhileRevalidate";
     options?: {
       cacheName?: string;
       expiration?: {
@@ -43,29 +48,33 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**.*.clerk.com',
+        protocol: "https",
+        hostname: "img.clerk.com", // Specific hostname for Clerk images
       },
       {
-        protocol: 'https',
-        hostname: '**.*.clerk.dev',
+        protocol: "https",
+        hostname: "**.clerk.com", // Wildcard for all subdomains
       },
       {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
+        protocol: "https",
+        hostname: "**.clerk.dev", // Wildcard for all subdomains
       },
       {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      }
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
     ],
     // Recommended for Next.js 15+
-    formats: ['image/avif', 'image/webp'],
+    formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60,
   },
   // Optional: Next.js 15+ performance optimizations
   experimental: {
-    optimizePackageImports: ['@clerk/nextjs'],
+    optimizePackageImports: ["@clerk/nextjs"],
   },
 };
 

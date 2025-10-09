@@ -18,6 +18,7 @@ import {
   Settings,
   User,
   VideoIcon,
+  Mail,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth } from "@clerk/nextjs";
@@ -85,6 +86,23 @@ const getNavLinks = (userId: string | undefined, user: any) => {
   return baseLinks;
 };
 
+// Function to check if user has minimal data
+const hasMinimalData = (user: any) => {
+  if (!user) return false;
+
+  // Check if user has date, year, month, or videoProfile data
+  const hasDateData = user.date || user.year || user.month;
+  const hasVideoProfile = user.videoProfile;
+
+  return hasDateData || hasVideoProfile;
+};
+
+// Basic links for users without minimal data
+const getBasicLinks = () => [
+  { label: "Home", href: "/", icon: <Home size={20} /> },
+  { label: "Contact", href: "/contact", icon: <Mail size={20} /> },
+];
+
 const MobileSheet = () => {
   const { userId } = useAuth();
   const pathname = usePathname();
@@ -106,7 +124,10 @@ const MobileSheet = () => {
   // Check if trial period has ended (you can customize this logic)
   const isTrialEnded = false; // Replace with your actual trial logic
 
-  const navLinks = getNavLinks(userId as string, user);
+  // Determine which links to show based on user data
+  const navLinks = hasMinimalData(user)
+    ? getNavLinks(userId as string, user)
+    : getBasicLinks();
 
   return (
     <Sheet>
@@ -134,8 +155,9 @@ const MobileSheet = () => {
         {!isTrialEnded ? (
           <>
             <SheetTitle className={cn("text-2xl font-bold mb-4", colors.text)}>
-              Access More Info
+              {hasMinimalData(user) ? "Access More Info" : "Welcome to Gigup"}
             </SheetTitle>
+
             {navLinks
               .filter((link) => pathname !== link.href)
               .map((link, index) => (
@@ -154,16 +176,45 @@ const MobileSheet = () => {
                   </span>
                 </Link>
               ))}
-            <div
-              className={cn(
-                "mt-6 p-2 w-fit text-sm rounded-md font-semibold shadow-md text-white",
-                isPro()
-                  ? "bg-gradient-to-br from-purple-600 via-emerald-600 to-orange-600"
-                  : "bg-gradient-to-br from-blue-600 via-green-600 to-yellow-600"
-              )}
-            >
-              {isPro() ? "Pro" : "Free"} Version
-            </div>
+
+            {/* Show version badge only if user has minimal data */}
+            {hasMinimalData(user) && (
+              <div
+                className={cn(
+                  "mt-6 p-2 w-fit text-sm rounded-md font-semibold shadow-md text-white",
+                  isPro()
+                    ? "bg-gradient-to-br from-purple-600 via-emerald-600 to-orange-600"
+                    : "bg-gradient-to-br from-blue-600 via-green-600 to-yellow-600"
+                )}
+              >
+                {isPro() ? "Pro" : "Free"} Version
+              </div>
+            )}
+
+            {/* Show setup prompt if user doesn't have minimal data */}
+            {!hasMinimalData(user) && user && (
+              <div
+                className={cn(
+                  "mt-6 p-4 rounded-lg border",
+                  colors.secondaryBackground,
+                  colors.border
+                )}
+              >
+                <p className={cn("text-sm mb-3", colors.text)}>
+                  Complete your profile to access all features!
+                </p>
+                <Link
+                  href="/profile"
+                  className={cn(
+                    "inline-block w-full text-center px-4 py-2 text-sm font-semibold rounded-lg",
+                    "transition duration-200 hover:brightness-110",
+                    "bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white"
+                  )}
+                >
+                  Complete Profile
+                </Link>
+              </div>
+            )}
           </>
         ) : (
           <>
