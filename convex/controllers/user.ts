@@ -498,16 +498,13 @@ export const searchUsers = query({
 });
 
 export const followUser = mutation({
-  args: {
-    targetUserId: v.id("users"),
-  },
+  args: { userId: v.string(), targetUserId: v.id("users") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
+    if (!args.userId) throw new Error("Unauthorized");
 
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
       .first();
     if (!currentUser) throw new Error("User not found");
 

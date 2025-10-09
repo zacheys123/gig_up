@@ -39,9 +39,9 @@ export const useSocialActions = () => {
   const unlikeVideo = useMutation(api.controllers.user.unlikeVideo);
 
   return {
-    toggleFollow: async (targetId: string) => {
+    toggleFollow: async (userId: string, targetId: string) => {
       const tId = toUserId(targetId);
-      await toggleFollowMutation({ targetUserId: tId });
+      await toggleFollowMutation({ userId, targetUserId: tId });
     },
 
     toggleVideoLike: async (videoId: string) => {
@@ -59,6 +59,7 @@ export const useSocialActions = () => {
 
 // Selector-style hook for checking if current user is following target user
 export const useIsFollowing = (targetUserId: string) => {
+  const id = toUserId(targetUserId);
   const { user: currentUser } = useCurrentUser();
-  return currentUser?.followings?.includes(targetUserId) || false;
+  return currentUser?.followings?.includes(id) || false;
 };

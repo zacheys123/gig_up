@@ -1,6 +1,9 @@
 import { IoMdAdd } from "react-icons/io";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCurrentUser, useIsFollowing } from "@/hooks/useCurrentUser";
 import { useSocialActions } from "@/hooks/useCurrentUser";
+import { useThemeColors } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const FollowButton = ({
   _id,
@@ -11,14 +14,13 @@ const FollowButton = ({
 }) => {
   const { user: currentUser } = useCurrentUser();
   const { toggleFollow } = useSocialActions();
+  const { colors, isDarkMode } = useThemeColors();
 
-  // Check if current user is following this user
   const isFollowing = currentUser?.followings?.includes(_id) || false;
-
-  const handleToggleFollow = async () => {
+  const handleToggleFollow = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
-      await toggleFollow(_id);
-      // Convex will automatically update the data and re-render the component
+      await toggleFollow(currentUser?.clerkId as string, _id);
     } catch (error) {
       console.error("Error toggling follow:", error);
     }
@@ -30,23 +32,44 @@ const FollowButton = ({
   }
 
   return (
-    <div>
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    >
       {isFollowing ? (
         <button
           onClick={handleToggleFollow}
-          className="flex items-center gap-1 text-gray-200 hover:text-red-800 text-[12px] p-1 bg-red-800 px-2 -py-6 rounded-md min-w-[50px]"
+          className={cn(
+            "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl",
+            "border transition-all duration-200",
+            "bg-transparent hover:bg-red-500/10",
+            "text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300",
+            "border-red-500/30 hover:border-red-500/50",
+            "backdrop-blur-sm"
+          )}
         >
-          following
+          <span>Following</span>
         </button>
       ) : (
         <button
           onClick={handleToggleFollow}
-          className="flex items-center gap-1 text-green-700 hover:text-red-800 text-[12px] p-1 bg-neutral-200 px-2 -py-6 rounded-md min-w-[50px]"
+          className={cn(
+            "flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl",
+            "transition-all duration-200 shadow-sm",
+            "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600",
+            "text-white hover:shadow-lg",
+            isDarkMode
+              ? "hover:shadow-blue-500/25"
+              : "hover:shadow-blue-500/40",
+            "backdrop-blur-sm"
+          )}
         >
-          Follow <IoMdAdd style={{ fontSize: "16px" }} />
+          <span>Follow</span>
+          <IoMdAdd className="text-base" />
         </button>
       )}
-    </div>
+    </motion.div>
   );
 };
 
