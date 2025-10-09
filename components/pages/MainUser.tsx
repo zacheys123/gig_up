@@ -426,7 +426,6 @@
 // };
 
 // export default MainUser;
-
 "use client";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -437,6 +436,8 @@ import {
   FiMoreVertical,
   FiUser,
   FiMail,
+  FiStar,
+  FiMusic,
 } from "react-icons/fi";
 import FollowButton from "./FollowButton";
 import { X } from "lucide-react";
@@ -453,6 +454,7 @@ const MainUser = ({
   picture,
   isClient,
   instrument,
+  roleType,
   completedGigsCount,
   city,
   bio,
@@ -472,34 +474,81 @@ const MainUser = ({
     setShowModal(true);
   };
 
-  const userType = isClient ? "Client" : instrument || "Professional";
+  // Enhanced role display with theme-aware styling
+  const getRoleDisplay = () => {
+    if (isClient) return { text: "Client", icon: <FiBriefcase size={12} /> };
+
+    if (roleType && instrument) {
+      return {
+        text: `${instrument} ${roleType}`,
+        icon: <FiMusic size={12} />,
+      };
+    }
+    if (instrument) return { text: instrument, icon: <FiMusic size={12} /> };
+    if (roleType) return { text: roleType, icon: <FiUser size={12} /> };
+
+    return { text: "Professional", icon: <FiUser size={12} /> };
+  };
+
+  const userRole = getRoleDisplay();
+
+  // Theme-aware role badge styling
+  const getRoleBadgeStyles = () => {
+    const baseStyles =
+      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors";
+
+    if (isClient) {
+      return cn(
+        baseStyles,
+        isDarkMode
+          ? "bg-blue-900/40 text-blue-300 border-blue-700/50 hover:bg-blue-900/60"
+          : "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+      );
+    } else {
+      return cn(
+        baseStyles,
+        isDarkMode
+          ? "bg-amber-900/40 text-amber-300 border-amber-700/50 hover:bg-amber-900/60"
+          : "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
+      );
+    }
+  };
+
+  // Theme-aware card background
+  const getCardBackground = () => {
+    return isDarkMode
+      ? "bg-gray-800/90 hover:bg-gray-700/90 border-gray-700"
+      : "bg-white/95 hover:bg-gray-50/95 border-gray-200";
+  };
+
+  // Theme-aware modal background
+  const getModalBackground = () => {
+    return isDarkMode
+      ? "bg-gray-800 border-gray-700"
+      : "bg-white border-gray-200";
+  };
+
+  // Theme-aware secondary background
+  const getSecondaryBackground = () => {
+    return isDarkMode
+      ? "bg-gray-700/50 border-gray-600"
+      : "bg-gray-100 border-gray-200";
+  };
 
   return (
     <>
       {/* Clean User Card */}
       <motion.div
-        whileHover={{ y: -4, scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ y: -2, scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
         className={cn(
-          "relative rounded-2xl p-5 cursor-pointer border transition-all duration-300",
-          colors.card,
-          colors.border,
-          "hover:shadow-xl backdrop-blur-sm",
-          isDarkMode ? "hover:shadow-black/30" : "hover:shadow-gray-200/50"
+          "relative rounded-xl p-4 cursor-pointer border transition-all duration-200 backdrop-blur-sm",
+          getCardBackground(),
+          "hover:shadow-md"
         )}
       >
-        {/* Background Accent */}
-        <div
-          className={cn(
-            "absolute inset-0 rounded-2xl opacity-5",
-            isClient
-              ? "bg-gradient-to-br from-blue-500 to-cyan-500"
-              : "bg-gradient-to-br from-amber-500 to-orange-500"
-          )}
-        />
-
-        <div className="relative flex items-start gap-4">
+        <div className="relative flex items-start gap-3">
           {/* Avatar */}
           <div className="flex-shrink-0 relative">
             {picture ? (
@@ -508,27 +557,27 @@ const MainUser = ({
                   src={picture}
                   alt={`${firstname} ${lastname}`}
                   className={cn(
-                    "w-14 h-14 rounded-2xl object-cover border-2 shadow-lg",
-                    colors.border
+                    "w-12 h-12 rounded-xl object-cover border shadow-sm",
+                    isDarkMode ? "border-gray-600" : "border-gray-200"
                   )}
                 />
                 <div
                   className={cn(
-                    "absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 shadow-sm",
+                    "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2",
                     isClient
-                      ? "bg-blue-500 border-white dark:border-gray-900"
-                      : "bg-amber-500 border-white dark:border-gray-900"
+                      ? "bg-blue-500 border-white dark:border-gray-800"
+                      : "bg-amber-500 border-white dark:border-gray-800"
                   )}
                 />
               </div>
             ) : (
               <div
                 className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center text-white font-medium text-lg shadow-lg",
+                  "w-12 h-12 rounded-xl flex items-center justify-center text-white font-medium shadow-sm border",
                   "bg-gradient-to-br",
                   isClient
-                    ? "from-blue-500 to-cyan-500"
-                    : "from-amber-500 to-orange-500"
+                    ? "from-blue-500 to-blue-600 border-blue-400"
+                    : "from-amber-500 to-amber-600 border-amber-400"
                 )}
               >
                 {firstname?.[0]}
@@ -539,93 +588,114 @@ const MainUser = ({
 
           {/* User Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
                 <h3
                   onClick={handleProfileClick}
                   className={cn(
-                    "font-bold text-lg mb-1 hover:opacity-80 transition-opacity cursor-pointer",
-                    colors.text
+                    "font-semibold text-base mb-1 hover:opacity-80 transition-opacity cursor-pointer",
+                    isDarkMode ? "text-white" : "text-gray-900"
                   )}
                 >
                   {firstname} {lastname}
                 </h3>
-                <p className={cn("text-sm font-medium", colors.textMuted)}>
+                <p
+                  className={cn(
+                    "text-sm",
+                    isDarkMode ? "text-gray-400" : "text-gray-600"
+                  )}
+                >
                   @{username}
                 </p>
               </div>
               <button
                 onClick={handleMoreClick}
                 className={cn(
-                  "p-2 rounded-xl transition-all duration-200 flex-shrink-0 ml-2",
-                  colors.hoverBg,
-                  "hover:scale-110 active:scale-95",
-                  colors.textMuted
+                  "p-1.5 rounded-lg transition-all duration-200 flex-shrink-0 ml-2",
+                  "hover:bg-opacity-20",
+                  isDarkMode
+                    ? "hover:bg-white text-gray-400"
+                    : "hover:bg-gray-200 text-gray-600"
                 )}
               >
-                <FiMoreVertical size={18} />
+                <FiMoreVertical size={16} />
               </button>
+            </div>
+
+            {/* Role Badge - Theme Enhanced */}
+            <div className="mb-2">
+              <span className={getRoleBadgeStyles()}>
+                {userRole.icon}
+                {userRole.text}
+              </span>
             </div>
 
             {/* Bio */}
             {bio && (
               <p
                 className={cn(
-                  "text-sm leading-relaxed mb-4 line-clamp-2",
-                  colors.textMuted
+                  "text-sm leading-relaxed mb-3 line-clamp-2",
+                  isDarkMode ? "text-gray-400" : "text-gray-600"
                 )}
               >
                 {bio}
               </p>
             )}
 
-            {/* Location & Role */}
-            <div className="flex items-center gap-3 mb-4">
+            {/* Location */}
+            {city && (
               <div
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm border",
-                  isClient
-                    ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
-                    : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+                  "flex items-center gap-1.5 text-xs mb-3",
+                  isDarkMode ? "text-gray-500" : "text-gray-500"
                 )}
               >
-                {userType}
+                <FiMapPin size={12} className="flex-shrink-0" />
+                <span>{city}</span>
               </div>
-
-              {city && (
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5 text-xs font-medium",
-                    colors.textMuted
-                  )}
-                >
-                  <FiMapPin size={12} className="flex-shrink-0" />
-                  <span>{city}</span>
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Stats & Action */}
             <div
               className={cn(
-                "flex items-center justify-between pt-4 border-t",
-                colors.border
+                "flex items-center justify-between pt-3 border-t",
+                isDarkMode ? "border-gray-700" : "border-gray-200"
               )}
             >
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 <div className="text-center">
-                  <div className={cn("font-bold text-lg", colors.text)}>
+                  <div
+                    className={cn(
+                      "font-bold text-sm",
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    )}
+                  >
                     {completedGigsCount || 0}
                   </div>
-                  <div className={cn("text-xs font-medium", colors.textMuted)}>
+                  <div
+                    className={cn(
+                      "text-xs",
+                      isDarkMode ? "text-gray-500" : "text-gray-600"
+                    )}
+                  >
                     Gigs
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={cn("font-bold text-lg", colors.text)}>
+                  <div
+                    className={cn(
+                      "font-bold text-sm",
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    )}
+                  >
                     {followers?.length || 0}
                   </div>
-                  <div className={cn("text-xs font-medium", colors.textMuted)}>
+                  <div
+                    className={cn(
+                      "text-xs",
+                      isDarkMode ? "text-gray-500" : "text-gray-600"
+                    )}
+                  >
                     Followers
                   </div>
                 </div>
@@ -654,46 +724,50 @@ const MainUser = ({
           {/* Backdrop */}
           <div
             className={cn(
-              "absolute inset-0 backdrop-blur-md",
-              isDarkMode ? "bg-black/60" : "bg-black/40"
+              "absolute inset-0 backdrop-blur-sm",
+              isDarkMode ? "bg-black/50" : "bg-black/30"
             )}
           />
 
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className={cn(
-              "relative rounded-3xl w-full max-w-md mx-auto border shadow-2xl backdrop-blur-lg",
-              colors.card,
-              colors.border,
-              isDarkMode ? "shadow-black/40" : "shadow-gray-400/20"
+              "relative rounded-2xl w-full max-w-md mx-auto border shadow-lg backdrop-blur-md",
+              getModalBackground(),
+              "shadow-black/10"
             )}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div
               className={cn(
-                "p-6 border-b rounded-t-3xl",
-                colors.border,
-                colors.secondaryBackground
+                "p-6 border-b rounded-t-2xl",
+                getSecondaryBackground()
               )}
             >
               <div className="flex items-center justify-between">
-                <h2 className={cn("text-xl font-bold", colors.text)}>
+                <h2
+                  className={cn(
+                    "text-lg font-semibold",
+                    isDarkMode ? "text-white" : "text-gray-900"
+                  )}
+                >
                   Profile Details
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
                   className={cn(
-                    "p-2 rounded-xl transition-all duration-200",
-                    colors.hoverBg,
-                    "hover:scale-110 active:scale-95",
-                    colors.textMuted
+                    "p-2 rounded-lg transition-all duration-200",
+                    "hover:bg-opacity-20",
+                    isDarkMode
+                      ? "hover:bg-white text-gray-400"
+                      : "hover:bg-gray-200 text-gray-600"
                   )}
                 >
-                  <X size={22} />
+                  <X size={20} />
                 </button>
               </div>
             </div>
@@ -708,27 +782,27 @@ const MainUser = ({
                       src={picture}
                       alt={`${firstname} ${lastname}`}
                       className={cn(
-                        "w-20 h-20 rounded-2xl object-cover border-2 shadow-lg",
-                        colors.border
+                        "w-16 h-16 rounded-xl object-cover border shadow-sm",
+                        isDarkMode ? "border-gray-600" : "border-gray-200"
                       )}
                     />
                     <div
                       className={cn(
-                        "absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 shadow-md",
+                        "absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2",
                         isClient
-                          ? "bg-blue-500 border-white dark:border-gray-900"
-                          : "bg-amber-500 border-white dark:border-gray-900"
+                          ? "bg-blue-500 border-white dark:border-gray-800"
+                          : "bg-amber-500 border-white dark:border-gray-800"
                       )}
                     />
                   </div>
                 ) : (
                   <div
                     className={cn(
-                      "w-20 h-20 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg",
+                      "w-16 h-16 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm border",
                       "bg-gradient-to-br",
                       isClient
-                        ? "from-blue-500 to-cyan-500"
-                        : "from-amber-500 to-orange-500"
+                        ? "from-blue-500 to-blue-600 border-blue-400"
+                        : "from-amber-500 to-amber-600 border-amber-400"
                     )}
                   >
                     {firstname?.[0]}
@@ -736,21 +810,27 @@ const MainUser = ({
                   </div>
                 )}
                 <div className="flex-1">
-                  <h3 className={cn("font-bold text-xl mb-1", colors.text)}>
-                    {firstname} {lastname}
-                  </h3>
-                  <p className={cn("text-base font-medium", colors.textMuted)}>
-                    @{username}
-                  </p>
-                  <div
+                  <h3
                     className={cn(
-                      "inline-flex px-3 py-1 rounded-full text-xs font-semibold mt-2 backdrop-blur-sm border",
-                      isClient
-                        ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
-                        : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+                      "font-semibold text-lg mb-1",
+                      isDarkMode ? "text-white" : "text-gray-900"
                     )}
                   >
-                    {userType}
+                    {firstname} {lastname}
+                  </h3>
+                  <p
+                    className={cn(
+                      "text-sm",
+                      isDarkMode ? "text-gray-400" : "text-gray-600"
+                    )}
+                  >
+                    @{username}
+                  </p>
+                  <div className="mt-2">
+                    <span className={getRoleBadgeStyles()}>
+                      {userRole.icon}
+                      {userRole.text}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -759,9 +839,9 @@ const MainUser = ({
               {bio && (
                 <div
                   className={cn(
-                    "text-sm leading-relaxed mb-6 p-4 rounded-xl backdrop-blur-sm",
-                    colors.secondaryBackground,
-                    colors.text
+                    "text-sm leading-relaxed mb-6 p-4 rounded-lg",
+                    getSecondaryBackground(),
+                    isDarkMode ? "text-gray-300" : "text-gray-700"
                   )}
                 >
                   {bio}
@@ -771,32 +851,41 @@ const MainUser = ({
               {/* Key Metrics */}
               <div
                 className={cn(
-                  "grid grid-cols-3 gap-3 mb-6 p-4 rounded-2xl backdrop-blur-sm border",
-                  colors.secondaryBackground,
-                  colors.border
+                  "grid grid-cols-3 gap-3 mb-6 p-4 rounded-xl border",
+                  getSecondaryBackground()
                 )}
               >
                 <div className="text-center">
-                  <div className={cn("font-bold text-2xl mb-1", colors.text)}>
+                  <div
+                    className={cn(
+                      "font-bold text-xl mb-1",
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    )}
+                  >
                     {completedGigsCount || 0}
                   </div>
                   <div
                     className={cn(
-                      "text-xs font-semibold uppercase tracking-wide",
-                      colors.textMuted
+                      "text-xs font-medium",
+                      isDarkMode ? "text-gray-500" : "text-gray-600"
                     )}
                   >
                     Gigs
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={cn("font-bold text-2xl mb-1", colors.text)}>
+                  <div
+                    className={cn(
+                      "font-bold text-xl mb-1",
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    )}
+                  >
                     {followers?.length || 0}
                   </div>
                   <div
                     className={cn(
-                      "text-xs font-semibold uppercase tracking-wide",
-                      colors.textMuted
+                      "text-xs font-medium",
+                      isDarkMode ? "text-gray-500" : "text-gray-600"
                     )}
                   >
                     Followers
@@ -805,19 +894,19 @@ const MainUser = ({
                 <div className="text-center">
                   <div
                     className={cn(
-                      "font-bold text-2xl mb-1",
+                      "font-bold text-xl mb-1",
                       isClient ? "text-blue-500" : "text-amber-500"
                     )}
                   >
-                    {isClient ? "Client" : "Pro"}
+                    <FiStar className="inline mr-1" size={14} />
                   </div>
                   <div
                     className={cn(
-                      "text-xs font-semibold uppercase tracking-wide",
-                      colors.textMuted
+                      "text-xs font-medium",
+                      isDarkMode ? "text-gray-500" : "text-gray-600"
                     )}
                   >
-                    Status
+                    Rating
                   </div>
                 </div>
               </div>
@@ -827,41 +916,39 @@ const MainUser = ({
                 {city && (
                   <div
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl backdrop-blur-sm",
-                      colors.secondaryBackground,
-                      colors.text
+                      "flex items-center gap-3 p-3 rounded-lg",
+                      getSecondaryBackground(),
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
                     )}
                   >
                     <FiMapPin className="flex-shrink-0" size={16} />
-                    <span className="text-sm font-medium">Based in {city}</span>
+                    <span className="text-sm">Based in {city}</span>
                   </div>
                 )}
 
                 {organization && isClient && (
                   <div
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl backdrop-blur-sm",
-                      colors.secondaryBackground,
-                      colors.text
+                      "flex items-center gap-3 p-3 rounded-lg",
+                      getSecondaryBackground(),
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
                     )}
                   >
                     <FiBriefcase className="flex-shrink-0" size={16} />
-                    <span className="text-sm font-medium">{organization}</span>
+                    <span className="text-sm">{organization}</span>
                   </div>
                 )}
 
                 {email && (
                   <div
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl backdrop-blur-sm",
-                      colors.secondaryBackground,
-                      colors.text
+                      "flex items-center gap-3 p-3 rounded-lg",
+                      getSecondaryBackground(),
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
                     )}
                   >
                     <FiMail className="flex-shrink-0" size={16} />
-                    <span className="text-sm font-medium truncate">
-                      {email}
-                    </span>
+                    <span className="text-sm truncate">{email}</span>
                   </div>
                 )}
               </div>
@@ -871,12 +958,8 @@ const MainUser = ({
                 <button
                   onClick={handleProfileClick}
                   className={cn(
-                    "flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-200",
-                    "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600",
-                    "text-white shadow-lg hover:shadow-xl",
-                    isDarkMode
-                      ? "hover:shadow-blue-500/25"
-                      : "hover:shadow-blue-500/40",
+                    "flex-1 py-2.5 px-4 rounded-lg font-medium transition-all duration-200",
+                    "bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow-md",
                     "hover:scale-105 active:scale-95"
                   )}
                 >
@@ -884,7 +967,7 @@ const MainUser = ({
                 </button>
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="transform scale-95"
+                  className="transform scale-90"
                 >
                   <FollowButton _id={_id} followers={followers} />
                 </div>
