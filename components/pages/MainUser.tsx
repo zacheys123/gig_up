@@ -705,7 +705,7 @@ const MainUser = ({
                 onClick={(e) => e.stopPropagation()}
                 className="transform scale-90"
               >
-                <FollowButton _id={_id} followers={followers} />
+                <FollowButton _id={_id} />
               </div>
             </div>
           </div>
@@ -969,7 +969,7 @@ const MainUser = ({
                   onClick={(e) => e.stopPropagation()}
                   className="transform scale-90"
                 >
-                  <FollowButton _id={_id} followers={followers} />
+                  <FollowButton _id={_id} />
                 </div>
               </div>
             </div>

@@ -5,16 +5,10 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
-const FollowButton = ({
-  _id,
-  followers,
-}: {
-  _id: string;
-  followers?: string[];
-}) => {
+const FollowButton = ({ _id }: { _id: string }) => {
   const { user: currentUser } = useCurrentUser();
   const { toggleFollow } = useSocialActions();
-  const { colors, isDarkMode } = useThemeColors();
+  const { isDarkMode } = useThemeColors();
 
   const isFollowing = currentUser?.followings?.includes(_id) || false;
   const handleToggleFollow = async (e: React.MouseEvent) => {

@@ -1,5 +1,8 @@
-import NotificationHandler from "@/components/NotificationHandler";
-import React from "react";
+import { MobileNavigation } from "@/components/(main)/MobileNav";
+import MobileSheet from "@/components/MobileSheet";
+
+import { UserButton } from "@clerk/nextjs";
+
 import { Toaster } from "sonner";
 
 export default function FriendLayout({
@@ -8,19 +11,21 @@ export default function FriendLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-  reviews: React.ReactNode; // Add Review type here
-  chat: React.ReactNode; // Add Chat type here
+  chat: React.ReactNode;
+  reviews: React.ReactNode;
 }>) {
   return (
-    <div className="bg-black shadow-md shadow-gray-300 h-screen w-full overflow-hidden">
-      <div className="flex items-center justify-between mt-4 mx-6  "></div>
+    <div className="bg-black h-full w-full overflow-scroll">
+      <div className="flex items-center justify-between mt-4 mx-6  ">
+        <MobileNavigation />
+      </div>
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,
         }}
       />
-      <NotificationHandler />
+      {/* <NotificationHandler /> */}
       {chat}
       {reviews}
       {children}

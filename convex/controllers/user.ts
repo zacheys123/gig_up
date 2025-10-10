@@ -497,6 +497,23 @@ export const searchUsers = query({
   },
 });
 
+export const getUserByUsername = query({
+  args: {
+    username: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  },
+});
 export const followUser = mutation({
   args: { userId: v.string(), targetUserId: v.id("users") },
   handler: async (ctx, args) => {
