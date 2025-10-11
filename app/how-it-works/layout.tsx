@@ -17,6 +17,7 @@ import { motion } from "framer-motion";
 import { useThemeColors } from "@/hooks/useTheme";
 import { UserButton } from "@clerk/nextjs";
 import { Box } from "@mui/material";
+import GigLoader from "@/components/(main)/GigLoader";
 
 export default function HowItWorksLayout({
   children,
@@ -113,16 +114,7 @@ export default function HowItWorksLayout({
   };
 
   if (!mounted) {
-    return (
-      <div
-        className={cn(
-          "flex justify-center items-center min-h-screen",
-          colors.background
-        )}
-      >
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <GigLoader color=" border-blue-500" />;
   }
 
   return (
@@ -134,9 +126,10 @@ export default function HowItWorksLayout({
       )}
     >
       {/* Header */}
+      {/* Header */}
       <header
         className={cn(
-          "border-b sticky top-0 z-40 backdrop-blur-sm",
+          "border-b sticky top-0 z-40 backdrop-blur-sm z-9999",
           colors.navBorder,
           colors.navBackground
         )}
@@ -145,17 +138,21 @@ export default function HowItWorksLayout({
           <div className="flex justify-between items-center h-16">
             {/* Left section - Logo and Navigation */}
             <div className="flex items-center">
-              <Box className="flex items-center space-x-4 justify-between w-full md:w-auto">
-                <Link
-                  href="/"
-                  className={cn("text-xl font-bold", colors.navText)}
-                >
-                  Gigup
-                </Link>
-                <div className="md:hidden">
-                  <UserButton />
-                </div>
-              </Box>
+              <Link
+                href="/"
+                className={cn("text-xl font-bold", colors.navText)}
+              >
+                Gigup
+              </Link>
+
+              {/* Mobile Back to App Button */}
+              <button
+                onClick={() => router.push("/")}
+                className="md:hidden bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold mx-10 hover:bg-red-600 transition-colors"
+              >
+                Back To App
+              </button>
+
               <nav className="ml-8 hidden md:flex space-x-2">
                 {navigation.map((item) => {
                   const isActive = activeHash === item.hash;
@@ -183,16 +180,14 @@ export default function HowItWorksLayout({
 
             {/* Right section - Actions */}
             <div className="flex items-center gap-4">
-              {/* Theme Toggle would go here if you add it back */}
-
               {/* Desktop UserButton would go here */}
               <div className="hidden md:block">
                 <UserButton />
               </div>
 
-              {/* Back to App Button */}
-              <Link
-                href="/"
+              {/* Desktop Back to App Button */}
+              <button
+                onClick={() => router.push("/")}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hidden md:block",
                   colors.primaryBg,
@@ -202,12 +197,11 @@ export default function HowItWorksLayout({
                 )}
               >
                 Back to App
-              </Link>
+              </button>
             </div>
           </div>
         </div>
       </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}

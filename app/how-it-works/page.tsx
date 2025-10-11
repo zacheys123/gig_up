@@ -27,6 +27,7 @@ import { GiAchievement } from "react-icons/gi";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
+import { useRouter } from "next/navigation";
 
 interface TierLabelsProps {
   [key: string]: string;
@@ -88,7 +89,7 @@ export default function HowItWorksPage() {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
   const [isClient, setIsClient] = useState(false);
-
+  const router = useRouter();
   useEffect(() => {
     setIsClient(true);
 
@@ -217,8 +218,8 @@ export default function HowItWorksPage() {
   const tierColors: TierColorsProps = {
     bronze: colors.warningBg + " " + colors.warningBorder,
     silver: colors.backgroundSecondary + " " + colors.border,
-    gold: "bg-yellow-50 border-yellow-200",
-    platinum: "bg-purple-50 border-purple-200",
+    gold: "bg-yellow-900 border-yellow-200",
+    platinum: "bg-purple-750 border-purple-200",
   };
 
   const tierLabels: TierLabelsProps = {
@@ -735,6 +736,7 @@ export default function HowItWorksPage() {
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <button
+              onClick={() => router.replace("/profile")}
               className={cn(
                 "px-6 py-3 rounded-lg font-semibold transition-all duration-200",
                 colors.primaryBg,

@@ -6,23 +6,23 @@ import { Sun, Moon } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import MobileSheet from "../MobileSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Skeleton } from "@/components/ui/skeleton"; // Make sure to import Skeleton
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function MobileNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const { user: currentUser, isLoading: currentUserLoading } = useCurrentUser();
-  const { colors, isDarkMode } = useThemeColors();
+  const { colors, isDarkMode, mounted } = useThemeColors(); // Add mounted
   const { toggleDarkMode } = useThemeToggle();
 
   // Check if user has a role (isClient or isMusician) only when data is loaded
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
 
-  // Show loading state while data is being fetched
-  if (!clerkLoaded || (isSignedIn && currentUserLoading)) {
+  // Show loading state while ANY data is being fetched (Clerk, user data, OR theme)
+  if (!clerkLoaded || (isSignedIn && currentUserLoading) || !mounted) {
     return (
       <>
         <nav
-          className={`fixed top-0 left-0 right-0 z-50 ${colors.navBackground} backdrop-blur-md border-b ${colors.navBorder}`}
+          className={`fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 backdrop-blur-md border-b border-gray-200 dark:border-gray-700`}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
@@ -36,7 +36,7 @@ export function MobileNavigation() {
                   <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
                     <span className="text-white font-bold text-sm">G</span>
                   </div>
-                  <span className={`text-xl font-bold ${colors.text}`}>
+                  <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
                     GigUp
                   </span>
                 </motion.div>

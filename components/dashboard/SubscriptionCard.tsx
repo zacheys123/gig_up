@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useTheme";
+import { useSubscriptionUpdates } from "@/hooks/useSubscriptionUpdates"; // Import the new hook
 
 interface SubscriptionCardProps {
   plan: {
@@ -34,6 +35,9 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  // Use the subscription updates hook
+  const { subscriptionSuccess, subscriptionError } = useSubscriptionUpdates();
+
   const updateSubscription = useMutation(
     api.controllers.subscription.updateSubscription
   );
@@ -41,7 +45,7 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
   const handleSubscriptionClick = () => {
     if (plan.name.toLowerCase().includes("pro") && !plan.current) {
       setShowConfirmation(true);
-    } else {
+    } else if (!plan.current) {
       handleSubscription();
     }
   };
@@ -54,12 +58,16 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
 
     try {
       const nextBillingDate = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      const isUpgrading =
+        plan.name.toLowerCase().includes("pro") && !plan.current;
+      const isDowngrading =
+        !plan.name.toLowerCase().includes("pro") && !plan.current;
 
       const result = await updateSubscription({
         clerkId: userId,
         tier: plan.name.toLowerCase().includes("pro") ? "pro" : "free",
         tierStatus: "active",
-        nextBillingDate,
+        nextBillingDate: isUpgrading ? nextBillingDate : undefined,
       });
 
       if (result.success) {
@@ -72,10 +80,28 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
           nextBillingDate,
         });
 
+        // Show success notification
+        if (isUpgrading) {
+          subscriptionSuccess("upgraded");
+        } else if (isDowngrading) {
+          subscriptionSuccess("downgraded");
+        } else {
+          subscriptionSuccess("renewed");
+        }
+
         console.log("Subscription updated successfully!");
       }
     } catch (error) {
       console.error("Failed to update subscription:", error);
+
+      // Show error notification
+      const action = plan.name.toLowerCase().includes("pro")
+        ? "upgrade"
+        : "downgrade";
+      subscriptionError(
+        action,
+        error instanceof Error ? error.message : undefined
+      );
     } finally {
       setIsLoading(false);
     }

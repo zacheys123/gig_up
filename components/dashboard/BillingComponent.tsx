@@ -7,7 +7,6 @@ import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { motion } from "framer-motion";
 
 const BillingComponent = () => {
-  const { userId } = useAuth();
   const { user } = useCurrentUser();
   const { getPlansForUser } = useSubscriptionStore();
 

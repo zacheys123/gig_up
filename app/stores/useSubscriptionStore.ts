@@ -32,11 +32,19 @@ interface SubscriptionStore {
   availableTiers: SubscriptionTier[];
   isLoading: boolean;
 
+  // Trial State
+  showTrialModal: boolean;
+  trialRemainingDays: number | null;
+
   // Actions
   setSubscription: (subscription: Subscription | null) => void;
   setLoading: (loading: boolean) => void;
   updateSubscription: (updates: Partial<Subscription>) => void;
   clearSubscription: () => void;
+
+  // Trial Actions
+  setShowTrialModal: (show: boolean) => void;
+  setTrialRemainingDays: (days: number | null) => void;
 
   // Computed
   isPro: () => boolean;
@@ -108,6 +116,10 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
         },
       ],
 
+      // Trial State
+      showTrialModal: false,
+      trialRemainingDays: null,
+
       // Actions
       setSubscription: (subscription) => set({ subscription }),
 
@@ -121,6 +133,11 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
         })),
 
       clearSubscription: () => set({ subscription: null }),
+
+      // Trial Actions
+      setShowTrialModal: (showTrialModal) => set({ showTrialModal }),
+      setTrialRemainingDays: (trialRemainingDays) =>
+        set({ trialRemainingDays }),
 
       // Computed values
       isPro: () => {
@@ -228,6 +245,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
       partialize: (state) => ({
         subscription: state.subscription,
         availableTiers: state.availableTiers,
+        // Don't persist trial state - it should be recalculated on each load
       }),
     }
   )

@@ -192,6 +192,30 @@ export const userModel = defineTable({
 
   // Timestamps
   lastAdminAction: v.optional(v.number()),
+  badges: v.optional(v.array(v.string())),
+  reliabilityScore: v.optional(v.number()),
+  avgRating: v.optional(v.number()),
+  performanceStats: v.optional(
+    v.object({
+      totalGigsCompleted: v.number(),
+      onTimeRate: v.number(),
+      clientSatisfaction: v.number(),
+      responseTime: v.optional(v.number()),
+      lastUpdated: v.optional(v.number()),
+    })
+  ),
+  badgeMilestones: v.optional(
+    v.object({
+      consecutiveGigs: v.number(),
+      earlyCompletions: v.number(),
+      perfectRatings: v.number(),
+      cancellationFreeStreak: v.number(),
+    })
+  ),
+  gigsBooked: v.optional(v.number()),
+  gigsPosted: v.optional(v.number()),
+  userearnings: v.optional(v.number()),
+  total: v.optional(v.number()),
 })
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])
@@ -204,4 +228,16 @@ export const userModel = defineTable({
   .index("by_is_banned", ["isBanned"])
   .index("by_last_active", ["lastActive"])
   .index("by_city_and_role", ["city", "isMusician"])
-  .index("by_admin_role", ["isAdmin", "adminRole"]);
+  .index("by_admin_role", ["isAdmin", "adminRole"])
+  .index("by_badges", ["badges"]) // For finding users with specific badges
+  .index("by_reliability_score", ["reliabilityScore"]) // For sorting by reliability
+  .index("by_avg_rating", ["avgRating"]) // For sorting by rating
+  .index("by_completed_gigs", ["completedGigsCount"]) // You already have this field
+  .index("by_reliability_and_role", ["reliabilityScore", "isMusician"]) // For finding reliable musicians
+  .index("by_rating_and_city", ["avgRating", "city", "isMusician"]) // For local top-rated musicians
+  .index("by_badges_and_city", ["badges", "city", "isMusician"]) // For finding badge holders in specific cities
+  .index("by_performance_stats", [
+    "performanceStats.totalGigsCompleted",
+    "reliabilityScore",
+  ]) // Compound performance index
+  .index("by_tier_and_reliability", ["tier", "reliabilityScore"]); // For premium reliable users

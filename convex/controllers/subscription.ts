@@ -2,6 +2,7 @@
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 
+// convex/controllers/subscription.ts - Update the query
 export const getSubscription = query({
   args: {
     clerkId: v.string(),
@@ -14,6 +15,7 @@ export const getSubscription = query({
 
     if (!user) return null;
 
+    // Return formatted subscription object
     return {
       tier: user.tier ?? "free",
       status: user.tierStatus ?? "active",

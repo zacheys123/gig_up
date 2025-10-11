@@ -1,29 +1,26 @@
+// hooks/useCheckTrial.ts
 "use client";
+import { UserProps } from "@/types/userTypes";
 import { useEffect, useState } from "react";
-import useStore from "@/app/zustand/useStore";
-import { useSubscription } from "./useSubscription";
-import { User } from "@/types/userTypes";
+import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
+import { useUserStore } from "@/app/stores";
 
-// import { UserProps } from "@/types/userinterfaces";
-// import { useSubscription } from "./useSubscription";
-
-export const useCheckTrial = (user: User | null) => {
-  const { setShowTrialModal, setTrialRemainingDays } = useStore();
-  const { subscription } = useSubscription(user?.clerkId as string);
-  const [isFirstMonthEnd, setisFirstMonthEnd] = useState<boolean>();
-  const isPro = subscription?.subscription?.tier !== "free";
-
+export const useCheckTrial = () => {
+  const { setShowTrialModal, setTrialRemainingDays } = useSubscriptionStore();
+  const [isFirstMonthEnd, setIsFirstMonthEnd] = useState<boolean>(false);
+  const { user } = useUserStore();
   useEffect(() => {
-    if (!user?.createdAt || isPro) return;
+    if (!user?._creationTime) return;
 
-    const signupDate = new Date(user.createdAt);
+    const signupDate = new Date(user?._creationTime);
     const trialEndDate = new Date(signupDate);
     trialEndDate.setMonth(trialEndDate.getMonth() + 1);
     const now = new Date();
 
+    // Check if first month has ended
     const oneMonthLater = new Date(signupDate);
     oneMonthLater.setMonth(signupDate.getMonth() + 1);
-    setisFirstMonthEnd(now >= oneMonthLater);
+    setIsFirstMonthEnd(now >= oneMonthLater);
 
     // Calculate the number of remaining full days (including today)
     const msInDay = 1000 * 60 * 60 * 24;
@@ -31,24 +28,30 @@ export const useCheckTrial = (user: User | null) => {
     const daysLeft = Math.ceil(timeDiff / msInDay);
 
     console.log({
-      createdAt: user?.createdAt,
+      createdAt: user?._creationTime,
       now: new Date().toISOString(),
       trialEnds: trialEndDate.toISOString(),
       daysLeft,
+      isFirstMonthEnd: now >= oneMonthLater,
     });
+
+    // Skip trial logic if user is already on Pro tier
+    if (user.tier === "pro") {
+      setShowTrialModal(false);
+      setTrialRemainingDays(null);
+      return;
+    }
 
     if (daysLeft <= 0) {
       // Trial expired
       setShowTrialModal(true);
       setTrialRemainingDays(null);
     } else {
-      // Trial still active
+      // Always set remaining days (will trigger modal logic)
       setTrialRemainingDays(daysLeft);
-      const timeout = setTimeout(() => {
-        setTrialRemainingDays(null);
-      }, 10000);
-      return () => clearTimeout(timeout);
+      setShowTrialModal(false);
     }
-  }, [user, isPro]);
-  return { isFirstMonthEnd, setisFirstMonthEnd };
+  }, [user, setShowTrialModal, setTrialRemainingDays]);
+
+  return { isFirstMonthEnd, setIsFirstMonthEnd };
 };

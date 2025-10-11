@@ -1,5 +1,6 @@
 import { MobileNav } from "@/components/dashboard/MobileNav";
 import { Sidebar } from "@/components/dashboard/SideBar";
+import { SubscriptionUpdateManager } from "@/components/dashboard/SubscriptionUpdateManger";
 // import NotificationHandler from "@/components/NotificationHandler";
 
 export default function DashboardLayout({
@@ -10,6 +11,7 @@ export default function DashboardLayout({
   return (
     <div className="flex flex-col md:flex-row h-screen  ">
       {/* Sidebar */}
+      <SubscriptionUpdateManager />
       <div className="hidden md:block">
         <Sidebar />
       </div>

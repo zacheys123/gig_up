@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
+import { colors } from "@/data";
 
+// In your useThemeColors hook, ensure this:
 export function useThemeColors() {
   const { theme, setTheme, resolvedTheme } = useNextTheme();
   const { userId } = useAuth();
@@ -16,23 +18,35 @@ export function useThemeColors() {
     userId ? { clerkId: userId } : "skip"
   );
 
-  // Sync Convex theme with next-themes
+  // Wait for both mounting AND userTheme to be available for authenticated users
   useEffect(() => {
-    if (mounted && userTheme && userTheme !== theme) {
-      setTheme(userTheme);
+    if (mounted) {
+      if (userId && userTheme && userTheme !== theme) {
+        setTheme(userTheme);
+      }
     }
-  }, [userTheme, theme, setTheme, mounted]);
+  }, [userTheme, mounted, userId, theme, setTheme]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const isDarkMode = resolvedTheme === "dark";
+  // Only consider theme ready when mounted AND (for authenticated users, userTheme is loaded)
+  const isThemeReady = mounted && (userId ? userTheme !== undefined : true);
 
+  const getSystemTheme = () => {
+    if (typeof window === "undefined") return "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  };
+
+  const effectiveTheme = userTheme || getSystemTheme() || "light";
+  const isDarkMode = effectiveTheme === "dark";
   const colors = {
     // Background colors
     background: isDarkMode ? "bg-gray-900" : "bg-white",
-    backgroundMuted: isDarkMode ? "bg-gray-800" : "bg-gray-60",
+    backgroundMuted: isDarkMode ? "bg-gray-800" : "bg-gray-50",
 
     // Text colors
     text: isDarkMode ? "text-gray-100" : "text-gray-900",
@@ -67,7 +81,7 @@ export function useThemeColors() {
     destructiveBg: isDarkMode ? "bg-red-900/20" : "bg-red-50",
     destructiveHover: isDarkMode ? "hover:bg-red-900/30" : "hover:bg-red-100",
 
-    // ADD WARNING COLORS HERE:
+    // Warning colors
     warning: isDarkMode
       ? "bg-amber-900/20 border-amber-800 text-amber-200 hover:bg-amber-900/30"
       : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100",
@@ -86,8 +100,6 @@ export function useThemeColors() {
 
     // Hover background
     hoverBackground: isDarkMode ? "bg-gray-700" : "bg-gray-200",
-
-    // ADD THESE MISSING CLASSES:
 
     // Additional background variants
     backgroundSecondary: isDarkMode ? "bg-gray-800" : "bg-gray-50",
@@ -114,7 +126,8 @@ export function useThemeColors() {
     gradientSecondary: isDarkMode
       ? "bg-gradient-to-br from-gray-900 via-gray-800 to-black"
       : "bg-gradient-to-br from-gray-50 via-white to-gray-100",
-    // Shadow colos
+
+    // Shadow colors
     shadow: isDarkMode ? "shadow-gray-900/50" : "shadow-gray-400/20",
 
     // Overlay colors
@@ -124,22 +137,24 @@ export function useThemeColors() {
     disabledText: isDarkMode ? "text-gray-500" : "text-gray-400",
     disabledBg: isDarkMode ? "bg-gray-700" : "bg-gray-200",
     disabledBorder: isDarkMode ? "border-gray-600" : "border-gray-300",
+
     danger: isDarkMode
       ? "bg-red-900/20 border-red-800 text-red-200 hover:bg-red-900/30"
       : "bg-red-50 border-red-200 text-red-800 hover:bg-red-100",
+
     skeleton: isDarkMode ? "border-gray-600/30" : "border-gray-300",
   };
 
   return {
     colors,
-    isDarkMode: mounted ? isDarkMode : false,
-    mounted,
-    theme: mounted ? theme : "light",
-    resolvedTheme: mounted ? resolvedTheme : "light",
+    isDarkMode: isThemeReady ? isDarkMode : false,
+    mounted: isThemeReady, // Return when theme is actually ready
+    theme: isThemeReady ? effectiveTheme : "light",
+    userTheme,
+    effectiveTheme: isThemeReady ? effectiveTheme : "light",
+    resolvedTheme: isThemeReady ? resolvedTheme : "light",
   };
 }
-
-// Updated toggle hook with Convex persistence
 export function useThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useNextTheme();
   const { userId } = useAuth();

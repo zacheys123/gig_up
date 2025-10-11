@@ -32,9 +32,13 @@ import {
   Bell,
 } from "lucide-react";
 import LoadingSpinner from "./loading";
+import { cn } from "@/lib/utils";
+import { useThemeColors } from "@/hooks/useTheme";
+import GigLoader from "@/components/(main)/GigLoader";
 
 export default function Home() {
   const { isLoaded, userId } = useAuth();
+  const { colors, isDarkMode, mounted, theme, userTheme } = useThemeColors();
 
   // ✅ Use Zustand store instead of useCurrentUser
   const { user, isLoading, isAuthenticated } = useUserStore();
@@ -86,6 +90,7 @@ export default function Home() {
       }
     }
   }, [isAuthenticated, user, shouldShowProfileModal]);
+
   const completionPercentage = Math.round(
     (((user?.firstname ? 1 : 0) +
       (user?.date ? 1 : 0) +
@@ -96,6 +101,7 @@ export default function Home() {
       6) *
       100
   );
+
   const getDynamicHref = () => {
     if (!userId || !user?.firstname) return `/profile`; // Basic profile setup
     if (!user?.isClient && !user?.isMusician) return `/roles/${userId}`; // Role selection
@@ -108,28 +114,17 @@ export default function Home() {
           : `/roles/${userId}`;
   };
 
-  // Show loading spinner while auth or user data is loading
-  if (!isLoaded) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-950 text-white">
-        <CircularProgress size="30px" />
-        <span className="mt-2 text-lg font-medium text-gray-300">
-          Loading...
-        </span>
-      </div>
-    );
+  // Show loading spinner while auth, user data, or theme is loading
+  if (!isLoaded || !mounted) {
+    return <GigLoader title="Loading GigUp..." size="md" fullScreen={true} />;
   }
 
   if (isLoading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-950 text-white">
-        <CircularProgress size="30px" />
-        <span className="mt-2 text-lg font-medium text-gray-300">
-          Loading...
-        </span>
-      </div>
+      <GigLoader title="Loading your profile..." size="lg" fullScreen={true} />
     );
   }
+
   // Features for different user types
   const guestFeatures = [
     {
@@ -211,10 +206,19 @@ export default function Home() {
   return (
     <>
       <div
-        className={`bg-gray-950 text-white font-sans min-h-screen overflow-y-scroll snap-mandatory snap-y scroll-smooth ${showProfileModal ? "overflow-hidden" : ""}`}
+        className={cn(
+          `font-sans min-h-screen overflow-y-scroll snap-mandatory snap-y scroll-smooth ${showProfileModal ? "overflow-hidden" : ""}`,
+          colors.background,
+          colors.text
+        )}
       >
         {/* Hero Section */}
-        <section className="relative flex flex-col items-center justify-center min-h-screen text-center snap-start px-4">
+        <section
+          className={cn(
+            "relative flex flex-col items-center justify-center min-h-screen text-center snap-start px-4",
+            colors.background
+          )}
+        >
           <video
             autoPlay
             loop
@@ -227,10 +231,18 @@ export default function Home() {
               type="video/mp4"
             />
           </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-gray-950/90"></div>
+          <div
+            className={cn(
+              "absolute inset-0 bg-gradient-to-b from-black/60 to-gray-950/90"
+            )}
+          ></div>
 
           <motion.div
-            className="relative z-10 px-6 py-12 bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 max-w-4xl w-full"
+            className={cn(
+              "relative z-10 px-6 py-12 backdrop-blur-xl rounded-2xl shadow-2xl border max-w-4xl w-full",
+              colors.card,
+              colors.cardBorder
+            )}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
@@ -261,7 +273,10 @@ export default function Home() {
             </motion.h1>
 
             <motion.p
-              className="text-xl md:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed"
+              className={cn(
+                "text-xl md:text-2xl mb-8 max-w-2xl mx-auto leading-relaxed",
+                colors.textMuted
+              )}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.8 }}
@@ -322,10 +337,15 @@ export default function Home() {
 
             {/* User-specific stats */}
             <motion.div
-              className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t border-white/10"
+              className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8, duration: 0.8 }}
+              style={{
+                borderColor: isDarkMode
+                  ? "rgba(55, 65, 81, 0.5)"
+                  : "rgba(229, 231, 235, 0.5)",
+              }}
             >
               {isAuthenticated && isProfileComplete
                 ? // User-specific stats for logged-in users with complete profiles
@@ -347,7 +367,7 @@ export default function Home() {
                       <div className="text-2xl md:text-3xl font-bold text-amber-400">
                         {stat.number}
                       </div>
-                      <div className="text-sm text-gray-400 mt-1">
+                      <div className={cn("text-sm mt-1", colors.textMuted)}>
                         {stat.label}
                       </div>
                     </div>
@@ -362,7 +382,7 @@ export default function Home() {
                       <div className="text-2xl md:text-3xl font-bold text-amber-400">
                         {stat.number}
                       </div>
-                      <div className="text-sm text-gray-400 mt-1">
+                      <div className={cn("text-sm mt-1", colors.textMuted)}>
                         {stat.label}
                       </div>
                     </div>
@@ -372,7 +392,12 @@ export default function Home() {
         </section>
 
         {/* Features Section - Dynamic based on user type */}
-        <section className="min-h-screen flex flex-col justify-center items-center snap-start bg-gradient-to-b from-gray-900 to-gray-950 py-20 px-4">
+        <section
+          className={cn(
+            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
+            colors.background
+          )}
+        >
           <motion.div
             className="text-center max-w-6xl mx-auto"
             initial={{ opacity: 0 }}
@@ -386,7 +411,12 @@ export default function Home() {
                   : "Why Join GigUp?"
                 : "Why Choose GigUp?"}
             </h2>
-            <p className="text-xl text-gray-400 mb-16 max-w-2xl mx-auto">
+            <p
+              className={cn(
+                "text-xl mb-16 max-w-2xl mx-auto",
+                colors.textMuted
+              )}
+            >
               {isAuthenticated && isProfileComplete
                 ? `Everything you need to ${user?.isMusician ? "grow your music career" : "find amazing talent"}`
                 : "Everything you need to grow your music career in one place"}
@@ -396,17 +426,22 @@ export default function Home() {
               {currentFeatures.map((feature, index) => (
                 <motion.div
                   key={index}
-                  className="group bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-white/10 hover:border-amber-500/30 hover:bg-gray-800/70 transition-all duration-500 hover:scale-105"
+                  className={cn(
+                    "group backdrop-blur-sm p-8 rounded-2xl border transition-all duration-500 hover:scale-105",
+                    colors.card,
+                    colors.cardBorder,
+                    "hover:border-amber-500/30"
+                  )}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.6 }}
                   whileHover={{ y: -5 }}
                 >
                   <div className="flex justify-center mb-6">{feature.icon}</div>
-                  <h3 className="text-xl font-bold text-white mb-3">
+                  <h3 className={cn("text-xl font-bold mb-3", colors.text)}>
                     {feature.title}
                   </h3>
-                  <p className="text-gray-400 leading-relaxed">
+                  <p className={cn("leading-relaxed", colors.textMuted)}>
                     {feature.description}
                   </p>
                 </motion.div>
@@ -416,7 +451,12 @@ export default function Home() {
         </section>
 
         {/* How It Works Section */}
-        <section className="min-h-screen flex flex-col justify-center items-center snap-start bg-gray-950 py-20 px-4">
+        <section
+          className={cn(
+            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
+            colors.background
+          )}
+        >
           <motion.div
             className="text-center max-w-6xl mx-auto"
             initial={{ opacity: 0 }}
@@ -428,7 +468,12 @@ export default function Home() {
                 ? "Next Steps"
                 : "How It Works"}
             </h2>
-            <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
+            <p
+              className={cn(
+                "text-xl mb-12 max-w-2xl mx-auto",
+                colors.textMuted
+              )}
+            >
               {isAuthenticated && isProfileComplete
                 ? "Make the most of your GigUp experience"
                 : "Get started in just a few simple steps"}
@@ -513,10 +558,10 @@ export default function Home() {
                       <div className="text-4xl font-black text-amber-500 mb-4">
                         {item.step}
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">
+                      <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
                         {item.title}
                       </h3>
-                      <p className="text-gray-400">{item.description}</p>
+                      <p className={cn(colors.textMuted)}>{item.description}</p>
                     </motion.div>
                   ))
                 : // Steps for guests and incomplete profiles
@@ -550,10 +595,10 @@ export default function Home() {
                       <div className="text-4xl font-black text-amber-500 mb-4">
                         {item.step}
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">
+                      <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
                         {item.title}
                       </h3>
-                      <p className="text-gray-400">{item.description}</p>
+                      <p className={cn(colors.textMuted)}>{item.description}</p>
                     </motion.div>
                   ))}
             </div>
@@ -584,7 +629,12 @@ export default function Home() {
         </section>
 
         {/* Final CTA Section */}
-        <section className="min-h-screen flex flex-col justify-center items-center snap-start bg-gradient-to-br from-gray-900 to-amber-950/20 py-20 px-4">
+        <section
+          className={cn(
+            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
+            colors.background
+          )}
+        >
           <motion.div
             className="text-center max-w-4xl mx-auto"
             initial={{ opacity: 0, y: 30 }}
@@ -598,7 +648,9 @@ export default function Home() {
                   : "Ready to Complete Your Profile?"
                 : "Ready to Start?"}
             </h2>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            <p
+              className={cn("text-xl mb-8 max-w-2xl mx-auto", colors.textMuted)}
+            >
               {isAuthenticated
                 ? isProfileComplete
                   ? `Continue your journey as a ${user?.isMusician ? "musician" : "client"}`
@@ -646,23 +698,35 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="min-h-40 flex flex-col justify-center items-center bg-gray-900 snap-start py-12 px-4 border-t border-white/10">
-          <p className="text-gray-400 text-center">
+        <footer
+          className={cn(
+            "min-h-40 flex flex-col justify-center items-center snap-start py-12 px-4 border-t",
+            colors.background,
+            colors.border
+          )}
+        >
+          <p className={cn("text-center", colors.textMuted)}>
             © {new Date().getFullYear()} GigUp. All rights reserved.
             <br />
-            <span className="text-sm text-gray-500 mt-2 block">
+            <span className={cn("text-sm mt-2 block", colors.textSecondary)}>
               Connecting the world through music
             </span>
           </p>
           {isAuthenticated && (
-            <p className="text-sm text-gray-600 mt-4">
+            <p className={cn("text-sm mt-4", colors.textMuted)}>
               Logged in as {user?.firstname || user?.username}
+              {userTheme && (
+                <span
+                  className={cn("text-xs block mt-1", colors.textSecondary)}
+                >
+                  Theme: {userTheme}
+                </span>
+              )}
             </p>
           )}
         </footer>
       </div>
 
-      {/* Professional Floating Profile Completion Modal */}
       {/* Professional Floating Profile Completion Modal */}
       <AnimatePresence>
         {showProfileModal && (
@@ -691,7 +755,11 @@ export default function Home() {
                 damping: 25,
                 stiffness: 300,
               }}
-              className="relative w-full max-w-2xl bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden"
+              className={cn(
+                "relative w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden",
+                colors.card,
+                colors.cardBorder
+              )}
             >
               {/* Header */}
               <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6">
@@ -720,47 +788,77 @@ export default function Home() {
               </div>
 
               {/* Content Area - Improved visibility */}
-              <div className="p-6 max-h-[60vh] overflow-y-auto">
+              <div
+                className={cn(
+                  "p-6 max-h-[60vh] overflow-y-auto",
+                  colors.background
+                )}
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   {/* Missing Information */}
                   <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <h4
+                      className={cn(
+                        "text-lg font-semibold mb-3 flex items-center gap-2",
+                        colors.text
+                      )}
+                    >
                       <User className="w-5 h-5 text-amber-500" />
                       Missing Information
                     </h4>
 
                     <div className="space-y-2">
                       {!user?.date && (
-                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <div
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border",
+                            colors.danger
+                          )}
+                        >
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-red-300 text-sm">
+                          <span className={cn("text-sm", colors.warningText)}>
                             Birth Date (Day)
                           </span>
                         </div>
                       )}
 
                       {!user?.month && (
-                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <div
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border",
+                            colors.danger
+                          )}
+                        >
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-red-300 text-sm">
+                          <span className={cn("text-sm", colors.warningText)}>
                             Birth Date (Month)
                           </span>
                         </div>
                       )}
 
                       {!user?.year && (
-                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <div
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border",
+                            colors.danger
+                          )}
+                        >
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-red-300 text-sm">
+                          <span className={cn("text-sm", colors.warningText)}>
                             Birth Date (Year)
                           </span>
                         </div>
                       )}
 
                       {!user?.isMusician && !user?.isClient && (
-                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <div
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border",
+                            colors.danger
+                          )}
+                        >
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-red-300 text-sm">
+                          <span className={cn("text-sm", colors.warningText)}>
                             Account Type
                           </span>
                         </div>
@@ -770,7 +868,12 @@ export default function Home() {
 
                   {/* Benefits */}
                   <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <h4
+                      className={cn(
+                        "text-lg font-semibold mb-3 flex items-center gap-2",
+                        colors.text
+                      )}
+                    >
                       <Star className="w-5 h-5 text-green-500" />
                       Unlock Benefits
                     </h4>
@@ -784,10 +887,14 @@ export default function Home() {
                       ].map((benefit, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg"
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border",
+                            colors.successBg,
+                            colors.successBorder
+                          )}
                         >
                           <Check className="w-4 h-4 text-green-500" />
-                          <span className="text-green-300 text-sm">
+                          <span className={cn("text-sm", colors.successText)}>
                             {benefit}
                           </span>
                         </div>
@@ -797,16 +904,27 @@ export default function Home() {
                 </div>
 
                 {/* Progress Section */}
-                <div className="mb-6 p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+                <div
+                  className={cn(
+                    "mb-6 p-4 rounded-xl border",
+                    colors.backgroundSecondary,
+                    colors.border
+                  )}
+                >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-gray-300 font-medium">
+                    <span className={cn("font-medium", colors.text)}>
                       Profile Completion
                     </span>
                     <span className="text-amber-400 font-bold">
                       {completionPercentage}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className={cn(
+                      "w-full rounded-full h-2",
+                      colors.backgroundMuted
+                    )}
+                  >
                     <div
                       className="bg-gradient-to-r from-amber-500 to-orange-600 h-2 rounded-full transition-all duration-500"
                       style={{
@@ -836,14 +954,21 @@ export default function Home() {
                   </Link>
 
                   <SignOutButton>
-                    <button className="w-full sm:w-auto px-4 py-2 border border-gray-600 text-gray-400 hover:text-red-400 hover:border-red-500 text-sm font-medium rounded-lg hover:bg-red-500/10 transition-all duration-300 flex items-center gap-2 justify-center">
+                    <button
+                      className={cn(
+                        "w-full sm:w-auto px-4 py-2 border text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-2 justify-center",
+                        colors.border,
+                        colors.textMuted,
+                        "hover:text-red-400 hover:border-red-500 hover:bg-red-500/10"
+                      )}
+                    >
                       <LogOut className="w-4 h-4" />
                       Sign Out
                     </button>
                   </SignOutButton>
                 </div>
 
-                <p className="text-center text-gray-500 text-xs mt-4">
+                <p className={cn("text-center text-xs mt-4", colors.textMuted)}>
                   Complete your profile for the best experience
                 </p>
               </div>

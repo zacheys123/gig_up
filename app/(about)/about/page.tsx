@@ -11,20 +11,15 @@ import {
   FiMusic,
   FiMic,
   FiUsers,
-  FiRefreshCw, // Add refresh icon
+  FiRefreshCw,
 } from "react-icons/fi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-// import { useAllUsers } from "@/hooks/useAllUsers";
-// import { UserProps } from "@/types/userinterfaces";
-// import { useAllGigs } from "@/hooks/useAllGigs";
-// import { GigProps } from "@/types/giginterface";
-// import { ResponseProps, usePostComments } from "@/hooks/usePostComments";
-// import PostFeedBack from "@/components/user/PostFeedBack";
-import { useState, useEffect } from "react"; // Add useState and useEffect
+import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import LoadingSpinner from "@/app/auth/loading";
+import { useThemeColors } from "@/hooks/useTheme";
 
 // Animation variants
 const fadeInUp = {
@@ -44,40 +39,9 @@ const staggerContainer = {
 
 export default function AboutPage() {
   const user = useCurrentUser();
-  // const { users } = useAllUsers();
-  // const { gigs } = useAllGigs();
-  // const { Allposts, isLoading: postsloading } = usePostComments();
-  // const allmusicians = users?.users?.filter((u: UserProps) => u?.isMusician).length;
-  // const allClients = users?.users?.filter((u: UserProps) => u?.isClient).length;
-  // const allBookedGigs = gigs?.gigs?.filter((u: GigProps) => u?.isTaken).length;
-  //   const musicians = users?.users?.filter((u: UserProps) => u?.isClient)
-  // State for shuffled posts
-  // console.log(musicians)
-  // const [shuffledPosts, setShuffledPosts] = useState<ResponseProps[]>([]);
-
-  // // Function to shuffle and select 2 random posts
-  // const shufflePosts = () => {
-  //   if (!Allposts || Allposts.length === 0) return;
-
-  //   // Copy the array to avoid mutating the original
-  //   const postsCopy = [...Allposts];
-
-  //   // Shuffle the array using Fisher-Yates algorithm
-  //   for (let i = postsCopy.length - 1; i > 0; i--) {
-  //     const j = Math.floor(Math.random() * (i + 1));
-  //     [postsCopy[i], postsCopy[j]] = [postsCopy[j], postsCopy[i]];
-  //   }
-
-  //   // Take the first 2 posts
-  //   setShuffledPosts(postsCopy.slice(0, 2));
-  // };
-
-  // // Shuffle posts when Allposts changes or on component mount
-  // useEffect(() => {
-  //   shufflePosts();
-  // }, [Allposts]);
   const { userId } = useAuth();
   const updateFirstLogin = useMutation(api.controllers.user.updateFirstLogin);
+  const { colors, isDarkMode, mounted } = useThemeColors();
 
   useEffect(() => {
     const markFirstLoginComplete = async () => {
@@ -97,21 +61,37 @@ export default function AboutPage() {
 
     markFirstLoginComplete();
   }, [userId]);
+
   if (!userId) {
-    <div>
-      <LoadingSpinner />
-    </div>;
+    return (
+      <div>
+        <LoadingSpinner />
+      </div>
+    );
   }
+
+  if (!mounted) {
+    return (
+      <div className={`min-h-screen ${colors.background}`}>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-gray-50 h-screen overflow-y-auto">
+    <div
+      className={`min-h-screen ${colors.background} ${colors.text} transition-colors duration-300 overflow-y-auto`}
+    >
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-indigo-900 to-purple-800 text-white py-28 px-4 overflow-hidden">
+      <section
+        className={`relative ${colors.gradientPrimary} py-28 px-4 overflow-hidden`}
+      >
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-5xl md:text-6xl font-bold mb-6 leading-tight"
+            className="text-5xl md:text-6xl font-bold mb-6 leading-tight text-white"
           >
             The Premier Platform Connecting{" "}
             <span className="text-amber-300">Artists</span> with{" "}
@@ -124,7 +104,7 @@ export default function AboutPage() {
             transition={{ delay: 0.3, duration: 0.8 }}
             className="text-xl max-w-3xl mx-auto mb-10 text-blue-100"
           >
-            {`Whether you're a talented performer seeking gigs or a restaurant,hotel a club looking
+            {`Whether you're a talented performer seeking gigs or a restaurant, hotel, or club looking
             for exceptional entertainment, we create perfect matches that
             inspire.`}
           </motion.p>
@@ -138,7 +118,7 @@ export default function AboutPage() {
             {user ? (
               <Link
                 href={"/authenticate"}
-                className="bg-amber-400 hover:bg-amber-300 text-indigo-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                className="bg-amber-400 hover:bg-amber-300 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
               >
                 Go to Dashboard
               </Link>
@@ -146,13 +126,13 @@ export default function AboutPage() {
               <>
                 <Link
                   href="/signup"
-                  className="bg-amber-400 hover:bg-amber-300 text-indigo-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                  className="bg-amber-400 hover:bg-amber-300 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <FiMic className="mr-2" /> Artists Sign Up
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-white hover:bg-gray-100 text-indigo-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                  className="bg-white hover:bg-gray-100 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <FiUsers className="mr-2" /> Clients Sign Up
                 </Link>
@@ -167,41 +147,44 @@ export default function AboutPage() {
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-500 rounded-full mix-blend-screen"></div>
         </div>
       </section>
+
       {/* Stats Bar */}
       <motion.section
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        className="bg-white py-12 shadow-sm"
+        className={`${colors.background} py-12 ${colors.shadow}`}
       >
         <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-8 text-center">
           <div>
-            <div className="text-4xl font-bold text-indigo-900 mb-2">
-              {/* {allmusicians}+ */}10K+
+            <div className={`text-4xl font-bold ${colors.primary} mb-2`}>
+              10K+
             </div>
-            <div className="text-gray-600">Talented Artists</div>
+            <div className={colors.textMuted}>Talented Artists</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-indigo-900 mb-2">
-              {/* {allClients}+ */}
+            <div className={`text-4xl font-bold ${colors.primary} mb-2`}>
               20K+
             </div>
-            <div className="text-gray-600">Verified Clients</div>
+            <div className={colors.textMuted}>Verified Clients</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-indigo-900 mb-2">
-              {/* {allBookedGigs <1 ? 0 :allBookedGigs}+ */} 9K
+            <div className={`text-4xl font-bold ${colors.primary} mb-2`}>
+              9K
             </div>
-            <div className="text-gray-600">Successful Bookings</div>
+            <div className={colors.textMuted}>Successful Bookings</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-indigo-900 mb-2">95%</div>
-            <div className="text-gray-600">Satisfaction Rate</div>
+            <div className={`text-4xl font-bold ${colors.primary} mb-2`}>
+              95%
+            </div>
+            <div className={colors.textMuted}>Satisfaction Rate</div>
           </div>
         </div>
       </motion.section>
+
       {/* For Artists Section */}
-      <section className="py-20 px-4 max-w-6xl mx-auto">
+      <section className={`py-20 px-4 max-w-6xl mx-auto ${colors.background}`}>
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -211,13 +194,13 @@ export default function AboutPage() {
         >
           <motion.h2
             variants={fadeInUp}
-            className="text-3xl font-bold text-gray-900 mb-4"
+            className={`text-3xl font-bold ${colors.text} mb-4`}
           >
-            For <span className="text-amber-500">Artists</span>
+            For <span className={colors.primary}>Artists</span>
           </motion.h2>
           <motion.p
             variants={fadeInUp}
-            className="text-xl text-gray-600 max-w-3xl mx-auto"
+            className={`text-xl ${colors.textMuted} max-w-3xl mx-auto`}
           >
             Find your perfect gig, showcase your talent, and grow your career
           </motion.p>
@@ -265,19 +248,20 @@ export default function AboutPage() {
             <motion.div
               key={index}
               variants={fadeInUp}
-              className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-all border-t-4 border-amber-400"
+              className={`${colors.card} p-8 rounded-xl ${colors.shadow} hover:shadow-lg transition-all border-t-4 border-amber-400 ${colors.border}`}
             >
               <div className="text-amber-500 mb-4">{item.icon}</div>
-              <h3 className="text-xl font-bold mb-3 text-gray-800">
+              <h3 className={`text-xl font-bold mb-3 ${colors.text}`}>
                 {item.title}
               </h3>
-              <p className="text-gray-600">{item.desc}</p>
+              <p className={colors.textMuted}>{item.desc}</p>
             </motion.div>
           ))}
         </motion.div>
       </section>
+
       {/* For Clients Section */}
-      <section className="py-20 bg-gray-100">
+      <section className={`py-20 ${colors.backgroundMuted}`}>
         <div className="max-w-6xl mx-auto px-4">
           <motion.div
             initial="hidden"
@@ -288,13 +272,13 @@ export default function AboutPage() {
           >
             <motion.h2
               variants={fadeInUp}
-              className="text-3xl font-bold text-gray-900 mb-4"
+              className={`text-3xl font-bold ${colors.text} mb-4`}
             >
               For <span className="text-indigo-600">Clients</span>
             </motion.h2>
             <motion.p
               variants={fadeInUp}
-              className="text-xl text-gray-600 max-w-3xl mx-auto"
+              className={`text-xl ${colors.textMuted} max-w-3xl mx-auto`}
             >
               Discover exceptional talent and create unforgettable experiences
             </motion.p>
@@ -342,20 +326,21 @@ export default function AboutPage() {
               <motion.div
                 key={index}
                 variants={fadeInUp}
-                className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-all border-t-4 border-indigo-500"
+                className={`${colors.card} p-8 rounded-xl ${colors.shadow} hover:shadow-lg transition-all border-t-4 border-indigo-500 ${colors.border}`}
               >
                 <div className="text-indigo-600 mb-4">{item.icon}</div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">
+                <h3 className={`text-xl font-bold mb-3 ${colors.text}`}>
                   {item.title}
                 </h3>
-                <p className="text-gray-600">{item.desc}</p>
+                <p className={colors.textMuted}>{item.desc}</p>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
+
       {/* Testimonial Section */}
-      <section className="py-14 bg-gradient-to-br from-indigo-900 to-purple-800 text-white">
+      <section className={`py-14 ${colors.gradientPrimary} text-white`}>
         <div className="max-w-6xl mx-auto px-4">
           <motion.div
             initial="hidden"
@@ -382,42 +367,32 @@ export default function AboutPage() {
             viewport={{ once: true }}
             className="flex justify-center mb-8"
           >
-            <button
-              // onClick={shufflePosts}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-700 hover:bg-indigo-600 text-white rounded-full transition-all duration-300 hover:scale-105"
-            >
+            <button className="flex items-center gap-2 px-6 py-3 bg-indigo-700 hover:bg-indigo-600 text-white rounded-full transition-all duration-300 hover:scale-105">
               <FiRefreshCw className="w-5 h-5" />
               Show Different Testimonials
             </button>
           </motion.div>
 
-          {/* Shuffled testimonials */}
-          {/* <div className="grid md:grid-cols-2 gap-8">
-            {postsloading && <div >loading posts...</div>}
-            {shuffledPosts.length > 0 ? (
-              shuffledPosts.map((post) => (
-                <PostFeedBack key={post._id} post={post} />
-              ))
-            ) : (
-              // Placeholder when no posts are available
-              <>
-                <div className="bg-indigo-800/50 p-8 rounded-2xl border border-indigo-700">
-                  <p className="text-center text-blue-200 italic">
-                    No testimonials available yet. Be the first to share your experience!
-                  </p>
-                </div>
-                <div className="bg-indigo-800/50 p-8 rounded-2xl border border-indigo-700">
-                  <p className="text-center text-blue-200 italic">
-                    Share how our platform has helped you connect with amazing talent!
-                  </p>
-                </div>
-              </>
-            )}
-          </div> */}
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Placeholder testimonials */}
+            <div className="bg-indigo-800/50 p-8 rounded-2xl border border-indigo-700">
+              <p className="text-center text-blue-200 italic">
+                No testimonials available yet. Be the first to share your
+                experience!
+              </p>
+            </div>
+            <div className="bg-indigo-800/50 p-8 rounded-2xl border border-indigo-700">
+              <p className="text-center text-blue-200 italic">
+                Share how our platform has helped you connect with amazing
+                talent!
+              </p>
+            </div>
+          </div>
         </div>
       </section>
+
       {/* CTA Section */}
-      <section className="py-20 px-4">
+      <section className={`py-20 px-4 ${colors.background}`}>
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -436,7 +411,7 @@ export default function AboutPage() {
             {user ? (
               <Link
                 href={"/authenticate"}
-                className="bg-white text-indigo-900 hover:bg-gray-100 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105"
+                className="bg-white text-gray-900 hover:bg-gray-100 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105"
               >
                 Go to Dashboard
               </Link>
@@ -444,13 +419,13 @@ export default function AboutPage() {
               <>
                 <Link
                   href="/signup?role=artist"
-                  className="bg-amber-400 hover:bg-amber-300 text-indigo-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                  className="bg-amber-400 hover:bg-amber-300 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <FiMic className="mr-2" /> Join as Artist
                 </Link>
                 <Link
                   href="/signup?role=client"
-                  className="bg-white hover:bg-gray-100 text-indigo-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                  className="bg-white hover:bg-gray-100 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <FiUsers className="mr-2" /> Join as Client
                 </Link>
@@ -464,13 +439,14 @@ export default function AboutPage() {
             </Link>
           </p>
         </motion.div>
-      </section>{" "}
+      </section>
+
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
+      <footer className={`${colors.navBackground} ${colors.text} py-12 px-4`}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <h3 className="text-xl font-bold mb-4 text-amber-400">Gigup</h3>
-            <p className="text-gray-400">
+            <p className={colors.textMuted}>
               Bridging the gap between exceptional talent and unforgettable
               venues since 2020.
             </p>
@@ -481,7 +457,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/authenticate"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   Sign Up
                 </Link>
@@ -489,7 +465,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/artist-resources"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   Resources
                 </Link>
@@ -497,7 +473,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/artist-faq"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   FAQ
                 </Link>
@@ -510,7 +486,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/authenticate"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   Sign Up
                 </Link>
@@ -518,7 +494,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/pricing"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   Pricing
                 </Link>
@@ -526,7 +502,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/client-faq"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   FAQ
                 </Link>
@@ -539,7 +515,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/about"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   About Us
                 </Link>
@@ -547,7 +523,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/blog"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   Blog
                 </Link>
@@ -555,7 +531,7 @@ export default function AboutPage() {
               <li>
                 <Link
                   href="/contact"
-                  className="text-gray-400 hover:text-white transition"
+                  className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
                   Contact
                 </Link>
@@ -563,16 +539,27 @@ export default function AboutPage() {
             </ul>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
+        <div
+          className={`max-w-6xl mx-auto mt-12 pt-8 ${colors.border} text-center ${colors.textMuted}`}
+        >
           <p>© {new Date().getFullYear()} Gigup. All rights reserved.</p>
           <div className="flex justify-center space-x-6 mt-4">
-            <Link href="/privacy" className="hover:text-white transition">
+            <Link
+              href="/privacy"
+              className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
+            >
               Privacy Policy
             </Link>
-            <Link href="/terms" className="hover:text-white transition">
+            <Link
+              href="/terms"
+              className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
+            >
               Terms of Service
             </Link>
-            <Link href="/cookies" className="hover:text-white transition">
+            <Link
+              href="/cookies"
+              className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
+            >
               Cookie Policy
             </Link>
           </div>
@@ -581,3 +568,36 @@ export default function AboutPage() {
     </div>
   );
 }
+
+// const { users } = useAllUsers();
+// const { gigs } = useAllGigs();
+// const { Allposts, isLoading: postsloading } = usePostComments();
+// const allmusicians = users?.users?.filter((u: UserProps) => u?.isMusician).length;
+// const allClients = users?.users?.filter((u: UserProps) => u?.isClient).length;
+// const allBookedGigs = gigs?.gigs?.filter((u: GigProps) => u?.isTaken).length;
+//   const musicians = users?.users?.filter((u: UserProps) => u?.isClient)
+// State for shuffled posts
+// console.log(musicians)
+// const [shuffledPosts, setShuffledPosts] = useState<ResponseProps[]>([]);
+
+// // Function to shuffle and select 2 random posts
+// const shufflePosts = () => {
+//   if (!Allposts || Allposts.length === 0) return;
+
+//   // Copy the array to avoid mutating the original
+//   const postsCopy = [...Allposts];
+
+//   // Shuffle the array using Fisher-Yates algorithm
+//   for (let i = postsCopy.length - 1; i > 0; i--) {
+//     const j = Math.floor(Math.random() * (i + 1));
+//     [postsCopy[i], postsCopy[j]] = [postsCopy[j], postsCopy[i]];
+//   }
+
+//   // Take the first 2 posts
+//   setShuffledPosts(postsCopy.slice(0, 2));
+// };
+
+// // Shuffle posts when Allposts changes or on component mount
+// useEffect(() => {
+//   shufflePosts();
+// }, [Allposts]);

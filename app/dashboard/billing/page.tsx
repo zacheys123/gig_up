@@ -4,41 +4,46 @@ import { MobileUsageMeter } from "@/components/dashboard/MobileUsageMeter";
 import GigChart from "@/components/dashboard/GigChart";
 import BillingComponent from "@/components/dashboard/BillingComponent";
 import { useAuth, UserButton } from "@clerk/nextjs";
-
 import { motion } from "framer-motion";
 import { Sparkles, Zap, CreditCard, BarChart2, RefreshCw } from "lucide-react";
-import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
+import GigLoader from "@/components/(main)/GigLoader";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export default function BillingPage() {
-  const { userId } = useAuth();
-  const { subscription } = useSubscriptionStore();
-  console.log(subscription);
+  const { userId, isLoaded: authLoaded } = useAuth();
 
+  // Get subscription directly from Convex
+  const subscription = useQuery(
+    api.controllers.subscription.getSubscription,
+    userId ? { clerkId: userId } : "skip"
+  );
+
+  if (!authLoaded || (userId && subscription === undefined)) {
+    return (
+      <GigLoader
+        title="Loading your dashboard..."
+        size="lg"
+        color="border-yellow-300"
+        fullScreen={true}
+      />
+    );
+  }
+
+  // If no subscription data found
   if (!subscription) {
     return (
-      <div className="h-screen w-full flex justify-center items-center bg-gradient-to-br from-gray-900 to-gray-800">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full"
-          />
-          <motion.span
-            className="text-orange-300 text-lg font-medium"
-            animate={{ opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            Loading your billing information...
-          </motion.span>
-        </motion.div>
+      <div className="fixed inset-0 flex flex-col overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white mb-4">
+              No Subscription Data
+            </h1>
+            <p className="text-gray-400">
+              Unable to load your subscription information.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -71,7 +76,7 @@ export default function BillingPage() {
           </div>
         </motion.div>
 
-        {/* Billing Component */}
+        {/* Billing Component - Pass subscription data */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -94,31 +99,7 @@ export default function BillingPage() {
             </h2>
           </div>
 
-          {/* Mobile view */}
-          <div className="md:hidden space-y-4 p-4 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="p-3 bg-gray-900/50 rounded-lg"
-            >
-              <p className="text-sm text-gray-300 mb-2 flex items-center gap-1">
-                <Zap className="w-4 h-4 text-yellow-400" />
-                Gig Postings
-              </p>
-              <MobileUsageMeter current={2} max={3} label="Gig Postings" />
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="p-3 bg-gray-900/50 rounded-lg"
-            >
-              <p className="text-sm text-gray-300 mb-2 flex items-center gap-1">
-                <Zap className="w-4 h-4 text-yellow-400" />
-                Gig Applications
-              </p>
-              <MobileUsageMeter current={1} max={5} label="Gig Applications" />
-            </motion.div>
-          </div>
-
-          {/* Desktop view */}
+          {/* Show usage based on subscription tier */}
           <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-6">
             <motion.div
               whileHover={{ y: -5 }}
@@ -126,15 +107,32 @@ export default function BillingPage() {
             >
               <div className="space-y-1">
                 <h3 className="text-lg font-medium text-white">
-                  Monthly Limits
+                  {subscription.tier === "pro"
+                    ? "Pro Benefits"
+                    : "Monthly Limits"}
                 </h3>
                 <p className="text-sm text-gray-400">
-                  Your current usage against plan limits
+                  {subscription.tier === "pro"
+                    ? "Enjoy unlimited access with your Pro plan"
+                    : "Your current usage against plan limits"}
                 </p>
               </div>
               <div className="space-y-5">
-                <UsageMeter current={2} max={3} label="Gig Postings" />
-                <UsageMeter current={1} max={5} label="Gig Applications" />
+                {subscription.tier === "pro" ? (
+                  <>
+                    <UsageMeter current={-1} max={-1} label="Gig Postings" />
+                    <UsageMeter
+                      current={-1}
+                      max={-1}
+                      label="Gig Applications"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <UsageMeter current={2} max={3} label="Gig Postings" />
+                    <UsageMeter current={1} max={5} label="Gig Applications" />
+                  </>
+                )}
               </div>
             </motion.div>
 
@@ -155,29 +153,32 @@ export default function BillingPage() {
           </div>
         </motion.div>
 
-        {/* Pro Tips Section */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          className="mt-8 p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl border border-blue-800/50"
-        >
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Sparkles className="w-5 h-5 text-blue-400" />
+        {/* Show upgrade tip only for free users */}
+        {subscription.tier === "free" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="mt-8 p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl border border-blue-800/50"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <Sparkles className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-white">Pro Tip</h3>
+                <p className="text-sm text-gray-300 mt-1">
+                  Upgrade to Pro for unlimited gig postings, premium analytics,
+                  and priority support. Get 20% off your first 3 months with
+                  code{" "}
+                  <span className="font-mono bg-gray-800 px-2 py-1 rounded text-blue-300">
+                    PRO20
+                  </span>
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-medium text-white">Pro Tip</h3>
-              <p className="text-sm text-gray-300 mt-1">
-                Upgrade to Pro for unlimited gig postings, premium analytics,
-                and priority support. Get 20% off your first 3 months with code{" "}
-                <span className="font-mono bg-gray-800 px-2 py-1 rounded text-blue-300">
-                  PRO20
-                </span>
-              </p>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </div>
   );

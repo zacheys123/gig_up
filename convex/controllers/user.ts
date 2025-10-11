@@ -99,6 +99,21 @@ export const syncUserProfile = mutation({
         myreviews: [],
         videosProfile: [],
         gigsBookedThisWeek: { count: 0, weekStart: now },
+        badges: [],
+        reliabilityScore: 100,
+        avgRating: 0,
+        performanceStats: {
+          totalGigsCompleted: 0,
+          onTimeRate: 100,
+          clientSatisfaction: 100,
+          lastUpdated: Date.now(),
+        },
+        badgeMilestones: {
+          consecutiveGigs: 0,
+          earlyCompletions: 0,
+          perfectRatings: 0,
+          cancellationFreeStreak: 0,
+        },
       });
     }
   },
@@ -717,3 +732,5 @@ export const unlikeGig = mutation({
 //     }
 //   },
 // });
+
+// convex/migrations/migrateAllUsers.ts
