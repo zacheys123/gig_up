@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./provider";
 import { AuthSync } from "@/components/AuthSync";
+import { GigUpAssistant } from "@/components/ai/GigupAssistant";
 
 export const metadata: Metadata = {
   title: "Gigup",
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
+          <GigUpAssistant />
           <AuthSync />
           {children}
         </Providers>

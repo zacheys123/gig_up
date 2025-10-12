@@ -10,6 +10,16 @@ export default defineSchema({
   // Other tables...
   gigs: gigModel,
 
+  aiSuggestions: defineTable({
+    questions: v.object({
+      musician: v.array(v.string()),
+      client: v.array(v.string()),
+      guest: v.array(v.string()),
+    }),
+    updatesReady: v.boolean(),
+    version: v.string(),
+    lastUpdated: v.number(),
+  }),
   videos: defineTable({
     title: v.string(),
     url: v.string(),

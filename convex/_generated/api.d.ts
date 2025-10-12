@@ -20,6 +20,7 @@ import type * as controllers_theme from "../controllers/theme.js";
 import type * as controllers_user from "../controllers/user.js";
 import type * as models_gigModel from "../models/gigModel.js";
 import type * as models_userModel from "../models/userModel.js";
+import type * as test from "../test.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   "controllers/user": typeof controllers_user;
   "models/gigModel": typeof models_gigModel;
   "models/userModel": typeof models_userModel;
+  test: typeof test;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,
