@@ -37,11 +37,18 @@ const SearchComponent = () => {
   const handleUserClick = async (viewedUser: UserProps) => {
     if (!userId || userId === viewedUser.clerkId) return;
 
+    console.log("Tracking profile view:", {
+      viewedUserClerkId: viewedUser.clerkId,
+      viewerClerkId: userId,
+      viewedUserConvexId: viewedUser._id, // For debugging
+    });
+
     try {
       await trackProfileView({
-        viewedUserId: viewedUser._id,
+        viewedUserId: viewedUser.clerkId,
         viewerUserId: userId,
       });
+      console.log("Profile view tracked successfully");
     } catch (error) {
       console.error("Failed to track profile view:", error);
     }

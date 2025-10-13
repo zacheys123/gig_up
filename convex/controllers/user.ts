@@ -54,6 +54,7 @@ export const syncUserProfile = mutation({
     if (existingUser) {
       // Only update these specific fields
       const updates: any = {
+        viewedProfiles: existingUser.viewedProfiles || [], // Initialize if undefined
         lastActive: now,
       };
 
@@ -687,10 +688,21 @@ export const unlikeGig = mutation({
   },
 });
 
+// Add this type definition somewhere in your file
+type UserDocument = {
+  viewedProfiles?: string[];
+  profileViews?: {
+    totalCount: number;
+    recentViewers: Array<{ userId: string; timestamp: number }>;
+    lastUpdated: number;
+  };
+  // Add other fields as needed
+};
+
 export const trackProfileView = mutation({
   args: {
-    viewedUserId: v.string(), // The profile being viewed
-    viewerUserId: v.string(), // The user doing the viewing
+    viewedUserId: v.string(), // This is Clerk ID of the profile being viewed
+    viewerUserId: v.string(), // This is Clerk ID of the viewer
   },
   handler: async (ctx, args) => {
     const { viewedUserId, viewerUserId } = args;
@@ -698,25 +710,36 @@ export const trackProfileView = mutation({
     // Don't track self-views
     if (viewedUserId === viewerUserId) return;
 
-    const viewedUser = await ctx.db.get(viewedUserId as any);
-    if (!viewedUser) return;
+    // Find users by clerkId instead of using the ID directly
+    const [viewedUserDoc, viewerDoc] = await Promise.all([
+      ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", viewedUserId))
+        .first(),
+      ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", viewerUserId))
+        .first(),
+    ]);
+
+    if (!viewedUserDoc) return;
 
     const currentTime = Date.now();
 
     // Update viewed user's profile view count
-    const currentViews = viewedUser.profileViews || {
+    const currentViews = viewedUserDoc.profileViews || {
       totalCount: 0,
       recentViewers: [],
       lastUpdated: currentTime,
     };
 
-    // Add viewer to recent viewers (limit to last 50)
+    // Add viewer to recent viewers
     const newRecentViewers = [
       { userId: viewerUserId, timestamp: currentTime },
-      ...currentViews.recentViewers.slice(0, 49), // Keep only last 50
+      ...currentViews.recentViewers.slice(0, 49),
     ];
 
-    await ctx.db.patch(viewedUserId as any, {
+    await ctx.db.patch(viewedUserDoc._id, {
       profileViews: {
         totalCount: currentViews.totalCount + 1,
         recentViewers: newRecentViewers,
@@ -724,15 +747,15 @@ export const trackProfileView = mutation({
       },
     });
 
-    const viewer = await ctx.db.get(viewerUserId as any);
-    if (viewer) {
-      const viewedProfiles = viewer.viewedProfiles || [];
+    // Update viewer's viewedProfiles
+    if (viewerDoc) {
+      const viewedProfiles = (viewerDoc as any).viewedProfiles || [];
       const updatedViewedProfiles = [
-        viewedUserId,
-        ...viewedProfiles.filter((id) => id !== viewedUserId), // Remove duplicates
-      ].slice(0, 100); // Keep last 100 viewed profiles
+        viewedUserId, // Store Clerk ID here
+        ...viewedProfiles.filter((id: string) => id !== viewedUserId),
+      ].slice(0, 100);
 
-      await ctx.db.patch(viewerUserId as any, {
+      await ctx.db.patch(viewerDoc._id, {
         viewedProfiles: updatedViewedProfiles,
       });
     }
