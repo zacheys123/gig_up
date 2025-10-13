@@ -1,5 +1,6 @@
+import { DesktopNavigation } from "@/components/(main)/DesktopNav";
 import { MobileNavigation } from "@/components/(main)/MobileNav";
-import MobileSheet from "@/components/MobileSheet";
+import MobileSheet from "@/components/pages/MobileSheet";
 
 import { UserButton } from "@clerk/nextjs";
 
@@ -16,15 +17,16 @@ export default function FriendLayout({
 }>) {
   return (
     <div className="bg-black h-full w-full overflow-scroll">
-      <div className="flex items-center justify-between mt-4 mx-6  ">
-        <MobileNavigation />
-      </div>
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,
         }}
-      />
+      />{" "}
+      {/* Mobile Navigation (hidden on desktop) */}
+      <MobileNavigation />
+      {/* Desktop Navigation (hidden on mobile) */}
+      <DesktopNavigation />
       {/* <NotificationHandler /> */}
       {chat}
       {reviews}

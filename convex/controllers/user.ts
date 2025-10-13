@@ -14,7 +14,7 @@ export const updateFirstLogin = mutation({
         .query("users")
         .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
         .first();
-
+      console.log(user);
       if (!user) {
         throw new Error("User not found");
       }
@@ -687,6 +687,59 @@ export const unlikeGig = mutation({
   },
 });
 
+export const trackProfileView = mutation({
+  args: {
+    viewedUserId: v.string(), // The profile being viewed
+    viewerUserId: v.string(), // The user doing the viewing
+  },
+  handler: async (ctx, args) => {
+    const { viewedUserId, viewerUserId } = args;
+
+    // Don't track self-views
+    if (viewedUserId === viewerUserId) return;
+
+    const viewedUser = await ctx.db.get(viewedUserId as any);
+    if (!viewedUser) return;
+
+    const currentTime = Date.now();
+
+    // Update viewed user's profile view count
+    const currentViews = viewedUser.profileViews || {
+      totalCount: 0,
+      recentViewers: [],
+      lastUpdated: currentTime,
+    };
+
+    // Add viewer to recent viewers (limit to last 50)
+    const newRecentViewers = [
+      { userId: viewerUserId, timestamp: currentTime },
+      ...currentViews.recentViewers.slice(0, 49), // Keep only last 50
+    ];
+
+    await ctx.db.patch(viewedUserId as any, {
+      profileViews: {
+        totalCount: currentViews.totalCount + 1,
+        recentViewers: newRecentViewers,
+        lastUpdated: currentTime,
+      },
+    });
+
+    const viewer = await ctx.db.get(viewerUserId as any);
+    if (viewer) {
+      const viewedProfiles = viewer.viewedProfiles || [];
+      const updatedViewedProfiles = [
+        viewedUserId,
+        ...viewedProfiles.filter((id) => id !== viewedUserId), // Remove duplicates
+      ].slice(0, 100); // Keep last 100 viewed profiles
+
+      await ctx.db.patch(viewerUserId as any, {
+        viewedProfiles: updatedViewedProfiles,
+      });
+    }
+
+    return { success: true };
+  },
+});
 // export const createOrUpdateUserPublic = mutation({
 //   args: {
 //     clerkId: v.string(),

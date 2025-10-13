@@ -192,10 +192,3 @@ export const generalQuestions = [
   "How do I get started as a client?",
   "What's included in the free trial?",
 ];
-
-export const suggestedQuestions = [
-  "How do I create a great musician profile?",
-  "What's included in the Pro tier?",
-  "How do I apply for gigs effectively?",
-  "Tips for writing good gig descriptions",
-];

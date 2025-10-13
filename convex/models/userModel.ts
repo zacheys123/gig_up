@@ -216,6 +216,22 @@ export const userModel = defineTable({
   gigsPosted: v.optional(v.number()),
   userearnings: v.optional(v.number()),
   total: v.optional(v.number()),
+  // Add to your user model
+  // In your user model
+  profileViews: v.optional(
+    v.object({
+      totalCount: v.number(),
+      recentViewers: v.array(
+        v.object({
+          userId: v.string(),
+          timestamp: v.number(),
+          anonymous: v.optional(v.boolean()),
+        })
+      ),
+      lastUpdated: v.optional(v.number()),
+    })
+  ),
+  viewedProfiles: v.optional(v.array(v.string())), // Track who current user has viewed
 })
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])

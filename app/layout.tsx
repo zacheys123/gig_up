@@ -31,7 +31,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
-          <GigUpAssistant />
           <AuthSync />
           {children}
         </Providers>

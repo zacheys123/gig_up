@@ -1,5 +1,5 @@
 // hooks/useGigUpAssistant.ts
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 interface QuestionLimit {
@@ -150,11 +150,18 @@ export function useGigUpAssistant() {
     }
   };
 
+  // Memoize the question usage to prevent infinite re-renders
+  const questionUsage = useMemo(() => getQuestionUsage(), [getQuestionUsage]);
+  const timeUntilReset = useMemo(
+    () => getTimeUntilReset(),
+    [getTimeUntilReset]
+  );
+
   return {
     askQuestion,
     isLoading,
-    questionUsage: getQuestionUsage(),
-    timeUntilReset: getTimeUntilReset(),
+    questionUsage,
+    timeUntilReset,
     tierLimits: TIER_QUESTION_LIMITS,
   };
 }

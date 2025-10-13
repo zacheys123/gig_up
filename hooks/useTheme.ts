@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
-import { colors } from "@/data";
 
 // In your useThemeColors hook, ensure this:
 export function useThemeColors() {

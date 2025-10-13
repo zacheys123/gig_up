@@ -1,5 +1,4 @@
 // SearchPage.tsx (server component)
-import OverlaySearch from "@/components/pages/OverlaySearch";
 import FormData from "@/components/pages/FormData";
 import SearchComponent from "@/components/pages/SearchComponent";
 import { ThemeWrapper } from "@/components/pages/themeWrapper";

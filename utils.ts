@@ -166,3 +166,125 @@ export const setPlatformVersion = (version: PlatformVersion) => {
     GIGUP_CONTEXTS.current = version;
   }
 };
+
+// utils/profileCompletion.ts
+export interface UserProfile {
+  firstname?: string;
+  lastname?: string;
+  talentbio?: string;
+  city?: string;
+  phone?: string;
+  date?: string;
+  month?: string;
+  year?: string;
+  instrument?: string;
+  experience?: string;
+  musicianhandles?: any[];
+  rate?: {
+    regular?: string;
+    function?: string;
+    concert?: string;
+    corporate?: string;
+  };
+  videosProfile?: any[];
+  // Add other fields from your model
+  [key: string]: any;
+}
+
+export const calculateProfileCompletion = (
+  user: UserProfile | null | undefined
+): number => {
+  if (!user) return 0;
+
+  const fields = [
+    // Basic Info (20%)
+    { check: () => !!(user.firstname && user.firstname.trim()), weight: 5 },
+    { check: () => !!(user.lastname && user.lastname.trim()), weight: 5 },
+    { check: () => !!(user.talentbio && user.talentbio.trim()), weight: 5 },
+    { check: () => !!(user.city && user.city.trim()), weight: 5 },
+
+    // Contact Info (15%)
+    { check: () => !!(user.phone && user.phone.trim()), weight: 15 },
+
+    // Date of Birth (10%)
+    {
+      check: () =>
+        !!(
+          user.date &&
+          user.month &&
+          user.year &&
+          user.date.trim() &&
+          user.month.trim() &&
+          user.year.trim()
+        ),
+      weight: 10,
+    },
+
+    // Musician Specific (30%)
+    { check: () => !!(user.instrument && user.instrument.trim()), weight: 5 },
+    { check: () => !!(user.experience && user.experience.trim()), weight: 5 },
+    {
+      check: () => !!(user.musicianhandles && user.musicianhandles.length > 0),
+      weight: 5,
+    },
+
+    // Rates (10%)
+    {
+      check: () => {
+        if (!user.rate) return false;
+        const rates = Object.values(user.rate);
+        return rates.some((rate) => rate && rate.toString().trim() !== "");
+      },
+      weight: 10,
+    },
+
+    // Videos (15%)
+    {
+      check: () => !!(user.videosProfile && user.videosProfile.length > 0),
+      weight: 15,
+    },
+  ];
+
+  const totalWeight = fields.reduce((sum, field) => sum + field.weight, 0);
+  const completedWeight = fields.reduce((sum, field) => {
+    return sum + (field.check() ? field.weight : 0);
+  }, 0);
+
+  return Math.round((completedWeight / totalWeight) * 100);
+};
+
+export const getProfileCompletionMessage = (percentage: number): string => {
+  if (percentage >= 90) return "Excellent! Your profile is complete";
+  if (percentage >= 75) return "Great profile! Almost there";
+  if (percentage >= 50) return "Good start! Keep going";
+  if (percentage >= 25) return "Getting there! Add more details";
+  return "Start building your profile";
+};
+
+export const getMissingFields = (
+  user: UserProfile | null | undefined
+): string[] => {
+  if (!user) return ["All fields"];
+
+  const missing: string[] = [];
+
+  if (!user.firstname?.trim()) missing.push("First Name");
+  if (!user.lastname?.trim()) missing.push("Last Name");
+  if (!user.talentbio?.trim()) missing.push("Bio");
+  if (!user.city?.trim()) missing.push("City");
+  if (!user.phone?.trim()) missing.push("Phone");
+  if (!user.date?.trim() || !user.month?.trim() || !user.year?.trim())
+    missing.push("Date of Birth");
+  if (!user.instrument?.trim()) missing.push("Instrument");
+  if (!user.experience?.trim()) missing.push("Experience");
+  if (!user.musicianhandles?.length) missing.push("Social Media");
+  if (!user.videosProfile?.length) missing.push("Performance Videos");
+
+  // Check if any rate is set
+  const hasRates =
+    user.rate &&
+    Object.values(user.rate).some((rate) => rate && rate.toString().trim());
+  if (!hasRates) missing.push("Performance Rates");
+
+  return missing;
+};

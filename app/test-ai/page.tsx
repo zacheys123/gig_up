@@ -1,6 +1,5 @@
-// app/test-ai/page.tsx
 "use client";
-import { useGigUpAssistant } from "@/app/ai/useGigUpAssistant";
+import { useGigUpAssistant } from "@/app/(ai)/useGigUpAssistant";
 
 export default function TestAIPage() {
   const { questionUsage, tierLimits } = useGigUpAssistant();

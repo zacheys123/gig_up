@@ -4,7 +4,7 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
-import MobileSheet from "../MobileSheet";
+import MobileSheet from "../pages/MobileSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Skeleton } from "@/components/ui/skeleton";
 

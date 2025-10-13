@@ -1,54 +1,80 @@
-
 import { getCurrentContext, GIGUP_CONTEXTS } from "@/utils";
-
-// app/api/ai/assistant/route.ts
-
 import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
 
-// Initialize DeepSeek client
 const deepseek = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY!,
   baseURL: process.env.DEEPSEEK_BASE_URL,
 });
+
 export async function POST(request: Request) {
+  console.log("🔍 AI Assistant API called");
+
   try {
-    const { question, userRole, userTier, platformVersion } = await request.json();
-   const context = platformVersion 
+    // Check environment variables first
+    if (!process.env.DEEPSEEK_API_KEY) {
+      console.error("❌ DEEPSEEK_API_KEY is missing");
+      throw new Error("API configuration error");
+    }
+
+    if (!process.env.DEEPSEEK_BASE_URL) {
+      console.error("❌ DEEPSEEK_BASE_URL is missing");
+      throw new Error("API configuration error");
+    }
+
+    const body = await request.json();
+    console.log("📥 Request body:", body);
+
+    const { question, userRole, userTier, platformVersion } = body;
+
+    if (!question) {
+      return NextResponse.json(
+        { error: "Question is required" },
+        { status: 400 }
+      );
+    }
+
+    const context = platformVersion
       ? GIGUP_CONTEXTS[platformVersion] || getCurrentContext()
       : getCurrentContext();
 
+    console.log("🤖 Using context for version:", platformVersion);
+
     const completion = await deepseek.chat.completions.create({
-      model: 'deepseek-chat',
+      model: "deepseek-chat",
       messages: [
-        { 
-          role: "system", 
-          content: `${context}\n\nCurrent user: ${userRole}, Tier: ${userTier}. Platform: ${GIGUP_CONTEXTS.current}`
+        {
+          role: "system",
+          content: `${context}\n\nCurrent user: ${userRole}, Tier: ${userTier}. Platform: ${GIGUP_CONTEXTS.current}`,
         },
-        { role: "user", content: question }
+        { role: "user", content: question },
       ],
       max_tokens: 500,
       temperature: 0.7,
     });
 
-
-
     const answer =
       completion.choices[0]?.message?.content ||
       "I couldn't generate a response. Please try again.";
 
-          return NextResponse.json({
-      answer: completion.choices[0].message.content,
+    console.log("✅ AI Response generated:", answer.substring(0, 100) + "...");
+
+    return NextResponse.json({
+      answer: answer,
       platformVersion: GIGUP_CONTEXTS.current,
-      contextVersion: platformVersion || GIGUP_CONTEXTS.current      provider: "deepseek",
+      contextVersion: platformVersion || GIGUP_CONTEXTS.current,
+      provider: "deepseek",
       model: "deepseek-chat",
     });
-
-
   } catch (error: any) {
-    console.error("DeepSeek API error:", error);
+    console.error("❌ DeepSeek API error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+      stack: error.stack,
+    });
 
-    // Provide helpful error messages
     let errorMessage =
       "I'm currently unavailable. Please try again in a moment.";
 
@@ -59,6 +85,9 @@ export async function POST(request: Request) {
         "I'm getting too many requests. Please wait a moment and try again.";
     } else if (error?.code === "ENOTFOUND") {
       errorMessage = "Network connection issue. Please check your internet.";
+    } else if (error.message?.includes("API key")) {
+      errorMessage =
+        "API configuration issue. Please check your environment variables.";
     }
 
     return NextResponse.json(
@@ -66,8 +95,10 @@ export async function POST(request: Request) {
         answer: errorMessage,
         provider: "deepseek",
         error: true,
+        debug:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       },
       { status: 200 }
-    ); // Still return 200 to avoid breaking the frontend
+    );
   }
 }

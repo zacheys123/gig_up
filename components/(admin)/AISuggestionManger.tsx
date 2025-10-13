@@ -2,8 +2,8 @@
 "use client";
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { Save, RotateCcw } from "lucide-react";
+import { api } from "@/convex/_generated/api";
 
 export function AISuggestionsManager() {
   const [musicianQuestions, setMusicianQuestions] = useState([
@@ -33,7 +33,7 @@ export function AISuggestionsManager() {
   const [version, setVersion] = useState("1.0.0");
 
   const updateSuggestions = useMutation(
-    api.controllers.ai.suggestions.updateAISuggestions
+    api.controllers.subscription.updateAISuggestions
   );
 
   const handleSave = async () => {
