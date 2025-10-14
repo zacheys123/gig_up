@@ -3,15 +3,30 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { FaHome, FaUser, FaChartBar, FaHistory, FaMusic } from "react-icons/fa";
-import { User, BarChart3, History, Music } from "lucide-react";
+import {
+  User,
+  BarChart3,
+  History,
+  Music,
+  MessageCircle,
+  Bell,
+  Video,
+  DollarSign,
+  Calendar,
+  Star,
+} from "lucide-react";
 import { IoHomeOutline } from "react-icons/io5";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const UserNav = () => {
   const { userId } = useAuth();
   const pathname = usePathname();
   const { colors } = useThemeColors();
+  const { user } = useCurrentUser();
+
+  const isMusician = user?.isMusician;
 
   const navItems = [
     {
@@ -47,14 +62,77 @@ const UserNav = () => {
       label: "Activity",
     },
     {
-      href: `/profile/musician`,
+      href: `/profile/messages`,
       icon: {
-        active: <FaMusic size={22} />,
-        inactive: <Music size={22} />,
+        active: <MessageCircle size={22} className="fill-current" />,
+        inactive: <MessageCircle size={22} />,
       },
-      label: "Musician",
-      condition: true, // You can dynamically set this based on user role
+      label: "Messages",
+      badge: 3, // You can make this dynamic
     },
+    {
+      href: `/profile/notifications`,
+      icon: {
+        active: <Bell size={22} className="fill-current" />,
+        inactive: <Bell size={22} />,
+      },
+      label: "Alerts",
+    },
+    // Musician-specific items
+    ...(isMusician
+      ? [
+          {
+            href: `/profile/musician`,
+            icon: {
+              active: <FaMusic size={22} />,
+              inactive: <Music size={22} />,
+            },
+            label: "Musician",
+          },
+          {
+            href: `/profile/videos`,
+            icon: {
+              active: <Video size={22} className="fill-current" />,
+              inactive: <Video size={22} />,
+            },
+            label: "Videos",
+          },
+          {
+            href: `/profile/rates`,
+            icon: {
+              active: <DollarSign size={22} className="fill-current" />,
+              inactive: <DollarSign size={22} />,
+            },
+            label: "Rates",
+          },
+          {
+            href: `/profile/availability`,
+            icon: {
+              active: <Calendar size={22} className="fill-current" />,
+              inactive: <Calendar size={22} />,
+            },
+            label: "Schedule",
+          },
+        ]
+      : [
+          // Client-specific items
+          {
+            href: `/profile/bookings`,
+            icon: {
+              active: <Calendar size={22} className="fill-current" />,
+              inactive: <Calendar size={22} />,
+            },
+            label: "Bookings",
+          },
+          {
+            href: `/profile/favorites`,
+            icon: {
+              active: <Star size={22} className="fill-current" />,
+              inactive: <Star size={22} />,
+            },
+            label: "Favorites",
+          },
+        ]),
   ];
 
   const isActive = (href: string) => {
@@ -82,38 +160,47 @@ const UserNav = () => {
         colors.border
       )}
     >
-      <div className="flex justify-around items-center w-full h-[70px] px-2 mx-auto">
+      <div className="flex justify-around items-center w-full h-[70px] px-2 mx-auto overflow-x-auto">
         {navItems.map((item) => {
-          if (item.condition === false) return null;
-
           const active = isActive(item.href);
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex-1 flex justify-center"
+              className="flex-1 flex justify-center min-w-[60px]"
             >
               <div
                 className={cn(
-                  "flex flex-col items-center justify-center w-full py-2 transition-all duration-200",
+                  "flex flex-col items-center justify-center w-full py-2 transition-all duration-200 relative",
                   active
                     ? "text-yellow-400"
                     : "text-gray-400 hover:text-yellow-400"
                 )}
               >
-                <div
-                  className={cn(
-                    "transition-transform duration-200",
-                    active ? "scale-110" : "scale-100"
+                <div className="relative">
+                  <div
+                    className={cn(
+                      "transition-transform duration-200",
+                      active ? "scale-110" : "scale-100"
+                    )}
+                  >
+                    {active ? item.icon.active : item.icon.inactive}
+                  </div>
+
+                  {/* Badge for notifications/messages */}
+                  {item.badge && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                      {item.badge > 9 ? "9+" : item.badge}
+                    </span>
                   )}
-                >
-                  {active ? item.icon.active : item.icon.inactive}
                 </div>
+
                 <span
                   className={cn(
-                    "text-xs mt-1 transition-colors duration-200",
-                    active ? "text-yellow-400 font-medium" : "text-gray-400"
+                    "text-xs mt-1 transition-colors duration-200 text-center leading-tight",
+                    active ? "text-yellow-400 font-medium" : "text-gray-400",
+                    "max-w-[60px] truncate"
                   )}
                 >
                   {item.label}

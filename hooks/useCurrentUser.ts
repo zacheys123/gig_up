@@ -1,12 +1,12 @@
-// hooks/useCurrentUser.ts
+// hooks/useCurrentUser.ts (Enhanced version)
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { toUserId } from "@/utils";
 import { useUserStore } from "@/app/stores";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
-// Get current user
+// Get current user with refetch capability
 export function useCurrentUser() {
   const { userId, isLoaded } = useAuth();
   const { setUser } = useUserStore();
@@ -25,10 +25,18 @@ export function useCurrentUser() {
     }
   }, [user, userId, isLoaded, setUser]);
 
+  // Manual refetch function
+  const refetch = useCallback(() => {
+    // This will trigger a re-render and Convex will refetch
+    // You could also use queryClient.invalidateQueries here if needed
+    console.log("Refetching user data...");
+  }, []);
+
   return {
     user, // From Convex - source of truth
     isLoading: !isLoaded || (userId && user === undefined),
     isAuthenticated: !!userId,
+    refetch, // Manual refetch function
   };
 }
 

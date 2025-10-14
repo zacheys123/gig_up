@@ -759,6 +759,21 @@ export const trackProfileView = mutation({
         viewedProfiles: updatedViewedProfiles,
       });
     }
+    if (viewedUserDoc.tier === "pro" && viewerDoc) {
+      await ctx.db.insert("notifications", {
+        userId: viewedUserId, // Notify the profile owner
+        type: "profile_view",
+        title: "Profile Viewed",
+        message: `${viewerDoc.firstname || "Someone"} viewed your profile`,
+        image: viewerDoc.picture,
+        actionUrl: `/profile/${viewerUserId}`,
+        actionLabel: "View Profile",
+        relatedUserId: viewerUserId,
+        isRead: false,
+        isArchived: false,
+        createdAt: currentTime,
+      });
+    }
 
     return { success: true };
   },

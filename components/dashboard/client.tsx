@@ -8,8 +8,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-
 import { Doc } from "@/convex/_generated/dataModel";
+import ClientDashboardSkeleton from "../skeletons/ClientDashboardSkeletons";
 
 // Use Convex's generated types
 type Gig = Doc<"gigs">;
@@ -19,16 +19,19 @@ interface GigWithUsers extends Gig {
   postedByUser: User | null;
   bookedByUser: User | null;
 }
+
 interface ClientDashboardProps {
   gigsPosted?: number;
   total?: number;
   isPro: boolean;
+  isLoading?: boolean;
 }
 
 export function ClientDashboard({
   gigsPosted = 0,
   total = 0,
   isPro,
+  isLoading = false,
 }: ClientDashboardProps) {
   const { userId } = useAuth();
   const gigs = useQuery(api.controllers.gigs.getGigsWithUsers); // Use the new query
@@ -43,7 +46,12 @@ export function ClientDashboard({
     (gig: GigWithUsers) => gig.postedByUser?.clerkId === userId && gig.isPending
   ).length;
 
-  const loading = gigs === undefined;
+  const loading = gigs === undefined || isLoading;
+
+  // Show skeleton while loading
+  if (loading) {
+    return <ClientDashboardSkeleton isPro={isPro} />;
+  }
 
   return (
     <div className="space-y-10 p-4 md:p-6 lg:p-10 bg-gradient-to-br from-[#0f0f0f] to-[#1a1a1a] text-white min-h-screen">
@@ -88,31 +96,26 @@ export function ClientDashboard({
 
           {/* Status Cards ONLY for Pro */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {!loading && (
-              <>
-                <RoleStatusCard
-                  title="Gigs Posted This Month"
-                  value={gigsPosted}
-                  icon={
-                    <div className="p-3 rounded-full bg-purple-500/10 backdrop-blur-sm">
-                      <Music className="text-purple-400" size={20} />
-                    </div>
-                  }
-                  trend="up"
-                />
-                <RoleStatusCard
-                  title="Gigs Booked and Completed"
-                  value={gigsBookedAndCompleted || 0}
-                  icon={
-                    <div className="p-3 rounded-full bg-purple-500/10 backdrop-blur-sm">
-                      <Music className="text-purple-400" size={20} />
-                    </div>
-                  }
-                  trend="up"
-                />
-              </>
-            )}
-
+            <RoleStatusCard
+              title="Gigs Posted This Month"
+              value={gigsPosted}
+              icon={
+                <div className="p-3 rounded-full bg-purple-500/10 backdrop-blur-sm">
+                  <Music className="text-purple-400" size={20} />
+                </div>
+              }
+              trend="up"
+            />
+            <RoleStatusCard
+              title="Gigs Booked and Completed"
+              value={gigsBookedAndCompleted || 0}
+              icon={
+                <div className="p-3 rounded-full bg-purple-500/10 backdrop-blur-sm">
+                  <Music className="text-purple-400" size={20} />
+                </div>
+              }
+              trend="up"
+            />
             <RoleStatusCard
               title="Total Spent"
               value={total}
@@ -124,7 +127,6 @@ export function ClientDashboard({
               }
               trend="steady"
             />
-
             <RoleStatusCard
               title="Upcoming Events"
               value={upcoming || 0}
@@ -158,5 +160,52 @@ export function ClientDashboard({
         </>
       )}
     </div>
+  );
+}
+
+// Enhanced version with better loading state management
+export function ClientDashboardWithLoading({
+  gigsPosted = 0,
+  total = 0,
+  isPro,
+  isLoading = false,
+  isDataLoading = false,
+}: {
+  gigsPosted?: number;
+  total?: number;
+  isPro: boolean;
+  isLoading?: boolean;
+  isDataLoading?: boolean;
+}) {
+  const { userId } = useAuth();
+  const gigs = useQuery(api.controllers.gigs.getGigsWithUsers);
+  const router = useRouter();
+
+  // Show full skeleton during initial load
+  if (isLoading) {
+    return <ClientDashboardSkeleton isPro={isPro} />;
+  }
+
+  // Show quick skeleton during data refresh
+  if (isDataLoading) {
+    return (
+      <div className="relative">
+        <ClientDashboardSkeleton isPro={isPro} />
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+          <div className="text-white text-sm bg-black/60 px-4 py-2 rounded-lg">
+            Refreshing data...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ClientDashboard
+      gigsPosted={gigsPosted}
+      total={total}
+      isPro={isPro}
+      isLoading={false}
+    />
   );
 }

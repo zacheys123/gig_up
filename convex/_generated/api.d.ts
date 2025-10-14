@@ -15,10 +15,12 @@ import type {
 } from "convex/server";
 import type * as cloudinary from "../cloudinary.js";
 import type * as controllers_gigs from "../controllers/gigs.js";
+import type * as controllers_notifications from "../controllers/notifications.js";
 import type * as controllers_subscription from "../controllers/subscription.js";
 import type * as controllers_theme from "../controllers/theme.js";
 import type * as controllers_user from "../controllers/user.js";
 import type * as models_gigModel from "../models/gigModel.js";
+import type * as models_notificationsModel from "../models/notificationsModel.js";
 import type * as models_userModel from "../models/userModel.js";
 import type * as test from "../test.js";
 
@@ -33,10 +35,12 @@ import type * as test from "../test.js";
 declare const fullApi: ApiFromModules<{
   cloudinary: typeof cloudinary;
   "controllers/gigs": typeof controllers_gigs;
+  "controllers/notifications": typeof controllers_notifications;
   "controllers/subscription": typeof controllers_subscription;
   "controllers/theme": typeof controllers_theme;
   "controllers/user": typeof controllers_user;
   "models/gigModel": typeof models_gigModel;
+  "models/notificationsModel": typeof models_notificationsModel;
   "models/userModel": typeof models_userModel;
   test: typeof test;
 }>;

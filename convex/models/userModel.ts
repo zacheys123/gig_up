@@ -216,8 +216,7 @@ export const userModel = defineTable({
   gigsPosted: v.optional(v.number()),
   userearnings: v.optional(v.number()),
   total: v.optional(v.number()),
-  // Add to your user model
-  // In your user model
+
   profileViews: v.optional(
     v.object({
       totalCount: v.number(),

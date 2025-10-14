@@ -54,8 +54,9 @@ import {
 } from "./ValidationSummary";
 import { VALIDATION_MESSAGES, ValidationError } from "@/types/validation";
 import { KenyanPhoneInput } from "./kenyanPhoneInput";
+import CurrentUserProfileSkeleton from "../skeletons/ProfileSkeletons";
+import { CurrentUserProfileMobileSkeleton } from "../skeletons/ProfileMobileSkeleton";
 
-// Types
 interface RateProps {
   regular: string;
   function: string;
@@ -77,7 +78,6 @@ const CurrentUserProfile = () => {
   // Convex mutations
   const updateUser = useMutation(api.controllers.user.updateUserProfile);
 
-  // State management
   const [loading, setLoading] = useState(false);
 
   // Personal Information
@@ -561,21 +561,17 @@ const CurrentUserProfile = () => {
     }
   };
 
+  // In your component:
   if (userLoading || !user) {
     return (
-      <div
-        className={cn(
-          "h-screen w-full flex justify-center items-center",
-          colors.background
-        )}
-      >
-        <div className="text-center">
-          <CircularProgress size={40} style={{ color: colors.text }} />
-          <p className={cn("mt-4", colors.textMuted)}>
-            Loading profile data...
-          </p>
+      <>
+        <div className="lg:hidden">
+          <CurrentUserProfileMobileSkeleton colors={colors} />
         </div>
-      </div>
+        <div className="hidden lg:block">
+          <CurrentUserProfileSkeleton colors={colors} />
+        </div>
+      </>
     );
   }
 

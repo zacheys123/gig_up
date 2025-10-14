@@ -15,6 +15,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useThemeColors } from "@/hooks/useTheme";
+import { MusicianDashboardSkeleton } from "../skeletons/MusicianDashboardSkeleton";
+import UpgradeModalSkeleton from "../skeletons/UpgradeModalSkeleton";
 
 export function MusicianDashboard({
   gigsBooked,
@@ -22,16 +24,19 @@ export function MusicianDashboard({
   firstLogin,
   onboarding,
   isPro,
+  isLoading = false,
 }: {
   gigsBooked: number;
   earnings: number;
   firstLogin: boolean;
   onboarding: boolean;
   isPro: boolean;
+  isLoading?: boolean;
 }) {
-  const { user } = useCurrentUser();
+  const { user, isLoading: userLoading } = useCurrentUser();
   const router = useRouter();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isModalLoading, setIsModalLoading] = useState(false);
   const { colors } = useThemeColors();
 
   useEffect(() => {
@@ -44,9 +49,21 @@ export function MusicianDashboard({
   }, [firstLogin, onboarding]);
 
   const handleUpgradeProfile = () => {
+    setIsModalLoading(true);
     router.push("/profile");
     setShowUpgradeModal(false);
+    setIsModalLoading(false);
   };
+
+  // Show skeleton while loading
+  if (isLoading || userLoading) {
+    return (
+      <MusicianDashboardSkeleton
+        isPro={isPro}
+        showUpgradeModal={showUpgradeModal}
+      />
+    );
+  }
 
   return (
     <motion.div
@@ -164,74 +181,77 @@ export function MusicianDashboard({
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
             >
-              <motion.div
-                initial={{ scale: 0.95, y: 10, opacity: 0 }}
-                animate={{ scale: 1, y: 0, opacity: 1 }}
-                exit={{ scale: 0.95, y: 10, opacity: 0 }}
-                transition={{
-                  duration: 0.3,
-                  ease: [0.16, 1, 0.3, 1],
-                  bounce: 0.4,
-                }}
-                className={`bg-gradient-to-br rounded-2xl w-[85%] max-w-md overflow-hidden border shadow-2xl ${colors.card} ${colors.border}`}
-              >
-                {/* Header with close button */}
-                <div className="flex justify-end p-4">
-                  <button
-                    onClick={handleUpgradeProfile}
-                    // Fixed version:
-                    className={`p-1 rounded-full transition-colors duration-200 ${colors.textMuted} hover:${colors.text} hover:${colors.hoverBg}`}
-                  >
-                    <FiX className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="px-8 pb-8 pt-2">
-                  <div className="flex flex-col items-center text-center space-y-5">
-                    <div className="p-3 bg-yellow-500/10 rounded-full">
-                      <FiAlertCircle className="h-8 w-8 text-yellow-400" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-300 to-blue-300 bg-clip-text text-transparent">
-                        Complete Your Profile
-                      </h3>
-                      <p
-                        className={`text-sm leading-relaxed ${colors.textMuted}`}
-                      >
-                        Showcase your talent! A complete profile with skills,
-                        experience, and portfolio receives add your date of
-                        birth and more details
-                        <span className="text-yellow-300">
-                          3× more bookings
-                        </span>{" "}
-                        and better visibility.
-                      </p>
-                    </div>
-
+              {isModalLoading ? (
+                <UpgradeModalSkeleton />
+              ) : (
+                <motion.div
+                  initial={{ scale: 0.95, y: 10, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.95, y: 10, opacity: 0 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: [0.16, 1, 0.3, 1],
+                    bounce: 0.4,
+                  }}
+                  className={`bg-gradient-to-br rounded-2xl w-[85%] max-w-md overflow-hidden border shadow-2xl ${colors.card} ${colors.border}`}
+                >
+                  {/* Header with close button */}
+                  <div className="flex justify-end p-4">
                     <button
                       onClick={handleUpgradeProfile}
-                      className="mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-medium rounded-full shadow-lg hover:shadow-purple-500/20 hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group"
+                      className={`p-1 rounded-full transition-colors duration-200 ${colors.textMuted} hover:${colors.text} hover:${colors.hoverBg}`}
                     >
-                      <span className="relative z-10 flex items-center gap-2">
-                        <FiUserPlus className="h-4 w-4" />
-                        Update Profile Now
-                      </span>
-                      <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <FiX className="h-5 w-5" />
                     </button>
                   </div>
-                </div>
 
-                {/* Subtle footer */}
-                <div
-                  className={`px-6 py-3 border-t text-center ${colors.secondaryBackground} ${colors.border}`}
-                >
-                  <p className={`text-xs ${colors.textMuted}`}>
-                    Only takes 2 minutes • Your profile is 67% complete
-                  </p>
-                </div>
-              </motion.div>
+                  {/* Content */}
+                  <div className="px-8 pb-8 pt-2">
+                    <div className="flex flex-col items-center text-center space-y-5">
+                      <div className="p-3 bg-yellow-500/10 rounded-full">
+                        <FiAlertCircle className="h-8 w-8 text-yellow-400" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-300 to-blue-300 bg-clip-text text-transparent">
+                          Complete Your Profile
+                        </h3>
+                        <p
+                          className={`text-sm leading-relaxed ${colors.textMuted}`}
+                        >
+                          Showcase your talent! A complete profile with skills,
+                          experience, and portfolio receives add your date of
+                          birth and more details
+                          <span className="text-yellow-300">
+                            3× more bookings
+                          </span>{" "}
+                          and better visibility.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={handleUpgradeProfile}
+                        className="mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-medium rounded-full shadow-lg hover:shadow-purple-500/20 hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group"
+                      >
+                        <span className="relative z-10 flex items-center gap-2">
+                          <FiUserPlus className="h-4 w-4" />
+                          Update Profile Now
+                        </span>
+                        <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Subtle footer */}
+                  <div
+                    className={`px-6 py-3 border-t text-center ${colors.secondaryBackground} ${colors.border}`}
+                  >
+                    <p className={`text-xs ${colors.textMuted}`}>
+                      Only takes 2 minutes • Your profile is 67% complete
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           ))}
       </AnimatePresence>
@@ -256,5 +276,54 @@ export function MusicianDashboard({
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+// Enhanced version with data loading states
+export default function MusicianDashboardWithLoading({
+  gigsBooked,
+  earnings,
+  firstLogin,
+  onboarding,
+  isPro,
+  isLoading = false,
+  isDataLoading = false,
+}: {
+  gigsBooked: number;
+  earnings: number;
+  firstLogin: boolean;
+  onboarding: boolean;
+  isPro: boolean;
+  isLoading?: boolean;
+  isDataLoading?: boolean;
+}) {
+  const { user, isLoading: userLoading } = useCurrentUser();
+
+  // Show full skeleton during initial load
+  if (isLoading || userLoading) {
+    return <MusicianDashboardSkeleton isPro={isPro} showUpgradeModal={false} />;
+  }
+
+  // Show quick skeleton during data refresh
+  if (isDataLoading) {
+    return (
+      <div className="relative">
+        <MusicianDashboardSkeleton isPro={isPro} showUpgradeModal={false} />
+        <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-xl">
+          <div className="text-white text-sm">Refreshing data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <MusicianDashboard
+      gigsBooked={gigsBooked}
+      earnings={earnings}
+      firstLogin={firstLogin}
+      onboarding={onboarding}
+      isPro={isPro}
+      isLoading={false}
+    />
   );
 }

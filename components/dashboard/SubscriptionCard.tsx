@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useTheme";
 import { useSubscriptionUpdates } from "@/hooks/useSubscriptionUpdates"; // Import the new hook
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import SubscriptionCardSkeleton from "../skeletons/SubscriptionSkeleton";
 
 interface SubscriptionCardProps {
   plan: {
@@ -34,7 +36,11 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
   const { setSubscription } = useSubscriptionStore();
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-
+  const { user } = useCurrentUser();
+  const isPro = user?.tier === "pro";
+  {
+    if (!user?.tier) <SubscriptionCardSkeleton isPro={isPro} />;
+  }
   // Use the subscription updates hook
   const { subscriptionSuccess, subscriptionError } = useSubscriptionUpdates();
 

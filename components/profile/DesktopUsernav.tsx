@@ -22,12 +22,13 @@ import {
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import DesktopUserNavSkeleton from "./DesktopProfileSkeleton";
+import DesktopUserNavSkeleton from "../skeletons/DesktopProfileSkeleton";
 import {
   calculateProfileCompletion,
   getMissingFields,
   getProfileCompletionMessage,
 } from "@/utils";
+import SidebarSkeleton from "../skeletons/SidebarSkeleton";
 
 const DesktopUserNav = () => {
   const { userId } = useAuth();
@@ -40,7 +41,7 @@ const DesktopUserNav = () => {
   const missingFields = getMissingFields(user);
   // Show skeleton while loading
   if (isLoading || !user) {
-    return <DesktopUserNavSkeleton />;
+    return <SidebarSkeleton />;
   }
 
   const isMusician = user?.isMusician;

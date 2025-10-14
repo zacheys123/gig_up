@@ -9,6 +9,7 @@ import { Sparkles, Zap, CreditCard, BarChart2, RefreshCw } from "lucide-react";
 import GigLoader from "@/components/(main)/GigLoader";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import BillingPageSkeleton from "@/components/skeletons/BillingPageSkeleton";
 
 export default function BillingPage() {
   const { userId, isLoaded: authLoaded } = useAuth();
@@ -19,15 +20,18 @@ export default function BillingPage() {
     userId ? { clerkId: userId } : "skip"
   );
 
+  // if (!authLoaded || (userId && subscription === undefined)) {
+  //   return (
+  //     <GigLoader
+  //       title="Loading your dashboard..."
+  //       size="lg"
+  //       color="border-yellow-300"
+  //       fullScreen={true}
+  //     />
+  //   );
+  // }
   if (!authLoaded || (userId && subscription === undefined)) {
-    return (
-      <GigLoader
-        title="Loading your dashboard..."
-        size="lg"
-        color="border-yellow-300"
-        fullScreen={true}
-      />
-    );
+    return <BillingPageSkeleton />;
   }
 
   // If no subscription data found

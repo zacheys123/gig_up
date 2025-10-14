@@ -11,7 +11,7 @@ const DesktopUserNavSkeleton = () => {
   return (
     <div
       className={cn(
-        "fixed left-0 top-16 h-[calc(100vh-4rem)] w-80 border-r backdrop-blur-lg",
+        "hidden md:fixed left-0 top-16 h-[calc(100vh-4rem)] w-80 border-r backdrop-blur-lg",
         colors.card,
         colors.border,
         "hidden lg:block" // Only show on desktop

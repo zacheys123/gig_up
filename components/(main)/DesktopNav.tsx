@@ -1,6 +1,5 @@
 // components/(main)/DesktopNav.tsx
 "use client";
-
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
@@ -19,6 +18,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function DesktopNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
@@ -104,7 +104,6 @@ export function DesktopNavigation() {
       label: "Messages",
       icon: <MessageCircle size={18} />,
       condition: isSignedIn,
-      badge: 3, // Example badge count
     },
   ];
 
@@ -114,7 +113,7 @@ export function DesktopNavigation() {
         "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
         colors.navBackground,
         colors.navBorder,
-        "hidden lg:block" // Hide on mobile, show on desktop
+        "hidden lg:block"
       )}
     >
       <div className="max-w-7xl mx-auto px-6">
@@ -161,13 +160,6 @@ export function DesktopNavigation() {
                       {item.icon}
                     </div>
                     <span>{item.label}</span>
-
-                    {/* Badge */}
-                    {item.badge && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                        {item.badge}
-                      </span>
-                    )}
                   </Link>
                 );
               })}
@@ -190,6 +182,9 @@ export function DesktopNavigation() {
                 </Button>
               </Link>
             )}
+
+            {/* Notifications Bell */}
+            {isSignedIn && <NotificationBell variant="desktop" />}
 
             {/* Theme Toggle */}
             <button

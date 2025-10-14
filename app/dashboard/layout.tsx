@@ -1,4 +1,4 @@
-import { MobileNav } from "@/components/dashboard/MobileNav";
+import MobileNav from "@/components/dashboard/MobileNav";
 import { Sidebar } from "@/components/dashboard/SideBar";
 import { SubscriptionUpdateManager } from "@/components/dashboard/SubscriptionUpdateManger";
 // import NotificationHandler from "@/components/NotificationHandler";

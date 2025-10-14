@@ -5,7 +5,6 @@ import { CircularProgress } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LoadingGame } from "./LoadingGame";
-
 export function OnboardingModal() {
   const router = useRouter();
 
@@ -59,8 +58,8 @@ export function OnboardingModal() {
                 {(isMusician
                   ? steps.musician
                   : isClient
-                  ? steps.client
-                  : []
+                    ? steps.client
+                    : []
                 ).map((step, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">

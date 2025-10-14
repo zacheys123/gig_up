@@ -2,6 +2,7 @@
 
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   CalendarIcon,
   CreditCardIcon,
@@ -9,13 +10,46 @@ import {
   MusicIcon,
   PlusIcon,
   UsersIcon,
+  BellIcon,
+  ChevronRightIcon,
+  MessageSquareIcon,
+  SettingsIcon,
+  HelpCircleIcon,
+  StarIcon,
+  HeartIcon,
+  BarChartIcon,
+  FileTextIcon,
+  ShieldIcon,
+  Sun,
+  Moon,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MdDashboard } from "react-icons/md";
+import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
+import { SidebarSkeleton } from "../skeletons/SidebarSkeleton";
 
 export function Sidebar() {
   const { user } = useCurrentUser();
   const { isPro } = useSubscriptionStore();
+  const pathname = usePathname();
+  const { unreadCount } = useNotifications(5, true);
+  const { colors, isDarkMode, mounted } = useThemeColors();
+  const { toggleDarkMode } = useThemeToggle();
+
+  if (!user) {
+    return <SidebarSkeleton />;
+  }
+
+  const isActive = (href: string, exact: boolean = false) => {
+    if (exact) {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
+
   const musicianLinks = [
     {
       name: "Dashboard",
@@ -39,6 +73,21 @@ export function Sidebar() {
       icon: <DollarSignIcon className="w-5 h-5" />,
     },
     {
+      name: "Messagesy",
+      href: "/dashboard/messages",
+      icon: <MessageSquareIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Reviews",
+      href: "/dashboard/reviews",
+      icon: <StarIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Analytics",
+      href: "/dashboard/analytics",
+      icon: <BarChartIcon className="w-5 h-5" />,
+    },
+    {
       name: "Billing",
       href: "/dashboard/billing",
       icon: <CreditCardIcon className="w-5 h-5" />,
@@ -53,7 +102,7 @@ export function Sidebar() {
       exact: true,
     },
     {
-      name: "Post",
+      name: "Post Gig",
       href: "/dashboard/create",
       icon: <PlusIcon className="w-5 h-5" />,
     },
@@ -68,49 +117,243 @@ export function Sidebar() {
       icon: <UsersIcon className="w-5 h-5" />,
     },
     {
+      name: "Messages",
+      href: "/dashboard/messages",
+      icon: <MessageSquareIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Favorites",
+      href: "/dashboard/favorites",
+      icon: <HeartIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Bookings",
+      href: "/dashboard/bookings",
+      icon: <CalendarIcon className="w-5 h-5" />,
+    },
+    {
       name: "Billing",
       href: "/dashboard/billing",
       icon: <CreditCardIcon className="w-5 h-5" />,
     },
   ];
 
+  // Common links for both roles
+  const commonLinks = [
+    {
+      name: "Notifications",
+      href: "/notifications",
+      icon: (
+        <div className="relative">
+          <BellIcon className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </div>
+      ),
+      exact: true,
+    },
+    {
+      name: "Documents",
+      href: "/dashboard/documents",
+      icon: <FileTextIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Settings",
+      href: "/dashboard/settings",
+      icon: <SettingsIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Help & Support",
+      href: "/dashboard/support",
+      icon: <HelpCircleIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Privacy & Security",
+      href: "/dashboard/privacy",
+      icon: <ShieldIcon className="w-5 h-5" />,
+    },
+  ];
+
+  const roleLinks = user?.isMusician
+    ? musicianLinks
+    : user?.isClient
+      ? clientLinks
+      : [];
+  const links = [...roleLinks, ...commonLinks];
+
   return (
-    <div className="w-full md:w-56 lg:w-64 bg-gray-900 p-4 border-r border-gray-800 h-full">
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-orange-500">GigUp</h2>
-        <div className="flex items-center gap-2 mt-1">
-          <span
-            className={`px-2 py-1 text-xs rounded-full ${
-              isPro()
-                ? "bg-purple-900/30 text-purple-400"
-                : "bg-gray-700 text-gray-400"
-            }`}
-          >
-            {isPro() ? "PRO" : "FREE"}
-          </span>
-          <span className="text-xs text-gray-400">
-            {user?.user?.isMusician ? "Artist" : "Client"}
-          </span>
+    <div
+      className={cn(
+        "w-full md:w-64 h-full flex flex-col border-r",
+        colors.background,
+        colors.border
+      )}
+    >
+      {/* Header */}
+      <div className={cn("p-6 border-b", colors.border)}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2
+              className={cn(
+                "text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent"
+              )}
+            >
+              GigUp
+            </h2>
+            <div className="flex items-center gap-2 mt-2">
+              <span
+                className={cn(
+                  "px-2 py-1 text-xs font-medium rounded-full border",
+                  isPro()
+                    ? "bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-400"
+                    : cn(
+                        "bg-gray-100 dark:bg-gray-700",
+                        colors.text,
+                        colors.border
+                      )
+                )}
+              >
+                {isPro() ? "PRO" : "FREE"}
+              </span>
+              <span className={cn("text-xs font-medium", colors.textMuted)}>
+                {user?.isMusician ? "Artist" : "Client"}
+              </span>
+            </div>
+          </div>
+
+          {/* Notifications for Desktop Sidebar */}
+          <div className="hidden lg:block">
+            <NotificationBell variant="desktop" />
+          </div>
         </div>
       </div>
 
-      <nav className="space-y-2">
-        {(user?.user?.isMusician
-          ? musicianLinks
-          : user?.user?.isClient
-            ? clientLinks
-            : []
-        ).map((link) => (
-          <Link
-            key={link.name}
-            href={link.href}
-            className="flex items-center gap-3 p-2 md:p-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {links.map((link) => {
+          const active = isActive(link.href, link.exact);
+          return (
+            <Link
+              key={link.name}
+              href={link.href}
+              className={cn(
+                "group flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 border-l-4",
+                colors.hoverBg,
+                active
+                  ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500 text-amber-100"
+                  : cn(colors.text, "border-transparent", colors.hoverBg)
+              )}
+            >
+              <div
+                className={cn(
+                  "transition-transform duration-200",
+                  active
+                    ? "text-amber-400"
+                    : cn("group-hover:text-amber-400", colors.textMuted)
+                )}
+              >
+                {link.icon}
+              </div>
+              <span
+                className={cn(
+                  "font-medium flex-1",
+                  active ? "text-amber-100" : colors.text
+                )}
+              >
+                {link.name}
+              </span>
+              <ChevronRightIcon
+                className={cn(
+                  "w-4 h-4 transition-all duration-200",
+                  active
+                    ? "text-amber-400 opacity-100"
+                    : cn("opacity-0 group-hover:opacity-100", colors.textMuted)
+                )}
+              />
+            </Link>
+          );
+        })}
+
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleDarkMode}
+          className={cn(
+            "group flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 border-l-4 border-transparent",
+            colors.hoverBg,
+            colors.text
+          )}
+        >
+          <div
+            className={cn(
+              "transition-colors duration-200",
+              "group-hover:text-amber-400",
+              colors.textMuted
+            )}
           >
-            <span className="flex-shrink-0">{link.icon}</span>
-            <span className="hidden md:inline">{link.name}</span>
-          </Link>
-        ))}
+            {isDarkMode ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </div>
+          <span className={cn("font-medium flex-1", colors.text)}>
+            {isDarkMode ? "Light Mode" : "Dark Mode"}
+          </span>
+          <div
+            className={cn(
+              "text-xs px-2 py-1 rounded-full",
+              colors.card,
+              colors.textMuted
+            )}
+          >
+            Switch
+          </div>
+        </button>
       </nav>
+
+      {/* Quick Stats */}
+      <div className={cn("p-4 border-t", colors.border)}>
+        <div
+          className={cn("rounded-lg p-3 border", colors.card, colors.border)}
+        >
+          <div className={cn("text-xs mb-2 font-medium", colors.textMuted)}>
+            Quick Stats
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <div className={cn(colors.text)}>
+                {user?.isMusician ? "Gigs Booked" : "Posts Created"}
+              </div>
+              <div className="text-amber-400 font-medium">
+                {user?.gigsBooked || 0}
+              </div>
+            </div>
+            <div className="flex justify-between text-sm">
+              <div className={cn(colors.text)}>Messages</div>
+              <div className="text-blue-400 font-medium">
+                {
+                  // user?.unreadMessages
+                  0
+                }
+              </div>
+            </div>
+            <div className="flex justify-between text-sm">
+              <div className={cn(colors.text)}>Notifications</div>
+              <div className="text-green-400 font-medium">{unreadCount}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* App Version */}
+      <div className={cn("px-4 py-2 border-t", colors.border)}>
+        <div className={cn("text-xs text-center", colors.textMuted)}>
+          GigUp v1.0.0
+        </div>
+      </div>
     </div>
   );
 }

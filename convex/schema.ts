@@ -3,13 +3,14 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { userModel } from "./models/userModel";
 import { gigModel } from "./models/gigModel";
+import { notificationModel } from "./models/notificationsModel"; // Make sure this path is correct
 
 export default defineSchema({
   users: userModel,
+  gigs: gigModel,
+  notifications: notificationModel,
 
   // Other tables...
-  gigs: gigModel,
-
   aiSuggestions: defineTable({
     questions: v.object({
       musician: v.array(v.string()),

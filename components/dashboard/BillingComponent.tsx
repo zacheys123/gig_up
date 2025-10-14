@@ -5,13 +5,17 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth } from "@clerk/nextjs";
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { motion } from "framer-motion";
+import BillingComponentSkeleton from "../skeletons/BillingComponentSkeleton";
 
 const BillingComponent = () => {
-  const { user } = useCurrentUser();
+  const { user, isLoading } = useCurrentUser();
   const { getPlansForUser } = useSubscriptionStore();
 
   const plans = getPlansForUser(user?.isMusician, user?.isClient);
 
+  if (isLoading) {
+    return <BillingComponentSkeleton />;
+  }
   return (
     <div className="w-full">
       {/* Responsive grid with perfect mobile spacing */}

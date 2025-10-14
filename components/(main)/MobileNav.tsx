@@ -1,23 +1,27 @@
+// components/(main)/MobileNavigation.tsx
 "use client";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
-import MobileSheet from "../pages/MobileSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import MobileSheet from "../pages/MobileSheet";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export function MobileNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const { user: currentUser, isLoading: currentUserLoading } = useCurrentUser();
-  const { colors, isDarkMode, mounted } = useThemeColors(); // Add mounted
+  const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
-
-  // Check if user has a role (isClient or isMusician) only when data is loaded
+  const { notifications } = useNotifications();
+  // Check if user has a role
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
 
-  // Show loading state while ANY data is being fetched (Clerk, user data, OR theme)
+  // Show loading state
   if (!clerkLoaded || (isSignedIn && currentUserLoading) || !mounted) {
     return (
       <>
@@ -44,10 +48,7 @@ export function MobileNavigation() {
 
               {/* Right side loading state */}
               <div className="flex items-center space-x-4">
-                {/* Theme Toggle Skeleton */}
-                <Skeleton className="w-10 h-10 rounded-md" />
-
-                {/* User info skeleton */}
+                <Skeleton className="w-8 h-8 rounded-md" />
                 <div className="flex items-center space-x-3">
                   <Skeleton className="w-16 h-4 rounded" />
                   <Skeleton className="w-8 h-8 rounded-full" />
@@ -86,7 +87,7 @@ export function MobileNavigation() {
             </Link>
 
             {/* Right side */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               {/* Theme Toggle */}
               <button
                 onClick={toggleDarkMode}
@@ -104,49 +105,24 @@ export function MobileNavigation() {
 
               {isSignedIn ? (
                 <>
-                  {/* Desktop User Button */}
-                  <div className="hidden md:block">
-                    <UserButton />
-                  </div>
+                  {notifications.length > 0 && (
+                    <NotificationBell variant="mobile" />
+                  )}
+                  {/* User Button */}
+                  <UserButton />
 
-                  {/* Mobile */}
-                  <div className="md:hidden flex items-center space-x-3">
-                    <span className={`text-sm ${colors.text}`}>
-                      Hi, {clerkUser?.firstName || clerkUser?.username}
-                    </span>
-                    <UserButton />
-
-                    {/* Show MobileSheet ONLY if user has a role AND data is loaded */}
-                    {hasRole && <MobileSheet />}
-                  </div>
+                  {/* Mobile Sheet - Only if user has role */}
+                  {hasRole && <MobileSheet />}
                 </>
               ) : (
                 <>
-                  {/* Desktop Sign In/Sign Up - Show for ALL non-signed-in users */}
-                  <div className="hidden md:flex space-x-2">
-                    <Link
-                      href="/sign-in"
-                      className={`px-4 py-2 text-sm font-medium ${colors.text} ${colors.primary} transition-colors`}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      href="/sign-up"
-                      className={`px-4 py-2 ${colors.primaryBg} text-white text-sm font-medium rounded-md ${colors.primaryBgHover} transition-colors`}
-                    >
-                      Sign Up
-                    </Link>
-                  </div>
-
-                  {/* Mobile - Show navigation + auth for non-signed-in users */}
-                  <div className="md:hidden flex items-center space-x-2">
-                    <Link
-                      href="/sign-in"
-                      className={`px-3 py-1 text-sm font-medium ${colors.text} ${colors.primary} transition-colors`}
-                    >
-                      Sign In
-                    </Link>
-                  </div>
+                  {/* Sign In for mobile */}
+                  <Link
+                    href="/sign-in"
+                    className={`px-3 py-1 text-sm font-medium ${colors.text} ${colors.primary} transition-colors`}
+                  >
+                    Sign In
+                  </Link>
                 </>
               )}
             </div>
