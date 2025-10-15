@@ -22,6 +22,7 @@ import {
   ShieldIcon,
   XIcon,
   ChevronRightIcon,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,6 +33,7 @@ import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { MobileNavSkeleton } from "../skeletons/MobileNavSkeleton";
+import { useRouter } from "next/navigation";
 
 interface NavLink {
   name: string;
@@ -52,7 +54,7 @@ export default function MobileNav() {
   const { toggleDarkMode } = useThemeToggle();
   const notificationsData = useNotifications(5, true);
   const unreadCount = user ? notificationsData.unreadCount : 0;
-
+  const router = useRouter();
   const musicianLinks: NavLink[] = [
     {
       name: "Dashboard",
@@ -134,6 +136,12 @@ export default function MobileNav() {
   ];
 
   const commonLinks: NavLink[] = [
+    {
+      name: "Profile",
+      href: "/profile", // Add this line
+      icon: <User className="w-5 h-5" />,
+      exact: false,
+    },
     {
       name: "Settings",
       href: "/dashboard/settings",
@@ -259,7 +267,7 @@ export default function MobileNav() {
   }, [isOpen]);
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 md:hidden" ref={navRef}>
+    <div className="fixed inset-x-0 bottom-0 z-9999 md:hidden" ref={navRef}>
       <div className="relative h-20">
         {/* Full Screen Overlay */}
         <AnimatePresence>
@@ -487,34 +495,6 @@ export default function MobileNav() {
                         Switch
                       </div>
                     </button>
-                  </motion.div>
-
-                  {/* User Profile */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{
-                      delay: (allLinks.length + 1) * 0.05,
-                      type: "spring",
-                      stiffness: 300,
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "flex items-center gap-3 w-full p-4 rounded-xl transition-all duration-200 border-l-4 border-transparent",
-                        colors.hoverBg
-                      )}
-                    >
-                      <div className={cn("p-1", colors.textMuted)}>
-                        <UserButton />
-                      </div>
-                      <span className={cn("font-medium flex-1", colors.text)}>
-                        Profile & Settings
-                      </span>
-                      <ChevronRightIcon
-                        className={cn("w-4 h-4", colors.textMuted)}
-                      />
-                    </div>
                   </motion.div>
                 </div>
               </div>

@@ -133,6 +133,14 @@ const CurrentUserProfile = () => {
   const [newVideoTitle, setNewVideoTitle] = useState("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
 
+  // Role Type State
+  const [roleType, setRoleType] = useState("");
+  const [djGenre, setDjGenre] = useState("");
+  const [djEquipment, setDjEquipment] = useState("");
+  const [mcType, setMcType] = useState("");
+  const [mcLanguages, setMcLanguages] = useState("");
+  const [vocalistGenre, setVocalistGenre] = useState("");
+
   const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true); // Default to public
 
   // Add this to your state declarations
@@ -177,6 +185,15 @@ const CurrentUserProfile = () => {
       setIsMusician(user.isMusician || false);
       setIsClient(user.isClient || false);
       setClientHandles(user.handles || "");
+
+      // Load role-specific data
+      setRoleType(user.roleType || "");
+      setDjGenre(user.djGenre || "");
+      setDjEquipment(user.djEquipment || "");
+      setMcType(user.mcType || "");
+      setMcLanguages(user.mcLanguages || "");
+      setVocalistGenre(user.vocalistGenre || "");
+
       // Handle videos with proper privacy settings
       const userVideos = user.videosProfile || [];
       const videosWithPrivacy: VideoProfileProps[] = userVideos.map(
@@ -184,12 +201,13 @@ const CurrentUserProfile = () => {
           _id: video._id,
           title: video.title || `Performance Video ${index + 1}`,
           url: video.url,
-          isPublic: video.isPublic !== undefined ? video.isPublic : true, // Default to public for existing videos
+          isPublic: video.isPublic !== undefined ? video.isPublic : true,
           createdAt: video.createdAt,
         })
       );
       setVideos(videosWithPrivacy);
-      // Fix for rate object - handle partial objects and undefined values
+
+      // Fix for rate object
       const userRate = user.rate || {};
       setRate({
         regular: userRate.regular || "",
@@ -199,6 +217,301 @@ const CurrentUserProfile = () => {
       });
     }
   }, [user]);
+
+  // Role Type Constants
+  const roleTypes = [
+    { value: "instrumentalist", label: "Instrumentalist" },
+    { value: "dj", label: "DJ" },
+    { value: "mc", label: "MC" },
+    { value: "vocalist", label: "Vocalist" },
+  ];
+
+  const djGenres = [
+    "Hip Hop",
+    "House",
+    "Techno",
+    "EDM",
+    "R&B",
+    "Afrobeats",
+    "Reggae",
+    "Dancehall",
+    "Pop",
+    "Electronic",
+    "mix",
+  ];
+
+  const mcTypes = [
+    "Event Host",
+    "Wedding MC",
+    "Corporate MC",
+    "Club MC",
+    "Concert Host",
+    "Radio Host",
+    "mix",
+  ];
+
+  const vocalistGenres = [
+    "Pop",
+    "R&B",
+    "Jazz",
+    "Soul",
+    "Gospel",
+    "Rock",
+    "Classical",
+    "Opera",
+    "Afrobeats",
+    "Reggae",
+    "mix",
+  ];
+
+  const instrumentsList = instruments().map((ins) => ({
+    value: ins.name,
+    label: ins.val,
+  }));
+
+  // Role-specific form sections
+  const InstrumentalistSection = () => (
+    <>
+      <SelectInput
+        label="Primary Instrument"
+        value={instrument}
+        onChange={setInstrument}
+        options={instrumentsList}
+      />
+
+      <SelectInput
+        label="Experience Level"
+        value={experience}
+        onChange={setExperience}
+        options={experiences().map((ex) => ({
+          value: ex.name,
+          label: ex.val,
+        }))}
+      />
+
+      <div className="md:col-span-2">
+        <Label className={cn("text-sm font-medium", colors.text)}>
+          Music Genres
+        </Label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {genre.map((g) => (
+            <Badge
+              key={g}
+              variant="outline"
+              className={cn(
+                "flex items-center gap-1",
+                colors.border,
+                colors.text
+              )}
+            >
+              {g}
+              <button
+                onClick={() => removeGenre(g)} // ← This calls removeGenre
+                className="text-red-500 hover:text-red-600"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+          <button
+            onClick={() => setShowGenreModal(true)}
+            className={cn(
+              "text-amber-500 hover:text-amber-600 text-sm flex items-center",
+              colors.text
+            )}
+          >
+            <Plus size={14} className="mr-1" /> Add Genre
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  const DJSection = () => (
+    <>
+      <SelectInput
+        label="DJ Genre"
+        value={djGenre}
+        onChange={setDjGenre}
+        options={djGenres.map((genre) => ({ value: genre, label: genre }))}
+      />
+
+      <TextInput
+        label="DJ Equipment"
+        value={djEquipment}
+        onChange={setDjEquipment}
+        placeholder="Turntables, Controller, Mixer, etc."
+        Icon={<Music size={16} />}
+      />
+
+      <div className="md:col-span-2">
+        <Label className={cn("text-sm font-medium", colors.text)}>
+          Music Genres
+        </Label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {genre.map((g) => (
+            <Badge
+              key={g}
+              variant="outline"
+              className={cn(
+                "flex items-center gap-1",
+                colors.border,
+                colors.text
+              )}
+            >
+              {g}
+              <button
+                onClick={() => removeGenre(g)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+          <button
+            onClick={() => setShowGenreModal(true)}
+            className={cn(
+              "text-amber-500 hover:text-amber-600 text-sm flex items-center",
+              colors.text
+            )}
+          >
+            <Plus size={14} className="mr-1" /> Add Genre
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  const MCSection = () => (
+    <>
+      <SelectInput
+        label="MC Type"
+        value={mcType}
+        onChange={setMcType}
+        options={mcTypes.map((type) => ({ value: type, label: type }))}
+      />
+
+      <TextInput
+        label="Languages Spoken"
+        value={mcLanguages}
+        onChange={setMcLanguages}
+        placeholder="English, Swahili, French, etc."
+        Icon={<Globe size={16} />}
+      />
+
+      <div className="md:col-span-2">
+        <Label className={cn("text-sm font-medium", colors.text)}>
+          Specialties
+        </Label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {genre.map((g) => (
+            <Badge
+              key={g}
+              variant="outline"
+              className={cn(
+                "flex items-center gap-1",
+                colors.border,
+                colors.text
+              )}
+            >
+              {g}
+              <button
+                onClick={() => removeGenre(g)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+          <button
+            onClick={() => setShowGenreModal(true)}
+            className={cn(
+              "text-amber-500 hover:text-amber-600 text-sm flex items-center",
+              colors.text
+            )}
+          >
+            <Plus size={14} className="mr-1" /> Add Specialty
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  const VocalistSection = () => (
+    <>
+      <SelectInput
+        label="Vocal Genre"
+        value={vocalistGenre}
+        onChange={setVocalistGenre}
+        options={vocalistGenres.map((genre) => ({
+          value: genre,
+          label: genre,
+        }))}
+      />
+
+      <SelectInput
+        label="Experience Level"
+        value={experience}
+        onChange={setExperience}
+        options={experiences().map((ex) => ({
+          value: ex.name,
+          label: ex.val,
+        }))}
+      />
+
+      <div className="md:col-span-2">
+        <Label className={cn("text-sm font-medium", colors.text)}>
+          Music Genres
+        </Label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {genre.map((g) => (
+            <Badge
+              key={g}
+              variant="outline"
+              className={cn(
+                "flex items-center gap-1",
+                colors.border,
+                colors.text
+              )}
+            >
+              {g}
+              <button
+                onClick={() => removeGenre(g)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+          <button
+            onClick={() => setShowGenreModal(true)}
+            className={cn(
+              "text-amber-500 hover:text-amber-600 text-sm flex items-center",
+              colors.text
+            )}
+          >
+            <Plus size={14} className="mr-1" /> Add Genre
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  // Helper function to render role-specific content
+  const renderRoleSpecificContent = () => {
+    switch (roleType) {
+      case "instrumentalist":
+        return <InstrumentalistSection />;
+      case "dj":
+        return <DJSection />;
+      case "mc":
+        return <MCSection />;
+      case "vocalist":
+        return <VocalistSection />;
+      default:
+        return null;
+    }
+  };
 
   // Add this helper function
   const scrollToField = (field: string) => {
@@ -276,6 +589,51 @@ const CurrentUserProfile = () => {
         importance: "high",
       });
     }
+    if (isMusician) {
+      if (!roleType) {
+        errors.push({
+          field: "roleType",
+          message: "Please select your role type",
+          importance: "high",
+        });
+      }
+    }
+
+    // Instrument validation only for instrumentalists
+    if (roleType === "instrumentalist" && !instrument) {
+      errors.push({
+        field: "instrument",
+        message: "Instrument is required for instrumentalists",
+        importance: "high",
+      });
+    }
+
+    // DJ-specific validations
+    if (roleType === "dj" && !djGenre) {
+      errors.push({
+        field: "djGenre",
+        message: "DJ genre is required",
+        importance: "high",
+      });
+    }
+
+    // MC-specific validations
+    if (roleType === "mc" && !mcType) {
+      errors.push({
+        field: "mcType",
+        message: "MC type is required",
+        importance: "high",
+      });
+    }
+
+    // Vocalist-specific validations
+    if (roleType === "vocalist" && !vocalistGenre) {
+      errors.push({
+        field: "vocalistGenre",
+        message: "Vocal genre is required",
+        importance: "high",
+      });
+    }
     // Validate Date of Birth (for musicians)
     if (isMusician) {
       if (!age || !month || !year) {
@@ -343,11 +701,6 @@ const CurrentUserProfile = () => {
   const handleUpdate = async () => {
     if (!user) return;
 
-    // Add debugging
-    console.log("Current user:", user);
-    console.log("User clerkId:", user.clerkId);
-    console.log("Clerk user:", userdata);
-
     // Run validation
     const validationErrors = validateProfile();
     const blockingErrors = validationErrors.filter(
@@ -397,7 +750,7 @@ const CurrentUserProfile = () => {
         email,
         username,
         city,
-        instrument,
+        instrument: roleType === "instrumentalist" ? instrument : "", // Only set instrument for instrumentalists
         experience,
         date: age,
         month,
@@ -414,6 +767,14 @@ const CurrentUserProfile = () => {
         rate,
         videosProfile: videos,
         firstTimeInProfile: false,
+
+        // Role-specific fields
+        roleType,
+        djGenre: roleType === "dj" ? djGenre : "",
+        djEquipment: roleType === "dj" ? djEquipment : "",
+        mcType: roleType === "mc" ? mcType : "",
+        mcLanguages: roleType === "mc" ? mcLanguages : "",
+        vocalistGenre: roleType === "vocalist" ? vocalistGenre : "",
       };
 
       console.log("Sending update data:", updateData);
@@ -421,7 +782,7 @@ const CurrentUserProfile = () => {
 
       await updateUser({
         userId: user._id as Id<"users">,
-        clerkId: user.clerkId, // Pass Clerk ID for verification
+        clerkId: user.clerkId,
         updates: updateData,
       });
 
@@ -490,7 +851,7 @@ const CurrentUserProfile = () => {
   };
 
   // Video handlers (LOCAL STATE ONLY - no separate API calls)
-  // Video handlers (LOCAL STATE ONLY - no separate API calls)
+  // Video handlers
   const addVideo = () => {
     if (!newVideoTitle.trim() || !newVideoUrl.trim()) {
       toast.error("Please enter both title and URL");
@@ -498,17 +859,17 @@ const CurrentUserProfile = () => {
     }
 
     const newVideo: VideoProfileProps = {
-      _id: Date.now().toString(), // Temporary ID
+      _id: Date.now().toString(),
       title: newVideoTitle,
       url: newVideoUrl,
-      isPublic: newVideoPrivacy, // Add this line
-      createdAt: Date.now(), // Use timestamp instead of Date object
+      isPublic: newVideoPrivacy,
+      createdAt: Date.now(),
     };
 
     setVideos((prev) => [...prev, newVideo]);
     setNewVideoTitle("");
     setNewVideoUrl("");
-    setNewVideoPrivacy(true); // Reset to public for next video
+    setNewVideoPrivacy(true);
     setShowVideoModal(false);
     toast.success("Video added! Don't forget to save your profile.");
   };
@@ -546,6 +907,7 @@ const CurrentUserProfile = () => {
     }
   };
 
+  // ADD THIS FUNCTION - IT WAS MISSING:
   const removeGenre = (genreToRemove: string) => {
     setGenre(genre.filter((g) => g !== genreToRemove));
   };
@@ -772,6 +1134,7 @@ const CurrentUserProfile = () => {
             </SectionContainer>
 
             {/* Experience Section */}
+            {/* Experience Section */}
             <SectionContainer
               icon={<Briefcase size={18} />}
               title="Experience & Skills"
@@ -779,61 +1142,16 @@ const CurrentUserProfile = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {isMusician && (
                   <>
+                    {/* Role Type Selection */}
                     <SelectInput
-                      label="Primary Instrument"
-                      value={instrument}
-                      onChange={setInstrument}
-                      options={instruments().map((ins) => ({
-                        value: ins.name,
-                        label: ins.val,
-                      }))}
+                      label="Role Type"
+                      value={roleType}
+                      onChange={setRoleType}
+                      options={roleTypes}
                     />
 
-                    <SelectInput
-                      label="Experience Level"
-                      value={experience}
-                      onChange={setExperience}
-                      options={experiences().map((ex) => ({
-                        value: ex.name,
-                        label: ex.val,
-                      }))}
-                    />
-
-                    <div className="md:col-span-2">
-                      <Label className={cn("text-sm font-medium", colors.text)}>
-                        Music Genres
-                      </Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {genre.map((g) => (
-                          <Badge
-                            key={g}
-                            variant="outline"
-                            className={cn(
-                              "flex items-center gap-1",
-                              colors.border,
-                              colors.text
-                            )}
-                          >
-                            {g}
-                            <button
-                              onClick={() => removeGenre(g)}
-                              className="text-red-500 hover:text-red-600"
-                            >
-                              <X size={12} />
-                            </button>
-                          </Badge>
-                        ))}
-                        <button
-                          onClick={() => setShowGenreModal(true)}
-                          className={cn(
-                            "text-amber-500 hover:text-amber-600 text-sm flex items-center",
-                            colors.text
-                          )}
-                        >
-                          <Plus size={14} className="mr-1" /> Add Genre
-                        </button>
-                      </div>
-                    </div>
+                    {/* Role-Specific Content */}
+                    {renderRoleSpecificContent()}
                   </>
                 )}
 

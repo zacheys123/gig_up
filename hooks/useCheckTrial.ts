@@ -8,7 +8,11 @@ import { useUserStore } from "@/app/stores";
 export const useCheckTrial = () => {
   const { setShowTrialModal, setTrialRemainingDays } = useSubscriptionStore();
   const [isFirstMonthEnd, setIsFirstMonthEnd] = useState<boolean>(false);
+  const [isInGracePeriod, setIsInGracePeriod] = useState<boolean>(false);
+  const [daysLeft, setDaysLeft] = useState<number>(0);
+
   const { user } = useUserStore();
+
   useEffect(() => {
     if (!user?._creationTime) return;
 
@@ -20,19 +24,27 @@ export const useCheckTrial = () => {
     // Check if first month has ended
     const oneMonthLater = new Date(signupDate);
     oneMonthLater.setMonth(signupDate.getMonth() + 1);
-    setIsFirstMonthEnd(now >= oneMonthLater);
+    const firstMonthEnded = now >= oneMonthLater;
+    setIsFirstMonthEnd(firstMonthEnded);
 
     // Calculate the number of remaining full days (including today)
     const msInDay = 1000 * 60 * 60 * 24;
     const timeDiff = trialEndDate.getTime() - now.getTime();
-    const daysLeft = Math.ceil(timeDiff / msInDay);
+    const remainingDays = Math.ceil(timeDiff / msInDay);
+
+    setDaysLeft(remainingDays);
+
+    // Determine if user is in grace period
+    const inGracePeriod = remainingDays > 0 && !firstMonthEnded;
+    setIsInGracePeriod(inGracePeriod);
 
     console.log({
       createdAt: user?._creationTime,
       now: new Date().toISOString(),
       trialEnds: trialEndDate.toISOString(),
-      daysLeft,
-      isFirstMonthEnd: now >= oneMonthLater,
+      daysLeft: remainingDays,
+      isFirstMonthEnd: firstMonthEnded,
+      isInGracePeriod: inGracePeriod,
     });
 
     // Skip trial logic if user is already on Pro tier
@@ -42,16 +54,21 @@ export const useCheckTrial = () => {
       return;
     }
 
-    if (daysLeft <= 0) {
+    if (remainingDays <= 0) {
       // Trial expired
       setShowTrialModal(true);
       setTrialRemainingDays(null);
     } else {
       // Always set remaining days (will trigger modal logic)
-      setTrialRemainingDays(daysLeft);
+      setTrialRemainingDays(remainingDays);
       setShowTrialModal(false);
     }
   }, [user, setShowTrialModal, setTrialRemainingDays]);
 
-  return { isFirstMonthEnd, setIsFirstMonthEnd };
+  return {
+    isFirstMonthEnd,
+    setIsFirstMonthEnd,
+    isInGracePeriod,
+    daysLeft,
+  };
 };

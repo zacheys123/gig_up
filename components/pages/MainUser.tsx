@@ -449,6 +449,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 interface MainUserProps extends UserProps {
   isFeatured?: boolean;
@@ -479,6 +480,7 @@ const MainUser = ({
   const { userId } = useAuth();
   const { user: currentUser } = useCurrentUser();
 
+  const { isInGracePeriod } = useCheckTrial();
   // Mutation to track profile views
   const trackProfileView = useMutation(api.controllers.user.trackProfileView);
 
@@ -486,24 +488,31 @@ const MainUser = ({
     router.push(`/search/${username}`);
   };
 
-  const handleMoreClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowModal(true);
-  };
-
-  // Track profile view when modal opens or card is interacted with
   useEffect(() => {
     if ((showModal || showViewNotification) && userId && userId !== _id) {
       trackProfileView({
         viewedUserId: _id,
         viewerUserId: userId,
+        isViewerInGracePeriod: isInGracePeriod, // Pass grace period status
       });
     }
-  }, [showModal, showViewNotification, _id, userId, trackProfileView]);
+  }, [
+    showModal,
+    showViewNotification,
+    _id,
+    userId,
+    trackProfileView,
+    isInGracePeriod,
+  ]);
 
   // Show view notification for pro users
   const handleCardInteraction = () => {
-    if (currentUser?.tier === "pro" && userId && userId !== _id) {
+    const shouldShowNotification =
+      (currentUser?.tier === "pro" || isInGracePeriod) &&
+      userId &&
+      userId !== _id;
+
+    if (shouldShowNotification) {
       setShowViewNotification(true);
       setTimeout(() => setShowViewNotification(false), 3000);
     }
@@ -579,20 +588,6 @@ const MainUser = ({
     return isDarkMode
       ? "bg-gray-800/90 hover:bg-gray-700/90 border-gray-700"
       : "bg-white/95 hover:bg-gray-50/95 border-gray-200";
-  };
-
-  // Theme-aware modal background
-  const getModalBackground = () => {
-    return isDarkMode
-      ? "bg-gray-800 border-gray-700"
-      : "bg-white border-gray-200";
-  };
-
-  // Theme-aware secondary background
-  const getSecondaryBackground = () => {
-    return isDarkMode
-      ? "bg-gray-700/50 border-gray-600"
-      : "bg-gray-100 border-gray-200";
   };
 
   // Get view count for display
@@ -841,6 +836,7 @@ const MainUser = ({
         <ViewNotification
           user={{ firstname, lastname, username, picture }}
           onClose={() => setShowViewNotification(false)}
+          isPro={currentUser?.tier === "pro"}
         />
       )}
     </>
@@ -1176,15 +1172,28 @@ const Modal = ({
   );
 };
 
-// View Notification Component for Pro Users
+// View Notification Component for Pro Users and inGracePeriodUsers
 const ViewNotification = ({
   user,
   onClose,
+  isPro,
 }: {
   user: any;
   onClose: () => void;
+  isPro: boolean;
 }) => {
-  const { isDarkMode } = useThemeColors();
+  const getNotificationStyle = () => {
+    if (isPro) {
+      return "bg-gradient-to-r from-purple-500 to-pink-500 border-purple-400 shadow-purple-500/25";
+    } else {
+      return "bg-gradient-to-r from-blue-500 to-cyan-500 border-blue-400 shadow-blue-500/25";
+    }
+  };
+
+  const getBadgeText = () => {
+    if (isPro) return "Pro";
+    return "Free Trial";
+  };
 
   return (
     <motion.div
@@ -1195,9 +1204,8 @@ const ViewNotification = ({
     >
       <div
         className={cn(
-          "rounded-lg p-4 shadow-lg border backdrop-blur-md",
-          "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-          "border-green-400 shadow-green-500/25"
+          "rounded-lg p-4 shadow-lg border backdrop-blur-md text-white",
+          getNotificationStyle()
         )}
       >
         <div className="flex items-center gap-3">
@@ -1216,10 +1224,15 @@ const ViewNotification = ({
             )}
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-sm">
-              {user.firstname} viewed your profile
-            </p>
-            <p className="text-xs opacity-90 mt-1">@{user.username}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="font-semibold text-sm">
+                {user.firstname} viewed your profile
+              </p>
+              <span className="text-xs bg-white/30 px-2 py-0.5 rounded-full">
+                {getBadgeText()}
+              </span>
+            </div>
+            <p className="text-xs opacity-90">@{user.username}</p>
           </div>
           <button
             onClick={onClose}

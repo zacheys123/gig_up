@@ -28,6 +28,7 @@ import {
   getProfileCompletionMessage,
 } from "@/utils";
 import SidebarSkeleton from "../skeletons/SidebarSkeleton";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 const DesktopUserNav = () => {
   const { userId } = useAuth();
@@ -39,6 +40,7 @@ const DesktopUserNav = () => {
   const completionMessage = getProfileCompletionMessage(profileCompletion);
   const missingFields = getMissingFields(user);
 
+  const { isFirstMonthEnd } = useCheckTrial();
   // Show skeleton while loading
   if (isLoading || !user) {
     return <DesktopUserNavSkeleton colors={colors} isDarkMode={isDarkMode} />;
@@ -86,7 +88,7 @@ const DesktopUserNav = () => {
           icon: <Bell size={20} />,
           label: "Notifications",
           description: "Alerts & updates",
-          pro: false,
+          pro: isFirstMonthEnd,
         },
         ...(isMusician
           ? [

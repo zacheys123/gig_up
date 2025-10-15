@@ -50,7 +50,7 @@ export function NotificationBell({
         {hasUnread && (
           <span
             className={cn(
-              "absolute -top-1 -right-1 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center",
+              "absolute -top-1 -right-1 bg-amber-500 text-white text-xs font-medium rounded-full flex items-center justify-center",
               "animate-pulse-subtle", // Custom CSS animation
               variant === "mobile" ? "w-4 h-4 text-[10px]" : "w-5 h-5 text-xs"
             )}

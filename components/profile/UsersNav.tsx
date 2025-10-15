@@ -62,16 +62,7 @@ const UserNav = () => {
       label: "Activity",
       pro: true, // Added pro tier
     },
-    {
-      href: `/profile/notifications`,
-      icon: {
-        active: <Bell size={22} className="fill-current" />,
-        inactive: <Bell size={22} />,
-      },
-      label: "Alerts",
-      pro: false, // Added pro tier
-      badges: 3,
-    },
+
     // Musician-specific items
     ...(isMusician
       ? [
@@ -211,14 +202,6 @@ const UserNav = () => {
                         {active ? item.icon.active : item.icon.inactive}
                       </div>
 
-                      {/* Badge for notifications/messages */}
-                      {item.badges && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                          {item.badges > 9 ? "9+" : item.badges}
-                        </span>
-                      )}
-
-                      {/* Pro badge for pro features that are accessible */}
                       {item.pro && isProTier && (
                         <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center text-[8px]">
                           P

@@ -198,23 +198,39 @@ export default function ClientEducationModal({
               <button
                 onClick={prevTip}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg  transition-colors",
-                  "group-hover:text-amber-600 dark:group-hover:text-amber-400",
+                  "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 relative group",
+                  "hover:text-amber-600 dark:hover:text-amber-400",
                   colors.textMuted
                 )}
               >
-                <span>Previous</span>
+                <span className="transition-colors duration-200">Previous</span>
+
+                {/* Subtle background on hover */}
+                <div
+                  className={cn(
+                    "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
+                    "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                  )}
+                />
               </button>
 
               <button
                 onClick={nextTip}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg  transition-colors",
-                  "group-hover:text-amber-600 dark:group-hover:text-amber-400",
+                  "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 relative group",
+                  "hover:text-amber-600 dark:hover:text-amber-400",
                   colors.textMuted
                 )}
               >
-                <span>Next</span>
+                <span className="transition-colors duration-200">Next</span>
+
+                {/* Subtle background on hover */}
+                <div
+                  className={cn(
+                    "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
+                    "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                  )}
+                />
               </button>
             </div>
           </div>

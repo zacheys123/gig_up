@@ -1,4 +1,5 @@
 // convex/controllers/user.ts
+import { Doc, Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 
@@ -173,6 +174,13 @@ export const updateUserProfile = mutation({
           })
         )
       ),
+      // ADD THESE NEW ROLE-SPECIFIC FIELDS:
+      roleType: v.optional(v.string()),
+      djGenre: v.optional(v.string()),
+      djEquipment: v.optional(v.string()),
+      mcType: v.optional(v.string()),
+      mcLanguages: v.optional(v.string()),
+      vocalistGenre: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {
@@ -193,7 +201,6 @@ export const updateUserProfile = mutation({
 
     await ctx.db.patch(args.userId, {
       ...cleanUpdates,
-
       lastActive: Date.now(),
     });
 
@@ -534,7 +541,7 @@ export const followUser = mutation({
   args: { userId: v.string(), tId: v.id("users") },
   handler: async (ctx, args) => {
     if (!args.userId) throw new Error("Unauthorized");
-
+    console.log(args.userId);
     const currentUser = await ctx.db
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
@@ -688,29 +695,19 @@ export const unlikeGig = mutation({
   },
 });
 
-// Add this type definition somewhere in your file
-type UserDocument = {
-  viewedProfiles?: string[];
-  profileViews?: {
-    totalCount: number;
-    recentViewers: Array<{ userId: string; timestamp: number }>;
-    lastUpdated: number;
-  };
-  // Add other fields as needed
-};
-
+// In your Convex mutation (trackProfileView)
 export const trackProfileView = mutation({
   args: {
-    viewedUserId: v.string(), // This is Clerk ID of the profile being viewed
-    viewerUserId: v.string(), // This is Clerk ID of the viewer
+    viewedUserId: v.string(),
+    viewerUserId: v.string(),
+    isViewerInGracePeriod: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { viewedUserId, viewerUserId } = args;
+    const { viewedUserId, viewerUserId, isViewerInGracePeriod } = args;
 
     // Don't track self-views
     if (viewedUserId === viewerUserId) return;
 
-    // Find users by clerkId instead of using the ID directly
     const [viewedUserDoc, viewerDoc] = await Promise.all([
       ctx.db
         .query("users")
@@ -725,6 +722,15 @@ export const trackProfileView = mutation({
     if (!viewedUserDoc) return;
 
     const currentTime = Date.now();
+
+    // NEW: Check if viewer has already viewed this profile
+    const viewerViewedProfiles = viewerDoc?.viewedProfiles || [];
+    const hasAlreadyViewed = viewerViewedProfiles.includes(viewedUserId);
+
+    if (hasAlreadyViewed) {
+      console.log(`User ${viewerUserId} has already viewed ${viewedUserId}`);
+      return { success: false, reason: "already_viewed" };
+    }
 
     // Update viewed user's profile view count
     const currentViews = viewedUserDoc.profileViews || {
@@ -749,19 +755,24 @@ export const trackProfileView = mutation({
 
     // Update viewer's viewedProfiles
     if (viewerDoc) {
-      const viewedProfiles = (viewerDoc as any).viewedProfiles || [];
+      const viewedProfiles = viewerDoc.viewedProfiles || [];
       const updatedViewedProfiles = [
-        viewedUserId, // Store Clerk ID here
+        viewedUserId,
         ...viewedProfiles.filter((id: string) => id !== viewedUserId),
-      ].slice(0, 100);
+      ].slice(0, 100); // Keep only last 100 viewed profiles
 
       await ctx.db.patch(viewerDoc._id, {
         viewedProfiles: updatedViewedProfiles,
       });
     }
-    if (viewedUserDoc.tier === "pro" && viewerDoc) {
+
+    // Check if user should get notifications (pro OR in grace period)
+    const shouldGetNotifications =
+      viewedUserDoc.tier === "pro" || isViewerInGracePeriod;
+
+    if (shouldGetNotifications && viewerDoc) {
       await ctx.db.insert("notifications", {
-        userId: viewedUserId, // Notify the profile owner
+        userId: viewedUserId,
         type: "profile_view",
         title: "Profile Viewed",
         message: `${viewerDoc.firstname || "Someone"} viewed your profile`,
@@ -778,6 +789,9 @@ export const trackProfileView = mutation({
     return { success: true };
   },
 });
+
+// Helper function to check notification eligibility
+
 // export const createOrUpdateUserPublic = mutation({
 //   args: {
 //     clerkId: v.string(),

@@ -49,7 +49,7 @@ export const useSocialActions = () => {
   return {
     toggleFollow: async (userId: string, targetId: string) => {
       const tId = toUserId(targetId);
-      await toggleFollowMutation({ userId, targetUserId: tId });
+      await toggleFollowMutation({ userId, tId: tId });
     },
 
     toggleVideoLike: async (videoId: string) => {

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import ClientEducationModal from "./ClientEducationModal";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { SearchUserSkeletonGrid } from "../skeletons/SearchMainUserSkeleton";
 
 const SearchComponent = () => {
   const { userId } = useAuth();
@@ -24,6 +25,18 @@ const SearchComponent = () => {
   const { users } = useAllUsers();
   const { user: myuser } = useCurrentUser();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (users) {
+        setIsLoading(false);
+      }
+    }, 1000); // Minimum loading time for better UX
+
+    return () => clearTimeout(timer);
+  }, [users]);
 
   const [activeFilters, setActiveFilters] = useState({
     roleType: [] as string[],
@@ -194,8 +207,6 @@ const SearchComponent = () => {
     }
   }, [searchQuery]);
 
-  const isMusician = myuser?.isMusician;
-
   // Process users with reliability data
   const processedUsers =
     users
@@ -308,8 +319,33 @@ const SearchComponent = () => {
 
           {/* User Grid */}
           <AnimatePresence>
-            {finalFilteredUsers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pt-[50px]">
+            {isLoading || (finalFilteredUsers.length < 0 && !users) ? (
+              // Show skeletons while loading
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <SearchUserSkeletonGrid count={2} isDarkMode={isDarkMode} />
+                  </motion.div>
+                ))}
+              </div>
+            ) : finalFilteredUsers.length > 0 ? (
+              // Show users when we have results
+              <div
+                className={cn(
+                  "grid gap-4 sm:gap-6 pt-4 sm:pt-[50px]",
+                  "grid-cols-1",
+                  "sm:grid-cols-2",
+                  "lg:grid-cols-3",
+                  "xl:grid-cols-4",
+                  "2xl:grid-cols-5"
+                )}
+              >
+                {" "}
                 {finalFilteredUsers.map((user: UserProps, index: number) => (
                   <motion.div
                     key={user._id}
@@ -323,13 +359,14 @@ const SearchComponent = () => {
                       damping: 25,
                       delay: index * 0.03,
                     }}
-                    onClick={() => handleUserClick(user)} // Add this line
+                    onClick={() => handleUserClick(user)}
                   >
                     <MainUser {...user} isFeatured={isFeaturedUser(user)} />
                   </motion.div>
                 ))}
               </div>
             ) : (
+              // Show empty state when no results
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -375,7 +412,6 @@ const SearchComponent = () => {
               </motion.div>
             )}
           </AnimatePresence>
-
           {/* Loading state */}
           {!users && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

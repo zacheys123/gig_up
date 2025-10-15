@@ -106,7 +106,7 @@ export function MobileNavigation() {
 
               {isSignedIn ? (
                 <>
-                  {notifications.length > 0 && (
+                  {!isFirstMonthEnd && notifications.length > 0 && (
                     <NotificationBell variant="mobile" />
                   )}
                   {/* User Button */}
