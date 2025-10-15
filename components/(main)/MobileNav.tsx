@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import MobileSheet from "../pages/MobileSheet";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 export function MobileNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
@@ -20,7 +21,7 @@ export function MobileNavigation() {
   const { notifications } = useNotifications();
   // Check if user has a role
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
-
+  const { isFirstMonthEnd } = useCheckTrial();
   // Show loading state
   if (!clerkLoaded || (isSignedIn && currentUserLoading) || !mounted) {
     return (
@@ -112,7 +113,13 @@ export function MobileNavigation() {
                   <UserButton />
 
                   {/* Mobile Sheet - Only if user has role */}
-                  {hasRole && <MobileSheet />}
+                  {hasRole && (
+                    <MobileSheet
+                      isTrialEnded={
+                        isFirstMonthEnd && currentUser?.tier !== "pro"
+                      }
+                    />
+                  )}
                 </>
               ) : (
                 <>

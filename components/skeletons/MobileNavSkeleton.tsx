@@ -1,6 +1,4 @@
 "use client";
-
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function MobileNavSkeleton() {

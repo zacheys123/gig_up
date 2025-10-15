@@ -11,7 +11,6 @@ import {
   Music,
   Settings,
   Video,
-  MessageCircle,
   Bell,
   Star,
   Calendar,
@@ -39,12 +38,14 @@ const DesktopUserNav = () => {
   const profileCompletion = calculateProfileCompletion(user);
   const completionMessage = getProfileCompletionMessage(profileCompletion);
   const missingFields = getMissingFields(user);
+
   // Show skeleton while loading
   if (isLoading || !user) {
-    return <SidebarSkeleton />;
+    return <DesktopUserNavSkeleton colors={colors} isDarkMode={isDarkMode} />;
   }
 
   const isMusician = user?.isMusician;
+  const isProTier = user?.tier === "pro";
 
   const navSections = [
     {
@@ -73,6 +74,7 @@ const DesktopUserNav = () => {
           icon: <History size={20} />,
           label: "Activity",
           description: "Recent actions",
+          pro: true, // Added pro tier
         },
       ],
     },
@@ -80,17 +82,11 @@ const DesktopUserNav = () => {
       title: "Features",
       items: [
         {
-          href: `/profile/messages`,
-          icon: <MessageCircle size={20} />,
-          label: "Messages",
-          description: "Chat conversations",
-          badge: 3,
-        },
-        {
           href: `/profile/notifications`,
           icon: <Bell size={20} />,
           label: "Notifications",
           description: "Alerts & updates",
+          pro: false,
         },
         ...(isMusician
           ? [
@@ -126,6 +122,7 @@ const DesktopUserNav = () => {
                 icon: <Calendar size={20} />,
                 label: "Availability",
                 description: "Your schedule",
+                pro: true, // Added pro tier
               },
             ]
           : [
@@ -140,6 +137,7 @@ const DesktopUserNav = () => {
                 icon: <Star size={20} />,
                 label: "Favorites",
                 description: "Saved musicians",
+                pro: true, // Added pro tier
               },
             ]),
       ],
@@ -180,6 +178,11 @@ const DesktopUserNav = () => {
               </h2>
               <p className={cn("text-sm", colors.textMuted)}>
                 {isMusician ? "Musician Account" : "Client Account"}
+                {isProTier && (
+                  <span className="ml-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs px-2 py-1 rounded-full">
+                    PRO
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -191,7 +194,7 @@ const DesktopUserNav = () => {
             <div key={sectionIndex} className="space-y-3">
               <h3
                 className={cn(
-                  "text-xs font-semibold uppercase tracking-wider px-3",
+                  "text-md font-semibold uppercase tracking-wider px-3 hover:text-yellow-400",
                   colors.textMuted
                 )}
               >
@@ -201,19 +204,20 @@ const DesktopUserNav = () => {
               <div className="space-y-1">
                 {section.items.map((item, itemIndex) => {
                   const active = isActive(item.href);
+                  const isProFeature = item.pro && !isProTier;
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
+                  const linkContent = (
+                    <div
                       className={cn(
                         "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group",
                         "hover:scale-[1.02] hover:shadow-sm",
+                        isProFeature && "cursor-not-allowed opacity-60",
                         active
                           ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
                           : cn(
                               "hover:bg-gray-100 dark:hover:bg-gray-800",
-                              colors.text
+                              "text-gray-700 dark:text-gray-300",
+                              "hover:text-amber-600 dark:hover:text-amber-400"
                             )
                       )}
                     >
@@ -222,7 +226,9 @@ const DesktopUserNav = () => {
                           "p-2 rounded-lg transition-colors",
                           active
                             ? "bg-amber-500 text-white"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:bg-amber-500/10 group-hover:text-amber-600"
+                            : isProFeature
+                              ? "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
+                              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:bg-amber-500/10 group-hover:text-amber-600"
                         )}
                       >
                         {item.icon}
@@ -232,22 +238,38 @@ const DesktopUserNav = () => {
                         <div className="flex items-center gap-2">
                           <span
                             className={cn(
-                              "font-medium text-sm",
-                              active ? "text-amber-600" : colors.text
+                              "font-medium text-sm transition-colors duration-200",
+                              active
+                                ? "text-amber-600"
+                                : isProFeature
+                                  ? "text-gray-500 dark:text-gray-400"
+                                  : "text-gray-700 dark:text-gray-300 group-hover:text-amber-600 dark:group-hover:text-amber-400"
                             )}
                           >
                             {item.label}
                           </span>
-                          {item.badge && (
-                            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                              {item.badge}
+
+                          {item.pro && (
+                            <span
+                              className={cn(
+                                "text-xs rounded-full px-2 py-1",
+                                isProFeature
+                                  ? "bg-gray-400 text-white"
+                                  : "bg-green-500 text-white"
+                              )}
+                            >
+                              PRO
                             </span>
                           )}
                         </div>
                         <p
                           className={cn(
-                            "text-xs truncate",
-                            active ? "text-amber-500/80" : colors.textMuted
+                            "text-xs truncate transition-colors duration-200",
+                            active
+                              ? "text-amber-500/80"
+                              : isProFeature
+                                ? "text-gray-400 dark:text-gray-500"
+                                : "text-gray-500 dark:text-gray-400 group-hover:text-amber-500/80 dark:group-hover:text-amber-400/80"
                           )}
                         >
                           {item.description}
@@ -255,10 +277,27 @@ const DesktopUserNav = () => {
                       </div>
 
                       {/* Active indicator */}
-                      {active && (
+                      {active && !isProFeature && (
                         <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
                       )}
-                    </Link>
+                    </div>
+                  );
+
+                  return (
+                    <div key={item.href}>
+                      {isProFeature ? (
+                        // Pro feature - visible but not clickable
+                        <div
+                          className="relative"
+                          title="Upgrade to Pro to access this feature"
+                        >
+                          {linkContent}
+                        </div>
+                      ) : (
+                        // Regular link - clickable
+                        <Link href={item.href}>{linkContent}</Link>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -287,31 +326,35 @@ const DesktopUserNav = () => {
             </p>
 
             {/* Show missing fields if profile is incomplete */}
-            {missingFields.length > 0 && profileCompletion < 100 && (
-              <div className="mt-2">
-                <p className={cn("text-xs font-medium mb-1", colors.text)}>
-                  Missing:
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {missingFields.slice(0, 3).map((field, index) => (
-                    <span
-                      key={index}
-                      className={cn(
-                        "text-xs px-2 py-1 rounded-full",
-                        "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
-                      )}
-                    >
-                      {field}
-                    </span>
-                  ))}
-                  {missingFields.length > 3 && (
-                    <span className={cn("text-xs px-2 py-1", colors.textMuted)}>
-                      +{missingFields.length - 3} more
-                    </span>
-                  )}
+            {missingFields.length > 0 &&
+              profileCompletion < 100 &&
+              user?.isMusician && (
+                <div className="mt-2">
+                  <p className={cn("text-xs font-medium mb-1", colors.text)}>
+                    Missing:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {missingFields.slice(0, 3).map((field, index) => (
+                      <span
+                        key={index}
+                        className={cn(
+                          "text-xs px-2 py-1 rounded-full",
+                          "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+                        )}
+                      >
+                        {field}
+                      </span>
+                    ))}
+                    {missingFields.length > 3 && (
+                      <span
+                        className={cn("text-xs px-2 py-1", colors.textMuted)}
+                      >
+                        +{missingFields.length - 3} more
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
       </div>

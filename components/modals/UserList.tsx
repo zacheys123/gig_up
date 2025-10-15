@@ -11,6 +11,7 @@ import { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { useAuth } from "@clerk/nextjs";
 import CheckModal from "./CheckModal";
+import { toUserId } from "@/utils";
 
 type UserProps = Doc<"users">;
 interface UserListModalProps {
@@ -62,7 +63,8 @@ const UserListModal = ({
     try {
       // Convert string to Convex ID and call mutation
       const targetUserId = user._id as Id<"users">;
-      await followUserMutation({ targetUserId });
+      const tId = toUserId(targetUserId);
+      await followUserMutation({ userId: clerkId ? clerkId : "", tId });
 
       // No need for manual optimistic updates - Convex handles it automatically!
     } catch (error) {

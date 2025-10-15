@@ -31,6 +31,15 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { SidebarSkeleton } from "../skeletons/SidebarSkeleton";
 
+interface NavLink {
+  name: string;
+  href: string;
+  icon: React.ReactElement;
+  exact?: boolean;
+  pro?: boolean;
+  description?: string;
+}
+
 export function Sidebar() {
   const { user } = useCurrentUser();
   const { isPro } = useSubscriptionStore();
@@ -50,7 +59,7 @@ export function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  const musicianLinks = [
+  const musicianLinks: NavLink[] = [
     {
       name: "Dashboard",
       href: "/dashboard",
@@ -73,7 +82,7 @@ export function Sidebar() {
       icon: <DollarSignIcon className="w-5 h-5" />,
     },
     {
-      name: "Messagesy",
+      name: "Messages",
       href: "/dashboard/messages",
       icon: <MessageSquareIcon className="w-5 h-5" />,
     },
@@ -94,7 +103,7 @@ export function Sidebar() {
     },
   ];
 
-  const clientLinks = [
+  const clientLinks: NavLink[] = [
     {
       name: "Dashboard",
       href: "/dashboard",
@@ -139,27 +148,7 @@ export function Sidebar() {
   ];
 
   // Common links for both roles
-  const commonLinks = [
-    {
-      name: "Notifications",
-      href: "/notifications",
-      icon: (
-        <div className="relative">
-          <BellIcon className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </div>
-      ),
-      exact: true,
-    },
-    {
-      name: "Documents",
-      href: "/dashboard/documents",
-      icon: <FileTextIcon className="w-5 h-5" />,
-    },
+  const commonLinks: NavLink[] = [
     {
       name: "Settings",
       href: "/dashboard/settings",
@@ -177,12 +166,59 @@ export function Sidebar() {
     },
   ];
 
+  // Base links (available to all users)
+  const baseLinks: NavLink[] = [
+    {
+      name: "Home",
+      href: "/",
+      icon: <BellIcon className="w-5 h-5" />,
+      exact: true,
+    },
+  ];
+
+  // Pro links (only for pro users)
+  const proLinks: NavLink[] = [
+    {
+      name: "Notifications",
+      href: "/notifications",
+      icon: (
+        <div className="relative">
+          <BellIcon className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </div>
+      ),
+      exact: true,
+      pro: false,
+      description: "Notifications with priority alerts",
+    },
+    {
+      name: "Documents",
+      href: "/dashboard/documents",
+      icon: <FileTextIcon className="w-5 h-5" />,
+      pro: true,
+      description: "Professional gig templates",
+    },
+    {
+      name: "Priority Support",
+      href: "/dashboard/priority-support",
+      icon: <ShieldIcon className="w-5 h-5" />,
+      pro: true,
+      description: "24/7 dedicated support",
+    },
+  ];
+
   const roleLinks = user?.isMusician
     ? musicianLinks
     : user?.isClient
       ? clientLinks
       : [];
-  const links = [...roleLinks, ...commonLinks];
+
+  // Combine all links in the same order as MobileNav
+  const links = [...baseLinks, ...roleLinks, ...commonLinks, ...proLinks];
 
   return (
     <div
@@ -235,13 +271,14 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {links.map((link) => {
           const active = isActive(link.href, link.exact);
-          return (
-            <Link
-              key={link.name}
-              href={link.href}
+          const isProFeature = link.pro && !isPro();
+
+          const linkContent = (
+            <div
               className={cn(
                 "group flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 border-l-4",
                 colors.hoverBg,
+                isProFeature && "cursor-not-allowed opacity-60",
                 active
                   ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500 text-amber-100"
                   : cn(colors.text, "border-transparent", colors.hoverBg)
@@ -252,27 +289,80 @@ export function Sidebar() {
                   "transition-transform duration-200",
                   active
                     ? "text-amber-400"
-                    : cn("group-hover:text-amber-400", colors.textMuted)
+                    : isProFeature
+                      ? "text-gray-400 dark:text-gray-500"
+                      : cn("group-hover:text-amber-400", colors.textMuted)
                 )}
               >
                 {link.icon}
               </div>
-              <span
-                className={cn(
-                  "font-medium flex-1",
-                  active ? "text-amber-100" : colors.text
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "font-medium flex-1",
+                      active ? "text-amber-100" : colors.text,
+                      isProFeature && "text-gray-500 dark:text-gray-400"
+                    )}
+                  >
+                    {link.name}
+                  </span>
+                  {link.pro && (
+                    <span
+                      className={cn(
+                        "text-xs rounded-full px-2 py-1",
+                        isProFeature
+                          ? "bg-gray-400 text-white"
+                          : "bg-green-500 text-white"
+                      )}
+                    >
+                      PRO
+                    </span>
+                  )}
+                </div>
+                {link.description && (
+                  <p
+                    className={cn(
+                      "text-xs truncate",
+                      active ? "text-amber-500/80" : colors.textMuted,
+                      isProFeature && "text-gray-400 dark:text-gray-500"
+                    )}
+                  >
+                    {link.description}
+                  </p>
                 )}
-              >
-                {link.name}
-              </span>
+              </div>
+
               <ChevronRightIcon
                 className={cn(
                   "w-4 h-4 transition-all duration-200",
                   active
                     ? "text-amber-400 opacity-100"
-                    : cn("opacity-0 group-hover:opacity-100", colors.textMuted)
+                    : isProFeature
+                      ? "text-gray-400 dark:text-gray-500 opacity-50"
+                      : cn(
+                          "opacity-0 group-hover:opacity-100",
+                          colors.textMuted
+                        )
                 )}
               />
+            </div>
+          );
+
+          return isProFeature ? (
+            // Pro feature - visible but not clickable
+            <div
+              key={link.name}
+              className="relative"
+              title="Upgrade to Pro to access this feature"
+            >
+              {linkContent}
+            </div>
+          ) : (
+            // Regular link - clickable (including pro links for pro users)
+            <Link key={link.name} href={link.href}>
+              {linkContent}
             </Link>
           );
         })}

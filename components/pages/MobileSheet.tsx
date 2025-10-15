@@ -19,26 +19,58 @@ import {
   User,
   VideoIcon,
   Mail,
+  Users,
+  Calendar,
+  Plus,
+  Sun,
+  Moon,
+  Bell,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { MotionConfig } from "framer-motion";
 import { GigUpAssistant } from "../ai/GigupAssistant";
 
+// Define interfaces
+interface NavLink {
+  label: string;
+  href: string;
+  icon: React.ReactElement;
+  badge?: number;
+  condition?: boolean;
+}
+
+interface DesktopNavigationItem {
+  href: string;
+  label: string;
+  icon: React.ReactElement;
+  condition?: boolean;
+  badge?: number;
+  pro?: boolean;
+}
+
+interface MobileSheetProps {
+  isTrialEnded: boolean;
+}
+
 // Define the nav links function with proper typing
-const getNavLinks = (userId: string | undefined, user: any) => {
-  const baseLinks = [
+const getNavLinks = (userId: string | undefined, user: any): NavLink[] => {
+  const baseLinks: NavLink[] = [
     { label: "Home", href: "/", icon: <Home size={20} /> },
     { label: "Dashboard", href: "/dashboard", icon: <MdDashboard size={20} /> },
     { label: "Search", href: "/auth/search", icon: <Search size={20} /> },
     { label: "Profile", href: "/profile", icon: <User size={20} /> },
-    { label: "My Chats", href: "/chats", icon: <MessageCircle size={20} /> },
+    {
+      href: "/messages",
+      icon: <MessageCircle size={20} />,
+      label: "Messages",
+      badge: 3,
+    },
     { label: "Settings", href: "/settings", icon: <Settings size={20} /> },
     { label: "Games", href: "/game", icon: <Gamepad size={20} /> },
   ];
@@ -89,7 +121,7 @@ const getNavLinks = (userId: string | undefined, user: any) => {
 };
 
 // Function to check if user has minimal data
-const hasMinimalData = (user: any) => {
+const hasMinimalData = (user: any): boolean => {
   if (!user) return false;
 
   // Check if user has date, year, month, or videoProfile data
@@ -100,13 +132,14 @@ const hasMinimalData = (user: any) => {
 };
 
 // Basic links for users without minimal data
-const getBasicLinks = () => [
+const getBasicLinks = (): NavLink[] => [
   { label: "Home", href: "/", icon: <Home size={20} /> },
   { label: "Contact", href: "/contact", icon: <Mail size={20} /> },
 ];
 
-const MobileSheet = () => {
+const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
   const { userId } = useAuth();
+  const { isSignedIn, user: clerkUser } = useUser();
   const pathname = usePathname();
   const { user } = useCurrentUser();
   const { isPro } = useSubscriptionStore();
@@ -114,7 +147,7 @@ const MobileSheet = () => {
   const { toggleDarkMode } = useThemeToggle();
 
   // Safely get tier from localStorage
-  const [tier, setTier] = React.useState("free");
+  const [tier, setTier] = React.useState<string>("free");
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -123,13 +156,46 @@ const MobileSheet = () => {
     }
   }, []);
 
-  // Check if trial period has ended (you can customize this logic)
-  const isTrialEnded = false; // Replace with your actual trial logic
-
   // Determine which links to show based on user data
-  const navLinks = hasMinimalData(user)
+  const navLinks: NavLink[] = hasMinimalData(user)
     ? getNavLinks(userId as string, user)
     : getBasicLinks();
+
+  // Check if user has a role
+  const hasRole = user?.isClient || user?.isMusician;
+  const isMusician = user?.isMusician;
+
+  // Add the missing navigation items from DesktopNavigation
+  const desktopNavigationItems: DesktopNavigationItem[] = [
+    {
+      href: "/community",
+      label: "Community",
+      icon: <Users size={20} />,
+      condition: isSignedIn,
+    },
+    {
+      href: "/messages",
+      label: "Messages",
+      icon: <MessageCircle size={20} />,
+      condition: isSignedIn,
+      badge: 3,
+    },
+    {
+      href: "/notifications",
+      label: "Notifications",
+      icon: <Bell size={20} />,
+      condition: isSignedIn,
+      pro: false,
+    },
+  ];
+
+  // Filter and add missing desktop navigation items
+  const missingDesktopItems = desktopNavigationItems
+    .filter((item) => item.condition !== false)
+    .filter((item) => !navLinks.some((link) => link.href === item.href));
+
+  // Combine existing nav links with missing desktop items
+  const allNavLinks: NavLink[] = [...navLinks, ...missingDesktopItems];
 
   return (
     <Sheet>
@@ -160,24 +226,92 @@ const MobileSheet = () => {
               {hasMinimalData(user) ? "Access More Info" : "Welcome to Gigup"}
             </SheetTitle>
 
-            {navLinks
-              .filter((link) => pathname !== link.href)
-              .map((link, index) => (
-                <Link
-                  key={index}
-                  href={link.href}
+            {/* Navigation Links */}
+            <div className="space-y-2">
+              {allNavLinks
+                .filter((link) => pathname !== link.href)
+                .map((link, index) => (
+                  <Link
+                    key={index}
+                    href={link.href}
+                    className={cn(
+                      "flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 group relative",
+                      colors.hoverBg,
+                      colors.text,
+                      "hover:text-amber-600 dark:hover:text-amber-400"
+                    )}
+                  >
+                    <div className="flex items-center gap-4">
+                      <span
+                        className={cn(
+                          "transition-colors duration-200",
+                          "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                        )}
+                      >
+                        {link.icon}
+                      </span>
+                      <span
+                        className={cn(
+                          "md:text-lg font-medium transition-colors duration-200",
+                          colors.text
+                        )}
+                      >
+                        {link.label}
+                      </span>
+                    </div>
+
+                    {/* Badge - positioned to the right */}
+                    {link.badge && (
+                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                        {link.badge}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+            </div>
+
+            {/* Create Button (for signed-in users with roles) */}
+            {isSignedIn && hasRole && (
+              <Link href={isMusician ? "/gigs" : "/create-gig"}>
+                <div
                   className={cn(
                     "flex items-center gap-4 w-full px-4 py-3 rounded-lg transition-all duration-200",
-                    colors.hoverBg,
-                    colors.text
+                    "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                    "text-white font-medium shadow-md hover:shadow-lg"
                   )}
                 >
-                  <span className={colors.text}>{link.icon}</span>
-                  <span className={cn("md:text-lg font-medium", colors.text)}>
-                    {link.label}
-                  </span>
+                  <Plus size={20} />
+                  <span>{isMusician ? "Find Gigs" : "Post Gig"}</span>
+                </div>
+              </Link>
+            )}
+
+            {/* Sign In/Sign Up for non-signed in users */}
+            {!isSignedIn && (
+              <div className="space-y-2">
+                <Link
+                  href="/sign-in"
+                  className={cn(
+                    "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg transition-all duration-200",
+                    colors.hoverBg,
+                    colors.text,
+                    "hover:text-amber-600 dark:hover:text-amber-400"
+                  )}
+                >
+                  <span>Sign In</span>
                 </Link>
-              ))}
+                <Link
+                  href="/sign-up"
+                  className={cn(
+                    "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg transition-all duration-200",
+                    "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                    "text-white font-medium shadow-md hover:shadow-lg"
+                  )}
+                >
+                  <span>Sign Up</span>
+                </Link>
+              </div>
+            )}
 
             {/* Show version badge only if user has minimal data */}
             {hasMinimalData(user) && (
@@ -217,6 +351,30 @@ const MobileSheet = () => {
                 </Link>
               </div>
             )}
+
+            {/* Theme Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg border mt-4">
+              <span className={cn("text-sm", colors.text)}>
+                {isDarkMode ? "Light Mode" : "Dark Mode"}
+              </span>
+              <button
+                onClick={toggleDarkMode}
+                className={cn(
+                  "p-2 rounded-md transition-all duration-200 relative group",
+                  colors.text,
+                  "hover:text-amber-600 dark:hover:text-amber-400"
+                )}
+                aria-label={
+                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
+              >
+                {isDarkMode ? (
+                  <Sun className="w-5 h-5 transition-colors duration-200" />
+                ) : (
+                  <Moon className="w-5 h-5 transition-colors duration-200" />
+                )}
+              </button>
+            </div>
           </>
         ) : (
           <>

@@ -198,7 +198,8 @@ export default function ClientEducationModal({
               <button
                 onClick={prevTip}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+                  "flex items-center gap-2 px-4 py-2 rounded-lg  transition-colors",
+                  "group-hover:text-amber-600 dark:group-hover:text-amber-400",
                   colors.textMuted
                 )}
               >
@@ -208,7 +209,8 @@ export default function ClientEducationModal({
               <button
                 onClick={nextTip}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+                  "flex items-center gap-2 px-4 py-2 rounded-lg  transition-colors",
+                  "group-hover:text-amber-600 dark:group-hover:text-amber-400",
                   colors.textMuted
                 )}
               >

@@ -39,7 +39,9 @@ export function NotificationBell({
       >
         <Icon
           className={cn(
-            "transition-transform duration-200 group-hover:scale-110",
+            "transition-transform duration-200 ",
+
+            "group-hover:text-amber-600 dark:group-hover:text-amber-400",
             variant === "mobile" ? "w-5 h-5" : "w-5 h-5"
           )}
         />

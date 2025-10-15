@@ -1,13 +1,21 @@
 // components/profile/DesktopUserNavSkeleton.tsx
 "use client";
 
-import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const DesktopUserNavSkeleton = () => {
-  const { colors, isDarkMode } = useThemeColors();
+interface DesktopUserNavSkeletonProps {
+  colors: {
+    card: string;
+    border: string;
+  };
+  isDarkMode?: boolean;
+}
 
+const DesktopUserNavSkeleton = ({
+  colors,
+  isDarkMode = false,
+}: DesktopUserNavSkeletonProps) => {
   return (
     <div
       className={cn(

@@ -1,4 +1,3 @@
-// components/(main)/DesktopNav.tsx
 "use client";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
@@ -82,7 +81,7 @@ export function DesktopNavigation() {
       icon: <Home size={18} />,
     },
     {
-      href: "/search",
+      href: "/auth/search",
       label: "Discover",
       icon: <Search size={18} />,
       condition: isSignedIn && hasRole,
@@ -100,10 +99,11 @@ export function DesktopNavigation() {
       condition: hasRole,
     },
     {
-      href: "/messages",
+      href: `/messages`,
+      icon: <MessageCircle size={20} />,
       label: "Messages",
-      icon: <MessageCircle size={18} />,
-      condition: isSignedIn,
+      description: "Chat conversations",
+      badge: 3,
     },
   ];
 
@@ -146,20 +146,35 @@ export function DesktopNavigation() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group",
-                      "hover:bg-gray-100 dark:hover:bg-gray-800",
-                      colors.text
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative",
+                      colors.textMuted,
+                      "hover:text-amber-600 dark:hover:text-amber-400"
                     )}
                   >
                     <div
                       className={cn(
                         "transition-colors duration-200",
-                        "group-hover:text-amber-600"
+                        "group-hover:text-amber-600 dark:group-hover:text-amber-400",
+                        colors.textMuted
                       )}
                     >
                       {item.icon}
                     </div>
-                    <span>{item.label}</span>
+                    <span className="transition-colors duration-200">
+                      {item.label}
+                    </span>
+                    {item.badge && (
+                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                        {item.badge}
+                      </span>
+                    )}
+                    {/* Subtle background on hover */}
+                    <div
+                      className={cn(
+                        "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
+                        "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                      )}
+                    />
                   </Link>
                 );
               })}
@@ -174,7 +189,7 @@ export function DesktopNavigation() {
                 <Button
                   className={cn(
                     "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                    "text-white flex items-center gap-2"
+                    "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200"
                   )}
                 >
                   <Plus size={16} />
@@ -184,25 +199,37 @@ export function DesktopNavigation() {
             )}
 
             {/* Notifications Bell */}
-            {isSignedIn && <NotificationBell variant="desktop" />}
+            {isSignedIn && (
+              <div className="hover:scale-105 transition-transform duration-200">
+                <NotificationBell variant="desktop" />
+              </div>
+            )}
 
             {/* Theme Toggle */}
             <button
               onClick={toggleDarkMode}
               className={cn(
-                "p-2 rounded-md transition-colors",
-                "hover:bg-gray-100 dark:hover:bg-gray-800",
-                colors.text
+                "p-2 rounded-md transition-all duration-200 relative group",
+                colors.text,
+                "hover:text-amber-600 dark:hover:text-amber-400"
               )}
               aria-label={
                 isDarkMode ? "Switch to light mode" : "Switch to dark mode"
               }
             >
               {isDarkMode ? (
-                <Sun className="w-5 h-5" />
+                <Sun className="w-5 h-5 transition-colors duration-200" />
               ) : (
-                <Moon className="w-5 h-5" />
+                <Moon className="w-5 h-5 transition-colors duration-200" />
               )}
+
+              {/* Subtle background on hover */}
+              <div
+                className={cn(
+                  "absolute inset-0 rounded-md bg-gray-50 dark:bg-gray-800/50",
+                  "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                )}
+              />
             </button>
 
             {isSignedIn ? (
@@ -216,34 +243,56 @@ export function DesktopNavigation() {
                 <Link
                   href="/profile"
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                    "hover:bg-gray-100 dark:hover:bg-gray-800",
-                    colors.text
+                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+                    colors.text,
+                    "hover:text-amber-600 dark:hover:text-amber-400"
                   )}
                 >
-                  <span>Profile</span>
+                  <span className="transition-colors duration-200">
+                    Profile
+                  </span>
+
+                  {/* Subtle background on hover */}
+                  <div
+                    className={cn(
+                      "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
+                      "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                    )}
+                  />
                 </Link>
 
                 {/* User Button */}
-                <UserButton />
+                <div className="hover:scale-105 transition-transform duration-200">
+                  <UserButton />
+                </div>
               </div>
             ) : (
               <div className="flex items-center space-x-3">
                 <Link
                   href="/sign-in"
                   className={cn(
-                    "px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                    "hover:bg-gray-100 dark:hover:bg-gray-800",
-                    colors.text
+                    "px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 relative group",
+                    colors.text,
+                    "hover:text-amber-600 dark:hover:text-amber-400"
                   )}
                 >
-                  Sign In
+                  <span className="transition-colors duration-200">
+                    Sign In
+                  </span>
+
+                  {/* Subtle background on hover */}
+                  <div
+                    className={cn(
+                      "absolute inset-0 rounded-md bg-gray-50 dark:bg-gray-800/50",
+                      "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                    )}
+                  />
                 </Link>
                 <Link
                   href="/sign-up"
                   className={cn(
                     "px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                    "text-white text-sm font-medium rounded-md transition-colors"
+                    "text-white text-sm font-medium rounded-md transition-all duration-200 shadow-md hover:shadow-lg"
                   )}
                 >
                   Sign Up

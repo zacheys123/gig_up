@@ -33,6 +33,15 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { MobileNavSkeleton } from "../skeletons/MobileNavSkeleton";
 
+interface NavLink {
+  name: string;
+  href: string;
+  icon: React.ReactElement;
+  exact: boolean;
+  pro?: boolean; // Make optional
+  description?: string; // Make optional
+}
+
 export default function MobileNav() {
   const { userId } = useAuth();
   const { user } = useCurrentUser();
@@ -41,14 +50,10 @@ export default function MobileNav() {
   const navRef = useRef<HTMLDivElement>(null);
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
-  const { unreadCount } = useNotifications(5, true);
+  const notificationsData = useNotifications(5, true);
+  const unreadCount = user ? notificationsData.unreadCount : 0;
 
-  // // If no user, return skeleton
-  if (!user) {
-    return <MobileNavSkeleton />;
-  }
-
-  const musicianLinks = [
+  const musicianLinks: NavLink[] = [
     {
       name: "Dashboard",
       href: "/dashboard",
@@ -73,12 +78,7 @@ export default function MobileNav() {
       icon: <DollarSignIcon className="w-5 h-5" />,
       exact: false,
     },
-    {
-      name: "Messages",
-      href: "/dashboard/messages",
-      icon: <MessageSquareIcon className="w-5 h-5" />,
-      exact: false,
-    },
+
     {
       name: "Reviews",
       href: "/dashboard/reviews",
@@ -93,7 +93,7 @@ export default function MobileNav() {
     },
   ];
 
-  const clientLinks = [
+  const clientLinks: NavLink[] = [
     {
       name: "Dashboard",
       href: "/dashboard",
@@ -118,12 +118,7 @@ export default function MobileNav() {
       icon: <UsersIcon className="w-5 h-5" />,
       exact: false,
     },
-    {
-      name: "Messages",
-      href: "/dashboard/messages",
-      icon: <MessageSquareIcon className="w-5 h-5" />,
-      exact: false,
-    },
+
     {
       name: "Favorites",
       href: "/dashboard/favorites",
@@ -138,13 +133,7 @@ export default function MobileNav() {
     },
   ];
 
-  const commonLinks = [
-    {
-      name: "Documents",
-      href: "/dashboard/documents",
-      icon: <FileTextIcon className="w-5 h-5" />,
-      exact: false,
-    },
+  const commonLinks: NavLink[] = [
     {
       name: "Settings",
       href: "/dashboard/settings",
@@ -165,13 +154,26 @@ export default function MobileNav() {
     },
   ];
 
-  const baseLinks = [
+  const baseLinks: NavLink[] = [
     {
       name: "Home",
       href: "/",
       icon: <HomeIcon className="w-5 h-5" />,
       exact: true,
     },
+
+    {
+      name: "Billing",
+      href: "/dashboard/billing",
+      icon: <CreditCardIcon className="w-5 h-5" />,
+      exact: false,
+    },
+  ];
+
+  const isProTier = user?.tier === "pro";
+
+  // Add pro links to your existing links structure
+  const proLinks: NavLink[] = [
     {
       name: "Notifications",
       href: "/notifications",
@@ -186,23 +188,35 @@ export default function MobileNav() {
         </div>
       ),
       exact: true,
+      pro: false,
+      description: "Notificcations with priority alerts",
     },
     {
-      name: "Billing",
-      href: "/dashboard/billing",
-      icon: <CreditCardIcon className="w-5 h-5" />,
+      name: "Documents",
+      href: "/dashboard/documents",
+      icon: <FileTextIcon className="w-5 h-5" />,
       exact: false,
+      pro: true,
+      description: "Professional gig templates",
+    },
+    {
+      name: "Priority Support",
+      href: "/dashboard/priority-support",
+      icon: <ShieldIcon className="w-5 h-5" />,
+      exact: false,
+      pro: true,
+      description: "24/7 dedicated support",
     },
   ];
-
   const roleLinks = user?.isMusician
     ? musicianLinks
     : user?.isClient
       ? clientLinks
       : [];
-  const allLinks = [...baseLinks, ...roleLinks, ...commonLinks];
+  // Add pro links to your existing allLinks array
+  const allLinks = [...baseLinks, ...roleLinks, ...commonLinks, ...proLinks];
 
-  const isActive = (href: string, exact: boolean = false) => {
+  const isActive = (href: string, exact: boolean = false, pro?: boolean) => {
     if (exact) {
       return pathname === href;
     }
@@ -308,7 +322,95 @@ export default function MobileNav() {
               <div className="h-[calc(100%-120px)] overflow-y-auto">
                 <div className="p-4 space-y-2">
                   {allLinks.map((link, index) => {
-                    const active = isActive(link.href, link.exact);
+                    const active = isActive(link.href, link.exact, link.pro);
+                    const isProFeature = link.pro && !isProTier; // true if pro feature AND user is not pro
+
+                    const linkContent = (
+                      <div
+                        className={cn(
+                          "group flex items-center gap-3 w-full p-4 rounded-xl transition-all duration-200 border-l-4",
+                          colors.hoverBg,
+                          isProFeature && "cursor-not-allowed opacity-60",
+                          active
+                            ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500 text-amber-100"
+                            : cn(
+                                colors.text,
+                                "border-transparent",
+                                colors.hoverBg
+                              )
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "transition-transform duration-200",
+                            active
+                              ? "text-amber-400"
+                              : isProFeature
+                                ? "text-gray-400 dark:text-gray-500"
+                                : cn(
+                                    "group-hover:text-amber-400",
+                                    colors.textMuted
+                                  )
+                          )}
+                        >
+                          {link.icon}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "font-medium text-sm",
+                                active ? "text-amber-600" : colors.text,
+                                isProFeature &&
+                                  "text-gray-500 dark:text-gray-400"
+                              )}
+                            >
+                              {link.name}
+                            </span>
+                            {link.pro && (
+                              <span
+                                className={cn(
+                                  "text-xs rounded-full px-2 py-1",
+                                  isProFeature
+                                    ? "bg-gray-400 text-white"
+                                    : "bg-green-500 text-white"
+                                )}
+                              >
+                                PRO
+                              </span>
+                            )}
+                          </div>
+                          {link.description && (
+                            <p
+                              className={cn(
+                                "text-xs truncate",
+                                active ? "text-amber-500/80" : colors.textMuted,
+                                isProFeature &&
+                                  "text-gray-400 dark:text-gray-500"
+                              )}
+                            >
+                              {link.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <ChevronRightIcon
+                          className={cn(
+                            "w-4 h-4 transition-all duration-200",
+                            active
+                              ? "text-amber-400 opacity-100"
+                              : isProFeature
+                                ? "text-gray-400 dark:text-gray-500 opacity-50"
+                                : cn(
+                                    "opacity-0 group-hover:opacity-100",
+                                    colors.textMuted
+                                  )
+                          )}
+                        />
+                      </div>
+                    );
+
                     return (
                       <motion.div
                         key={link.name}
@@ -320,54 +422,23 @@ export default function MobileNav() {
                           stiffness: 300,
                         }}
                       >
-                        <Link
-                          href={link.href}
-                          className={cn(
-                            "group flex items-center gap-3 w-full p-4 rounded-xl transition-all duration-200 border-l-4",
-                            colors.hoverBg,
-                            active
-                              ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500 text-amber-100"
-                              : cn(
-                                  colors.text,
-                                  "border-transparent",
-                                  colors.hoverBg
-                                )
-                          )}
-                          onClick={() => setIsOpen(false)}
-                        >
+                        {isProFeature ? (
+                          // Pro feature - visible but not clickable
                           <div
-                            className={cn(
-                              "transition-transform duration-200",
-                              active
-                                ? "text-amber-400"
-                                : cn(
-                                    "group-hover:text-amber-400",
-                                    colors.textMuted
-                                  )
-                            )}
+                            className="relative"
+                            title="Upgrade to Pro to access this feature"
                           >
-                            {link.icon}
+                            {linkContent}
                           </div>
-                          <span
-                            className={cn(
-                              "font-medium flex-1",
-                              active ? "text-amber-100" : colors.text
-                            )}
+                        ) : (
+                          // Regular link - clickable (including pro links for pro users)
+                          <Link
+                            href={link.href}
+                            onClick={() => setIsOpen(false)}
                           >
-                            {link.name}
-                          </span>
-                          <ChevronRightIcon
-                            className={cn(
-                              "w-4 h-4 transition-all duration-200",
-                              active
-                                ? "text-amber-400 opacity-100"
-                                : cn(
-                                    "opacity-0 group-hover:opacity-100",
-                                    colors.textMuted
-                                  )
-                            )}
-                          />
-                        </Link>
+                            {linkContent}
+                          </Link>
+                        )}
                       </motion.div>
                     );
                   })}

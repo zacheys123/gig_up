@@ -531,7 +531,7 @@ export const getUserByUsername = query({
   },
 });
 export const followUser = mutation({
-  args: { userId: v.string(), targetUserId: v.id("users") },
+  args: { userId: v.string(), tId: v.id("users") },
   handler: async (ctx, args) => {
     if (!args.userId) throw new Error("Unauthorized");
 
@@ -541,23 +541,23 @@ export const followUser = mutation({
       .first();
     if (!currentUser) throw new Error("User not found");
 
-    const targetUser = await ctx.db.get(args.targetUserId);
+    const targetUser = await ctx.db.get(args.tId);
     if (!targetUser) throw new Error("Target user not found");
 
     const currentFollowings = currentUser.followings || [];
     const targetFollowers = targetUser.followers || [];
 
     // Check if already following
-    const isAlreadyFollowing = currentFollowings.includes(args.targetUserId);
+    const isAlreadyFollowing = currentFollowings.includes(args.tId);
 
     if (isAlreadyFollowing) {
       // Unfollow logic
       await ctx.db.patch(currentUser._id, {
-        followings: currentFollowings.filter((id) => id !== args.targetUserId),
+        followings: currentFollowings.filter((id) => id !== args.tId),
         lastActive: Date.now(),
       });
 
-      await ctx.db.patch(args.targetUserId, {
+      await ctx.db.patch(args.tId, {
         followers: targetFollowers.filter((id) => id !== currentUser._id),
         lastActive: Date.now(),
       });
@@ -566,11 +566,11 @@ export const followUser = mutation({
     } else {
       // Follow logic
       await ctx.db.patch(currentUser._id, {
-        followings: [...currentFollowings, args.targetUserId],
+        followings: [...currentFollowings, args.tId],
         lastActive: Date.now(),
       });
 
-      await ctx.db.patch(args.targetUserId, {
+      await ctx.db.patch(args.tId, {
         followers: [...targetFollowers, currentUser._id],
         lastActive: Date.now(),
       });

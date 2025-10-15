@@ -8,7 +8,6 @@ import {
   BarChart3,
   History,
   Music,
-  MessageCircle,
   Bell,
   Video,
   DollarSign,
@@ -27,6 +26,7 @@ const UserNav = () => {
   const { user } = useCurrentUser();
 
   const isMusician = user?.isMusician;
+  const isProTier = user?.tier === "pro";
 
   const navItems = [
     {
@@ -60,15 +60,7 @@ const UserNav = () => {
         inactive: <History size={22} />,
       },
       label: "Activity",
-    },
-    {
-      href: `/profile/messages`,
-      icon: {
-        active: <MessageCircle size={22} className="fill-current" />,
-        inactive: <MessageCircle size={22} />,
-      },
-      label: "Messages",
-      badge: 3, // You can make this dynamic
+      pro: true, // Added pro tier
     },
     {
       href: `/profile/notifications`,
@@ -77,6 +69,8 @@ const UserNav = () => {
         inactive: <Bell size={22} />,
       },
       label: "Alerts",
+      pro: false, // Added pro tier
+      badges: 3,
     },
     // Musician-specific items
     ...(isMusician
@@ -112,6 +106,7 @@ const UserNav = () => {
               inactive: <Calendar size={22} />,
             },
             label: "Schedule",
+            pro: true, // Added pro tier
           },
         ]
       : [
@@ -131,6 +126,7 @@ const UserNav = () => {
               inactive: <Star size={22} />,
             },
             label: "Favorites",
+            pro: true, // Added pro tier
           },
         ]),
   ];
@@ -163,55 +159,93 @@ const UserNav = () => {
       <div className="flex justify-around items-center w-full h-[70px] px-2 mx-auto overflow-x-auto">
         {navItems.map((item) => {
           const active = isActive(item.href);
+          const isProFeature = item.pro && !isProTier;
 
           return (
-            <Link
+            <div
               key={item.href}
-              href={item.href}
-              className="flex-1 flex justify-center min-w-[60px]"
+              className={cn(
+                "flex-1 flex justify-center min-w-[60px]",
+                isProFeature && "opacity-60"
+              )}
             >
-              <div
-                className={cn(
-                  "flex flex-col items-center justify-center w-full py-2 transition-all duration-200 relative",
-                  active
-                    ? "text-yellow-400"
-                    : "text-gray-400 hover:text-yellow-400"
-                )}
-              >
-                <div className="relative">
-                  <div
-                    className={cn(
-                      "transition-transform duration-200",
-                      active ? "scale-110" : "scale-100"
-                    )}
-                  >
-                    {active ? item.icon.active : item.icon.inactive}
+              {isProFeature ? (
+                // Pro feature - visible but not clickable
+                <div
+                  className="flex flex-col items-center justify-center w-full py-2 relative cursor-not-allowed"
+                  title="Upgrade to Pro to access this feature"
+                >
+                  <div className="relative">
+                    <div className="scale-100 opacity-60">
+                      {item.icon.inactive}
+                    </div>
+
+                    {/* Pro badge */}
+                    <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center text-[8px]">
+                      P
+                    </span>
                   </div>
 
-                  {/* Badge for notifications/messages */}
-                  {item.badge && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                      {item.badge > 9 ? "9+" : item.badge}
-                    </span>
-                  )}
+                  <span className="text-xs mt-1 text-gray-400 text-center leading-tight max-w-[60px] truncate opacity-60">
+                    {item.label}
+                  </span>
                 </div>
+              ) : (
+                // Regular link - clickable
+                <Link href={item.href} className="w-full flex justify-center">
+                  <div
+                    className={cn(
+                      "flex flex-col items-center justify-center w-full py-2 transition-all duration-200 relative",
+                      active
+                        ? "text-yellow-400"
+                        : "text-gray-400 hover:text-yellow-400"
+                    )}
+                  >
+                    <div className="relative">
+                      <div
+                        className={cn(
+                          "transition-transform duration-200",
+                          active ? "scale-110" : "scale-100"
+                        )}
+                      >
+                        {active ? item.icon.active : item.icon.inactive}
+                      </div>
 
-                <span
-                  className={cn(
-                    "text-xs mt-1 transition-colors duration-200 text-center leading-tight",
-                    active ? "text-yellow-400 font-medium" : "text-gray-400",
-                    "max-w-[60px] truncate"
-                  )}
-                >
-                  {item.label}
-                </span>
+                      {/* Badge for notifications/messages */}
+                      {item.badges && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                          {item.badges > 9 ? "9+" : item.badges}
+                        </span>
+                      )}
 
-                {/* Active indicator dot */}
-                {active && (
-                  <div className="w-1 h-1 bg-yellow-400 rounded-full mt-1" />
-                )}
-              </div>
-            </Link>
+                      {/* Pro badge for pro features that are accessible */}
+                      {item.pro && isProTier && (
+                        <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center text-[8px]">
+                          P
+                        </span>
+                      )}
+                    </div>
+
+                    <span
+                      className={cn(
+                        "text-xs mt-1 transition-colors duration-200 text-center leading-tight",
+                        active
+                          ? "text-yellow-400 font-medium"
+                          : "text-gray-400",
+                        "max-w-[60px] truncate"
+                      )}
+                    >
+                      {item.label}
+                    </span>
+
+                    {/* Active indicator dot */}
+                    {active && (
+                      <div className="w-1 h-1 bg-yellow-400 rounded-full mt-1" />
+                    )}
+                  </div>
+                </Link>
+              )}
+            </div>
           );
         })}
       </div>
