@@ -30,10 +30,12 @@ import { MdDashboard } from "react-icons/md";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
-import { useNotifications } from "@/hooks/useNotifications";
+
 import { cn } from "@/lib/utils";
 import { MobileNavSkeleton } from "../skeletons/MobileNavSkeleton";
 import { useRouter } from "next/navigation";
+import { useNotificationSystem } from "@/hooks/useNotifications";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 interface NavLink {
   name: string;
@@ -52,8 +54,8 @@ export default function MobileNav() {
   const navRef = useRef<HTMLDivElement>(null);
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
-  const notificationsData = useNotifications(5, true);
-  const unreadCount = user ? notificationsData.unreadCount : 0;
+  const { unreadCount } = useNotificationSystem();
+  const { isInGracePeriod: canSeeNotification } = useCheckTrial();
   const router = useRouter();
   const musicianLinks: NavLink[] = [
     {
@@ -196,7 +198,7 @@ export default function MobileNav() {
         </div>
       ),
       exact: true,
-      pro: false,
+      pro: canSeeNotification,
       description: "Notificcations with priority alerts",
     },
     {

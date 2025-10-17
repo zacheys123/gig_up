@@ -14,7 +14,7 @@ interface NotificationBellProps {
 export function NotificationBell({
   variant = "desktop",
 }: NotificationBellProps) {
-  const { unreadCount, notifications } = useNotificationSystem(); // <-- USE NEW HOOK
+  const { unreadCount } = useNotificationSystem(); // <-- USE NEW HOOK
   const { colors } = useThemeColors();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -46,7 +46,7 @@ export function NotificationBell({
         {hasUnread && (
           <span
             className={cn(
-              "absolute -top-1 -right-1 bg-amber-500 text-white text-xs font-medium rounded-full flex items-center justify-center",
+              "absolute -top-1 -right-1 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center",
               "animate-pulse-subtle",
               variant === "mobile" ? "w-4 h-4 text-[10px]" : "w-5 h-5 text-xs"
             )}

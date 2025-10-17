@@ -17,6 +17,7 @@ import {
   DollarSign,
   Users,
   Globe,
+  BellIcon,
 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ import {
 } from "@/utils";
 import SidebarSkeleton from "../skeletons/SidebarSkeleton";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
+import { useNotificationSystem } from "@/hooks/useNotifications";
 
 const DesktopUserNav = () => {
   const { userId } = useAuth();
@@ -39,8 +41,8 @@ const DesktopUserNav = () => {
   const profileCompletion = calculateProfileCompletion(user);
   const completionMessage = getProfileCompletionMessage(profileCompletion);
   const missingFields = getMissingFields(user);
-
-  const { isFirstMonthEnd } = useCheckTrial();
+  const { unreadCount } = useNotificationSystem();
+  const { isInGracePeriod } = useCheckTrial();
   // Show skeleton while loading
   if (isLoading || !user) {
     return <DesktopUserNavSkeleton colors={colors} isDarkMode={isDarkMode} />;
@@ -84,11 +86,21 @@ const DesktopUserNav = () => {
       title: "Features",
       items: [
         {
-          href: `/profile/notifications`,
-          icon: <Bell size={20} />,
+          href: "/notifications",
+          icon: (
+            <div className="relative">
+              <BellIcon className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </div>
+          ),
           label: "Notifications",
-          description: "Alerts & updates",
-          pro: isFirstMonthEnd,
+          exact: true,
+          pro: isInGracePeriod,
+          description: "Notifications with priority alerts",
         },
         ...(isMusician
           ? [
@@ -117,7 +129,7 @@ const DesktopUserNav = () => {
                 href: `/settings`,
                 icon: <Settings size={20} />,
                 label: "Settings",
-                description: "Seetings and notifications",
+                description: "Settings and notifications",
               },
               {
                 href: `/profile/availability`,

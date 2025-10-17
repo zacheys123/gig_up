@@ -24,42 +24,27 @@ export const NOTIFICATION_TYPES = [
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 // ==================== NOTIFICATION SETTINGS SCHEMA ====================
+// Make all push notification fields optional since they're not being used yet
+// Remove all push notification fields
 export const notificationSettingsSchema = {
   userId: v.string(),
 
-  // Profile & Social
-  profileViews: v.boolean(),
-  followRequests: v.boolean(),
-
-  // Gigs & Bookings
-  gigInvites: v.boolean(),
-  bookingRequests: v.boolean(),
+  // In-app notifications only
   bookingConfirmations: v.boolean(),
-  gigReminders: v.boolean(),
-
-  // Messages & Communication
-  newMessages: v.boolean(),
-  messageRequests: v.boolean(),
-
-  // System & Updates
-  systemUpdates: v.boolean(),
+  bookingRequests: v.boolean(),
   featureAnnouncements: v.boolean(),
-  securityAlerts: v.boolean(),
-
-  // Marketing
-  promotionalEmails: v.boolean(),
+  followRequests: v.boolean(),
+  gigInvites: v.boolean(),
+  gigReminders: v.boolean(),
+  messageRequests: v.boolean(),
+  newMessages: v.boolean(),
   newsletter: v.boolean(),
+  profileViews: v.boolean(),
+  promotionalEmails: v.boolean(),
+  securityAlerts: v.boolean(),
+  systemUpdates: v.boolean(),
 
-  // Push Notifications
-  pushEnabled: v.boolean(),
-  pushProfileViews: v.boolean(),
-  pushFollowRequests: v.boolean(),
-  pushGigInvites: v.boolean(),
-  pushBookingRequests: v.boolean(),
-  pushBookingConfirmations: v.boolean(),
-  pushGigReminders: v.boolean(),
-  pushNewMessages: v.boolean(),
-  pushSystemUpdates: v.boolean(),
+  // REMOVED: All push notification fields
 };
 
 // ==================== NOTIFICATION MODEL SCHEMA ====================
@@ -120,17 +105,6 @@ export type NotificationSettings = {
   // Marketing
   promotionalEmails: boolean;
   newsletter: boolean;
-
-  // Push Notifications
-  pushEnabled: boolean;
-  pushProfileViews: boolean;
-  pushFollowRequests: boolean;
-  pushGigInvites: boolean;
-  pushBookingRequests: boolean;
-  pushBookingConfirmations: boolean;
-  pushGigReminders: boolean;
-  pushNewMessages: boolean;
-  pushSystemUpdates: boolean;
 };
 
 export type Notification = {
@@ -182,17 +156,6 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   // Marketing
   promotionalEmails: false,
   newsletter: false,
-
-  // Push Notifications
-  pushEnabled: true,
-  pushProfileViews: true,
-  pushFollowRequests: true,
-  pushGigInvites: true,
-  pushBookingRequests: true,
-  pushBookingConfirmations: true,
-  pushGigReminders: true,
-  pushNewMessages: true,
-  pushSystemUpdates: true,
 };
 
 // ==================== NOTIFICATION TYPE MAPPING ====================

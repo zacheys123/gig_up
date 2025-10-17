@@ -2,7 +2,10 @@
 import { Doc, Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
-import { createNotificationInternal } from "../createNotificationInternal";
+import {
+  createNotificationInternal,
+  isUserDocument,
+} from "../createNotificationInternal";
 
 export const updateFirstLogin = mutation({
   args: {
@@ -433,6 +436,7 @@ export const updateUserAsClient = mutation({
     }
   },
 });
+
 export const updateUserAsAdmin = mutation({
   args: {
     clerkId: v.string(),
@@ -542,6 +546,8 @@ export const getUserByUsername = query({
     return user;
   },
 });
+// Add this helper function at the top of your file
+
 export const followUser = mutation({
   args: { userId: v.string(), tId: v.id("users") },
   handler: async (ctx, args) => {
@@ -555,6 +561,11 @@ export const followUser = mutation({
 
     const targetUser = await ctx.db.get(args.tId);
     if (!targetUser) throw new Error("Target user not found");
+
+    // ✅ TYPE CHECK: Ensure both are user documents
+    if (!isUserDocument(currentUser) || !isUserDocument(targetUser)) {
+      throw new Error("Invalid user documents");
+    }
 
     const currentFollowings = currentUser.followings || [];
     const targetFollowers = targetUser.followers || [];
@@ -596,18 +607,20 @@ export const followUser = mutation({
           lastActive: Date.now(),
         });
 
-        // ✅ CREATE FOLLOW REQUEST NOTIFICATION
+        // ✅ CREATE FOLLOW REQUEST NOTIFICATION (using Document IDs)
         try {
           await createNotificationInternal(ctx, {
-            userId: targetUser.clerkId, // RECIPIENT: Private account owner
+            userDocumentId: targetUser._id, // RECIPIENT: Private account owner (Document ID)
             type: "follow_request",
             title: "Follow Request",
             message: `${currentUser.firstname || currentUser.username} wants to follow you`,
             image: currentUser.picture,
-            actionUrl: `/settings/follow-requests`, // Special page to manage requests
-            relatedUserId: currentUser.clerkId, // REQUESTER
+            actionUrl: `/social/follow-requests?requester=${currentUser._id}&action=pending`,
+
+            relatedUserDocumentId: currentUser._id, // REQUESTER (Document ID)
             metadata: {
-              requesterId: currentUser.clerkId,
+              requesterDocumentId: currentUser._id.toString(),
+              requesterClerkId: currentUser.clerkId,
               requesterName: currentUser.firstname,
               requesterUsername: currentUser.username,
               requesterPicture: currentUser.picture,
@@ -616,7 +629,7 @@ export const followUser = mutation({
               isRequesterClient: currentUser.isClient,
               instrument: currentUser.instrument,
               city: currentUser.city,
-              requestId: currentUser._id, // Store for accept/decline actions
+              requestId: currentUser._id.toString(),
               isPrivateAccount: true,
             },
           });
@@ -640,18 +653,19 @@ export const followUser = mutation({
           lastActive: Date.now(),
         });
 
-        // ✅ CREATE FOLLOW NOTIFICATION (existing logic)
+        // ✅ CREATE FOLLOW NOTIFICATION (using Document IDs)
         try {
           await createNotificationInternal(ctx, {
-            userId: targetUser.clerkId,
+            userDocumentId: targetUser._id, // RECIPIENT (Document ID)
             type: "new_follower",
             title: "New Follower",
             message: `${currentUser.firstname || currentUser.username} started following you`,
             image: currentUser.picture,
-            actionUrl: `/search/${currentUser.username}`,
-            relatedUserId: currentUser.clerkId,
+            actionUrl: `/social/followers?new=true&follower=${currentUser._id}`,
+            relatedUserDocumentId: currentUser._id, // FOLLOWER (Document ID)
             metadata: {
-              followerId: currentUser.clerkId,
+              followerDocumentId: currentUser._id.toString(),
+              followerClerkId: currentUser.clerkId,
               followerName: currentUser.firstname,
               followerUsername: currentUser.username,
               followerPicture: currentUser.picture,
@@ -674,6 +688,7 @@ export const followUser = mutation({
     }
   },
 });
+
 export const acceptFollowRequest = mutation({
   args: { userId: v.string(), requesterId: v.id("users") },
   handler: async (ctx, args) => {
@@ -687,6 +702,11 @@ export const acceptFollowRequest = mutation({
 
     const requesterUser = await ctx.db.get(args.requesterId);
     if (!requesterUser) throw new Error("Requester not found");
+
+    // ✅ TYPE CHECK: Ensure both are user documents
+    if (!isUserDocument(currentUser) || !isUserDocument(requesterUser)) {
+      throw new Error("Invalid user documents");
+    }
 
     const currentFollowers = currentUser.followers || [];
     const currentPendingRequests = currentUser.pendingFollowRequests || [];
@@ -706,18 +726,19 @@ export const acceptFollowRequest = mutation({
       lastActive: Date.now(),
     });
 
-    // ✅ NOTIFY THE REQUESTER THAT THEIR REQUEST WAS ACCEPTED
+    // ✅ NOTIFY THE REQUESTER THAT THEIR REQUEST WAS ACCEPTED (using Document IDs)
     try {
       await createNotificationInternal(ctx, {
-        userId: requesterUser.clerkId, // RECIPIENT: The person who requested
+        userDocumentId: requesterUser._id, // RECIPIENT: The person who requested (Document ID)
         type: "follow_accepted",
         title: "Follow Request Accepted",
         message: `${currentUser.firstname || currentUser.username} accepted your follow request`,
         image: currentUser.picture,
-        actionUrl: `/search/${currentUser.username}`,
-        relatedUserId: currentUser.clerkId, // ACCEPTER
+        actionUrl: `/social/followers?accepted=true&user=${currentUser._id}`,
+        relatedUserDocumentId: currentUser._id, // ACCEPTER (Document ID)
         metadata: {
-          acceptedById: currentUser.clerkId,
+          acceptedByDocumentId: currentUser._id.toString(),
+          acceptedByClerkId: currentUser.clerkId,
           acceptedByName: currentUser.firstname,
           acceptedByUsername: currentUser.username,
           acceptedByPicture: currentUser.picture,
@@ -746,15 +767,50 @@ export const declineFollowRequest = mutation({
       .first();
     if (!currentUser) throw new Error("User not found");
 
+    const requesterUser = await ctx.db.get(args.requesterId);
+    if (!requesterUser) throw new Error("Requester not found");
+
+    // ✅ TYPE CHECK: Ensure both are user documents
+    if (!isUserDocument(currentUser) || !isUserDocument(requesterUser)) {
+      throw new Error("Invalid user documents");
+    }
+
     const currentPendingRequests = currentUser.pendingFollowRequests || [];
 
-    // Simply remove from pending requests
+    // Remove from pending requests
     await ctx.db.patch(currentUser._id, {
       pendingFollowRequests: currentPendingRequests.filter(
         (id) => id !== args.requesterId
       ),
       lastActive: Date.now(),
     });
+
+    // ✅ OPTIONAL: Notify requester that their request was declined
+    try {
+      await createNotificationInternal(ctx, {
+        userDocumentId: requesterUser._id, // RECIPIENT: The person who requested (Document ID)
+        type: "follow_request",
+        title: "Follow Request Declined",
+        message: `${currentUser.firstname || currentUser.username} declined your follow request`,
+        image: currentUser.picture,
+        actionUrl: `/search/${currentUser.username}`,
+        relatedUserDocumentId: currentUser._id, // DECLINER (Document ID)
+        metadata: {
+          declinedByDocumentId: currentUser._id.toString(),
+          declinedByClerkId: currentUser.clerkId,
+          declinedByName: currentUser.firstname,
+          declinedByUsername: currentUser.username,
+          declinedByPicture: currentUser.picture,
+          isPrivateAccount: true,
+          action: "declined",
+        },
+      });
+    } catch (notificationError) {
+      console.error(
+        "Failed to create follow declined notification:",
+        notificationError
+      );
+    }
 
     return { success: true };
   },
@@ -928,53 +984,36 @@ export const deleteUserAccount = mutation({
     return { success: true, message: "User account deleted from Convex" };
   },
 });
+// convex/users.ts
+export const getProfileViews = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    return user?.profileViews;
+  },
+});
 
-// Helper function to check notification eligibility
+export const getPendingFollowRequests = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user?.pendingFollowRequests) return [];
 
-// export const createOrUpdateUserPublic = mutation({
-//   args: {
-//     clerkId: v.string(),
-//     email: v.string(),
-//     username: v.string(),
-//     picture: v.optional(v.string()),
-//     firstname: v.optional(v.string()),
-//     lastname: v.optional(v.string()),
-//   },
-//   handler: async (ctx, args) => {
-//     console.log("Creating user publicly:", args.clerkId);
+    const requests = await Promise.all(
+      user.pendingFollowRequests.map(async (requesterId) => {
+        return await ctx.db.get(requesterId);
+      })
+    );
 
-//     const existingUser = await ctx.db
-//       .query("users")
-//       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-//       .first();
+    return requests.filter(Boolean);
+  },
+});
 
-//     const now = Date.now();
-//     const userData = createUserData(args, now);
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
 
-//     if (existingUser) {
-//       return await ctx.db.patch(existingUser._id, userData);
-//     } else {
-//       return await ctx.db.insert("users", {
-//         ...userData,
-//         // Array fields
-//         followers: [],
-//         followings: [],
-//         refferences: [],
-//         musicianhandles: [],
-//         musiciangenres: [],
-//         savedGigs: [],
-//         favoriteGigs: [],
-//         likedVideos: [],
-//         bookingHistory: [],
-//         adminPermissions: [],
-//         allreviews: [],
-//         myreviews: [],
-//         videosProfile: [],
-//         // Weekly stats
-//         gigsBookedThisWeek: { count: 0, weekStart: now },
-//       });
-//     }
-//   },
-// });
-
-// convex/migrations/migrateAllUsers.ts
+// convex/gigs.ts

@@ -2,7 +2,7 @@
 
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useNotifications } from "@/hooks/useNotifications";
+
 import {
   CalendarIcon,
   CreditCardIcon,
@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { SidebarSkeleton } from "../skeletons/SidebarSkeleton";
+import { useNotificationSystem } from "@/hooks/useNotifications";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 interface NavLink {
   name: string;
@@ -44,10 +46,10 @@ export function Sidebar() {
   const { user } = useCurrentUser();
   const { isPro } = useSubscriptionStore();
   const pathname = usePathname();
-  const { unreadCount } = useNotifications(5, true);
+  const { unreadCount } = useNotificationSystem();
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
-
+  const { isInGracePeriod } = useCheckTrial();
   if (!user) {
     return <SidebarSkeleton />;
   }
@@ -192,7 +194,7 @@ export function Sidebar() {
         </div>
       ),
       exact: true,
-      pro: false,
+      pro: isInGracePeriod,
       description: "Notifications with priority alerts",
     },
     {

@@ -14,20 +14,24 @@ import {
   Calendar,
   Star,
   Settings,
+  BellIcon,
 } from "lucide-react";
 import { IoHomeOutline } from "react-icons/io5";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
+import { useNotificationSystem } from "@/hooks/useNotifications";
 
 const UserNav = () => {
   const { userId } = useAuth();
   const pathname = usePathname();
   const { colors } = useThemeColors();
   const { user } = useCurrentUser();
-
+  const { unreadCount } = useNotificationSystem();
   const isMusician = user?.isMusician;
   const isProTier = user?.tier === "pro";
+  const { isInGracePeriod } = useCheckTrial();
 
   const navItems = [
     {
@@ -47,23 +51,34 @@ const UserNav = () => {
       label: "Account",
     },
     {
-      href: `/profile/stats`,
+      href: "/notifications",
       icon: {
-        active: <FaChartBar size={22} />,
-        inactive: <BarChart3 size={22} />,
+        active: (
+          <div className="relative">
+            <BellIcon className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </div>
+        ),
+        inactive: (
+          <div className="relative">
+            <BellIcon className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </div>
+        ),
       },
-      label: "Stats",
+      label: "Notifications",
+      exact: true,
+      pro: isInGracePeriod,
+      description: "Notifications with priority alerts",
     },
-    {
-      href: `/profile/activity`,
-      icon: {
-        active: <FaHistory size={22} />,
-        inactive: <History size={22} />,
-      },
-      label: "Activity",
-      pro: true, // Added pro tier
-    },
-
     // Musician-specific items
     ...(isMusician
       ? [

@@ -7,7 +7,6 @@ import { useState } from "react";
 import { useNotificationSettings } from "@/hooks/useNotificationsSettings";
 import {
   ArrowLeft,
-  Lock,
   Bell,
   Users,
   Calendar,
@@ -19,8 +18,6 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { NotificationSettings } from "@/convex/notificationsTypes";
-import { color } from "framer-motion";
 
 export default function NotificationSettingsPage() {
   const { settings, updateSettings, isLoading } = useNotificationSettings();
@@ -87,7 +84,6 @@ export default function NotificationSettingsPage() {
   type ValidInAppKey = (typeof validInAppKeys)[number];
 
   // Individual ToggleRow component with its own loading state
-  // Individual ToggleRow component with its own loading state
   const ToggleRow = ({
     label,
     description,
@@ -128,18 +124,13 @@ export default function NotificationSettingsPage() {
                 "shadow-sm"
               )
             : cn(
-                colors.background + colors.borderMuted,
+                "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/50",
                 "hover:border-gray-300 dark:hover:border-gray-600"
               ),
           "group relative overflow-hidden",
           localSaving && "opacity-70 cursor-wait"
         )}
       >
-        {/* Subtle background gradient for enabled state */}
-        {isEnabled && (
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-sky-50/10 dark:from-blue-900/5 dark:to-sky-900/5" />
-        )}
-
         <div className="flex items-start gap-4 flex-1 mb-4 sm:mb-0 relative z-10">
           {icon && (
             <div
@@ -165,7 +156,9 @@ export default function NotificationSettingsPage() {
               <div
                 className={cn(
                   "font-semibold text-base lg:text-lg transition-colors duration-300",
-                  isEnabled ? colors.textMuted : colors.infoText
+                  isEnabled
+                    ? "text-blue-700 dark:text-blue-300"
+                    : "text-gray-900 dark:text-gray-100"
                 )}
               >
                 {label}
@@ -197,7 +190,9 @@ export default function NotificationSettingsPage() {
             <div
               className={cn(
                 "text-sm lg:text-base leading-relaxed transition-colors duration-300",
-                isEnabled ? colors.textMuted : colors.infoBorder
+                isEnabled
+                  ? "text-blue-600 dark:text-blue-400/90"
+                  : "text-gray-600 dark:text-gray-400"
               )}
             >
               {description}
@@ -251,28 +246,17 @@ export default function NotificationSettingsPage() {
                 onCheckedChange={handleToggle}
                 disabled={localSaving || isLoading}
                 className={cn(
-                  // Base styles
                   "relative transition-all duration-200",
                   "scale-110 lg:scale-100",
                   "hover:scale-115 lg:hover:scale-105",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
-
-                  // Switch colors - using blue instead of green for better visibility
-                  "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600",
-                  "data-[state=unchecked]:bg-gray-400 data-[state=unchecked]:border-gray-400",
-                  "dark:data-[state=unchecked]:bg-gray-600 dark:data-[state=unchecked]:border-gray-600",
-
-                  // Border
+                  "data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-400",
+                  "dark:data-[state=unchecked]:bg-gray-600",
                   "border-2 border-transparent",
-
-                  // Enhanced effects
                   isEnabled &&
                     cn("shadow-lg shadow-blue-200/50 dark:shadow-blue-800/30"),
-
-                  // Hover effects
                   "hover:data-[state=checked]:bg-blue-700 hover:data-[state=unchecked]:bg-gray-500",
                   "dark:hover:data-[state=unchecked]:bg-gray-500",
-
                   localSaving && "opacity-70"
                 )}
               />
@@ -385,7 +369,7 @@ export default function NotificationSettingsPage() {
                 "flex items-center gap-3 transition-transform duration-300 hover:scale-105"
               )}
             >
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <span>
                 {enabledCount}/{totalCount} Enabled
               </span>
@@ -396,48 +380,7 @@ export default function NotificationSettingsPage() {
 
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        {/* Enhanced Coming Soon Banner */}
-        <div
-          className={cn(
-            "mb-8 lg:mb-12 p-6 lg:p-8 rounded-2xl border-2 border-dashed transition-all duration-300",
-            "hover:shadow-xl hover:border-solid transform hover:-translate-y-1",
-            colors.border,
-            "bg-muted/50",
-            "backdrop-blur-sm"
-          )}
-        >
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div
-              className={cn(
-                "p-4 rounded-2xl flex-shrink-0",
-                "bg-primary text-primary-foreground",
-                "shadow-lg animate-pulse"
-              )}
-            >
-              <Lock className="w-8 h-8" />
-            </div>
-            <div className="flex-1 text-center md:text-left">
-              <h3
-                className={cn(
-                  "font-bold text-2xl lg:text-3xl mb-3 lg:mb-4",
-                  colors.text
-                )}
-              >
-                🚀 Push Notifications - Coming Soon!
-              </h3>
-              <p
-                className={cn(
-                  "text-lg lg:text-xl leading-relaxed",
-                  colors.textMuted
-                )}
-              >
-                Browser push notifications are currently in development. You'll
-                soon be able to receive notifications even when the app is
-                closed. Stay tuned for exciting updates!
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* REMOVED: Push notifications coming soon banner */}
 
         {/* Grid Layout for Larger Screens */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">

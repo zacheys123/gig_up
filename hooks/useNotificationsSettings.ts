@@ -75,15 +75,6 @@ export const useNotificationSettings = () => {
         promotionalEmails: updatedSettings.promotionalEmails,
         newsletter: updatedSettings.newsletter,
         // Add push settings if your validator expects them
-        pushEnabled: updatedSettings.pushEnabled,
-        pushProfileViews: updatedSettings.pushProfileViews,
-        pushFollowRequests: updatedSettings.pushFollowRequests,
-        pushGigInvites: updatedSettings.pushGigInvites,
-        pushBookingRequests: updatedSettings.pushBookingRequests,
-        pushBookingConfirmations: updatedSettings.pushBookingConfirmations,
-        pushGigReminders: updatedSettings.pushGigReminders,
-        pushNewMessages: updatedSettings.pushNewMessages,
-        pushSystemUpdates: updatedSettings.pushSystemUpdates,
       };
 
       return updateSettingsMutation({

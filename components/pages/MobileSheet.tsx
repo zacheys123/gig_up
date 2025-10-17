@@ -180,13 +180,6 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
       condition: isSignedIn,
       badge: 3,
     },
-    {
-      href: "/notifications",
-      label: "Notifications",
-      icon: <Bell size={20} />,
-      condition: isSignedIn,
-      pro: false,
-    },
   ];
 
   // Filter and add missing desktop navigation items

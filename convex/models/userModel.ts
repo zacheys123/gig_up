@@ -231,8 +231,8 @@ export const userModel = defineTable({
     })
   ),
   viewedProfiles: v.optional(v.array(v.string())), // Track who current user has viewed
-  isPrivate: v.boolean(), // New field - default false
-  pendingFollowRequests: v.array(v.id("users")),
+  isPrivate: v.optional(v.boolean()), // New field - default false
+  pendingFollowRequests: v.optional(v.array(v.id("users"))),
 })
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])

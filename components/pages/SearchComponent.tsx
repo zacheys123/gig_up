@@ -15,7 +15,7 @@ import { UserProps } from "@/types/userTypes";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import ClientEducationModal from "./ClientEducationModal";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SearchUserSkeletonGrid } from "../skeletons/SearchMainUserSkeleton";
 import { debounce } from "lodash";

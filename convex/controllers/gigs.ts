@@ -311,13 +311,13 @@ export const createGig = mutation({
     // 4. Create notifications
     const notificationPromises = relevantUsers.map(async (user) => {
       return createNotificationInternal(ctx, {
-        userId: user.clerkId,
+        userDocumentId: user._id,
         type: "gig_invite",
         title: "New Gig Opportunity! 🎵",
         message: `New ${genre || "gig"} posted in ${posterUser.city || "your area"}: "${title}"`,
         image: posterUser.picture,
-        actionUrl: `/gigs/${gigId}`,
-        relatedUserId: posterUser.clerkId,
+        actionUrl: `/gigs/invitations/${gigId}?inviter=${posterUser._id}&status=pending`,
+        relatedUserDocumentId: posterUser._id,
         metadata: {
           senderId: posterUser.clerkId,
           senderName: posterUser.firstname,

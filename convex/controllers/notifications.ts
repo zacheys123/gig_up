@@ -9,76 +9,80 @@ import {
 } from "../notificationsTypes";
 
 const recentViews = new Map<string, number>(); // userId -> timestamp
-
 export const trackProfileView = mutation({
   args: {
-    viewedUserId: v.string(),
-    viewerUserId: v.string(),
+    viewedUserDocId: v.id("users"),
+    viewerUserDocId: v.id("users"),
     isViewerInGracePeriod: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { viewedUserId, viewerUserId, isViewerInGracePeriod } = args;
+    const { viewedUserDocId, viewerUserDocId, isViewerInGracePeriod } = args;
+
+    console.log("=== PROFILE VIEW DEBUG ===");
+    console.log("Viewed User Document ID:", viewedUserDocId);
+    console.log("Viewer User Document ID:", viewerUserDocId);
+    console.log("Is Viewer in Grace Period:", isViewerInGracePeriod);
+
+    // Get users by document ID
+    const [viewedUserDoc, viewerDoc] = await Promise.all([
+      ctx.db.get(viewedUserDocId),
+      ctx.db.get(viewerUserDocId),
+    ]);
+    console.log("Viewer User:", {
+      id: viewerDoc?._id,
+      username: viewerDoc?.username,
+      tier: viewerDoc?.tier,
+      clerkId: viewerDoc?.clerkId,
+    });
+    console.log(
+      "Can Create Notification:",
+      viewerDoc?.tier === "pro" || isViewerInGracePeriod
+    );
+
+    if (!viewedUserDoc) {
+      throw new Error(
+        `Viewed user not found with document ID: ${viewedUserDocId}`
+      );
+    }
+
+    if (!viewerDoc) {
+      throw new Error(
+        `Viewer user not found with document ID: ${viewerUserDocId}`
+      );
+    }
 
     // Don't track self-views
-    if (viewedUserId === viewerUserId) return;
-
-    // ✅ DEBOUNCE: Check if this view happened recently (last 5 minutes)
-    const viewKey = `${viewerUserId}-${viewedUserId}`;
-    const lastViewTime = recentViews.get(viewKey);
-    const currentTime = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-
-    if (lastViewTime && currentTime - lastViewTime < fiveMinutes) {
-      console.log(`Debounced profile view: ${viewerUserId} -> ${viewedUserId}`);
-      return { success: false, reason: "debounced" };
+    if (viewedUserDoc._id.toString() === viewerDoc._id.toString()) {
+      console.log("Self-view detected, skipping");
+      return { success: false, reason: "self_view" };
     }
 
-    // Update the recent views cache
-    recentViews.set(viewKey, currentTime);
-
-    // Clean up old entries (optional - to prevent memory leaks)
-    if (recentViews.size > 1000) {
-      for (const [key, timestamp] of recentViews.entries()) {
-        if (currentTime - timestamp > fiveMinutes) {
-          recentViews.delete(key);
-        }
-      }
-    }
-
-    const [viewedUserDoc, viewerDoc] = await Promise.all([
-      ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", viewedUserId))
-        .first(),
-      ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", viewerUserId))
-        .first(),
-    ]);
-
-    if (!viewedUserDoc || !viewerDoc) {
-      throw new Error("User not found");
-    }
-
-    // Check if viewer has already viewed this profile
-    const viewerViewedProfiles = viewerDoc?.viewedProfiles || [];
-    const hasAlreadyViewed = viewerViewedProfiles.includes(viewedUserId);
+    // Check if user has already viewed this profile
+    const viewerViewedProfiles = viewerDoc.viewedProfiles || [];
+    const hasAlreadyViewed = viewerViewedProfiles.some(
+      (viewedId: any) => viewedId.toString() === viewedUserDoc._id.toString()
+    );
 
     if (hasAlreadyViewed) {
-      console.log(`User ${viewerUserId} has already viewed ${viewedUserId}`);
-      return { success: false, reason: "already_viewed" };
+      console.log(
+        `🚫 USER BLOCKED: ${viewerDoc.username} has already viewed ${viewedUserDoc.username}`
+      );
+      return {
+        success: false,
+        reason: "already_viewed",
+        message: "You have already viewed this profile",
+      };
     }
 
     // Update viewed user's profile view count
     const currentViews = viewedUserDoc.profileViews || {
       totalCount: 0,
       recentViewers: [],
-      lastUpdated: currentTime,
+      lastUpdated: Date.now(),
     };
 
-    // Add viewer to recent viewers
     const newRecentViewers = [
-      { userId: viewerUserId, timestamp: currentTime },
+      { userId: viewerDoc._id, timestamp: Date.now() },
       ...currentViews.recentViewers.slice(0, 49),
     ];
 
@@ -86,60 +90,65 @@ export const trackProfileView = mutation({
       profileViews: {
         totalCount: currentViews.totalCount + 1,
         recentViewers: newRecentViewers,
-        lastUpdated: currentTime,
+        lastUpdated: Date.now(),
       },
     });
 
     // Update viewer's viewedProfiles
-    if (viewerDoc) {
-      const viewedProfiles = viewerDoc.viewedProfiles || [];
-      const updatedViewedProfiles = [
-        viewedUserId,
-        ...viewedProfiles.filter((id: string) => id !== viewedUserId),
-      ].slice(0, 100);
+    const updatedViewedProfiles = [
+      viewedUserDoc._id,
+      ...viewerViewedProfiles,
+    ].slice(0, 100);
 
-      await ctx.db.patch(viewerDoc._id, {
-        viewedProfiles: updatedViewedProfiles,
-      });
-    }
+    await ctx.db.patch(viewerDoc._id, {
+      viewedProfiles: updatedViewedProfiles,
+    });
 
-    // ✅ USE UPDATED HELPER FUNCTION
+    console.log(
+      `✅ Profile view tracked for ${viewedUserDoc.username} by ${viewerDoc.username}`
+    );
+    console.log(
+      `📊 Viewer details - Tier: ${viewerDoc.tier}, Grace Period: ${isViewerInGracePeriod}`
+    );
+
+    // ✅ Create notification using Document IDs consistently
     const notificationId = await createNotificationInternal(ctx, {
-      userId: viewedUserId, // RECIPIENT
+      userDocumentId: viewedUserDoc._id, // RECIPIENT's document ID
       type: "profile_view",
       title: "Profile Viewed",
       message: `${viewerDoc.firstname || "Someone"} viewed your profile`,
       image: viewerDoc.picture,
-      actionUrl: `/profile/${viewerUserId}`,
-      relatedUserId: viewerUserId, // VIEWER
-      isViewerInGracePeriod: isViewerInGracePeriod, // VIEWER'S grace period
+      actionUrl: `/analytics/profile-views?viewer=${viewerDoc._id}&source=notification`,
+      relatedUserDocumentId: viewerDoc._id, // VIEWER's document ID
+      isViewerInGracePeriod: isViewerInGracePeriod,
       metadata: {
-        senderId: viewerUserId,
+        senderDocumentId: viewerDoc._id.toString(),
+        senderClerkId: viewerDoc.clerkId,
+        recipientDocumentId: viewedUserDoc._id.toString(),
+        recipientClerkId: viewedUserDoc.clerkId,
         senderName: viewerDoc.firstname,
         senderPicture: viewerDoc.picture,
-        senderEmail: viewerDoc.email,
         isProUser: viewerDoc.tier === "pro",
-        isMusician: viewerDoc.isMusician,
-        isClient: viewerDoc.isClient,
-        instrument: viewerDoc.instrument,
-        city: viewerDoc.city,
-        roleType: viewerDoc.roleType,
-        viewerId: viewerUserId,
-        viewedUserId: viewedUserId,
         isViewerProOrGracePeriod:
-          viewerDoc.tier === "pro" || isViewerInGracePeriod, // Track this for analytics
+          viewerDoc.tier === "pro" || isViewerInGracePeriod,
       },
     });
 
-    return { success: true, notificationId };
+    if (notificationId) {
+      console.log(`🔔 Notification created with ID: ${notificationId}`);
+    } else {
+      console.log(
+        `🔕 Notification was not created - check viewer restrictions or recipient settings`
+      );
+    }
+
+    return {
+      success: true,
+      notificationId,
+      message: "Profile view tracked successfully",
+    };
   },
 });
-
-// Generic notification creation function using the mapping
-
-// convex/notifications.ts
-
-// Remove all your old type definitions and use the centralized ones
 
 export const getNotificationSettings = query({
   args: {
@@ -164,10 +173,6 @@ export const getNotificationSettings = query({
   },
 });
 
-// convex/notifications.ts - FIXED VERSION
-// convex/notifications.ts - FIX THE MUTATION SCHEMA
-// convex/notifications.ts - CORRECTED MUTATION
-// convex/notifications.ts - UPDATED MUTATION
 export const updateNotificationSettings = mutation({
   args: {
     userId: v.string(),
@@ -196,17 +201,6 @@ export const updateNotificationSettings = mutation({
       // Marketing - ALL REQUIRED
       promotionalEmails: v.boolean(),
       newsletter: v.boolean(),
-
-      // Push Notifications - ALL REQUIRED
-      pushEnabled: v.boolean(),
-      pushProfileViews: v.boolean(),
-      pushFollowRequests: v.boolean(),
-      pushGigInvites: v.boolean(),
-      pushBookingRequests: v.boolean(),
-      pushBookingConfirmations: v.boolean(),
-      pushGigReminders: v.boolean(),
-      pushNewMessages: v.boolean(),
-      pushSystemUpdates: v.boolean(),
     }),
   },
   handler: async (ctx, args) => {
@@ -232,7 +226,6 @@ export const updateNotificationSettings = mutation({
   },
 });
 
-// Update your createNotification to use the centralized types
 export const createNotification = mutation({
   args: {
     userId: v.string(),
@@ -281,8 +274,6 @@ export const createNotification = mutation({
   },
 });
 
-// Keep all your other existing functions (getUserNotifications, markAsRead, etc.)
-// They should work without changes since they use the centralized types
 export const getUserNotifications = query({
   args: {
     clerkId: v.string(),
