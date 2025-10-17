@@ -24,6 +24,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { PrivacySettings } from "@/components/settings/PrivacySettings";
+
 // Types
 type SettingItem = {
   label: string;
@@ -44,7 +45,6 @@ type ModalType =
   | "login-activity"
   | "devices"
   | "payments"
-  | "notifications"
   | "privacy";
 
 const SettingPage = () => {
@@ -67,7 +67,8 @@ const SettingPage = () => {
     phoneNumber: "",
   });
 
-  // Settings sections configuration
+  // Settings sections configuration - UPDATED
+  // In your main settings page - UPDATE THIS SECTION
   const settingsSections: SettingsSection[] = [
     {
       title: "Account",
@@ -90,20 +91,13 @@ const SettingPage = () => {
       items: [
         {
           label: "Notification Preferences",
-          action: () => router.push("/settings/notification"),
-          isNavigation: true,
-        },
-        {
-          label: "Push Notifications",
-          action: () => alert("Push notifications modal coming soon"),
-        },
-        {
-          label: "Email Notifications",
-          action: () => alert("Email notifications modal coming soon"),
+          action: () => router.push("/settings/notification"), // CHANGED: Redirect to notifications page
+          isNavigation: true, // CHANGED: Now it's navigation
         },
         {
           label: "SMS Alerts",
-          action: () => alert("SMS alerts modal coming soon"),
+          action: () => alert("coming soon"),
+          isNavigation: false,
         },
       ],
     },
@@ -175,66 +169,6 @@ const SettingPage = () => {
             notifications[name] ? colors.primaryBg : colors.backgroundMuted
           )}
         />
-      </div>
-    </div>
-  );
-
-  // Notifications Modal
-  const NotificationsModal = () => (
-    <div className="space-y-4">
-      <NotificationToggle name="push" label="Push Notifications" />
-      <NotificationToggle name="email" label="Email Notifications" />
-      <NotificationToggle name="sms" label="SMS Alerts" />
-      <NotificationToggle name="marketing" label="Marketing Communications" />
-
-      <div className="pt-4">
-        <label
-          className={cn("block text-sm font-medium mb-1", colors.textSecondary)}
-        >
-          SMS Phone Number
-        </label>
-        <input
-          type="tel"
-          name="phoneNumber"
-          value={formData.phoneNumber}
-          onChange={handleInputChange}
-          className={cn(
-            "w-full rounded-lg px-4 py-2 focus:ring-2 focus:border-transparent",
-            colors.background,
-            colors.text
-          )}
-          placeholder="+1 (___) ___-____"
-          disabled={!notifications.sms}
-        />
-      </div>
-
-      <div className="flex justify-end space-x-3 pt-6">
-        <button
-          type="button"
-          onClick={closeModal}
-          className={cn(
-            "px-4 py-2 rounded-lg border font-medium",
-            colors.border,
-            colors.textSecondary,
-            colors.background
-          )}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            alert("Notification preferences saved!");
-            closeModal();
-          }}
-          className={cn(
-            "px-4 py-2 rounded-lg font-medium",
-            colors.primaryBg,
-            colors.textInverted
-          )}
-        >
-          Save Preferences
-        </button>
       </div>
     </div>
   );
@@ -674,6 +608,7 @@ const SettingPage = () => {
       </div>
     </div>
   );
+
   const PrivacyModal = () => (
     <div>
       <PrivacySettings user={user} />
@@ -714,10 +649,7 @@ const SettingPage = () => {
       title: "Payment Methods",
       component: <PaymentsModal />,
     },
-    notifications: {
-      title: "Notification Preferences",
-      component: <NotificationsModal />,
-    },
+
     privacy: {
       title: "Privacy Settings",
       component: <PrivacyModal />,
@@ -839,7 +771,7 @@ const SettingPage = () => {
         >
           <div
             className={cn(
-              "rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto",
+              "rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto", // Increased max-width for better layout
               colors.card
             )}
           >

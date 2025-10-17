@@ -1,61 +1,12 @@
-// hooks/useNotificationSettings.ts
+// hooks/useNotificationSettings.ts - UPDATED
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useMemo } from "react";
-
-export interface NotificationSettings {
-  userId: string;
-  // Profile & Social
-  profileViews: boolean;
-  followRequests: boolean;
-
-  // Gigs & Bookings
-  gigInvites: boolean;
-  bookingRequests: boolean;
-  bookingConfirmations: boolean;
-  gigReminders: boolean;
-
-  // Messages & Communication
-  newMessages: boolean;
-  messageRequests: boolean;
-
-  // System & Updates
-  systemUpdates: boolean;
-  featureAnnouncements: boolean;
-  securityAlerts: boolean;
-
-  // Marketing
-  promotionalEmails: boolean;
-  newsletter: boolean;
-}
-
-export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  userId: "",
-  // Profile & Social
-  profileViews: true,
-  followRequests: true,
-
-  // Gigs & Bookings
-  gigInvites: true,
-  bookingRequests: true,
-  bookingConfirmations: true,
-  gigReminders: true,
-
-  // Messages & Communication
-  newMessages: true,
-  messageRequests: true,
-
-  // System & Updates
-  systemUpdates: true,
-  featureAnnouncements: false,
-  securityAlerts: true,
-
-  // Marketing
-  promotionalEmails: false,
-  newsletter: false,
-};
-
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  NotificationSettings,
+} from "@/convex/notificationsTypes";
 export const useNotificationSettings = () => {
   const { userId } = useAuth();
 
@@ -68,20 +19,32 @@ export const useNotificationSettings = () => {
     api.controllers.notifications.updateNotificationSettings
   );
 
-  // Memoize the settings to prevent unnecessary re-renders
-  const settings = useMemo(() => {
+  const settings = useMemo((): NotificationSettings => {
     if (!settingsData) {
-      return { ...DEFAULT_NOTIFICATION_SETTINGS };
+      return { ...DEFAULT_NOTIFICATION_SETTINGS, userId: userId || "" };
     }
-    return settingsData;
-  }, [settingsData]);
+    return settingsData as NotificationSettings;
+  }, [settingsData, userId]);
 
-  // Memoize the update function
-  const updateSettings = useCallback(
-    async (newSettings: NotificationSettings) => {
+  // Update single setting - sends only the changed field
+  const updateSingleSetting = useCallback(
+    async (key: keyof NotificationSettings, value: boolean) => {
       if (!userId) throw new Error("User not authenticated");
 
-      // Remove userId if it exists (backend will handle it)
+      return updateSettingsMutation({
+        userId,
+        settings: { [key]: value },
+      });
+    },
+    [userId, updateSettingsMutation]
+  );
+
+  // Update multiple settings at once
+  const updateSettings = useCallback(
+    async (newSettings: Partial<NotificationSettings>) => {
+      if (!userId) throw new Error("User not authenticated");
+
+      // Remove userId if it exists
       const { userId: _, ...settingsToUpdate } = newSettings;
 
       return updateSettingsMutation({
@@ -95,6 +58,7 @@ export const useNotificationSettings = () => {
   return {
     settings,
     updateSettings,
+    updateSingleSetting,
     isLoading: settingsData === undefined,
   };
 };

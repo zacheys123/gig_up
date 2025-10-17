@@ -5,6 +5,7 @@ import { userModel } from "./models/userModel";
 import { gigModel } from "./models/gigModel";
 import { notificationModel } from "./models/notificationsModel"; // Make sure this path is correct
 import { notificationSettingsModel } from "./models/notificationSettings";
+import { pushSubscriptions } from "./models/push";
 
 export default defineSchema({
   users: userModel,
@@ -27,4 +28,5 @@ export default defineSchema({
     title: v.string(),
     url: v.string(),
   }),
+  pushSubscriptions: pushSubscriptions,
 });

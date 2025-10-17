@@ -3,35 +3,11 @@ import { v } from "convex/values";
 import { mutation } from "../_generated/server";
 import { query } from "../_generated/server";
 import { createNotificationInternal } from "../createNotificationInternal";
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  NOTIFICATION_TYPE_TO_SETTING_MAP,
+} from "../notificationsTypes";
 
-// NOTIFICATION TYPE TO SETTINGS MAPPING
-// convex/notifications.ts - FIX THE MAPPING
-// convex/notifications.ts - UPDATE THE MAPPING
-export const notificationTypeToSettingMap = {
-  // Profile & Social
-  profile_view: "profileViews",
-  new_follower: "followRequests", // All follower activities
-  follow_request: "followRequests", // All follower activities
-  follow_accepted: "followRequests", // All follower activities
-  like: "profileViews", // Social interactions
-  new_review: "profileViews", // Social interactions
-  review_received: "profileViews", // Social interactions
-  share: "profileViews", // Social interactions
-
-  // Messages & Communication
-  new_message: "newMessages",
-
-  // Gigs & Bookings
-  gig_invite: "gigInvites",
-  gig_application: "bookingRequests", // Applications become booking requests
-  gig_approved: "bookingConfirmations",
-  gig_rejected: "bookingRequests", // Rejections are booking requests
-  gig_cancelled: "bookingRequests", // Cancellations are booking requests
-  gig_reminder: "gigReminders",
-
-  // System
-  system_alert: "systemUpdates",
-} as const;
 const recentViews = new Map<string, number>(); // userId -> timestamp
 
 export const trackProfileView = mutation({
@@ -160,6 +136,108 @@ export const trackProfileView = mutation({
 });
 
 // Generic notification creation function using the mapping
+
+// convex/notifications.ts
+
+// Remove all your old type definitions and use the centralized ones
+
+export const getNotificationSettings = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+
+    const settings = await ctx.db
+      .query("notificationSettings")
+      .withIndex("by_user_id", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!settings) {
+      return {
+        userId: userId,
+        ...DEFAULT_NOTIFICATION_SETTINGS,
+      };
+    }
+
+    return settings;
+  },
+});
+
+// convex/notifications.ts - FIXED VERSION
+// convex/notifications.ts - FIX THE MUTATION SCHEMA
+export const updateNotificationSettings = mutation({
+  args: {
+    userId: v.string(),
+    settings: v.object({
+      // Profile & Social - ALL OPTIONAL
+      profileViews: v.optional(v.boolean()),
+      followRequests: v.optional(v.boolean()),
+
+      // Gigs & Bookings - ALL OPTIONAL
+      gigInvites: v.optional(v.boolean()),
+      bookingRequests: v.optional(v.boolean()),
+      bookingConfirmations: v.optional(v.boolean()),
+      gigReminders: v.optional(v.boolean()),
+
+      // Messages & Communication - ALL OPTIONAL
+      newMessages: v.optional(v.boolean()),
+      messageRequests: v.optional(v.boolean()),
+
+      // System & Updates - ALL OPTIONAL
+      systemUpdates: v.optional(v.boolean()),
+      featureAnnouncements: v.optional(v.boolean()),
+      securityAlerts: v.optional(v.boolean()),
+
+      // Marketing - ALL OPTIONAL
+      promotionalEmails: v.optional(v.boolean()),
+      newsletter: v.optional(v.boolean()),
+
+      // Push Notifications - ALL OPTIONAL
+      pushEnabled: v.optional(v.boolean()),
+      pushProfileViews: v.optional(v.boolean()),
+      pushFollowRequests: v.optional(v.boolean()),
+      pushGigInvites: v.optional(v.boolean()),
+      pushBookingRequests: v.optional(v.boolean()),
+      pushBookingConfirmations: v.optional(v.boolean()),
+      pushGigReminders: v.optional(v.boolean()),
+      pushNewMessages: v.optional(v.boolean()),
+      pushSystemUpdates: v.optional(v.boolean()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { userId, settings } = args;
+
+    const existing = await ctx.db
+      .query("notificationSettings")
+      .withIndex("by_user_id", (q) => q.eq("userId", userId))
+      .first();
+
+    // Filter out undefined values to only update provided fields
+    const cleanSettings = Object.fromEntries(
+      Object.entries(settings).filter(([_, value]) => value !== undefined)
+    );
+
+    if (existing) {
+      await ctx.db.patch(existing._id, cleanSettings);
+    } else {
+      // For new records, merge with defaults
+      const defaultSettings = { ...DEFAULT_NOTIFICATION_SETTINGS };
+      // Remove userId from defaults to avoid conflict
+      delete (defaultSettings as any).userId;
+
+      await ctx.db.insert("notificationSettings", {
+        userId,
+        ...defaultSettings,
+        ...cleanSettings,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+// Update your createNotification to use the centralized types
 export const createNotification = mutation({
   args: {
     userId: v.string(),
@@ -174,18 +252,18 @@ export const createNotification = mutation({
   handler: async (ctx, args) => {
     const { userId, type, ...rest } = args;
 
-    // Check user's notification settings
+    // Check user's notification settings using centralized mapping
     const notificationSettings = await ctx.db
       .query("notificationSettings")
       .withIndex("by_user_id", (q) => q.eq("userId", userId))
       .first();
 
     const settingKey =
-      notificationTypeToSettingMap[
-        type as keyof typeof notificationTypeToSettingMap
+      NOTIFICATION_TYPE_TO_SETTING_MAP[
+        type as keyof typeof NOTIFICATION_TYPE_TO_SETTING_MAP
       ];
 
-    // Only create notification if setting is enabled (or if no setting exists, default to true)
+    // Only create notification if setting is enabled
     const shouldCreate =
       !notificationSettings ||
       !settingKey ||
@@ -208,6 +286,8 @@ export const createNotification = mutation({
   },
 });
 
+// Keep all your other existing functions (getUserNotifications, markAsRead, etc.)
+// They should work without changes since they use the centralized types
 export const getUserNotifications = query({
   args: {
     clerkId: v.string(),
@@ -288,103 +368,5 @@ export const getUnreadCount = query({
       .collect();
 
     return unreadNotifications.length;
-  },
-});
-
-// notifications settings
-
-// In your getNotificationSettings query
-export const getNotificationSettings = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { userId } = args;
-
-    const settings = await ctx.db
-      .query("notificationSettings")
-      .withIndex("by_user_id", (q) => q.eq("userId", userId))
-      .first();
-
-    if (!settings) {
-      // Return default settings if none exist
-      return {
-        userId: userId,
-        // Profile & Social
-        profileViews: true,
-        followRequests: true,
-
-        // Gigs & Bookings
-        gigInvites: true,
-        bookingRequests: true,
-        bookingConfirmations: true,
-        gigReminders: true,
-
-        // Messages & Communication
-        newMessages: true,
-        messageRequests: true,
-
-        // System & Updates
-        systemUpdates: true,
-        featureAnnouncements: false,
-        securityAlerts: true,
-
-        // Marketing
-        promotionalEmails: false,
-        newsletter: false,
-      };
-    }
-
-    return settings;
-  },
-});
-
-// convex/notifications.ts - UPDATE THE MUTATION
-export const updateNotificationSettings = mutation({
-  args: {
-    userId: v.string(),
-    settings: v.object({
-      // Profile & Social
-      profileViews: v.boolean(),
-      followRequests: v.boolean(),
-
-      // Gigs & Bookings
-      gigInvites: v.boolean(),
-      bookingRequests: v.boolean(),
-      bookingConfirmations: v.boolean(),
-      gigReminders: v.boolean(),
-
-      // Messages & Communication
-      newMessages: v.boolean(),
-      messageRequests: v.boolean(),
-
-      // System & Updates
-      systemUpdates: v.boolean(),
-      featureAnnouncements: v.boolean(),
-      securityAlerts: v.boolean(),
-
-      // Marketing
-      promotionalEmails: v.boolean(),
-      newsletter: v.boolean(),
-    }),
-  },
-  handler: async (ctx, args) => {
-    const { userId, settings } = args;
-
-    const existing = await ctx.db
-      .query("notificationSettings")
-      .withIndex("by_user_id", (q) => q.eq("userId", userId))
-      .first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, settings);
-    } else {
-      await ctx.db.insert("notificationSettings", {
-        userId,
-        ...settings,
-      });
-    }
-
-    return { success: true };
   },
 });

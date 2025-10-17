@@ -1,695 +1,465 @@
-// app/notifications/page.tsx
+// app/settings/notification/page.tsx - IMPROVED & RESPONSIVE
 "use client";
 
-import { Switch } from "@/components/ui/switch";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useThemeColors } from "@/hooks/useTheme";
-import { useEffect, useState, useCallback } from "react";
-import { Bell, ArrowLeft, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { useState } from "react";
+import { useNotificationSettings } from "@/hooks/useNotificationsSettings";
 import {
-  DEFAULT_NOTIFICATION_SETTINGS,
-  useNotificationSettings,
-} from "@/hooks/useNotificationsSettings";
-import { motion } from "framer-motion";
+  ArrowLeft,
+  Lock,
+  Bell,
+  Users,
+  Calendar,
+  MessageSquare,
+  Settings,
+  Eye,
+  UserPlus,
+  Mail,
+  Zap,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { NotificationSettings } from "@/convex/notificationsTypes";
 
-const NotificationsPage = () => {
-  const { user } = useCurrentUser();
-  const { colors, isDarkMode } = useThemeColors();
-  const router = useRouter();
+export default function NotificationSettingsPage() {
+  const { settings, updateSingleSetting, isLoading } =
+    useNotificationSettings();
+  const { colors } = useThemeColors();
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
-  const {
-    settings: actualSettings,
-    updateSettings,
-    isLoading,
-  } = useNotificationSettings();
-
-  const [settings, setSettings] = useState(DEFAULT_NOTIFICATION_SETTINGS);
-
-  // Fix: Add proper dependency and condition
-  useEffect(() => {
-    if (
-      actualSettings &&
-      JSON.stringify(actualSettings) !== JSON.stringify(settings)
-    ) {
-      setSettings(actualSettings);
-    }
-  }, [actualSettings]); // Remove settings from dependencies
-
-  const handleToggle = useCallback(
-    (key: keyof typeof DEFAULT_NOTIFICATION_SETTINGS) => {
-      setSettings((prev) => ({
-        ...prev,
-        [key]: !prev[key],
-      }));
-    },
-    []
-  );
-
-  const handleSave = async () => {
-    if (!user?.clerkId) {
-      toast.error("You must be logged in to save settings");
-      return;
-    }
-
+  const handleToggle = async (
+    key: keyof NotificationSettings,
+    value: boolean
+  ) => {
     setSaving(true);
     try {
-      await updateSettings(settings);
-      toast.success("Notification preferences saved!");
+      await updateSingleSetting(key, value);
     } catch (error) {
-      console.error("Failed to save notification settings:", error);
-      toast.error("Failed to save preferences");
+      console.error("Failed to update settings:", error);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleBack = () => {
-    router.back();
-  };
-
-  const resetToDefaults = useCallback(() => {
-    setSettings(DEFAULT_NOTIFICATION_SETTINGS);
-    toast.success("Reset to default settings");
-  }, []);
-
-  const muteAll = useCallback(() => {
-    setSettings({
-      ...DEFAULT_NOTIFICATION_SETTINGS,
-      profileViews: false,
-      followRequests: false,
-      gigInvites: false,
-      bookingRequests: false,
-      bookingConfirmations: false,
-      gigReminders: false,
-      newMessages: false,
-      messageRequests: false,
-      systemUpdates: false,
-      featureAnnouncements: false,
-      promotionalEmails: false,
-      newsletter: false,
-      // Keep security alerts on
-      securityAlerts: true,
-    });
-    toast.success("Muted all non-essential notifications");
-  }, []);
-
-  // Memoize the components to prevent unnecessary re-renders
-  const NotificationSection = useCallback(
-    ({
-      title,
-      description,
-      children,
-    }: {
-      title: string;
-      description?: string;
-      children: React.ReactNode;
-    }) => (
-      <div
-        className={cn(
-          "rounded-lg border p-6",
-          isDarkMode
-            ? "bg-gray-800 border-gray-700"
-            : "bg-white border-gray-200"
-        )}
-      >
-        <div className="mb-4">
-          <h3
-            className={cn(
-              "text-lg font-semibold mb-1",
-              isDarkMode ? "text-white" : "text-gray-900"
-            )}
-          >
+  const NotificationSection = ({
+    title,
+    icon,
+    description,
+    children,
+  }: {
+    title: string;
+    icon: React.ReactNode;
+    description?: string;
+    children: React.ReactNode;
+  }) => (
+    <div
+      className={cn(
+        "rounded-2xl border p-6 lg:p-8 mb-6 transition-all duration-300",
+        "hover:shadow-lg hover:border-opacity-70",
+        colors.border,
+        colors.card,
+        "backdrop-blur-sm bg-white/95 dark:bg-gray-900/95"
+      )}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-6">
+        <div
+          className={cn(
+            "p-3 rounded-xl flex-shrink-0",
+            "bg-gradient-to-br from-blue-500 to-blue-600 text-white",
+            "shadow-lg"
+          )}
+        >
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h2 className={cn("text-2xl font-bold mb-2", colors.text)}>
             {title}
-          </h3>
+          </h2>
           {description && (
-            <p
-              className={cn(
-                "text-sm",
-                isDarkMode ? "text-gray-400" : "text-gray-600"
-              )}
-            >
+            <p className={cn("text-base leading-relaxed", colors.textMuted)}>
               {description}
             </p>
           )}
         </div>
-        <div className="space-y-4">{children}</div>
       </div>
-    ),
-    [isDarkMode]
+      <div className="space-y-3">{children}</div>
+    </div>
   );
-  const NotificationToggle = useCallback(
-    ({
-      label,
-      description,
-      enabled,
-      onChange,
-    }: {
-      label: string;
-      description?: string;
-      enabled: boolean;
-      onChange: () => void;
-    }) => (
-      <div
-        className={cn(
-          "group relative flex flex-col sm:flex-row sm:items-center justify-between p-6 rounded-2xl border-2 transition-all duration-500 ease-out cursor-pointer overflow-hidden",
-          "hover:scale-[1.02] hover:shadow-2xl transform-gpu min-h-[120px] sm:min-h-0",
-          enabled
-            ? [
-                "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
-                "border-green-200 dark:border-green-700/50",
-                "shadow-lg shadow-green-500/10 dark:shadow-green-500/5",
-                "hover:shadow-xl hover:shadow-green-500/20 dark:hover:shadow-green-500/10",
-              ]
-            : [
-                "bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800/50 dark:to-slate-800/50",
-                "border-gray-200 dark:border-gray-700",
-                "shadow-lg shadow-gray-500/5 dark:shadow-black/20",
-                "hover:shadow-xl hover:shadow-gray-500/10 dark:hover:shadow-black/30",
-              ]
-        )}
-        onClick={onChange}
-      >
-        {/* Background Glow Effect */}
-        <div
-          className={cn(
-            "absolute inset-0 rounded-2xl transition-all duration-700 ease-out",
-            enabled
-              ? "bg-gradient-to-r from-green-500/5 to-emerald-500/5 dark:from-green-400/10 dark:to-emerald-400/10"
-              : "bg-gradient-to-r from-gray-500/3 to-slate-500/3 dark:from-gray-400/5 dark:to-slate-400/5"
-          )}
-        />
 
-        {/* Animated Border Glow */}
-        <div
-          className={cn(
-            "absolute inset-0 rounded-2xl border-2 transition-all duration-700 ease-out",
-            enabled
-              ? "border-green-300/50 dark:border-green-500/30 scale-105 opacity-100"
-              : "border-transparent scale-100 opacity-0"
-          )}
-        />
+  // Only include the in-app notification settings we're actually using
+  const validInAppKeys = [
+    "profileViews",
+    "followRequests",
+    "gigInvites",
+    "bookingRequests",
+    "bookingConfirmations",
+    "gigReminders",
+    "newMessages",
+    "systemUpdates",
+  ] as const;
 
-        {/* Content Container - Flex column on mobile, row on desktop */}
-        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 flex-1 z-10 w-full">
-          {/* Icon Container */}
+  type ValidInAppKey = (typeof validInAppKeys)[number];
+
+  const ToggleRow = ({
+    label,
+    description,
+    inAppKey,
+    icon,
+  }: {
+    label: string;
+    description: string;
+    inAppKey: ValidInAppKey;
+    icon?: React.ReactNode;
+  }) => (
+    <div
+      className={cn(
+        "flex flex-col sm:flex-row sm:items-center justify-between p-4 lg:p-6 rounded-xl transition-all duration-300",
+        "hover:shadow-md border border-transparent hover:border-gray-200 dark:hover:border-gray-700",
+        colors.hoverBg,
+        "group"
+      )}
+    >
+      <div className="flex items-start gap-4 flex-1 mb-4 sm:mb-0">
+        {icon && (
           <div
             className={cn(
-              "relative flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-all duration-500 ease-out transform-gpu",
-              "group-hover:scale-110 shadow-lg",
-              enabled
-                ? [
-                    "bg-gradient-to-br from-green-500 to-emerald-600",
-                    "shadow-green-500/25 dark:shadow-green-500/40",
-                    "text-white",
-                  ]
-                : [
-                    "bg-gradient-to-br from-gray-400 to-slate-500",
-                    "shadow-gray-500/20 dark:shadow-gray-600/30",
-                    "text-gray-100 dark:text-gray-300",
-                  ]
+              "p-2 rounded-lg mt-1 flex-shrink-0 transition-colors duration-300",
+              "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
+              "group-hover:bg-blue-100 group-hover:text-blue-600 dark:group-hover:bg-blue-900/30 dark:group-hover:text-blue-400"
             )}
           >
-            {/* Animated Check/X Mark */}
-            <div className="relative w-5 h-5 sm:w-6 sm:h-6">
-              {enabled ? (
-                // Check Mark
-                <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 transition-all duration-500 ease-out transform-gpu"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                  viewBox="0 0 24 24"
-                >
-                  <motion.path
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              ) : (
-                // X Mark
-                <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 transition-all duration-500 ease-out transform-gpu"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                  viewBox="0 0 24 24"
-                >
-                  <motion.path
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              )}
-            </div>
-
-            {/* Floating Particles */}
-            <div
-              className={cn(
-                "absolute inset-0 rounded-xl overflow-hidden",
-                enabled ? "opacity-100" : "opacity-0"
-              )}
-            >
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "absolute w-1 h-1 bg-white/30 rounded-full animate-pulse",
-                    i === 0 && "top-1 left-2",
-                    i === 1 && "top-3 right-2",
-                    i === 2 && "bottom-2 left-3"
-                  )}
-                  style={{ animationDelay: `${i * 0.3}s` }}
-                />
-              ))}
-            </div>
+            {icon}
           </div>
-
-          {/* Text Content - Full width on mobile */}
-          <div className="flex-1 min-w-0 w-full sm:w-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2 w-full">
-              <h4
-                className={cn(
-                  "font-bold text-lg sm:text-base lg:text-lg tracking-tight transition-all duration-300 break-words",
-                  "flex-1 min-w-0",
-                  enabled
-                    ? "text-green-900 dark:text-green-100"
-                    : "text-gray-900 dark:text-gray-100"
-                )}
-              >
-                {label}
-              </h4>
-
-              {/* Status Badge */}
-              <span
-                className={cn(
-                  "px-3 py-1 rounded-full text-xs font-semibold transition-all duration-500 ease-out transform-gpu",
-                  "shadow-md backdrop-blur-sm w-fit sm:w-auto",
-                  "flex items-center gap-1 self-start sm:self-auto",
-                  enabled
-                    ? [
-                        "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-200",
-                        "shadow-green-500/20 dark:shadow-green-500/30",
-                        "scale-100",
-                      ]
-                    : [
-                        "bg-gray-500/20 text-gray-600 dark:bg-gray-500/30 dark:text-gray-300",
-                        "shadow-gray-500/20 dark:shadow-gray-500/30",
-                        "scale-95",
-                      ]
-                )}
-              >
-                {enabled ? (
-                  <>
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse flex-shrink-0" />
-                    <span className="whitespace-nowrap">ACTIVE</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full flex-shrink-0" />
-                    <span className="whitespace-nowrap">INACTIVE</span>
-                  </>
-                )}
-              </span>
-            </div>
-
-            {description && (
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-all duration-300 break-words",
-                  "w-full max-w-none",
-                  enabled
-                    ? "text-green-700/80 dark:text-green-300/80"
-                    : "text-gray-600 dark:text-gray-400"
-                )}
-              >
-                {description}
-              </p>
+        )}
+        <div className="flex-1 min-w-0">
+          <div
+            className={cn(
+              "font-semibold text-base lg:text-lg mb-2",
+              colors.text
             )}
+          >
+            {label}
           </div>
-
-          {/* Enhanced Animated Switch - Positioned properly */}
-          <div className="relative flex-shrink-0 mt-4 sm:mt-0 sm:ml-4 lg:ml-6 z-10 self-end sm:self-auto">
-            <div
-              className={cn(
-                "relative w-14 sm:w-16 h-7 sm:h-8 rounded-full transition-all duration-700 ease-in-out transform-gpu",
-                "border-2 shadow-lg backdrop-blur-sm",
-                enabled
-                  ? [
-                      "bg-gradient-to-r from-green-400 to-emerald-500",
-                      "border-green-300 dark:border-green-500",
-                      "shadow-green-500/40 dark:shadow-green-500/50",
-                      "scale-105",
-                    ]
-                  : [
-                      "bg-gradient-to-r from-gray-400 to-slate-500",
-                      "border-gray-300 dark:border-gray-600",
-                      "shadow-gray-500/30 dark:shadow-gray-600/40",
-                      "scale-100",
-                    ]
-              )}
-            >
-              {/* Switch Track Glow */}
-              <div
-                className={cn(
-                  "absolute inset-0 rounded-full transition-all duration-500 ease-out",
-                  enabled ? "bg-green-400/20 animate-pulse" : "bg-gray-400/10"
-                )}
-              />
-
-              {/* Animated Knob */}
-              <div
-                className={cn(
-                  "absolute top-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-700 ease-in-out transform-gpu",
-                  "shadow-xl border backdrop-blur-sm",
-                  enabled
-                    ? [
-                        "left-7 sm:left-9 bg-white border-green-100",
-                        "shadow-green-500/50 dark:shadow-green-400/50",
-                        "rotate-12",
-                      ]
-                    : [
-                        "left-1 bg-white border-gray-100",
-                        "shadow-gray-500/40 dark:shadow-gray-400/40",
-                        "rotate-0",
-                      ]
-                )}
-              >
-                {/* Knob Inner Glow */}
-                <div
-                  className={cn(
-                    "absolute inset-0 rounded-full transition-all duration-500 ease-out",
-                    enabled ? "bg-green-400/20 animate-pulse" : "bg-gray-400/10"
-                  )}
-                />
-              </div>
-
-              {/* Switch Icons */}
-              <div className="absolute inset-0 flex items-center justify-between px-2 sm:px-3">
-                {/* Off Icon */}
-                <svg
-                  className={cn(
-                    "w-2.5 h-2.5 sm:w-3 sm:h-3 transition-all duration-500 ease-out transform-gpu",
-                    enabled ? "text-white/0 scale-0" : "text-white/90 scale-100"
-                  )}
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M19 13H5v-2h14v2z" />
-                </svg>
-
-                {/* On Icon */}
-                <svg
-                  className={cn(
-                    "w-2.5 h-2.5 sm:w-3 sm:h-3 transition-all duration-500 ease-out transform-gpu",
-                    enabled ? "text-white/90 scale-100" : "text-white/0 scale-0"
-                  )}
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Instruction Text */}
-            <div
-              className={cn(
-                "text-xs font-medium text-center mt-2 transition-all duration-300 transform-gpu whitespace-nowrap",
-                "hidden sm:block", // Hide on mobile to save space
-                enabled
-                  ? "text-green-600 dark:text-green-400 scale-100"
-                  : "text-gray-500 dark:text-gray-400 scale-95"
-              )}
-            >
-              {enabled ? "Click to disable" : "Click to enable"}
-            </div>
+          <div
+            className={cn(
+              "text-sm lg:text-base leading-relaxed",
+              colors.textMuted
+            )}
+          >
+            {description}
           </div>
         </div>
+      </div>
 
-        {/* Hover Ripple Effect */}
+      {/* Enhanced Switch Container */}
+      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
         <div
           className={cn(
-            "absolute inset-0 rounded-2xl transition-all duration-500 ease-out opacity-0 pointer-events-none",
-            "group-hover:opacity-100",
-            enabled
-              ? "bg-green-500/5 dark:bg-green-400/5"
-              : "bg-gray-500/5 dark:bg-gray-400/5"
+            "px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 min-w-[70px] text-center",
+            settings[inAppKey]
+              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 shadow-sm"
+              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
           )}
-        />
+        >
+          {settings[inAppKey] ? "Enabled" : "Disabled"}
+        </div>
 
-        {/* Active Pulse Effect */}
-        {enabled && (
-          <div className="absolute inset-0 rounded-2xl bg-green-500/10 animate-pulse pointer-events-none" />
-        )}
+        <div className="relative">
+          <Switch
+            checked={settings[inAppKey] as boolean}
+            onCheckedChange={(checked) => handleToggle(inAppKey, checked)}
+            disabled={saving || isLoading}
+            className={cn(
+              "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-400",
+              "dark:data-[state=unchecked]:bg-gray-600",
+              "transition-all duration-300 transform",
+              "scale-125 lg:scale-110",
+              "hover:scale-135 lg:hover:scale-125",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          />
+          {/* Loading indicator */}
+          {(saving || isLoading) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 bg-opacity-80 rounded-full">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+        </div>
       </div>
-    ),
-    [isDarkMode]
+    </div>
   );
 
   if (isLoading) {
     return (
       <div
         className={cn(
-          "min-h-screen py-8 flex items-center justify-center",
-          isDarkMode ? "bg-gray-900" : "bg-gray-50"
+          "min-h-screen flex items-center justify-center",
+          colors.background
         )}
       >
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p
-            className={cn(
-              "text-sm",
-              isDarkMode ? "text-gray-400" : "text-gray-600"
-            )}
-          >
-            Loading settings...
+          <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className={cn("text-2xl font-bold mb-2", colors.text)}>
+            Loading Preferences
+          </h2>
+          <p className={cn("text-lg", colors.textMuted)}>
+            Getting your notification settings...
           </p>
         </div>
       </div>
     );
   }
 
+  const enabledCount = Object.values(settings).filter(
+    (val) => val === true
+  ).length;
+  const totalCount = validInAppKeys.length;
+
   return (
-    <div
-      className={cn(
-        "min-h-screen py-8",
-        isDarkMode ? "bg-gray-900" : "bg-gray-50"
-      )}
-    >
-      <div className="max-w-2xl mx-auto px-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
+    <div className={cn("min-h-screen", colors.background)}>
+      {/* Enhanced Full Width Header */}
+      <div
+        className={cn(
+          "w-full border-b bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm",
+          colors.border,
+          "sticky top-0 z-10"
+        )}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 py-6 lg:py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-8">
+              <button
+                onClick={() => router.back()}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 lg:px-6 lg:py-4 rounded-2xl transition-all duration-300",
+                  "hover:bg-opacity-20 hover:scale-105 active:scale-95",
+                  colors.textMuted,
+                  colors.hoverBg,
+                  "border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600",
+                  "w-fit"
+                )}
+              >
+                <ArrowLeft size={20} className="flex-shrink-0" />
+                <span className="font-semibold text-base lg:text-lg">Back</span>
+              </button>
+
+              <div className="flex-1">
+                <h1
+                  className={cn(
+                    "text-3xl lg:text-4xl xl:text-5xl font-bold mb-2 lg:mb-3",
+                    colors.primary
+                  )}
+                >
+                  🔔 Notification Preferences
+                </h1>
+                <p className={cn("text-lg lg:text-xl", colors.textMuted)}>
+                  Control how and when you receive notifications
+                </p>
+              </div>
+            </div>
+
+            <div
               className={cn(
-                "hover:bg-opacity-20",
-                isDarkMode
-                  ? "hover:bg-white text-white"
-                  : "hover:bg-gray-200 text-gray-700"
+                "px-4 py-3 lg:px-6 lg:py-4 rounded-2xl text-base lg:text-lg font-semibold",
+                "bg-gradient-to-r from-blue-500 to-blue-600 text-white",
+                "shadow-lg border-2 border-blue-200 dark:border-blue-800",
+                "flex items-center gap-3"
               )}
             >
-              <ArrowLeft size={20} />
-            </Button>
-            <div>
-              <h1
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>
+                {enabledCount}/{totalCount} Enabled
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Enhanced Coming Soon Banner */}
+        <div
+          className={cn(
+            "mb-8 lg:mb-12 p-6 lg:p-8 rounded-2xl border-2 border-dashed transition-all duration-300",
+            "hover:shadow-xl hover:border-solid transform hover:-translate-y-1",
+            colors.border,
+            "bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20",
+            "backdrop-blur-sm"
+          )}
+        >
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div
+              className={cn(
+                "p-4 rounded-2xl flex-shrink-0",
+                "bg-gradient-to-br from-blue-500 to-blue-600 text-white",
+                "shadow-lg animate-pulse"
+              )}
+            >
+              <Lock className="w-8 h-8" />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h3
                 className={cn(
-                  "text-2xl font-bold",
-                  isDarkMode ? "text-white" : "text-gray-900"
+                  "font-bold text-2xl lg:text-3xl mb-3 lg:mb-4",
+                  colors.text
                 )}
               >
-                Notifications
-              </h1>
+                🚀 Push Notifications - Coming Soon!
+              </h3>
               <p
                 className={cn(
-                  "text-sm",
-                  isDarkMode ? "text-gray-400" : "text-gray-600"
+                  "text-lg lg:text-xl leading-relaxed",
+                  colors.textMuted
                 )}
               >
-                Manage how you receive notifications
+                Browser push notifications are currently in development. You'll
+                soon be able to receive notifications even when the app is
+                closed. Stay tuned for exciting updates!
               </p>
             </div>
           </div>
-
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {saving ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Saving...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Save size={16} />
-                Save Changes
-              </div>
-            )}
-          </Button>
         </div>
 
-        <div className="space-y-6">
-          {/* Profile & Social */}
+        {/* Grid Layout for Larger Screens */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+          {/* Social & Profile Section */}
           <NotificationSection
-            title="Profile & Social"
-            description="Notifications about your profile and social interactions"
+            title="Social & Profile"
+            icon={<Users className="w-6 h-6" />}
+            description="Manage notifications about your profile and social interactions"
           >
-            <NotificationToggle
+            <ToggleRow
               label="Profile Views"
-              description="When someone views your profile"
-              enabled={settings.profileViews}
-              onChange={() => handleToggle("profileViews")}
+              description="Get notified when someone views your profile"
+              inAppKey="profileViews"
+              icon={<Eye className="w-4 h-4" />}
             />
-
-            <NotificationToggle
+            <ToggleRow
               label="Follow Requests"
-              description="When someone requests to follow you"
-              enabled={settings.followRequests}
-              onChange={() => handleToggle("followRequests")}
+              description="Notifications for new followers and follow requests"
+              inAppKey="followRequests"
+              icon={<UserPlus className="w-4 h-4" />}
             />
           </NotificationSection>
 
-          {/* Gigs & Bookings */}
+          {/* Gigs & Bookings Section */}
           <NotificationSection
             title="Gigs & Bookings"
-            description="Notifications about gig opportunities and bookings"
+            icon={<Calendar className="w-6 h-6" />}
+            description="Stay updated on your gig invitations and booking activities"
           >
-            <NotificationToggle
+            <ToggleRow
               label="Gig Invites"
-              description="When you receive new gig invitations"
-              enabled={settings.gigInvites}
-              onChange={() => handleToggle("gigInvites")}
+              description="When you're invited to perform at a gig"
+              inAppKey="gigInvites"
+              icon={<Calendar className="w-4 h-4" />}
             />
-            <NotificationToggle
+            <ToggleRow
               label="Booking Requests"
-              description="When someone wants to book you"
-              enabled={settings.bookingRequests}
-              onChange={() => handleToggle("bookingRequests")}
+              description="Notifications for new booking requests"
+              inAppKey="bookingRequests"
+              icon={<Mail className="w-4 h-4" />}
             />
-            <NotificationToggle
+            <ToggleRow
               label="Booking Confirmations"
-              description="When your bookings are confirmed"
-              enabled={settings.bookingConfirmations}
-              onChange={() => handleToggle("bookingConfirmations")}
+              description="When your booking is confirmed"
+              inAppKey="bookingConfirmations"
+              icon={<Bell className="w-4 h-4" />}
             />
-            <NotificationToggle
+            <ToggleRow
               label="Gig Reminders"
-              description="Reminders for upcoming gigs"
-              enabled={settings.gigReminders}
-              onChange={() => handleToggle("gigReminders")}
+              description="Reminders for upcoming gigs and events"
+              inAppKey="gigReminders"
+              icon={<Zap className="w-4 h-4" />}
             />
           </NotificationSection>
 
-          {/* Messages */}
-          <NotificationSection
-            title="Messages & Communication"
-            description="Notifications about messages and communication"
-          >
-            <NotificationToggle
-              label="New Messages"
-              description="When you receive new messages"
-              enabled={settings.newMessages}
-              onChange={() => handleToggle("newMessages")}
-            />
-            <NotificationToggle
-              label="Message Requests"
-              description="When you receive message requests"
-              enabled={settings.messageRequests}
-              onChange={() => handleToggle("messageRequests")}
-            />
-          </NotificationSection>
+          {/* Messages Section */}
+          <div className="xl:col-span-2">
+            <NotificationSection
+              title="Messages & Communication"
+              icon={<MessageSquare className="w-6 h-6" />}
+              description="Control your messaging notifications"
+            >
+              <ToggleRow
+                label="New Messages"
+                description="Notifications for new direct messages and conversations"
+                inAppKey="newMessages"
+                icon={<MessageSquare className="w-4 h-4" />}
+              />
+            </NotificationSection>
+          </div>
 
-          {/* System & Updates */}
-          <NotificationSection
-            title="System & Updates"
-            description="Important updates about the platform"
-          >
-            <NotificationToggle
-              label="System Updates"
-              description="Important platform updates and maintenance"
-              enabled={settings.systemUpdates}
-              onChange={() => handleToggle("systemUpdates")}
-            />
-            <NotificationToggle
-              label="Feature Announcements"
-              description="New features and improvements"
-              enabled={settings.featureAnnouncements}
-              onChange={() => handleToggle("featureAnnouncements")}
-            />
-            <NotificationToggle
-              label="Security Alerts"
-              description="Important security notifications"
-              enabled={settings.securityAlerts}
-              onChange={() => handleToggle("securityAlerts")}
-            />
-          </NotificationSection>
-
-          {/* Marketing */}
-          <NotificationSection
-            title="Marketing & News"
-            description="Promotional emails and newsletters"
-          >
-            <NotificationToggle
-              label="Promotional Emails"
-              description="Special offers and promotions"
-              enabled={settings.promotionalEmails}
-              onChange={() => handleToggle("promotionalEmails")}
-            />
-            <NotificationToggle
-              label="Newsletter"
-              description="Weekly newsletter and updates"
-              enabled={settings.newsletter}
-              onChange={() => handleToggle("newsletter")}
-            />
-          </NotificationSection>
+          {/* System Section */}
+          <div className="xl:col-span-2">
+            <NotificationSection
+              title="System & Updates"
+              icon={<Settings className="w-6 h-6" />}
+              description="Important app updates and system notifications"
+            >
+              <ToggleRow
+                label="System Updates"
+                description="Important app updates, maintenance, and announcements"
+                inAppKey="systemUpdates"
+                icon={<Settings className="w-4 h-4" />}
+              />
+            </NotificationSection>
+          </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8 flex gap-4">
-          <Button
-            variant="outline"
-            onClick={resetToDefaults}
-            className={cn(
-              isDarkMode
-                ? "border-gray-600 text-gray-300 hover:bg-gray-800"
-                : "border-gray-300 text-gray-700 hover:bg-gray-100"
-            )}
-          >
-            Reset to Defaults
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={muteAll}
-            className={cn(
-              isDarkMode
-                ? "border-gray-600 text-gray-300 hover:bg-gray-800"
-                : "border-gray-300 text-gray-700 hover:bg-gray-100"
-            )}
-          >
-            Mute All
-          </Button>
+        {/* Enhanced Save Button Section */}
+        <div
+          className={cn(
+            "sticky bottom-6 mt-12 p-6 lg:p-8 rounded-2xl border-2 backdrop-blur-xl",
+            colors.border,
+            "bg-white/90 dark:bg-gray-900/90 border-opacity-50",
+            "shadow-2xl transform transition-all duration-300",
+            "hover:shadow-3xl hover:scale-105"
+          )}
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex-1">
+              <h3 className={cn("font-bold text-2xl mb-2", colors.text)}>
+                ✅ Preferences Updated
+              </h3>
+              <p className={cn("text-lg", colors.textMuted)}>
+                Your changes are automatically saved. You're all set!
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={() => router.back()}
+                className={cn(
+                  "px-8 py-4 rounded-2xl border-2 font-semibold text-lg transition-all duration-300",
+                  "hover:bg-opacity-20 hover:scale-105 active:scale-95",
+                  colors.border,
+                  colors.textSecondary,
+                  colors.background,
+                  "hover:shadow-lg"
+                )}
+              >
+                Back to Settings
+              </button>
+              <button
+                onClick={() => {
+                  alert("✅ Your notification preferences have been saved!");
+                  router.back();
+                }}
+                className={cn(
+                  "px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-300",
+                  "hover:scale-105 active:scale-95 hover:shadow-2xl",
+                  "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white",
+                  "shadow-lg"
+                )}
+              >
+                Done & Continue
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default NotificationsPage;
+}

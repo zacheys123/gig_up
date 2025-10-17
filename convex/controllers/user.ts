@@ -117,6 +117,8 @@ export const syncUserProfile = mutation({
           perfectRatings: 0,
           cancellationFreeStreak: 0,
         },
+        isPrivate: false,
+        pendingFollowRequests: [],
       });
     }
   },
@@ -244,6 +246,8 @@ const createUserData = (args: any, now: number) => {
 
     // Date fields
     bannedAt: 0,
+    isPrivate: false,
+    pendingFollowRequests: [],
   };
 };
 export const getAllUsers = query({
