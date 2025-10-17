@@ -482,9 +482,31 @@ const MainUser = ({
 
   const { isInGracePeriod } = useCheckTrial();
   // Mutation to track profile views
-  const trackProfileView = useMutation(api.controllers.user.trackProfileView);
+  const trackProfileView = useMutation(
+    api.controllers.notifications.trackProfileView
+  );
 
-  const handleProfileClick = () => {
+  const handleProfileClick = async () => {
+    // Track view only when profile is actually opened
+    if (userId && userId !== _id) {
+      try {
+        await trackProfileView({
+          viewedUserId: _id,
+          viewerUserId: userId,
+          isViewerInGracePeriod: isInGracePeriod,
+        });
+
+        // Show notification for pro users
+        if (currentUser?.tier === "pro" || isInGracePeriod) {
+          setShowViewNotification(true);
+          setTimeout(() => setShowViewNotification(false), 3000);
+        }
+      } catch (error) {
+        console.error("Failed to track profile view:", error);
+      }
+    }
+
+    // Navigate to profile
     router.push(`/search/${username}`);
   };
 

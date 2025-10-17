@@ -46,25 +46,7 @@ const SearchComponent = () => {
     clientOnly: false,
     musicianOnly: false,
   });
-  const trackProfileView = useMutation(api.controllers.user.trackProfileView);
-  // In your SearchComponent - ADD DEBOUNCING
-  const handleUserClick = useCallback(
-    debounce(async (viewedUser: UserProps) => {
-      if (!userId || userId === viewedUser.clerkId) return;
 
-      console.log("Tracking profile view for:", viewedUser.clerkId);
-
-      try {
-        await trackProfileView({
-          viewedUserId: viewedUser.clerkId,
-          viewerUserId: userId,
-        });
-      } catch (error) {
-        console.error("Failed to track profile view:", error);
-      }
-    }, 1000), // 1 second debounce
-    [userId, trackProfileView]
-  );
   // Featured user algorithm
   // More robust isFeaturedUser function
   const isFeaturedUser = (user: UserProps): boolean => {
@@ -358,7 +340,6 @@ const SearchComponent = () => {
                       damping: 25,
                       delay: index * 0.03,
                     }}
-                    onClick={() => handleUserClick(user)}
                   >
                     <MainUser {...user} isFeatured={isFeaturedUser(user)} />
                   </motion.div>
