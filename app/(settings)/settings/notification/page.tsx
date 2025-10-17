@@ -1,4 +1,4 @@
-// app/settings/notification/page.tsx - IMPROVED & RESPONSIVE
+// app/settings/notification/page.tsx - UPDATED WITH INDIVIDUAL LOADING
 "use client";
 
 import { useThemeColors } from "@/hooks/useTheme";
@@ -23,25 +23,11 @@ import { useRouter } from "next/navigation";
 import { NotificationSettings } from "@/convex/notificationsTypes";
 
 export default function NotificationSettingsPage() {
-  const { settings, updateSingleSetting, isLoading } =
-    useNotificationSettings();
+  const { settings, updateSettings, isLoading } = useNotificationSettings();
   const { colors } = useThemeColors();
-  const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  const handleToggle = async (
-    key: keyof NotificationSettings,
-    value: boolean
-  ) => {
-    setSaving(true);
-    try {
-      await updateSingleSetting(key, value);
-    } catch (error) {
-      console.error("Failed to update settings:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Remove the global saving state since we'll use individual states per switch
 
   const NotificationSection = ({
     title,
@@ -102,6 +88,7 @@ export default function NotificationSettingsPage() {
 
   type ValidInAppKey = (typeof validInAppKeys)[number];
 
+  // Individual ToggleRow component with its own loading state
   const ToggleRow = ({
     label,
     description,
@@ -112,84 +99,135 @@ export default function NotificationSettingsPage() {
     description: string;
     inAppKey: ValidInAppKey;
     icon?: React.ReactNode;
-  }) => (
-    <div
-      className={cn(
-        "flex flex-col sm:flex-row sm:items-center justify-between p-4 lg:p-6 rounded-xl transition-all duration-300",
-        "hover:shadow-md border border-transparent hover:border-gray-200 dark:hover:border-gray-700",
-        colors.hoverBg,
-        "group"
-      )}
-    >
-      <div className="flex items-start gap-4 flex-1 mb-4 sm:mb-0">
-        {icon && (
-          <div
-            className={cn(
-              "p-2 rounded-lg mt-1 flex-shrink-0 transition-colors duration-300",
-              "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
-              "group-hover:bg-blue-100 group-hover:text-blue-600 dark:group-hover:bg-blue-900/30 dark:group-hover:text-blue-400"
-            )}
-          >
-            {icon}
-          </div>
+  }) => {
+    const [localSaving, setLocalSaving] = useState(false);
+
+    const handleToggle = async (checked: boolean) => {
+      setLocalSaving(true);
+      try {
+        // Use updateSettings to send the entire settings object with the updated field
+        await updateSettings({
+          ...settings, // Send all current settings
+          [inAppKey]: checked, // Update the specific field
+        });
+      } catch (error) {
+        console.error("Failed to update settings:", error);
+      } finally {
+        setLocalSaving(false);
+      }
+    };
+
+    return (
+      <div
+        className={cn(
+          "flex flex-col sm:flex-row sm:items-center justify-between p-4 lg:p-6 rounded-xl transition-all duration-300",
+          "hover:shadow-md border-2",
+          settings[inAppKey]
+            ? "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/20"
+            : "border-transparent hover:border-gray-200 dark:hover:border-gray-700",
+          colors.hoverBg,
+          "group",
+          localSaving && "opacity-70"
         )}
-        <div className="flex-1 min-w-0">
-          <div
-            className={cn(
-              "font-semibold text-base lg:text-lg mb-2",
-              colors.text
-            )}
-          >
-            {label}
-          </div>
-          <div
-            className={cn(
-              "text-sm lg:text-base leading-relaxed",
-              colors.textMuted
-            )}
-          >
-            {description}
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Switch Container */}
-      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-        <div
-          className={cn(
-            "px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 min-w-[70px] text-center",
-            settings[inAppKey]
-              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 shadow-sm"
-              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-          )}
-        >
-          {settings[inAppKey] ? "Enabled" : "Disabled"}
-        </div>
-
-        <div className="relative">
-          <Switch
-            checked={settings[inAppKey] as boolean}
-            onCheckedChange={(checked) => handleToggle(inAppKey, checked)}
-            disabled={saving || isLoading}
-            className={cn(
-              "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-400",
-              "dark:data-[state=unchecked]:bg-gray-600",
-              "transition-all duration-300 transform",
-              "scale-125 lg:scale-110",
-              "hover:scale-135 lg:hover:scale-125",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
-          />
-          {/* Loading indicator */}
-          {(saving || isLoading) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 bg-opacity-80 rounded-full">
-              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      >
+        <div className="flex items-start gap-4 flex-1 mb-4 sm:mb-0">
+          {icon && (
+            <div
+              className={cn(
+                "p-2 rounded-lg mt-1 flex-shrink-0 transition-all duration-300",
+                settings[inAppKey]
+                  ? "bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-300 shadow-sm"
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                "group-hover:scale-105",
+                localSaving && "animate-pulse"
+              )}
+            >
+              {icon}
             </div>
           )}
+          <div className="flex-1 min-w-0">
+            <div
+              className={cn(
+                "font-semibold text-base lg:text-lg mb-2 transition-colors duration-300",
+                settings[inAppKey]
+                  ? "text-green-700 dark:text-green-300"
+                  : colors.text
+              )}
+            >
+              {label}
+              {settings[inAppKey] && (
+                <span className="ml-2 text-xs bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300 px-2 py-1 rounded-full">
+                  ACTIVE
+                </span>
+              )}
+              {localSaving && (
+                <span className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300 px-2 py-1 rounded-full animate-pulse">
+                  SAVING...
+                </span>
+              )}
+            </div>
+            <div
+              className={cn(
+                "text-sm lg:text-base leading-relaxed transition-colors duration-300",
+                settings[inAppKey]
+                  ? "text-green-600 dark:text-green-400"
+                  : colors.textMuted
+              )}
+            >
+              {description}
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Switch Container */}
+        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+          <div
+            className={cn(
+              "px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 min-w-[70px] text-center border-2",
+              settings[inAppKey]
+                ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700 shadow-lg scale-105"
+                : "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600",
+              localSaving && "opacity-70"
+            )}
+          >
+            {settings[inAppKey] ? (
+              <div className="flex items-center justify-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                Enabled
+              </div>
+            ) : (
+              "Disabled"
+            )}
+          </div>
+
+          <div className="relative">
+            <Switch
+              checked={settings[inAppKey] as boolean}
+              onCheckedChange={handleToggle}
+              disabled={localSaving || isLoading}
+              className={cn(
+                "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-400",
+                "dark:data-[state=unchecked]:bg-gray-600",
+                "transition-all duration-300 transform",
+                "scale-125 lg:scale-110",
+                "hover:scale-135 lg:hover:scale-125",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                settings[inAppKey] &&
+                  "shadow-lg shadow-green-200 dark:shadow-green-800",
+                localSaving && "opacity-70"
+              )}
+            />
+            {/* Loading indicator - Only shows for this specific switch */}
+            {localSaving && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 bg-opacity-90 rounded-full border-2 border-blue-300 dark:border-blue-700">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (isLoading) {
     return (

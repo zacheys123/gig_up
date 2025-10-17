@@ -166,43 +166,47 @@ export const getNotificationSettings = query({
 
 // convex/notifications.ts - FIXED VERSION
 // convex/notifications.ts - FIX THE MUTATION SCHEMA
+// convex/notifications.ts - CORRECTED MUTATION
+// convex/notifications.ts - UPDATED MUTATION
 export const updateNotificationSettings = mutation({
   args: {
     userId: v.string(),
+
     settings: v.object({
-      // Profile & Social - ALL OPTIONAL
-      profileViews: v.optional(v.boolean()),
-      followRequests: v.optional(v.boolean()),
+      _creationTime: v.optional(v.number()),
+      // Profile & Social - ALL REQUIRED (since we're sending full object)
+      profileViews: v.boolean(),
+      followRequests: v.boolean(),
 
-      // Gigs & Bookings - ALL OPTIONAL
-      gigInvites: v.optional(v.boolean()),
-      bookingRequests: v.optional(v.boolean()),
-      bookingConfirmations: v.optional(v.boolean()),
-      gigReminders: v.optional(v.boolean()),
+      // Gigs & Bookings - ALL REQUIRED
+      gigInvites: v.boolean(),
+      bookingRequests: v.boolean(),
+      bookingConfirmations: v.boolean(),
+      gigReminders: v.boolean(),
 
-      // Messages & Communication - ALL OPTIONAL
-      newMessages: v.optional(v.boolean()),
-      messageRequests: v.optional(v.boolean()),
+      // Messages & Communication - ALL REQUIRED
+      newMessages: v.boolean(),
+      messageRequests: v.boolean(),
 
-      // System & Updates - ALL OPTIONAL
-      systemUpdates: v.optional(v.boolean()),
-      featureAnnouncements: v.optional(v.boolean()),
-      securityAlerts: v.optional(v.boolean()),
+      // System & Updates - ALL REQUIRED
+      systemUpdates: v.boolean(),
+      featureAnnouncements: v.boolean(),
+      securityAlerts: v.boolean(),
 
-      // Marketing - ALL OPTIONAL
-      promotionalEmails: v.optional(v.boolean()),
-      newsletter: v.optional(v.boolean()),
+      // Marketing - ALL REQUIRED
+      promotionalEmails: v.boolean(),
+      newsletter: v.boolean(),
 
-      // Push Notifications - ALL OPTIONAL
-      pushEnabled: v.optional(v.boolean()),
-      pushProfileViews: v.optional(v.boolean()),
-      pushFollowRequests: v.optional(v.boolean()),
-      pushGigInvites: v.optional(v.boolean()),
-      pushBookingRequests: v.optional(v.boolean()),
-      pushBookingConfirmations: v.optional(v.boolean()),
-      pushGigReminders: v.optional(v.boolean()),
-      pushNewMessages: v.optional(v.boolean()),
-      pushSystemUpdates: v.optional(v.boolean()),
+      // Push Notifications - ALL REQUIRED
+      pushEnabled: v.boolean(),
+      pushProfileViews: v.boolean(),
+      pushFollowRequests: v.boolean(),
+      pushGigInvites: v.boolean(),
+      pushBookingRequests: v.boolean(),
+      pushBookingConfirmations: v.boolean(),
+      pushGigReminders: v.boolean(),
+      pushNewMessages: v.boolean(),
+      pushSystemUpdates: v.boolean(),
     }),
   },
   handler: async (ctx, args) => {
@@ -213,23 +217,14 @@ export const updateNotificationSettings = mutation({
       .withIndex("by_user_id", (q) => q.eq("userId", userId))
       .first();
 
-    // Filter out undefined values to only update provided fields
-    const cleanSettings = Object.fromEntries(
-      Object.entries(settings).filter(([_, value]) => value !== undefined)
-    );
-
     if (existing) {
-      await ctx.db.patch(existing._id, cleanSettings);
+      // Update with the full settings object
+      await ctx.db.patch(existing._id, settings);
     } else {
-      // For new records, merge with defaults
-      const defaultSettings = { ...DEFAULT_NOTIFICATION_SETTINGS };
-      // Remove userId from defaults to avoid conflict
-      delete (defaultSettings as any).userId;
-
+      // Create new settings with the provided full object
       await ctx.db.insert("notificationSettings", {
         userId,
-        ...defaultSettings,
-        ...cleanSettings,
+        ...settings,
       });
     }
 

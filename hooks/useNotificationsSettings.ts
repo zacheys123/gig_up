@@ -1,4 +1,4 @@
-// hooks/useNotificationSettings.ts - UPDATED
+// hooks/useNotificationSettings.ts - UPDATED TO SEND ALL SETTINGS
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
@@ -7,6 +7,7 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   NotificationSettings,
 } from "@/convex/notificationsTypes";
+
 export const useNotificationSettings = () => {
   const { userId } = useAuth();
 
@@ -26,33 +27,71 @@ export const useNotificationSettings = () => {
     return settingsData as NotificationSettings;
   }, [settingsData, userId]);
 
-  // Update single setting - sends only the changed field
+  // Update single setting - sends ALL settings with the updated field
   const updateSingleSetting = useCallback(
     async (key: keyof NotificationSettings, value: boolean) => {
       if (!userId) throw new Error("User not authenticated");
 
-      return updateSettingsMutation({
-        userId,
-        settings: { [key]: value },
-      });
-    },
-    [userId, updateSettingsMutation]
-  );
+      // Create updated settings with ALL fields
+      const updatedSettings: NotificationSettings = {
+        ...settings, // Current settings (all fields)
+        [key]: value, // Update the specific field
+        userId, // Ensure userId is included
+      };
 
-  // Update multiple settings at once
-  const updateSettings = useCallback(
-    async (newSettings: Partial<NotificationSettings>) => {
-      if (!userId) throw new Error("User not authenticated");
-
-      // Remove userId if it exists
-      const { userId: _, ...settingsToUpdate } = newSettings;
+      // Remove userId before sending (backend will handle it)
+      const { userId: _, ...settingsToUpdate } = updatedSettings;
 
       return updateSettingsMutation({
         userId,
         settings: settingsToUpdate,
       });
     },
-    [userId, updateSettingsMutation]
+    [userId, updateSettingsMutation, settings] // Add settings to dependencies
+  );
+
+  // Update multiple settings at once
+  // Alternative: Simple filtering in the update function
+  const updateSettings = useCallback(
+    async (newSettings: Partial<NotificationSettings>) => {
+      if (!userId) throw new Error("User not authenticated");
+
+      // Merge with current settings
+      const updatedSettings = { ...settings, ...newSettings };
+
+      // Create clean object with only the fields your validator expects
+      const cleanSettings = {
+        profileViews: updatedSettings.profileViews,
+        followRequests: updatedSettings.followRequests,
+        gigInvites: updatedSettings.gigInvites,
+        bookingRequests: updatedSettings.bookingRequests,
+        bookingConfirmations: updatedSettings.bookingConfirmations,
+        gigReminders: updatedSettings.gigReminders,
+        newMessages: updatedSettings.newMessages,
+        messageRequests: updatedSettings.messageRequests,
+        systemUpdates: updatedSettings.systemUpdates,
+        featureAnnouncements: updatedSettings.featureAnnouncements,
+        securityAlerts: updatedSettings.securityAlerts,
+        promotionalEmails: updatedSettings.promotionalEmails,
+        newsletter: updatedSettings.newsletter,
+        // Add push settings if your validator expects them
+        pushEnabled: updatedSettings.pushEnabled,
+        pushProfileViews: updatedSettings.pushProfileViews,
+        pushFollowRequests: updatedSettings.pushFollowRequests,
+        pushGigInvites: updatedSettings.pushGigInvites,
+        pushBookingRequests: updatedSettings.pushBookingRequests,
+        pushBookingConfirmations: updatedSettings.pushBookingConfirmations,
+        pushGigReminders: updatedSettings.pushGigReminders,
+        pushNewMessages: updatedSettings.pushNewMessages,
+        pushSystemUpdates: updatedSettings.pushSystemUpdates,
+      };
+
+      return updateSettingsMutation({
+        userId,
+        settings: cleanSettings,
+      });
+    },
+    [userId, updateSettingsMutation, settings]
   );
 
   return {

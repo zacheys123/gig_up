@@ -1,7 +1,34 @@
-// convex/notifications.ts
-
+// convex/notifications.ts - FIXED VERSION
 import { MutationCtx } from "./_generated/server";
-import { notificationTypeToSettingMap } from "./controllers/notifications";
+import { NotificationSettings, NotificationType } from "./notificationsTypes";
+export const notificationTypeToSettingMap: Record<
+  NotificationType,
+  keyof NotificationSettings
+> = {
+  // Profile & Social
+  profile_view: "profileViews",
+  new_follower: "followRequests",
+  follow_request: "followRequests",
+  follow_accepted: "followRequests",
+  like: "profileViews",
+  new_review: "profileViews",
+  review_received: "profileViews",
+  share: "profileViews",
+
+  // Messages & Communication
+  new_message: "newMessages",
+
+  // Gigs & Bookings
+  gig_invite: "gigInvites",
+  gig_application: "bookingRequests",
+  gig_approved: "bookingConfirmations",
+  gig_rejected: "bookingRequests",
+  gig_cancelled: "bookingRequests",
+  gig_reminder: "gigReminders",
+
+  // System
+  system_alert: "systemUpdates",
+};
 
 // REUSABLE HELPER FUNCTION - ALWAYS RESPECTS RECIPIENT SETTINGS
 export const createNotificationInternal = async (
@@ -47,17 +74,21 @@ export const createNotificationInternal = async (
       .withIndex("by_user_id", (q) => q.eq("userId", userId))
       .first();
 
-    const settingKey =
-      notificationTypeToSettingMap[
-        type as keyof typeof notificationTypeToSettingMap
-      ];
-
     // 4. DETERMINE IF WE SHOULD CREATE NOTIFICATION
     let shouldCreateNotification = true;
 
-    if (notificationSettings && settingKey) {
-      // ✅ ALWAYS check recipient's setting first
-      shouldCreateNotification = notificationSettings[settingKey] !== false;
+    if (notificationSettings) {
+      const settingKey =
+        notificationTypeToSettingMap[
+          type as keyof typeof notificationTypeToSettingMap
+        ];
+
+      if (settingKey) {
+        // ✅ ALWAYS check recipient's setting first
+        // Use type assertion to safely access the property
+        const settings = notificationSettings as NotificationSettings;
+        shouldCreateNotification = settings[settingKey] !== false;
+      }
     }
 
     // 5. Create notification ONLY if recipient has setting enabled
