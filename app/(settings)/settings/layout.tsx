@@ -21,19 +21,43 @@ export default function SettingsLayout({
   };
 
   return (
-    <div className="bg-black h-full w-full overflow-scroll">
+    <div className="bg-background text-foreground h-full w-full overflow-scroll">
       <div className="flex items-center justify-between mt-4 mx-6">
         {/* Back Button */}
         <Logo />
 
         {/* User Button */}
-        <UserButton />
+        <UserButton
+          appearance={{
+            elements: {
+              rootBox: "text-foreground",
+              userButtonTrigger: "text-foreground hover:bg-accent",
+              userButtonPopoverCard:
+                "bg-card border-border text-card-foreground",
+              userPreviewMainIdentifier: "text-card-foreground",
+              userPreviewSecondaryIdentifier: "text-muted-foreground",
+              userButtonPopoverActionButton:
+                "text-card-foreground hover:bg-accent",
+              userButtonPopoverActionButtonText: "text-card-foreground",
+              userButtonPopoverFooter: "bg-muted",
+            },
+          }}
+        />
       </div>
 
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,
+          classNames: {
+            toast: "bg-card border-border text-card-foreground",
+            title: "text-card-foreground",
+            description: "text-muted-foreground",
+            actionButton:
+              "bg-primary text-primary-foreground hover:bg-primary/90",
+            cancelButton: "bg-muted text-muted-foreground hover:bg-muted/80",
+            closeButton: "bg-muted text-muted-foreground hover:bg-muted/80",
+          },
         }}
       />
 

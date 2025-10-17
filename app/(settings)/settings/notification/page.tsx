@@ -1,4 +1,3 @@
-// app/settings/notification/page.tsx - UPDATED WITH INDIVIDUAL LOADING
 "use client";
 
 import { useThemeColors } from "@/hooks/useTheme";
@@ -21,13 +20,12 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { NotificationSettings } from "@/convex/notificationsTypes";
+import { color } from "framer-motion";
 
 export default function NotificationSettingsPage() {
   const { settings, updateSettings, isLoading } = useNotificationSettings();
   const { colors } = useThemeColors();
   const router = useRouter();
-
-  // Remove the global saving state since we'll use individual states per switch
 
   const NotificationSection = ({
     title,
@@ -46,14 +44,14 @@ export default function NotificationSettingsPage() {
         "hover:shadow-lg hover:border-opacity-70",
         colors.border,
         colors.card,
-        "backdrop-blur-sm bg-white/95 dark:bg-gray-900/95"
+        "backdrop-blur-sm bg-card/95"
       )}
     >
       <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-6">
         <div
           className={cn(
             "p-3 rounded-xl flex-shrink-0",
-            "bg-gradient-to-br from-blue-500 to-blue-600 text-white",
+            "bg-primary text-primary-foreground",
             "shadow-lg"
           )}
         >
@@ -89,6 +87,7 @@ export default function NotificationSettingsPage() {
   type ValidInAppKey = (typeof validInAppKeys)[number];
 
   // Individual ToggleRow component with its own loading state
+  // Individual ToggleRow component with its own loading state
   const ToggleRow = ({
     label,
     description,
@@ -105,10 +104,9 @@ export default function NotificationSettingsPage() {
     const handleToggle = async (checked: boolean) => {
       setLocalSaving(true);
       try {
-        // Use updateSettings to send the entire settings object with the updated field
         await updateSettings({
-          ...settings, // Send all current settings
-          [inAppKey]: checked, // Update the specific field
+          ...settings,
+          [inAppKey]: checked,
         });
       } catch (error) {
         console.error("Failed to update settings:", error);
@@ -117,28 +115,45 @@ export default function NotificationSettingsPage() {
       }
     };
 
+    const isEnabled = settings[inAppKey] as boolean;
+
     return (
       <div
         className={cn(
           "flex flex-col sm:flex-row sm:items-center justify-between p-4 lg:p-6 rounded-xl transition-all duration-300",
-          "hover:shadow-md border-2",
-          settings[inAppKey]
-            ? "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/20"
-            : "border-transparent hover:border-gray-200 dark:hover:border-gray-700",
-          colors.hoverBg,
-          "group",
-          localSaving && "opacity-70"
+          "hover:shadow-md border",
+          isEnabled
+            ? cn(
+                "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10",
+                "shadow-sm"
+              )
+            : cn(
+                colors.background + colors.borderMuted,
+                "hover:border-gray-300 dark:hover:border-gray-600"
+              ),
+          "group relative overflow-hidden",
+          localSaving && "opacity-70 cursor-wait"
         )}
       >
-        <div className="flex items-start gap-4 flex-1 mb-4 sm:mb-0">
+        {/* Subtle background gradient for enabled state */}
+        {isEnabled && (
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-sky-50/10 dark:from-blue-900/5 dark:to-sky-900/5" />
+        )}
+
+        <div className="flex items-start gap-4 flex-1 mb-4 sm:mb-0 relative z-10">
           {icon && (
             <div
               className={cn(
-                "p-2 rounded-lg mt-1 flex-shrink-0 transition-all duration-300",
-                settings[inAppKey]
-                  ? "bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-300 shadow-sm"
-                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                "group-hover:scale-105",
+                "p-2.5 rounded-xl mt-0.5 flex-shrink-0 transition-all duration-300 border",
+                isEnabled
+                  ? cn(
+                      "text-blue-600 bg-blue-100 border-blue-200 dark:text-blue-400 dark:bg-blue-900/30 dark:border-blue-800",
+                      "shadow-sm group-hover:scale-105"
+                    )
+                  : cn(
+                      "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-700",
+                      "group-hover:bg-gray-200 dark:group-hover:bg-gray-700 group-hover:scale-105"
+                    ),
                 localSaving && "animate-pulse"
               )}
             >
@@ -146,32 +161,43 @@ export default function NotificationSettingsPage() {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div
-              className={cn(
-                "font-semibold text-base lg:text-lg mb-2 transition-colors duration-300",
-                settings[inAppKey]
-                  ? "text-green-700 dark:text-green-300"
-                  : colors.text
-              )}
-            >
-              {label}
-              {settings[inAppKey] && (
-                <span className="ml-2 text-xs bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300 px-2 py-1 rounded-full">
-                  ACTIVE
-                </span>
-              )}
-              {localSaving && (
-                <span className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300 px-2 py-1 rounded-full animate-pulse">
-                  SAVING...
-                </span>
-              )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+              <div
+                className={cn(
+                  "font-semibold text-base lg:text-lg transition-colors duration-300",
+                  isEnabled ? colors.textMuted : colors.infoText
+                )}
+              >
+                {label}
+              </div>
+              <div className="flex items-center gap-2">
+                {isEnabled && (
+                  <span
+                    className={cn(
+                      "text-xs font-medium px-2 py-1 rounded-full border transition-all duration-300",
+                      "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800",
+                      "group-hover:scale-105"
+                    )}
+                  >
+                    ACTIVE
+                  </span>
+                )}
+                {localSaving && (
+                  <span
+                    className={cn(
+                      "text-xs font-medium px-2 py-1 rounded-full border animate-pulse",
+                      "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800"
+                    )}
+                  >
+                    SAVING...
+                  </span>
+                )}
+              </div>
             </div>
             <div
               className={cn(
                 "text-sm lg:text-base leading-relaxed transition-colors duration-300",
-                settings[inAppKey]
-                  ? "text-green-600 dark:text-green-400"
-                  : colors.textMuted
+                isEnabled ? colors.textMuted : colors.infoBorder
               )}
             >
               {description}
@@ -180,47 +206,95 @@ export default function NotificationSettingsPage() {
         </div>
 
         {/* Enhanced Switch Container */}
-        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto relative z-10">
+          {/* Status Badge */}
           <div
             className={cn(
-              "px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 min-w-[70px] text-center border-2",
-              settings[inAppKey]
-                ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700 shadow-lg scale-105"
-                : "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600",
+              "px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 min-w-[80px] text-center border",
+              isEnabled
+                ? cn(
+                    "text-blue-800 bg-blue-100 border-blue-300 dark:text-blue-200 dark:bg-blue-900/40 dark:border-blue-700",
+                    "shadow-sm group-hover:shadow-md"
+                  )
+                : cn(
+                    "text-gray-600 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600",
+                    "group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
+                  ),
               localSaving && "opacity-70"
             )}
           >
-            {settings[inAppKey] ? (
-              <div className="flex items-center justify-center gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                Enabled
+            {isEnabled ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span>Enabled</span>
               </div>
             ) : (
-              "Disabled"
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                <span>Disabled</span>
+              </div>
             )}
           </div>
 
+          {/* Enhanced Switch */}
           <div className="relative">
-            <Switch
-              checked={settings[inAppKey] as boolean}
-              onCheckedChange={handleToggle}
-              disabled={localSaving || isLoading}
+            <div
               className={cn(
-                "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-400",
-                "dark:data-[state=unchecked]:bg-gray-600",
-                "transition-all duration-300 transform",
-                "scale-125 lg:scale-110",
-                "hover:scale-135 lg:hover:scale-125",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                settings[inAppKey] &&
-                  "shadow-lg shadow-green-200 dark:shadow-green-800",
-                localSaving && "opacity-70"
+                "p-1 rounded-2xl transition-all duration-200",
+                isEnabled
+                  ? "bg-blue-100/50 dark:bg-blue-900/20 group-hover:bg-blue-200/50 dark:group-hover:bg-blue-800/20"
+                  : "bg-gray-100/50 dark:bg-gray-800/20 group-hover:bg-gray-200/50 dark:group-hover:bg-gray-700/20"
               )}
-            />
-            {/* Loading indicator - Only shows for this specific switch */}
+            >
+              <Switch
+                checked={isEnabled}
+                onCheckedChange={handleToggle}
+                disabled={localSaving || isLoading}
+                className={cn(
+                  // Base styles
+                  "relative transition-all duration-200",
+                  "scale-110 lg:scale-100",
+                  "hover:scale-115 lg:hover:scale-105",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+
+                  // Switch colors - using blue instead of green for better visibility
+                  "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600",
+                  "data-[state=unchecked]:bg-gray-400 data-[state=unchecked]:border-gray-400",
+                  "dark:data-[state=unchecked]:bg-gray-600 dark:data-[state=unchecked]:border-gray-600",
+
+                  // Border
+                  "border-2 border-transparent",
+
+                  // Enhanced effects
+                  isEnabled &&
+                    cn("shadow-lg shadow-blue-200/50 dark:shadow-blue-800/30"),
+
+                  // Hover effects
+                  "hover:data-[state=checked]:bg-blue-700 hover:data-[state=unchecked]:bg-gray-500",
+                  "dark:hover:data-[state=unchecked]:bg-gray-500",
+
+                  localSaving && "opacity-70"
+                )}
+              />
+            </div>
+
+            {/* Enhanced Loading Overlay */}
             {localSaving && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 bg-opacity-90 rounded-full border-2 border-blue-300 dark:border-blue-700">
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center rounded-2xl backdrop-blur-sm",
+                  "bg-white/90 dark:bg-gray-900/90 border",
+                  isEnabled
+                    ? "border-blue-200 dark:border-blue-800"
+                    : "border-gray-200 dark:border-gray-700"
+                )}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
+                    Saving...
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -238,7 +312,12 @@ export default function NotificationSettingsPage() {
         )}
       >
         <div className="text-center">
-          <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div
+            className={cn(
+              "w-12 h-12 border-3 border-t-transparent rounded-full animate-spin mx-auto mb-4",
+              colors.primaryBg
+            )}
+          ></div>
           <h2 className={cn("text-2xl font-bold mb-2", colors.text)}>
             Loading Preferences
           </h2>
@@ -260,7 +339,7 @@ export default function NotificationSettingsPage() {
       {/* Enhanced Full Width Header */}
       <div
         className={cn(
-          "w-full border-b bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm",
+          "w-full border-b bg-background/95 backdrop-blur-sm",
           colors.border,
           "sticky top-0 z-10"
         )}
@@ -275,7 +354,7 @@ export default function NotificationSettingsPage() {
                   "hover:bg-opacity-20 hover:scale-105 active:scale-95",
                   colors.textMuted,
                   colors.hoverBg,
-                  "border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600",
+                  "border-2 border-transparent hover:border-border",
                   "w-fit"
                 )}
               >
@@ -301,9 +380,9 @@ export default function NotificationSettingsPage() {
             <div
               className={cn(
                 "px-4 py-3 lg:px-6 lg:py-4 rounded-2xl text-base lg:text-lg font-semibold",
-                "bg-gradient-to-r from-blue-500 to-blue-600 text-white",
-                "shadow-lg border-2 border-blue-200 dark:border-blue-800",
-                "flex items-center gap-3"
+                "bg-primary text-primary-foreground",
+                "shadow-lg border-2 border-primary/20",
+                "flex items-center gap-3 transition-transform duration-300 hover:scale-105"
               )}
             >
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -323,7 +402,7 @@ export default function NotificationSettingsPage() {
             "mb-8 lg:mb-12 p-6 lg:p-8 rounded-2xl border-2 border-dashed transition-all duration-300",
             "hover:shadow-xl hover:border-solid transform hover:-translate-y-1",
             colors.border,
-            "bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20",
+            "bg-muted/50",
             "backdrop-blur-sm"
           )}
         >
@@ -331,7 +410,7 @@ export default function NotificationSettingsPage() {
             <div
               className={cn(
                 "p-4 rounded-2xl flex-shrink-0",
-                "bg-gradient-to-br from-blue-500 to-blue-600 text-white",
+                "bg-primary text-primary-foreground",
                 "shadow-lg animate-pulse"
               )}
             >
@@ -452,7 +531,7 @@ export default function NotificationSettingsPage() {
           className={cn(
             "sticky bottom-6 mt-12 p-6 lg:p-8 rounded-2xl border-2 backdrop-blur-xl",
             colors.border,
-            "bg-white/90 dark:bg-gray-900/90 border-opacity-50",
+            "bg-card/90 border-opacity-50",
             "shadow-2xl transform transition-all duration-300",
             "hover:shadow-3xl hover:scale-105"
           )}
@@ -488,7 +567,7 @@ export default function NotificationSettingsPage() {
                 className={cn(
                   "px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-300",
                   "hover:scale-105 active:scale-95 hover:shadow-2xl",
-                  "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white",
+                  "bg-primary text-primary-foreground hover:bg-primary/90",
                   "shadow-lg"
                 )}
               >
