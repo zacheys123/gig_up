@@ -13,6 +13,7 @@ import {
   DollarSign,
   Calendar,
   Star,
+  Settings,
 } from "lucide-react";
 import { IoHomeOutline } from "react-icons/io5";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -83,12 +84,12 @@ const UserNav = () => {
             label: "Videos",
           },
           {
-            href: `/profile/rates`,
+            href: `/settings`,
             icon: {
-              active: <DollarSign size={22} className="fill-current" />,
-              inactive: <DollarSign size={22} />,
+              active: <Settings size={22} className="fill-current" />,
+              inactive: <Settings size={22} />,
             },
-            label: "Rates",
+            label: "Settings",
           },
           {
             href: `/profile/availability`,

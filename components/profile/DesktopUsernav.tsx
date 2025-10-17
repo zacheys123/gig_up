@@ -114,10 +114,10 @@ const DesktopUserNav = () => {
                 description: "Performance portfolio",
               },
               {
-                href: `/profile/rates`,
-                icon: <DollarSign size={20} />,
-                label: "Rates",
-                description: "Pricing & fees",
+                href: `/settings`,
+                icon: <Settings size={20} />,
+                label: "Settings",
+                description: "Seetings and notifications",
               },
               {
                 href: `/profile/availability`,

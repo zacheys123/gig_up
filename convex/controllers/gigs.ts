@@ -1,6 +1,7 @@
 // convex/controllers/gigs.ts
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
+import { createNotificationInternal } from "../createNotificationInternal";
 
 // export const getAllGigs = query({
 //   args: {
@@ -176,6 +177,77 @@ export const getPaginatedGigs = query({
 });
 
 // Basic gig operations from previous example
+// followers
+// export const createGig = mutation({
+//   args: {
+//     postedBy: v.id("users"),
+//     title: v.string(),
+//     secret: v.string(),
+//     bussinesscat: v.string(),
+//     logo: v.string(),
+//     time: v.object({
+//       from: v.string(),
+//       to: v.string(),
+//     }),
+//   },
+//   handler: async (ctx, args) => {
+//     const { postedBy, title } = args;
+
+//     // 1. Create the gig
+//     const gigId = await ctx.db.insert("gigs", {
+//       ...args,
+//       date: Date.now(),
+//       isTaken: false,
+//       isPending: false,
+//       bandCategory: [],
+//       viewCount: [],
+//       bookCount: [],
+//       bookingHistory: [],
+//       paymentStatus: "pending",
+//       gigRating: 0,
+//       vocalistGenre: [],
+//     });
+
+//     // 2. Get poster info
+//     const posterUser = await ctx.db.get(postedBy);
+//     if (!posterUser) return gigId;
+
+//     // 3. Compute followers dynamically - find users who have this user in their following list
+//     const allUsers = await ctx.db
+//       .query("users")
+//       .filter((q) => q.neq(q.field("clerkId"), posterUser.clerkId)) // Exclude poster
+//       .collect();
+
+//     const followers = allUsers.filter((user) => {
+//       // Check if user.following array exists and contains the poster's clerkId
+//       return user.followings && user.followings.includes(posterUser.clerkId);
+//     });
+
+//     // 4. Create notifications for followers
+//     const notificationPromises = followers.map(async (follower) => {
+//       return createNotificationInternal(ctx, {
+//         userId: follower.clerkId,
+//         type: "gig_invite",
+//         title: "New Gig Posted!",
+//         message: `${posterUser.firstname} posted: "${title}"`,
+//         image: posterUser.picture,
+//         actionUrl: `/gigs/${gigId}`,
+//         relatedUserId: posterUser.clerkId,
+//         metadata: {
+//           senderId: posterUser.clerkId,
+//           senderName: posterUser.firstname,
+//           gigId: gigId,
+//           gigTitle: title,
+//         },
+//       });
+//     });
+
+//     await Promise.all(notificationPromises);
+
+//     return gigId;
+//   },
+// });
+// interest based
 export const createGig = mutation({
   args: {
     postedBy: v.id("users"),
@@ -187,9 +259,14 @@ export const createGig = mutation({
       from: v.string(),
       to: v.string(),
     }),
-    // Add other required fields as needed
+    // Add genre/category if available
+    genre: v.optional(v.string()),
+    location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const { postedBy, title, genre, location } = args;
+
+    // 1. Create the gig
     const gigId = await ctx.db.insert("gigs", {
       ...args,
       date: Date.now(),
@@ -204,10 +281,59 @@ export const createGig = mutation({
       vocalistGenre: [],
     });
 
+    // 2. Get poster info
+    const posterUser = await ctx.db.get(postedBy);
+    if (!posterUser) return gigId;
+
+    // 3. Find relevant musicians based on criteria
+    let relevantUsersQuery = ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("isMusician"), true)) // Only musicians
+      .filter((q) => q.neq(q.field("clerkId"), posterUser.clerkId)); // Exclude poster
+
+    // Add filters based on available data
+    if (genre) {
+      // Find musicians who have this genre in their preferences
+      relevantUsersQuery = relevantUsersQuery.filter((q) =>
+        q.eq(q.field("genres"), genre)
+      );
+    }
+
+    if (location && posterUser.city) {
+      // Find musicians in the same city
+      relevantUsersQuery = relevantUsersQuery.filter((q) =>
+        q.eq(q.field("city"), posterUser.city)
+      );
+    }
+
+    const relevantUsers = await relevantUsersQuery.take(20); // Limit to avoid spam
+
+    // 4. Create notifications
+    const notificationPromises = relevantUsers.map(async (user) => {
+      return createNotificationInternal(ctx, {
+        userId: user.clerkId,
+        type: "gig_invite",
+        title: "New Gig Opportunity! 🎵",
+        message: `New ${genre || "gig"} posted in ${posterUser.city || "your area"}: "${title}"`,
+        image: posterUser.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserId: posterUser.clerkId,
+        metadata: {
+          senderId: posterUser.clerkId,
+          senderName: posterUser.firstname,
+          gigId: gigId,
+          gigTitle: title,
+          genre: genre,
+          location: posterUser.city,
+        },
+      });
+    });
+
+    await Promise.all(notificationPromises);
+
     return gigId;
   },
 });
-
 export const getGigById = query({
   args: { gigId: v.id("gigs") },
   handler: async (ctx, args) => {

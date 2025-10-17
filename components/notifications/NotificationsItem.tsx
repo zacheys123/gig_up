@@ -1,124 +1,130 @@
 // components/notifications/NotificationItem.tsx
 "use client";
-import Link from "next/link";
-
-import { useNotificationActions } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
-import { useThemeColors } from "@/hooks/useTheme";
-import { Check, ExternalLink } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { Notification } from "@/types/notifications";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { Check, MoreHorizontal, Clock } from "lucide-react";
 
 interface NotificationItemProps {
-  notification: Notification;
+  notification: any;
   onClose: () => void;
+  getNotificationIcon: (type: string) => React.ReactNode;
+  themeConfig: any;
+  iconConfig: any;
 }
 
 export function NotificationItem({
   notification,
   onClose,
+  getNotificationIcon,
+  themeConfig,
+  iconConfig,
 }: NotificationItemProps) {
-  const { markAsRead } = useNotificationActions();
-  const { colors } = useThemeColors();
+  // Format time relative or absolute
+  const formatTime = (timestamp: number) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
-  const handleClick = async () => {
-    if (!notification.isRead) {
-      await markAsRead({
-        notificationId: notification._id,
-        read: true,
-      });
-    }
-    onClose();
-  };
-
-  const handleMarkRead = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!notification.isRead) {
-      await markAsRead({
-        notificationId: notification._id,
-        read: true,
-      });
+    if (diffInHours < 1) {
+      const minutes = Math.floor(diffInHours * 60);
+      return `${minutes}m ago`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      return date.toLocaleDateString();
     }
   };
 
   return (
-    <Link
-      href={notification.actionUrl || "#"}
-      onClick={handleClick}
+    <motion.div
+      whileHover={{ scale: 1.005 }}
       className={cn(
-        "block p-4 transition-colors relative group",
-        "hover:bg-gray-50 dark:hover:bg-gray-750",
-        !notification.isRead && "bg-blue-50 dark:bg-blue-900/20"
+        "p-4 transition-all duration-200 cursor-pointer group",
+        "border-l-4 hover:border-l-blue-400/50",
+        !notification.isRead
+          ? "border-l-blue-500 bg-blue-500/5"
+          : "border-l-transparent",
+        themeConfig.surface.hover
       )}
     >
-      <div className="flex items-start gap-3">
-        {/* Avatar */}
-        <div className="flex-shrink-0">
-          {notification.image ? (
-            <img
-              src={notification.image}
-              alt=""
-              className="w-10 h-10 rounded-full"
-            />
-          ) : (
-            <div
-              className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center",
-                "bg-gradient-to-br from-amber-500 to-orange-500 text-white text-sm font-medium"
-              )}
-            >
-              {notification.title.charAt(0)}
-            </div>
+      <div className="flex items-start gap-4">
+        {/* Icon Container */}
+        <div
+          className={cn(
+            "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center",
+            themeConfig.surface.secondary,
+            "group-hover:scale-105 transition-transform duration-200"
           )}
+        >
+          {getNotificationIcon(notification.type)}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h4
+        {/* Content Container */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Message */}
+          <p
             className={cn(
-              "text-sm font-medium pr-6",
+              "text-sm leading-relaxed pr-2",
               !notification.isRead
-                ? "text-gray-900 dark:text-gray-100"
-                : "text-gray-700 dark:text-gray-300"
+                ? themeConfig.text.primary
+                : themeConfig.text.secondary,
+              !notification.isRead && "font-semibold"
             )}
           >
-            {notification.title}
-          </h4>
-          <p className={cn("text-sm mt-1 line-clamp-2", colors.textMuted)}>
             {notification.message}
           </p>
-          <p className={cn("text-xs mt-2", colors.textMuted)}>
-            {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
-          </p>
-        </div>
 
-        {/* Actions */}
-        <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {!notification.isRead && (
-            <button
-              onClick={handleMarkRead}
+          {/* Action Button & Time */}
+          <div className="flex items-center justify-between">
+            {notification.actionUrl && (
+              <Link
+                href={notification.actionUrl}
+                onClick={onClose}
+                className={cn(
+                  "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                  "hover:shadow-sm transform-gpu",
+                  themeConfig.accent.hover,
+                  themeConfig.accent.primary
+                )}
+              >
+                {notification.actionLabel || "View"}
+                <Check className={iconConfig.size.sm} />
+              </Link>
+            )}
+
+            <div
               className={cn(
-                "p-1 rounded transition-colors",
-                "hover:bg-green-100 dark:hover:bg-green-900/30",
-                "text-green-600 dark:text-green-400"
+                "flex items-center gap-1 text-xs",
+                themeConfig.text.muted
               )}
-              title="Mark as read"
             >
-              <Check className="w-3 h-3" />
-            </button>
-          )}
-          <div className="w-3 h-3 text-gray-400">
-            <ExternalLink className="w-3 h-3" />
+              <Clock className={iconConfig.size.sm} />
+              <span>{formatTime(notification.createdAt)}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Unread indicator */}
-      {!notification.isRead && (
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full" />
-      )}
-    </Link>
+        {/* Status Indicator */}
+        <div className="flex flex-col items-center gap-2">
+          {!notification.isRead && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-2 h-2 bg-blue-500 rounded-full shadow-sm shadow-blue-500/50"
+            />
+          )}
+          <button
+            className={cn(
+              "p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200",
+              themeConfig.surface.hover,
+              themeConfig.text.muted
+            )}
+          >
+            <MoreHorizontal className={iconConfig.size.sm} />
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 }

@@ -55,7 +55,7 @@ interface DesktopNavigationItem {
 }
 
 interface MobileSheetProps {
-  isTrialEnded: boolean;
+  isTrialEnded?: boolean;
 }
 
 // Define the nav links function with proper typing

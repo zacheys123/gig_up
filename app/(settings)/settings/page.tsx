@@ -1,6 +1,8 @@
 "use client";
 import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { cn } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import {
   User,
@@ -15,11 +17,19 @@ import {
   HelpCircle,
   LogOut,
 } from "react-feather";
+import { useRouter } from "next/navigation";
+import { useThemeToggle } from "@/hooks/useTheme";
+import { useThemeColors } from "@/hooks/useTheme";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useClerk, useUser } from "@clerk/nextjs";
 
-// Type definitions
+// Types
 type SettingItem = {
   label: string;
   action: () => void;
+  isDanger?: boolean;
+  isNavigation?: boolean;
 };
 
 type SettingsSection = {
@@ -28,38 +38,115 @@ type SettingsSection = {
   items: SettingItem[];
 };
 
-type ModalContent = {
-  title: string;
-  component: React.ReactNode;
-};
-
 type ModalType =
   | "deleteaccount"
-  | "email"
-  | "push"
-  | "email-notifications"
-  | "sms"
   | "2fa"
   | "login-activity"
   | "devices"
   | "payments"
-  | "billing"
-  | "subscription";
+  | "notifications";
 
 const SettingPage = () => {
-  const [darkMode, setDarkMode] = useState<boolean>(false);
-  const [activeModal, setActiveModal] = useState<ModalType | null>(null);
+  const router = useRouter();
   const { user } = useCurrentUser();
-  const [formData, setFormData] = useState({
-    phoneNumber: "",
-  });
+  const { isDarkMode: darkMode, toggleDarkMode } = useThemeToggle();
+  const { colors } = useThemeColors();
+  // State
+  const [activeModal, setActiveModal] = useState<ModalType | null>(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
   const [notifications, setNotifications] = useState({
     push: true,
     email: true,
     sms: false,
     marketing: false,
   });
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(false);
+
+  const [formData, setFormData] = useState({
+    phoneNumber: "",
+  });
+
+  // Settings sections configuration
+  const settingsSections: SettingsSection[] = [
+    {
+      title: "Account",
+      icon: <User size={18} className="mr-3" />,
+      items: [
+        {
+          label: "Email Preferences",
+          action: () => alert("Email preferences modal coming soon"),
+        },
+        {
+          label: "Delete Account",
+          action: () => openModal("deleteaccount"),
+          isDanger: true,
+        },
+      ],
+    },
+    {
+      title: "Notifications",
+      icon: <Bell size={18} className="mr-3" />,
+      items: [
+        {
+          label: "Notification Preferences",
+          action: () => router.push("/settings/notification"),
+          isNavigation: true,
+        },
+        {
+          label: "Push Notifications",
+          action: () => alert("Push notifications modal coming soon"),
+        },
+        {
+          label: "Email Notifications",
+          action: () => alert("Email notifications modal coming soon"),
+        },
+        {
+          label: "SMS Alerts",
+          action: () => alert("SMS alerts modal coming soon"),
+        },
+      ],
+    },
+    {
+      title: "Security",
+      icon: <Lock size={18} className="mr-3" />,
+      items: [
+        {
+          label: "Two-Factor Authentication",
+          action: () => openModal("2fa"),
+        },
+        {
+          label: "Login Activity",
+          action: () => openModal("login-activity"),
+        },
+        {
+          label: "Connected Devices",
+          action: () => openModal("devices"),
+        },
+      ],
+    },
+    {
+      title: "Billing",
+      icon: <CreditCard size={18} className="mr-3" />,
+      items: [
+        {
+          label: "Payment Methods",
+          action: () => openModal("payments"),
+        },
+        {
+          label: "Billing History",
+          action: () => alert("Billing history modal coming soon"),
+        },
+        {
+          label: "Subscription Plan",
+          action: () => alert("Subscription plan modal coming soon"),
+        },
+      ],
+    },
+  ];
+
+  // Modal handlers
+  const openModal = (modalName: ModalType) => setActiveModal(modalName);
+  const closeModal = () => setActiveModal(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -70,187 +157,7 @@ const SettingPage = () => {
     setNotifications((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const settingsSections: SettingsSection[] = [
-    {
-      title: "Account",
-      icon: <User size={18} className="mr-3" />,
-      items: [
-        { label: "Email Preferences", action: () => openModal("email") },
-        { label: "Delete Account", action: () => openModal("deleteaccount") },
-      ],
-    },
-    {
-      title: "Notifications",
-      icon: <Bell size={18} className="mr-3" />,
-      items: [
-        { label: "Push Notifications", action: () => openModal("push") },
-        {
-          label: "Email Notifications",
-          action: () => openModal("email-notifications"),
-        },
-        { label: "SMS Alerts", action: () => openModal("sms") },
-      ],
-    },
-    {
-      title: "Security",
-      icon: <Lock size={18} className="mr-3" />,
-      items: [
-        { label: "Two-Factor Authentication", action: () => openModal("2fa") },
-        { label: "Login Activity", action: () => openModal("login-activity") },
-        { label: "Connected Devices", action: () => openModal("devices") },
-      ],
-    },
-    {
-      title: "Billing",
-      icon: <CreditCard size={18} className="mr-3" />,
-      items: [
-        { label: "Payment Methods", action: () => openModal("payments") },
-        { label: "Billing History", action: () => openModal("billing") },
-        { label: "Subscription Plan", action: () => openModal("subscription") },
-      ],
-    },
-  ];
-
-  const openModal = (modalName: ModalType): void => {
-    setActiveModal(modalName);
-  };
-
-  const closeModal = (): void => {
-    setActiveModal(null);
-  };
-
-  // const handleSubmit = (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   // Handle form submission here
-  //   alert("Settings saved!");
-  //   closeModal();
-  // };
-
-  // Modal components
-
-  const DeleteAccountModal = () => {
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
-    const [username, setUsername] = useState("");
-    const [confirmChecked, setConfirmChecked] = useState(false);
-
-    const currentUsername = user?.user?.username;
-    const usernameMatches = username === currentUsername;
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-      inputRef.current?.focus();
-    }, []);
-
-    const handleDeleteAccount = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsDeleting(true);
-      setError("");
-      setSuccess("");
-      try {
-        const response = await fetch("/api/user/account/delete", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username }),
-        });
-
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-        const data: { message: string } = await response.json();
-        setSuccess(data?.message);
-        // Optionally show success message before redirect
-        window.location.href = "/";
-      } catch (err: unknown) {
-        setError((err as Error).message || "Failed to delete account");
-      } finally {
-        setIsDeleting(false);
-      }
-    };
-
-    return (
-      <form
-        onSubmit={handleDeleteAccount}
-        aria-label="Delete account confirmation"
-      >
-        <div className="space-y-6">
-          <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-4">
-            <h4 className="font-bold text-red-400 flex items-center">
-              <Info size={18} className="mr-2" />
-              Dangerous Action
-            </h4>
-            <p className="text-sm text-red-300 mt-1">
-              This will permanently delete your account and all associated data.
-              This action cannot be undone.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Enter your username to confirm
-            </label>
-            <input
-              autoComplete="off"
-              ref={inputRef}
-              type="text"
-              value={username}
-              onChange={(ev) => setUsername(ev.target.value)}
-              className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500"
-              placeholder="Your username"
-              aria-required
-            />
-            {username && !usernameMatches && (
-              <p className="text-red-400 text-sm mt-1">
-                Username does not match
-              </p>
-            )}
-            {username && usernameMatches && (
-              <p className="text-emerald-400 text-sm mt-1">Username Verified</p>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={confirmChecked}
-              onChange={(e) => setConfirmChecked(e.target.checked)}
-              id="confirm"
-              className="accent-red-600"
-            />
-            <label htmlFor="confirm" className="text-sm text-gray-300">
-              I understand this action cannot be undone
-            </label>
-          </div>
-
-          {error && <div className="text-red-400 text-sm">{error}</div>}
-          {success && <div className="text-emerald-400 text-sm">{success}</div>}
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={closeModal}
-              className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!usernameMatches || isDeleting}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                usernameMatches && confirmChecked
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-red-900/50 cursor-not-allowed"
-              }`}
-            >
-              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
-            </button>
-          </div>
-        </div>
-      </form>
-    );
-  };
-
+  // Notification Toggle Component
   const NotificationToggle = ({
     name,
     label,
@@ -259,17 +166,22 @@ const SettingPage = () => {
     label: string;
   }) => (
     <div className="flex items-center justify-between py-3">
-      <span className="font-medium text-sm text-muted-foreground">{label}</span>
+      <span className={cn("font-medium text-sm", colors.textSecondary)}>
+        {label}
+      </span>
       <div className="flex items-center gap-2">
         <Switch
           checked={notifications[name]}
           onCheckedChange={() => handleToggleChange(name)}
-          className="data-[state=checked]:bg-rose-600 data-[state=unchecked]:bg-emerald-500"
+          className={cn(
+            notifications[name] ? colors.primaryBg : colors.backgroundMuted
+          )}
         />
       </div>
     </div>
   );
 
+  // Notifications Modal
   const NotificationsModal = () => (
     <div className="space-y-4">
       <NotificationToggle name="push" label="Push Notifications" />
@@ -278,7 +190,9 @@ const SettingPage = () => {
       <NotificationToggle name="marketing" label="Marketing Communications" />
 
       <div className="pt-4">
-        <label className="block text-sm font-medium text-gray-300 mb-1">
+        <label
+          className={cn("block text-sm font-medium mb-1", colors.textSecondary)}
+        >
           SMS Phone Number
         </label>
         <input
@@ -286,7 +200,11 @@ const SettingPage = () => {
           name="phoneNumber"
           value={formData.phoneNumber}
           onChange={handleInputChange}
-          className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={cn(
+            "w-full rounded-lg px-4 py-2 focus:ring-2 focus:border-transparent",
+            colors.background,
+            colors.text
+          )}
           placeholder="+1 (___) ___-____"
           disabled={!notifications.sms}
         />
@@ -296,7 +214,12 @@ const SettingPage = () => {
         <button
           type="button"
           onClick={closeModal}
-          className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors"
+          className={cn(
+            "px-4 py-2 rounded-lg border font-medium",
+            colors.border,
+            colors.textSecondary,
+            colors.background
+          )}
         >
           Cancel
         </button>
@@ -306,7 +229,11 @@ const SettingPage = () => {
             alert("Notification preferences saved!");
             closeModal();
           }}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
+          className={cn(
+            "px-4 py-2 rounded-lg font-medium",
+            colors.primaryBg,
+            colors.textInverted
+          )}
         >
           Save Preferences
         </button>
@@ -314,70 +241,209 @@ const SettingPage = () => {
     </div>
   );
 
+  // Delete Account Modal
+  const DeleteAccountModal = () => {
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [error, setError] = useState("");
+    const [username, setUsername] = useState("");
+    const [confirmChecked, setConfirmChecked] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+      inputRef.current?.focus();
+    }, []);
+
+    const usernameMatches = username === user?.username;
+
+    // Inside the component
+    const { user: clerkUser } = useUser();
+    const { signOut } = useClerk();
+    const deleteUserAccount = useMutation(
+      api.controllers.user.deleteUserAccount
+    );
+
+    const handleDeleteAccount = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsDeleting(true);
+      setError("");
+
+      try {
+        if (!user) throw new Error("No user found");
+
+        // 1. Delete from Convex
+        await deleteUserAccount({ userId: clerkUser?.id ? clerkUser.id : "" });
+
+        // 2. Delete from Clerk using their API
+        await clerkUser?.delete();
+
+        // 3. This will automatically sign out and redirect
+        // No need to call signOut() separately
+      } catch (err) {
+        setError((err as Error).message || "Failed to delete account");
+        setIsDeleting(false);
+      }
+    };
+
+    return (
+      <form onSubmit={handleDeleteAccount}>
+        <div className="space-y-6">
+          <div
+            className={cn(
+              "rounded-lg p-4 border",
+              colors.destructiveBg,
+              colors.warningBorder
+            )}
+          >
+            <h4
+              className={cn("font-bold flex items-center", colors.destructive)}
+            >
+              <Info size={18} className="mr-2" />
+              Dangerous Action
+            </h4>
+            <p className={cn("text-sm mt-1", colors.warningText)}>
+              This will permanently delete your account and all associated data.
+              This action cannot be undone.
+            </p>
+          </div>
+
+          <div>
+            <label
+              className={cn(
+                "block text-sm font-medium mb-1",
+                colors.textSecondary
+              )}
+            >
+              Enter your username to confirm
+            </label>
+            <input
+              ref={inputRef}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={cn(
+                "w-full rounded-lg px-4 py-2 focus:ring-2",
+                colors.background,
+                colors.text
+              )}
+              placeholder="Your username"
+              required
+            />
+            {username && !usernameMatches && (
+              <p className={cn("text-sm mt-1", colors.destructive)}>
+                Username does not match
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={confirmChecked}
+              onChange={(e) => setConfirmChecked(e.target.checked)}
+              id="confirm"
+              className={colors.destructive}
+            />
+            <label
+              htmlFor="confirm"
+              className={cn("text-sm", colors.textSecondary)}
+            >
+              I understand this action cannot be undone
+            </label>
+          </div>
+
+          {error && (
+            <div className={cn("text-sm", colors.destructive)}>{error}</div>
+          )}
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={closeModal}
+              className={cn(
+                "px-4 py-2 rounded-lg border font-medium",
+                colors.border,
+                colors.textSecondary,
+                colors.background
+              )}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!usernameMatches || !confirmChecked || isDeleting}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium disabled:cursor-not-allowed",
+                isDeleting ? colors.disabledBg : colors.destructiveBg,
+                colors.textInverted,
+                (!usernameMatches || !confirmChecked) && "opacity-50"
+              )}
+            >
+              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
+            </button>
+          </div>
+        </div>
+      </form>
+    );
+  };
+
+  // Two-Factor Authentication Modal
   const TwoFactorModal = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-medium">Two-Factor Authentication</h4>
-          <p className="text-sm text-gray-400 mt-1">
+          <h4 className={cn("font-medium", colors.text)}>
+            Two-Factor Authentication
+          </h4>
+          <p className={cn("text-sm mt-1", colors.textSecondary)}>
             {twoFactorEnabled
               ? "Currently enabled"
-              : "Add an extra layer of security to your account"}
+              : "Add extra security to your account"}
           </p>
         </div>
         <button
           onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            twoFactorEnabled ? "bg-blue-600" : "bg-gray-600"
-          }`}
+          className={cn(
+            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+            twoFactorEnabled ? colors.primaryBg : colors.border
+          )}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            className={cn(
+              "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
               twoFactorEnabled ? "translate-x-6" : "translate-x-1"
-            }`}
+            )}
           />
         </button>
       </div>
 
       {twoFactorEnabled && (
-        <div className="bg-gray-700 p-4 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <div className="bg-gray-800 p-3 rounded-lg">
-              <svg
-                className="w-6 h-6 text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"
-                />
-              </svg>
+        <div className={cn("p-4 rounded-lg", colors.background)}>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className={cn("p-3 rounded-lg", colors.backgroundMuted)}>
+              <Lock size={20} className={colors.primary} />
             </div>
             <div>
-              <h4 className="font-medium">Authenticator App</h4>
-              <p className="text-sm text-gray-400">
+              <h4 className={cn("font-medium", colors.text)}>
+                Authenticator App
+              </h4>
+              <p className={cn("text-sm", colors.textSecondary)}>
                 Use an app like Google Authenticator
               </p>
             </div>
           </div>
 
-          <div className="mt-4 p-3 bg-gray-800 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="font-mono text-lg">7B5N 3K9P 2L8M</span>
-              <button className="text-blue-400 text-sm font-medium">
+          <div className={cn("p-3 rounded-lg", colors.backgroundMuted)}>
+            <div className="flex justify-between items-center mb-4">
+              <span className={cn("font-mono text-lg", colors.text)}>
+                7B5N 3K9P 2L8M
+              </span>
+              <button className={cn("text-sm font-medium", colors.primary)}>
                 Copy
               </button>
             </div>
-            <div className="flex justify-center my-4">
-              <div className="bg-white p-2 rounded">
-                {/* QR Code placeholder */}
-                <div className="w-32 h-32 bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-500 text-xs">QR Code</span>
-                </div>
+            <div className="bg-white p-2 rounded flex justify-center">
+              <div className="w-32 h-32 bg-gray-200 flex items-center justify-center">
+                <span className="text-gray-500 text-xs">QR Code</span>
               </div>
             </div>
           </div>
@@ -387,14 +453,23 @@ const SettingPage = () => {
       <div className="flex justify-end space-x-3 pt-4">
         <button
           onClick={closeModal}
-          className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors"
+          className={cn(
+            "px-4 py-2 rounded-lg border font-medium",
+            colors.border,
+            colors.textSecondary,
+            colors.background
+          )}
         >
           {twoFactorEnabled ? "Close" : "Cancel"}
         </button>
         {!twoFactorEnabled && (
           <button
             onClick={() => setTwoFactorEnabled(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
+            className={cn(
+              "px-4 py-2 rounded-lg font-medium",
+              colors.primaryBg,
+              colors.textInverted
+            )}
           >
             Enable 2FA
           </button>
@@ -403,26 +478,210 @@ const SettingPage = () => {
     </div>
   );
 
-  const modalContent: Record<ModalType, ModalContent> = {
+  // Login Activity Modal
+  const LoginActivityModal = () => (
+    <div>
+      <div className="space-y-4">
+        {[
+          {
+            device: "Chrome • Windows",
+            location: "New York, US",
+            time: "1 day ago",
+          },
+          {
+            device: "Safari • iPhone",
+            location: "San Francisco, US",
+            time: "2 days ago",
+          },
+          {
+            device: "Firefox • Mac",
+            location: "London, UK",
+            time: "1 week ago",
+          },
+        ].map((session, index) => (
+          <div
+            key={index}
+            className={cn(
+              "flex items-center justify-between p-3 rounded-lg",
+              colors.background
+            )}
+          >
+            <div>
+              <p className={cn("font-medium", colors.text)}>{session.device}</p>
+              <p className={cn("text-sm", colors.textSecondary)}>
+                {session.location} • {session.time}
+              </p>
+            </div>
+            <button
+              className={cn(
+                "text-sm font-medium hover:opacity-80",
+                colors.destructive
+              )}
+            >
+              Log out
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end pt-6">
+        <button
+          onClick={closeModal}
+          className={cn(
+            "px-4 py-2 rounded-lg font-medium",
+            colors.primaryBg,
+            colors.textInverted
+          )}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+
+  // Connected Devices Modal
+  const ConnectedDevicesModal = () => (
+    <div>
+      <div className="space-y-4">
+        {[
+          {
+            device: "iPhone 13",
+            status: "Currently active",
+            lastActive: "Now",
+          },
+          {
+            device: "MacBook Pro",
+            status: "Last active 2 hours ago",
+            lastActive: "2 hours ago",
+          },
+          {
+            device: "iPad Pro",
+            status: "Last active 1 day ago",
+            lastActive: "1 day ago",
+          },
+        ].map((device, index) => (
+          <div
+            key={index}
+            className={cn(
+              "flex items-center justify-between p-3 rounded-lg",
+              colors.background
+            )}
+          >
+            <div>
+              <p className={cn("font-medium", colors.text)}>{device.device}</p>
+              <p className={cn("text-sm", colors.textSecondary)}>
+                {device.status}
+              </p>
+            </div>
+            <button
+              className={cn(
+                "text-sm font-medium hover:opacity-80",
+                colors.destructive
+              )}
+            >
+              Disconnect
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end pt-6">
+        <button
+          onClick={closeModal}
+          className={cn(
+            "px-4 py-2 rounded-lg font-medium",
+            colors.primaryBg,
+            colors.textInverted
+          )}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+
+  // Payment Methods Modal
+  const PaymentsModal = () => (
+    <div>
+      <div className="space-y-4">
+        <div className={cn("p-4 rounded-lg", colors.background)}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={cn("p-2 rounded mr-3", colors.primaryBg)}>
+                <CreditCard size={18} className="text-white" />
+              </div>
+              <div>
+                <p className={cn("font-medium", colors.text)}>Visa •••• 4242</p>
+                <p className={cn("text-sm", colors.textSecondary)}>
+                  Expires 04/2025
+                </p>
+              </div>
+            </div>
+            <button
+              className={cn(
+                "text-sm font-medium hover:opacity-80",
+                colors.destructive
+              )}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+
+        <div className={cn("p-4 rounded-lg", colors.background)}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={cn("p-2 rounded mr-3", colors.border)}>
+                <CreditCard size={18} className="text-white" />
+              </div>
+              <div>
+                <p className={cn("font-medium", colors.text)}>
+                  Mastercard •••• 8888
+                </p>
+                <p className={cn("text-sm", colors.textSecondary)}>
+                  Expires 08/2024
+                </p>
+              </div>
+            </div>
+            <button
+              className={cn(
+                "text-sm font-medium hover:opacity-80",
+                colors.destructive
+              )}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+
+        <button
+          className={cn(
+            "w-full p-3 border-2 border-dashed rounded-lg transition-colors",
+            colors.border,
+            colors.textSecondary
+          )}
+        >
+          + Add New Payment Method
+        </button>
+      </div>
+      <div className="flex justify-end pt-6">
+        <button
+          onClick={closeModal}
+          className={cn(
+            "px-4 py-2 rounded-lg font-medium",
+            colors.primaryBg,
+            colors.textInverted
+          )}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+
+  // Modal content mapping
+  const modalContent = {
     deleteaccount: {
       title: "Delete Account",
       component: <DeleteAccountModal />,
-    },
-    email: {
-      title: "Email Preferences",
-      component: <NotificationsModal />,
-    },
-    push: {
-      title: "Push Notifications",
-      component: <NotificationsModal />,
-    },
-    "email-notifications": {
-      title: "Email Notifications",
-      component: <NotificationsModal />,
-    },
-    sms: {
-      title: "SMS Alerts",
-      component: <NotificationsModal />,
     },
     "2fa": {
       title: "Two-Factor Authentication",
@@ -430,246 +689,39 @@ const SettingPage = () => {
     },
     "login-activity": {
       title: "Login Activity",
-      component: (
-        <div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
-              <div
-                key={item}
-                className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
-              >
-                <div>
-                  <p className="font-medium">Chrome • Windows</p>
-                  <p className="text-sm text-gray-400">
-                    New York, US • {item} day ago
-                  </p>
-                </div>
-                <button className="text-red-400 text-sm font-medium">
-                  Log out
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end pt-6">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      ),
+      component: <LoginActivityModal />,
     },
     devices: {
       title: "Connected Devices",
-      component: (
-        <div>
-          <div className="space-y-4">
-            {["iPhone 13", "MacBook Pro", "iPad Pro"].map((device) => (
-              <div
-                key={device}
-                className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
-              >
-                <div>
-                  <p className="font-medium">{device}</p>
-                  <p className="text-sm text-gray-400">Currently active</p>
-                </div>
-                <button className="text-red-400 text-sm font-medium">
-                  Disconnect
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end pt-6">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      ),
+      component: <ConnectedDevicesModal />,
     },
     payments: {
       title: "Payment Methods",
-      component: (
-        <div>
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-700 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="bg-blue-500 p-2 rounded mr-3">
-                    <CreditCard size={18} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Visa •••• 4242</p>
-                    <p className="text-sm text-gray-400">Expires 04/2025</p>
-                  </div>
-                </div>
-                <button className="text-red-400 text-sm font-medium">
-                  Remove
-                </button>
-              </div>
-            </div>
-
-            <button className="w-full p-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
-              + Add New Payment Method
-            </button>
-          </div>
-          <div className="flex justify-end pt-6">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      ),
+      component: <PaymentsModal />,
     },
-    billing: {
-      title: "Billing History",
-      component: (
-        <div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
-              <div
-                key={item}
-                className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
-              >
-                <div>
-                  <p className="font-medium">Pro Subscription</p>
-                  <p className="text-sm text-gray-400">
-                    {item} month ago • ${item * 9}.99
-                  </p>
-                </div>
-                <button className="text-blue-400 text-sm font-medium">
-                  Download
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end pt-6">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      ),
+    notifications: {
+      title: "Notification Preferences",
+      component: <NotificationsModal />,
     },
-    subscription: {
-      title: "Subscription Plan",
-      component: (
-        <div>
-          <div className="bg-gray-700 rounded-lg p-4 mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="font-medium">Pro Plan</h4>
-              <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded">
-                Active
-              </span>
-            </div>
-            <p className="text-gray-400 text-sm">
-              $9.99/month • Next billing date: June 15, 2023
-            </p>
-          </div>
+  } as const;
 
-          <div className="space-y-4">
-            <h4 className="font-medium">Available Plans</h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                {
-                  name: "Basic",
-                  price: "$0",
-                  features: ["5 Gigs/month", "Basic support"],
-                },
-                {
-                  name: "Pro",
-                  price: "$9.99",
-                  features: ["Unlimited Gigs", "Priority support", "Analytics"],
-                  current: true,
-                },
-                {
-                  name: "Business",
-                  price: "$29.99",
-                  features: [
-                    "Unlimited Gigs",
-                    "24/7 support",
-                    "Advanced analytics",
-                    "Team members",
-                  ],
-                },
-              ].map((plan) => (
-                <div
-                  key={plan.name}
-                  className={`p-4 rounded-lg border ${
-                    plan.current
-                      ? "border-blue-500 bg-blue-900/10"
-                      : "border-gray-600 hover:border-gray-500"
-                  } transition-colors cursor-pointer`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium">{plan.name}</h4>
-                    <p className="text-lg font-bold">
-                      {plan.price}
-                      <span className="text-sm font-normal text-gray-400">
-                        /mo
-                      </span>
-                    </p>
-                  </div>
-                  <ul className="space-y-2 mt-4">
-                    {plan.features.map((feature, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center text-sm text-gray-300"
-                      >
-                        <Check size={14} className="mr-2 text-green-400" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    className={`w-full mt-4 py-2 rounded-lg ${
-                      plan.current
-                        ? "bg-blue-600 hover:bg-blue-700"
-                        : "bg-gray-600 hover:bg-gray-500"
-                    } transition-colors`}
-                  >
-                    {plan.current ? "Current Plan" : "Upgrade"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-between pt-8">
-            <button className="text-red-400 hover:text-red-300 transition-colors">
-              Cancel Subscription
-            </button>
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      ),
-    },
+  // Safe modal access
+  const getModalContent = (modalType: ModalType) => {
+    return modalContent[modalType];
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 text-white">
+    <div className={cn("max-w-4xl mx-auto p-6", colors.text)}>
+      {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className={cn("text-3xl font-bold", colors.primary)}>Settings</h1>
         <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="flex items-center px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+          onClick={() => toggleDarkMode()}
+          className={cn(
+            "flex items-center px-4 py-2 rounded-lg",
+            colors.background,
+            colors.text
+          )}
         >
           {darkMode ? (
             <Sun size={18} className="mr-2" />
@@ -680,27 +732,48 @@ const SettingPage = () => {
         </button>
       </div>
 
+      {/* Settings Sections */}
       <div className="space-y-8">
         {settingsSections.map((section, index) => (
-          <div key={index} className="bg-gray-900 rounded-xl p-6 shadow-lg">
+          <div
+            key={index}
+            className={cn("rounded-xl p-6 shadow-lg", colors.card)}
+          >
             <div className="flex items-center mb-4">
-              {section.icon}
+              <span className={colors.textSecondary}>{section.icon}</span>
               <h2 className="text-xl font-semibold">{section.title}</h2>
             </div>
+
             <div className="space-y-3">
               {section.items.map((item, itemIndex) => (
                 <div
                   key={itemIndex}
-                  className={
-                    item.label === "Delete Account"
-                      ? "flex justify-between items-center p-4 bg-red-800 rounded-lg transition-colors cursor-pointer"
-                      : "flex justify-between items-center p-4 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer"
-                  }
+                  className={cn(
+                    "flex justify-between items-center p-4 rounded-lg transition-colors cursor-pointer group",
+                    item.isDanger
+                      ? colors.destructiveBg
+                      : item.isNavigation
+                        ? cn("bg-blue-800/30 hover:bg-blue-800/40", colors.text)
+                        : colors.hoverBg
+                  )}
                   onClick={item.action}
                 >
                   <span className="font-medium">{item.label}</span>
                   <div className="flex items-center">
-                    <Info size={16} className="text-gray-400 ml-2" />
+                    {item.isNavigation ? (
+                      <ArrowRight
+                        size={16}
+                        className={cn(
+                          "ml-2 group-hover:translate-x-1 transition-transform",
+                          colors.primary
+                        )}
+                      />
+                    ) : (
+                      <Info
+                        size={16}
+                        className={cn("ml-2", colors.textSecondary)}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
@@ -709,33 +782,69 @@ const SettingPage = () => {
         ))}
       </div>
 
-      <div className="mt-10 flex justify-between items-center pt-6 border-t border-gray-800">
-        <button className="flex items-center text-gray-400 hover:text-white transition-colors">
+      {/* Footer Actions */}
+      <div
+        className={cn(
+          "mt-10 flex justify-between items-center pt-6 border-t",
+          colors.border
+        )}
+      >
+        <button
+          className={cn(
+            "flex items-center hover:opacity-80",
+            colors.textSecondary
+          )}
+        >
           <HelpCircle size={16} className="mr-2" />
           Help Center
         </button>
-        <button className="flex items-center px-4 py-2 rounded-lg bg-red-900/30 hover:bg-red-900/40 text-red-400 transition-colors">
+        <button
+          className={cn(
+            "flex items-center px-4 py-2 rounded-lg",
+            colors.destructiveBg,
+            colors.destructive
+          )}
+        >
           <LogOut size={16} className="mr-2" />
           Log Out
         </button>
       </div>
 
-      {/* Enhanced Modal */}
+      {/* Modal */}
       {activeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-fade-in">
-            <div className="sticky top-0 bg-gray-800 p-6 pb-4 flex justify-between items-center border-b border-gray-700">
+        <div
+          className={cn(
+            "fixed inset-0 flex items-center justify-center z-50 p-4",
+            colors.overlay
+          )}
+        >
+          <div
+            className={cn(
+              "rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto",
+              colors.card
+            )}
+          >
+            <div
+              className={cn(
+                "sticky top-0 p-6 pb-4 flex justify-between items-center border-b rounded-t-xl",
+                colors.card,
+                colors.border
+              )}
+            >
               <h3 className="text-xl font-bold">
-                {modalContent[activeModal].title}
+                {getModalContent(activeModal).title}
               </h3>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-700"
+                className={cn(
+                  "p-1 rounded-full hover:opacity-70",
+                  colors.textSecondary
+                )}
               >
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6">{modalContent[activeModal].component}</div>
+            <div className="p-6">{getModalContent(activeModal).component}</div>
           </div>
         </div>
       )}

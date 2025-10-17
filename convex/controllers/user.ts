@@ -695,98 +695,40 @@ export const unlikeGig = mutation({
   },
 });
 
-// In your Convex mutation (trackProfileView)
-export const trackProfileView = mutation({
+// convex/user.ts
+
+// convex/user.ts
+// convex/notifications.ts
+
+export const deleteUserAccount = mutation({
   args: {
-    viewedUserId: v.string(),
-    viewerUserId: v.string(),
-    isViewerInGracePeriod: v.optional(v.boolean()),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { viewedUserId, viewerUserId, isViewerInGracePeriod } = args;
+    const { userId } = args;
 
-    // Don't track self-views
-    if (viewedUserId === viewerUserId) return;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
 
-    const [viewedUserDoc, viewerDoc] = await Promise.all([
-      ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", viewedUserId))
-        .first(),
-      ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", viewerUserId))
-        .first(),
-    ]);
-
-    if (!viewedUserDoc) return;
-
-    const currentTime = Date.now();
-
-    // NEW: Check if viewer has already viewed this profile
-    const viewerViewedProfiles = viewerDoc?.viewedProfiles || [];
-    const hasAlreadyViewed = viewerViewedProfiles.includes(viewedUserId);
-
-    if (hasAlreadyViewed) {
-      console.log(`User ${viewerUserId} has already viewed ${viewedUserId}`);
-      return { success: false, reason: "already_viewed" };
+    if (!args.userId) {
+      throw new Error("Unauthorized");
     }
 
-    // Update viewed user's profile view count
-    const currentViews = viewedUserDoc.profileViews || {
-      totalCount: 0,
-      recentViewers: [],
-      lastUpdated: currentTime,
-    };
-
-    // Add viewer to recent viewers
-    const newRecentViewers = [
-      { userId: viewerUserId, timestamp: currentTime },
-      ...currentViews.recentViewers.slice(0, 49),
-    ];
-
-    await ctx.db.patch(viewedUserDoc._id, {
-      profileViews: {
-        totalCount: currentViews.totalCount + 1,
-        recentViewers: newRecentViewers,
-        lastUpdated: currentTime,
-      },
-    });
-
-    // Update viewer's viewedProfiles
-    if (viewerDoc) {
-      const viewedProfiles = viewerDoc.viewedProfiles || [];
-      const updatedViewedProfiles = [
-        viewedUserId,
-        ...viewedProfiles.filter((id: string) => id !== viewedUserId),
-      ].slice(0, 100); // Keep only last 100 viewed profiles
-
-      await ctx.db.patch(viewerDoc._id, {
-        viewedProfiles: updatedViewedProfiles,
-      });
+    if (args.userId !== user?.clerkId) {
+      throw new Error("Unauthorized - User ID mismatch");
     }
 
-    // Check if user should get notifications (pro OR in grace period)
-    const shouldGetNotifications =
-      viewedUserDoc.tier === "pro" || isViewerInGracePeriod;
-
-    if (shouldGetNotifications && viewerDoc) {
-      await ctx.db.insert("notifications", {
-        userId: viewedUserId,
-        type: "profile_view",
-        title: "Profile Viewed",
-        message: `${viewerDoc.firstname || "Someone"} viewed your profile`,
-        image: viewerDoc.picture,
-        actionUrl: `/profile/${viewerUserId}`,
-        actionLabel: "View Profile",
-        relatedUserId: viewerUserId,
-        isRead: false,
-        isArchived: false,
-        createdAt: currentTime,
-      });
+    if (user) {
+      await ctx.db.delete(user._id);
     }
 
-    return { success: true };
+    // Note: Any related data will be automatically handled by Convex
+    // if you have proper relationships set up, or you can add additional
+    // deletion logic here if needed
+
+    return { success: true, message: "User account deleted from Convex" };
   },
 });
 

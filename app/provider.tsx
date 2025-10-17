@@ -5,6 +5,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 
 import { ThemeProvider as NextThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { NotificationSystemProvider } from "@/hooks/useNotifications";
 
 // Create a safe Convex client that handles missing URLs
 // function getConvexClient() {
@@ -73,8 +74,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         appearance={clerkAppearance}
       >
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          <Toaster position="top-center" />
-          {children}
+          {" "}
+          <NotificationSystemProvider>
+            <Toaster position="top-center" />
+            {children}{" "}
+          </NotificationSystemProvider>
         </ConvexProviderWithClerk>
       </ClerkProvider>
     </NextThemeProvider>

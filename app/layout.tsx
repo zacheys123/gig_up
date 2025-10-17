@@ -4,6 +4,8 @@ import "./globals.css";
 import { Providers } from "./provider";
 import { AuthSync } from "@/components/AuthSync";
 import { GigUpAssistant } from "@/components/ai/GigupAssistant";
+import { NotificationSystemProvider } from "@/hooks/useNotifications";
+import { NotificationToastContainer } from "@/components/notifications/NotificationToastContainer";
 
 export const metadata: Metadata = {
   title: "Gigup",
@@ -31,8 +33,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
-          <AuthSync />
-          {children}
+          <AuthSync />{" "}
+          <NotificationSystemProvider>
+            {children} <NotificationToastContainer />
+          </NotificationSystemProvider>
         </Providers>
       </body>
     </html>

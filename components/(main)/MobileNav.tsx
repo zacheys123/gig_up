@@ -10,15 +10,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import MobileSheet from "../pages/MobileSheet";
-import { useNotifications } from "@/hooks/useNotifications";
+
 import { useCheckTrial } from "@/hooks/useCheckTrial";
+import { useNotificationSystem } from "@/hooks/useNotifications";
 
 export function MobileNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const { user: currentUser, isLoading: currentUserLoading } = useCurrentUser();
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
-  const { notifications } = useNotifications();
+  const { notifications } = useNotificationSystem();
   // Check if user has a role
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
   const { isFirstMonthEnd } = useCheckTrial();

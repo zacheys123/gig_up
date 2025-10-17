@@ -5,7 +5,7 @@ import { searchFunc } from "@/utils";
 import MainUser from "./MainUser";
 import { useAllUsers } from "@/hooks/useAllUsers";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FiSearch, FiUsers } from "react-icons/fi";
 import { calculateReliability } from "@/lib/reliability";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -18,6 +18,7 @@ import ClientEducationModal from "./ClientEducationModal";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SearchUserSkeletonGrid } from "../skeletons/SearchMainUserSkeleton";
+import { debounce } from "lodash";
 
 const SearchComponent = () => {
   const { userId } = useAuth();
@@ -46,26 +47,24 @@ const SearchComponent = () => {
     musicianOnly: false,
   });
   const trackProfileView = useMutation(api.controllers.user.trackProfileView);
+  // In your SearchComponent - ADD DEBOUNCING
+  const handleUserClick = useCallback(
+    debounce(async (viewedUser: UserProps) => {
+      if (!userId || userId === viewedUser.clerkId) return;
 
-  const handleUserClick = async (viewedUser: UserProps) => {
-    if (!userId || userId === viewedUser.clerkId) return;
+      console.log("Tracking profile view for:", viewedUser.clerkId);
 
-    console.log("Tracking profile view:", {
-      viewedUserClerkId: viewedUser.clerkId,
-      viewerClerkId: userId,
-      viewedUserConvexId: viewedUser._id, // For debugging
-    });
-
-    try {
-      await trackProfileView({
-        viewedUserId: viewedUser.clerkId,
-        viewerUserId: userId,
-      });
-      console.log("Profile view tracked successfully");
-    } catch (error) {
-      console.error("Failed to track profile view:", error);
-    }
-  };
+      try {
+        await trackProfileView({
+          viewedUserId: viewedUser.clerkId,
+          viewerUserId: userId,
+        });
+      } catch (error) {
+        console.error("Failed to track profile view:", error);
+      }
+    }, 1000), // 1 second debounce
+    [userId, trackProfileView]
+  );
   // Featured user algorithm
   // More robust isFeaturedUser function
   const isFeaturedUser = (user: UserProps): boolean => {

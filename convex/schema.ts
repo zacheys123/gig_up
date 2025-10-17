@@ -4,11 +4,13 @@ import { v } from "convex/values";
 import { userModel } from "./models/userModel";
 import { gigModel } from "./models/gigModel";
 import { notificationModel } from "./models/notificationsModel"; // Make sure this path is correct
+import { notificationSettingsModel } from "./models/notificationSettings";
 
 export default defineSchema({
   users: userModel,
   gigs: gigModel,
   notifications: notificationModel,
+  notificationSettings: notificationSettingsModel,
 
   // Other tables...
   aiSuggestions: defineTable({
