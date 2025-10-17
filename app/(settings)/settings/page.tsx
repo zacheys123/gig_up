@@ -23,7 +23,7 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useClerk, useUser } from "@clerk/nextjs";
-
+import { PrivacySettings } from "@/components/settings/PrivacySettings";
 // Types
 type SettingItem = {
   label: string;
@@ -44,7 +44,8 @@ type ModalType =
   | "login-activity"
   | "devices"
   | "payments"
-  | "notifications";
+  | "notifications"
+  | "privacy";
 
 const SettingPage = () => {
   const router = useRouter();
@@ -107,20 +108,17 @@ const SettingPage = () => {
       ],
     },
     {
-      title: "Security",
+      title: "Privacy",
       icon: <Lock size={18} className="mr-3" />,
       items: [
         {
-          label: "Two-Factor Authentication",
-          action: () => openModal("2fa"),
+          label: "Privacy Settings",
+          action: () => openModal("privacy"),
+          isNavigation: true,
         },
         {
-          label: "Login Activity",
-          action: () => openModal("login-activity"),
-        },
-        {
-          label: "Connected Devices",
-          action: () => openModal("devices"),
+          label: "Blocked Users",
+          action: () => alert("Blocked users management coming soon"),
         },
       ],
     },
@@ -676,6 +674,23 @@ const SettingPage = () => {
       </div>
     </div>
   );
+  const PrivacyModal = () => (
+    <div>
+      <PrivacySettings user={user} />
+      <div className="flex justify-end pt-6">
+        <button
+          onClick={closeModal}
+          className={cn(
+            "px-4 py-2 rounded-lg font-medium",
+            colors.primaryBg,
+            colors.textInverted
+          )}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
 
   // Modal content mapping
   const modalContent = {
@@ -702,6 +717,10 @@ const SettingPage = () => {
     notifications: {
       title: "Notification Preferences",
       component: <NotificationsModal />,
+    },
+    privacy: {
+      title: "Privacy Settings",
+      component: <PrivacyModal />,
     },
   } as const;
 

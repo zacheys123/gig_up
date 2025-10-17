@@ -2,6 +2,7 @@
 import { Doc, Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
+import { createNotificationInternal } from "../createNotificationInternal";
 
 export const updateFirstLogin = mutation({
   args: {
@@ -541,7 +542,7 @@ export const followUser = mutation({
   args: { userId: v.string(), tId: v.id("users") },
   handler: async (ctx, args) => {
     if (!args.userId) throw new Error("Unauthorized");
-    console.log(args.userId);
+
     const currentUser = await ctx.db
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
@@ -553,9 +554,11 @@ export const followUser = mutation({
 
     const currentFollowings = currentUser.followings || [];
     const targetFollowers = targetUser.followers || [];
+    const targetPendingRequests = targetUser.pendingFollowRequests || [];
 
     // Check if already following
     const isAlreadyFollowing = currentFollowings.includes(args.tId);
+    const hasPendingRequest = targetPendingRequests.includes(currentUser._id);
 
     if (isAlreadyFollowing) {
       // Unfollow logic
@@ -570,23 +573,213 @@ export const followUser = mutation({
       });
 
       return { success: true, action: "unfollowed" };
-    } else {
-      // Follow logic
-      await ctx.db.patch(currentUser._id, {
-        followings: [...currentFollowings, args.tId],
-        lastActive: Date.now(),
-      });
-
+    } else if (hasPendingRequest) {
+      // Cancel pending request
       await ctx.db.patch(args.tId, {
-        followers: [...targetFollowers, currentUser._id],
+        pendingFollowRequests: targetPendingRequests.filter(
+          (id) => id !== currentUser._id
+        ),
         lastActive: Date.now(),
       });
 
-      return { success: true, action: "followed" };
+      return { success: true, action: "request_cancelled" };
+    } else {
+      // Handle follow based on account privacy
+      if (targetUser.isPrivate) {
+        // PRIVATE ACCOUNT: Send follow request
+        await ctx.db.patch(args.tId, {
+          pendingFollowRequests: [...targetPendingRequests, currentUser._id],
+          lastActive: Date.now(),
+        });
+
+        // ✅ CREATE FOLLOW REQUEST NOTIFICATION
+        try {
+          await createNotificationInternal(ctx, {
+            userId: targetUser.clerkId, // RECIPIENT: Private account owner
+            type: "follow_request",
+            title: "Follow Request",
+            message: `${currentUser.firstname || currentUser.username} wants to follow you`,
+            image: currentUser.picture,
+            actionUrl: `/settings/follow-requests`, // Special page to manage requests
+            relatedUserId: currentUser.clerkId, // REQUESTER
+            metadata: {
+              requesterId: currentUser.clerkId,
+              requesterName: currentUser.firstname,
+              requesterUsername: currentUser.username,
+              requesterPicture: currentUser.picture,
+              isRequesterPro: currentUser.tier === "pro",
+              isRequesterMusician: currentUser.isMusician,
+              isRequesterClient: currentUser.isClient,
+              instrument: currentUser.instrument,
+              city: currentUser.city,
+              requestId: currentUser._id, // Store for accept/decline actions
+              isPrivateAccount: true,
+            },
+          });
+        } catch (notificationError) {
+          console.error(
+            "Failed to create follow request notification:",
+            notificationError
+          );
+        }
+
+        return { success: true, action: "request_sent", isPrivate: true };
+      } else {
+        // PUBLIC ACCOUNT: Direct follow
+        await ctx.db.patch(currentUser._id, {
+          followings: [...currentFollowings, args.tId],
+          lastActive: Date.now(),
+        });
+
+        await ctx.db.patch(args.tId, {
+          followers: [...targetFollowers, currentUser._id],
+          lastActive: Date.now(),
+        });
+
+        // ✅ CREATE FOLLOW NOTIFICATION (existing logic)
+        try {
+          await createNotificationInternal(ctx, {
+            userId: targetUser.clerkId,
+            type: "new_follower",
+            title: "New Follower",
+            message: `${currentUser.firstname || currentUser.username} started following you`,
+            image: currentUser.picture,
+            actionUrl: `/search/${currentUser.username}`,
+            relatedUserId: currentUser.clerkId,
+            metadata: {
+              followerId: currentUser.clerkId,
+              followerName: currentUser.firstname,
+              followerUsername: currentUser.username,
+              followerPicture: currentUser.picture,
+              isFollowerPro: currentUser.tier === "pro",
+              isFollowerMusician: currentUser.isMusician,
+              isFollowerClient: currentUser.isClient,
+              instrument: currentUser.instrument,
+              city: currentUser.city,
+            },
+          });
+        } catch (notificationError) {
+          console.error(
+            "Failed to create follow notification:",
+            notificationError
+          );
+        }
+
+        return { success: true, action: "followed", isPrivate: false };
+      }
     }
   },
 });
+export const acceptFollowRequest = mutation({
+  args: { userId: v.string(), requesterId: v.id("users") },
+  handler: async (ctx, args) => {
+    if (!args.userId) throw new Error("Unauthorized");
 
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+    if (!currentUser) throw new Error("User not found");
+
+    const requesterUser = await ctx.db.get(args.requesterId);
+    if (!requesterUser) throw new Error("Requester not found");
+
+    const currentFollowers = currentUser.followers || [];
+    const currentPendingRequests = currentUser.pendingFollowRequests || [];
+    const requesterFollowings = requesterUser.followings || [];
+
+    // Remove from pending and add to followers
+    await ctx.db.patch(currentUser._id, {
+      followers: [...currentFollowers, args.requesterId],
+      pendingFollowRequests: currentPendingRequests.filter(
+        (id) => id !== args.requesterId
+      ),
+      lastActive: Date.now(),
+    });
+
+    await ctx.db.patch(args.requesterId, {
+      followings: [...requesterFollowings, currentUser._id],
+      lastActive: Date.now(),
+    });
+
+    // ✅ NOTIFY THE REQUESTER THAT THEIR REQUEST WAS ACCEPTED
+    try {
+      await createNotificationInternal(ctx, {
+        userId: requesterUser.clerkId, // RECIPIENT: The person who requested
+        type: "follow_accepted",
+        title: "Follow Request Accepted",
+        message: `${currentUser.firstname || currentUser.username} accepted your follow request`,
+        image: currentUser.picture,
+        actionUrl: `/search/${currentUser.username}`,
+        relatedUserId: currentUser.clerkId, // ACCEPTER
+        metadata: {
+          acceptedById: currentUser.clerkId,
+          acceptedByName: currentUser.firstname,
+          acceptedByUsername: currentUser.username,
+          acceptedByPicture: currentUser.picture,
+          isPrivateAccount: true,
+        },
+      });
+    } catch (notificationError) {
+      console.error(
+        "Failed to create follow accepted notification:",
+        notificationError
+      );
+    }
+
+    return { success: true };
+  },
+});
+
+export const declineFollowRequest = mutation({
+  args: { userId: v.string(), requesterId: v.id("users") },
+  handler: async (ctx, args) => {
+    if (!args.userId) throw new Error("Unauthorized");
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+    if (!currentUser) throw new Error("User not found");
+
+    const currentPendingRequests = currentUser.pendingFollowRequests || [];
+
+    // Simply remove from pending requests
+    await ctx.db.patch(currentUser._id, {
+      pendingFollowRequests: currentPendingRequests.filter(
+        (id) => id !== args.requesterId
+      ),
+      lastActive: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+// convex/users.ts
+export const updateUserPrivacySettings = mutation({
+  args: {
+    userId: v.string(),
+    updates: v.object({
+      isPrivate: v.optional(v.boolean()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { userId, updates } = args;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(user._id, updates);
+
+    return { success: true, updatedFields: Object.keys(updates) };
+  },
+});
 export const likeVideo = mutation({
   args: {
     videoId: v.string(),

@@ -3,7 +3,10 @@
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Check, MoreHorizontal, Clock } from "lucide-react";
+import { Check, MoreHorizontal, Clock, UserCheck, UserX } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface NotificationItemProps {
   notification: any;
@@ -20,6 +23,16 @@ export function NotificationItem({
   themeConfig,
   iconConfig,
 }: NotificationItemProps) {
+  const { userId } = useAuth();
+
+  // Add the follow request mutations
+  const acceptFollowRequest = useMutation(
+    api.controllers.user.acceptFollowRequest
+  );
+  const declineFollowRequest = useMutation(
+    api.controllers.user.declineFollowRequest
+  );
+
   // Format time relative or absolute
   const formatTime = (timestamp: number) => {
     const now = new Date();
@@ -33,6 +46,29 @@ export function NotificationItem({
       return `${Math.floor(diffInHours)}h ago`;
     } else {
       return date.toLocaleDateString();
+    }
+  };
+
+  // ✅ ADD THIS FUNCTION FOR FOLLOW REQUEST ACTIONS
+  const handleFollowRequestAction = async (action: "accept" | "decline") => {
+    if (!userId) return;
+
+    try {
+      if (action === "accept") {
+        await acceptFollowRequest({
+          userId: userId,
+          requesterId: notification.metadata.requestId,
+        });
+      } else {
+        await declineFollowRequest({
+          userId: userId,
+          requesterId: notification.metadata.requestId,
+        });
+      }
+      // You might want to refresh notifications or remove this one
+      onClose(); // Close the dropdown
+    } catch (error) {
+      console.error(`Failed to ${action} follow request:`, error);
     }
   };
 
@@ -75,9 +111,37 @@ export function NotificationItem({
             {notification.message}
           </p>
 
-          {/* Action Button & Time */}
-          <div className="flex items-center justify-between">
-            {notification.actionUrl && (
+          {/* ✅ ADD FOLLOW REQUEST ACTION BUTTONS */}
+          {notification.type === "follow_request" && (
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => handleFollowRequestAction("accept")}
+                className={cn(
+                  "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                  "bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow-md",
+                  "transform-gpu hover:scale-105"
+                )}
+              >
+                <UserCheck className="w-3 h-3" />
+                Accept
+              </button>
+              <button
+                onClick={() => handleFollowRequestAction("decline")}
+                className={cn(
+                  "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                  "bg-gray-500 hover:bg-gray-600 text-white shadow-sm hover:shadow-md",
+                  "transform-gpu hover:scale-105"
+                )}
+              >
+                <UserX className="w-3 h-3" />
+                Decline
+              </button>
+            </div>
+          )}
+
+          {/* Regular Action Button & Time (for non-follow-request notifications) */}
+          {notification.actionUrl && notification.type !== "follow_request" && (
+            <div className="flex items-center justify-between">
               <Link
                 href={notification.actionUrl}
                 onClick={onClose}
@@ -91,8 +155,21 @@ export function NotificationItem({
                 {notification.actionLabel || "View"}
                 <Check className={iconConfig.size.sm} />
               </Link>
-            )}
 
+              <div
+                className={cn(
+                  "flex items-center gap-1 text-xs",
+                  themeConfig.text.muted
+                )}
+              >
+                <Clock className={iconConfig.size.sm} />
+                <span>{formatTime(notification.createdAt)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Time only for follow requests (since they have their own buttons) */}
+          {notification.type === "follow_request" && (
             <div
               className={cn(
                 "flex items-center gap-1 text-xs",
@@ -102,7 +179,7 @@ export function NotificationItem({
               <Clock className={iconConfig.size.sm} />
               <span>{formatTime(notification.createdAt)}</span>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Status Indicator */}

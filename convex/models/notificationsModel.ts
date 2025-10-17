@@ -12,7 +12,7 @@ export const notificationTypes = [
   "gig_cancelled",
   "gig_reminder",
   "new_follower",
-
+  "follow_request",
   "follow_accepted",
   "new_review",
   "like",
