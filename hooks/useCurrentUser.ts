@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { toUserId } from "@/utils";
 import { useUserStore } from "@/app/stores";
 import { useEffect, useCallback } from "react";
+import { useCheckTrial } from "./useCheckTrial";
 
 // Get current user with refetch capability
 export function useCurrentUser() {
@@ -45,11 +46,15 @@ export const useSocialActions = () => {
   const toggleFollowMutation = useMutation(api.controllers.user.followUser);
   const likeVideo = useMutation(api.controllers.user.likeVideo);
   const unlikeVideo = useMutation(api.controllers.user.unlikeVideo);
-
+  const { isInGracePeriod } = useCheckTrial();
   return {
     toggleFollow: async (userId: string, targetId: string) => {
       const tId = toUserId(targetId);
-      await toggleFollowMutation({ userId, tId: tId });
+      await toggleFollowMutation({
+        userId,
+        tId: tId,
+        isViewerInGracePeriod: isInGracePeriod,
+      });
     },
 
     toggleVideoLike: async (videoId: string) => {

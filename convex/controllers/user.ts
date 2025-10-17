@@ -3,7 +3,9 @@ import { Doc, Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 import {
+  cleanupFollowNotifications,
   createNotificationInternal,
+  deleteFollowRequestNotification,
   isUserDocument,
 } from "../createNotificationInternal";
 
@@ -546,10 +548,12 @@ export const getUserByUsername = query({
     return user;
   },
 });
-// Add this helper function at the top of your file
-
 export const followUser = mutation({
-  args: { userId: v.string(), tId: v.id("users") },
+  args: {
+    userId: v.string(),
+    tId: v.id("users"),
+    isViewerInGracePeriod: v.optional(v.boolean()), // ADD THIS
+  },
   handler: async (ctx, args) => {
     if (!args.userId) throw new Error("Unauthorized");
 
@@ -575,6 +579,7 @@ export const followUser = mutation({
     const isAlreadyFollowing = currentFollowings.includes(args.tId);
     const hasPendingRequest = targetPendingRequests.includes(currentUser._id);
 
+    // In your followUser function, update the unfollow section:
     if (isAlreadyFollowing) {
       // Unfollow logic
       await ctx.db.patch(currentUser._id, {
@@ -587,7 +592,16 @@ export const followUser = mutation({
         lastActive: Date.now(),
       });
 
+      // 🗑️ CLEAN UP NOTIFICATIONS USING DOCUMENT IDs
+      try {
+        await cleanupFollowNotifications(ctx, args.tId, currentUser._id);
+      } catch (cleanupError) {
+        console.error("Failed to cleanup notifications:", cleanupError);
+        // Don't throw - we don't want unfollow to fail if cleanup fails
+      }
+
       return { success: true, action: "unfollowed" };
+      // In the follow request cancellation section:
     } else if (hasPendingRequest) {
       // Cancel pending request
       await ctx.db.patch(args.tId, {
@@ -596,6 +610,13 @@ export const followUser = mutation({
         ),
         lastActive: Date.now(),
       });
+
+      // 🗑️ CLEAN UP NOTIFICATIONS USING DOCUMENT IDs
+      try {
+        await cleanupFollowNotifications(ctx, args.tId, currentUser._id);
+      } catch (cleanupError) {
+        console.error("Failed to cleanup notifications:", cleanupError);
+      }
 
       return { success: true, action: "request_cancelled" };
     } else {
@@ -616,8 +637,8 @@ export const followUser = mutation({
             message: `${currentUser.firstname || currentUser.username} wants to follow you`,
             image: currentUser.picture,
             actionUrl: `/social/follow-requests?requester=${currentUser._id}&action=pending`,
-
             relatedUserDocumentId: currentUser._id, // REQUESTER (Document ID)
+            isViewerInGracePeriod: args.isViewerInGracePeriod, // ADD THIS
             metadata: {
               requesterDocumentId: currentUser._id.toString(),
               requesterClerkId: currentUser.clerkId,
@@ -663,6 +684,7 @@ export const followUser = mutation({
             image: currentUser.picture,
             actionUrl: `/social/followers?new=true&follower=${currentUser._id}`,
             relatedUserDocumentId: currentUser._id, // FOLLOWER (Document ID)
+            isViewerInGracePeriod: args.isViewerInGracePeriod, // ADD THIS
             metadata: {
               followerDocumentId: currentUser._id.toString(),
               followerClerkId: currentUser.clerkId,
@@ -688,9 +710,12 @@ export const followUser = mutation({
     }
   },
 });
-
 export const acceptFollowRequest = mutation({
-  args: { userId: v.string(), requesterId: v.id("users") },
+  args: {
+    userId: v.string(),
+    requesterId: v.id("users"),
+    isViewerInGracePeriod: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     if (!args.userId) throw new Error("Unauthorized");
 
@@ -726,16 +751,31 @@ export const acceptFollowRequest = mutation({
       lastActive: Date.now(),
     });
 
-    // ✅ NOTIFY THE REQUESTER THAT THEIR REQUEST WAS ACCEPTED (using Document IDs)
+    // 🗑️ CLEAN UP THE FOLLOW REQUEST NOTIFICATION
+    try {
+      await deleteFollowRequestNotification(
+        ctx,
+        currentUser._id,
+        args.requesterId
+      );
+    } catch (cleanupError) {
+      console.error(
+        "Failed to cleanup follow request notification:",
+        cleanupError
+      );
+    }
+
+    // ✅ NOTIFY THE REQUESTER THAT THEIR REQUEST WAS ACCEPTED
     try {
       await createNotificationInternal(ctx, {
-        userDocumentId: requesterUser._id, // RECIPIENT: The person who requested (Document ID)
+        userDocumentId: requesterUser._id,
         type: "follow_accepted",
         title: "Follow Request Accepted",
         message: `${currentUser.firstname || currentUser.username} accepted your follow request`,
         image: currentUser.picture,
         actionUrl: `/social/followers?accepted=true&user=${currentUser._id}`,
-        relatedUserDocumentId: currentUser._id, // ACCEPTER (Document ID)
+        relatedUserDocumentId: currentUser._id,
+        isViewerInGracePeriod: args.isViewerInGracePeriod,
         metadata: {
           acceptedByDocumentId: currentUser._id.toString(),
           acceptedByClerkId: currentUser.clerkId,
@@ -757,7 +797,11 @@ export const acceptFollowRequest = mutation({
 });
 
 export const declineFollowRequest = mutation({
-  args: { userId: v.string(), requesterId: v.id("users") },
+  args: {
+    userId: v.string(),
+    requesterId: v.id("users"),
+    isViewerInGracePeriod: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     if (!args.userId) throw new Error("Unauthorized");
 
@@ -785,6 +829,20 @@ export const declineFollowRequest = mutation({
       lastActive: Date.now(),
     });
 
+    // 🗑️ CLEAN UP THE FOLLOW REQUEST NOTIFICATION (SAME AS ACCEPT)
+    try {
+      await deleteFollowRequestNotification(
+        ctx,
+        currentUser._id,
+        args.requesterId
+      );
+    } catch (cleanupError) {
+      console.error(
+        "Failed to cleanup follow request notification:",
+        cleanupError
+      );
+    }
+
     // ✅ OPTIONAL: Notify requester that their request was declined
     try {
       await createNotificationInternal(ctx, {
@@ -795,6 +853,7 @@ export const declineFollowRequest = mutation({
         image: currentUser.picture,
         actionUrl: `/search/${currentUser.username}`,
         relatedUserDocumentId: currentUser._id, // DECLINER (Document ID)
+        isViewerInGracePeriod: args.isViewerInGracePeriod, // ADDED THIS
         metadata: {
           declinedByDocumentId: currentUser._id.toString(),
           declinedByClerkId: currentUser.clerkId,

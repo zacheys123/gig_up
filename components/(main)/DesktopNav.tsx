@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 export function DesktopNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
@@ -25,6 +26,7 @@ export function DesktopNavigation() {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
 
+  const { isInGracePeriod } = useCheckTrial();
   // Check if user has a role
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
   const isMusician = currentUser?.isMusician;
@@ -199,11 +201,12 @@ export function DesktopNavigation() {
             )}
 
             {/* Notifications Bell */}
-            {isSignedIn && (
-              <div className="hover:scale-105 transition-transform duration-200">
-                <NotificationBell variant="desktop" />
-              </div>
-            )}
+            {(isSignedIn && currentUser?.tier === "pro") ||
+              (isInGracePeriod && (
+                <div className="hover:scale-105 transition-transform duration-200">
+                  <NotificationBell variant="desktop" />
+                </div>
+              ))}
 
             {/* Theme Toggle */}
             <button

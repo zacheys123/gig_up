@@ -31,7 +31,6 @@ const UserNav = () => {
   const { unreadCount } = useNotificationSystem();
   const isMusician = user?.isMusician;
   const isProTier = user?.tier === "pro";
-  const { isInGracePeriod } = useCheckTrial();
 
   const navItems = [
     {
@@ -50,36 +49,7 @@ const UserNav = () => {
       },
       label: "Account",
     },
-    {
-      href: "/notifications",
-      icon: {
-        active: (
-          <div className="relative">
-            <BellIcon className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </div>
-        ),
-        inactive: (
-          <div className="relative">
-            <BellIcon className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </div>
-        ),
-      },
-      label: "Notifications",
-      exact: true,
-      pro: isInGracePeriod,
-      description: "Notifications with priority alerts",
-    },
-    // Musician-specific items
+
     ...(isMusician
       ? [
           {

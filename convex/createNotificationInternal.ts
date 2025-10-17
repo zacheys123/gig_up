@@ -173,3 +173,118 @@ export const createNotificationInternal = async (
     return null;
   }
 };
+
+// convex/notifications.ts - Add these helper functions
+export const cleanupFollowNotifications = async (
+  ctx: MutationCtx,
+  targetUserDocumentId: Id<"users">,
+  currentUserDocumentId: Id<"users">
+) => {
+  try {
+    // Get the target user to get their clerkId for notification querying
+    const targetUser = await ctx.db.get(targetUserDocumentId);
+    if (!targetUser) {
+      console.error("Target user not found for notification cleanup");
+      return { success: false, error: "Target user not found" };
+    }
+
+    // Get all notifications for the target user
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user_id", (q) => q.eq("userId", targetUser.clerkId))
+      .collect();
+
+    let deletedCount = 0;
+    const followTypes = ["new_follower", "follow_request", "follow_accepted"];
+
+    for (const notification of notifications) {
+      // Check if this notification should be deleted using document IDs
+      const shouldDelete =
+        followTypes.includes(notification.type) &&
+        (notification.metadata?.followerDocumentId ===
+          currentUserDocumentId.toString() ||
+          notification.metadata?.requesterDocumentId ===
+            currentUserDocumentId.toString() ||
+          notification.relatedUserId?.toString() ===
+            currentUserDocumentId.toString());
+
+      if (shouldDelete) {
+        await ctx.db.delete(notification._id);
+        deletedCount++;
+        console.log(
+          `🗑️ Deleted ${notification.type} notification for user ${targetUserDocumentId}`
+        );
+      }
+    }
+
+    return { success: true, deletedCount };
+  } catch (error) {
+    console.error("Error in cleanupFollowNotifications:", error);
+    return { success: false, error: "Failed to cleanup notifications" };
+  }
+};
+
+// More specific helper functions using document IDs
+export const deleteFollowerNotification = async (
+  ctx: MutationCtx,
+  targetUserDocumentId: Id<"users">,
+  followerDocumentId: Id<"users">
+) => {
+  try {
+    const targetUser = await ctx.db.get(targetUserDocumentId);
+    if (!targetUser) return;
+
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user_id", (q) => q.eq("userId", targetUser.clerkId))
+      .collect();
+
+    for (const notification of notifications) {
+      if (
+        notification.type === "new_follower" &&
+        notification.metadata?.followerDocumentId ===
+          followerDocumentId.toString()
+      ) {
+        await ctx.db.delete(notification._id);
+        console.log(
+          `🗑️ Deleted follower notification for user ${targetUserDocumentId}`
+        );
+        break;
+      }
+    }
+  } catch (error) {
+    console.error("Error in deleteFollowerNotification:", error);
+  }
+};
+
+export const deleteFollowRequestNotification = async (
+  ctx: MutationCtx,
+  targetUserDocumentId: Id<"users">,
+  requesterDocumentId: Id<"users">
+) => {
+  try {
+    const targetUser = await ctx.db.get(targetUserDocumentId);
+    if (!targetUser) return;
+
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user_id", (q) => q.eq("userId", targetUser.clerkId))
+      .collect();
+
+    for (const notification of notifications) {
+      if (
+        notification.type === "follow_request" &&
+        notification.metadata?.requesterDocumentId ===
+          requesterDocumentId.toString()
+      ) {
+        await ctx.db.delete(notification._id);
+        console.log(
+          `🗑️ Deleted follow request notification for user ${targetUserDocumentId}`
+        );
+        break;
+      }
+    }
+  } catch (error) {
+    console.error("Error in deleteFollowRequestNotification:", error);
+  }
+};
