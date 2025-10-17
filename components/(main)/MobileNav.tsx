@@ -13,6 +13,7 @@ import MobileSheet from "../pages/MobileSheet";
 
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useNotificationSystem } from "@/hooks/useNotifications";
+import Logo from "../Logo";
 
 export function MobileNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
@@ -33,20 +34,7 @@ export function MobileNavigation() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               {/* Logo */}
-              <Link href="/" className="flex items-center space-x-2">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center space-x-2"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">G</span>
-                  </div>
-                  <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    GigUp
-                  </span>
-                </motion.div>
-              </Link>
+              <Logo />
 
               {/* Right side loading state */}
               <div className="flex items-center space-x-4">
