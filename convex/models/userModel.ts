@@ -110,7 +110,7 @@ export const userModel = defineTable({
   followers: v.optional(v.array(v.string())), // user IDs
   followings: v.optional(v.array(v.string())), // user IDs
   refferences: v.optional(v.array(v.string())), // user IDs
-
+  mutualFollowers: v.optional(v.number()),
   // Business and billing
   tier: v.union(v.literal("free"), v.literal("pro")),
   tierStatus: v.optional(

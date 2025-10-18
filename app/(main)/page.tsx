@@ -62,23 +62,28 @@ export default function Home() {
 
   const isNewUser = isAuthenticated && !user?.firstname;
 
+  // ✅ UPDATED: Clients don't need date of birth, only musicians do
   const isProfileComplete =
     isAuthenticated &&
     user &&
     user.firstTimeInProfile === false &&
-    user.date &&
-    user.month &&
-    user.year &&
-    (user.isMusician || user.isClient);
+    // For musicians: require date of birth + role type
+    ((user.isMusician &&
+      user.date &&
+      user.month &&
+      user.year &&
+      user.roleType) ||
+      // For clients: only require basic profile completion
+      (user.isClient && user.firstname));
 
   const needsRoleSelection =
     isAuthenticated && user?.firstname && !user?.isClient && !user?.isMusician;
 
-  // Show modal only if authenticated, has role, but profile is incomplete
+  // ✅ UPDATED: Show modal only for musicians with incomplete profiles
   const shouldShowProfileModal =
     isAuthenticated &&
     user &&
-    (user.isMusician || user.isClient) &&
+    user.isMusician && // Only musicians see the modal
     !isProfileComplete;
 
   useEffect(() => {
@@ -90,28 +95,40 @@ export default function Home() {
       }
     }
   }, [isAuthenticated, user, shouldShowProfileModal]);
-
-  const completionPercentage = Math.round(
-    (((user?.firstname ? 1 : 0) +
-      (user?.date ? 1 : 0) +
-      (user?.month ? 1 : 0) +
-      (user?.year ? 1 : 0) +
-      (user?.isMusician || user?.isClient ? 1 : 0) +
-      (user?.firstTimeInProfile === false ? 1 : 0)) /
-      6) *
-      100
-  );
-
+  const completionPercentage = user?.isMusician
+    ? Math.round(
+        (((user?.firstname ? 1 : 0) +
+          (user?.date ? 1 : 0) +
+          (user?.month ? 1 : 0) +
+          (user?.year ? 1 : 0) +
+          (user?.isMusician ? 1 : 0) +
+          (user?.firstTimeInProfile === false ? 1 : 0)) /
+          6) *
+          100
+      )
+    : Math.round(
+        (((user?.firstname ? 1 : 0) +
+          (user?.isClient ? 1 : 0) +
+          (user?.firstTimeInProfile === false ? 1 : 0)) /
+          3) *
+          100
+      );
   const getDynamicHref = () => {
     if (!userId || !user?.firstname) return `/profile`; // Basic profile setup
     if (!user?.isClient && !user?.isMusician) return `/roles/${userId}`; // Role selection
-    return !user?.onboardingComplete
-      ? `/dashboard`
-      : user?.isClient
-        ? `/create/${userId}`
-        : user?.isMusician
-          ? `/av_gigs/${userId}`
-          : `/roles/${userId}`;
+
+    // For clients: Skip onboarding and go directly to create page
+    if (user?.isClient) {
+      return `/create/${userId}`;
+    }
+
+    // For musicians: Check onboarding status
+    if (user?.isMusician) {
+      return !user?.onboardingComplete ? `/dashboard` : `/av_gigs/${userId}`;
+    }
+
+    // Fallback
+    return `/roles/${userId}`;
   };
 
   // Show loading spinner while auth, user data, or theme is loading
@@ -302,11 +319,15 @@ export default function Home() {
                     href={getDynamicHref()}
                     className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
                   >
-                    {isProfileComplete
-                      ? "Go to Dashboard"
-                      : needsRoleSelection
-                        ? "Choose Your Role"
-                        : "Complete Profile"}
+                    {isAuthenticated
+                      ? isProfileComplete
+                        ? user?.isClient
+                          ? "Create Gig"
+                          : "Find Gigs"
+                        : needsRoleSelection
+                          ? "Choose Your Role"
+                          : "Complete Profile"
+                      : "Get Started"}
 
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -315,7 +336,7 @@ export default function Home() {
                       href={user?.isMusician ? "/discover" : "/browse"}
                       className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
                     >
-                      {user?.isMusician ? "Find Gigs" : "Find Artists"}
+                      {user?.isClient && "Find Artists"}
                     </Link>
                   )}
                 </div>

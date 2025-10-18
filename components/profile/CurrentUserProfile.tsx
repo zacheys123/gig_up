@@ -777,12 +777,10 @@ const CurrentUserProfile = () => {
         vocalistGenre: roleType === "vocalist" ? vocalistGenre : "",
       };
 
-      console.log("Sending update data:", updateData);
-      console.log("User ID:", user._id);
-
       await updateUser({
         userId: user._id as Id<"users">,
         clerkId: user.clerkId,
+        onboardingComplete: true,
         updates: updateData,
       });
 

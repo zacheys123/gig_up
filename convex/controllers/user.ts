@@ -133,6 +133,7 @@ export const updateUserProfile = mutation({
   args: {
     userId: v.id("users"),
     clerkId: v.string(), // Add this parameter
+    onboardingComplete: v.boolean(),
     updates: v.object({
       // ... your existing fields ...
       firstname: v.optional(v.string()),
@@ -170,6 +171,7 @@ export const updateUserProfile = mutation({
           corporate: v.optional(v.string()),
         })
       ),
+
       videosProfile: v.optional(
         v.array(
           v.object({
@@ -245,7 +247,7 @@ const createUserData = (args: any, now: number) => {
     firstLogin: true,
     onboardingComplete: false,
     firstTimeInProfile: true,
-
+    mutualFollowers: 0,
     // String fields
     banReason: "",
 
@@ -1075,4 +1077,13 @@ export const getUserById = query({
   },
 });
 
-// convex/gigs.ts
+// Type guard to check if a document is a user document
+// function isUserDocument(doc: any): doc is Doc<"users"> {
+//   return (
+//     doc &&
+//     typeof doc.clerkId === "string" &&
+//     typeof doc.username === "string" &&
+//     "isMusician" in doc &&
+//     "isClient" in doc
+//   );
+// }

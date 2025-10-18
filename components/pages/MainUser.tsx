@@ -58,15 +58,6 @@ const MainUser = ({
     api.controllers.notifications.trackProfileView
   );
 
-  // Check if current user has already viewed this profile
-  useEffect(() => {
-    if (currentUser?.viewedProfiles && _id) {
-      const alreadyViewed = currentUser.viewedProfiles.some(
-        (viewedId: any) => viewedId.toString() === _id.toString()
-      );
-      setHasAlreadyViewed(alreadyViewed);
-    }
-  }, [currentUser?.viewedProfiles, _id]);
   // Get view count from the database (already queried and passed as prop)
   const viewCount = profileViews?.totalCount || 0;
 
@@ -104,12 +95,6 @@ const MainUser = ({
   };
   const handleModalOpen = (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    // Show message if already viewed
-    if (hasAlreadyViewed) {
-      alert("You have already viewed this profile");
-      return;
-    }
 
     setShowModal(true);
   };
@@ -167,7 +152,7 @@ const MainUser = ({
     if (hasAlreadyViewed) {
       return isDarkMode
         ? "bg-gray-600/50 border-gray-500 hover:border-gray-400"
-        : "bg-gray-200/50 border-gray-300 hover:border-gray-400";
+        : "bg-gray-400/50 border-gray-300 hover:border-gray-400";
     }
 
     if (isFeatured) {

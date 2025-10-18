@@ -24,6 +24,7 @@ export default function FriendLayout({
         }}
       />{" "}
       {/* Mobile Navigation (hidden on desktop) */}
+      <MobileNavigation />
       {/* Desktop Navigation (hidden on mobile) */}
       <DesktopNavigation />
       {/* <NotificationHandler /> */}

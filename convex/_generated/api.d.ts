@@ -16,6 +16,7 @@ import type {
 import type * as cloudinary from "../cloudinary.js";
 import type * as controllers_gigs from "../controllers/gigs.js";
 import type * as controllers_notifications from "../controllers/notifications.js";
+import type * as controllers_socials from "../controllers/socials.js";
 import type * as controllers_subscription from "../controllers/subscription.js";
 import type * as controllers_theme from "../controllers/theme.js";
 import type * as controllers_user from "../controllers/user.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   cloudinary: typeof cloudinary;
   "controllers/gigs": typeof controllers_gigs;
   "controllers/notifications": typeof controllers_notifications;
+  "controllers/socials": typeof controllers_socials;
   "controllers/subscription": typeof controllers_subscription;
   "controllers/theme": typeof controllers_theme;
   "controllers/user": typeof controllers_user;

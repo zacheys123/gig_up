@@ -22,7 +22,12 @@ export function isUserDocument(doc: any): doc is {
   viewedProfiles?: any[];
 } {
   return (
-    doc && typeof doc === "object" && "clerkId" in doc && "username" in doc
+    doc &&
+    typeof doc === "object" &&
+    "clerkId" in doc &&
+    "username" in doc &&
+    "isMusician" in doc &&
+    "isClient" in doc
   );
 }
 export const notificationTypeToSettingMap: Record<
