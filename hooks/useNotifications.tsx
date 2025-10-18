@@ -114,7 +114,7 @@ export const NotificationSystemProvider = ({
     // Auto remove after 5 seconds
     setTimeout(() => {
       removeToast(toast.id);
-    }, 5000);
+    }, 10000);
   };
 
   const removeToast = (id: string) => {

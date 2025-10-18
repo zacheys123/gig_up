@@ -9,7 +9,7 @@ export function NotificationToastContainer() {
   const { toasts, removeToast } = useNotificationSystem();
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3 max-w-sm">
+    <div className="fixed top-4 right-14 z-50 space-y-3 max-w-sm">
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <NotificationToast

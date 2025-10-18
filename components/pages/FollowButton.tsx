@@ -4,8 +4,30 @@ import { useSocialActions } from "@/hooks/useCurrentUser";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { Button } from "../ui/button";
 
-const FollowButton = ({ _id }: { _id: string }) => {
+const FollowButton = ({
+  _id,
+  variant,
+  size,
+  className,
+}: {
+  _id: string;
+  variant?:
+    | "link"
+    | "default"
+    | "outline"
+    | "destructive"
+    | "primary"
+    | "secondary"
+    | "ghost"
+    | "closed"
+    | "update"
+    | null
+    | undefined;
+  size?: "default" | "sm" | "lg" | "icon" | null | undefined;
+  className?: string;
+}) => {
   const { user: currentUser } = useCurrentUser();
   const { toggleFollow } = useSocialActions();
   const { isDarkMode } = useThemeColors();
@@ -32,19 +54,25 @@ const FollowButton = ({ _id }: { _id: string }) => {
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
     >
       {isFollowing ? (
-        <button
+        <Button
           onClick={handleToggleFollow}
-          className={cn(
-            "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl",
-            "border transition-all duration-200",
-            "bg-transparent hover:bg-red-500/10",
-            "text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300",
-            "border-red-500/30 hover:border-red-500/50",
-            "backdrop-blur-sm"
-          )}
+          className={
+            className
+              ? className
+              : cn(
+                  "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl",
+                  "border transition-all duration-200",
+                  "bg-transparent hover:bg-red-500/10",
+                  "text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300",
+                  "border-red-500/30 hover:border-red-500/50",
+                  "backdrop-blur-sm"
+                )
+          }
+          variant={variant}
+          size={size}
         >
           <span>Following</span>
-        </button>
+        </Button>
       ) : (
         <button
           onClick={handleToggleFollow}

@@ -7,126 +7,74 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { ToastNotification } from "@/hooks/useNotifications";
 
-// Import the same color configuration from your notifications page
+// Notification type configuration using your theme colors
 const NOTIFICATION_TYPE_CONFIG = {
   profile_view: {
     icon: "👁️",
     label: "Profile View",
-    bgColor: "bg-blue-50 dark:bg-blue-900/20",
-    borderColor: "border-blue-200 dark:border-blue-800",
-    iconColor: "text-blue-600 dark:text-blue-400",
-    textColor: "text-blue-700 dark:text-blue-300",
-    actionColor: "text-blue-600 dark:text-blue-400",
+    colorVariant: "info" as const,
   },
   follow_request: {
     icon: "👥",
     label: "Follow Request",
-    bgColor: "bg-orange-50 dark:bg-orange-900/20",
-    borderColor: "border-orange-200 dark:border-orange-800",
-    iconColor: "text-orange-600 dark:text-orange-400",
-    textColor: "text-orange-700 dark:text-orange-300",
-    actionColor: "text-orange-600 dark:text-orange-400",
+    colorVariant: "warning" as const,
   },
   new_follower: {
     icon: "❤️",
     label: "New Follower",
-    bgColor: "bg-green-50 dark:bg-green-900/20",
-    borderColor: "border-green-200 dark:border-green-800",
-    iconColor: "text-green-600 dark:text-green-400",
-    textColor: "text-green-700 dark:text-green-300",
-    actionColor: "text-green-600 dark:text-green-400",
+    colorVariant: "success" as const,
   },
   follow_accepted: {
     icon: "✅",
     label: "Follow Accepted",
-    bgColor: "bg-emerald-50 dark:bg-emerald-900/20",
-    borderColor: "border-emerald-200 dark:border-emerald-800",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-    textColor: "text-emerald-700 dark:text-emerald-300",
-    actionColor: "text-emerald-600 dark:text-emerald-400",
+    colorVariant: "success" as const,
   },
   gig_invite: {
     icon: "🎵",
     label: "Gig Invite",
-    bgColor: "bg-purple-50 dark:bg-purple-900/20",
-    borderColor: "border-purple-200 dark:border-purple-800",
-    iconColor: "text-purple-600 dark:text-purple-400",
-    textColor: "text-purple-700 dark:text-purple-300",
-    actionColor: "text-purple-600 dark:text-purple-400",
+    colorVariant: "primary" as const,
   },
   gig_approved: {
     icon: "🎉",
     label: "Gig Approved",
-    bgColor: "bg-teal-50 dark:bg-teal-900/20",
-    borderColor: "border-teal-200 dark:border-teal-800",
-    iconColor: "text-teal-600 dark:text-teal-400",
-    textColor: "text-teal-700 dark:text-teal-300",
-    actionColor: "text-teal-600 dark:text-teal-400",
+    colorVariant: "success" as const,
   },
   gig_reminder: {
     icon: "⏰",
     label: "Gig Reminder",
-    bgColor: "bg-amber-50 dark:bg-amber-900/20",
-    borderColor: "border-amber-200 dark:border-amber-800",
-    iconColor: "text-amber-600 dark:text-amber-400",
-    textColor: "text-amber-700 dark:text-amber-300",
-    actionColor: "text-amber-600 dark:text-amber-400",
+    colorVariant: "warning" as const,
   },
   new_message: {
     icon: "💬",
     label: "Message",
-    bgColor: "bg-indigo-50 dark:bg-indigo-900/20",
-    borderColor: "border-indigo-200 dark:border-indigo-800",
-    iconColor: "text-indigo-600 dark:text-indigo-400",
-    textColor: "text-indigo-700 dark:text-indigo-300",
-    actionColor: "text-indigo-600 dark:text-indigo-400",
+    colorVariant: "info" as const,
   },
   new_review: {
     icon: "⭐",
     label: "Review",
-    bgColor: "bg-yellow-50 dark:bg-yellow-900/20",
-    borderColor: "border-yellow-200 dark:border-yellow-800",
-    iconColor: "text-yellow-600 dark:text-yellow-400",
-    textColor: "text-yellow-700 dark:text-yellow-300",
-    actionColor: "text-yellow-600 dark:text-yellow-400",
+    colorVariant: "warning" as const,
   },
   review_received: {
     icon: "🌟",
     label: "Review Received",
-    bgColor: "bg-amber-50 dark:bg-amber-900/20",
-    borderColor: "border-amber-200 dark:border-amber-800",
-    iconColor: "text-amber-600 dark:text-amber-400",
-    textColor: "text-amber-700 dark:text-amber-300",
-    actionColor: "text-amber-600 dark:text-amber-400",
+    colorVariant: "success" as const,
   },
   system_alert: {
     icon: "⚠️",
     label: "System Alert",
-    bgColor: "bg-red-50 dark:bg-red-900/20",
-    borderColor: "border-red-200 dark:border-red-800",
-    iconColor: "text-red-600 dark:text-red-400",
-    textColor: "text-red-700 dark:text-red-300",
-    actionColor: "text-red-600 dark:text-red-400",
+    colorVariant: "danger" as const,
   },
   system_updates: {
     icon: "🔄",
     label: "System Update",
-    bgColor: "bg-gray-50 dark:bg-gray-900/20",
-    borderColor: "border-gray-200 dark:border-gray-800",
-    iconColor: "text-gray-600 dark:text-gray-400",
-    textColor: "text-gray-700 dark:text-gray-300",
-    actionColor: "text-gray-600 dark:text-gray-400",
+    colorVariant: "info" as const,
   },
 } as const;
 
 const DEFAULT_CONFIG = {
   icon: "🔔",
   label: "Notification",
-  bgColor: "bg-gray-50 dark:bg-gray-900/20",
-  borderColor: "border-gray-200 dark:border-gray-800",
-  iconColor: "text-gray-600 dark:text-gray-400",
-  textColor: "text-gray-700 dark:text-gray-300",
-  actionColor: "text-gray-600 dark:text-gray-400",
+  colorVariant: "info" as const,
 };
 
 const getNotificationConfig = (type: string) => {
@@ -136,14 +84,97 @@ const getNotificationConfig = (type: string) => {
   );
 };
 
+// Helper to get theme colors based on variant
+const getThemeColors = (colors: any, variant: string, isDarkMode: boolean) => {
+  const baseColors = {
+    // Background colors
+    bg: isDarkMode ? colors.card : colors.background,
+    border: colors.border,
+
+    // Text colors
+    text: colors.text,
+    textMuted: colors.textMuted,
+
+    // Close button
+    close: colors.textMuted,
+    closeHover: isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5",
+  };
+
+  switch (variant) {
+    case "primary":
+      return {
+        ...baseColors,
+        iconBg: isDarkMode ? "bg-orange-900/30" : "bg-orange-100",
+        icon: isDarkMode ? "text-orange-400" : "text-orange-600",
+        accent: isDarkMode ? "text-orange-400" : "text-orange-600",
+        accentHover: isDarkMode
+          ? "hover:text-orange-300"
+          : "hover:text-orange-700",
+        badge: isDarkMode
+          ? "bg-orange-900/30 text-orange-300"
+          : "bg-orange-100 text-orange-700",
+      };
+    case "success":
+      return {
+        ...baseColors,
+        iconBg: isDarkMode ? "bg-green-900/30" : "bg-green-100",
+        icon: isDarkMode ? "text-green-400" : "text-green-600",
+        accent: isDarkMode ? "text-green-400" : "text-green-600",
+        accentHover: isDarkMode
+          ? "hover:text-green-300"
+          : "hover:text-green-700",
+        badge: isDarkMode
+          ? "bg-green-900/30 text-green-300"
+          : "bg-green-100 text-green-700",
+      };
+    case "warning":
+      return {
+        ...baseColors,
+        iconBg: isDarkMode ? "bg-amber-900/30" : "bg-amber-100",
+        icon: isDarkMode ? "text-amber-400" : "text-amber-600",
+        accent: isDarkMode ? "text-amber-400" : "text-amber-600",
+        accentHover: isDarkMode
+          ? "hover:text-amber-300"
+          : "hover:text-amber-700",
+        badge: isDarkMode
+          ? "bg-amber-900/30 text-amber-300"
+          : "bg-amber-100 text-amber-700",
+      };
+    case "danger":
+      return {
+        ...baseColors,
+        iconBg: isDarkMode ? "bg-red-900/30" : "bg-red-100",
+        icon: isDarkMode ? "text-red-400" : "text-red-600",
+        accent: isDarkMode ? "text-red-400" : "text-red-600",
+        accentHover: isDarkMode ? "hover:text-red-300" : "hover:text-red-700",
+        badge: isDarkMode
+          ? "bg-red-900/30 text-red-300"
+          : "bg-red-100 text-red-700",
+      };
+    case "info":
+    default:
+      return {
+        ...baseColors,
+        iconBg: isDarkMode ? "bg-blue-900/30" : "bg-blue-100",
+        icon: isDarkMode ? "text-blue-400" : "text-blue-600",
+        accent: isDarkMode ? "text-blue-400" : "text-blue-600",
+        accentHover: isDarkMode ? "hover:text-blue-300" : "hover:text-blue-700",
+        badge: isDarkMode
+          ? "bg-blue-900/30 text-blue-300"
+          : "bg-blue-100 text-blue-700",
+      };
+  }
+};
+
 interface NotificationToastProps {
   toast: ToastNotification;
   onClose: () => void;
 }
 
 export function NotificationToast({ toast, onClose }: NotificationToastProps) {
-  const { colors } = useThemeColors();
+  const { colors, isDarkMode } = useThemeColors();
   const config = getNotificationConfig(toast.type);
+  const themeColors = getThemeColors(colors, config.colorVariant, isDarkMode);
 
   const handleToastClick = () => {
     if (toast.actionUrl) {
@@ -156,8 +187,10 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
       className={cn(
         "rounded-xl border p-4 shadow-lg max-w-sm w-full backdrop-blur-sm",
         "transition-all duration-200 hover:shadow-xl cursor-pointer",
-        config.bgColor,
-        config.borderColor
+        "border-2 hover:border-opacity-50",
+        themeColors.bg,
+        themeColors.border,
+        "hover:scale-[1.02] transform transition-transform"
       )}
     >
       <div className="flex items-start gap-3">
@@ -166,8 +199,8 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
           <div
             className={cn(
               "w-10 h-10 rounded-lg flex items-center justify-center text-lg",
-              config.bgColor.replace("50", "100").replace("900/20", "800"),
-              config.iconColor
+              themeColors.iconBg,
+              themeColors.icon
             )}
           >
             {config.icon}
@@ -179,11 +212,13 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1">
               <h4
-                className={cn("font-semibold text-sm mb-1", config.textColor)}
+                className={cn("font-semibold text-sm mb-1", themeColors.text)}
               >
                 {toast.title}
               </h4>
-              <p className={cn("text-sm leading-relaxed", colors.textMuted)}>
+              <p
+                className={cn("text-sm leading-relaxed", themeColors.textMuted)}
+              >
                 {toast.message}
               </p>
             </div>
@@ -196,7 +231,8 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
                 href={toast.actionUrl}
                 className={cn(
                   "text-xs font-medium transition-colors hover:underline",
-                  config.actionColor
+                  themeColors.accent,
+                  themeColors.accentHover
                 )}
                 onClick={onClose}
               >
@@ -206,15 +242,16 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
               <span
                 className={cn(
                   "text-xs px-2 py-1 rounded-full font-medium",
-                  config.bgColor.replace("50", "100").replace("900/20", "800"),
-                  config.textColor
+                  themeColors.badge
                 )}
               >
                 {config.label}
               </span>
             )}
 
-            <span className={cn("text-xs", colors.textMuted)}>just now</span>
+            <span className={cn("text-xs", themeColors.textMuted)}>
+              just now
+            </span>
           </div>
         </div>
 
@@ -226,8 +263,8 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
           }}
           className={cn(
             "flex-shrink-0 p-1 rounded-full transition-colors",
-            "hover:bg-black/5 dark:hover:bg-white/10",
-            colors.textMuted
+            themeColors.closeHover,
+            themeColors.close
           )}
         >
           <X className="w-3 h-3" />

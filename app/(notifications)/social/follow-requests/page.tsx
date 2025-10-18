@@ -256,7 +256,7 @@ export default function FollowRequests() {
   }, [pendingRequests, selectedRequests]);
 
   return (
-    <div className={cn("min-h-screen", colors.background)}>
+    <div className={cn("min-h-screen w-full", colors.background)}>
       {/* Enhanced Header */}
       <div className={cn("border-b", colors.border)}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
