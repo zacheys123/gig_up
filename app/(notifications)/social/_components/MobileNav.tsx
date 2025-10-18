@@ -71,7 +71,7 @@ export function MobileNav({ onMenuClick }: MobileNavProps) {
   return (
     <div
       className={cn(
-        "lg:hidden fixed top-0 left-0 right-0 z-50 border-b",
+        "lg:hidden fixed top-0 left-0 right-0 z-50 border-b w-[82%]",
         colors.navBackground,
         colors.navBorder
       )}

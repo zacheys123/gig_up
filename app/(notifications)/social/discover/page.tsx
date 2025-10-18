@@ -31,27 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-
-interface UserCard {
-  _id: string;
-  clerkId: string;
-  firstname?: string;
-  lastname?: string;
-  username: string;
-  picture?: string;
-  city?: string;
-  instrument?: string;
-  isMusician: boolean;
-  isClient: boolean;
-  tier: string;
-  talentbio?: string;
-  followers: number;
-  followings: number;
-  lastActive?: number;
-  isPrivate?: boolean;
-  roleType?: string;
-  experience?: string;
-}
+import { UserProps } from "@/types/userTypes";
 
 export default function DiscoverPage() {
   const { user: currentUser } = useCurrentUser();
@@ -64,6 +44,9 @@ export default function DiscoverPage() {
     instrument: "",
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<
+    "all" | "musicians" | "clients" | "pro"
+  >("all");
 
   // Search users with filters
   const searchResults = useQuery(
@@ -80,11 +63,11 @@ export default function DiscoverPage() {
           limit: 50,
         }
       : "skip"
-  ) as UserCard[] | undefined;
+  ) as UserProps[] | undefined;
 
   // Get all users if no search (for initial discovery)
   const allUsers = useQuery(api.controllers.user.getAllUsers) as
-    | UserCard[]
+    | UserProps[]
     | undefined;
 
   const followUser = useMutation(api.controllers.user.followUser);
@@ -104,21 +87,60 @@ export default function DiscoverPage() {
     return usersToDisplay
       .filter((user) => user._id !== currentUser._id)
       .map((user) => {
+        // Check if current user is following this user
         const isFollowing = currentUser.followings?.includes(user._id) || false;
+
+        // CORRECTED: Check if current user has a pending request to this user
         const hasPendingRequest =
           user.isPrivate &&
-          currentUser.followings?.includes(user._id) === false;
+          (user.pendingFollowRequests?.includes(currentUser._id) || false);
 
         return {
           ...user,
           isFollowing,
           hasPendingRequest,
           canFollow: !isFollowing && !hasPendingRequest,
+          // Add computed counts for display
+          followersCount: user.followers?.length || 0,
+          followingsCount: user.followings?.length || 0,
         };
       });
   }, [usersToDisplay, currentUser]);
 
-  const handleFollow = async (targetUserId: string, targetUsername: string) => {
+  // Group users by category for better organization
+  const categorizedUsers = useMemo(() => {
+    const musicians = enhancedUsers.filter((user) => user.isMusician);
+    const clients = enhancedUsers.filter((user) => user.isClient);
+    const proUsers = enhancedUsers.filter((user) => user.tier === "pro");
+
+    // CORRECTED: followers is an array, so we check its length
+    const popularUsers = enhancedUsers
+      .filter((user) => (user.followers?.length || 0) > 10)
+      .sort((a, b) => (b.followers?.length || 0) - (a.followers?.length || 0))
+      .slice(0, 8);
+
+    return { musicians, clients, proUsers, popularUsers, all: enhancedUsers };
+  }, [enhancedUsers]);
+
+  // Get users for current active category
+  const usersForCategory = useMemo(() => {
+    switch (activeCategory) {
+      case "musicians":
+        return categorizedUsers.musicians;
+      case "clients":
+        return categorizedUsers.clients;
+      case "pro":
+        return categorizedUsers.proUsers;
+      default:
+        return categorizedUsers.all;
+    }
+  }, [activeCategory, categorizedUsers]);
+
+  const handleFollow = async (
+    targetUserId: string,
+    targetUsername: string,
+    isPrivate: boolean
+  ) => {
     if (!currentUser?.clerkId) {
       toast.error("Please log in to follow users");
       return;
@@ -152,22 +174,51 @@ export default function DiscoverPage() {
       instrument: "",
     });
     setSearchQuery("");
+    setActiveCategory("all");
   };
 
   const hasActiveFilters =
     searchQuery ||
     filters.city ||
     filters.instrument ||
-    filters.isMusician !== undefined;
+    filters.isMusician !== undefined ||
+    activeCategory !== "all";
 
-  // Group users by category for better organization
-  const categorizedUsers = useMemo(() => {
-    const musicians = enhancedUsers.filter((user) => user.isMusician);
-    const clients = enhancedUsers.filter((user) => user.isClient);
-    const proUsers = enhancedUsers.filter((user) => user.tier === "pro");
-
-    return { musicians, clients, proUsers };
-  }, [enhancedUsers]);
+  // Category cards for quick filtering
+  const categoryCards = [
+    {
+      id: "all" as const,
+      title: "All Users",
+      count: categorizedUsers.all.length,
+      icon: Users,
+      color: "bg-blue-500",
+      description: "Discover all users",
+    },
+    {
+      id: "musicians" as const,
+      title: "Musicians",
+      count: categorizedUsers.musicians.length,
+      icon: Music,
+      color: "bg-purple-500",
+      description: "Find talented artists",
+    },
+    {
+      id: "clients" as const,
+      title: "Clients",
+      count: categorizedUsers.clients.length,
+      icon: Building,
+      color: "bg-green-500",
+      description: "Connect with event organizers",
+    },
+    {
+      id: "pro" as const,
+      title: "Pro Users",
+      count: categorizedUsers.proUsers.length,
+      icon: Crown,
+      color: "bg-amber-500",
+      description: "Verified professionals",
+    },
+  ];
 
   return (
     <div className={cn("min-h-screen pt-24 lg:pt-0", colors.background)}>
@@ -177,7 +228,7 @@ export default function DiscoverPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between mb-6"
+            className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4"
           >
             <div>
               <h1 className={cn("text-3xl font-bold mb-2", colors.text)}>
@@ -195,11 +246,49 @@ export default function DiscoverPage() {
             </div>
           </motion.div>
 
-          {/* Search and Filters */}
+          {/* Category Cards */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+          >
+            {categoryCards.map((category) => (
+              <motion.div
+                key={category.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={cn(
+                  "p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                  colors.card,
+                  colors.border,
+                  activeCategory === category.id && "ring-2 ring-blue-500"
+                )}
+                onClick={() => setActiveCategory(category.id)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <category.icon
+                    className={`w-8 h-8 ${category.color} text-white p-1.5 rounded-lg`}
+                  />
+                  <Badge variant="secondary" className="text-xs">
+                    {category.count}
+                  </Badge>
+                </div>
+                <h3 className={cn("font-semibold text-sm", colors.text)}>
+                  {category.title}
+                </h3>
+                <p className={cn("text-xs", colors.textMuted)}>
+                  {category.description}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Search and Filters */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
             className={cn(
               "p-6 rounded-xl border mb-6",
               colors.card,
@@ -385,23 +474,32 @@ export default function DiscoverPage() {
                     />
                   </Badge>
                 )}
+                {activeCategory !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Category: {activeCategory}
+                    <X
+                      className="w-3 h-3 cursor-pointer"
+                      onClick={() => setActiveCategory("all")}
+                    />
+                  </Badge>
+                )}
               </motion.div>
             )}
           </motion.div>
         </div>
 
         {/* Users Grid */}
-        {enhancedUsers.length > 0 ? (
+        {usersForCategory.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence>
-              {enhancedUsers.map((user, index) => (
+              {usersForCategory.map((user, index) => (
                 <motion.div
                   key={user._id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
                   className={cn(
-                    "rounded-xl border p-6 transition-all duration-300 hover:shadow-lg",
+                    "rounded-xl border p-6 transition-all duration-300 hover:shadow-lg flex flex-col",
                     colors.card,
                     colors.border
                   )}
@@ -414,7 +512,7 @@ export default function DiscoverPage() {
                           <img
                             src={user.picture}
                             alt={user.firstname || user.username}
-                            className="rounded-xl object-cover w-48 h-48"
+                            className="rounded-xl object-cover wq-[48px] h-[48px]"
                           />
                         ) : (
                           <div
@@ -432,18 +530,20 @@ export default function DiscoverPage() {
                           </div>
                         )}
                       </div>
-                      <div>
-                        <h3 className={cn("font-semibold", colors.text)}>
+                      <div className="min-w-0">
+                        <h3
+                          className={cn("font-semibold truncate", colors.text)}
+                        >
                           {user.firstname} {user.lastname}
                         </h3>
-                        <p className={cn("text-sm", colors.textMuted)}>
+                        <p className={cn("text-sm truncate", colors.textMuted)}>
                           @{user.username}
                         </p>
                       </div>
                     </div>
 
                     {user.isPrivate && (
-                      <Shield className="w-4 h-4 text-gray-400" />
+                      <Shield className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     )}
                   </div>
 
@@ -479,7 +579,7 @@ export default function DiscoverPage() {
                   </div>
 
                   {/* User Info */}
-                  <div className="space-y-2 mb-4">
+                  <div className="space-y-2 mb-4 flex-1">
                     {user.city && (
                       <div className="flex items-center gap-2 text-sm">
                         <MapPin className="w-3 h-3 text-gray-400" />
@@ -505,17 +605,21 @@ export default function DiscoverPage() {
                   {/* Stats */}
                   <div className="flex items-center justify-between text-xs mb-4">
                     <span className={colors.textMuted}>
-                      {user.followers} followers
+                      {user.followersCount} followers
                     </span>
                     <span className={colors.textMuted}>
-                      {user.followings} following
+                      {user.followingsCount} following
                     </span>
                   </div>
 
                   {/* Action Button */}
                   <Button
                     onClick={() =>
-                      handleFollow(user._id, user.firstname || user.username)
+                      handleFollow(
+                        user._id,
+                        user.firstname || user.username,
+                        user.isPrivate || false
+                      )
                     }
                     disabled={!user.canFollow}
                     variant={
