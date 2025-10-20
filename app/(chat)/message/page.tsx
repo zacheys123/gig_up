@@ -44,7 +44,7 @@ export default function MessagesPage() {
 
   return (
     <div className={cn("flex h-screen", colors.background, colors.text)}>
-      {/* Chat List Sidebar - Hidden on mobile when chat is selected */}
+      // app/messages/page.tsx - Remove the header section and keep only:
       <div
         className={cn(
           "flex flex-col border-r transition-all duration-300",
@@ -54,22 +54,11 @@ export default function MessagesPage() {
           selectedChat ? "hidden md:flex" : "flex"
         )}
       >
-        {/* Minimal Header */}
+        {/* Remove the header with back button and home - navigation is now handled by DesktopMessagesNav */}
+
         <div className={cn("p-4 border-b", colors.border)}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Back to Home */}
-              <Link
-                href="/"
-                className={cn(
-                  "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-                  colors.text
-                )}
-              >
-                <Home className="w-5 h-5" />
-              </Link>
-              <h1 className={cn("text-xl font-bold", colors.text)}>Messages</h1>
-            </div>
+            <h1 className={cn("text-xl font-bold", colors.text)}>Messages</h1>
             <Button
               variant="ghost"
               size="sm"
@@ -100,6 +89,15 @@ export default function MessagesPage() {
           </div>
         </div>
 
+        {/* Rest of the chat list remains the same */}
+        <div className="flex-1 overflow-y-auto">
+          <ChatList
+            chats={filteredChats}
+            selectedChat={selectedChat}
+            onSelectChat={(chatId) => setSelectedChat(chatId)}
+          />
+        </div>
+
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
           <ChatList
@@ -109,7 +107,6 @@ export default function MessagesPage() {
           />
         </div>
       </div>
-
       {/* Main Chat Area */}
       <div
         className={cn(
@@ -159,7 +156,6 @@ export default function MessagesPage() {
           </div>
         )}
       </div>
-
       {/* Right Sidebar - Desktop Only (Facebook-style) */}
       {!selectedChat && (
         <div
