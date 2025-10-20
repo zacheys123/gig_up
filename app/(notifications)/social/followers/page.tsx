@@ -16,7 +16,6 @@ import {
   UserCheck,
   MoreHorizontal,
   UserX,
-  MessageCircle,
   Eye,
   Share2,
   Sparkles,
@@ -48,6 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import { Id } from "@/convex/_generated/dataModel";
 import FollowButton from "@/components/pages/FollowButton";
+import { ChatIcon } from "@/components/chat/ChatIcon";
 
 interface Follower {
   _id: Id<"users">;
@@ -164,7 +164,7 @@ const MobileFollowerCard = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className={cn("rounded-xl", colors.card)}
+              className={cn("rounded-xl items-center", colors.card)}
             >
               <DropdownMenuItem
                 onClick={() => handleAction("view-profile", follower)}
@@ -172,10 +172,8 @@ const MobileFollowerCard = ({
                 <Eye className="w-4 h-4 mr-2" />
                 View Profile
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleAction("message", follower)}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
+              <DropdownMenuItem>
+                <ChatIcon userId={follower._id} />
                 Message
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -228,19 +226,18 @@ const MobileFollowerCard = ({
           </div>
 
           <div className="flex items-center gap-1">
-            <Button
-              onClick={() => handleAction("message", follower)}
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-            >
-              <MessageCircle className="w-3 h-3" />
-            </Button>
             <FollowButton
               _id={follower._id}
               variant="default"
               size="sm"
-              className="h-8 px-3 text-xs"
+              className={cn(
+                "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl",
+                "border transition-all duration-200",
+                "bg-transparent hover:bg-red-500/10",
+                "text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300",
+                "border-red-500/30 hover:border-red-500/50",
+                "backdrop-blur-sm"
+              )}
             />
           </div>
         </div>
@@ -352,12 +349,7 @@ const TabletFollowerCard = ({
                 <Eye className="w-4 h-4 mr-2" />
                 View Profile
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleAction("message", follower)}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Message
-              </DropdownMenuItem>
+              <ChatIcon userId={follower?._id} /> Message
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => handleAction("remove", follower)}
@@ -411,14 +403,6 @@ const TabletFollowerCard = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => handleAction("message", follower)}
-              variant="outline"
-              size="sm"
-              className="rounded-lg"
-            >
-              <MessageCircle className="w-4 h-4" />
-            </Button>
             <FollowButton
               _id={follower._id}
               variant="default"
@@ -554,7 +538,7 @@ const DesktopFollowerCard = ({
               onClick={() => handleAction("message", follower)}
               className={cn("rounded-lg", colors.hoverBg)}
             >
-              <MessageCircle className="w-4 h-4 mr-2" />
+              <ChatIcon userId={follower?._id} className="w-4 h-4 mr-2" />
               Message
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -623,14 +607,6 @@ const DesktopFollowerCard = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            onClick={() => handleAction("message", follower)}
-            variant="outline"
-            size="sm"
-            className={cn("rounded-lg border-2", colors.border)}
-          >
-            <MessageCircle className="w-4 h-4" />
-          </Button>
           <FollowButton
             _id={follower._id}
             variant="default"
@@ -789,11 +765,8 @@ export default function FollowersPage() {
   const handleAction = (action: string, follower: Follower) => {
     setSelectedFollower(follower);
     switch (action) {
-      case "message":
-        router.push(`/messages?user=${follower.username}`);
-        break;
       case "view-profile":
-        router.push(`/profile/${follower.username}`);
+        router.push(`/search/${follower.username}`);
         break;
       case "remove":
         setShowRemoveDialog(true);
@@ -1062,7 +1035,10 @@ export default function FollowersPage() {
               <Button
                 onClick={() => setShowMobileFilters(!showMobileFilters)}
                 variant="outline"
-                className="w-full justify-between rounded-lg"
+                className={cn(
+                  "w-full justify-between rounded-lg",
+                  colors.textMuted
+                )}
               >
                 <span>
                   Filter:{" "}
@@ -1088,7 +1064,7 @@ export default function FollowersPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="mt-2 overflow-hidden"
                   >
-                    <div className="flex gap-2 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <div className="flex gap-2 p-1 rounded-lg bg-gray-100 dark:bg-gray-300">
                       {[
                         { key: "all", label: "All" },
                         { key: "musicians", label: "Musicians", icon: Music },

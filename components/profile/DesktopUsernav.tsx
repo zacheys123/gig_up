@@ -28,9 +28,6 @@ import {
   getMissingFields,
   getProfileCompletionMessage,
 } from "@/utils";
-import SidebarSkeleton from "../skeletons/SidebarSkeleton";
-import { useCheckTrial } from "@/hooks/useCheckTrial";
-import { useNotificationSystem } from "@/hooks/useNotifications";
 
 const DesktopUserNav = () => {
   const { userId } = useAuth();

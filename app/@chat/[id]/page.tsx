@@ -1,7 +1,11 @@
-import React from "react";
+// app/@chat/[id]/page.tsx
+"use client";
+import { ChatModal } from "@/components/chat/ChatModal";
+import { useParams } from "next/navigation";
 
-const ChatPage = () => {
-  return <div>ChatPage</div>;
-};
+export default function ChatModalPage() {
+  const params = useParams();
+  const chatId = params.id as string;
 
-export default ChatPage;
+  return <ChatModal chatId={chatId} />;
+}

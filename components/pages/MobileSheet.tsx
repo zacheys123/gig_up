@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +25,8 @@ import {
   Sun,
   Moon,
   Bell,
+  ArrowLeft,
+  Search as SearchIcon,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -35,6 +37,12 @@ import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { GigUpAssistant } from "../ai/GigupAssistant";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { useChat } from "@/app/context/ChatContext";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 // Define interfaces
 interface NavLink {
@@ -43,6 +51,7 @@ interface NavLink {
   icon: React.ReactElement;
   badge?: number;
   condition?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 interface DesktopNavigationItem {
@@ -137,6 +146,182 @@ const getBasicLinks = (): NavLink[] => [
   { label: "Contact", href: "/contact", icon: <Mail size={20} /> },
 ];
 
+// Chat List Component
+const ChatList = ({
+  onBack,
+  onSelectChat,
+}: {
+  onBack: () => void;
+  onSelectChat: (chatId: string) => void;
+}) => {
+  const { user: currentUser } = useCurrentUser();
+  const { colors } = useThemeColors();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Fetch user's chats
+  const chats = useQuery(
+    api.controllers.chat.getUserChats,
+    currentUser?._id ? { userId: currentUser._id } : "skip"
+  );
+
+  // Filter and sort chats
+  const filteredChats = chats
+    ?.filter(
+      (chat) =>
+        chat.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chat.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Unread chats first, then by recent activity
+      if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+      if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+      return (b.lastMessageAt || 0) - (a.lastMessageAt || 0);
+    });
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1">
+          <h3 className="font-semibold text-lg">Messages</h3>
+          <p className={cn("text-sm", colors.textMuted)}>Your conversations</p>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="relative">
+          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-gray-50 dark:bg-gray-800 border-0"
+          />
+        </div>
+      </div>
+
+      {/* Chat List */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {filteredChats?.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div
+              className={cn(
+                "w-16 h-16 rounded-full flex items-center justify-center mb-4",
+                "bg-gray-100 dark:bg-gray-800"
+              )}
+            >
+              <MessageCircle className="w-8 h-8 text-gray-400" />
+            </div>
+            <h4 className={cn("font-semibold mb-2", colors.text)}>
+              {searchQuery ? "No matches found" : "No conversations yet"}
+            </h4>
+            <p className={cn("text-sm", colors.textMuted)}>
+              {searchQuery
+                ? "Try a different search term"
+                : "Start a conversation with other users"}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredChats?.map((chat) => {
+              const otherParticipant = chat.otherParticipants[0];
+
+              return (
+                <button
+                  key={chat._id}
+                  onClick={() => onSelectChat(chat._id)}
+                  className={cn(
+                    "w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200",
+                    "hover:bg-gray-50 dark:hover:bg-gray-800/50",
+                    "border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                  )}
+                >
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={otherParticipant?.picture} />
+                    <AvatarFallback className="text-sm">
+                      {otherParticipant?.firstname?.[0]}
+                      {otherParticipant?.lastname?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4
+                        className={cn(
+                          "font-semibold text-sm truncate",
+                          colors.text
+                        )}
+                      >
+                        {chat.displayName}
+                      </h4>
+                      {chat.lastMessageAt && (
+                        <span
+                          className={cn(
+                            "text-xs whitespace-nowrap",
+                            colors.textMuted
+                          )}
+                        >
+                          {formatTime(chat.lastMessageAt)}
+                        </span>
+                      )}
+                    </div>
+
+                    <p
+                      className={cn(
+                        "text-sm truncate",
+                        chat.unreadCount > 0
+                          ? "font-medium text-gray-900 dark:text-white"
+                          : colors.textMuted
+                      )}
+                    >
+                      {chat.lastMessage || "Start a conversation"}
+                    </p>
+                  </div>
+
+                  {chat.unreadCount > 0 && (
+                    <div className="flex-shrink-0">
+                      <span
+                        className={cn(
+                          "bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center",
+                          "animate-pulse"
+                        )}
+                      >
+                        {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Helper function to format time
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+
+  if (diff < 24 * 60 * 60 * 1000) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } else if (diff < 7 * 24 * 60 * 60 * 1000) {
+    return date.toLocaleDateString([], { weekday: "short" });
+  } else {
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+}
+
 const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
   const { userId } = useAuth();
   const { isSignedIn, user: clerkUser } = useUser();
@@ -145,6 +330,35 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
   const { isPro } = useSubscriptionStore();
   const { colors, isDarkMode } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
+
+  const unreadCount = useUnreadCount();
+  const { openChat } = useChat();
+
+  // State for sheet content
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<"main" | "chatList">("main");
+
+  // Function to handle opening chat list
+  const handleOpenMessages = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isSignedIn) {
+      setCurrentView("chatList");
+    } else {
+      // For non-signed-in users, navigate to messages page
+      window.location.href = "/messages";
+    }
+  };
+
+  // Function to handle chat selection
+  const handleSelectChat = (chatId: string) => {
+    openChat(chatId);
+    setSheetOpen(false); // Close the sheet when chat opens
+  };
+
+  // Function to go back to main menu
+  const handleBackToMain = () => {
+    setCurrentView("main");
+  };
 
   // Safely get tier from localStorage
   const [tier, setTier] = React.useState<string>("free");
@@ -178,7 +392,7 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
       label: "Messages",
       icon: <MessageCircle size={20} />,
       condition: isSignedIn,
-      badge: 3,
+      badge: unreadCount,
     },
   ];
 
@@ -190,8 +404,29 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
   // Combine existing nav links with missing desktop items
   const allNavLinks: NavLink[] = [...navLinks, ...missingDesktopItems];
 
+  // Update Messages link to use toggle for signed-in users
+  const updatedNavLinks = allNavLinks.map((link) => {
+    if (link.href === "/messages" && isSignedIn) {
+      return {
+        ...link,
+        onClick: handleOpenMessages,
+        badge: unreadCount,
+      };
+    }
+    return link;
+  });
+
+  // Reset to main view when sheet closes
+  const handleSheetOpenChange = (open: boolean) => {
+    setSheetOpen(open);
+    if (!open) {
+      // Small delay to ensure smooth transition
+      setTimeout(() => setCurrentView("main"), 300);
+    }
+  };
+
   return (
-    <Sheet>
+    <Sheet open={sheetOpen} onOpenChange={handleSheetOpenChange}>
       <SheetTrigger asChild>
         <button className="p-2">
           <Menu
@@ -205,275 +440,178 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
       <SheetContent
         side="left"
         className={cn(
-          "w-[80%] sm:w-[60%] md:w-[40%] h-full",
-          "backdrop-blur-2xl border-r px-6 py-6 flex flex-col gap-4 z-[999]",
-          "rounded-br-[120px] shadow-2xl",
+          "w-[85%] sm:w-[70%] h-full p-0 overflow-hidden",
           colors.card,
-          colors.border,
-          "transition-colors duration-200 ease-in-out"
+          colors.border
         )}
       >
-        {!isTrialEnded ? (
-          <>
-            <SheetTitle className={cn("text-2xl font-bold mb-4", colors.text)}>
-              {hasMinimalData(user) ? "Access More Info" : "Welcome to Gigup"}
-            </SheetTitle>
+        {/* Main Navigation View */}
+        {currentView === "main" && (
+          <div className="h-full flex flex-col">
+            <div className={cn("p-6 border-b", colors.border)}>
+              <SheetTitle
+                className={cn("text-2xl font-bold mb-2", colors.text)}
+              >
+                {hasMinimalData(user) ? "Access More Info" : "Welcome to Gigup"}
+              </SheetTitle>
+              {isSignedIn && unreadCount > 0 && (
+                <p className={cn("text-sm", colors.textMuted)}>
+                  You have {unreadCount} unread message
+                  {unreadCount !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
 
-            {/* Navigation Links */}
-            <div className="space-y-2">
-              {allNavLinks
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {updatedNavLinks
                 .filter((link) => pathname !== link.href)
-                .map((link, index) => (
-                  <Link
-                    key={index}
-                    href={link.href}
+                .map((link, index) => {
+                  const linkContent = (
+                    <div
+                      className={cn(
+                        "flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 group relative",
+                        colors.hoverBg,
+                        colors.text,
+                        "hover:text-amber-600 dark:hover:text-amber-400"
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span
+                          className={cn(
+                            "transition-colors duration-200",
+                            "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                          )}
+                        >
+                          {link.icon}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-lg font-medium transition-colors duration-200",
+                            colors.text
+                          )}
+                        >
+                          {link.label}
+                        </span>
+                      </div>
+
+                      {/* Badge - positioned to the right */}
+                      {link.badge && link.badge > 0 && (
+                        <span
+                          className={cn(
+                            "bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center",
+                            "animate-pulse"
+                          )}
+                        >
+                          {link.badge > 99 ? "99+" : link.badge}
+                        </span>
+                      )}
+                    </div>
+                  );
+
+                  if (link.onClick) {
+                    return (
+                      <button
+                        key={index}
+                        onClick={link.onClick}
+                        className="w-full text-left"
+                      >
+                        {linkContent}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={index}
+                      href={link.href}
+                      onClick={() => setSheetOpen(false)}
+                    >
+                      {linkContent}
+                    </Link>
+                  );
+                })}
+            </div>
+
+            {/* Footer Section */}
+            <div className="p-4 border-t space-y-4">
+              {/* Create Button */}
+              {isSignedIn && hasRole && (
+                <Link
+                  href={isMusician ? "/gigs" : "/create-gig"}
+                  onClick={() => setSheetOpen(false)}
+                >
+                  <div
                     className={cn(
-                      "flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 group relative",
+                      "flex items-center gap-4 w-full px-4 py-3 rounded-lg transition-all duration-200",
+                      "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                      "text-white font-medium shadow-md hover:shadow-lg"
+                    )}
+                  >
+                    <Plus size={20} />
+                    <span>{isMusician ? "Find Gigs" : "Post Gig"}</span>
+                  </div>
+                </Link>
+              )}
+
+              {/* Sign In/Sign Up */}
+              {!isSignedIn && (
+                <div className="space-y-2">
+                  <Link
+                    href="/sign-in"
+                    onClick={() => setSheetOpen(false)}
+                    className={cn(
+                      "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg transition-all duration-200",
                       colors.hoverBg,
                       colors.text,
                       "hover:text-amber-600 dark:hover:text-amber-400"
                     )}
                   >
-                    <div className="flex items-center gap-4">
-                      <span
-                        className={cn(
-                          "transition-colors duration-200",
-                          "group-hover:text-amber-600 dark:group-hover:text-amber-400"
-                        )}
-                      >
-                        {link.icon}
-                      </span>
-                      <span
-                        className={cn(
-                          "md:text-lg font-medium transition-colors duration-200",
-                          colors.text
-                        )}
-                      >
-                        {link.label}
-                      </span>
-                    </div>
-
-                    {/* Badge - positioned to the right */}
-                    {link.badge && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                        {link.badge}
-                      </span>
-                    )}
+                    <span>Sign In</span>
                   </Link>
-                ))}
-            </div>
-
-            {/* Create Button (for signed-in users with roles) */}
-            {isSignedIn && hasRole && (
-              <Link href={isMusician ? "/gigs" : "/create-gig"}>
-                <div
-                  className={cn(
-                    "flex items-center gap-4 w-full px-4 py-3 rounded-lg transition-all duration-200",
-                    "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                    "text-white font-medium shadow-md hover:shadow-lg"
-                  )}
-                >
-                  <Plus size={20} />
-                  <span>{isMusician ? "Find Gigs" : "Post Gig"}</span>
+                  <Link
+                    href="/sign-up"
+                    onClick={() => setSheetOpen(false)}
+                    className={cn(
+                      "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg transition-all duration-200",
+                      "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                      "text-white font-medium shadow-md hover:shadow-lg"
+                    )}
+                  >
+                    <span>Sign Up</span>
+                  </Link>
                 </div>
-              </Link>
-            )}
+              )}
 
-            {/* Sign In/Sign Up for non-signed in users */}
-            {!isSignedIn && (
-              <div className="space-y-2">
-                <Link
-                  href="/sign-in"
+              {/* Theme Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg border">
+                <span className={cn("text-sm", colors.text)}>
+                  {isDarkMode ? "Light Mode" : "Dark Mode"}
+                </span>
+                <button
+                  onClick={toggleDarkMode}
                   className={cn(
-                    "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg transition-all duration-200",
-                    colors.hoverBg,
+                    "p-2 rounded-md transition-all duration-200 relative group",
                     colors.text,
                     "hover:text-amber-600 dark:hover:text-amber-400"
                   )}
                 >
-                  <span>Sign In</span>
-                </Link>
-                <Link
-                  href="/sign-up"
-                  className={cn(
-                    "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg transition-all duration-200",
-                    "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                    "text-white font-medium shadow-md hover:shadow-lg"
+                  {isDarkMode ? (
+                    <Sun className="w-5 h-5" />
+                  ) : (
+                    <Moon className="w-5 h-5" />
                   )}
-                >
-                  <span>Sign Up</span>
-                </Link>
+                </button>
               </div>
-            )}
 
-            {/* Show version badge only if user has minimal data */}
-            {hasMinimalData(user) && (
-              <div
-                className={cn(
-                  "mt-6 p-2 w-fit text-sm rounded-md font-semibold shadow-md text-white",
-                  isPro()
-                    ? "bg-gradient-to-br from-purple-600 via-emerald-600 to-orange-600"
-                    : "bg-gradient-to-br from-blue-600 via-green-600 to-yellow-600"
-                )}
-              >
-                {isPro() ? "Pro" : "Free"} Version
-              </div>
-            )}
-
-            {/* Show setup prompt if user doesn't have minimal data */}
-            {!hasMinimalData(user) && user && (
-              <div
-                className={cn(
-                  "mt-6 p-4 rounded-lg border",
-                  colors.secondaryBackground,
-                  colors.border
-                )}
-              >
-                <p className={cn("text-sm mb-3", colors.text)}>
-                  Complete your profile to access all features!
-                </p>
-                <Link
-                  href="/profile"
-                  className={cn(
-                    "inline-block w-full text-center px-4 py-2 text-sm font-semibold rounded-lg",
-                    "transition duration-200 hover:brightness-110",
-                    "bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white"
-                  )}
-                >
-                  Complete Profile
-                </Link>
-              </div>
-            )}
-
-            {/* Theme Toggle */}
-            <div className="flex items-center justify-between p-3 rounded-lg border mt-4">
-              <span className={cn("text-sm", colors.text)}>
-                {isDarkMode ? "Light Mode" : "Dark Mode"}
-              </span>
-              <button
-                onClick={toggleDarkMode}
-                className={cn(
-                  "p-2 rounded-md transition-all duration-200 relative group",
-                  colors.text,
-                  "hover:text-amber-600 dark:hover:text-amber-400"
-                )}
-                aria-label={
-                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
-                }
-              >
-                {isDarkMode ? (
-                  <Sun className="w-5 h-5 transition-colors duration-200" />
-                ) : (
-                  <Moon className="w-5 h-5 transition-colors duration-200" />
-                )}
-              </button>
+              <GigUpAssistant />
             </div>
-          </>
-        ) : (
-          <>
-            <SheetTitle className={cn("text-2xl font-bold mb-4", colors.text)}>
-              Try Gigup Now!!!!
-            </SheetTitle>
-            <div className="flex flex-col justify-between h-full">
-              <div className="space-y-4">
-                <Link
-                  href={"/experience/v1/trial"}
-                  className={cn(
-                    "flex items-center gap-4 w-full px-4 py-3 rounded-lg transition-all duration-200",
-                    colors.hoverBg,
-                    colors.text
-                  )}
-                >
-                  <span className={colors.text}>
-                    <VideoIcon size={20} />
-                  </span>
-                  <div
-                    className={cn(
-                      "p-3 rounded-lg shadow-lg",
-                      colors.secondaryBackground
-                    )}
-                  >
-                    <span className="md:text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 via-purple-600 to-yellow-500">
-                      Experience GiGup
-                    </span>
-                  </div>
-                </Link>
-
-                {/* New informational text */}
-                <p
-                  className={cn(
-                    "text-sm mt-4 mb-2 px-2 leading-relaxed",
-                    colors.textMuted
-                  )}
-                >
-                  Unlock the full potential of GiGup with premium features such
-                  as:
-                </p>
-                <ul
-                  className={cn(
-                    "list-disc list-inside text-sm mb-4 px-4 space-y-1",
-                    colors.textMuted
-                  )}
-                >
-                  <li>Unlimited gigs & chats</li>
-                  <li>Advanced analytics & insights</li>
-                  <li>Priority support</li>
-                  <li>Exclusive video tools</li>
-                </ul>
-              </div>
-
-              <div className="space-y-4">
-                {/* Upgrade prompt for free users */}
-                {!isPro() && (
-                  <div
-                    className={cn(
-                      "p-2 w-fit text-sm rounded-md font-semibold shadow-md text-white",
-                      "bg-gradient-to-br from-purple-600 via-emerald-600 to-orange-600"
-                    )}
-                  >
-                    Upgrade to Pro Version
-                  </div>
-                )}
-
-                {/* CTA button */}
-                <Link
-                  href="/dashboard/billing"
-                  className={cn(
-                    "mt-4 inline-block w-full text-center px-6 py-3 text-sm font-semibold rounded-lg",
-                    "transition duration-200 hover:brightness-110",
-                    "bg-gradient-to-r from-purple-700 via-pink-600 to-yellow-500 text-white"
-                  )}
-                >
-                  {isPro() ? "Manage Subscription" : "Upgrade Now"}
-                </Link>
-
-                {/* Theme Toggle */}
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <span className={cn("text-sm", colors.text)}>Dark Mode</span>
-                  <button
-                    onClick={toggleDarkMode}
-                    className={cn(
-                      "p-2 rounded-md transition-colors",
-                      colors.hoverBg
-                    )}
-                    aria-label={
-                      isDarkMode
-                        ? "Switch to light mode"
-                        : "Switch to dark mode"
-                    }
-                  >
-                    {isDarkMode ? (
-                      <span className="text-yellow-400">☀️</span>
-                    ) : (
-                      <span className="text-blue-400">🌙</span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
+          </div>
         )}
-        <GigUpAssistant />
+
+        {/* Chat List View */}
+        {currentView === "chatList" && (
+          <ChatList onBack={handleBackToMain} onSelectChat={handleSelectChat} />
+        )}
       </SheetContent>
     </Sheet>
   );

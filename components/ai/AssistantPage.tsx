@@ -498,7 +498,7 @@ export function AssistantPage() {
                             "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-gray-200/60 dark:border-gray-700/60",
                             "hover:shadow-lg hover:scale-105 hover:border-orange-300/50 dark:hover:border-orange-400/50",
                             "active:scale-95",
-                            colors.text
+                            colors.textSecondary
                           )}
                         >
                           {question}

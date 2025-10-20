@@ -228,7 +228,7 @@ export default function DiscoverPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4"
+            className="flex flex-col lg:flex-row lg:items-center lg:justify-between my-13 gap-4"
           >
             <div>
               <h1 className={cn("text-3xl font-bold mb-2", colors.text)}>

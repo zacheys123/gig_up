@@ -1,26 +1,14 @@
+// app/provider.tsx
 "use client";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
-
 import { ThemeProvider as NextThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { NotificationSystemProvider } from "@/hooks/useNotifications";
+import { ChatProvider } from "./context/ChatContext";
 
-// Create a safe Convex client that handles missing URLs
-// function getConvexClient() {
-//   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-
-//   if (!convexUrl) {
-//     console.warn("NEXT_PUBLIC_CONVEX_URL is not set. Convex will not work until you run 'npx convex dev'");
-//     // Return a dummy client that won't crash
-//     return new ConvexReactClient("https://dummy.convex.dev");
-//   }
-
-//   return new ConvexReactClient(convexUrl);
-// }
-
-// const convex = getConvexClient();
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 const clerkAppearance = {
   baseTheme: undefined,
@@ -62,7 +50,6 @@ const clerkAppearance = {
     },
   },
 };
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -74,11 +61,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         appearance={clerkAppearance}
       >
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          {" "}
-          <NotificationSystemProvider>
-            <Toaster position="top-center" />
-            {children}{" "}
-          </NotificationSystemProvider>
+          <ChatProvider>
+            <NotificationSystemProvider>
+              <Toaster position="top-center" />
+              {children}
+            </NotificationSystemProvider>
+          </ChatProvider>
         </ConvexProviderWithClerk>
       </ClerkProvider>
     </NextThemeProvider>

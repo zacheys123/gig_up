@@ -71,7 +71,7 @@ const FollowButton = ({
           variant={variant}
           size={size}
         >
-          <span>Following</span>
+          <span>UnFollow</span>
         </Button>
       ) : (
         <button

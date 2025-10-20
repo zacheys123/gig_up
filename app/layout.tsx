@@ -26,8 +26,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+
+  chat,
 }: {
   children: React.ReactNode;
+  chat: React.ReactNode; // Add chat parallel route slot
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -58,7 +61,8 @@ export default function RootLayout({
         <Providers>
           <AuthSync />{" "}
           <NotificationSystemProvider>
-            {children} <NotificationToastContainer />
+            {children} {chat}
+            <NotificationToastContainer />
           </NotificationSystemProvider>
         </Providers>
       </body>

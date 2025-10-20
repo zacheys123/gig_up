@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import FollowButton from "@/components/pages/FollowButton";
 
 interface FollowingUser {
   _id: string;
@@ -470,22 +471,11 @@ export default function FollowingPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Action Button */}
-                    <Button
-                      onClick={() =>
-                        handleUnfollow(
-                          user._id,
-                          user.firstname || user.username
-                        )
-                      }
-                      variant="outline"
-                      className="text-red-600 border-red-500/30 hover:bg-red-500/10 rounded-xl gap-2"
+                    <FollowButton
+                      _id={user?._id}
+                      variant="secondary"
                       size="sm"
-                    >
-                      <UserMinus className="w-4 h-4" />
-                      Unfollow
-                    </Button>
+                    />
                   </div>
 
                   {/* Bio */}

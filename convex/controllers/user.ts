@@ -684,7 +684,7 @@ export const followUser = mutation({
             title: "New Follower",
             message: `${currentUser.firstname || currentUser.username} started following you`,
             image: currentUser.picture,
-            actionUrl: `/social/followers?new=true&follower=${currentUser._id}`,
+            actionUrl: `/social/followers?new=true`,
             relatedUserDocumentId: currentUser._id, // FOLLOWER (Document ID)
             isViewerInGracePeriod: args.isViewerInGracePeriod, // ADD THIS
             metadata: {

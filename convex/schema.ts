@@ -29,4 +29,52 @@ export default defineSchema({
     url: v.string(),
   }),
   pushSubscriptions: pushSubscriptions,
+  chats: defineTable({
+    participantIds: v.array(v.id("users")), // Users in this chat
+    lastMessage: v.optional(v.string()),
+    lastMessageAt: v.optional(v.number()),
+    unreadCounts: v.optional(v.record(v.string(), v.number())), // clerkId -> count
+    type: v.union(v.literal("direct"), v.literal("group")), // Direct message or group chat
+    name: v.optional(v.string()), // For group chats
+    createdBy: v.id("users"),
+  })
+    .index("by_participants", ["participantIds"])
+    .index("by_lastMessageAt", ["lastMessageAt"]),
+
+  messages: defineTable({
+    chatId: v.id("chats"),
+    senderId: v.id("users"),
+    content: v.string(),
+    messageType: v.union(
+      v.literal("text"),
+      v.literal("image"),
+      v.literal("file"),
+      v.literal("audio")
+    ),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          type: v.string(),
+          name: v.optional(v.string()),
+          size: v.optional(v.number()),
+        })
+      )
+    ),
+    readBy: v.optional(v.array(v.id("users"))),
+    repliedTo: v.optional(v.id("messages")),
+  })
+    .index("by_chatId", ["chatId"])
+    .index("by_senderId", ["senderId"]),
+  // Remove the by_chatId_creationTime index entirely
+
+  // For tracking user online status in chats
+  chatPresence: defineTable({
+    userId: v.id("users"),
+    chatId: v.id("chats"),
+    lastSeen: v.number(),
+    isOnline: v.boolean(),
+  })
+    .index("by_userId_chatId", ["userId", "chatId"])
+    .index("by_chatId", ["chatId"]),
 });
