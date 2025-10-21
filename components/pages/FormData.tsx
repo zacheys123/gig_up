@@ -10,7 +10,7 @@ const FormData = () => {
   return (
     <form
       className={cn(
-        "w-full h-[70px] fixed z-50 shadow-lg",
+        "w-full h-[70px] fixed z-30 shadow-lg",
         colors.background,
         "bg-gradient-to-r from-black to-gray-900" // Fallback gradient
       )}

@@ -22,6 +22,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
+import ConfirmPrompt from "../ConfirmPrompt";
 
 interface MainUserProps extends UserProps {
   isFeatured?: boolean;
@@ -46,6 +47,7 @@ const MainUser = ({
   isFeatured = false, // New prop
   profileViews, // For view count display
   pendingFollowRequests,
+  isMusician,
 }: MainUserProps) => {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -58,7 +60,7 @@ const MainUser = ({
   const trackProfileView = useMutation(
     api.controllers.notifications.trackProfileView
   );
-
+  const [showPrompt, setShowPrompt] = useState(false);
   // Get view count from the database (already queried and passed as prop)
   const viewCount = profileViews?.totalCount || 0;
 
@@ -82,7 +84,7 @@ const MainUser = ({
         if (result?.success) {
           router.push(`/search/${username}`);
         } else if (result?.reason === "already_viewed") {
-          alert("You have already viewed this profile");
+          setShowPrompt(true);
         }
       } catch (error) {
         console.error("Failed to track profile view:", error);
@@ -447,6 +449,27 @@ const MainUser = ({
           isPro={currentUser?.tier === "pro"}
         />
       )}
+
+      <ConfirmPrompt
+        isOpen={showPrompt}
+        onClose={() => setShowPrompt(false)}
+        onConfirm={() => router.push(`/search/${username}`)}
+        onCancel={() => null}
+        title="View Profile"
+        question="Do you want to visit their profile?"
+        userInfo={{
+          id: _id,
+          name: firstname + " " + lastname,
+          username: username,
+          image: picture,
+          type: isMusician ? "musician" : "client",
+          instrument: instrument,
+          city: city,
+        }}
+        confirmText="Yes, View"
+        cancelText="No, Thanks"
+        variant="info"
+      />
     </>
   );
 };
@@ -767,12 +790,6 @@ const Modal = ({
             >
               View Profile
             </button>
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="transform scale-90"
-            >
-              <FollowButton _id={user._id} />
-            </div>
           </div>
         </div>
       </motion.div>

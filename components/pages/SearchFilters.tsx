@@ -243,11 +243,11 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
   ).length;
 
   return (
-    <div className="relative my-3">
+    <div className="relative ">
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={filterButtonStyle}
-        className="flex items-center gap-2 px-4 py-2 mb-4 rounded-lg border hover:bg-gray-50 transition-colors shadow-sm hover:text-gray-900 ml-[100px] whitespace-nowrap mt-10 !ml-18"
+        className="flex items-center gap-2 px-4 py-2 z-30 mb-4 rounded-lg border hover:bg-gray-50 transition-colors shadow-sm hover:text-gray-900 ml-[100px] whitespace-nowrap mt-10 !ml-18"
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor =
             filterButtonHoverStyle.backgroundColor;

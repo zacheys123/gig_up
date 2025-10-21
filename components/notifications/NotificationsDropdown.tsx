@@ -142,7 +142,7 @@ export function NotificationDropdown({
       {/* Backdrop */}
       <motion.div
         {...animationVariants.backdrop}
-        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px]" // Darker backdrop for better contrast
+        className="fixed inset-0 z-60 bg-black/30 backdrop-blur-[1px]" // Darker backdrop for better contrast
         onClick={onClose}
         aria-hidden="true"
       />

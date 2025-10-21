@@ -78,11 +78,11 @@ export const NotificationSystemProvider = ({
   const { userId } = useAuth();
 
   // Fetch notifications
-  const notificationsData = useQuery(
+  const notifs = useQuery(
     api.controllers.notifications.getUserNotifications,
     userId ? { clerkId: userId, limit: 20 } : "skip"
   );
-
+  const notificationsData = notifs?.filter((n) => !n.isRead);
   // Fetch unread count
   const unreadCountData = useQuery(
     api.controllers.notifications.getUnreadCount,
@@ -215,3 +215,24 @@ export const NotificationSystemProvider = ({
     </NotificationSystemContext.Provider>
   );
 };
+
+// <ConfirmPrompt
+//     isOpen={showPrompt}
+//     onClose={() => setShowPrompt(false)}
+//     onConfirm={() => router.push(`/search/${username}`)}
+//     onCancel={() => null}
+//     title="View Profile"
+//     question="Do you want to visit their profile?"
+//     userInfo={{
+//       id: _id,
+//       name: firstname + " " + lastname,
+//       username: username,
+//       image: picture,
+//       type: isMusician ? "musician" : "client",
+//       instrument: instrument,
+//       city: city,
+//     }}
+//     confirmText="Yes, View"
+//     cancelText="No, Thanks"
+//     variant="info"
+//   />
