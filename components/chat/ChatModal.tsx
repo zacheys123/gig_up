@@ -20,7 +20,7 @@ export function ChatModal({ chatId }: ChatModalProps) {
 
   const handleClose = () => {
     closeChat();
-    // Also navigate back to clear the parallel route
+    // Simple back navigation - this usually works best
     router.back();
   };
 
@@ -41,7 +41,6 @@ export function ChatModal({ chatId }: ChatModalProps) {
     }
   };
 
-  // Don't render if no chat is active or if the chatId doesn't match
   if (!currentChatId || currentChatId !== chatId) return null;
 
   return (

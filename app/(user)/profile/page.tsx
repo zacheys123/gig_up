@@ -9,6 +9,11 @@ import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
+import {
+  calculateProfileCompletion,
+  getMissingFields,
+  getProfileCompletionMessage,
+} from "@/utils";
 
 type Gig = Doc<"gigs">;
 type User = Doc<"users">;
@@ -23,6 +28,9 @@ const ProfilePage = () => {
   const router = useRouter();
   const { colors, mounted } = useThemeColors();
 
+  const profileCompletion = calculateProfileCompletion(user);
+  const completionMessage = getProfileCompletionMessage(profileCompletion);
+  const missingFields = getMissingFields(user);
   // Use Convex query to get all gigs with user data
   const gigs = useQuery(api.controllers.gigs.getGigsWithUsers) as
     | GigWithUsers[]
@@ -179,55 +187,55 @@ const ProfilePage = () => {
           transition={{ delay: 0.3 }}
           className="mb-8"
         >
-          <div
-            className={cn("rounded-xl border p-6", colors.card, colors.border)}
-          >
-            <h2 className={cn("text-xl font-semibold mb-4", colors.text)}>
-              Profile Completion
-            </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className={cn("text-sm", colors.textMuted)}>
-                  Progress
-                </span>
-                <span className="text-amber-400 font-bold">
-                  {Math.round(
-                    (((user?.firstname ? 1 : 0) +
-                      (user?.date ? 1 : 0) +
-                      (user?.month ? 1 : 0) +
-                      (user?.year ? 1 : 0) +
-                      (user?.isMusician || user?.isClient ? 1 : 0)) /
-                      5) *
-                      100
-                  )}
-                  %
-                </span>
-              </div>
-              <div
-                className={cn(
-                  "w-full rounded-full h-2",
-                  colors.backgroundMuted
-                )}
-              >
-                <div
-                  className="bg-gradient-to-r from-amber-500 to-orange-600 h-2 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${
-                      (((user?.firstname ? 1 : 0) +
-                        (user?.date ? 1 : 0) +
-                        (user?.month ? 1 : 0) +
-                        (user?.year ? 1 : 0) +
-                        (user?.isMusician || user?.isClient ? 1 : 0)) /
-                        5) *
-                      100
-                    }%`,
-                  }}
-                />
-              </div>
-              <p className={cn("text-xs text-center", colors.textMuted)}>
-                Complete your profile to unlock all features
-              </p>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className={cn("text-sm md:text-lg", colors.textMuted)}>
+                Profile Complete
+              </span>
+              <span className={cn("text-sm font-medium", colors.text)}>
+                {profileCompletion}%
+              </span>
             </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${profileCompletion}%` }}
+              />
+            </div>
+            <p className={cn("text-xs", colors.textMuted)}>
+              {completionMessage}
+            </p>
+
+            {/* Show missing fields if profile is incomplete */}
+            {missingFields.length > 0 &&
+              profileCompletion < 100 &&
+              user?.isMusician && (
+                <div className="mt-2">
+                  <p className={cn("text-xs font-medium mb-1", colors.text)}>
+                    Missing:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {missingFields.slice(0, 3).map((field, index) => (
+                      <span
+                        key={index}
+                        className={cn(
+                          "text-xs px-2 py-1 rounded-full",
+                          "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+                        )}
+                      >
+                        {field}
+                      </span>
+                    ))}
+                    {missingFields.length > 3 && (
+                      <span
+                        className={cn("text-xs px-2 py-1", colors.textMuted)}
+                      >
+                        +{missingFields.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
           </div>
         </motion.section>
 

@@ -1,6 +1,6 @@
-// hooks/useNotificationSystem.ts
+// hooks/useNotificationSystem.ts - UPDATED VERSION
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -38,8 +38,7 @@ const NotificationSystemContext = createContext<
   NotificationSystemContextType | undefined
 >(undefined);
 
-// hooks/useNotificationSystem.ts - UPDATE THE MAPPING
-// Frontend mapping (same as backend)
+// Frontend mapping
 const notificationTypeToSettingMap = {
   profile_view: "profileViews",
   new_follower: "followRequests",
@@ -77,12 +76,17 @@ export const NotificationSystemProvider = ({
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const { userId } = useAuth();
 
+  // Track which notifications we've already shown as toasts
+  const shownNotificationIds = useRef<Set<string>>(new Set());
+
   // Fetch notifications
   const notifs = useQuery(
     api.controllers.notifications.getUserNotifications,
     userId ? { clerkId: userId, limit: 20 } : "skip"
   );
+
   const notificationsData = notifs?.filter((n) => !n.isRead);
+
   // Fetch unread count
   const unreadCountData = useQuery(
     api.controllers.notifications.getUnreadCount,
@@ -114,7 +118,7 @@ export const NotificationSystemProvider = ({
     // Auto remove after 5 seconds
     setTimeout(() => {
       removeToast(toast.id);
-    }, 10000);
+    }, 5000);
   };
 
   const removeToast = (id: string) => {
@@ -138,40 +142,6 @@ export const NotificationSystemProvider = ({
     // This will trigger a refetch since we're using useQuery
   };
 
-  // Show toasts for new notifications
-  useEffect(() => {
-    if (
-      notificationsData &&
-      notificationsData.length > 0 &&
-      notificationSettings
-    ) {
-      const latestNotification = notificationsData[0];
-
-      // Check if this is a new notification (created in the last 10 seconds)
-      const isNewNotification =
-        Date.now() - latestNotification.createdAt < 10000;
-
-      if (isNewNotification) {
-        const shouldShowToast = shouldDisplayToast(
-          latestNotification,
-          notificationSettings
-        );
-
-        if (shouldShowToast) {
-          addToast({
-            type: latestNotification.type,
-            title: latestNotification.title,
-            message: latestNotification.message,
-            image: latestNotification.image,
-            actionUrl: latestNotification.actionUrl,
-            metadata: latestNotification.metadata,
-            createdAt: latestNotification.createdAt,
-          });
-        }
-      }
-    }
-  }, [notificationsData, notificationSettings]);
-
   const shouldDisplayToast = (notification: any, settings: any) => {
     // Critical notifications always show
     const criticalTypes = ["system_alert"];
@@ -191,6 +161,59 @@ export const NotificationSystemProvider = ({
     // For unmapped types, default to true
     return true;
   };
+
+  // FIXED: Show toasts only for NEW notifications
+  useEffect(() => {
+    if (
+      notificationsData &&
+      notificationsData.length > 0 &&
+      notificationSettings
+    ) {
+      // Get current time for comparison
+      const currentTime = Date.now();
+
+      notificationsData.forEach((notification) => {
+        // Skip if we've already shown this notification
+        if (shownNotificationIds.current.has(notification._id)) {
+          return;
+        }
+
+        // Check if this is a new notification (created in the last 30 seconds)
+        const isNewNotification =
+          currentTime - notification._creationTime < 30000;
+
+        if (isNewNotification) {
+          const shouldShowToast = shouldDisplayToast(
+            notification,
+            notificationSettings
+          );
+
+          if (shouldShowToast) {
+            // Mark this notification as shown
+            shownNotificationIds.current.add(notification._id);
+
+            addToast({
+              type: notification.type,
+              title: notification.title,
+              message: notification.message,
+              image: notification.image,
+              actionUrl: notification.actionUrl,
+              metadata: notification.metadata,
+              createdAt: notification._creationTime,
+            });
+          }
+        }
+      });
+    }
+  }, [notificationsData, notificationSettings]);
+
+  // Clean up shown IDs when notifications change significantly
+  useEffect(() => {
+    if (notificationsData && notificationsData.length === 0) {
+      // Reset when all notifications are cleared
+      shownNotificationIds.current.clear();
+    }
+  }, [notificationsData?.length]);
 
   const value: NotificationSystemContextType = {
     // Toasts
@@ -215,24 +238,3 @@ export const NotificationSystemProvider = ({
     </NotificationSystemContext.Provider>
   );
 };
-
-// <ConfirmPrompt
-//     isOpen={showPrompt}
-//     onClose={() => setShowPrompt(false)}
-//     onConfirm={() => router.push(`/search/${username}`)}
-//     onCancel={() => null}
-//     title="View Profile"
-//     question="Do you want to visit their profile?"
-//     userInfo={{
-//       id: _id,
-//       name: firstname + " " + lastname,
-//       username: username,
-//       image: picture,
-//       type: isMusician ? "musician" : "client",
-//       instrument: instrument,
-//       city: city,
-//     }}
-//     confirmText="Yes, View"
-//     cancelText="No, Thanks"
-//     variant="info"
-//   />

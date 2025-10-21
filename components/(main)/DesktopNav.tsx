@@ -31,57 +31,56 @@ export function DesktopNavigation() {
   const { toggleDarkMode } = useThemeToggle();
 
   const { isInGracePeriod } = useCheckTrial();
-  // Check if user has a role
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
   const isMusician = currentUser?.isMusician;
 
   const unreadCount = useUnreadCount();
-  const { openChat } = useChat();
   const [showChatListModal, setShowChatListModal] = useState(false);
 
-  // Function to handle opening chat list modal
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
     setShowChatListModal(true);
   };
 
-  // Show loading state while data is being fetched
   if (!clerkLoaded || (isSignedIn && currentUserLoading) || !mounted) {
     return (
       <nav
         className={cn(
           "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
-          colors.navBackground,
-          colors.navBorder
+          "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700"
         )}
       >
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
+            {/* Logo & Navigation Skeleton */}
             <div className="flex items-center space-x-10">
-              <Link href="/" className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">G</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  GigUp
-                </span>
-              </Link>
+              {/* Logo Skeleton */}
+              <div className="flex items-center space-x-2">
+                <Skeleton className="w-8 h-8 rounded-lg" />
+                <Skeleton className="w-16 h-6 rounded" />
+              </div>
 
               {/* Navigation Links Skeleton */}
               <div className="hidden lg:flex items-center space-x-8">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="w-20 h-4 rounded" />
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Skeleton className="w-4 h-4 rounded" />
+                    <Skeleton className="w-16 h-4 rounded" />
+                  </div>
                 ))}
               </div>
             </div>
 
             {/* Right side loading state */}
             <div className="flex items-center space-x-4">
-              <Skeleton className="w-10 h-10 rounded-md" />
+              <Skeleton className="w-24 h-9 rounded-md" /> {/* Create button */}
+              <Skeleton className="w-20 h-9 rounded-lg" /> {/* Messages */}
+              <Skeleton className="w-8 h-8 rounded-md" /> {/* Theme */}
               <div className="flex items-center space-x-3">
-                <Skeleton className="w-24 h-4 rounded" />
-                <Skeleton className="w-8 h-8 rounded-full" />
+                <Skeleton className="w-20 h-4 rounded" /> {/* Greeting */}
+                <Skeleton className="w-16 h-9 rounded-lg" /> {/* Profile */}
+                <Skeleton className="w-8 h-8 rounded-full" />{" "}
+                {/* User button */}
               </div>
             </div>
           </div>
@@ -113,13 +112,6 @@ export function DesktopNavigation() {
       label: isMusician ? "Find Gigs" : "Post Gig",
       icon: <Calendar size={18} />,
       condition: hasRole,
-    },
-    {
-      href: "/messages",
-      icon: <MessageCircle size={18} />,
-      label: "Messages",
-      badge: unreadCount,
-      onClick: isSignedIn ? handleOpenMessages : undefined, // Only add onClick for signed-in users
     },
   ];
 
@@ -178,11 +170,6 @@ export function DesktopNavigation() {
                       <span className="transition-colors duration-200">
                         {item.label}
                       </span>
-                      {item.badge && item.badge > 0 && (
-                        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
-                          {item.badge > 99 ? "99+" : item.badge}
-                        </span>
-                      )}
                       {/* Subtle background on hover */}
                       <div
                         className={cn(
@@ -193,20 +180,6 @@ export function DesktopNavigation() {
                     </div>
                   );
 
-                  // If item has onClick (like Messages for signed-in users), use button
-                  if (item.onClick) {
-                    return (
-                      <button
-                        key={item.href}
-                        onClick={item.onClick}
-                        className="text-left"
-                      >
-                        {linkContent}
-                      </button>
-                    );
-                  }
-
-                  // Otherwise use regular Link
                   return (
                     <Link key={item.href} href={item.href}>
                       {linkContent}
@@ -231,6 +204,37 @@ export function DesktopNavigation() {
                     <span>{isMusician ? "Find Gigs" : "Post Gig"}</span>
                   </Button>
                 </Link>
+              )}
+
+              {/* Messages Link - Opens Chat List Modal */}
+              {isSignedIn && (
+                <button onClick={handleOpenMessages} className="relative group">
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative",
+                      colors.textMuted,
+                      "hover:text-amber-600 dark:hover:text-amber-400"
+                    )}
+                  >
+                    <MessageCircle size={18} />
+                    <span>Messages</span>
+
+                    {/* Unread badge */}
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+
+                    {/* Subtle background on hover */}
+                    <div
+                      className={cn(
+                        "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
+                        "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                      )}
+                    />
+                  </div>
+                </button>
               )}
 
               {/* Notifications Bell */}

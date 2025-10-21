@@ -1,4 +1,3 @@
-// components/notifications/NotificationToast.tsx
 "use client";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -179,6 +178,7 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
   const handleToastClick = () => {
     if (toast.actionUrl) {
       onClose();
+      // Navigation will be handled by the Link component
     }
   };
 
@@ -186,12 +186,14 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
     <div
       className={cn(
         "rounded-xl border p-4 shadow-lg max-w-sm w-full backdrop-blur-sm",
-        "transition-all duration-200 hover:shadow-xl cursor-pointer",
+        "transition-all duration-200 hover:shadow-xl",
         "border-2 hover:border-opacity-50",
         themeColors.bg,
         themeColors.border,
-        "hover:scale-[1.02] transform transition-transform"
+        toast.actionUrl &&
+          "cursor-pointer hover:scale-[1.02] transform transition-transform"
       )}
+      onClick={toast.actionUrl ? handleToastClick : undefined}
     >
       <div className="flex items-start gap-3">
         {/* Icon */}
@@ -227,17 +229,15 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
           {/* Action and Metadata */}
           <div className="flex items-center justify-between mt-2">
             {toast.actionUrl ? (
-              <Link
-                href={toast.actionUrl}
+              <span
                 className={cn(
                   "text-xs font-medium transition-colors hover:underline",
                   themeColors.accent,
                   themeColors.accentHover
                 )}
-                onClick={onClose}
               >
                 View details →
-              </Link>
+              </span>
             ) : (
               <span
                 className={cn(
@@ -285,17 +285,14 @@ export function NotificationToast({ toast, onClose }: NotificationToastProps) {
         damping: 30,
         layout: { duration: 0.3 },
       }}
-      onClick={handleToastClick}
-      className="cursor-pointer"
+      className={toast.actionUrl ? "cursor-pointer" : ""}
     >
       {toast.actionUrl ? (
-        <Link href={toast.actionUrl}>
+        <Link href={toast.actionUrl} className="block">
           <ToastContent />
         </Link>
       ) : (
-        <div>
-          <ToastContent />
-        </div>
+        <ToastContent />
       )}
     </motion.div>
   );

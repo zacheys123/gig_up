@@ -177,10 +177,13 @@ const FriendsComponent = () => {
                 </span>
               </p>
             )}
-
             <div className="flex gap-3 sm:gap-4 mt-2">
               <div onClick={(e) => e.stopPropagation()}>
-                <FollowButton _id={friend._id} />
+                <FollowButton
+                  _id={friend._id}
+                  pendingFollowRequests={friend?.pendingFollowRequests}
+                  targetUserFollowings={friend?.followings}
+                />
               </div>
               <ReportButton userId={friend?._id || ""} />
               <Button

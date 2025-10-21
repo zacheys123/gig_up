@@ -47,25 +47,25 @@ export function NotificationDropdown({
   // Enhanced theme configuration for better visibility
   const themeConfig = {
     background: isDarkMode
-      ? "bg-gray-900/98 backdrop-blur-xl" // Increased opacity for better contrast
+      ? "bg-gray-900/98 backdrop-blur-xl"
       : "bg-white/98 backdrop-blur-xl",
-    border: isDarkMode ? "border-gray-600" : "border-gray-300", // Brighter borders
+    border: isDarkMode ? "border-gray-600" : "border-gray-300",
     text: {
       primary: isDarkMode ? "text-white" : "text-gray-900",
-      secondary: isDarkMode ? "text-gray-200" : "text-gray-700", // Brighter secondary text
-      muted: isDarkMode ? "text-gray-400" : "text-gray-600", // Better contrast
+      secondary: isDarkMode ? "text-gray-200" : "text-gray-700",
+      muted: isDarkMode ? "text-gray-400" : "text-gray-600",
     },
     accent: {
       primary: isDarkMode ? "text-blue-400" : "text-blue-600",
-      background: isDarkMode ? "bg-blue-500/30" : "bg-blue-500/15", // More visible accent
+      background: isDarkMode ? "bg-blue-500/30" : "bg-blue-500/15",
       hover: isDarkMode ? "hover:bg-blue-500/30" : "hover:bg-blue-500/15",
     },
     surface: {
-      primary: isDarkMode ? "bg-gray-800/80" : "bg-gray-50/90", // More opaque surfaces
+      primary: isDarkMode ? "bg-gray-800/80" : "bg-gray-50/90",
       secondary: isDarkMode ? "bg-gray-800" : "bg-gray-100",
-      hover: isDarkMode ? "hover:bg-gray-700/80" : "hover:bg-gray-200/80", // Better hover states
+      hover: isDarkMode ? "hover:bg-gray-700/80" : "hover:bg-gray-200/80",
     },
-    divider: isDarkMode ? "divide-gray-700" : "divide-gray-300", // More visible dividers
+    divider: isDarkMode ? "divide-gray-700" : "divide-gray-300",
   };
 
   // Enhanced icon configuration with better visibility
@@ -78,7 +78,6 @@ export function NotificationDropdown({
     notification: (type: string) => {
       const baseClass = "w-4 h-4";
       switch (type) {
-        // Profile & Social - Brighter colors
         case "profile_view":
           return <Eye className={cn(baseClass, "text-blue-400")} />;
         case "new_follower":
@@ -89,12 +88,8 @@ export function NotificationDropdown({
           return <Heart className={cn(baseClass, "text-red-400")} />;
         case "share":
           return <Share className={cn(baseClass, "text-indigo-400")} />;
-
-        // Messages
         case "new_message":
           return <MessageCircle className={cn(baseClass, "text-green-400")} />;
-
-        // Gigs & Bookings - More vibrant colors
         case "gig_invite":
         case "gig_application":
         case "gig_approved":
@@ -102,17 +97,11 @@ export function NotificationDropdown({
         case "gig_cancelled":
         case "gig_reminder":
           return <Calendar className={cn(baseClass, "text-amber-400")} />;
-
-        // Reviews
         case "new_review":
         case "review_received":
           return <Star className={cn(baseClass, "text-yellow-400")} />;
-
-        // System - More attention-grabbing
         case "system_alert":
           return <AlertTriangle className={cn(baseClass, "text-orange-400")} />;
-
-        // Default - Brighter gray
         default:
           return <Bell className={cn(baseClass, "text-gray-400")} />;
       }
@@ -127,9 +116,24 @@ export function NotificationDropdown({
       exit: { opacity: 0 },
     },
     dropdown: {
-      initial: { opacity: 0, scale: 0.95, y: -8 },
-      animate: { opacity: 1, scale: 1, y: 0 },
-      exit: { opacity: 0, scale: 0.95, y: -8 },
+      initial: {
+        opacity: 0,
+        scale: 0.95,
+        y: -8,
+        x: variant === "mobile" ? "-50%" : 0,
+      },
+      animate: {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        x: variant === "mobile" ? "-50%" : 0,
+      },
+      exit: {
+        opacity: 0,
+        scale: 0.95,
+        y: -8,
+        x: variant === "mobile" ? "-50%" : 0,
+      },
     },
     item: {
       initial: { opacity: 0, y: 10 },
@@ -142,7 +146,7 @@ export function NotificationDropdown({
       {/* Backdrop */}
       <motion.div
         {...animationVariants.backdrop}
-        className="fixed inset-0 z-60 bg-black/30 backdrop-blur-[1px]" // Darker backdrop for better contrast
+        className="fixed inset-0 z-60 bg-black/30 backdrop-blur-[1px]"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -152,16 +156,22 @@ export function NotificationDropdown({
         {...animationVariants.dropdown}
         transition={{ type: "spring", duration: 0.3, bounce: 0.1 }}
         className={cn(
-          "absolute right-0 top-12 z-50 rounded-2xl shadow-2xl border transform-gpu",
+          "absolute top-12 z-50 rounded-2xl shadow-2xl border transform-gpu",
           themeConfig.background,
           themeConfig.border,
           dropdownWidth,
-          "ring-1", // Added ring for better definition
-          isDarkMode ? "ring-gray-700" : "ring-gray-200"
+          "ring-1",
+          isDarkMode ? "ring-gray-700" : "ring-gray-200",
+          // Mobile positioning - centered
+          variant === "mobile"
+            ? "left-18 -translate-x-1/2 mx-4" // Centered with margin
+            : "right-0" // Desktop positioning
         )}
         style={{
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
+          // Ensure it doesn't go off-screen on mobile
+          maxWidth: variant === "mobile" ? "calc(100vw - 2rem)" : "none",
         }}
       >
         {/* Header - Enhanced contrast */}
@@ -171,7 +181,7 @@ export function NotificationDropdown({
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "p-2 rounded-xl border", // Added border for definition
+                  "p-2 rounded-xl border",
                   themeConfig.accent.background,
                   isDarkMode ? "border-blue-400/30" : "border-blue-500/20"
                 )}
@@ -180,7 +190,7 @@ export function NotificationDropdown({
                   className={cn(
                     iconConfig.size.md,
                     themeConfig.accent.primary,
-                    "drop-shadow-sm" // Added shadow for better visibility
+                    "drop-shadow-sm"
                   )}
                 />
               </div>
@@ -196,7 +206,7 @@ export function NotificationDropdown({
                 {unreadCount > 0 ? (
                   <p
                     className={cn(
-                      "text-sm font-semibold mt-1", // Added margin and semibold
+                      "text-sm font-semibold mt-1",
                       themeConfig.accent.primary,
                       "drop-shadow-sm"
                     )}
@@ -206,7 +216,7 @@ export function NotificationDropdown({
                 ) : (
                   <p
                     className={cn(
-                      "text-sm mt-1 font-medium", // Added font weight
+                      "text-sm mt-1 font-medium",
                       themeConfig.text.muted
                     )}
                   >
@@ -224,7 +234,7 @@ export function NotificationDropdown({
                   whileTap={{ scale: 0.95 }}
                   onClick={handleMarkAllRead}
                   className={cn(
-                    "p-2 rounded-lg border transition-all duration-200 font-semibold", // Added border
+                    "p-2 rounded-lg border transition-all duration-200 font-semibold",
                     themeConfig.surface.hover,
                     themeConfig.accent.primary,
                     isDarkMode ? "border-blue-400/30" : "border-blue-500/20"
@@ -239,7 +249,7 @@ export function NotificationDropdown({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={cn(
-                    "p-2 rounded-lg border transition-all duration-200", // Added border
+                    "p-2 rounded-lg border transition-all duration-200",
                     themeConfig.surface.hover,
                     themeConfig.text.muted,
                     isDarkMode ? "border-gray-600" : "border-gray-300"
@@ -279,7 +289,6 @@ export function NotificationDropdown({
               ))}
             </div>
           ) : (
-            /* Enhanced Empty State */
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -287,7 +296,7 @@ export function NotificationDropdown({
             >
               <div
                 className={cn(
-                  "w-20 h-20 rounded-2xl flex items-center justify-center mb-4 border", // Added border
+                  "w-20 h-20 rounded-2xl flex items-center justify-center mb-4 border",
                   themeConfig.surface.secondary,
                   isDarkMode ? "border-gray-700" : "border-gray-200"
                 )}
@@ -302,7 +311,7 @@ export function NotificationDropdown({
               </div>
               <h4
                 className={cn(
-                  "font-bold text-lg mb-2 drop-shadow-sm", // Added drop shadow
+                  "font-bold text-lg mb-2 drop-shadow-sm",
                   themeConfig.text.primary
                 )}
               >
@@ -310,7 +319,7 @@ export function NotificationDropdown({
               </h4>
               <p
                 className={cn(
-                  "text-sm mb-6 max-w-xs font-medium", // Added font weight
+                  "text-sm mb-6 max-w-xs font-medium",
                   themeConfig.text.muted
                 )}
               >
@@ -320,10 +329,10 @@ export function NotificationDropdown({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
-                  "px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 border", // Added border
+                  "px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 border",
                   "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg",
                   "hover:shadow-xl transform-gpu flex items-center gap-2",
-                  "border-blue-400/30" // Added border for definition
+                  "border-blue-400/30"
                 )}
               >
                 <Zap className="w-4 h-4" />
@@ -342,7 +351,7 @@ export function NotificationDropdown({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={cn(
-                    "px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border", // Added border
+                    "px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border",
                     themeConfig.surface.hover,
                     themeConfig.accent.primary,
                     "flex items-center gap-2",
@@ -355,12 +364,7 @@ export function NotificationDropdown({
               </Link>
 
               <div className="flex items-center gap-2 text-xs">
-                <span
-                  className={cn(
-                    "font-semibold", // Added font weight
-                    themeConfig.text.muted
-                  )}
-                >
+                <span className={cn("font-semibold", themeConfig.text.muted)}>
                   {notifications.length} total
                 </span>
               </div>
@@ -379,7 +383,7 @@ export function NotificationDropdown({
           scrollbar-color: auto;
         }
         .custom-scrollbar::-webkit-scrollbar {
-          width: 8px; /* Slightly wider for better visibility */
+          width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
@@ -389,19 +393,19 @@ export function NotificationDropdown({
         .custom-scrollbar::-webkit-scrollbar-thumb {
           border-radius: 10px;
           transition: all 0.3s ease;
-          border: 2px solid transparent; /* Added border for better definition */
+          border: 2px solid transparent;
           background-clip: padding-box;
         }
         .scrollbar-light::-webkit-scrollbar-thumb {
-          background: rgba(0, 0, 0, 0.3); /* Darker for better visibility */
-          border: 2px solid rgba(255, 255, 255, 0.8); /* Contrast border */
+          background: rgba(0, 0, 0, 0.3);
+          border: 2px solid rgba(255, 255, 255, 0.8);
         }
         .scrollbar-light::-webkit-scrollbar-thumb:hover {
           background: rgba(0, 0, 0, 0.5);
         }
         .scrollbar-dark::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.3); /* Brighter for dark mode */
-          border: 2px solid rgba(0, 0, 0, 0.3); /* Contrast border */
+          background: rgba(255, 255, 255, 0.3);
+          border: 2px solid rgba(0, 0, 0, 0.3);
         }
         .scrollbar-dark::-webkit-scrollbar-thumb:hover {
           background: rgba(255, 255, 255, 0.5);

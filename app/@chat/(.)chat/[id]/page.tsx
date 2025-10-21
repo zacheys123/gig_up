@@ -16,6 +16,7 @@ export default function InterceptedChatPage() {
     }
   }, [chatId, currentChatId, openChat]);
 
+  // Clean up when component unmounts
   useEffect(() => {
     return () => {
       if (chatId === currentChatId) {

@@ -24,25 +24,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const enableMobileModal = () => setMobileModal(true);
   const disableMobileModal = () => setMobileModal(false);
+  // contexts/ChatContext.tsx - Update the openChat function
   const openChat = (chatId: string) => {
     setCurrentChatId(chatId);
-
-    // Store current URL to return to when chat closes
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("previousRoute", pathname);
-    }
-
-    // Use parallel route for modal chat
-    router.push(`/@chat/${chatId}`, { scroll: false });
+    // Just navigate to the chat route - let intercepting routes handle the modal
+    router.push(`/chat/${chatId}`, { scroll: false });
   };
 
   const closeChat = () => {
     setCurrentChatId(null);
-
-    // Return to previous page or root
-    const previousRoute = sessionStorage.getItem("previousRoute") || "/";
-    router.push(previousRoute, { scroll: false });
-    sessionStorage.removeItem("previousRoute");
+    // Let the modal handle the navigation
   };
 
   return (

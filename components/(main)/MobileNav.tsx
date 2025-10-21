@@ -24,35 +24,52 @@ export function MobileNavigation() {
   // Check if user has a role
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
   const { isFirstMonthEnd } = useCheckTrial();
-  // Show loading state
   if (!clerkLoaded || (isSignedIn && currentUserLoading) || !mounted) {
     return (
-      <>
-        <nav
-          className={`fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 backdrop-blur-md border-b border-gray-200 dark:border-gray-700`}
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              {/* Logo */}
-              <Logo />
+      <nav
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
+          "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700"
+        )}
+      >
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo & Navigation Skeleton */}
+            <div className="flex items-center space-x-10">
+              {/* Logo Skeleton */}
+              <div className="flex items-center space-x-2">
+                <Skeleton className="w-8 h-8 rounded-lg" />
+                <Skeleton className="w-16 h-6 rounded" />
+              </div>
 
-              {/* Right side loading state */}
-              <div className="flex items-center space-x-4">
-                <Skeleton className="w-8 h-8 rounded-md" />
-                <div className="flex items-center space-x-3">
-                  <Skeleton className="w-16 h-4 rounded" />
-                  <Skeleton className="w-8 h-8 rounded-full" />
-                  <Skeleton className="w-8 h-8 rounded-md" />
-                </div>
+              {/* Navigation Links Skeleton */}
+              <div className="hidden lg:flex items-center space-x-8">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Skeleton className="w-4 h-4 rounded" />
+                    <Skeleton className="w-16 h-4 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right side loading state */}
+            <div className="flex items-center space-x-4">
+              <Skeleton className="w-24 h-9 rounded-md" /> {/* Create button */}
+              <Skeleton className="w-20 h-9 rounded-lg" /> {/* Messages */}
+              <Skeleton className="w-8 h-8 rounded-md" /> {/* Theme */}
+              <div className="flex items-center space-x-3">
+                <Skeleton className="w-20 h-4 rounded" /> {/* Greeting */}
+                <Skeleton className="w-16 h-9 rounded-lg" /> {/* Profile */}
+                <Skeleton className="w-8 h-8 rounded-full" />{" "}
+                {/* User button */}
               </div>
             </div>
           </div>
-        </nav>
-        <div className="h-16" />
-      </>
+        </div>
+      </nav>
     );
   }
-
   return (
     <>
       <nav

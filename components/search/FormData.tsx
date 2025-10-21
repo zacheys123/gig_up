@@ -1,8 +1,9 @@
 "use client";
 import { Search } from "lucide-react";
-import SearchInput from "./SearchInput";
+
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
+import SearchInput from "./SearchInput";
 
 const FormData = () => {
   const { colors } = useThemeColors();

@@ -1,4 +1,4 @@
-// hooks/useCurrentUser.ts (Enhanced version)
+// hooks/useCurrentUser.ts - Enhanced version
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
@@ -29,7 +29,6 @@ export function useCurrentUser() {
   // Manual refetch function
   const refetch = useCallback(() => {
     // This will trigger a re-render and Convex will refetch
-    // You could also use queryClient.invalidateQueries here if needed
     console.log("Refetching user data...");
   }, []);
 
@@ -41,18 +40,41 @@ export function useCurrentUser() {
   };
 }
 
-// Social actions as custom hooks
+// Enhanced Social actions with follow request handling
 export const useSocialActions = () => {
   const toggleFollowMutation = useMutation(api.controllers.user.followUser);
+  const acceptFollowRequest = useMutation(
+    api.controllers.user.acceptFollowRequest
+  );
+  const declineFollowRequest = useMutation(
+    api.controllers.user.declineFollowRequest
+  );
   const likeVideo = useMutation(api.controllers.user.likeVideo);
   const unlikeVideo = useMutation(api.controllers.user.unlikeVideo);
   const { isInGracePeriod } = useCheckTrial();
+
   return {
     toggleFollow: async (userId: string, targetId: string) => {
       const tId = toUserId(targetId);
       await toggleFollowMutation({
         userId,
         tId: tId,
+        isViewerInGracePeriod: isInGracePeriod,
+      });
+    },
+
+    acceptFollowRequest: async (userId: string, requesterId: string) => {
+      await acceptFollowRequest({
+        userId,
+        requesterId: toUserId(requesterId),
+        isViewerInGracePeriod: isInGracePeriod,
+      });
+    },
+
+    declineFollowRequest: async (userId: string, requesterId: string) => {
+      await declineFollowRequest({
+        userId,
+        requesterId: toUserId(requesterId),
         isViewerInGracePeriod: isInGracePeriod,
       });
     },
@@ -75,4 +97,11 @@ export const useIsFollowing = (targetUserId: string) => {
   const id = toUserId(targetUserId);
   const { user: currentUser } = useCurrentUser();
   return currentUser?.followings?.includes(id) || false;
+};
+
+// Hook for checking pending follow requests
+export const useHasPendingRequest = (targetUserId: string) => {
+  const id = toUserId(targetUserId);
+  const { user: currentUser } = useCurrentUser();
+  return currentUser?.pendingFollowRequests?.includes(id) || false;
 };

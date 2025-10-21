@@ -1,15 +1,14 @@
-// SearchPage.tsx (server component)
-import FormData from "@/components/pages/FormData";
-import SearchComponent from "@/components/pages/SearchComponent";
+// app/search/page.tsx (NEW - Main Search Page)
 import { ThemeWrapper } from "@/components/pages/themeWrapper";
+import SearchHeader from "@/components/search/SearchHeader";
+import SearchResultsGrid from "@/components/search/SearchResultsGrid";
 
 const SearchPage = async () => {
   return (
     <ThemeWrapper>
-      <div className="pb-[60px] overflow-hidden">
-        <FormData />
-        <SearchComponent />
-        {/* <OverlaySearch /> */}
+      <div className="min-h-screen pb-20">
+        <SearchHeader />
+        <SearchResultsGrid />
       </div>
     </ThemeWrapper>
   );
