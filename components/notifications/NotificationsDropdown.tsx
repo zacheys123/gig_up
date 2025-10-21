@@ -1,4 +1,3 @@
-// components/notifications/NotificationDropdown.tsx
 "use client";
 import { useNotificationSystem } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useTheme";

@@ -18,8 +18,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import LoadingSpinner from "@/app/auth/loading";
 import { useThemeColors } from "@/hooks/useTheme";
+import GigLoader from "@/components/(main)/GigLoader";
 
 // Animation variants
 const fadeInUp = {
@@ -38,7 +38,7 @@ const staggerContainer = {
 };
 
 export default function AboutPage() {
-  const user = useCurrentUser();
+  const { user } = useCurrentUser();
   const { userId } = useAuth();
   const updateFirstLogin = useMutation(api.controllers.user.updateFirstLogin);
   const { colors, isDarkMode, mounted } = useThemeColors();
@@ -64,8 +64,8 @@ export default function AboutPage() {
 
   if (!userId) {
     return (
-      <div>
-        <LoadingSpinner />
+      <div className={`min-h-screen ${colors.background}`}>
+        <GigLoader color="border-green-400" title="Welcome to Gigup..." />
       </div>
     );
   }
@@ -73,7 +73,7 @@ export default function AboutPage() {
   if (!mounted) {
     return (
       <div className={`min-h-screen ${colors.background}`}>
-        <LoadingSpinner />
+        <GigLoader color="border-green-400" title="Welcome to Gigup..." />
       </div>
     );
   }
@@ -117,10 +117,12 @@ export default function AboutPage() {
           >
             {user ? (
               <Link
-                href={"/authenticate"}
-                className="bg-amber-400 hover:bg-amber-300 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                href={user?.onboardingComplete ? "/" : "/authenticate"}
+                className="bg-amber-400 hover:bg-amber-300 text-gray-500 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
               >
-                Go to Dashboard
+                {user?.onboardingComplete
+                  ? "Go to Dashboard"
+                  : "Hurry Home!!!!"}
               </Link>
             ) : (
               <>

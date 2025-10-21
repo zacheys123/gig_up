@@ -8,6 +8,10 @@ interface ChatContextType {
   closeChat: () => void;
   currentChatId: string | null;
   isChatOpen: boolean;
+  mobileModal: boolean;
+  setMobileModal: (enabled: boolean) => void;
+  enableMobileModal: () => void;
+  disableMobileModal: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -16,7 +20,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [mobileModal, setMobileModal] = useState(false);
 
+  const enableMobileModal = () => setMobileModal(true);
+  const disableMobileModal = () => setMobileModal(false);
   const openChat = (chatId: string) => {
     setCurrentChatId(chatId);
 
@@ -45,6 +52,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         closeChat,
         currentChatId,
         isChatOpen: !!currentChatId,
+        mobileModal,
+        setMobileModal,
+        enableMobileModal,
+        disableMobileModal,
       }}
     >
       {children}

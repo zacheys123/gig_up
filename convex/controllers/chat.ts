@@ -307,3 +307,100 @@ export const getChatPresence = query({
     return presence;
   },
 });
+
+// Add these to your existing chat.ts file
+
+// Get unread counts for a user
+export const getUnreadCounts = query({
+  args: {
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (!args.userId) return { total: 0, byChat: {} };
+
+    const chats = await ctx.db
+      .query("chats")
+      .withIndex("by_participants", (q) =>
+        q.eq("participantIds", [args.userId!])
+      )
+      .collect();
+
+    let total = 0;
+    const byChat: Record<string, number> = {};
+
+    chats.forEach((chat) => {
+      const count = chat.unreadCounts?.[args.userId!] || 0;
+      byChat[chat._id] = count;
+      total += count;
+    });
+
+    return { total, byChat };
+  },
+});
+
+// Mark all chats as read for a user
+export const markAllAsRead = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const chats = await ctx.db
+      .query("chats")
+      .withIndex("by_participants", (q) =>
+        q.eq("participantIds", [args.userId])
+      )
+      .collect();
+
+    // Reset unread counts for all chats
+    const updatePromises = chats.map(async (chat) => {
+      await ctx.db.patch(chat._id, {
+        unreadCounts: {
+          ...chat.unreadCounts,
+          [args.userId]: 0,
+        },
+      });
+    });
+
+    await Promise.all(updatePromises);
+  },
+});
+
+// Delete a message
+export const deleteMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    // Soft delete by setting content to "[deleted]"
+    await ctx.db.patch(args.messageId, {
+      content: "[deleted]",
+      isDeleted: true,
+    });
+  },
+});
+
+// Clear all messages in a chat
+export const clearChat = mutation({
+  args: {
+    chatId: v.id("chats"),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_chatId", (q) => q.eq("chatId", args.chatId))
+      .collect();
+
+    // Delete all messages
+    const deletePromises = messages.map((message) =>
+      ctx.db.delete(message._id)
+    );
+
+    await Promise.all(deletePromises);
+
+    // Reset chat last message
+    await ctx.db.patch(args.chatId, {
+      lastMessage: "",
+      lastMessageAt: Date.now(),
+    });
+  },
+});

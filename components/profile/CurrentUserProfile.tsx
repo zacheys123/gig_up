@@ -163,9 +163,12 @@ const CurrentUserProfile = () => {
     "December",
   ];
   const daysOfMonth = Array.from({ length: 31 }, (_, i) => i + 1);
-
+  const hasLoadedInitialData = React.useRef(false);
   useEffect(() => {
-    if (user) {
+    // Only load data once when user is available and we haven't loaded it yet
+    if (user && !userLoading && !hasLoadedInitialData.current) {
+      console.log("🔄 Loading initial user data into form");
+
       setFirstname(user.firstname || "");
       setLastname(user.lastname || "");
       setUsername(user.username || "");
@@ -215,9 +218,11 @@ const CurrentUserProfile = () => {
         concert: userRate.concert || "",
         corporate: userRate.corporate || "",
       });
-    }
-  }, [user]);
 
+      // Mark that we've loaded the initial data
+      hasLoadedInitialData.current = true;
+    }
+  }, [user, userLoading]); // Only depend on user and loading state
   // Role Type Constants
   const roleTypes = [
     { value: "instrumentalist", label: "Instrumentalist" },
@@ -707,11 +712,11 @@ const CurrentUserProfile = () => {
       (error) => error.importance === "high"
     );
 
-    // If there are errors, handle them
+    // If there are errors, handle them WITHOUT preventing form submission
     if (validationErrors.length > 0) {
       setValidationErrors(validationErrors);
-      scrollToValidationSummary();
 
+      // Show toast but don't block submission for medium/low importance errors
       if (blockingErrors.length > 0) {
         toast.error(
           `Complete ${blockingErrors.length} required field(s) to save`,
@@ -723,7 +728,10 @@ const CurrentUserProfile = () => {
             },
           }
         );
+        scrollToValidationSummary();
+        return; // Only return for blocking errors
       } else {
+        // For non-blocking errors, show warning but allow save
         toast.warning(
           `Profile can be saved, but ${validationErrors.length} recommendation(s) found`,
           {
@@ -735,13 +743,13 @@ const CurrentUserProfile = () => {
           }
         );
 
-        const shouldContinue = await showConfirmationDialog(validationErrors);
-        if (!shouldContinue) return;
+        // Don't return here - allow the save to proceed
+        // Just scroll to show the recommendations
+        scrollToValidationSummary();
       }
-      return;
     }
 
-    // Proceed with saving if no errors or user confirmed
+    // Proceed with saving if no blocking errors
     try {
       setLoading(true);
       const updateData = {
@@ -750,7 +758,7 @@ const CurrentUserProfile = () => {
         email,
         username,
         city,
-        instrument: roleType === "instrumentalist" ? instrument : "", // Only set instrument for instrumentalists
+        instrument: roleType === "instrumentalist" ? instrument : "",
         experience,
         date: age,
         month,

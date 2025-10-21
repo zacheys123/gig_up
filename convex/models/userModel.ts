@@ -20,6 +20,7 @@ export const userModel = defineTable({
   // Role and type
   isMusician: v.boolean(),
   isClient: v.boolean(),
+  isBoth: v.optional(v.boolean()),
   isAdmin: v.boolean(),
   adminRole: v.optional(
     v.union(
@@ -42,7 +43,7 @@ export const userModel = defineTable({
   mcLanguages: v.optional(v.string()),
   vocalistGenre: v.optional(v.string()),
   talentbio: v.optional(v.string()),
-
+  verified: v.optional(v.boolean()),
   // Client specific fields
   organization: v.optional(v.string()),
 
@@ -112,7 +113,12 @@ export const userModel = defineTable({
   refferences: v.optional(v.array(v.string())), // user IDs
   mutualFollowers: v.optional(v.number()),
   // Business and billing
-  tier: v.union(v.literal("free"), v.literal("pro")),
+  tier: v.union(
+    v.literal("free"),
+    v.literal("pro"),
+    v.literal("premium"),
+    v.literal("elite")
+  ),
   tierStatus: v.optional(
     v.union(
       v.literal("active"),

@@ -6,6 +6,7 @@ import { AuthSync } from "@/components/AuthSync";
 import { GigUpAssistant } from "@/components/ai/GigupAssistant";
 import { NotificationSystemProvider } from "@/hooks/useNotifications";
 import { NotificationToastContainer } from "@/components/notifications/NotificationToastContainer";
+import { GlobalActivityTracker } from "@/components/GlobalActivityTracker";
 
 export const metadata: Metadata = {
   title: "Gigup",
@@ -26,19 +27,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-
   chat,
 }: {
   children: React.ReactNode;
-  chat: React.ReactNode; // Add chat parallel route slot
+  chat: React.ReactNode;
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Add manifest for PWA capabilities */}
         <link rel="manifest" href="/manifest.json" />
-
-        {/* Register service worker */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -59,9 +56,11 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <AuthSync />{" "}
+          <GlobalActivityTracker /> {/* Add this here */}
+          <AuthSync />
           <NotificationSystemProvider>
-            {children} {chat}
+            {children}
+            {chat}
             <NotificationToastContainer />
           </NotificationSystemProvider>
         </Providers>

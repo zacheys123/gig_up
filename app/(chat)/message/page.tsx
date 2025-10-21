@@ -4,29 +4,33 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import {
-  Search,
-  MessageCircle,
-  Plus,
-  Users,
-  ArrowLeft,
-  Home,
-} from "lucide-react";
+import { Search, MessageCircle, Plus, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChatInterface } from "@/components/chat/ChatInterface";
-
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { Id } from "@/convex/_generated/dataModel";
-import Link from "next/link";
 import { ChatList } from "../_components/ChatLists";
-
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useChat } from "@/app/context/ChatContext";
 export default function MessagesPage() {
   const { user: currentUser } = useCurrentUser();
   const { colors } = useThemeColors();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
+  const { disableMobileModal } = useChat();
+  useEffect(() => {
+    disableMobileModal();
+  }, [disableMobileModal]);
+
+  useEffect(() => {
+    const chatId = searchParams.get("chat");
+    if (chatId) {
+      setSelectedChat(chatId);
+    }
+  }, [searchParams]);
 
   // Fetch user's chats
   const chats = useQuery(
@@ -44,7 +48,7 @@ export default function MessagesPage() {
 
   return (
     <div className={cn("flex h-screen", colors.background, colors.text)}>
-      // app/messages/page.tsx - Remove the header section and keep only:
+      {/* Chat List Sidebar */}
       <div
         className={cn(
           "flex flex-col border-r transition-all duration-300",
@@ -54,8 +58,6 @@ export default function MessagesPage() {
           selectedChat ? "hidden md:flex" : "flex"
         )}
       >
-        {/* Remove the header with back button and home - navigation is now handled by DesktopMessagesNav */}
-
         <div className={cn("p-4 border-b", colors.border)}>
           <div className="flex items-center justify-between">
             <h1 className={cn("text-xl font-bold", colors.text)}>Messages</h1>
@@ -89,15 +91,6 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Rest of the chat list remains the same */}
-        <div className="flex-1 overflow-y-auto">
-          <ChatList
-            chats={filteredChats}
-            selectedChat={selectedChat}
-            onSelectChat={(chatId) => setSelectedChat(chatId)}
-          />
-        </div>
-
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
           <ChatList
@@ -107,6 +100,7 @@ export default function MessagesPage() {
           />
         </div>
       </div>
+
       {/* Main Chat Area */}
       <div
         className={cn(
@@ -156,29 +150,6 @@ export default function MessagesPage() {
           </div>
         )}
       </div>
-      {/* Right Sidebar - Desktop Only (Facebook-style) */}
-      {!selectedChat && (
-        <div
-          className={cn(
-            "w-80 border-l hidden xl:flex flex-col",
-            colors.border,
-            colors.background
-          )}
-        >
-          <div className={cn("p-6 border-b", colors.border)}>
-            <h3 className={cn("font-semibold", colors.text)}>
-              Suggested Connections
-            </h3>
-          </div>
-          <div className="flex-1 p-4">
-            <div className="text-center">
-              <p className={cn("text-sm", colors.textMuted)}>
-                People you may know will appear here
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

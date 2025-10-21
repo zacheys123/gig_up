@@ -318,7 +318,7 @@ const SearchComponent = () => {
               // Show users when we have results
               <div
                 className={cn(
-                  "grid gap-4 sm:gap-6 pt-4 sm:pt-[50px]",
+                  "grid gap-4 sm:gap-6 pt-4 sm:pt-[50px] mt-4",
                   "grid-cols-1",
                   "sm:grid-cols-2",
                   "lg:grid-cols-3",

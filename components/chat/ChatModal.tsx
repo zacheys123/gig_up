@@ -7,6 +7,7 @@ import { useChat } from "@/app/context/ChatContext";
 import { ChatInterface } from "./ChatInterface";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface ChatModalProps {
   chatId: string;
@@ -15,25 +16,33 @@ interface ChatModalProps {
 export function ChatModal({ chatId }: ChatModalProps) {
   const { closeChat, currentChatId } = useChat();
   const { colors } = useThemeColors();
+  const router = useRouter();
+
+  const handleClose = () => {
+    closeChat();
+    // Also navigate back to clear the parallel route
+    router.back();
+  };
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        closeChat();
+        handleClose();
       }
     };
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [closeChat]);
+  }, [handleClose]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      closeChat();
+      handleClose();
     }
   };
 
-  if (!currentChatId) return null;
+  // Don't render if no chat is active or if the chatId doesn't match
+  if (!currentChatId || currentChatId !== chatId) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -60,7 +69,7 @@ export function ChatModal({ chatId }: ChatModalProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={closeChat}
+            onClick={handleClose}
             className="rounded-full"
           >
             <X className="w-5 h-5" />

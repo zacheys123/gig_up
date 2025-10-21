@@ -1,4 +1,3 @@
-// components/notifications/NotificationItem.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -6,6 +5,12 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useNotificationSystem } from "@/hooks/useNotifications";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+import { Check, X, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface NotificationItemProps {
   notification: any;
@@ -24,9 +29,24 @@ export function NotificationItem({
 }: NotificationItemProps) {
   const router = useRouter();
   const { markAsRead } = useNotificationSystem();
+  const { userId } = useAuth();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Convex mutations for follow request actions
+  const acceptFollowRequest = useMutation(
+    api.controllers.user.acceptFollowRequest
+  );
+  const declineFollowRequest = useMutation(
+    api.controllers.user.declineFollowRequest
+  );
 
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
+
+    // Don't navigate if it's a follow request with action buttons
+    if (notification.type === "follow_request") {
+      return;
+    }
 
     // Mark as read if unread
     if (!notification.isRead) {
@@ -39,6 +59,58 @@ export function NotificationItem({
     // Navigate to actionUrl if it exists
     if (notification.actionUrl) {
       router.push(notification.actionUrl);
+    }
+  };
+
+  const handleAcceptFollowRequest = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!userId || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const requesterId = notification.metadata?.requesterDocumentId;
+      if (requesterId) {
+        await acceptFollowRequest({
+          userId,
+          requesterId,
+        });
+
+        // Mark notification as read
+        await markAsRead(notification._id);
+
+        // Close dropdown after successful action
+        setTimeout(onClose, 500);
+      }
+    } catch (error) {
+      console.error("Error accepting follow request:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeclineFollowRequest = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!userId || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const requesterId = notification.metadata?.requesterDocumentId;
+      if (requesterId) {
+        await declineFollowRequest({
+          userId,
+          requesterId,
+        });
+
+        // Mark notification as read
+        await markAsRead(notification._id);
+
+        // Close dropdown after successful action
+        setTimeout(onClose, 500);
+      }
+    } catch (error) {
+      console.error("Error declining follow request:", error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -59,7 +131,8 @@ export function NotificationItem({
   };
 
   // Determine if this notification should be clickable
-  const isClickable = Boolean(notification.actionUrl);
+  const isClickable =
+    Boolean(notification.actionUrl) && notification.type !== "follow_request";
 
   const NotificationContent = () => (
     <motion.div
@@ -112,6 +185,58 @@ export function NotificationItem({
               >
                 {notification.message}
               </p>
+
+              {/* Follow Request Actions */}
+              {notification.type === "follow_request" && (
+                <div className="flex items-center gap-2 mt-3">
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      onClick={handleAcceptFollowRequest}
+                      disabled={isProcessing}
+                      size="sm"
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs font-semibold",
+                        "bg-green-500 hover:bg-green-600 text-white",
+                        "transition-all duration-200"
+                      )}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Check className="w-3 h-3" />
+                      )}
+                      Accept
+                    </Button>
+                  </motion.div>
+
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      onClick={handleDeclineFollowRequest}
+                      disabled={isProcessing}
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs font-semibold",
+                        "text-red-500 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20",
+                        "transition-all duration-200"
+                      )}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <X className="w-3 h-3" />
+                      )}
+                      Decline
+                    </Button>
+                  </motion.div>
+                </div>
+              )}
 
               {/* Metadata */}
               <div className="flex items-center gap-3 mt-2">

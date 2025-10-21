@@ -45,6 +45,7 @@ const MainUser = ({
   organization,
   isFeatured = false, // New prop
   profileViews, // For view count display
+  pendingFollowRequests,
 }: MainUserProps) => {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -403,7 +404,10 @@ const MainUser = ({
                 onClick={(e) => e.stopPropagation()}
                 className="transform scale-90"
               >
-                <FollowButton _id={_id} />
+                <FollowButton
+                  _id={_id}
+                  pendingFollowRequests={pendingFollowRequests}
+                />
               </div>
             </div>
           </div>

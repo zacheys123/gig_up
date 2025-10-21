@@ -45,6 +45,7 @@ export default defineSchema({
     chatId: v.id("chats"),
     senderId: v.id("users"),
     content: v.string(),
+    isDeleted: v.optional(v.boolean()),
     messageType: v.union(
       v.literal("text"),
       v.literal("image"),

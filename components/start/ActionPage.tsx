@@ -13,6 +13,45 @@ import { experiences, instruments } from "@/data";
 import Modal from "../modals/Modal";
 import { useUserMutations } from "@/hooks/useUserMutation";
 
+// Add the arrays at the top of the file
+const djGenres = [
+  "Hip Hop",
+  "House",
+  "Techno",
+  "EDM",
+  "R&B",
+  "Afrobeats",
+  "Reggae",
+  "Dancehall",
+  "Pop",
+  "Electronic",
+  "mix",
+];
+
+const mcTypes = [
+  "Event Host",
+  "Wedding MC",
+  "Corporate MC",
+  "Club MC",
+  "Concert Host",
+  "Radio Host",
+  "mix",
+];
+
+const vocalistGenres = [
+  "Pop",
+  "R&B",
+  "Jazz",
+  "Soul",
+  "Gospel",
+  "Rock",
+  "Classical",
+  "Opera",
+  "Afrobeats",
+  "Reggae",
+  "mix",
+];
+
 type Error = string[];
 type RoleSteps = {
   instrumentalist: string[];
@@ -455,11 +494,11 @@ const ActionPage = () => {
                 className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
               >
                 <option value="">Select DJ Genre</option>
-                <option value="hiphop">Hip Hop</option>
-                <option value="electronic">Electronic/Dance</option>
-                <option value="reggae">Reggae/Dancehall</option>
-                <option value="afrobeats">Afrobeats</option>
-                <option value="openformat">Open Format</option>
+                {djGenres.map((genre) => (
+                  <option key={genre} value={genre.toLowerCase()}>
+                    {genre}
+                  </option>
+                ))}
               </select>
             )}
             {steps[currentStep] === "vocalistgenre" && (
@@ -469,11 +508,11 @@ const ActionPage = () => {
                 className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
               >
                 <option value="">Select Genre</option>
-                <option value="jazz">Jazz</option>
-                <option value="neosoul">Neo Soul</option>
-                <option value="Mugithi">Mugithi</option>
-                <option value="afrobeats">Afrobeats</option>
-                <option value="mix">Mix</option>
+                {vocalistGenres.map((genre) => (
+                  <option key={genre} value={genre.toLowerCase()}>
+                    {genre}
+                  </option>
+                ))}
               </select>
             )}
 
@@ -494,10 +533,14 @@ const ActionPage = () => {
                 className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
               >
                 <option value="">Select MC Type</option>
-                <option value="eventhost">Event Host</option>
-                <option value="weddingmc">Wedding MC</option>
-                <option value="corporate">Corporate MC</option>
-                <option value="battlemc">Battle MC</option>
+                {mcTypes.map((type) => (
+                  <option
+                    key={type}
+                    value={type.toLowerCase().replace(/\s+/g, "")}
+                  >
+                    {type}
+                  </option>
+                ))}
               </select>
             )}
 

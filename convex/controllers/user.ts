@@ -226,6 +226,7 @@ const createUserData = (args: any, now: number) => {
     isMusician: false,
     isClient: false,
     isAdmin: false,
+    isBoth: false,
     isBanned: false,
 
     // Tier and theme with literal types
@@ -430,6 +431,7 @@ export const updateUserAsClient = mutation({
 
       await ctx.db.patch(user._id, {
         ...cleanUpdates,
+        firstLogin: false,
         lastActive: Date.now(),
       });
 
@@ -478,6 +480,7 @@ export const updateUserAsAdmin = mutation({
 
       await ctx.db.patch(user._id, {
         ...cleanUpdates,
+        firstLogin: false,
         lastActive: Date.now(),
       });
 
@@ -1077,13 +1080,15 @@ export const getUserById = query({
   },
 });
 
-// Type guard to check if a document is a user document
-// function isUserDocument(doc: any): doc is Doc<"users"> {
-//   return (
-//     doc &&
-//     typeof doc.clerkId === "string" &&
-//     typeof doc.username === "string" &&
-//     "isMusician" in doc &&
-//     "isClient" in doc
-//   );
-// }
+export const updateLastActive = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+
+    if (user) {
+      await ctx.db.patch(user._id, {
+        lastActive: Date.now(),
+      });
+    }
+  },
+});
