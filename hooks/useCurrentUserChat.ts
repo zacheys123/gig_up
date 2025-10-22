@@ -1,4 +1,4 @@
-// hooks/useChat.ts (Optimized version)
+// hooks/useChat.ts (Improved version)
 "use client";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -22,6 +22,32 @@ export function useUserCurrentChat() {
   const markAllAsRead = useMutation(api.controllers.chat.markAllAsRead);
   const deleteMessage = useMutation(api.controllers.chat.deleteMessage);
   const clearChat = useMutation(api.controllers.chat.clearChat);
+
+  // ✅ IMPROVED: Better unread count handling with fallback calculations
+  const safeUnreadCounts = unreadCounts || { total: 0, byChat: {} };
+
+  // Calculate total unread from chats as fallback if query returns 0
+  const calculatedTotalUnread =
+    chats?.reduce((total, chat) => {
+      return total + (chat.unreadCount || 0);
+    }, 0) || 0;
+
+  // Use query result if available and > 0, otherwise use calculated fallback
+  const finalTotalUnread =
+    safeUnreadCounts.total > 0 ? safeUnreadCounts.total : calculatedTotalUnread;
+
+  // Enhanced byChat with fallback to chat.unreadCount
+  const enhancedByChat: Record<string, number> = {};
+  chats?.forEach((chat) => {
+    const queryCount = safeUnreadCounts.byChat[chat._id] || 0;
+    const chatCount = chat.unreadCount || 0;
+    enhancedByChat[chat._id] = queryCount > 0 ? queryCount : chatCount;
+  });
+
+  const finalUnreadCounts = {
+    total: finalTotalUnread,
+    byChat: enhancedByChat,
+  };
 
   // Online status based on lastActive field from chat participants
   const getOnlineStatus = (user: any) => {
@@ -83,11 +109,21 @@ export function useUserCurrentChat() {
     await clearChat({ chatId });
   };
 
+  // Debug logging (remove in production)
+  if (process.env.NODE_ENV === "development") {
+    console.log("🔍 Chat Hook Debug:");
+    console.log("Chats:", chats?.length);
+    console.log("Query unreadCounts:", unreadCounts);
+    console.log("Calculated total unread:", calculatedTotalUnread);
+    console.log("Final total unread:", finalTotalUnread);
+    console.log("Enhanced byChat:", enhancedByChat);
+  }
+
   return {
     // Data
     chats: chats || [],
-    unreadCounts: unreadCounts || { total: 0, byChat: {} },
-    totalUnread: unreadCounts?.total || 0,
+    unreadCounts: finalUnreadCounts, // ✅ Use the enhanced version
+    totalUnread: finalTotalUnread, // ✅ This should now work properly
     onlineUsers,
 
     // Status helpers

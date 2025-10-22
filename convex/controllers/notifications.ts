@@ -183,6 +183,9 @@ export const updateNotificationSettings = mutation({
       profileViews: v.boolean(),
       followRequests: v.boolean(),
 
+      likes: v.boolean(), // NEW
+      shares: v.boolean(), // NEW
+      reviews: v.boolean(), // NEW
       // Gigs & Bookings - ALL REQUIRED
       gigInvites: v.boolean(),
       bookingRequests: v.boolean(),
@@ -197,10 +200,6 @@ export const updateNotificationSettings = mutation({
       systemUpdates: v.boolean(),
       featureAnnouncements: v.boolean(),
       securityAlerts: v.boolean(),
-
-      // Marketing - ALL REQUIRED
-      promotionalEmails: v.boolean(),
-      newsletter: v.boolean(),
     }),
   },
   handler: async (ctx, args) => {

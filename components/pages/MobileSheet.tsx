@@ -33,6 +33,8 @@ import {
   Gem,
   Star,
   CheckCircle,
+  Lock,
+  Sparkles,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -63,9 +65,10 @@ interface NavigationLink {
   label: string;
   href: string;
   icon: React.ReactElement;
-  badge?: number;
+  badge?: number | null;
   condition?: boolean;
   onClick?: (e: React.MouseEvent) => void;
+  proOnly?: boolean;
 }
 
 interface DesktopNavItem {
@@ -73,7 +76,7 @@ interface DesktopNavItem {
   label: string;
   icon: React.ReactElement;
   condition?: boolean;
-  badge?: number;
+  badge?: number | null;
   pro?: boolean;
 }
 
@@ -132,20 +135,33 @@ const getTierInfo = (tier?: string) => {
 
 const getNavigationLinks = (
   userId: string | undefined,
-  user: any
+  user: any,
+  isPro: boolean,
+  isTrialEnded?: boolean
 ): NavigationLink[] => {
   const coreLinks: NavigationLink[] = [
     { label: "Home", href: "/", icon: <Home size={22} /> },
     { label: "Dashboard", href: "/dashboard", icon: <MdDashboard size={22} /> },
     { label: "Search", href: "/auth/search", icon: <Search size={22} /> },
     { label: "Profile", href: "/profile", icon: <User size={22} /> },
-    {
-      href: "/messages",
-      icon: <MessageCircle size={22} />,
-      label: "Messages",
-    },
     { label: "Settings", href: "/settings", icon: <Settings size={22} /> },
     { label: "Games", href: "/game", icon: <Gamepad size={22} /> },
+  ];
+
+  // Pro-only features
+  const proLinks: NavigationLink[] = [
+    {
+      label: "Advanced Analytics",
+      href: "/analytics",
+      icon: <Sparkles size={22} />,
+      proOnly: true,
+    },
+    {
+      label: "Priority Support",
+      href: "/support",
+      icon: <Star size={22} />,
+      proOnly: true,
+    },
   ];
 
   if (user?._id) {
@@ -177,6 +193,11 @@ const getNavigationLinks = (
       href: user?.isClient ? `/create/${userId}` : `/av_gigs/${userId}`,
       icon: <Music size={22} />,
     });
+
+    // Add pro links if user is pro
+    if (isPro) {
+      coreLinks.push(...proLinks);
+    }
   }
 
   return coreLinks;
@@ -417,7 +438,10 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
   const { isSignedIn, user: clerkUser } = useUser();
   const currentPath = usePathname();
   const { user } = useCurrentUser();
+
+  // ✅ Use subscription store properly
   const { isPro } = useSubscriptionStore();
+
   const { colors, theme } = useThemeColors();
   const { setTheme } = useThemeToggle();
 
@@ -453,9 +477,21 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
     markAllAsRead();
   };
 
+  // ✅ Pass isPro and isTrialEnded to getNavigationLinks
   const navigationLinks: NavigationLink[] = hasMinimumData(user)
-    ? getNavigationLinks(userId as string, user)
+    ? getNavigationLinks(userId as string, user, isPro(), isTrialEnded)
     : getEssentialLinks();
+
+  // ✅ Calculate total unread from chats directly as fallback
+  const { chats } = useUserCurrentChat();
+  const calculatedTotalUnread =
+    chats?.reduce((total, chat) => {
+      return total + (chat.unreadCount || 0);
+    }, 0) || 0;
+
+  // ✅ Use the calculated total if the hook returns 0 but we have chats with unread counts
+  const displayTotalUnread =
+    totalUnread > 0 ? totalUnread : calculatedTotalUnread;
 
   const desktopItems: DesktopNavItem[] = [
     {
@@ -469,7 +505,7 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
       label: "Messages",
       icon: <MessageCircle size={22} />,
       condition: isSignedIn,
-      badge: totalUnread,
+      badge: displayTotalUnread > 0 ? displayTotalUnread : null,
     },
   ];
 
@@ -484,7 +520,7 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
       return {
         ...link,
         onClick: handleOpenMessages,
-        badge: totalUnread,
+        badge: displayTotalUnread > 0 ? displayTotalUnread : null,
       };
     }
     return link;
@@ -522,6 +558,9 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
   const userTier = user?.tier || "free";
   const currentTier = getTierInfo(userTier);
   const TierIcon = currentTier.icon;
+
+  // ✅ Show upgrade prompt if trial ended or not pro
+  const showUpgradePrompt = isTrialEnded || !isPro;
 
   return (
     <>
@@ -586,18 +625,26 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                       <p className={cn("text-sm truncate", colors.textMuted)}>
                         @{user.username}
                       </p>
+                      {showUpgradePrompt && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Lock className="w-3 h-3 text-amber-500" />
+                          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                            {isTrialEnded ? "Trial Ended" : "Upgrade to Pro"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {isSignedIn && totalUnread > 0 && (
+                {isSignedIn && displayTotalUnread > 0 && (
                   <div className="mt-3 flex items-center gap-2">
                     <Badge
                       variant="secondary"
                       className="bg-blue-500 text-white border-0"
                     >
-                      {totalUnread} unread message
-                      {totalUnread !== 1 ? "s" : ""}
+                      {displayTotalUnread} unread message
+                      {displayTotalUnread !== 1 ? "s" : ""}
                     </Badge>
                     <Button
                       variant="ghost"
@@ -615,8 +662,15 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {finalLinks
                   .filter((link) => currentPath !== link.href)
+                  .filter((link) => {
+                    // ✅ Hide pro-only links if user is not pro
+                    if (link.proOnly && !isPro) return false;
+                    return true;
+                  })
                   .map((link, index) => {
                     const isActive = currentPath === link.href;
+                    const isProOnly = link.proOnly && !isPro;
+
                     const linkElement = (
                       <div
                         className={cn(
@@ -625,7 +679,8 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                             ? "bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800"
                             : colors.hoverBg,
                           "hover:border-amber-200 dark:hover:border-amber-800",
-                          "border border-transparent"
+                          "border border-transparent",
+                          isProOnly && "opacity-60"
                         )}
                       >
                         <div className="flex items-center gap-4">
@@ -634,7 +689,8 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                               "transition-colors duration-200",
                               isActive
                                 ? "text-amber-600 dark:text-amber-400"
-                                : "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                                : "group-hover:text-amber-600 dark:group-hover:text-amber-400",
+                              isProOnly && "text-gray-400"
                             )}
                           >
                             {link.icon}
@@ -644,11 +700,15 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                               "text-base font-medium transition-colors duration-200",
                               isActive
                                 ? "text-amber-600 dark:text-amber-400"
-                                : colors.text
+                                : colors.text,
+                              isProOnly && "text-gray-500"
                             )}
                           >
                             {link.label}
                           </span>
+                          {isProOnly && (
+                            <Lock className="w-3 h-3 text-amber-500" />
+                          )}
                         </div>
 
                         {link.badge && link.badge > 0 && (
@@ -668,8 +728,12 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                       return (
                         <button
                           key={index}
-                          onClick={link.onClick}
-                          className="w-full text-left"
+                          onClick={isProOnly ? undefined : link.onClick}
+                          disabled={isProOnly}
+                          className={cn(
+                            "w-full text-left",
+                            isProOnly && "cursor-not-allowed"
+                          )}
                         >
                           {linkElement}
                         </button>
@@ -679,13 +743,36 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                     return (
                       <Link
                         key={index}
-                        href={link.href}
-                        onClick={() => setIsSheetOpen(false)}
+                        href={isProOnly ? "/upgrade" : link.href}
+                        onClick={() => !isProOnly && setIsSheetOpen(false)}
+                        className={cn(isProOnly && "cursor-not-allowed")}
                       >
                         {linkElement}
                       </Link>
                     );
                   })}
+
+                {/* ✅ Upgrade Prompt */}
+                {showUpgradePrompt && (
+                  <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Crown className="w-5 h-5" />
+                      <h4 className="font-bold text-sm">Unlock Pro Features</h4>
+                    </div>
+                    <p className="text-xs text-amber-100 mb-3">
+                      {isTrialEnded
+                        ? "Your trial has ended. Upgrade to continue accessing premium features."
+                        : "Upgrade to Pro for advanced analytics, priority support, and more."}
+                    </p>
+                    <Link
+                      href="/upgrade"
+                      onClick={() => setIsSheetOpen(false)}
+                      className="block w-full text-center bg-white text-amber-600 py-2 px-4 rounded-xl text-sm font-semibold hover:bg-amber-50 transition-colors"
+                    >
+                      Upgrade Now
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}

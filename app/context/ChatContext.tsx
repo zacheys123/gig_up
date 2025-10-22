@@ -33,7 +33,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const closeChat = () => {
     setCurrentChatId(null);
-    // Let the modal handle the navigation
+    if (pathname.includes("/chat/")) {
+      router.back();
+    }
   };
 
   return (

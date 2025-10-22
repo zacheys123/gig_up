@@ -20,6 +20,9 @@ import {
   Moon,
   CheckCircle,
   XCircle,
+  Heart,
+  Share2,
+  Star,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -72,16 +75,28 @@ export default function NotificationSettingsPage() {
     </div>
   );
 
-  // Only include the in-app notification settings we're actually using
   const validInAppKeys = [
+    // Profile & Social (UPDATED)
     "profileViews",
+    "likes", // NEW
+    "shares", // NEW
+    "reviews", // NEW
     "followRequests",
+
+    // Gigs & Bookings
     "gigInvites",
     "bookingRequests",
     "bookingConfirmations",
     "gigReminders",
+
+    // Messages
     "newMessages",
+    "messageRequests",
+
+    // System
     "systemUpdates",
+    "featureAnnouncements",
+    "securityAlerts",
   ] as const;
 
   type ValidInAppKey = (typeof validInAppKeys)[number];
@@ -191,7 +206,7 @@ export default function NotificationSettingsPage() {
                 <p
                   className={cn(
                     "text-sm leading-relaxed line-clamp-2",
-                    isEnabled ? "text-blue-700/80" : colors.textMuted,
+                    isEnabled ? colors.primary : colors.textMuted,
                     localSaving && "opacity-60"
                   )}
                 >
@@ -418,19 +433,37 @@ export default function NotificationSettingsPage() {
         <div className="space-y-6">
           {/* Social & Profile Section */}
           <NotificationSection
-            title="Social & Profile"
-            icon={<Users className="w-5 h-5" />}
-            description="Profile views and social interactions"
+            title="Social & Engagement"
+            icon={<Users className="w-6 h-6" />}
+            description="Manage notifications about your social interactions and engagement"
           >
             <ToggleRow
               label="Profile Views"
-              description="When someone views your profile"
+              description="Get notified when someone views your profile"
               inAppKey="profileViews"
               icon={<Eye className="w-4 h-4" />}
             />
             <ToggleRow
+              label="Likes"
+              description="When someone likes your posts or content"
+              inAppKey="likes"
+              icon={<Heart className="w-4 h-4" />} // Add Heart icon import
+            />
+            <ToggleRow
+              label="Shares"
+              description="When someone shares your content"
+              inAppKey="shares"
+              icon={<Share2 className="w-4 h-4" />} // Add Share2 icon import
+            />
+            <ToggleRow
+              label="Reviews"
+              description="New reviews and ratings on your profile"
+              inAppKey="reviews"
+              icon={<Star className="w-4 h-4" />} // Add Star icon import
+            />
+            <ToggleRow
               label="Follow Requests"
-              description="New followers and follow requests"
+              description="Notifications for new followers and follow requests"
               inAppKey="followRequests"
               icon={<UserPlus className="w-4 h-4" />}
             />

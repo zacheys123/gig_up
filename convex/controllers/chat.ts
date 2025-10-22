@@ -40,6 +40,7 @@ export const getChat = query({
 });
 
 // Get or create a direct chat between two users
+// In your getOrCreateDirectChat function - add logging
 export const getOrCreateDirectChat = mutation({
   args: {
     user1Id: v.id("users"),
@@ -48,8 +49,11 @@ export const getOrCreateDirectChat = mutation({
   handler: async (ctx, args) => {
     const { user1Id, user2Id } = args;
 
+    console.log("Creating chat between:", user1Id, user2Id);
+
     // Sort IDs to ensure consistent chat creation
     const participantIds = [user1Id, user2Id].sort();
+    console.log("Participant IDs:", participantIds);
 
     // Check if chat already exists
     const existingChat = await ctx.db
@@ -60,10 +64,12 @@ export const getOrCreateDirectChat = mutation({
       .first();
 
     if (existingChat) {
+      console.log("Found existing chat:", existingChat._id);
       return existingChat._id;
     }
 
     // Create new chat
+    console.log("Creating new chat...");
     const chatId = await ctx.db.insert("chats", {
       participantIds,
       type: "direct",
@@ -72,6 +78,7 @@ export const getOrCreateDirectChat = mutation({
       unreadCounts: {},
     });
 
+    console.log("Created chat:", chatId);
     return chatId;
   },
 });
@@ -198,7 +205,7 @@ export const getMessages = query({
   },
 });
 
-// Get user's chats
+// In convex/controllers/chat.ts - getUserChats
 export const getUserChats = query({
   args: {
     userId: v.optional(v.id("users")),
@@ -206,7 +213,6 @@ export const getUserChats = query({
   handler: async (ctx, args) => {
     if (!args.userId) return [];
 
-    // Store in a variable to help TypeScript narrow the type
     const userId = args.userId;
 
     const chats = await ctx.db
@@ -228,12 +234,15 @@ export const getUserChats = query({
               otherParticipants[0]?.username
             : chat.name;
 
+        // ✅ Make sure unreadCount is calculated properly
+        const unreadCount = chat.unreadCounts?.[userId] || 0;
+
         return {
           ...chat,
           participants: participants.filter(Boolean),
           displayName: chatName,
           otherParticipants,
-          unreadCount: chat.unreadCounts?.[userId] || 0,
+          unreadCount, // ✅ This is important for fallback
         };
       })
     );
@@ -334,12 +343,16 @@ export const getChatPresence = query({
 // Add these to your existing chat.ts file
 
 // Get unread counts for a user
+// In convex/controllers/chat.ts - getUnreadCounts
 export const getUnreadCounts = query({
   args: {
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    if (!args.userId) return { total: 0, byChat: {} };
+    if (!args.userId) {
+      console.log("No user ID provided");
+      return { total: 0, byChat: {} };
+    }
 
     const chats = await ctx.db
       .query("chats")
@@ -347,6 +360,8 @@ export const getUnreadCounts = query({
         q.eq("participantIds", [args.userId!])
       )
       .collect();
+
+    console.log("Found chats for user:", chats.length);
 
     let total = 0;
     const byChat: Record<string, number> = {};
@@ -356,6 +371,8 @@ export const getUnreadCounts = query({
       byChat[chat._id] = count;
       total += count;
     });
+
+    console.log("Calculated unread counts:", { total, byChat });
 
     return { total, byChat };
   },
@@ -511,5 +528,22 @@ export const updateActiveSession = mutation({
     }
 
     return false;
+  },
+});
+
+// In convex/controllers/chat.ts - Add this temporary query
+export const getAllChatsDebug = query({
+  handler: async (ctx) => {
+    const allChats = await ctx.db.query("chats").collect();
+    console.log("ALL CHATS:", allChats);
+
+    // Also log all users
+    const allUsers = await ctx.db.query("users").collect();
+    console.log(
+      "ALL USERS:",
+      allUsers.map((u) => ({ id: u._id, name: u.firstname }))
+    );
+
+    return allChats;
   },
 });

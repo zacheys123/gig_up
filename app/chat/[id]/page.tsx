@@ -21,7 +21,7 @@ export default function ChatPage() {
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <h1 className="text-lg font-semibold">Chat</h1>
+        <h1 className="text-lg font-semibold">Chaty</h1>
       </div>
 
       {/* Chat Interface */}

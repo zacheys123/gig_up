@@ -7,8 +7,8 @@ import { useChat } from "@/app/context/ChatContext";
 import { ChatInterface } from "./ChatInterface";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useRouter, usePathname } from "next/navigation";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -20,6 +20,7 @@ export function ChatModal({ chatId }: ChatModalProps) {
   const { closeChat, currentChatId } = useChat();
   const { colors } = useThemeColors();
   const router = useRouter();
+  const pathname = usePathname();
   const { user: currentUser } = useCurrentUser();
 
   // Convex mutations
@@ -51,8 +52,8 @@ export function ChatModal({ chatId }: ChatModalProps) {
     }
   }, [currentUser?._id, chatId, currentChatId, createActiveSession]);
 
-  // Delete active session when modal closes
   const handleClose = async () => {
+    // Delete active session first
     if (currentUser?._id && chatId && isSessionActive) {
       try {
         await deleteActiveSession({
@@ -65,7 +66,10 @@ export function ChatModal({ chatId }: ChatModalProps) {
       }
     }
 
+    // Close chat in context
     closeChat();
+
+    // Navigate back to remove the intercepted route from URL
     router.back();
   };
 
@@ -95,6 +99,7 @@ export function ChatModal({ chatId }: ChatModalProps) {
     }
   };
 
+  // Don't render if this isn't the current chat
   if (!currentChatId || currentChatId !== chatId) return null;
 
   return (
@@ -123,7 +128,7 @@ export function ChatModal({ chatId }: ChatModalProps) {
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            className="rounded-full"
+            className="rounded-full hover:bg-red-100 hover:text-red-600 transition-colors"
           >
             <X className="w-5 h-5" />
           </Button>

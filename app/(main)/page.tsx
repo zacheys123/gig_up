@@ -38,7 +38,7 @@ import GigLoader from "@/components/(main)/GigLoader";
 
 export default function Home() {
   const { isLoaded, userId } = useAuth();
-  const { colors, isDarkMode, mounted, theme, userTheme } = useThemeColors();
+  const { colors, isDarkMode, mounted, userTheme } = useThemeColors();
 
   // ✅ Use Zustand store instead of useCurrentUser
   const { user, isLoading, isAuthenticated } = useUserStore();
@@ -59,8 +59,6 @@ export default function Home() {
   useEffect(() => {
     setIsClientSide(true);
   }, []);
-
-  const isNewUser = isAuthenticated && !user?.firstname;
 
   // ✅ UPDATED: Clients don't need date of birth, only musicians do
   const isProfileComplete =
@@ -334,7 +332,11 @@ export default function Home() {
                   {isProfileComplete && (
                     <Link
                       href={user?.isMusician ? "/discover" : "/browse"}
-                      className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
+                      className={
+                        user?.isClient
+                          ? "px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
+                          : ""
+                      }
                     >
                       {user?.isClient && "Find Artists"}
                     </Link>

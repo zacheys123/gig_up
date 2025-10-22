@@ -29,22 +29,27 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export const notificationSettingsSchema = {
   userId: v.string(),
 
-  // In-app notifications only
-  bookingConfirmations: v.boolean(),
-  bookingRequests: v.boolean(),
-  featureAnnouncements: v.boolean(),
-  followRequests: v.boolean(),
-  gigInvites: v.boolean(),
-  gigReminders: v.boolean(),
-  messageRequests: v.boolean(),
-  newMessages: v.boolean(),
-  newsletter: v.boolean(),
+  // Profile & Social (UPDATED)
   profileViews: v.boolean(),
-  promotionalEmails: v.boolean(),
-  securityAlerts: v.boolean(),
-  systemUpdates: v.boolean(),
+  likes: v.boolean(), // NEW
+  shares: v.boolean(), // NEW
+  reviews: v.boolean(), // NEW
+  followRequests: v.boolean(),
 
-  // REMOVED: All push notification fields
+  // Gigs & Bookings
+  gigInvites: v.boolean(),
+  bookingRequests: v.boolean(),
+  bookingConfirmations: v.boolean(),
+  gigReminders: v.boolean(),
+
+  // Messages & Communication
+  newMessages: v.boolean(),
+  messageRequests: v.boolean(),
+
+  // System & Updates
+  systemUpdates: v.boolean(),
+  featureAnnouncements: v.boolean(),
+  securityAlerts: v.boolean(),
 };
 
 // ==================== NOTIFICATION MODEL SCHEMA ====================
@@ -83,8 +88,11 @@ export const notificationModelSchema = {
 export type NotificationSettings = {
   userId: string;
 
-  // Profile & Social
+  // Profile & Social (UPDATED)
   profileViews: boolean;
+  likes: boolean; // NEW
+  shares: boolean; // NEW
+  reviews: boolean; // NEW
   followRequests: boolean;
 
   // Gigs & Bookings
@@ -102,9 +110,7 @@ export type NotificationSettings = {
   featureAnnouncements: boolean;
   securityAlerts: boolean;
 
-  // Marketing
-  promotionalEmails: boolean;
-  newsletter: boolean;
+  // REMOVED: promotionalEmails & newsletter
 };
 
 export type Notification = {
@@ -128,34 +134,33 @@ export type Notification = {
 };
 
 // ==================== DEFAULT SETTINGS ====================
-// convex/types/notificationTypes.ts - FIX DEFAULT SETTINGS
-// Define default settings WITHOUT userId
 export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   NotificationSettings,
   "userId"
 > = {
-  // Profile & Social
+  // Profile & Social (UPDATED)
   profileViews: true,
-  followRequests: true,
+  likes: false, // NEW
+  shares: false, // NEW
+  reviews: false, // NEW
+  followRequests: false,
 
   // Gigs & Bookings
-  gigInvites: true,
-  bookingRequests: true,
-  bookingConfirmations: true,
-  gigReminders: true,
+  gigInvites: false,
+  bookingRequests: false,
+  bookingConfirmations: false,
+  gigReminders: false,
 
   // Messages & Communication
-  newMessages: true,
-  messageRequests: true,
+  newMessages: false,
+  messageRequests: false,
 
   // System & Updates
-  systemUpdates: true,
+  systemUpdates: false,
   featureAnnouncements: false,
-  securityAlerts: true,
+  securityAlerts: false,
 
-  // Marketing
-  promotionalEmails: false,
-  newsletter: false,
+  // REMOVED: promotionalEmails & newsletter
 };
 
 // ==================== NOTIFICATION TYPE MAPPING ====================
@@ -163,15 +168,17 @@ export const NOTIFICATION_TYPE_TO_SETTING_MAP: Record<
   NotificationType,
   keyof NotificationSettings
 > = {
-  // Profile & Social
+  // Profile & Social (UPDATED)
   profile_view: "profileViews",
+  like: "likes", // NEW - maps to "likes" setting
+  share: "shares", // NEW - maps to "shares" setting
+  new_review: "reviews", // NEW - maps to "reviews" setting
+  review_received: "reviews", // NEW - maps to "reviews" setting
+
+  // Follows
   new_follower: "followRequests",
   follow_request: "followRequests",
   follow_accepted: "followRequests",
-  like: "profileViews",
-  new_review: "profileViews",
-  review_received: "profileViews",
-  share: "profileViews",
 
   // Messages & Communication
   new_message: "newMessages",

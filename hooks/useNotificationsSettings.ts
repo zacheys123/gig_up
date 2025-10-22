@@ -71,9 +71,11 @@ export const useNotificationSettings = () => {
         messageRequests: updatedSettings.messageRequests,
         systemUpdates: updatedSettings.systemUpdates,
         featureAnnouncements: updatedSettings.featureAnnouncements,
+        likes: updatedSettings.likes,
+        shares: updatedSettings.shares,
         securityAlerts: updatedSettings.securityAlerts,
-        promotionalEmails: updatedSettings.promotionalEmails,
-        newsletter: updatedSettings.newsletter,
+        reviews: updatedSettings.reviews,
+
         // Add push settings if your validator expects them
       };
 

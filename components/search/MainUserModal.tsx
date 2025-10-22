@@ -359,7 +359,7 @@ export function UserModal({
             <ChatIcon
               userId={user._id}
               variant="secondary"
-              showText={true}
+              showText={false}
               className="flex-1 justify-center"
               showPulse={true}
             />

@@ -30,12 +30,12 @@ export default defineSchema({
   }),
   pushSubscriptions: pushSubscriptions,
   chats: defineTable({
-    participantIds: v.array(v.id("users")), // Users in this chat
+    participantIds: v.array(v.id("users")),
     lastMessage: v.optional(v.string()),
     lastMessageAt: v.optional(v.number()),
-    unreadCounts: v.optional(v.record(v.string(), v.number())), // clerkId -> count
-    type: v.union(v.literal("direct"), v.literal("group")), // Direct message or group chat
-    name: v.optional(v.string()), // For group chats
+    unreadCounts: v.optional(v.record(v.id("users"), v.number())), // ← Use document IDs
+    type: v.union(v.literal("direct"), v.literal("group")),
+    name: v.optional(v.string()),
     createdBy: v.id("users"),
   })
     .index("by_participants", ["participantIds"])

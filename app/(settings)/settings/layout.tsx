@@ -5,6 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
+import { useThemeColors } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 
 export default function SettingsLayout({
   children,
@@ -12,7 +14,7 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
-
+  const { colors } = useThemeColors();
   const handleBack = () => {
     router.back(); // Go back to previous page
     // OR use specific route:
@@ -22,8 +24,21 @@ export default function SettingsLayout({
 
   return (
     <div className="bg-background text-foreground h-full w-full overflow-scroll">
-      <div className="flex items-center justify-between mt-4 mx-6">
+      <div className="flex items-center justify-around mt-4 mx-6">
         {/* Back Button */}
+
+        <button
+          onClick={() => router.back()}
+          className={cn(
+            "flex items-center gap-2 p-2 rounded-lg transition-all duration-300",
+            colors.hoverBg,
+            colors.textMuted,
+            "hover:text-opacity-100"
+          )}
+        >
+          <ArrowLeft size={20} />
+          <span className="font-medium">Back</span>
+        </button>
         <Logo />
 
         {/* User Button */}
@@ -33,13 +48,13 @@ export default function SettingsLayout({
               rootBox: "text-foreground",
               userButtonTrigger: "text-foreground hover:bg-accent",
               userButtonPopoverCard:
-                "bg-card border-border text-card-foreground",
-              userPreviewMainIdentifier: "text-card-foreground",
-              userPreviewSecondaryIdentifier: "text-muted-foreground",
-              userButtonPopoverActionButton:
-                "text-card-foreground hover:bg-accent",
-              userButtonPopoverActionButtonText: "text-card-foreground",
-              userButtonPopoverFooter: "bg-muted",
+                colors.card + " border-border text-card-foreground",
+              userPreviewMainIdentifier: colors.textMuted,
+              userPreviewSecondaryIdentifier: colors.textMuted,
+              userButtonPopoverActionButton: colors.textMuted + colors.hoverBg,
+
+              userButtonPopoverActionButtonText: colors.textMuted,
+              userButtonPopoverFooter: colors.background,
             },
           }}
         />
