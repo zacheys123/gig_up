@@ -652,40 +652,6 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
             </div>
           </div>
 
-          {/* Unread Messages Banner */}
-          {totalUnreadCount > 0 && (
-            <div className="px-6 pb-3">
-              <div
-                className={cn(
-                  "flex items-center justify-between p-3 rounded-2xl",
-                  colors.warningBg,
-                  colors.warningBorder
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "w-2 h-2 rounded-full animate-pulse",
-                      colors.warningText
-                    )}
-                  />
-                  <span className={cn("text-sm font-medium", colors.text)}>
-                    {totalUnreadCount} unread message
-                    {totalUnreadCount !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleMarkAllAsRead}
-                  className={cn("text-xs h-7 px-2", colors.warningHover)}
-                >
-                  Mark all read
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Tabs */}
           <div className="px-6 pb-3">
             <Tabs
