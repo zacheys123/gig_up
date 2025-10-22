@@ -1,4 +1,3 @@
-// components/chat/ChatListModal.tsx
 "use client";
 import { useEffect, useState } from "react";
 import {
@@ -130,8 +129,8 @@ function UserSearchPanel({
         className={cn(
           "relative w-full max-w-2xl h-[80vh] rounded-3xl shadow-2xl border flex flex-col",
           colors.card,
-          colors.border,
-          "backdrop-blur-sm bg-white/95 dark:bg-gray-900/95"
+          colors.cardBorder,
+          "backdrop-blur-sm bg-white/95"
         )}
       >
         {/* Header */}
@@ -140,10 +139,11 @@ function UserSearchPanel({
             <div
               className={cn(
                 "p-2 rounded-2xl",
-                "bg-amber-500/10 dark:bg-amber-500/20"
+                colors.warningBg,
+                colors.warningBorder
               )}
             >
-              <Users className="w-5 h-5 text-amber-500" />
+              <Users className={cn("w-5 h-5", colors.warningText)} />
             </div>
             <div>
               <h3 className={cn("text-xl font-bold", colors.text)}>
@@ -175,7 +175,7 @@ function UserSearchPanel({
               className={cn(
                 "pl-11 pr-4 py-3 rounded-2xl border-0",
                 colors.backgroundMuted,
-                "focus:ring-2 focus:ring-amber-500/20"
+                "focus:ring-2 focus:ring-orange-500/20"
               )}
             />
           </div>
@@ -190,7 +190,7 @@ function UserSearchPanel({
               onClick={() => setSelectedCategory("all")}
               className={cn(
                 "rounded-full text-xs",
-                selectedCategory === "all" && "bg-amber-500 hover:bg-amber-600"
+                selectedCategory === "all" && colors.primaryBg
               )}
             >
               <UserPlus className="w-3 h-3 mr-1" />
@@ -202,8 +202,7 @@ function UserSearchPanel({
               onClick={() => setSelectedCategory("musicians")}
               className={cn(
                 "rounded-full text-xs",
-                selectedCategory === "musicians" &&
-                  "bg-amber-500 hover:bg-amber-600"
+                selectedCategory === "musicians" && colors.primaryBg
               )}
             >
               <Music className="w-3 h-3 mr-1" />
@@ -215,8 +214,7 @@ function UserSearchPanel({
               onClick={() => setSelectedCategory("clients")}
               className={cn(
                 "rounded-full text-xs",
-                selectedCategory === "clients" &&
-                  "bg-amber-500 hover:bg-amber-600"
+                selectedCategory === "clients" && colors.primaryBg
               )}
             >
               <Briefcase className="w-3 h-3 mr-1" />
@@ -233,21 +231,38 @@ function UserSearchPanel({
               {[...Array(6)].map((_, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-4 p-4 rounded-2xl border"
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-2xl border",
+                    colors.border
+                  )}
                 >
-                  <Skeleton className="w-12 h-12 rounded-2xl" />
+                  <Skeleton
+                    className={cn("w-12 h-12 rounded-2xl", colors.skeleton)}
+                  />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-32 rounded" />
-                      <Skeleton className="h-3 w-16 rounded" />
+                      <Skeleton
+                        className={cn("h-4 w-32 rounded", colors.skeleton)}
+                      />
+                      <Skeleton
+                        className={cn("h-3 w-16 rounded", colors.skeleton)}
+                      />
                     </div>
-                    <Skeleton className="h-3 w-48 rounded" />
+                    <Skeleton
+                      className={cn("h-3 w-48 rounded", colors.skeleton)}
+                    />
                     <div className="flex gap-2">
-                      <Skeleton className="h-5 w-20 rounded-full" />
-                      <Skeleton className="h-5 w-24 rounded-full" />
+                      <Skeleton
+                        className={cn("h-5 w-20 rounded-full", colors.skeleton)}
+                      />
+                      <Skeleton
+                        className={cn("h-5 w-24 rounded-full", colors.skeleton)}
+                      />
                     </div>
                   </div>
-                  <Skeleton className="w-20 h-9 rounded-xl" />
+                  <Skeleton
+                    className={cn("w-20 h-9 rounded-xl", colors.skeleton)}
+                  />
                 </div>
               ))}
             </div>
@@ -257,10 +272,11 @@ function UserSearchPanel({
               <div
                 className={cn(
                   "w-20 h-20 rounded-3xl flex items-center justify-center mb-4",
-                  "bg-amber-500/10 border border-amber-200/20"
+                  colors.warningBg,
+                  colors.warningBorder
                 )}
               >
-                <Search className="w-8 h-8 text-amber-500" />
+                <Search className={cn("w-8 h-8", colors.warningText)} />
               </div>
               <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
                 No users found
@@ -279,19 +295,19 @@ function UserSearchPanel({
                   key={user._id}
                   className={cn(
                     "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300",
-                    "hover:shadow-lg hover:border-amber-200 dark:hover:border-amber-500/20",
-                    colors.border
+                    colors.border,
+                    "hover:shadow-lg hover:border-orange-200"
                   )}
                 >
                   <div className="flex items-center gap-4">
                     {/* Avatar with tier badge */}
                     <div className="relative">
-                      <Avatar className="w-14 h-14 rounded-2xl border-2 border-amber-200">
+                      <Avatar className="w-14 h-14 rounded-2xl border-2 border-orange-200">
                         <AvatarImage src={user.picture} />
                         <AvatarFallback
                           className={cn(
                             "text-base font-semibold rounded-2xl",
-                            "bg-gradient-to-br from-amber-500/10 to-orange-500/10"
+                            "bg-gradient-to-br from-orange-500/10 to-red-500/10"
                           )}
                         >
                           {user.firstname?.[0]}
@@ -302,8 +318,8 @@ function UserSearchPanel({
                         <div className="absolute -top-1 -right-1">
                           <div
                             className={cn(
-                              "w-6 h-6 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center",
-                              user.tier === "pro" && "bg-amber-500",
+                              "w-6 h-6 rounded-full border-2 border-white flex items-center justify-center",
+                              user.tier === "pro" && "bg-orange-500",
                               user.tier === "premium" && "bg-purple-500",
                               user.tier === "elite" && "bg-yellow-500"
                             )}
@@ -341,8 +357,8 @@ function UserSearchPanel({
                           className={cn(
                             "text-xs",
                             user.isMusician
-                              ? "border-purple-200 text-purple-700 dark:text-purple-300"
-                              : "border-blue-200 text-blue-700 dark:text-blue-300"
+                              ? "border-purple-200 text-purple-700"
+                              : "border-blue-200 text-blue-700"
                           )}
                         >
                           {user.isMusician ? (
@@ -365,11 +381,11 @@ function UserSearchPanel({
                             className={cn(
                               "text-xs",
                               user.tier === "pro" &&
-                                "border-amber-200 text-amber-700 dark:text-amber-300",
+                                "border-orange-200 text-orange-700",
                               user.tier === "premium" &&
-                                "border-purple-200 text-purple-700 dark:text-purple-300",
+                                "border-purple-200 text-purple-700",
                               user.tier === "elite" &&
-                                "border-yellow-200 text-yellow-700 dark:text-yellow-300"
+                                "border-yellow-200 text-yellow-700"
                             )}
                           >
                             <Crown className="w-3 h-3 mr-1" />
@@ -382,7 +398,7 @@ function UserSearchPanel({
                         {user.city && (
                           <Badge
                             variant="outline"
-                            className="text-xs border-gray-200 text-gray-700 dark:text-gray-300"
+                            className="text-xs border-gray-200 text-gray-700"
                           >
                             <MapPin className="w-3 h-3 mr-1" />
                             {user.city}
@@ -394,12 +410,12 @@ function UserSearchPanel({
                         <p className={cn("text-sm", colors.textMuted)}>
                           {user.instrument}
                         </p>
-                      )}{" "}
+                      )}
                       {/* Location */}
                       {user.roleType && (
                         <Badge
                           variant="outline"
-                          className="text-xs border-gray-200 text-gray-700 dark:text-gray-300"
+                          className="text-xs border-gray-200 text-gray-700"
                         >
                           <MapPin className="w-3 h-3 mr-1" />
                           {user.roleType}
@@ -414,7 +430,9 @@ function UserSearchPanel({
                     disabled={isLoading}
                     className={cn(
                       "rounded-xl transition-all duration-300",
-                      "bg-amber-500 hover:bg-amber-600 text-white",
+                      colors.primaryBg,
+                      colors.primaryBgHover,
+                      "text-white",
                       "hover:scale-105 active:scale-95",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
@@ -455,7 +473,7 @@ function UserSearchPanel({
 export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
   const { smartCreateOrOpenChat, chats, markAllAsRead } = useUserCurrentChat();
   const { user: currentUser } = useCurrentUser();
-  const { colors, isDarkMode } = useThemeColors();
+  const { colors } = useThemeColors();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
@@ -463,6 +481,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
   const [showUserSearch, setShowUserSearch] = useState(false);
 
   const totalUnreadCount = useUnreadCount();
+
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -560,8 +579,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
           className={cn(
             "relative w-full max-w-md h-[90vh] rounded-3xl shadow-2xl border flex flex-col",
             colors.card,
-            colors.border,
-            "backdrop-blur-sm bg-white/95 dark:bg-gray-900/95"
+            colors.cardBorder,
+            "backdrop-blur-sm bg-white/95"
           )}
         >
           {/* Header */}
@@ -570,10 +589,11 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
               <div
                 className={cn(
                   "p-2 rounded-2xl",
-                  "bg-amber-500/10 dark:bg-amber-500/20"
+                  colors.warningBg,
+                  colors.warningBorder
                 )}
               >
-                <MessageCircle className="w-5 h-5 text-amber-500" />
+                <MessageCircle className={cn("w-5 h-5", colors.warningText)} />
               </div>
               <div>
                 <h3 className={cn("text-xl font-bold", colors.text)}>
@@ -593,7 +613,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 onClick={handleStartNewChat}
                 className={cn(
                   "rounded-2xl transition-all duration-300",
-                  "hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+                  colors.hoverBg,
+                  colors.primary
                 )}
                 title="New conversation"
               >
@@ -625,23 +646,29 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 className={cn(
                   "pl-11 pr-4 py-3 rounded-2xl border-0",
                   colors.backgroundMuted,
-                  "focus:ring-2 focus:ring-amber-500/20"
+                  "focus:ring-2 focus:ring-orange-500/20"
                 )}
               />
             </div>
           </div>
 
-          {/* Unread Messages Banner
+          {/* Unread Messages Banner */}
           {totalUnreadCount > 0 && (
             <div className="px-6 pb-3">
               <div
                 className={cn(
                   "flex items-center justify-between p-3 rounded-2xl",
-                  "bg-amber-500/10 border border-amber-200/50"
+                  colors.warningBg,
+                  colors.warningBorder
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full animate-pulse",
+                      colors.warningText
+                    )}
+                  />
                   <span className={cn("text-sm font-medium", colors.text)}>
                     {totalUnreadCount} unread message
                     {totalUnreadCount !== 1 ? "s" : ""}
@@ -651,13 +678,13 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                   variant="ghost"
                   size="sm"
                   onClick={handleMarkAllAsRead}
-                  className="text-xs h-7 px-2 hover:bg-amber-500/20"
+                  className={cn("text-xs h-7 px-2", colors.warningHover)}
                 >
                   Mark all read
                 </Button>
               </div>
             </div>
-          )} */}
+          )}
 
           {/* Tabs */}
           <div className="px-6 pb-3">
@@ -676,7 +703,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                   value="all"
                   className={cn(
                     "text-xs rounded-xl",
-                    "data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+                    "data-[state=active]:bg-orange-500 data-[state=active]:text-white"
                   )}
                 >
                   All
@@ -685,12 +712,12 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                   value="unread"
                   className={cn(
                     "text-xs rounded-xl",
-                    "data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+                    "data-[state=active]:bg-orange-500 data-[state=active]:text-white"
                   )}
                 >
                   Unread
                   {chats?.some((chat) => chat.unreadCount > 0) && (
-                    <Badge className="ml-1 h-4 w-4 p-0 text-[10px] bg-amber-500">
+                    <Badge className="ml-1 h-4 w-4 p-0 text-[10px] bg-orange-500">
                       {chats?.filter((chat) => chat.unreadCount > 0).length}
                     </Badge>
                   )}
@@ -699,7 +726,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                   value="archived"
                   className={cn(
                     "text-xs rounded-xl",
-                    "data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+                    "data-[state=active]:bg-orange-500 data-[state=active]:text-white"
                   )}
                 >
                   Archived
@@ -718,13 +745,21 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                     key={i}
                     className="flex items-center gap-4 p-3 rounded-2xl"
                   >
-                    <Skeleton className="w-12 h-12 rounded-2xl" />
+                    <Skeleton
+                      className={cn("w-12 h-12 rounded-2xl", colors.skeleton)}
+                    />
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">
-                        <Skeleton className="h-4 w-32 rounded" />
-                        <Skeleton className="h-3 w-12 rounded" />
+                        <Skeleton
+                          className={cn("h-4 w-32 rounded", colors.skeleton)}
+                        />
+                        <Skeleton
+                          className={cn("h-3 w-12 rounded", colors.skeleton)}
+                        />
                       </div>
-                      <Skeleton className="h-3 w-48 rounded" />
+                      <Skeleton
+                        className={cn("h-3 w-48 rounded", colors.skeleton)}
+                      />
                     </div>
                   </div>
                 ))}
@@ -735,10 +770,13 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 <div
                   className={cn(
                     "w-20 h-20 rounded-3xl flex items-center justify-center mb-4",
-                    "bg-amber-500/10 border border-amber-200/20"
+                    colors.warningBg,
+                    colors.warningBorder
                   )}
                 >
-                  <MessageCircle className="w-8 h-8 text-amber-500" />
+                  <MessageCircle
+                    className={cn("w-8 h-8", colors.warningText)}
+                  />
                 </div>
                 <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
                   {searchQuery ? "No matches found" : "No conversations yet"}
@@ -753,7 +791,9 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                     onClick={handleStartNewChat}
                     className={cn(
                       "rounded-2xl px-6 py-3",
-                      "bg-amber-500 hover:bg-amber-600 text-white",
+                      colors.primaryBg,
+                      colors.primaryBgHover,
+                      "text-white",
                       "font-semibold shadow-lg hover:shadow-xl"
                     )}
                   >
@@ -777,9 +817,9 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                       key={chat._id}
                       className={cn(
                         "group relative rounded-2xl transition-all duration-300",
-                        "hover:bg-gray-50 dark:hover:bg-gray-800/60",
-                        "border border-transparent hover:border-amber-200 dark:hover:border-amber-500/20",
-                        hasUnread && "bg-amber-50/50 dark:bg-amber-500/10"
+                        colors.hoverBg,
+                        colors.border,
+                        hasUnread && colors.warningBg
                       )}
                       onMouseEnter={() => setHoveredChat(chat._id)}
                       onMouseLeave={() => setHoveredChat(null)}
@@ -787,7 +827,13 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                       {/* Pin Indicator */}
                       {isPinned && (
                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                          <Pin className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <Pin
+                            className={cn(
+                              "w-3 h-3",
+                              colors.warningText,
+                              "fill-current"
+                            )}
+                          />
                         </div>
                       )}
 
@@ -797,12 +843,12 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                       >
                         {/* Avatar */}
                         <div className="relative">
-                          <Avatar className="w-12 h-12 rounded-2xl border-2 border-amber-200">
+                          <Avatar className="w-12 h-12 rounded-2xl border-2 border-orange-200">
                             <AvatarImage src={otherUser?.picture} />
                             <AvatarFallback
                               className={cn(
                                 "text-sm font-semibold rounded-2xl",
-                                "bg-gradient-to-br from-amber-500/10 to-orange-500/10"
+                                "bg-gradient-to-br from-orange-500/10 to-red-500/10"
                               )}
                             >
                               {otherUser?.firstname?.[0]}
@@ -810,7 +856,13 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                             </AvatarFallback>
                           </Avatar>
                           {hasUnread && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full ring-2 ring-white dark:ring-gray-900 animate-pulse" />
+                            <div
+                              className={cn(
+                                "absolute -top-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white animate-pulse",
+                                colors.warningText,
+                                "bg-current"
+                              )}
+                            />
                           )}
                         </div>
 
@@ -821,9 +873,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                               <h4
                                 className={cn(
                                   "font-semibold text-sm truncate",
-                                  hasUnread
-                                    ? "text-gray-900 dark:text-white"
-                                    : colors.text
+                                  colors.text
                                 )}
                               >
                                 {chat.displayName}
@@ -837,7 +887,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                                 className={cn(
                                   "text-xs whitespace-nowrap",
                                   hasUnread
-                                    ? "text-amber-600 dark:text-amber-400"
+                                    ? colors.warningText
                                     : colors.textMuted
                                 )}
                               >
@@ -852,7 +902,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                                 className={cn(
                                   "w-3 h-3 flex-shrink-0",
                                   hasUnread
-                                    ? "text-amber-500"
+                                    ? colors.warningText
                                     : colors.textMuted
                                 )}
                               />
@@ -860,9 +910,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                             <p
                               className={cn(
                                 "text-sm truncate",
-                                hasUnread
-                                  ? "text-gray-700 dark:text-gray-300 font-medium"
-                                  : colors.textMuted
+                                hasUnread ? colors.text : colors.textMuted
                               )}
                             >
                               {chat.lastMessage || "Say hello! 👋"}
@@ -875,7 +923,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                           <Badge
                             className={cn(
                               "rounded-full px-2 min-w-[24px] h-6 text-xs font-semibold",
-                              "bg-amber-500 text-white",
+                              colors.primaryBg,
+                              "text-white",
                               "animate-pulse"
                             )}
                           >
@@ -897,7 +946,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 <Switch
                   checked={showArchived}
                   onCheckedChange={setShowArchived}
-                  className="data-[state=checked]:bg-amber-500"
+                  className="data-[state=checked]:bg-orange-500"
                 />
                 <Label className={cn("text-sm", colors.textMuted)}>
                   Show Archived
@@ -908,7 +957,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 size="sm"
                 className={cn(
                   "text-xs rounded-xl",
-                  "hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+                  colors.hoverBg,
+                  colors.primary
                 )}
               >
                 Settings
