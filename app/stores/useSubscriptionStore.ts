@@ -26,6 +26,7 @@ interface Subscription {
   nextBillingDate?: number;
 }
 
+// stores/useSubscriptionStore.ts - Keep as functions but fix typing
 interface SubscriptionStore {
   // State
   subscription: Subscription | null;
@@ -46,13 +47,13 @@ interface SubscriptionStore {
   setShowTrialModal: (show: boolean) => void;
   setTrialRemainingDays: (days: number | null) => void;
 
-  // Computed
+  // Computed - Keep as functions but properly type them
   isPro: () => boolean;
   isActive: () => boolean;
   daysUntilRenewal: () => number;
   canUpgrade: () => boolean;
 
-  // NEW: Get plans based on user role
+  // Get plans based on user role
   getPlansForUser: (
     isMusician?: boolean,
     isClient?: boolean
@@ -122,37 +123,32 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
 
       // Actions
       setSubscription: (subscription) => set({ subscription }),
-
       setLoading: (isLoading) => set({ isLoading }),
-
       updateSubscription: (updates) =>
         set((state) => ({
           subscription: state.subscription
             ? { ...state.subscription, ...updates }
             : null,
         })),
-
       clearSubscription: () => set({ subscription: null }),
-
-      // Trial Actions
       setShowTrialModal: (showTrialModal) => set({ showTrialModal }),
       setTrialRemainingDays: (trialRemainingDays) =>
         set({ trialRemainingDays }),
 
-      // Computed values
-      isPro: () => {
+      // ✅ FIX: Computed functions - properly typed
+      isPro: (): boolean => {
         const { subscription } = get();
         return (
           subscription?.tier === "pro" && subscription?.status === "active"
         );
       },
 
-      isActive: () => {
+      isActive: (): boolean => {
         const { subscription } = get();
         return subscription?.status === "active";
       },
 
-      daysUntilRenewal: () => {
+      daysUntilRenewal: (): number => {
         const { subscription } = get();
         if (!subscription?.currentPeriodEnd) return 0;
 
@@ -164,16 +160,16 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
         return Math.max(0, diffDays);
       },
 
-      canUpgrade: () => {
+      canUpgrade: (): boolean => {
         const { subscription } = get();
         return (
           subscription?.tier !== "pro" || subscription?.status !== "active"
         );
       },
 
-      // NEW: Get role-specific plans
+      // ✅ FIX: Update getPlansForUser to call isPro() function
       getPlansForUser: (isMusician = false, isClient = false) => {
-        const { isPro } = get();
+        const { isPro } = get(); // Get the function from store
 
         const musicianFreeFeatures = [
           "Book to 2 gigs/week",
@@ -219,8 +215,8 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
               : isClient
                 ? clientFreeFeatures
                 : [],
-            cta: isPro() ? "Downgrade" : "Current Plan",
-            current: !isPro(),
+            cta: isPro() ? "Downgrade" : "Current Plan", // ✅ Call isPro() function
+            current: !isPro(), // ✅ Call isPro() function
           },
           {
             name: "Pro Tier",
@@ -234,8 +230,8 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
               : isClient
                 ? clientProFeatures
                 : [],
-            cta: isPro() ? "Current Plan" : "Upgrade",
-            current: isPro(),
+            cta: isPro() ? "Current Plan" : "Upgrade", // ✅ Call isPro() function
+            current: isPro(), // ✅ Call isPro() function
           },
         ];
       },
@@ -245,7 +241,6 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
       partialize: (state) => ({
         subscription: state.subscription,
         availableTiers: state.availableTiers,
-        // Don't persist trial state - it should be recalculated on each load
       }),
     }
   )

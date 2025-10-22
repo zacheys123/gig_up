@@ -6,12 +6,27 @@ import {
   Search,
   MessageCircle,
   Plus,
-  MoreHorizontal,
   CheckCheck,
+  MoreHorizontal,
+  Video,
+  Phone,
+  UserPlus,
+  Filter,
+  Archive,
+  Delete,
+  Pin,
+  CheckCircle2,
+  Crown,
+  Zap,
+  Users,
+  Music,
+  Briefcase,
+  MapPin,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useChat } from "@/app/context/ChatContext";
+
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -20,35 +35,449 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { useUserCurrentChat } from "@/hooks/useCurrentUserChat";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 interface ChatListModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface UserSearchPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUserSelect: (userId: string) => void;
+}
+
+// UserSearchPanel Component
+function UserSearchPanel({
+  isOpen,
+  onClose,
+  onUserSelect,
+}: UserSearchPanelProps) {
+  const { colors } = useThemeColors();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<
+    "all" | "musicians" | "clients"
+  >("all");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const { smartCreateOrOpenChat, isLoading } = useUserCurrentChat();
+
+  // Fetch all users for search
+  const allUsers = useQuery(api.controllers.user.getAllUsers);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Filter users based on search and category
+  const filteredUsers = allUsers?.filter((user) => {
+    const matchesSearch =
+      user.firstname?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.lastname?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.username?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.instrument?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.city?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.roleType?.toLowerCase().includes(debouncedQuery.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      (selectedCategory === "musicians" && user.isMusician) ||
+      (selectedCategory === "clients" && user.isClient);
+
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleStartChat = async (userId: string) => {
+    try {
+      await smartCreateOrOpenChat(userId);
+      toast.success("Chat started successfully!");
+      onUserSelect(userId);
+    } catch (error) {
+      toast.error("Failed to start chat. Please try again.");
+      console.error("Failed to create chat:", error);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-300"
+        onClick={onClose}
+      />
+
+      {/* Search Panel */}
+      <div
+        className={cn(
+          "relative w-full max-w-2xl h-[80vh] rounded-3xl shadow-2xl border flex flex-col",
+          colors.card,
+          colors.border,
+          "backdrop-blur-sm bg-white/95 dark:bg-gray-900/95"
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "p-2 rounded-2xl",
+                "bg-amber-500/10 dark:bg-amber-500/20"
+              )}
+            >
+              <Users className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <h3 className={cn("text-xl font-bold", colors.text)}>
+                Find People
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                Connect with musicians and clients
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="rounded-2xl hover:bg-red-500/10 hover:text-red-600"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="p-6 pb-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search by name, username, location, or specialty..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={cn(
+                "pl-11 pr-4 py-3 rounded-2xl border-0",
+                colors.backgroundMuted,
+                "focus:ring-2 focus:ring-amber-500/20"
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Category Filters */}
+        <div className="px-6 pb-4">
+          <div className="flex gap-2">
+            <Button
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("all")}
+              className={cn(
+                "rounded-full text-xs",
+                selectedCategory === "all" && "bg-amber-500 hover:bg-amber-600"
+              )}
+            >
+              <UserPlus className="w-3 h-3 mr-1" />
+              All Users
+            </Button>
+            <Button
+              variant={selectedCategory === "musicians" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("musicians")}
+              className={cn(
+                "rounded-full text-xs",
+                selectedCategory === "musicians" &&
+                  "bg-amber-500 hover:bg-amber-600"
+              )}
+            >
+              <Music className="w-3 h-3 mr-1" />
+              Musicians
+            </Button>
+            <Button
+              variant={selectedCategory === "clients" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("clients")}
+              className={cn(
+                "rounded-full text-xs",
+                selectedCategory === "clients" &&
+                  "bg-amber-500 hover:bg-amber-600"
+              )}
+            >
+              <Briefcase className="w-3 h-3 mr-1" />
+              Clients
+            </Button>
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+          {!allUsers ? (
+            // Loading skeletons
+            <div className="space-y-4">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 p-4 rounded-2xl border"
+                >
+                  <Skeleton className="w-12 h-12 rounded-2xl" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-32 rounded" />
+                      <Skeleton className="h-3 w-16 rounded" />
+                    </div>
+                    <Skeleton className="h-3 w-48 rounded" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                    </div>
+                  </div>
+                  <Skeleton className="w-20 h-9 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : filteredUsers?.length === 0 ? (
+            // Empty state
+            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+              <div
+                className={cn(
+                  "w-20 h-20 rounded-3xl flex items-center justify-center mb-4",
+                  "bg-amber-500/10 border border-amber-200/20"
+                )}
+              >
+                <Search className="w-8 h-8 text-amber-500" />
+              </div>
+              <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
+                No users found
+              </h4>
+              <p className={cn("text-sm max-w-xs", colors.textMuted)}>
+                {debouncedQuery
+                  ? "Try adjusting your search terms or browse different categories"
+                  : "Start typing to search for users"}
+              </p>
+            </div>
+          ) : (
+            // User results
+            <div className="space-y-3">
+              {filteredUsers?.map((user) => (
+                <div
+                  key={user._id}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300",
+                    "hover:shadow-lg hover:border-amber-200 dark:hover:border-amber-500/20",
+                    colors.border
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Avatar with tier badge */}
+                    <div className="relative">
+                      <Avatar className="w-14 h-14 rounded-2xl border-2 border-amber-200">
+                        <AvatarImage src={user.picture} />
+                        <AvatarFallback
+                          className={cn(
+                            "text-base font-semibold rounded-2xl",
+                            "bg-gradient-to-br from-amber-500/10 to-orange-500/10"
+                          )}
+                        >
+                          {user.firstname?.[0]}
+                          {user.lastname?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.tier !== "free" && (
+                        <div className="absolute -top-1 -right-1">
+                          <div
+                            className={cn(
+                              "w-6 h-6 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center",
+                              user.tier === "pro" && "bg-amber-500",
+                              user.tier === "premium" && "bg-purple-500",
+                              user.tier === "elite" && "bg-yellow-500"
+                            )}
+                          >
+                            <Crown className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* User info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h4
+                          className={cn("font-semibold text-lg", colors.text)}
+                        >
+                          {user.firstname} {user.lastname}
+                        </h4>
+                        {user.verified && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-blue-500 text-white text-xs"
+                          >
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
+                      <p className={cn("text-sm", colors.textMuted)}>
+                        @{user.username}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {/* Role badge */}
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs",
+                            user.isMusician
+                              ? "border-purple-200 text-purple-700 dark:text-purple-300"
+                              : "border-blue-200 text-blue-700 dark:text-blue-300"
+                          )}
+                        >
+                          {user.isMusician ? (
+                            <>
+                              <Music className="w-3 h-3 mr-1" />
+                              Musician
+                            </>
+                          ) : (
+                            <>
+                              <Briefcase className="w-3 h-3 mr-1" />
+                              Client
+                            </>
+                          )}
+                        </Badge>
+
+                        {/* Tier badge */}
+                        {user.tier !== "free" && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs",
+                              user.tier === "pro" &&
+                                "border-amber-200 text-amber-700 dark:text-amber-300",
+                              user.tier === "premium" &&
+                                "border-purple-200 text-purple-700 dark:text-purple-300",
+                              user.tier === "elite" &&
+                                "border-yellow-200 text-yellow-700 dark:text-yellow-300"
+                            )}
+                          >
+                            <Crown className="w-3 h-3 mr-1" />
+                            {user.tier.charAt(0).toUpperCase() +
+                              user.tier.slice(1)}
+                          </Badge>
+                        )}
+
+                        {/* Location */}
+                        {user.city && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-gray-200 text-gray-700 dark:text-gray-300"
+                          >
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {user.city}
+                          </Badge>
+                        )}
+                      </div>
+                      {/* Specialization */}
+                      {user.instrument && (
+                        <p className={cn("text-sm", colors.textMuted)}>
+                          {user.instrument}
+                        </p>
+                      )}{" "}
+                      {/* Location */}
+                      {user.roleType && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-gray-200 text-gray-700 dark:text-gray-300"
+                        >
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {user.roleType}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action button */}
+                  <Button
+                    onClick={() => handleStartChat(user._id)}
+                    disabled={isLoading}
+                    className={cn(
+                      "rounded-xl transition-all duration-300",
+                      "bg-amber-500 hover:bg-amber-600 text-white",
+                      "hover:scale-105 active:scale-95",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    {isLoading ? "Starting..." : "Message"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Quick Stats */}
+        <div className={cn("p-4 border-t", colors.border)}>
+          <div className="flex justify-between text-sm">
+            <span className={colors.textMuted}>
+              Showing {filteredUsers?.length || 0} of {allUsers?.length || 0}{" "}
+              users
+            </span>
+            <div className="flex gap-4">
+              <span className={cn("flex items-center gap-1", colors.textMuted)}>
+                <Music className="w-3 h-3" />
+                {allUsers?.filter((u) => u.isMusician).length} musicians
+              </span>
+              <span className={cn("flex items-center gap-1", colors.textMuted)}>
+                <Briefcase className="w-3 h-3" />
+                {allUsers?.filter((u) => u.isClient).length} clients
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main ChatListModal Component
 export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
-  const { openChat } = useChat();
+  const { smartCreateOrOpenChat, chats, markAllAsRead } = useUserCurrentChat();
   const { user: currentUser } = useCurrentUser();
   const { colors, isDarkMode } = useThemeColors();
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+  const [showArchived, setShowArchived] = useState(false);
+  const [hoveredChat, setHoveredChat] = useState<string | null>(null);
+  const [showUserSearch, setShowUserSearch] = useState(false);
 
-  // Fetch user's chats
-  const chats = useQuery(
-    api.controllers.chat.getUserChats,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
-  );
-
+  const totalUnreadCount = useUnreadCount();
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
-        onClose();
+        if (showUserSearch) {
+          setShowUserSearch(false);
+        } else {
+          onClose();
+        }
       }
     };
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showUserSearch]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -57,19 +486,59 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
   };
 
   const handleChatClick = (chatId: string) => {
-    openChat(chatId);
+    smartCreateOrOpenChat(chatId); // This will open the existing chat
     onClose();
   };
 
-  // Filter chats based on search
-  const filteredChats = chats?.filter(
-    (chat) =>
-      chat.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      chat.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleStartNewChat = () => {
+    setShowUserSearch(true);
+  };
 
-  // Sort chats: unread first, then by recent activity
+  const handleUserSelect = async (userId: string) => {
+    // The chat creation and opening is handled in the UserSearchPanel
+    setShowUserSearch(false);
+    onClose(); // Close the main modal too
+  };
+
+  const handleVideoCall = (chatId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log("Starting video call for chat:", chatId);
+  };
+
+  const handleVoiceCall = (chatId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log("Starting voice call for chat:", chatId);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      toast.success("All messages marked as read");
+    } catch (error) {
+      toast.error("Failed to mark messages as read");
+    }
+  };
+
+  // Filter and sort chats
+  const filteredChats = chats?.filter((chat) => {
+    const matchesSearch =
+      chat.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const isArchived = chat.isArchived || false;
+
+    if (activeTab === "unread") {
+      return matchesSearch && chat.unreadCount > 0 && !isArchived;
+    } else if (activeTab === "archived") {
+      return matchesSearch && isArchived;
+    }
+
+    return matchesSearch && !isArchived;
+  });
+
   const sortedChats = filteredChats?.sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
     if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
     if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
     return (b.lastMessageAt || 0) - (a.lastMessageAt || 0);
@@ -78,261 +547,402 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Enhanced Backdrop with blur */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-300"
-        onClick={handleBackdropClick}
-      />
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-300"
+          onClick={handleBackdropClick}
+        />
 
-      {/* Modern Modal Container */}
-      <div className="relative w-full max-w-md h-[85vh] bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col transform transition-all duration-300 scale-100">
-        {/* Sleek Header */}
-        <div className="flex items-center justify-between p-6 pb-4">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "p-2 rounded-2xl",
-                isDarkMode ? "bg-blue-500/20" : "bg-blue-500/10"
-              )}
-            >
-              <MessageCircle className="w-5 h-5 text-blue-500" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Messages
-              </h3>
-              <p className={cn("text-sm mt-0.5", colors.textMuted)}>
-                {sortedChats?.length || 0} conversations
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Enhanced Search Bar */}
-        <div className="px-6 pb-4">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 transition-colors group-focus-within:text-blue-500" />
-            <Input
-              placeholder="Search messages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(
-                "pl-11 pr-4 py-3 rounded-2xl border-0 bg-gray-50 dark:bg-gray-800/50",
-                "transition-all duration-200 focus:ring-2 focus:ring-blue-500/20",
-                "placeholder-gray-400 dark:placeholder-gray-500"
-              )}
-            />
-          </div>
-        </div>
-
-        {/* Chat List with Modern Design */}
-        <div className="flex-1 overflow-y-auto px-3 pb-4">
-          {!chats ? (
-            // Loading skeletons
-            <div className="space-y-3">
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 p-3 rounded-2xl"
-                >
-                  <Skeleton className="w-12 h-12 rounded-2xl" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4 rounded" />
-                    <Skeleton className="h-3 w-1/2 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : sortedChats?.length === 0 ? (
-            // Empty state
-            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+        {/* Modal Container */}
+        <div
+          className={cn(
+            "relative w-full max-w-md h-[90vh] rounded-3xl shadow-2xl border flex flex-col",
+            colors.card,
+            colors.border,
+            "backdrop-blur-sm bg-white/95 dark:bg-gray-900/95"
+          )}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 pb-4">
+            <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "w-20 h-20 rounded-3xl flex items-center justify-center mb-4",
-                  "bg-gradient-to-br from-blue-500/10 to-purple-500/10",
-                  "border border-blue-200/20 dark:border-blue-500/20"
+                  "p-2 rounded-2xl",
+                  "bg-amber-500/10 dark:bg-amber-500/20"
                 )}
               >
-                <MessageCircle className="w-8 h-8 text-blue-500" />
+                <MessageCircle className="w-5 h-5 text-amber-500" />
               </div>
-              <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
-                {searchQuery ? "No matches found" : "No conversations"}
-              </h4>
-              <p className={cn("text-sm max-w-xs", colors.textMuted)}>
-                {searchQuery
-                  ? "Try searching with different keywords"
-                  : "Start connecting with other musicians and clients"}
-              </p>
-              {!searchQuery && (
-                <Button className="mt-4 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white px-6">
-                  Find People
-                </Button>
-              )}
+              <div>
+                <h3 className={cn("text-xl font-bold", colors.text)}>
+                  Messages
+                </h3>
+                <p className={cn("text-sm mt-0.5", colors.textMuted)}>
+                  {sortedChats?.length || 0} conversations
+                </p>
+              </div>
             </div>
-          ) : (
-            // Chat list
-            <div className="space-y-1">
-              {sortedChats?.map((chat) => {
-                const otherParticipant = chat.otherParticipants[0];
-                const hasUnread = chat.unreadCount > 0;
 
-                return (
-                  <button
-                    key={chat._id}
-                    onClick={() => handleChatClick(chat._id)}
+            <div className="flex items-center gap-2">
+              {/* New Chat Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleStartNewChat}
+                className={cn(
+                  "rounded-2xl transition-all duration-300",
+                  "hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+                )}
+                title="New conversation"
+              >
+                <UserPlus className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className={cn(
+                  "rounded-2xl transition-all duration-300",
+                  "hover:bg-red-500/10 hover:text-red-600"
+                )}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="px-6 pb-4">
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(
+                  "pl-11 pr-4 py-3 rounded-2xl border-0",
+                  colors.backgroundMuted,
+                  "focus:ring-2 focus:ring-amber-500/20"
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Unread Messages Banner
+          {totalUnreadCount > 0 && (
+            <div className="px-6 pb-3">
+              <div
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-2xl",
+                  "bg-amber-500/10 border border-amber-200/50"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                  <span className={cn("text-sm font-medium", colors.text)}>
+                    {totalUnreadCount} unread message
+                    {totalUnreadCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs h-7 px-2 hover:bg-amber-500/20"
+                >
+                  Mark all read
+                </Button>
+              </div>
+            </div>
+          )} */}
+
+          {/* Tabs */}
+          <div className="px-6 pb-3">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList
+                className={cn(
+                  "w-full grid grid-cols-3 rounded-2xl p-1",
+                  colors.backgroundMuted
+                )}
+              >
+                <TabsTrigger
+                  value="all"
+                  className={cn(
+                    "text-xs rounded-xl",
+                    "data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+                  )}
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="unread"
+                  className={cn(
+                    "text-xs rounded-xl",
+                    "data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+                  )}
+                >
+                  Unread
+                  {chats?.some((chat) => chat.unreadCount > 0) && (
+                    <Badge className="ml-1 h-4 w-4 p-0 text-[10px] bg-amber-500">
+                      {chats?.filter((chat) => chat.unreadCount > 0).length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="archived"
+                  className={cn(
+                    "text-xs rounded-xl",
+                    "data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+                  )}
+                >
+                  Archived
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Chat List */}
+          <div className="flex-1 overflow-y-auto px-3 pb-4">
+            {!chats ? (
+              // Loading skeletons
+              <div className="space-y-3">
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-3 rounded-2xl"
+                  >
+                    <Skeleton className="w-12 h-12 rounded-2xl" />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-4 w-32 rounded" />
+                        <Skeleton className="h-3 w-12 rounded" />
+                      </div>
+                      <Skeleton className="h-3 w-48 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : sortedChats?.length === 0 ? (
+              // Empty state
+              <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                <div
+                  className={cn(
+                    "w-20 h-20 rounded-3xl flex items-center justify-center mb-4",
+                    "bg-amber-500/10 border border-amber-200/20"
+                  )}
+                >
+                  <MessageCircle className="w-8 h-8 text-amber-500" />
+                </div>
+                <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
+                  {searchQuery ? "No matches found" : "No conversations yet"}
+                </h4>
+                <p className={cn("text-sm max-w-xs mb-6", colors.textMuted)}>
+                  {searchQuery
+                    ? "Try adjusting your search terms"
+                    : "Start connecting with other users to see your conversations here"}
+                </p>
+                {!searchQuery && (
+                  <Button
+                    onClick={handleStartNewChat}
                     className={cn(
-                      "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group",
-                      "hover:bg-gray-50 dark:hover:bg-gray-800/60",
-                      "border border-transparent hover:border-gray-100 dark:hover:border-gray-700",
-                      hasUnread && "bg-blue-50/50 dark:bg-blue-500/10"
+                      "rounded-2xl px-6 py-3",
+                      "bg-amber-500 hover:bg-amber-600 text-white",
+                      "font-semibold shadow-lg hover:shadow-xl"
                     )}
                   >
-                    {/* Avatar with status indicator */}
-                    <div className="relative">
-                      <Avatar className="w-12 h-12 rounded-2xl ring-2 ring-white dark:ring-gray-800 group-hover:ring-blue-100 dark:group-hover:ring-blue-500/20 transition-all duration-200">
-                        <AvatarImage src={otherParticipant?.picture} />
-                        <AvatarFallback
-                          className={cn(
-                            "text-sm font-semibold rounded-2xl",
-                            isDarkMode ? "bg-gray-700" : "bg-gray-200"
-                          )}
-                        >
-                          {otherParticipant?.firstname?.[0]}
-                          {otherParticipant?.lastname?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      {hasUnread && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full ring-2 ring-white dark:ring-gray-900 animate-pulse" />
-                      )}
-                    </div>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Start Your First Conversation
+                  </Button>
+                )}
+              </div>
+            ) : (
+              // Chat list
+              <div className="space-y-2">
+                {sortedChats?.map((chat) => {
+                  const otherUser = chat.otherParticipants?.[0];
+                  const hasUnread = chat.unreadCount > 0;
+                  const isPinned = chat.isPinned || false;
+                  const isVerified = otherUser?.verified;
+                  const isHovered = hoveredChat === chat._id;
 
-                    {/* Chat content */}
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <h4
-                          className={cn(
-                            "font-semibold text-sm truncate transition-colors",
-                            hasUnread
-                              ? "text-gray-900 dark:text-white"
-                              : colors.text
+                  return (
+                    <div
+                      key={chat._id}
+                      className={cn(
+                        "group relative rounded-2xl transition-all duration-300",
+                        "hover:bg-gray-50 dark:hover:bg-gray-800/60",
+                        "border border-transparent hover:border-amber-200 dark:hover:border-amber-500/20",
+                        hasUnread && "bg-amber-50/50 dark:bg-amber-500/10"
+                      )}
+                      onMouseEnter={() => setHoveredChat(chat._id)}
+                      onMouseLeave={() => setHoveredChat(null)}
+                    >
+                      {/* Pin Indicator */}
+                      {isPinned && (
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                          <Pin className="w-3 h-3 text-amber-500 fill-amber-500" />
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => handleChatClick(chat._id)}
+                        className="w-full flex items-center gap-4 p-4 rounded-2xl"
+                      >
+                        {/* Avatar */}
+                        <div className="relative">
+                          <Avatar className="w-12 h-12 rounded-2xl border-2 border-amber-200">
+                            <AvatarImage src={otherUser?.picture} />
+                            <AvatarFallback
+                              className={cn(
+                                "text-sm font-semibold rounded-2xl",
+                                "bg-gradient-to-br from-amber-500/10 to-orange-500/10"
+                              )}
+                            >
+                              {otherUser?.firstname?.[0]}
+                              {otherUser?.lastname?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          {hasUnread && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full ring-2 ring-white dark:ring-gray-900 animate-pulse" />
                           )}
-                        >
-                          {chat.displayName}
-                        </h4>
-                        {chat.lastMessageAt && (
-                          <span
+                        </div>
+
+                        {/* Chat content */}
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <h4
+                                className={cn(
+                                  "font-semibold text-sm truncate",
+                                  hasUnread
+                                    ? "text-gray-900 dark:text-white"
+                                    : colors.text
+                                )}
+                              >
+                                {chat.displayName}
+                              </h4>
+                              {isVerified && (
+                                <CheckCircle2 className="w-3 h-3 text-blue-500 fill-blue-500" />
+                              )}
+                            </div>
+                            {chat.lastMessageAt && (
+                              <span
+                                className={cn(
+                                  "text-xs whitespace-nowrap",
+                                  hasUnread
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : colors.textMuted
+                                )}
+                              >
+                                {formatTime(chat.lastMessageAt)}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {chat.lastMessage && (
+                              <CheckCheck
+                                className={cn(
+                                  "w-3 h-3 flex-shrink-0",
+                                  hasUnread
+                                    ? "text-amber-500"
+                                    : colors.textMuted
+                                )}
+                              />
+                            )}
+                            <p
+                              className={cn(
+                                "text-sm truncate",
+                                hasUnread
+                                  ? "text-gray-700 dark:text-gray-300 font-medium"
+                                  : colors.textMuted
+                              )}
+                            >
+                              {chat.lastMessage || "Say hello! 👋"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Unread badge */}
+                        {hasUnread && (
+                          <Badge
                             className={cn(
-                              "text-xs whitespace-nowrap transition-colors",
-                              hasUnread
-                                ? "text-blue-600 dark:text-blue-400"
-                                : colors.textMuted
+                              "rounded-full px-2 min-w-[24px] h-6 text-xs font-semibold",
+                              "bg-amber-500 text-white",
+                              "animate-pulse"
                             )}
                           >
-                            {formatTime(chat.lastMessageAt)}
-                          </span>
+                            {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                          </Badge>
                         )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {chat.lastMessage && (
-                          <CheckCheck
-                            className={cn(
-                              "w-3 h-3 flex-shrink-0",
-                              hasUnread ? "text-blue-500" : "text-gray-400"
-                            )}
-                          />
-                        )}
-                        <p
-                          className={cn(
-                            "text-sm truncate transition-colors",
-                            hasUnread
-                              ? "text-gray-700 dark:text-gray-300 font-medium"
-                              : colors.textMuted
-                          )}
-                        >
-                          {chat.lastMessage || "Say hello! 👋"}
-                        </p>
-                      </div>
+                      </button>
                     </div>
-
-                    {/* Unread badge */}
-                    {hasUnread && (
-                      <Badge
-                        variant="default"
-                        className={cn(
-                          "rounded-full px-2 min-w-[24px] h-6 text-xs font-semibold",
-                          "bg-blue-500 hover:bg-blue-600 text-white",
-                          "animate-pulse shadow-lg shadow-blue-500/25"
-                        )}
-                      >
-                        {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
-                      </Badge>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Enhanced Footer */}
-        <div className="p-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <Button
-            className={cn(
-              "w-full rounded-2xl py-3 font-semibold transition-all duration-200",
-              "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600",
-              "shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40",
-              "text-white transform hover:scale-[1.02] active:scale-[0.98]"
+                  );
+                })}
+              </div>
             )}
-            onClick={() => window.open("/messages", "_blank")}
-          >
-            Open Messages
-            <MessageCircle className="w-4 h-4 ml-2" />
-          </Button>
+          </div>
+
+          {/* Footer */}
+          <div className={cn("p-4 border-t", colors.border)}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={showArchived}
+                  onCheckedChange={setShowArchived}
+                  className="data-[state=checked]:bg-amber-500"
+                />
+                <Label className={cn("text-sm", colors.textMuted)}>
+                  Show Archived
+                </Label>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "text-xs rounded-xl",
+                  "hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+                )}
+              >
+                Settings
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* User Search Panel */}
+      <UserSearchPanel
+        isOpen={showUserSearch}
+        onClose={() => setShowUserSearch(false)}
+        onUserSelect={handleUserSelect}
+      />
+    </>
   );
 }
 
-// Enhanced time formatting
+// Time formatting helper
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
 
   if (diff < 60000) {
-    // Less than 1 minute
     return "now";
   } else if (diff < 3600000) {
-    // Less than 1 hour
     const minutes = Math.floor(diff / 60000);
     return `${minutes}m`;
   } else if (diff < 86400000) {
-    // Less than 1 day
     const hours = Math.floor(diff / 3600000);
     return `${hours}h`;
   } else if (diff < 604800000) {
-    // Less than 1 week
     const days = Math.floor(diff / 86400000);
     return `${days}d`;
   } else {

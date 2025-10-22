@@ -34,7 +34,7 @@ export function DesktopNavigation() {
   const hasRole = currentUser?.isClient || currentUser?.isMusician;
   const isMusician = currentUser?.isMusician;
 
-  const unreadCount = useUnreadCount();
+  const { total: unreadCount, byChat: unreadCounts } = useUnreadCount();
   const [showChatListModal, setShowChatListModal] = useState(false);
 
   const handleOpenMessages = (e: React.MouseEvent) => {
@@ -52,15 +52,12 @@ export function DesktopNavigation() {
       >
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center h-16">
-            {/* Logo & Navigation Skeleton */}
             <div className="flex items-center space-x-10">
-              {/* Logo Skeleton */}
               <div className="flex items-center space-x-2">
                 <Skeleton className="w-8 h-8 rounded-lg" />
                 <Skeleton className="w-16 h-6 rounded" />
               </div>
 
-              {/* Navigation Links Skeleton */}
               <div className="hidden lg:flex items-center space-x-8">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -71,16 +68,14 @@ export function DesktopNavigation() {
               </div>
             </div>
 
-            {/* Right side loading state */}
             <div className="flex items-center space-x-4">
-              <Skeleton className="w-24 h-9 rounded-md" /> {/* Create button */}
-              <Skeleton className="w-20 h-9 rounded-lg" /> {/* Messages */}
-              <Skeleton className="w-8 h-8 rounded-md" /> {/* Theme */}
+              <Skeleton className="w-24 h-9 rounded-md" />
+              <Skeleton className="w-20 h-9 rounded-lg" />
+              <Skeleton className="w-8 h-8 rounded-md" />
               <div className="flex items-center space-x-3">
-                <Skeleton className="w-20 h-4 rounded" /> {/* Greeting */}
-                <Skeleton className="w-16 h-9 rounded-lg" /> {/* Profile */}
-                <Skeleton className="w-8 h-8 rounded-full" />{" "}
-                {/* User button */}
+                <Skeleton className="w-20 h-4 rounded" />
+                <Skeleton className="w-16 h-9 rounded-lg" />
+                <Skeleton className="w-8 h-8 rounded-full" />
               </div>
             </div>
           </div>
@@ -127,9 +122,7 @@ export function DesktopNavigation() {
       >
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center h-16">
-            {/* Left: Logo + Navigation */}
             <div className="flex items-center space-x-10">
-              {/* Logo */}
               <Link href="/" className="flex items-center space-x-2">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
@@ -145,7 +138,6 @@ export function DesktopNavigation() {
                 </motion.div>
               </Link>
 
-              {/* Navigation Links */}
               <div className="flex items-center space-x-8">
                 {navigationItems.map((item) => {
                   if (item.condition === false) return null;
@@ -170,7 +162,6 @@ export function DesktopNavigation() {
                       <span className="transition-colors duration-200">
                         {item.label}
                       </span>
-                      {/* Subtle background on hover */}
                       <div
                         className={cn(
                           "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
@@ -189,9 +180,7 @@ export function DesktopNavigation() {
               </div>
             </div>
 
-            {/* Right: Actions & User */}
             <div className="flex items-center space-x-4">
-              {/* Create Button (for signed-in users with roles) */}
               {isSignedIn && hasRole && (
                 <Link href={isMusician ? "/gigs" : "/create-gig"}>
                   <Button
@@ -206,7 +195,6 @@ export function DesktopNavigation() {
                 </Link>
               )}
 
-              {/* Messages Link - Opens Chat List Modal */}
               {isSignedIn && (
                 <button onClick={handleOpenMessages} className="relative group">
                   <div
@@ -219,14 +207,12 @@ export function DesktopNavigation() {
                     <MessageCircle size={18} />
                     <span>Messages</span>
 
-                    {/* Unread badge */}
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
                         {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     )}
 
-                    {/* Subtle background on hover */}
                     <div
                       className={cn(
                         "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
@@ -237,7 +223,6 @@ export function DesktopNavigation() {
                 </button>
               )}
 
-              {/* Notifications Bell */}
               {(isSignedIn && currentUser?.tier === "pro") ||
                 (isInGracePeriod && (
                   <div className="hover:scale-105 transition-transform duration-200">
@@ -245,7 +230,6 @@ export function DesktopNavigation() {
                   </div>
                 ))}
 
-              {/* Theme Toggle */}
               <button
                 onClick={toggleDarkMode}
                 className={cn(
@@ -263,7 +247,6 @@ export function DesktopNavigation() {
                   <Moon className="w-5 h-5 transition-colors duration-200" />
                 )}
 
-                {/* Subtle background on hover */}
                 <div
                   className={cn(
                     "absolute inset-0 rounded-md bg-gray-50 dark:bg-gray-800/50",
@@ -274,12 +257,10 @@ export function DesktopNavigation() {
 
               {isSignedIn ? (
                 <div className="flex items-center space-x-4">
-                  {/* User Greeting */}
                   <span className={cn("text-sm", colors.textMuted)}>
                     Hi, {clerkUser?.firstName || clerkUser?.username}
                   </span>
 
-                  {/* Profile Link */}
                   <Link
                     href="/profile"
                     className={cn(
@@ -292,7 +273,6 @@ export function DesktopNavigation() {
                       Profile
                     </span>
 
-                    {/* Subtle background on hover */}
                     <div
                       className={cn(
                         "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
@@ -301,7 +281,6 @@ export function DesktopNavigation() {
                     />
                   </Link>
 
-                  {/* User Button */}
                   <div className="hover:scale-105 transition-transform duration-200">
                     <UserButton />
                   </div>
@@ -320,7 +299,6 @@ export function DesktopNavigation() {
                       Sign In
                     </span>
 
-                    {/* Subtle background on hover */}
                     <div
                       className={cn(
                         "absolute inset-0 rounded-md bg-gray-50 dark:bg-gray-800/50",
@@ -344,7 +322,6 @@ export function DesktopNavigation() {
         </div>
       </nav>
 
-      {/* Chat List Modal */}
       <ChatListModal
         isOpen={showChatListModal}
         onClose={() => setShowChatListModal(false)}

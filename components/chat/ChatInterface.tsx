@@ -114,18 +114,35 @@ export function ChatInterface({ chatId, isModal, onBack }: ChatInterfaceProps) {
     updateActiveSession,
   ]);
 
-  // Mark as read and update presence
+  // In your ChatInterface component
+  // In your ChatInterface component - FIXED useEffect
   useEffect(() => {
     if (typedUser && currentUser && chat) {
-      markAsRead({ chatId: typedUser, userId: currentUser._id });
-      updatePresence({
-        userId: currentUser._id,
+      console.log("🔔 Marking chat as read:", {
         chatId: typedUser,
-        isOnline: true,
+        userId: currentUser._id,
+        currentUnreadCounts: chat.unreadCounts,
       });
-    }
-  }, [typedUser, currentUser, markAsRead, updatePresence, chat]);
 
+      markAsRead({ chatId: typedUser, userId: currentUser._id });
+
+      // We can't use ctx in frontend, but we can verify by re-querying
+      console.log("📊 Before markAsRead - Unread counts:", chat.unreadCounts);
+    }
+  }, [typedUser, currentUser, markAsRead, chat]);
+
+  // Add this to see if markAsRead is working
+  const updatedChat = useQuery(api.controllers.chat.getChat, {
+    chatId: typedUser,
+  });
+  useEffect(() => {
+    if (updatedChat) {
+      console.log(
+        "📊 After markAsRead - Updated unread counts:",
+        updatedChat.unreadCounts
+      );
+    }
+  }, [updatedChat]);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };

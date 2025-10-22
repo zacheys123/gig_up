@@ -1,34 +1,38 @@
-// hooks/useUnreadCount.ts - Enhanced version with real-time updates
+// hooks/useUnreadCount.ts - Corrected version
 "use client";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "./useCurrentUser";
 import { useEffect, useState } from "react";
-import { Id } from "@/convex/_generated/dataModel";
 
-export function useUnreadCount() {
+interface UnreadCountsData {
+  total: number;
+  byChat: Record<string, number>;
+}
+
+export function useUnreadCount(): UnreadCountsData {
   const { user: currentUser } = useCurrentUser();
   const [forceUpdate, setForceUpdate] = useState(0);
 
-  const chats = useQuery(
-    api.controllers.chat.getUserChats,
+  const unreadData = useQuery(
+    api.controllers.chat.getUnreadCounts,
     currentUser?._id ? { userId: currentUser._id } : "skip"
   );
 
-  // Calculate total unread count across all chats
-  const totalUnreadCount =
-    chats?.reduce((total, chat) => {
-      return total + (chat.unreadCount || 0);
-    }, 0) || 0;
+  // Return default values if no data
+  const result: UnreadCountsData = unreadData || {
+    total: 0,
+    byChat: {},
+  };
 
-  // Optional: Auto-refresh every 30 seconds for real-time updates
+  // Auto-refresh every 30 seconds for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
       setForceUpdate((prev) => prev + 1);
-    }, 30000); // 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);
 
-  return totalUnreadCount;
+  return result;
 }

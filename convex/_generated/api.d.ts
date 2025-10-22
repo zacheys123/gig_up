@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as cloudinary from "../cloudinary.js";
 import type * as controllers_chat from "../controllers/chat.js";
+import type * as controllers_debug from "../controllers/debug.js";
 import type * as controllers_gigs from "../controllers/gigs.js";
 import type * as controllers_notifications from "../controllers/notifications.js";
 import type * as controllers_socials from "../controllers/socials.js";
@@ -41,6 +42,7 @@ import type * as test from "../test.js";
 declare const fullApi: ApiFromModules<{
   cloudinary: typeof cloudinary;
   "controllers/chat": typeof controllers_chat;
+  "controllers/debug": typeof controllers_debug;
   "controllers/gigs": typeof controllers_gigs;
   "controllers/notifications": typeof controllers_notifications;
   "controllers/socials": typeof controllers_socials;

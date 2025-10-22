@@ -41,7 +41,6 @@ export function SearchUserCard({
   const [showModal, setShowModal] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const { isDarkMode } = useThemeColors();
-  const { userId } = useAuth();
   const { user: currentUser, isLoading } = useCurrentUser();
   const { isInGracePeriod } = useCheckTrial();
   const [isDataReady, setIsDataReady] = useState(false);

@@ -1,11 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   BookA,
   BookCopy,
@@ -35,10 +30,11 @@ import {
   CheckCircle,
   Lock,
   Sparkles,
+  X,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
@@ -46,8 +42,6 @@ import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { GigUpAssistant } from "../ai/GigupAssistant";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -60,6 +54,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useUserCurrentChat } from "@/hooks/useCurrentUserChat";
 import { useChat } from "@/app/context/ChatContext";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 interface NavigationLink {
   label: string;
@@ -71,19 +67,6 @@ interface NavigationLink {
   proOnly?: boolean;
 }
 
-interface DesktopNavItem {
-  href: string;
-  label: string;
-  icon: React.ReactElement;
-  condition?: boolean;
-  badge?: number | null;
-  pro?: boolean;
-}
-
-interface MobileSheetProps {
-  isTrialEnded?: boolean;
-}
-
 interface ThemeOption {
   id: string;
   label: string;
@@ -91,7 +74,6 @@ interface ThemeOption {
   description: string;
 }
 
-// Tier configuration with colors and icons
 const tierConfig = {
   free: {
     label: "Free",
@@ -127,7 +109,6 @@ const tierConfig = {
   },
 };
 
-// Helper function to safely get tier info
 const getTierInfo = (tier?: string) => {
   const userTier = tier || "free";
   return tierConfig[userTier as keyof typeof tierConfig];
@@ -148,7 +129,6 @@ const getNavigationLinks = (
     { label: "Games", href: "/game", icon: <Gamepad size={22} /> },
   ];
 
-  // Pro-only features
   const proLinks: NavigationLink[] = [
     {
       label: "Advanced Analytics",
@@ -194,7 +174,6 @@ const getNavigationLinks = (
       icon: <Music size={22} />,
     });
 
-    // Add pro links if user is pro
     if (isPro) {
       coreLinks.push(...proLinks);
     }
@@ -226,8 +205,8 @@ const ConversationList = ({
   const { colors } = useThemeColors();
   const [searchFilter, setSearchFilter] = useState("");
 
-  // Use the chat hook instead of direct query
-  const { chats, unreadCounts, isUserOnline } = useUserCurrentChat();
+  const { chats, isUserOnline } = useUserCurrentChat();
+  const { byChat: unreadCounts } = useUnreadCount();
 
   const filteredConversations = chats
     ?.filter(
@@ -240,8 +219,8 @@ const ConversationList = ({
           .includes(searchFilter.toLowerCase())
     )
     .sort((a, b) => {
-      const aUnread = unreadCounts.byChat[a._id] || 0;
-      const bUnread = unreadCounts.byChat[b._id] || 0;
+      const aUnread = unreadCounts[a._id] || 0;
+      const bUnread = unreadCounts[b._id] || 0;
 
       if (aUnread > 0 && bUnread === 0) return -1;
       if (aUnread === 0 && bUnread > 0) return 1;
@@ -316,7 +295,7 @@ const ConversationList = ({
               const otherUser = conversation.otherParticipants?.[0];
               const tierInfo = getTierInfo(otherUser?.tier);
               const TierIcon = tierInfo.icon;
-              const unreadCount = unreadCounts.byChat[conversation._id] || 0;
+              const unreadCount = unreadCounts[conversation._id] || 0;
               const isOnline = otherUser ? isUserOnline(otherUser._id) : false;
 
               return (
@@ -339,12 +318,10 @@ const ConversationList = ({
                       </AvatarFallback>
                     </Avatar>
 
-                    {/* Online Status */}
                     {isOnline && (
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white dark:border-gray-900" />
                     )}
 
-                    {/* Tier Badge */}
                     {otherUser?.tier !== "free" && (
                       <div className="absolute -top-1 -right-1">
                         <TierIcon
@@ -433,20 +410,24 @@ function formatTimestamp(timestamp: number): string {
   }
 }
 
-const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
+interface MobileSheetProps {
+  children?: React.ReactNode;
+  isTrialEnded?: boolean;
+}
+
+export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
   const { userId } = useAuth();
   const { isSignedIn, user: clerkUser } = useUser();
-  const currentPath = usePathname();
-  const { user } = useCurrentUser();
-
-  // ✅ Use subscription store properly
-  const { isPro } = useSubscriptionStore();
-
   const { colors, theme } = useThemeColors();
   const { setTheme } = useThemeToggle();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useCurrentUser();
+  const { isInGracePeriod, isFirstMonthEnd } = useCheckTrial();
 
-  // Use the chat hook for unread counts and chat data
-  const { totalUnread, markAllAsRead } = useUserCurrentChat();
+  const { isPro } = useSubscriptionStore();
+  const { total: totalUnread, byChat: unreadCounts } = useUnreadCount();
+  const { markAllAsRead, chats } = useUserCurrentChat();
   const { openChat } = useChat();
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -477,23 +458,13 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
     markAllAsRead();
   };
 
-  // ✅ Pass isPro and isTrialEnded to getNavigationLinks
   const navigationLinks: NavigationLink[] = hasMinimumData(user)
     ? getNavigationLinks(userId as string, user, isPro(), isTrialEnded)
     : getEssentialLinks();
 
-  // ✅ Calculate total unread from chats directly as fallback
-  const { chats } = useUserCurrentChat();
-  const calculatedTotalUnread =
-    chats?.reduce((total, chat) => {
-      return total + (chat.unreadCount || 0);
-    }, 0) || 0;
+  const displayTotalUnread = totalUnread > 0 ? totalUnread : null;
 
-  // ✅ Use the calculated total if the hook returns 0 but we have chats with unread counts
-  const displayTotalUnread =
-    totalUnread > 0 ? totalUnread : calculatedTotalUnread;
-
-  const desktopItems: DesktopNavItem[] = [
+  const additionalItems: NavigationLink[] = [
     {
       href: "/community",
       label: "Community",
@@ -505,22 +476,28 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
       label: "Messages",
       icon: <MessageCircle size={22} />,
       condition: isSignedIn,
-      badge: displayTotalUnread > 0 ? displayTotalUnread : null,
+      badge:
+        displayTotalUnread && displayTotalUnread > 0
+          ? displayTotalUnread
+          : null,
+      onClick: handleOpenMessages,
     },
   ];
 
-  const missingItems = desktopItems
-    .filter((item) => item.condition !== false)
-    .filter((item) => !navigationLinks.some((link) => link.href === item.href));
-
-  const completeLinks: NavigationLink[] = [...navigationLinks, ...missingItems];
+  const completeLinks: NavigationLink[] = [
+    ...navigationLinks,
+    ...additionalItems,
+  ];
 
   const finalLinks = completeLinks.map((link) => {
     if (link.href === "/messages" && isSignedIn) {
       return {
         ...link,
         onClick: handleOpenMessages,
-        badge: displayTotalUnread > 0 ? displayTotalUnread : null,
+        badge:
+          displayTotalUnread && displayTotalUnread > 0
+            ? displayTotalUnread
+            : null,
       };
     }
     return link;
@@ -554,27 +531,27 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
     },
   ];
 
-  // Get user tier from user data or fallback to free
   const userTier = user?.tier || "free";
   const currentTier = getTierInfo(userTier);
   const TierIcon = currentTier.icon;
 
-  // ✅ Show upgrade prompt if trial ended or not pro
   const showUpgradePrompt = isTrialEnded || !isPro;
 
   return (
     <>
       <Sheet open={isSheetOpen} onOpenChange={handleSheetToggle}>
         <SheetTrigger asChild>
-          <button className="p-2 rounded-xl transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800">
-            <Menu
-              className={cn(
-                "w-6 h-6 transition-colors duration-200",
-                colors.text,
-                "hover:text-amber-600 dark:hover:text-amber-400"
-              )}
-            />
-          </button>
+          {children || (
+            <button className="p-2 rounded-xl transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+              <Menu
+                className={cn(
+                  "w-6 h-6 transition-colors duration-200",
+                  colors.text,
+                  "hover:text-amber-600 dark:hover:text-amber-400"
+                )}
+              />
+            </button>
+          )}
         </SheetTrigger>
         <SheetContent
           side="left"
@@ -586,12 +563,11 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
         >
           {activeView === "main" && (
             <div className="h-full flex flex-col">
-              {/* Header */}
               <div className={cn("p-6 border-b", colors.border)}>
                 <div className="flex items-center justify-between mb-4">
-                  <SheetTitle className={cn("text-2xl font-bold", colors.text)}>
+                  <h2 className={cn("text-2xl font-bold", colors.text)}>
                     {hasMinimumData(user) ? "Menu" : "GigUp"}
-                  </SheetTitle>
+                  </h2>
                   <Badge
                     className={cn(
                       "px-3 py-1.5 text-sm font-bold border-0 shadow-lg",
@@ -637,7 +613,7 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                   </div>
                 )}
 
-                {isSignedIn && displayTotalUnread > 0 && (
+                {displayTotalUnread && isSignedIn && displayTotalUnread > 0 && (
                   <div className="mt-3 flex items-center gap-2">
                     <Badge
                       variant="secondary"
@@ -658,17 +634,15 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                 )}
               </div>
 
-              {/* Navigation Links */}
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {finalLinks
-                  .filter((link) => currentPath !== link.href)
+                  .filter((link) => pathname !== link.href)
                   .filter((link) => {
-                    // ✅ Hide pro-only links if user is not pro
                     if (link.proOnly && !isPro) return false;
-                    return true;
+                    return link.condition !== false;
                   })
                   .map((link, index) => {
-                    const isActive = currentPath === link.href;
+                    const isActive = pathname === link.href;
                     const isProOnly = link.proOnly && !isPro;
 
                     const linkElement = (
@@ -752,7 +726,6 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                     );
                   })}
 
-                {/* ✅ Upgrade Prompt */}
                 {showUpgradePrompt && (
                   <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white">
                     <div className="flex items-center gap-3 mb-2">
@@ -775,7 +748,6 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                 )}
               </div>
 
-              {/* Footer */}
               <div className={cn("p-6 border-t space-y-4", colors.border)}>
                 {!isSignedIn && (
                   <div className="space-y-3">
@@ -806,7 +778,6 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                   </div>
                 )}
 
-                {/* Theme Selector */}
                 <div
                   className={cn(
                     "flex items-center justify-between p-4 rounded-2xl border transition-all duration-200",
@@ -840,7 +811,6 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
                   </button>
                 </div>
 
-                {/* AI Assistant */}
                 <GigUpAssistant />
               </div>
             </div>
@@ -855,7 +825,6 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
         </SheetContent>
       </Sheet>
 
-      {/* Theme Selection Modal */}
       <Dialog open={isThemeModalOpen} onOpenChange={setIsThemeModalOpen}>
         <DialogContent
           className={cn(
@@ -920,6 +889,6 @@ const MobileSheet: React.FC<MobileSheetProps> = ({ isTrialEnded }) => {
       </Dialog>
     </>
   );
-};
+}
 
 export default MobileSheet;

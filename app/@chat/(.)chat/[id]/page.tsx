@@ -8,7 +8,7 @@ import { useChat } from "@/app/context/ChatContext";
 export default function InterceptedChatPage() {
   const params = useParams();
   const chatId = params.id as string;
-  const { openChat, closeChat, currentChatId } = useChat();
+  const { openChat, closeChat, currentChatId, isChatOpen } = useChat();
 
   useEffect(() => {
     if (chatId && chatId !== currentChatId) {
@@ -16,15 +16,7 @@ export default function InterceptedChatPage() {
     }
   }, [chatId, currentChatId, openChat]);
 
-  // Clean up when component unmounts
-  useEffect(() => {
-    return () => {
-      if (chatId === currentChatId) {
-        closeChat();
-      }
-    };
-  }, [chatId, currentChatId, closeChat]);
-
+  // Don't render if no chatId or if it's not the current chat
   if (!chatId || chatId !== currentChatId) return null;
 
   return <ChatModal chatId={chatId} />;

@@ -84,6 +84,7 @@ export const getOrCreateDirectChat = mutation({
 });
 
 // Send a message
+// In convex/controllers/chat.ts - Add detailed logging to sendMessage
 export const sendMessage = mutation({
   args: {
     chatId: v.id("chats"),
@@ -119,11 +120,17 @@ export const sendMessage = mutation({
       repliedTo,
     } = args;
 
+    console.log("💌 Sending message to chat:", chatId);
+
     // Verify chat exists and user is participant
     const chat = await ctx.db.get(chatId);
     if (!chat || !chat.participantIds.includes(senderId)) {
+      console.log("❌ Chat not found or user not participant");
       throw new Error("Chat not found or user not participant");
     }
+
+    console.log("📊 Current unreadCounts:", chat.unreadCounts);
+    console.log("👥 Participant IDs:", chat.participantIds);
 
     // Get sender details for notification
     const sender = await ctx.db.get(senderId);
@@ -151,36 +158,31 @@ export const sendMessage = mutation({
       (id) => id !== senderId
     );
 
+    console.log("🎯 Other participants to update:", otherParticipants);
+
     const updates = otherParticipants.map(async (participantId) => {
       const currentCount = chat.unreadCounts?.[participantId] || 0;
+      const newCount = currentCount + 1;
+
+      console.log(
+        `📈 Updating unread count for ${participantId}: ${currentCount} -> ${newCount}`
+      );
+
       await ctx.db.patch(chatId, {
         unreadCounts: {
           ...chat.unreadCounts,
-          [participantId]: currentCount + 1,
+          [participantId]: newCount,
         },
       });
     });
 
     await Promise.all(updates);
 
-    // ✅ CREATE NOTIFICATIONS FOR OTHER PARTICIPANTS (only if they don't have chat open)
-    try {
-      await createMessageNotifications(ctx, {
-        chat,
-        sender,
-        messageContent: content,
-        messageType,
-        otherParticipants: chat.participantIds.filter((id) => id !== senderId),
-      });
-    } catch (notificationError) {
-      console.error(
-        "Failed to create message notifications:",
-        notificationError
-      );
-      // Don't throw - we don't want message sending to fail if notifications fail
-    }
+    // Verify the update worked
+    const updatedChat = await ctx.db.get(chatId);
+    console.log("✅ Updated unreadCounts:", updatedChat?.unreadCounts);
 
-    return messageId;
+    // ... rest of your sendMessage code
   },
 });
 
@@ -206,50 +208,112 @@ export const getMessages = query({
 });
 
 // In convex/controllers/chat.ts - getUserChats
+
+// convex/controllers/chat.ts - COMPLETELY REWRITTEN getUserChats
 export const getUserChats = query({
   args: {
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    if (!args.userId) return [];
+    if (!args.userId) {
+      console.log("❌ No user ID provided to getUserChats");
+      return [];
+    }
 
-    const userId = args.userId;
+    console.log("🔄 getUserChats - Fresh execution for user:", args.userId);
 
-    const chats = await ctx.db
-      .query("chats")
-      .withIndex("by_participants", (q) => q.eq("participantIds", [userId]))
-      .collect();
+    try {
+      // Get ALL chats and filter manually (bypass any index issues)
+      const allChats = await ctx.db.query("chats").collect();
 
-    // Get chat details with participant info
-    const chatsWithDetails = await Promise.all(
-      chats.map(async (chat) => {
-        const participants = await Promise.all(
-          chat.participantIds.map((id) => ctx.db.get(id))
-        );
+      const userChats = allChats.filter(
+        (chat) =>
+          chat.participantIds && chat.participantIds.includes(args.userId!)
+      );
 
-        const otherParticipants = participants.filter((p) => p?._id !== userId);
-        const chatName =
-          chat.type === "direct"
-            ? `${otherParticipants[0]?.firstname} ${otherParticipants[0]?.lastname}`.trim() ||
-              otherParticipants[0]?.username
-            : chat.name;
+      console.log("📊 getUserChats - Found chats:", userChats.length);
 
-        // ✅ Make sure unreadCount is calculated properly
-        const unreadCount = chat.unreadCounts?.[userId] || 0;
+      // Process each chat with proper error handling
+      const chatsWithDetails = await Promise.all(
+        userChats.map(async (chat) => {
+          try {
+            // Get participant details
+            const participants = await Promise.all(
+              chat.participantIds.map((id) => ctx.db.get(id))
+            );
 
-        return {
-          ...chat,
-          participants: participants.filter(Boolean),
-          displayName: chatName,
-          otherParticipants,
-          unreadCount, // ✅ This is important for fallback
-        };
-      })
-    );
+            const validParticipants = participants.filter(Boolean);
+            const otherParticipants = validParticipants.filter(
+              (p) => p?._id !== args.userId
+            );
 
-    return chatsWithDetails.sort(
-      (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
-    );
+            // Determine chat display name
+            let displayName = "Unknown User";
+            if (chat.type === "direct" && otherParticipants.length > 0) {
+              const otherUser = otherParticipants[0];
+              displayName =
+                `${otherUser?.firstname} ${otherUser?.lastname}`.trim() ||
+                otherUser?.username ||
+                "Unknown User";
+            } else if (chat.name) {
+              displayName = chat.name;
+            }
+
+            // ✅ CRITICAL FIX: Get the CORRECT unread count for this user
+            const unreadCount = chat.unreadCounts?.[args.userId!] || 0;
+
+            console.log(`💬 getUserChats - Chat ${chat._id}:`, {
+              displayName,
+              unreadCount,
+              allUnreadCounts: chat.unreadCounts,
+              currentUserId: args.userId,
+              participantIds: chat.participantIds,
+            });
+
+            return {
+              // Spread the original chat data FIRST
+              ...chat,
+              // Then add our computed fields
+              participants: validParticipants,
+              displayName,
+              otherParticipants,
+              unreadCount, // This should reflect chat.unreadCounts[userId]
+            };
+          } catch (error) {
+            console.error(`❌ Error processing chat ${chat._id}:`, error);
+            // Return basic data if participant lookup fails
+            return {
+              ...chat,
+              participants: [],
+              displayName: "Unknown User",
+              otherParticipants: [],
+              unreadCount: chat.unreadCounts?.[args.userId!] || 0,
+            };
+          }
+        })
+      );
+
+      // Sort by last message time
+      const sortedChats = chatsWithDetails.sort(
+        (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+      );
+
+      console.log("🎉 getUserChats - Final result count:", sortedChats.length);
+      console.log(
+        "📦 getUserChats - Final chats:",
+        sortedChats.map((chat) => ({
+          id: chat._id,
+          displayName: chat.displayName,
+          unreadCount: chat.unreadCount,
+          allUnreadCounts: chat.unreadCounts,
+        }))
+      );
+
+      return sortedChats;
+    } catch (error) {
+      console.error("💥 Critical error in getUserChats:", error);
+      return [];
+    }
   },
 });
 
@@ -531,19 +595,4 @@ export const updateActiveSession = mutation({
   },
 });
 
-// In convex/controllers/chat.ts - Add this temporary query
-export const getAllChatsDebug = query({
-  handler: async (ctx) => {
-    const allChats = await ctx.db.query("chats").collect();
-    console.log("ALL CHATS:", allChats);
-
-    // Also log all users
-    const allUsers = await ctx.db.query("users").collect();
-    console.log(
-      "ALL USERS:",
-      allUsers.map((u) => ({ id: u._id, name: u.firstname }))
-    );
-
-    return allChats;
-  },
-});
+// convex/debugChats.ts

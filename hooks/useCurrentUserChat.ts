@@ -1,19 +1,17 @@
-// hooks/useChat.ts (Improved version)
+// hooks/useChat.ts (Improved version with chat creation)
 "use client";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useCurrentUser } from "./useCurrentUser";
+import { useRouter } from "next/navigation";
 
 export function useUserCurrentChat() {
   const { user: currentUser } = useCurrentUser();
+  const router = useRouter();
 
   // Queries
   const chats = useQuery(api.controllers.chat.getUserChats, {
-    userId: currentUser?._id,
-  });
-
-  const unreadCounts = useQuery(api.controllers.chat.getUnreadCounts, {
     userId: currentUser?._id,
   });
 
@@ -22,32 +20,10 @@ export function useUserCurrentChat() {
   const markAllAsRead = useMutation(api.controllers.chat.markAllAsRead);
   const deleteMessage = useMutation(api.controllers.chat.deleteMessage);
   const clearChat = useMutation(api.controllers.chat.clearChat);
-
-  // ✅ IMPROVED: Better unread count handling with fallback calculations
-  const safeUnreadCounts = unreadCounts || { total: 0, byChat: {} };
-
-  // Calculate total unread from chats as fallback if query returns 0
-  const calculatedTotalUnread =
-    chats?.reduce((total, chat) => {
-      return total + (chat.unreadCount || 0);
-    }, 0) || 0;
-
-  // Use query result if available and > 0, otherwise use calculated fallback
-  const finalTotalUnread =
-    safeUnreadCounts.total > 0 ? safeUnreadCounts.total : calculatedTotalUnread;
-
-  // Enhanced byChat with fallback to chat.unreadCount
-  const enhancedByChat: Record<string, number> = {};
-  chats?.forEach((chat) => {
-    const queryCount = safeUnreadCounts.byChat[chat._id] || 0;
-    const chatCount = chat.unreadCount || 0;
-    enhancedByChat[chat._id] = queryCount > 0 ? queryCount : chatCount;
-  });
-
-  const finalUnreadCounts = {
-    total: finalTotalUnread,
-    byChat: enhancedByChat,
-  };
+  const createDirectChat = useMutation(
+    api.controllers.chat.getOrCreateDirectChat
+  );
+  const sendMessage = useMutation(api.controllers.chat.sendMessage);
 
   // Online status based on lastActive field from chat participants
   const getOnlineStatus = (user: any) => {
@@ -90,7 +66,7 @@ export function useUserCurrentChat() {
     return getChatOnlineParticipants(chatId).length > 0;
   };
 
-  // Actions
+  // Chat Actions
   const handleMarkAsRead = async (chatId: Id<"chats">) => {
     if (!currentUser?._id) return;
     await markAsRead({ chatId, userId: currentUser._id });
@@ -109,21 +85,90 @@ export function useUserCurrentChat() {
     await clearChat({ chatId });
   };
 
-  // Debug logging (remove in production)
-  if (process.env.NODE_ENV === "development") {
-    console.log("🔍 Chat Hook Debug:");
-    console.log("Chats:", chats?.length);
-    console.log("Query unreadCounts:", unreadCounts);
-    console.log("Calculated total unread:", calculatedTotalUnread);
-    console.log("Final total unread:", finalTotalUnread);
-    console.log("Enhanced byChat:", enhancedByChat);
-  }
+  // New Chat Creation
+  const createNewChat = async (otherUserId: string): Promise<string> => {
+    if (!currentUser?._id) {
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      console.log("Creating new chat between:", currentUser._id, otherUserId);
+
+      const chatId = await createDirectChat({
+        user1Id: currentUser._id,
+        user2Id: otherUserId as Id<"users">,
+      });
+
+      console.log("Successfully created chat:", chatId);
+      return chatId;
+    } catch (error) {
+      console.error("Failed to create chat:", error);
+      throw new Error("Failed to create chat");
+    }
+  };
+
+  const createAndOpenChat = async (otherUserId: string) => {
+    try {
+      const chatId = await createNewChat(otherUserId);
+      // Open the newly created chat
+      router.push(`/chat/${chatId}`, { scroll: false });
+      return chatId;
+    } catch (error) {
+      console.error("Failed to create and open chat:", error);
+      throw error;
+    }
+  };
+
+  const sendNewMessage = async (chatId: string, content: string) => {
+    if (!currentUser?._id) {
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      await sendMessage({
+        chatId: chatId as Id<"chats">,
+        senderId: currentUser._id,
+        content,
+        messageType: "text",
+      });
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      throw new Error("Failed to send message");
+    }
+  };
+
+  // Check if user already has a chat with another user
+  const getExistingChatWithUser = (otherUserId: string) => {
+    return chats?.find(
+      (chat) =>
+        chat.participantIds.includes(otherUserId as Id<"users">) &&
+        chat.type === "direct"
+    );
+  };
+
+  // Smart chat creation - opens existing chat if it exists, creates new one if not
+  const smartCreateOrOpenChat = async (otherUserId: string) => {
+    // Check if chat already exists
+    const existingChat = getExistingChatWithUser(otherUserId);
+
+    if (existingChat) {
+      // Open existing chat
+      router.push(`/chat/${existingChat._id}`, { scroll: false });
+      return existingChat._id;
+    } else {
+      // Create new chat
+      return await createAndOpenChat(otherUserId);
+    }
+  };
+
+  // Get user details from participants
+  const getUserFromParticipants = (participants: any[]) => {
+    return participants?.find((p: any) => p?._id !== currentUser?._id);
+  };
 
   return {
     // Data
     chats: chats || [],
-    unreadCounts: finalUnreadCounts, // ✅ Use the enhanced version
-    totalUnread: finalTotalUnread, // ✅ This should now work properly
     onlineUsers,
 
     // Status helpers
@@ -131,11 +176,21 @@ export function useUserCurrentChat() {
     getChatOnlineParticipants,
     hasOnlineParticipants,
 
-    // Actions
+    // Chat management actions
     markAsRead: handleMarkAsRead,
     markAllAsRead: handleMarkAllAsRead,
     deleteMessage: handleDeleteMessage,
     clearChat: handleClearChat,
+
+    // Chat creation actions
+    createNewChat,
+    createAndOpenChat,
+    smartCreateOrOpenChat,
+    sendNewMessage,
+
+    // Utility functions
+    getExistingChatWithUser,
+    getUserFromParticipants,
 
     // Loading states
     isLoading: chats === undefined,
