@@ -3,6 +3,7 @@ import { query, mutation, action } from "../_generated/server";
 import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
 import { api } from "../_generated/api";
+import { createMessageNotifications } from "../createNotificationInternal";
 
 // Get a specific chat by ID
 export const getChat = query({
@@ -117,6 +118,10 @@ export const sendMessage = mutation({
       throw new Error("Chat not found or user not participant");
     }
 
+    // Get sender details for notification
+    const sender = await ctx.db.get(senderId);
+    if (!sender) throw new Error("Sender not found");
+
     // Create message
     const messageId = await ctx.db.insert("messages", {
       chatId,
@@ -138,6 +143,7 @@ export const sendMessage = mutation({
     const otherParticipants = chat.participantIds.filter(
       (id) => id !== senderId
     );
+
     const updates = otherParticipants.map(async (participantId) => {
       const currentCount = chat.unreadCounts?.[participantId] || 0;
       await ctx.db.patch(chatId, {
@@ -149,6 +155,23 @@ export const sendMessage = mutation({
     });
 
     await Promise.all(updates);
+
+    // ✅ CREATE NOTIFICATIONS FOR OTHER PARTICIPANTS (only if they don't have chat open)
+    try {
+      await createMessageNotifications(ctx, {
+        chat,
+        sender,
+        messageContent: content,
+        messageType,
+        otherParticipants: chat.participantIds.filter((id) => id !== senderId),
+      });
+    } catch (notificationError) {
+      console.error(
+        "Failed to create message notifications:",
+        notificationError
+      );
+      // Don't throw - we don't want message sending to fail if notifications fail
+    }
 
     return messageId;
   },
@@ -402,5 +425,91 @@ export const clearChat = mutation({
       lastMessage: "",
       lastMessageAt: Date.now(),
     });
+  },
+});
+
+// convex/chat.ts
+export const createActiveChatSession = mutation({
+  args: {
+    userId: v.id("users"),
+    chatId: v.id("chats"),
+  },
+  handler: async (ctx, args) => {
+    const { userId, chatId } = args;
+
+    // Check if session already exists
+    const existingSession = await ctx.db
+      .query("activeChatSessions")
+      .withIndex("by_user_and_chat", (q) =>
+        q.eq("userId", userId).eq("chatId", chatId)
+      )
+      .first();
+
+    if (existingSession) {
+      // Update lastActive if session exists
+      await ctx.db.patch(existingSession._id, {
+        lastActive: Date.now(),
+      });
+      return existingSession._id;
+    }
+
+    // Create new session
+    const sessionId = await ctx.db.insert("activeChatSessions", {
+      userId,
+      chatId,
+      lastActive: Date.now(),
+    });
+
+    return sessionId;
+  },
+});
+
+export const deleteActiveChatSession = mutation({
+  args: {
+    userId: v.id("users"),
+    chatId: v.id("chats"),
+  },
+  handler: async (ctx, args) => {
+    const { userId, chatId } = args;
+
+    const session = await ctx.db
+      .query("activeChatSessions")
+      .withIndex("by_user_and_chat", (q) =>
+        q.eq("userId", userId).eq("chatId", chatId)
+      )
+      .first();
+
+    if (session) {
+      await ctx.db.delete(session._id);
+      return true;
+    }
+
+    return false;
+  },
+});
+// convex/chat.ts
+export const updateActiveSession = mutation({
+  args: {
+    userId: v.id("users"),
+    chatId: v.id("chats"),
+  },
+  handler: async (ctx, args) => {
+    const { userId, chatId } = args;
+
+    const session = await ctx.db
+      .query("activeChatSessions")
+      .withIndex("by_user_and_chat", (q) =>
+        q.eq("userId", userId).eq("chatId", chatId)
+      )
+      .first();
+
+    if (session) {
+      await ctx.db.patch(session._id, {
+        lastActive: Date.now(),
+      });
+      return true;
+    }
+
+    return false;
   },
 });

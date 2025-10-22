@@ -1,4 +1,4 @@
-// components/search/SearchResultsGrid.tsx (FIXED)
+// components/search/SearchResultsGrid.tsx
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserStore } from "@/app/stores";
@@ -6,10 +6,9 @@ import { useAllUsers } from "@/hooks/useAllUsers";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { SearchUserCard } from "./SearchUserCard";
+import { SearchUserCardSkeleton } from "../skeletons/SearchUserSkeleton";
 import { useEffect, useState } from "react";
 import SearchFilters from "./SearchFilters";
-
-import { SearchUserCardSkeleton } from "../skeletons/SearchUserSkeleton";
 import { useUserSearch } from "@/hooks/useUserSearch";
 
 export function SearchResultsGrid() {
@@ -18,37 +17,19 @@ export function SearchResultsGrid() {
   const { isDarkMode } = useThemeColors();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fix: Pass currentUser safely (it might be null from the store)
+  // Use the hook with all your logic
   const {
     filteredUsers,
     activeFilters,
-    activeFilterCount, // Get this from hook
-    processedUsers, // Get this from hook
+    activeFilterCount,
+    processedUsers,
     handleFilterChange,
+    isFeaturedUser, // Get the function from the hook
   } = useUserSearch({
     users: users || [],
-    currentUser: currentUser || undefined, // Handle null case
+    currentUser: currentUser, // Pass the current user
     searchQuery,
   });
-
-  // Your featured user algorithm (moved inside component)
-  const isFeaturedUser = (user: any): boolean => {
-    try {
-      const views = user.profileViews?.totalCount || 0;
-      const followers = Math.max(user.followers?.length || 1, 1);
-      const engagementRate = views / followers;
-
-      let isActive = false;
-      if (user.lastActive && typeof user.lastActive === "number") {
-        isActive = Date.now() - user.lastActive < 7 * 24 * 60 * 60 * 1000;
-      }
-
-      const isFeatured = views >= 10 && engagementRate > 0.3 && isActive;
-      return isFeatured;
-    } catch (error) {
-      return false;
-    }
-  };
 
   useEffect(() => {
     if (users && !usersLoading) {
@@ -138,7 +119,10 @@ export function SearchResultsGrid() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <SearchUserCard user={user} isFeatured={isFeaturedUser(user)} />
+                <SearchUserCard
+                  user={user}
+                  isFeatured={isFeaturedUser ? isFeaturedUser(user) : false}
+                />
               </motion.div>
             ))}
           </motion.div>

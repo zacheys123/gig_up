@@ -1,6 +1,6 @@
-// components/chat/ChatModal.tsx
+// components/chat/ChatModal.tsx - UPDATED
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChat } from "@/app/context/ChatContext";
@@ -8,6 +8,9 @@ import { ChatInterface } from "./ChatInterface";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ChatModalProps {
   chatId: string;
@@ -17,10 +20,52 @@ export function ChatModal({ chatId }: ChatModalProps) {
   const { closeChat, currentChatId } = useChat();
   const { colors } = useThemeColors();
   const router = useRouter();
+  const { user: currentUser } = useCurrentUser();
 
-  const handleClose = () => {
+  // Convex mutations
+  const createActiveSession = useMutation(
+    api.controllers.chat.createActiveChatSession
+  );
+  const deleteActiveSession = useMutation(
+    api.controllers.chat.deleteActiveChatSession
+  );
+
+  const [isSessionActive, setIsSessionActive] = useState(false);
+
+  // Create active session when modal opens
+  useEffect(() => {
+    if (currentUser?._id && chatId && currentChatId === chatId) {
+      const activateSession = async () => {
+        try {
+          await createActiveSession({
+            userId: currentUser._id,
+            chatId: chatId as any,
+          });
+          setIsSessionActive(true);
+        } catch (error) {
+          console.error("Failed to create active session:", error);
+        }
+      };
+
+      activateSession();
+    }
+  }, [currentUser?._id, chatId, currentChatId, createActiveSession]);
+
+  // Delete active session when modal closes
+  const handleClose = async () => {
+    if (currentUser?._id && chatId && isSessionActive) {
+      try {
+        await deleteActiveSession({
+          userId: currentUser._id,
+          chatId: chatId as any,
+        });
+        setIsSessionActive(false);
+      } catch (error) {
+        console.error("Failed to delete active session:", error);
+      }
+    }
+
     closeChat();
-    // Simple back navigation - this usually works best
     router.back();
   };
 
@@ -32,7 +77,16 @@ export function ChatModal({ chatId }: ChatModalProps) {
     };
 
     document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      // Cleanup session on unmount
+      if (currentUser?._id && chatId && isSessionActive) {
+        deleteActiveSession({
+          userId: currentUser._id,
+          chatId: chatId as any,
+        }).catch(console.error);
+      }
+    };
   }, [handleClose]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {

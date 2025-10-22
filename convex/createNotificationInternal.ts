@@ -293,3 +293,75 @@ export const deleteFollowRequestNotification = async (
     console.error("Error in deleteFollowRequestNotification:", error);
   }
 };
+
+export const createMessageNotifications = async (
+  ctx: MutationCtx,
+  args: {
+    chat: any;
+    sender: any;
+    messageContent: string;
+    messageType: string;
+    otherParticipants: any[];
+  }
+) => {
+  const { chat, sender, messageContent, messageType, otherParticipants } = args;
+
+  // Get active chat sessions to see who has the chat open
+  const activeChatSessions = await ctx.db
+    .query("activeChatSessions")
+    .withIndex("by_chat_id", (q) => q.eq("chatId", chat._id))
+    .collect();
+
+  const participantsWithChatOpen = activeChatSessions.map(
+    (session) => session.userId
+  );
+
+  // Filter out participants who have the chat open
+  const participantsToNotify = otherParticipants.filter(
+    (participantId) => !participantsWithChatOpen.includes(participantId)
+  );
+
+  // Create notifications for each participant who doesn't have chat open
+  const notificationPromises = participantsToNotify.map(
+    async (participantId) => {
+      try {
+        await createNotificationInternal(ctx, {
+          userDocumentId: participantId, // RECIPIENT's document ID
+          type: "new_message",
+          title: "New Message",
+          message: `${sender.firstname || sender.username}: ${truncateMessage(messageContent)}`,
+          image: sender.picture,
+          actionUrl: `/chat/${chat._id}`,
+          relatedUserDocumentId: sender._id, // SENDER's document ID
+          metadata: {
+            chatId: chat._id.toString(),
+            senderDocumentId: sender._id.toString(),
+            senderClerkId: sender.clerkId,
+            senderName: sender.firstname,
+            senderUsername: sender.username,
+            senderPicture: sender.picture,
+            messageType: messageType,
+            isSenderPro: sender.tier === "pro",
+            isSenderMusician: sender.isMusician,
+            isSenderClient: sender.isClient,
+            instrument: sender.instrument,
+            city: sender.city,
+            truncatedMessage: truncateMessage(messageContent),
+          },
+        });
+      } catch (error) {
+        console.error(
+          `Failed to create notification for user ${participantId}:`,
+          error
+        );
+      }
+    }
+  );
+
+  await Promise.all(notificationPromises);
+};
+
+function truncateMessage(content: string, maxLength: number = 50): string {
+  if (content.length <= maxLength) return content;
+  return content.substring(0, maxLength) + "...";
+}

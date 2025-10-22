@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
+import { OnlineBadge } from "./OnlineBadge";
 
 interface ChatInterfaceProps {
   chatId: string;
@@ -36,13 +37,72 @@ export function ChatInterface({ chatId, isModal, onBack }: ChatInterfaceProps) {
   const messages = useQuery(api.controllers.chat.getMessages, {
     chatId: typedUser,
   });
-  const presence = useQuery(api.controllers.chat.getChatPresence, {
-    chatId: typedUser,
-  });
 
   const sendMessage = useMutation(api.controllers.chat.sendMessage);
   const markAsRead = useMutation(api.controllers.chat.markAsRead);
   const updatePresence = useMutation(api.controllers.chat.updatePresence);
+
+  const createActiveSession = useMutation(
+    api.controllers.chat.createActiveChatSession
+  );
+  const deleteActiveSession = useMutation(
+    api.controllers.chat.deleteActiveChatSession
+  );
+  const updateActiveSession = useMutation(
+    api.controllers.chat.updateActiveSession
+  );
+
+  // Active session management
+  useEffect(() => {
+    if (!currentUser?._id || !chatId) return;
+
+    let intervalId: NodeJS.Timeout;
+
+    const setupActiveSession = async () => {
+      try {
+        // Create initial session
+        await createActiveSession({
+          userId: currentUser._id,
+          chatId: chatId as any,
+        });
+
+        // Set up periodic updates every 30 seconds
+        intervalId = setInterval(async () => {
+          try {
+            await updateActiveSession({
+              userId: currentUser._id,
+              chatId: chatId as any,
+            });
+          } catch (error) {
+            console.error("Failed to update active session:", error);
+          }
+        }, 30000); // Every 30 seconds
+      } catch (error) {
+        console.error("Failed to create active session:", error);
+      }
+    };
+
+    setupActiveSession();
+
+    // Cleanup function
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+
+      // Delete session on unmount
+      deleteActiveSession({
+        userId: currentUser._id,
+        chatId: chatId as any,
+      }).catch(console.error);
+    };
+  }, [
+    currentUser?._id,
+    chatId,
+    createActiveSession,
+    deleteActiveSession,
+    updateActiveSession,
+  ]);
 
   useEffect(() => {
     if (typedUser && currentUser) {
@@ -53,7 +113,7 @@ export function ChatInterface({ chatId, isModal, onBack }: ChatInterfaceProps) {
         isOnline: true,
       });
     }
-  }, [typedUser, currentUser, markAsRead, updatePresence]);
+  }, [typedUser, currentUser, markAsRead]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,16 +192,12 @@ export function ChatInterface({ chatId, isModal, onBack }: ChatInterfaceProps) {
             {chat.displayName}
           </h3>
           <p className={cn("text-xs", colors.textMuted)}>
-            {presence?.some(
-              (p) => p.userId === otherParticipant?._id && p.isOnline
-            ) ? (
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                Online
-              </span>
-            ) : (
-              "Offline"
-            )}
+            <OnlineBadge
+              userId={currentUser?._id as Id<"users">}
+              size="xs"
+              showText={true}
+              showLastActive={true} // 👈 Add this to see last active time
+            />
           </p>
         </div>
       </div>

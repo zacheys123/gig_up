@@ -78,4 +78,12 @@ export default defineSchema({
   })
     .index("by_userId_chatId", ["userId", "chatId"])
     .index("by_chatId", ["chatId"]),
+  activeChatSessions: defineTable({
+    userId: v.id("users"), // User who has the chat open
+    chatId: v.id("chats"), // Chat that is currently open
+    lastActive: v.number(), // Timestamp of last activity
+  })
+    .index("by_user_id", ["userId"])
+    .index("by_chat_id", ["chatId"])
+    .index("by_user_and_chat", ["userId", "chatId"]),
 });

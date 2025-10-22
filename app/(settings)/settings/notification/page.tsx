@@ -1,6 +1,6 @@
 "use client";
 
-import { useThemeColors } from "@/hooks/useTheme";
+import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
@@ -16,12 +16,17 @@ import {
   UserPlus,
   Mail,
   Zap,
+  Sun,
+  Moon,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function NotificationSettingsPage() {
   const { settings, updateSettings, isLoading } = useNotificationSettings();
-  const { colors } = useThemeColors();
+  const { colors, isDarkMode } = useThemeColors();
+  const { toggleDarkMode } = useThemeToggle();
   const router = useRouter();
 
   const NotificationSection = ({
@@ -37,31 +42,29 @@ export default function NotificationSettingsPage() {
   }) => (
     <div
       className={cn(
-        "rounded-2xl border p-6 lg:p-8 mb-6 transition-all duration-300",
-        "hover:shadow-lg hover:border-opacity-70",
+        "rounded-2xl p-6 mb-6 transition-all duration-300",
         colors.border,
         colors.card,
-        "backdrop-blur-sm bg-card/95"
+        "backdrop-blur-sm",
+        "hover:shadow-lg hover:border-opacity-70"
       )}
     >
-      <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6">
         <div
           className={cn(
-            "p-3 rounded-xl flex-shrink-0",
-            "bg-primary text-primary-foreground",
-            "shadow-lg"
+            "p-3 rounded-xl",
+            "bg-gradient-to-br from-blue-500 to-purple-600 text-white",
+            "shadow-lg shadow-blue-500/25"
           )}
         >
           {icon}
         </div>
         <div className="flex-1">
-          <h2 className={cn("text-2xl font-bold mb-2", colors.text)}>
+          <h2 className={cn("text-xl font-semibold mb-1", colors.text)}>
             {title}
           </h2>
           {description && (
-            <p className={cn("text-base leading-relaxed", colors.textMuted)}>
-              {description}
-            </p>
+            <p className={cn("text-sm", colors.textMuted)}>{description}</p>
           )}
         </div>
       </div>
@@ -83,7 +86,7 @@ export default function NotificationSettingsPage() {
 
   type ValidInAppKey = (typeof validInAppKeys)[number];
 
-  // Individual ToggleRow component with its own loading state
+  // Modern ToggleRow component inspired by Instagram/Facebook
   const ToggleRow = ({
     label,
     description,
@@ -116,176 +119,223 @@ export default function NotificationSettingsPage() {
     return (
       <div
         className={cn(
-          "flex flex-col sm:flex-row sm:items-center justify-between p-4 lg:p-6 rounded-xl transition-all duration-300",
-          "hover:shadow-md border",
-          isEnabled
-            ? cn(
-                "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10",
-                "shadow-sm"
-              )
-            : cn(
-                "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/50",
-                "hover:border-gray-300 dark:hover:border-gray-600"
-              ),
-          "group relative overflow-hidden",
-          localSaving && "opacity-70 cursor-wait"
+          "group flex items-center justify-between p-4 rounded-xl transition-all duration-300",
+          "border border-transparent",
+          colors.hoverBg,
+          "hover:border-opacity-50",
+          localSaving && "opacity-60 cursor-not-allowed"
         )}
       >
-        <div className="flex items-start gap-4 flex-1 mb-4 sm:mb-0 relative z-10">
+        {/* Left Content - Fixed layout */}
+        <div className="flex items-start gap-4 flex-1 min-w-0">
           {icon && (
             <div
               className={cn(
-                "p-2.5 rounded-xl mt-0.5 flex-shrink-0 transition-all duration-300 border",
+                "p-2.5 rounded-lg flex-shrink-0 transition-all duration-300 mt-0.5",
                 isEnabled
-                  ? cn(
-                      "text-blue-600 bg-blue-100 border-blue-200 dark:text-blue-400 dark:bg-blue-900/30 dark:border-blue-800",
-                      "shadow-sm group-hover:scale-105"
-                    )
-                  : cn(
-                      "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-700",
-                      "group-hover:bg-gray-200 dark:group-hover:bg-gray-700 group-hover:scale-105"
-                    ),
-                localSaving && "animate-pulse"
+                  ? cn("text-blue-600 bg-blue-50", colors.border)
+                  : cn("text-gray-500 bg-gray-100", colors.border)
               )}
             >
               {icon}
             </div>
           )}
+
           <div className="flex-1 min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-              <div
-                className={cn(
-                  "font-semibold text-base lg:text-lg transition-colors duration-300",
-                  isEnabled
-                    ? "text-blue-700 dark:text-blue-300"
-                    : "text-gray-900 dark:text-gray-100"
-                )}
-              >
-                {label}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="flex justify-between items-center w-full">
+                    <h3
+                      className={cn(
+                        "font-medium text-base ",
+                        colors.text,
+                        localSaving && "opacity-70"
+                      )}
+                    >
+                      {label}
+                    </h3>
+
+                    {/* Enabled/Disabled Status Badge */}
+                    <div
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-300",
+                        isEnabled
+                          ? "bg-green-100 text-green-700 border border-green-200"
+                          : "bg-gray-100 text-gray-600 border border-gray-200",
+                        localSaving && "opacity-70"
+                      )}
+                    >
+                      {isEnabled ? (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          <span>Enabled</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-3 h-3" />
+                          <span>Disabled</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {localSaving && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                      <span className="text-xs text-blue-600 font-medium whitespace-nowrap">
+                        Saving...
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p
+                  className={cn(
+                    "text-sm leading-relaxed line-clamp-2",
+                    isEnabled ? "text-blue-700/80" : colors.textMuted,
+                    localSaving && "opacity-60"
+                  )}
+                >
+                  {description}
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                {isEnabled && (
-                  <span
-                    className={cn(
-                      "text-xs font-medium px-2 py-1 rounded-full border transition-all duration-300",
-                      "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800",
-                      "group-hover:scale-105"
-                    )}
-                  >
-                    ACTIVE
-                  </span>
-                )}
-                {localSaving && (
-                  <span
-                    className={cn(
-                      "text-xs font-medium px-2 py-1 rounded-full border animate-pulse",
-                      "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800"
-                    )}
-                  >
-                    SAVING...
-                  </span>
-                )}
-              </div>
-            </div>
-            <div
-              className={cn(
-                "text-sm lg:text-base leading-relaxed transition-colors duration-300",
-                isEnabled
-                  ? "text-blue-600 dark:text-blue-400/90"
-                  : "text-gray-600 dark:text-gray-400"
-              )}
-            >
-              {description}
             </div>
           </div>
         </div>
 
-        {/* Enhanced Switch Container */}
-        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto relative z-10">
-          {/* Status Badge */}
+        {/* Right Switch - Compact layout */}
+        <div className="flex items-center gap-3 pl-4 flex-shrink-0">
+          {/* Status Indicator */}
           <div
             className={cn(
-              "px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 min-w-[80px] text-center border",
+              "px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-300 whitespace-nowrap",
+              "hidden sm:block",
               isEnabled
-                ? cn(
-                    "text-blue-800 bg-blue-100 border-blue-300 dark:text-blue-200 dark:bg-blue-900/40 dark:border-blue-700",
-                    "shadow-sm group-hover:shadow-md"
-                  )
-                : cn(
-                    "text-gray-600 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600",
-                    "group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
-                  ),
-              localSaving && "opacity-70"
+                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                : cn("bg-gray-100 text-gray-600", colors.border)
             )}
           >
-            {isEnabled ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <span>Enabled</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                <span>Disabled</span>
-              </div>
-            )}
+            {isEnabled ? "On" : "Off"}
           </div>
 
-          {/* Enhanced Switch */}
-          <div className="relative">
-            <div
+          {/* Compact Switch Container */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Custom switch container */}
+            <button
+              onClick={() =>
+                !localSaving && !isLoading && handleToggle(!isEnabled)
+              }
+              disabled={localSaving || isLoading}
               className={cn(
-                "p-1 rounded-2xl transition-all duration-200",
+                "relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ease-in-out flex-shrink-0",
+                "border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
                 isEnabled
-                  ? "bg-blue-100/50 dark:bg-blue-900/20 group-hover:bg-blue-200/50 dark:group-hover:bg-blue-800/20"
-                  : "bg-gray-100/50 dark:bg-gray-800/20 group-hover:bg-gray-200/50 dark:group-hover:bg-gray-700/20"
+                  ? "bg-blue-500 border-blue-600 shadow-lg shadow-blue-500/30"
+                  : "bg-gray-200 border-gray-300 shadow-lg shadow-gray-300/50",
+                localSaving && "opacity-70 cursor-not-allowed",
+                !localSaving && "hover:scale-105 hover:shadow-xl"
               )}
             >
-              <Switch
-                checked={isEnabled}
-                onCheckedChange={handleToggle}
-                disabled={localSaving || isLoading}
+              {/* Thumb with smooth animation */}
+              <span
                 className={cn(
-                  "relative transition-all duration-200",
-                  "scale-110 lg:scale-100",
-                  "hover:scale-115 lg:hover:scale-105",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-400",
-                  "dark:data-[state=unchecked]:bg-gray-600",
-                  "border-2 border-transparent",
-                  isEnabled &&
-                    cn("shadow-lg shadow-blue-200/50 dark:shadow-blue-800/30"),
-                  "hover:data-[state=checked]:bg-blue-700 hover:data-[state=unchecked]:bg-gray-500",
-                  "dark:hover:data-[state=unchecked]:bg-gray-500",
-                  localSaving && "opacity-70"
+                  "inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-all duration-300 ease-in-out",
+                  "border border-gray-200",
+                  isEnabled ? "translate-x-5" : "translate-x-0.5",
+                  localSaving && "animate-pulse"
                 )}
               />
-            </div>
+            </button>
 
-            {/* Enhanced Loading Overlay */}
-            {localSaving && (
-              <div
-                className={cn(
-                  "absolute inset-0 flex items-center justify-center rounded-2xl backdrop-blur-sm",
-                  "bg-white/90 dark:bg-gray-900/90 border",
-                  isEnabled
-                    ? "border-blue-200 dark:border-blue-800"
-                    : "border-gray-200 dark:border-gray-700"
-                )}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
-                    Saving...
-                  </span>
+            {/* Compact Status indicator */}
+            <div
+              className={cn(
+                "px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 whitespace-nowrap",
+                "border shadow-sm hidden md:block",
+                isEnabled
+                  ? "bg-green-100 text-green-700 border-green-200"
+                  : "bg-gray-100 text-gray-600 border-gray-200",
+                localSaving && "opacity-60"
+              )}
+            >
+              {localSaving ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                  <span>Saving</span>
                 </div>
-              </div>
-            )}
+              ) : isEnabled ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span>Enabled</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                  <span>Disabled</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   };
+
+  // Fixed Theme Toggle Component
+  const ThemeToggle = () => (
+    <button
+      onClick={toggleDarkMode}
+      className={cn(
+        "fixed bottom-6 right-6 z-50",
+        "p-3 rounded-full transition-all duration-300",
+        colors.card,
+        colors.border,
+        "shadow-lg hover:shadow-xl",
+        "hover:scale-110 active:scale-95",
+        "group"
+      )}
+      aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+    >
+      <div className="relative w-6 h-6">
+        <Sun
+          className={cn(
+            "w-5 h-5 absolute top-0.5 left-0.5 transition-all duration-300",
+            isDarkMode
+              ? "rotate-0 opacity-100 text-yellow-500"
+              : "rotate-90 opacity-0 text-gray-400"
+          )}
+        />
+        <Moon
+          className={cn(
+            "w-5 h-5 absolute top-0.5 left-0.5 transition-all duration-300",
+            isDarkMode
+              ? "rotate-90 opacity-0 text-gray-400"
+              : "rotate-0 opacity-100 text-blue-600"
+          )}
+        />
+      </div>
+
+      {/* Tooltip */}
+      <div
+        className={cn(
+          "absolute right-full mr-3 top-1/2 transform -translate-y-1/2",
+          "px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap",
+          colors.card,
+          colors.text,
+          colors.border,
+          "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+          "shadow-lg pointer-events-none"
+        )}
+      >
+        Switch to {isDarkMode ? "light" : "dark"} mode
+        <div
+          className={cn(
+            "absolute top-1/2 left-full -translate-y-1/2 border-8 border-transparent",
+            colors.border
+          )}
+        />
+      </div>
+    </button>
+  );
 
   if (isLoading) {
     return (
@@ -296,12 +346,7 @@ export default function NotificationSettingsPage() {
         )}
       >
         <div className="text-center">
-          <div
-            className={cn(
-              "w-12 h-12 border-3 border-t-transparent rounded-full animate-spin mx-auto mb-4",
-              colors.primaryBg
-            )}
-          ></div>
+          <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <h2 className={cn("text-2xl font-bold mb-2", colors.text)}>
             Loading Preferences
           </h2>
@@ -320,85 +365,72 @@ export default function NotificationSettingsPage() {
 
   return (
     <div className={cn("min-h-screen", colors.background)}>
-      {/* Enhanced Full Width Header */}
+      {/* Modern Header */}
       <div
         className={cn(
-          "w-full border-b bg-background/95 backdrop-blur-sm",
+          "w-full border-b backdrop-blur-sm",
           colors.border,
+          colors.card,
           "sticky top-0 z-10"
         )}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 py-6 lg:py-8">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-8">
+        <div className="max-w-6xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
               <button
                 onClick={() => router.back()}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 lg:px-6 lg:py-4 rounded-2xl transition-all duration-300",
-                  "hover:bg-opacity-20 hover:scale-105 active:scale-95",
-                  colors.textMuted,
+                  "flex items-center gap-2 p-2 rounded-lg transition-all duration-300",
                   colors.hoverBg,
-                  "border-2 border-transparent hover:border-border",
-                  "w-fit"
+                  colors.textMuted,
+                  "hover:text-opacity-100"
                 )}
               >
-                <ArrowLeft size={20} className="flex-shrink-0" />
-                <span className="font-semibold text-base lg:text-lg">Back</span>
+                <ArrowLeft size={20} />
+                <span className="font-medium">Back</span>
               </button>
 
-              <div className="flex-1">
-                <h1
-                  className={cn(
-                    "text-3xl lg:text-4xl xl:text-5xl font-bold mb-2 lg:mb-3",
-                    colors.primary
-                  )}
-                >
-                  🔔 Notification Preferences
+              <div>
+                <h1 className={cn("text-2xl font-bold", colors.text)}>
+                  Notifications
                 </h1>
-                <p className={cn("text-lg lg:text-xl", colors.textMuted)}>
-                  Control how and when you receive notifications
+                <p className={cn("text-gray-600", colors.textMuted)}>
+                  Manage your notification preferences
                 </p>
               </div>
             </div>
 
             <div
               className={cn(
-                "px-4 py-3 lg:px-6 lg:py-4 rounded-2xl text-base lg:text-lg font-semibold",
-                "bg-primary text-primary-foreground",
-                "shadow-lg border-2 border-primary/20",
-                "flex items-center gap-3 transition-transform duration-300 hover:scale-105"
+                "px-4 py-2 rounded-full text-sm font-medium",
+                "bg-blue-100 text-blue-700 border border-blue-200"
               )}
             >
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span>
-                {enabledCount}/{totalCount} Enabled
-              </span>
+              {enabledCount}/{totalCount} enabled
             </div>
           </div>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        {/* REMOVED: Push notifications coming soon banner */}
-
-        {/* Grid Layout for Larger Screens */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Grid Layout */}
+        <div className="space-y-6">
           {/* Social & Profile Section */}
           <NotificationSection
             title="Social & Profile"
-            icon={<Users className="w-6 h-6" />}
-            description="Manage notifications about your profile and social interactions"
+            icon={<Users className="w-5 h-5" />}
+            description="Profile views and social interactions"
           >
             <ToggleRow
               label="Profile Views"
-              description="Get notified when someone views your profile"
+              description="When someone views your profile"
               inAppKey="profileViews"
               icon={<Eye className="w-4 h-4" />}
             />
             <ToggleRow
               label="Follow Requests"
-              description="Notifications for new followers and follow requests"
+              description="New followers and follow requests"
               inAppKey="followRequests"
               icon={<UserPlus className="w-4 h-4" />}
             />
@@ -407,119 +439,74 @@ export default function NotificationSettingsPage() {
           {/* Gigs & Bookings Section */}
           <NotificationSection
             title="Gigs & Bookings"
-            icon={<Calendar className="w-6 h-6" />}
-            description="Stay updated on your gig invitations and booking activities"
+            icon={<Calendar className="w-5 h-5" />}
+            description="Gig invitations and booking activities"
           >
             <ToggleRow
               label="Gig Invites"
-              description="When you're invited to perform at a gig"
+              description="When you're invited to perform"
               inAppKey="gigInvites"
               icon={<Calendar className="w-4 h-4" />}
             />
             <ToggleRow
               label="Booking Requests"
-              description="Notifications for new booking requests"
+              description="New booking requests"
               inAppKey="bookingRequests"
               icon={<Mail className="w-4 h-4" />}
             />
             <ToggleRow
               label="Booking Confirmations"
-              description="When your booking is confirmed"
+              description="When bookings are confirmed"
               inAppKey="bookingConfirmations"
               icon={<Bell className="w-4 h-4" />}
             />
             <ToggleRow
               label="Gig Reminders"
-              description="Reminders for upcoming gigs and events"
+              description="Reminders for upcoming gigs"
               inAppKey="gigReminders"
               icon={<Zap className="w-4 h-4" />}
             />
           </NotificationSection>
 
           {/* Messages Section */}
-          <div className="xl:col-span-2">
-            <NotificationSection
-              title="Messages & Communication"
-              icon={<MessageSquare className="w-6 h-6" />}
-              description="Control your messaging notifications"
-            >
-              <ToggleRow
-                label="New Messages"
-                description="Notifications for new direct messages and conversations"
-                inAppKey="newMessages"
-                icon={<MessageSquare className="w-4 h-4" />}
-              />
-            </NotificationSection>
-          </div>
+          <NotificationSection
+            title="Messages"
+            icon={<MessageSquare className="w-5 h-5" />}
+            description="Direct messages and conversations"
+          >
+            <ToggleRow
+              label="New Messages"
+              description="New direct messages"
+              inAppKey="newMessages"
+              icon={<MessageSquare className="w-4 h-4" />}
+            />
+          </NotificationSection>
 
           {/* System Section */}
-          <div className="xl:col-span-2">
-            <NotificationSection
-              title="System & Updates"
-              icon={<Settings className="w-6 h-6" />}
-              description="Important app updates and system notifications"
-            >
-              <ToggleRow
-                label="System Updates"
-                description="Important app updates, maintenance, and announcements"
-                inAppKey="systemUpdates"
-                icon={<Settings className="w-4 h-4" />}
-              />
-            </NotificationSection>
-          </div>
+          <NotificationSection
+            title="System"
+            icon={<Settings className="w-5 h-5" />}
+            description="App updates and announcements"
+          >
+            <ToggleRow
+              label="System Updates"
+              description="Important app updates"
+              inAppKey="systemUpdates"
+              icon={<Settings className="w-4 h-4" />}
+            />
+          </NotificationSection>
         </div>
 
-        {/* Enhanced Save Button Section */}
-        <div
-          className={cn(
-            "sticky bottom-6 mt-12 p-6 lg:p-8 rounded-2xl border-2 backdrop-blur-xl",
-            colors.border,
-            "bg-card/90 border-opacity-50",
-            "shadow-2xl transform transition-all duration-300",
-            "hover:shadow-3xl hover:scale-105"
-          )}
-        >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex-1">
-              <h3 className={cn("font-bold text-2xl mb-2", colors.text)}>
-                ✅ Preferences Updated
-              </h3>
-              <p className={cn("text-lg", colors.textMuted)}>
-                Your changes are automatically saved. You're all set!
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={() => router.back()}
-                className={cn(
-                  "px-8 py-4 rounded-2xl border-2 font-semibold text-lg transition-all duration-300",
-                  "hover:bg-opacity-20 hover:scale-105 active:scale-95",
-                  colors.border,
-                  colors.textSecondary,
-                  colors.background,
-                  "hover:shadow-lg"
-                )}
-              >
-                Back to Settings
-              </button>
-              <button
-                onClick={() => {
-                  alert("✅ Your notification preferences have been saved!");
-                  router.back();
-                }}
-                className={cn(
-                  "px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-300",
-                  "hover:scale-105 active:scale-95 hover:shadow-2xl",
-                  "bg-primary text-primary-foreground hover:bg-primary/90",
-                  "shadow-lg"
-                )}
-              >
-                Done & Continue
-              </button>
-            </div>
-          </div>
+        {/* Footer */}
+        <div className="mt-12 text-center">
+          <p className={cn("text-sm", colors.textMuted)}>
+            Your preferences are automatically saved
+          </p>
         </div>
       </div>
+
+      {/* Fixed Theme Toggle */}
+      <ThemeToggle />
     </div>
   );
 }

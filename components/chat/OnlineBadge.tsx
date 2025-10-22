@@ -85,7 +85,7 @@ export function OnlineBadge({
             sizeClasses[size]
           )}
         />
-        {showText && <span className="text-gray-500">Loading...</span>}
+        {showText && <span className="text-gray-500">checking.....</span>}
       </div>
     );
   }
