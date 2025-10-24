@@ -165,7 +165,8 @@ export function useUserCurrentChat() {
 
       // If no existing chat, create a new one
       console.log("Creating new chat with user:", otherUserId);
-      const newChatId = await createNewChat(otherUserId); // Use the context method
+      const newChatId = await createNewChat(otherUserId);
+      console.log("✅ New chat created with ID:", newChatId);
       return newChatId;
     } catch (error) {
       console.error("Failed to create or open chat:", error);

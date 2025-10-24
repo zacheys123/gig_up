@@ -80,29 +80,38 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
   >("idle");
 
   const handleChatClick = async (chatId: string) => {
+    console.log("🎯 [1] handleChatClick called with chatId:", chatId);
+
     try {
       setOpeningChatId(chatId);
+      console.log("🎯 [2] Set openingChatId:", chatId);
 
       // Show immediate visual feedback on the clicked chat
       const chatElement = document.querySelector(`[data-chat-id="${chatId}"]`);
       if (chatElement) {
         chatElement.classList.add("bg-orange-50", "border-orange-200");
+        console.log("🎯 [3] Added visual feedback to chat element");
       }
 
       // Start smooth transition
       setTransitionStage("minimizing");
+      console.log("🎯 [4] Set transitionStage to 'minimizing'");
 
       // Open chat immediately
+      console.log("🎯 [5] Calling openChat with:", chatId);
       openChat(chatId);
+      console.log("🎯 [6] openChat completed");
 
       // Close modal with minimal delay for smooth animation
       setTimeout(() => {
+        console.log("🎯 [7] Timeout callback executing");
         setTransitionStage("idle");
         setOpeningChatId(null);
+        console.log("🎯 [8] Closing modal via onClose");
         onClose(); // Close the modal after opening chat
       }, 100);
     } catch (error) {
-      console.error("Failed to open chat:", error);
+      console.error("🎯 [ERROR] Failed to open chat:", error);
       toast.error("Failed to open chat. Please try again.");
       setTransitionStage("idle");
       setOpeningChatId(null);
@@ -113,33 +122,46 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
     setShowUserSearch(true);
   };
   const allUsers = useAllUsersWithPresence();
-  // In ChatListModal.tsx - FIXED
-  const handleUserSelect = async (userId: string) => {
-    // ✅ userId, not chatId
+  const Select = async (userId: string) => {
+    console.log("🔄 [START] handleUserSelect called with userId:", userId);
+
     try {
       setIsCreatingChat(true);
+      console.log("🔄 [1] isCreatingChat set to true");
 
-      // Get user info for toast
-      const user = allUsers?.find((u) => u._id === userId); // ✅ Use userId to find user
+      const user = allUsers?.find((u) => u._id === userId);
+      console.log("🔄 [2] Found user:", user);
+
       const userName = user ? `${user.firstname} ${user.lastname}` : "User";
+      console.log("🔄 [3] User name:", userName);
 
-      // ✅ Pass userId (not chatId) to smartCreateOrOpenChat
+      console.log("🔄 [4] Calling smartCreateOrOpenChat...");
       const chatId = await showChatCreationPromise(
-        smartCreateOrOpenChat(userId), // ✅ This should take userId
+        smartCreateOrOpenChat(userId),
         userName
       );
 
+      console.log("🔄 [5] Chat creation completed, chatId:", chatId);
+
       if (chatId) {
+        console.log("🔄 [6] Chat ID is valid, proceeding...");
         setNewlyCreatedChatId(chatId);
         setShowUserSearch(false);
+        console.log("🔄 [7] Set newlyCreatedChatId and closed user search");
+
+        console.log("🔄 [8] Setting timeout to call handleChatClick");
         setTimeout(() => {
-          handleChatClick(chatId); // ✅ Use the returned chatId here
+          console.log("🔄 [9] Timeout - calling handleChatClick with:", chatId);
+          handleChatClick(chatId);
         }, 500);
+      } else {
+        console.error("🔄 [ERROR] chatId is null or undefined");
       }
     } catch (error) {
-      console.error("Failed to create chat:", error);
+      console.error("🔄 [ERROR] Failed to create chat:", error);
     } finally {
       setIsCreatingChat(false);
+      console.log("🔄 [10] isCreatingChat set to false");
     }
   };
 
@@ -674,7 +696,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
       <UserSearchPanel
         isOpen={showUserSearch}
         onClose={() => setShowUserSearch(false)}
-        onUserSelect={handleUserSelect}
+        onUserSelect={Select}
         variant="modal"
       />
     </>

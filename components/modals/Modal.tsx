@@ -5,7 +5,7 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Sun, Moon, Monitor, CheckCircle } from "lucide-react";
 
-const Modal = ({
+export const Modal = ({
   isOpen,
   onClose,
   title,

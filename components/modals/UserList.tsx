@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import Modal from "./Modal";
+import { Modal } from "./Modal";
 import { User, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { IoAdd, IoCheckmark } from "react-icons/io5";

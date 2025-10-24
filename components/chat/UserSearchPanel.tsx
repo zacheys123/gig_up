@@ -24,6 +24,7 @@ import { useUserCurrentChat } from "@/hooks/useCurrentUserChat";
 import { UserListItem } from "./UserListItem";
 import { toast } from "sonner";
 import { useChatToasts } from "@/hooks/useToasts";
+import { useAllUsersWithPresence } from "@/hooks/useAllUsers";
 
 interface UserSearchPanelProps {
   isOpen: boolean;
