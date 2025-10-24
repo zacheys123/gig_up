@@ -31,6 +31,11 @@ import {
   Lock,
   Sparkles,
   X,
+  UserPlus,
+  Briefcase,
+  MapPin,
+  Pin,
+  CheckCheck,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -56,6 +61,10 @@ import { useUserCurrentChat } from "@/hooks/useCurrentUserChat";
 import { useChat } from "@/app/context/ChatContext";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
 
 interface NavigationLink {
   label: string;
@@ -74,6 +83,416 @@ interface ThemeOption {
   description: string;
 }
 
+// UserSearchPanel Component for MobileSheet
+function UserSearchPanel({
+  isOpen,
+  onClose,
+  onUserSelect,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onUserSelect: (userId: string) => void;
+}) {
+  const { colors } = useThemeColors();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<
+    "all" | "musicians" | "clients"
+  >("all");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const { smartCreateOrOpenChat, isLoading } = useUserCurrentChat();
+
+  // Fetch all users for search
+  const allUsers = useQuery(api.controllers.user.getAllUsers);
+
+  // Debounce search query
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Filter users based on search and category
+  const filteredUsers = allUsers?.filter((user) => {
+    const matchesSearch =
+      user.firstname?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.lastname?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.username?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.instrument?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.city?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      user.roleType?.toLowerCase().includes(debouncedQuery.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      (selectedCategory === "musicians" && user.isMusician) ||
+      (selectedCategory === "clients" && user.isClient);
+
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleStartChat = async (userId: string) => {
+    try {
+      await smartCreateOrOpenChat(userId);
+      toast.success("Chat started successfully!");
+      onUserSelect(userId);
+    } catch (error) {
+      toast.error("Failed to start chat. Please try again.");
+      console.error("Failed to create chat:", error);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-300"
+        onClick={onClose}
+      />
+
+      {/* Search Panel */}
+      <div
+        className={cn(
+          "relative w-full max-w-2xl h-[80vh] rounded-3xl shadow-2xl border flex flex-col",
+          colors.card,
+          colors.cardBorder,
+          "backdrop-blur-sm bg-white/95"
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "p-2 rounded-2xl",
+                colors.warningBg,
+                colors.warningBorder
+              )}
+            >
+              <Users className={cn("w-5 h-5", colors.warningText)} />
+            </div>
+            <div>
+              <h3 className={cn("text-xl font-bold", colors.text)}>
+                Find People
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                Connect with musicians and clients
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="rounded-2xl hover:bg-red-500/10 hover:text-red-600"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="p-6 pb-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search by name, username, location, or specialty..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={cn(
+                "pl-11 pr-4 py-3 rounded-2xl border-0",
+                colors.backgroundMuted,
+                "focus:ring-2 focus:ring-orange-500/20"
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Category Filters */}
+        <div className="px-6 pb-4">
+          <div className="flex gap-2">
+            <Button
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("all")}
+              className={cn(
+                "rounded-full text-xs",
+                selectedCategory === "all" && colors.primaryBg
+              )}
+            >
+              <UserPlus className="w-3 h-3 mr-1" />
+              All Users
+            </Button>
+            <Button
+              variant={selectedCategory === "musicians" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("musicians")}
+              className={cn(
+                "rounded-full text-xs",
+                selectedCategory === "musicians" && colors.primaryBg
+              )}
+            >
+              <Music className="w-3 h-3 mr-1" />
+              Musicians
+            </Button>
+            <Button
+              variant={selectedCategory === "clients" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("clients")}
+              className={cn(
+                "rounded-full text-xs",
+                selectedCategory === "clients" && colors.primaryBg
+              )}
+            >
+              <Briefcase className="w-3 h-3 mr-1" />
+              Clients
+            </Button>
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+          {!allUsers ? (
+            // Loading skeletons
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-2xl border",
+                    colors.border
+                  )}
+                >
+                  <div
+                    className={cn("w-12 h-12 rounded-2xl", colors.skeleton)}
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={cn("h-4 w-32 rounded", colors.skeleton)}
+                      />
+                      <div
+                        className={cn("h-3 w-16 rounded", colors.skeleton)}
+                      />
+                    </div>
+                    <div className={cn("h-3 w-48 rounded", colors.skeleton)} />
+                    <div className="flex gap-2">
+                      <div
+                        className={cn("h-5 w-20 rounded-full", colors.skeleton)}
+                      />
+                      <div
+                        className={cn("h-5 w-24 rounded-full", colors.skeleton)}
+                      />
+                    </div>
+                  </div>
+                  <div className={cn("w-20 h-9 rounded-xl", colors.skeleton)} />
+                </div>
+              ))}
+            </div>
+          ) : filteredUsers?.length === 0 ? (
+            // Empty state
+            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+              <div
+                className={cn(
+                  "w-20 h-20 rounded-3xl flex items-center justify-center mb-4",
+                  colors.warningBg,
+                  colors.warningBorder
+                )}
+              >
+                <Search className={cn("w-8 h-8", colors.warningText)} />
+              </div>
+              <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
+                No users found
+              </h4>
+              <p className={cn("text-sm max-w-xs", colors.textMuted)}>
+                {debouncedQuery
+                  ? "Try adjusting your search terms or browse different categories"
+                  : "Start typing to search for users"}
+              </p>
+            </div>
+          ) : (
+            // User results
+            <div className="space-y-3">
+              {filteredUsers?.map((user) => (
+                <div
+                  key={user._id}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300",
+                    colors.border,
+                    "hover:shadow-lg hover:border-orange-200"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Avatar with tier badge */}
+                    <div className="relative">
+                      <Avatar className="w-14 h-14 rounded-2xl border-2 border-orange-200">
+                        <AvatarImage src={user.picture} />
+                        <AvatarFallback
+                          className={cn(
+                            "text-base font-semibold rounded-2xl",
+                            "bg-gradient-to-br from-orange-500/10 to-red-500/10"
+                          )}
+                        >
+                          {user.firstname?.[0]}
+                          {user.lastname?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.tier !== "free" && (
+                        <div className="absolute -top-1 -right-1">
+                          <div
+                            className={cn(
+                              "w-6 h-6 rounded-full border-2 border-white flex items-center justify-center",
+                              user.tier === "pro" && "bg-orange-500",
+                              user.tier === "premium" && "bg-purple-500",
+                              user.tier === "elite" && "bg-yellow-500"
+                            )}
+                          >
+                            <Crown className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* User info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h4
+                          className={cn("font-semibold text-lg", colors.text)}
+                        >
+                          {user.firstname} {user.lastname}
+                        </h4>
+                        {user.verified && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-blue-500 text-white text-xs"
+                          >
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
+                      <p className={cn("text-sm", colors.textMuted)}>
+                        @{user.username}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {/* Role badge */}
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs",
+                            user.isMusician
+                              ? "border-purple-200 text-purple-700"
+                              : "border-blue-200 text-blue-700"
+                          )}
+                        >
+                          {user.isMusician ? (
+                            <>
+                              <Music className="w-3 h-3 mr-1" />
+                              Musician
+                            </>
+                          ) : (
+                            <>
+                              <Briefcase className="w-3 h-3 mr-1" />
+                              Client
+                            </>
+                          )}
+                        </Badge>
+
+                        {/* Tier badge */}
+                        {user.tier !== "free" && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs",
+                              user.tier === "pro" &&
+                                "border-orange-200 text-orange-700",
+                              user.tier === "premium" &&
+                                "border-purple-200 text-purple-700",
+                              user.tier === "elite" &&
+                                "border-yellow-200 text-yellow-700"
+                            )}
+                          >
+                            <Crown className="w-3 h-3 mr-1" />
+                            {user.tier.charAt(0).toUpperCase() +
+                              user.tier.slice(1)}
+                          </Badge>
+                        )}
+
+                        {/* Location */}
+                        {user.city && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-gray-200 text-gray-700"
+                          >
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {user.city}
+                          </Badge>
+                        )}
+                      </div>
+                      {/* Specialization */}
+                      {user.instrument && (
+                        <p className={cn("text-sm", colors.textMuted)}>
+                          {user.instrument}
+                        </p>
+                      )}
+                      {/* Role Type */}
+                      {user.roleType && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-gray-200 text-gray-700"
+                        >
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {user.roleType}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action button */}
+                  <Button
+                    onClick={() => handleStartChat(user._id)}
+                    disabled={isLoading}
+                    className={cn(
+                      "rounded-xl transition-all duration-300",
+                      colors.primaryBg,
+                      colors.primaryBgHover,
+                      "text-white",
+                      "hover:scale-105 active:scale-95",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    {isLoading ? "Starting..." : "Message"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Quick Stats */}
+        <div className={cn("p-4 border-t", colors.border)}>
+          <div className="flex justify-between text-sm">
+            <span className={colors.textMuted}>
+              Showing {filteredUsers?.length || 0} of {allUsers?.length || 0}{" "}
+              users
+            </span>
+            <div className="flex gap-4">
+              <span className={cn("flex items-center gap-1", colors.textMuted)}>
+                <Music className="w-3 h-3" />
+                {allUsers?.filter((u) => u.isMusician).length} musicians
+              </span>
+              <span className={cn("flex items-center gap-1", colors.textMuted)}>
+                <Briefcase className="w-3 h-3" />
+                {allUsers?.filter((u) => u.isClient).length} clients
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const tierConfig = {
   free: {
     label: "Free",
@@ -86,10 +505,10 @@ const tierConfig = {
   pro: {
     label: "Pro",
     icon: Zap,
-    gradient: "from-amber-500 to-orange-600",
-    bg: "bg-gradient-to-r from-amber-500 to-orange-600",
-    text: "text-amber-100",
-    badge: "bg-amber-100 text-amber-800 border-amber-300",
+    gradient: "from-orange-500 to-red-600",
+    bg: "bg-gradient-to-r from-orange-500 to-red-600",
+    text: "text-orange-100",
+    badge: "bg-orange-100 text-orange-800 border-orange-300",
   },
   premium: {
     label: "Premium",
@@ -174,7 +593,7 @@ const getNavigationLinks = (
       icon: <Music size={22} />,
     });
 
-    if (isPro) {
+    if (isPro && !isTrialEnded) {
       coreLinks.push(...proLinks);
     }
   }
@@ -201,27 +620,41 @@ const ConversationList = ({
   onNavigateBack: () => void;
   onConversationSelect: (conversationId: string) => void;
 }) => {
-  const { user: currentUser } = useCurrentUser();
   const { colors } = useThemeColors();
   const [searchFilter, setSearchFilter] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
 
   const { chats, isUserOnline } = useUserCurrentChat();
   const { byChat: unreadCounts } = useUnreadCount();
 
+  // Enhanced filtering with tabs
   const filteredConversations = chats
-    ?.filter(
-      (conversation) =>
+    ?.filter((conversation) => {
+      const matchesSearch =
         conversation.displayName
           ?.toLowerCase()
           .includes(searchFilter.toLowerCase()) ||
         conversation.lastMessage
           ?.toLowerCase()
-          .includes(searchFilter.toLowerCase())
-    )
+          .includes(searchFilter.toLowerCase());
+
+      const isArchived = conversation.isArchived || false;
+      const hasUnread = (unreadCounts[conversation._id] || 0) > 0;
+
+      if (activeTab === "unread") {
+        return matchesSearch && hasUnread && !isArchived;
+      } else if (activeTab === "archived") {
+        return matchesSearch && isArchived;
+      }
+
+      return matchesSearch && !isArchived;
+    })
     .sort((a, b) => {
       const aUnread = unreadCounts[a._id] || 0;
       const bUnread = unreadCounts[b._id] || 0;
 
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
       if (aUnread > 0 && bUnread === 0) return -1;
       if (aUnread === 0 && bUnread > 0) return 1;
       return (b.lastMessageAt || 0) - (a.lastMessageAt || 0);
@@ -236,7 +669,7 @@ const ConversationList = ({
           onClick={onNavigateBack}
           className={cn(
             "p-2 rounded-xl transition-all duration-200",
-            "hover:bg-gray-100 dark:hover:bg-gray-800",
+            "hover:bg-gray-100",
             colors.text
           )}
         >
@@ -248,6 +681,7 @@ const ConversationList = ({
         </div>
       </div>
 
+      {/* Search Bar */}
       <div className={cn("p-4 border-b", colors.border)}>
         <div className="relative">
           <SearchIcon
@@ -263,10 +697,58 @@ const ConversationList = ({
             className={cn(
               "pl-10 border-0 rounded-xl",
               colors.backgroundMuted,
-              "focus:bg-white dark:focus:bg-gray-800 transition-colors"
+              "focus:bg-white transition-colors"
             )}
           />
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="px-4 pb-3">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList
+            className={cn(
+              "w-full grid grid-cols-3 rounded-2xl p-1",
+              colors.backgroundMuted
+            )}
+          >
+            <TabsTrigger
+              value="all"
+              className={cn(
+                "text-xs rounded-xl",
+                "data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+              )}
+            >
+              All
+            </TabsTrigger>
+            <TabsTrigger
+              value="unread"
+              className={cn(
+                "text-xs rounded-xl",
+                "data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+              )}
+            >
+              Unread
+              {chats?.some((chat) => (unreadCounts[chat._id] || 0) > 0) && (
+                <Badge className="ml-1 h-4 w-4 p-0 text-[10px] bg-orange-500">
+                  {
+                    chats?.filter((chat) => (unreadCounts[chat._id] || 0) > 0)
+                      .length
+                  }
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="archived"
+              className={cn(
+                "text-xs rounded-xl",
+                "data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+              )}
+            >
+              Archived
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
@@ -275,7 +757,7 @@ const ConversationList = ({
             <div
               className={cn(
                 "w-20 h-20 rounded-2xl flex items-center justify-center mb-4",
-                "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
+                "bg-gradient-to-br from-gray-100 to-gray-200"
               )}
             >
               <MessageCircle className={cn("w-8 h-8", colors.textMuted)} />
@@ -297,20 +779,35 @@ const ConversationList = ({
               const TierIcon = tierInfo.icon;
               const unreadCount = unreadCounts[conversation._id] || 0;
               const isOnline = otherUser ? isUserOnline(otherUser._id) : false;
+              const isPinned = conversation.isPinned || false;
 
               return (
                 <button
                   key={conversation._id}
                   onClick={() => onConversationSelect(conversation._id)}
                   className={cn(
-                    "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group",
-                    "hover:bg-gray-50 dark:hover:bg-gray-800/50",
-                    "border border-transparent hover:border-gray-200 dark:hover:border-gray-700",
-                    "shadow-sm hover:shadow-md"
+                    "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group relative",
+                    "hover:bg-gray-50",
+                    "border border-transparent hover:border-gray-200",
+                    "shadow-sm hover:shadow-md",
+                    unreadCount > 0 && colors.warningBg
                   )}
                 >
+                  {/* Pin Indicator */}
+                  {isPinned && (
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <Pin
+                        className={cn(
+                          "w-3 h-3",
+                          colors.warningText,
+                          "fill-current"
+                        )}
+                      />
+                    </div>
+                  )}
+
                   <div className="relative">
-                    <Avatar className="w-14 h-14 rounded-2xl border-2 border-transparent group-hover:border-amber-200 dark:group-hover:border-amber-800 transition-colors">
+                    <Avatar className="w-14 h-14 rounded-2xl border-2 border-transparent group-hover:border-orange-200 transition-colors">
                       <AvatarImage src={otherUser?.picture} />
                       <AvatarFallback className="text-base font-semibold rounded-2xl">
                         {otherUser?.firstname?.[0]}
@@ -319,19 +816,29 @@ const ConversationList = ({
                     </Avatar>
 
                     {isOnline && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white dark:border-gray-900" />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white" />
                     )}
 
                     {otherUser?.tier !== "free" && (
                       <div className="absolute -top-1 -right-1">
                         <TierIcon
                           className={cn(
-                            "w-5 h-5 p-1 rounded-full border-2 border-white dark:border-gray-900",
+                            "w-5 h-5 p-1 rounded-full border-2 border-white",
                             tierInfo.text,
                             tierInfo.bg
                           )}
                         />
                       </div>
+                    )}
+
+                    {unreadCount > 0 && (
+                      <div
+                        className={cn(
+                          "absolute -top-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white animate-pulse",
+                          colors.warningText,
+                          "bg-current"
+                        )}
+                      />
                     )}
                   </div>
 
@@ -354,7 +861,9 @@ const ConversationList = ({
                         <span
                           className={cn(
                             "text-xs whitespace-nowrap",
-                            colors.textMuted
+                            unreadCount > 0
+                              ? colors.warningText
+                              : colors.textMuted
                           )}
                         >
                           {formatTimestamp(conversation.lastMessageAt)}
@@ -362,23 +871,35 @@ const ConversationList = ({
                       )}
                     </div>
 
-                    <p
-                      className={cn(
-                        "text-sm truncate",
-                        unreadCount > 0
-                          ? "font-semibold text-gray-900 dark:text-white"
-                          : colors.textMuted
+                    <div className="flex items-center gap-2">
+                      {conversation.lastMessage && (
+                        <CheckCheck
+                          className={cn(
+                            "w-3 h-3 flex-shrink-0",
+                            unreadCount > 0
+                              ? colors.warningText
+                              : colors.textMuted
+                          )}
+                        />
                       )}
-                    >
-                      {conversation.lastMessage || "Start a conversation"}
-                    </p>
+                      <p
+                        className={cn(
+                          "text-sm truncate",
+                          unreadCount > 0
+                            ? "font-semibold text-gray-900"
+                            : colors.textMuted
+                        )}
+                      >
+                        {conversation.lastMessage || "Start a conversation"}
+                      </p>
+                    </div>
                   </div>
 
                   {unreadCount > 0 && (
                     <div className="flex-shrink-0">
                       <span
                         className={cn(
-                          "bg-blue-500 text-white text-xs font-semibold rounded-full px-2 py-1 min-w-[24px] text-center",
+                          "bg-orange-500 text-white text-xs font-semibold rounded-full px-2 py-1 min-w-[24px] text-center",
                           "animate-pulse shadow-sm"
                         )}
                       >
@@ -435,6 +956,7 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
     "main"
   );
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
 
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -458,8 +980,22 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
     markAllAsRead();
   };
 
+  const handleStartNewChat = () => {
+    setShowUserSearch(true);
+  };
+
+  const handleUserSelect = (userId: string) => {
+    setShowUserSearch(false);
+    setIsSheetOpen(false);
+  };
+
+  // Enhanced trial experience
+  const showTrialEnded = isTrialEnded || isFirstMonthEnd;
+  const showGracePeriod = isInGracePeriod && !isPro;
+  const showUpgradePrompt = showTrialEnded || showGracePeriod || !isPro;
+
   const navigationLinks: NavigationLink[] = hasMinimumData(user)
-    ? getNavigationLinks(userId as string, user, isPro(), isTrialEnded)
+    ? getNavigationLinks(userId as string, user, isPro(), showTrialEnded)
     : getEssentialLinks();
 
   const displayTotalUnread = totalUnread > 0 ? totalUnread : null;
@@ -535,19 +1071,17 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
   const currentTier = getTierInfo(userTier);
   const TierIcon = currentTier.icon;
 
-  const showUpgradePrompt = isTrialEnded || !isPro;
-
   return (
     <>
       <Sheet open={isSheetOpen} onOpenChange={handleSheetToggle}>
         <SheetTrigger asChild>
           {children || (
-            <button className="p-2 rounded-xl transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <button className="p-2 rounded-xl transition-all duration-200 hover:bg-gray-100">
               <Menu
                 className={cn(
                   "w-6 h-6 transition-colors duration-200",
                   colors.text,
-                  "hover:text-amber-600 dark:hover:text-amber-400"
+                  "hover:text-orange-600"
                 )}
               />
             </button>
@@ -582,7 +1116,7 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
 
                 {isSignedIn && user && (
                   <div className="flex items-center gap-3">
-                    <Avatar className="w-12 h-12 rounded-2xl border-2 border-amber-200 dark:border-amber-800">
+                    <Avatar className="w-12 h-12 rounded-2xl border-2 border-orange-200">
                       <AvatarImage src={user.picture} />
                       <AvatarFallback className="rounded-2xl font-semibold">
                         {user.firstname?.[0]}
@@ -603,9 +1137,13 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                       </p>
                       {showUpgradePrompt && (
                         <div className="flex items-center gap-1 mt-1">
-                          <Lock className="w-3 h-3 text-amber-500" />
-                          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                            {isTrialEnded ? "Trial Ended" : "Upgrade to Pro"}
+                          <Lock className="w-3 h-3 text-orange-500" />
+                          <span className="text-xs text-orange-600 font-medium">
+                            {showTrialEnded
+                              ? "Trial Ended"
+                              : showGracePeriod
+                                ? "Grace Period"
+                                : "Upgrade to Pro"}
                           </span>
                         </div>
                       )}
@@ -635,24 +1173,45 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {/* New Chat Button */}
+                {isSignedIn && (
+                  <Button
+                    onClick={handleStartNewChat}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 px-4 py-4 rounded-2xl transition-all duration-200",
+                      colors.primaryBg,
+                      colors.primaryBgHover,
+                      "text-white",
+                      "font-semibold shadow-lg hover:shadow-xl",
+                      "transform hover:scale-105"
+                    )}
+                  >
+                    <UserPlus className="w-5 h-5" />
+                    Start New Conversation
+                  </Button>
+                )}
+
                 {finalLinks
                   .filter((link) => pathname !== link.href)
                   .filter((link) => {
-                    if (link.proOnly && !isPro) return false;
+                    // Hide pro-only features if trial ended or not pro
+                    if (link.proOnly && (showTrialEnded || !isPro))
+                      return false;
                     return link.condition !== false;
                   })
                   .map((link, index) => {
                     const isActive = pathname === link.href;
-                    const isProOnly = link.proOnly && !isPro;
+                    const isProOnly =
+                      link.proOnly && (showTrialEnded || !isPro);
 
                     const linkElement = (
                       <div
                         className={cn(
                           "flex items-center justify-between w-full px-4 py-4 rounded-2xl transition-all duration-200 group relative",
                           isActive
-                            ? "bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800"
+                            ? "bg-orange-50 border border-orange-200"
                             : colors.hoverBg,
-                          "hover:border-amber-200 dark:hover:border-amber-800",
+                          "hover:border-orange-200",
                           "border border-transparent",
                           isProOnly && "opacity-60"
                         )}
@@ -662,8 +1221,8 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                             className={cn(
                               "transition-colors duration-200",
                               isActive
-                                ? "text-amber-600 dark:text-amber-400"
-                                : "group-hover:text-amber-600 dark:group-hover:text-amber-400",
+                                ? "text-orange-600"
+                                : "group-hover:text-orange-600",
                               isProOnly && "text-gray-400"
                             )}
                           >
@@ -672,16 +1231,14 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                           <span
                             className={cn(
                               "text-base font-medium transition-colors duration-200",
-                              isActive
-                                ? "text-amber-600 dark:text-amber-400"
-                                : colors.text,
+                              isActive ? "text-orange-600" : colors.text,
                               isProOnly && "text-gray-500"
                             )}
                           >
                             {link.label}
                           </span>
                           {isProOnly && (
-                            <Lock className="w-3 h-3 text-amber-500" />
+                            <Lock className="w-3 h-3 text-orange-500" />
                           )}
                         </div>
 
@@ -727,22 +1284,30 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                   })}
 
                 {showUpgradePrompt && (
-                  <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                  <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white">
                     <div className="flex items-center gap-3 mb-2">
                       <Crown className="w-5 h-5" />
-                      <h4 className="font-bold text-sm">Unlock Pro Features</h4>
+                      <h4 className="font-bold text-sm">
+                        {showTrialEnded
+                          ? "Trial Period Ended"
+                          : showGracePeriod
+                            ? "Grace Period Active"
+                            : "Unlock Pro Features"}
+                      </h4>
                     </div>
-                    <p className="text-xs text-amber-100 mb-3">
-                      {isTrialEnded
+                    <p className="text-xs text-orange-100 mb-3">
+                      {showTrialEnded
                         ? "Your trial has ended. Upgrade to continue accessing premium features."
-                        : "Upgrade to Pro for advanced analytics, priority support, and more."}
+                        : showGracePeriod
+                          ? "You're in grace period. Upgrade now to maintain access to all features."
+                          : "Upgrade to Pro for advanced analytics, priority support, and more."}
                     </p>
                     <Link
                       href="/upgrade"
                       onClick={() => setIsSheetOpen(false)}
-                      className="block w-full text-center bg-white text-amber-600 py-2 px-4 rounded-xl text-sm font-semibold hover:bg-amber-50 transition-colors"
+                      className="block w-full text-center bg-white text-orange-600 py-2 px-4 rounded-xl text-sm font-semibold hover:bg-orange-50 transition-colors"
                     >
-                      Upgrade Now
+                      {showGracePeriod ? "Upgrade Now" : "Upgrade to Pro"}
                     </Link>
                   </div>
                 )}
@@ -756,8 +1321,8 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                       onClick={() => setIsSheetOpen(false)}
                       className={cn(
                         "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl transition-all duration-200",
-                        "border border-gray-200 dark:border-gray-700",
-                        "hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400",
+                        "border border-gray-200",
+                        "hover:border-orange-500 hover:text-orange-600",
                         colors.text
                       )}
                     >
@@ -768,7 +1333,7 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                       onClick={() => setIsSheetOpen(false)}
                       className={cn(
                         "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl transition-all duration-200",
-                        "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                        "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
                         "text-white font-semibold shadow-lg hover:shadow-xl",
                         "transform hover:scale-105"
                       )}
@@ -781,7 +1346,7 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                 <div
                   className={cn(
                     "flex items-center justify-between p-4 rounded-2xl border transition-all duration-200",
-                    "hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20",
+                    "hover:border-orange-500 hover:bg-orange-50",
                     colors.border
                   )}
                 >
@@ -797,8 +1362,8 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                     onClick={() => setIsThemeModalOpen(true)}
                     className={cn(
                       "p-2 rounded-xl transition-all duration-200",
-                      "hover:bg-amber-100 dark:hover:bg-amber-900/30",
-                      "hover:text-amber-600 dark:hover:text-amber-400"
+                      "hover:bg-orange-100",
+                      "hover:text-orange-600"
                     )}
                   >
                     {theme === "dark" ? (
@@ -825,6 +1390,13 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
         </SheetContent>
       </Sheet>
 
+      {/* User Search Panel */}
+      <UserSearchPanel
+        isOpen={showUserSearch}
+        onClose={() => setShowUserSearch(false)}
+        onUserSelect={handleUserSelect}
+      />
+
       <Dialog open={isThemeModalOpen} onOpenChange={setIsThemeModalOpen}>
         <DialogContent
           className={cn(
@@ -847,9 +1419,9 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                 }}
                 className={cn(
                   "flex items-center gap-4 p-4 rounded-xl border transition-all duration-200",
-                  "hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20",
+                  "hover:border-orange-500 hover:bg-orange-50",
                   theme === option.id
-                    ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                    ? "border-orange-500 bg-orange-50"
                     : colors.border,
                   "transform hover:scale-105"
                 )}
@@ -858,8 +1430,8 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                   className={cn(
                     "p-2 rounded-lg",
                     theme === option.id
-                      ? "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30"
-                      : "bg-gray-100 dark:bg-gray-800"
+                      ? "text-orange-600 bg-orange-100"
+                      : "bg-gray-100"
                   )}
                 >
                   {option.icon}
@@ -868,9 +1440,7 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                   <div
                     className={cn(
                       "font-semibold",
-                      theme === option.id
-                        ? "text-amber-600 dark:text-amber-400"
-                        : colors.text
+                      theme === option.id ? "text-orange-600" : colors.text
                     )}
                   >
                     {option.label}
@@ -880,7 +1450,7 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                   </div>
                 </div>
                 {theme === option.id && (
-                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
                 )}
               </button>
             ))}

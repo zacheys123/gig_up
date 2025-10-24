@@ -29,11 +29,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface ChatInterfaceProps {
   chatId: string;
-  isModal: boolean;
+
   onBack?: () => void;
 }
 
-export function ChatInterface({ chatId, isModal, onBack }: ChatInterfaceProps) {
+export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   const { user: currentUser } = useCurrentUser();
   const { colors } = useThemeColors();
   const [message, setMessage] = useState("");
@@ -328,16 +328,14 @@ export function ChatInterface({ chatId, isModal, onBack }: ChatInterfaceProps) {
           colors.card
         )}
       >
-        {!isModal && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="mr-2 md:hidden"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="mr-2 md:hidden"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
 
         <Avatar className="w-8 h-8">
           <AvatarImage src={otherParticipant?.picture} />

@@ -26,7 +26,7 @@ export default function ChatPage() {
 
       {/* Chat Interface */}
       <div className="flex-1">
-        <ChatInterface chatId={chatId} isModal={false} onBack={handleBack} />
+        <ChatInterface chatId={chatId} onBack={handleBack} />
       </div>
     </div>
   );

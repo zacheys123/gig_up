@@ -146,18 +146,30 @@ export function useUserCurrentChat() {
     );
   };
 
-  // Smart chat creation - opens existing chat if it exists, creates new one if not
-  const smartCreateOrOpenChat = async (otherUserId: string) => {
-    // Check if chat already exists
-    const existingChat = getExistingChatWithUser(otherUserId);
+  // In your useUserCurrentChat hook
+  const smartCreateOrOpenChat = async (
+    otherUserId: string
+  ): Promise<string> => {
+    try {
+      // First, check if a chat already exists
+      const existingChat = chats?.find((chat) =>
+        chat.otherParticipants?.some(
+          (participant) => participant?._id === otherUserId
+        )
+      );
 
-    if (existingChat) {
-      // Open existing chat
-      router.push(`/chat/${existingChat._id}`, { scroll: false });
-      return existingChat._id;
-    } else {
-      // Create new chat
-      return await createAndOpenChat(otherUserId);
+      if (existingChat) {
+        console.log("Found existing chat:", existingChat._id);
+        return existingChat._id;
+      }
+
+      // If no existing chat, create a new one
+      console.log("Creating new chat with user:", otherUserId);
+      const newChatId = await createNewChat(otherUserId); // Use the context method
+      return newChatId;
+    } catch (error) {
+      console.error("Failed to create or open chat:", error);
+      throw error;
     }
   };
 

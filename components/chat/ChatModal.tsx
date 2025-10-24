@@ -1,4 +1,3 @@
-// components/chat/ChatModal.tsx - UPDATED
 "use client";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
@@ -53,6 +52,8 @@ export function ChatModal({ chatId }: ChatModalProps) {
   }, [currentUser?._id, chatId, currentChatId, createActiveSession]);
 
   const handleClose = async () => {
+    console.log("Closing chat modal for:", chatId);
+
     // Delete active session first
     if (currentUser?._id && chatId && isSessionActive) {
       try {
@@ -69,10 +70,19 @@ export function ChatModal({ chatId }: ChatModalProps) {
     // Close chat in context
     closeChat();
 
-    // Navigate back to remove the intercepted route from URL
-    router.back();
+    // Use router.push to navigate to current path without the intercepted route
+    // This ensures we don't go back to a previous page unexpectedly
+    if (pathname.includes("/chat/")) {
+      // If we're on a chat page, navigate to the parent route
+      const basePath = pathname.split("/chat/")[0] || "/";
+      router.push(basePath);
+    } else {
+      // Otherwise just use replace to remove the intercepted route from history
+      router.replace(pathname);
+    }
   };
 
+  // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -83,7 +93,12 @@ export function ChatModal({ chatId }: ChatModalProps) {
     document.addEventListener("keydown", handleEscape);
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      // Cleanup session on unmount
+    };
+  }, [handleClose]);
+
+  // Cleanup session on unmount
+  useEffect(() => {
+    return () => {
       if (currentUser?._id && chatId && isSessionActive) {
         deleteActiveSession({
           userId: currentUser._id,
@@ -91,7 +106,7 @@ export function ChatModal({ chatId }: ChatModalProps) {
         }).catch(console.error);
       }
     };
-  }, [handleClose]);
+  }, [currentUser?._id, chatId, isSessionActive, deleteActiveSession]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -100,18 +115,26 @@ export function ChatModal({ chatId }: ChatModalProps) {
   };
 
   // Don't render if this isn't the current chat
-  if (!currentChatId || currentChatId !== chatId) return null;
+  if (!currentChatId || currentChatId !== chatId) {
+    console.log(
+      "Not rendering modal - currentChatId:",
+      currentChatId,
+      "chatId:",
+      chatId
+    );
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
         onClick={handleBackdropClick}
       />
 
       <div
         className={cn(
-          "relative w-full max-w-2xl h-[80vh] rounded-2xl shadow-2xl mx-4",
+          "relative w-full max-w-2xl h-[80vh] rounded-2xl shadow-2xl mx-4 flex flex-col",
           colors.card,
           colors.border
         )}
@@ -119,7 +142,7 @@ export function ChatModal({ chatId }: ChatModalProps) {
         {/* Header */}
         <div
           className={cn(
-            "flex items-center justify-between p-4 border-b",
+            "flex items-center justify-between p-4 border-b flex-shrink-0",
             colors.border
           )}
         >
@@ -135,8 +158,8 @@ export function ChatModal({ chatId }: ChatModalProps) {
         </div>
 
         {/* Chat Interface */}
-        <div className="h-[calc(100%-80px)]">
-          <ChatInterface chatId={chatId} isModal={true} />
+        <div className="flex-1 min-h-0">
+          <ChatInterface chatId={chatId} />
         </div>
       </div>
     </div>

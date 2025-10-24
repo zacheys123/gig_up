@@ -13,10 +13,6 @@ interface ChatContextType {
   createNewChat: (otherUserId: string) => Promise<string>;
   currentChatId: string | null;
   isChatOpen: boolean;
-  mobileModal: boolean;
-  setMobileModal: (enabled: boolean) => void;
-  enableMobileModal: () => void;
-  disableMobileModal: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -32,9 +28,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     api.controllers.chat.getOrCreateDirectChat
   );
 
-  const enableMobileModal = () => setMobileModal(true);
-  const disableMobileModal = () => setMobileModal(false);
-
   const openChat = (chatId: string) => {
     setCurrentChatId(chatId);
     router.push(`/chat/${chatId}`, { scroll: false });
@@ -42,9 +35,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const closeChat = () => {
     setCurrentChatId(null);
-    if (pathname.includes("/chat/")) {
-      router.back();
-    }
+    router.back();
   };
 
   const createNewChat = async (otherUserId: string): Promise<string> => {
@@ -75,10 +66,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         createNewChat,
         currentChatId,
         isChatOpen: !!currentChatId,
-        mobileModal,
-        setMobileModal,
-        enableMobileModal,
-        disableMobileModal,
       }}
     >
       {children}
