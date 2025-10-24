@@ -50,435 +50,11 @@ import { useUserCurrentChat } from "@/hooks/useCurrentUserChat";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useChat } from "@/app/context/ChatContext";
 import GigLoader from "../(main)/GigLoader";
+import UserSearchPanel from "./UserSearchPanel";
 
 interface ChatListModalProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface UserSearchPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onUserSelect: (userId: string) => void;
-}
-
-// UserSearchPanel Component
-function UserSearchPanel({
-  isOpen,
-  onClose,
-  onUserSelect,
-}: UserSearchPanelProps) {
-  const { colors } = useThemeColors();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<
-    "all" | "musicians" | "clients"
-  >("all");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const { smartCreateOrOpenChat, isLoading: isCreatingChat } =
-    useUserCurrentChat();
-
-  const { user } = useCurrentUser();
-  // Fetch all users for search
-  const users = useQuery(api.controllers.user.getAllUsers);
-  const allUsers = users?.filter((u) => u?._id !== user?._id);
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Filter users based on search and category
-  const filteredUsers = allUsers?.filter((user) => {
-    const matchesSearch =
-      user.firstname?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-      user.lastname?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-      user.username?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-      user.instrument?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-      user.city?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-      user.roleType?.toLowerCase().includes(debouncedQuery.toLowerCase());
-
-    const matchesCategory =
-      selectedCategory === "all" ||
-      (selectedCategory === "musicians" && user.isMusician) ||
-      (selectedCategory === "clients" && user.isClient);
-
-    return matchesSearch && matchesCategory;
-  });
-
-  const handleStartChat = async (userId: string) => {
-    try {
-      console.log("Starting chat with user:", userId);
-      const result = await smartCreateOrOpenChat(userId);
-      console.log("Chat creation result:", result);
-
-      if (result) {
-        toast.success("Chat started successfully!");
-        onUserSelect(userId);
-      } else {
-        toast.error("Failed to create chat. Please try again.");
-      }
-    } catch (error) {
-      console.error("Failed to create chat:", error);
-      toast.error("Failed to start chat. Please try again.");
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-300"
-        onClick={onClose}
-      />
-
-      {/* Search Panel */}
-      <div
-        className={cn(
-          "relative w-full max-w-2xl h-[80vh] rounded-3xl shadow-2xl border flex flex-col",
-          colors.card,
-          colors.cardBorder,
-          "backdrop-blur-sm bg-white/95"
-        )}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "p-2 rounded-2xl",
-                colors.warningBg,
-                colors.warningBorder
-              )}
-            >
-              <Users className={cn("w-5 h-5", colors.warningText)} />
-            </div>
-            <div>
-              <h3 className={cn("text-xl font-bold", colors.text)}>
-                Find People
-              </h3>
-              <p className={cn("text-sm", colors.textMuted)}>
-                Connect with musicians and clients
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="rounded-2xl hover:bg-red-500/10 hover:text-red-600"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="p-6 pb-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search by name, username, location, or specialty..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(
-                "pl-11 pr-4 py-3 rounded-2xl border-0",
-                colors.backgroundMuted,
-                "focus:ring-2 focus:ring-orange-500/20"
-              )}
-            />
-          </div>
-        </div>
-
-        {/* Category Filters */}
-        <div className="px-6 pb-4">
-          <div className="flex gap-2">
-            <Button
-              variant={selectedCategory === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory("all")}
-              className={cn(
-                "rounded-full text-xs",
-                selectedCategory === "all" && colors.primaryBg
-              )}
-            >
-              <UserPlus className="w-3 h-3 mr-1" />
-              All Users
-            </Button>
-            <Button
-              variant={selectedCategory === "musicians" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory("musicians")}
-              className={cn(
-                "rounded-full text-xs",
-                selectedCategory === "musicians" && colors.primaryBg
-              )}
-            >
-              <Music className="w-3 h-3 mr-1" />
-              Musicians
-            </Button>
-            <Button
-              variant={selectedCategory === "clients" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory("clients")}
-              className={cn(
-                "rounded-full text-xs",
-                selectedCategory === "clients" && colors.primaryBg
-              )}
-            >
-              <Briefcase className="w-3 h-3 mr-1" />
-              Clients
-            </Button>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
-          {!allUsers ? (
-            // Loading skeletons
-            <div className="space-y-4">
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "flex items-center gap-4 p-4 rounded-2xl border",
-                    colors.border
-                  )}
-                >
-                  <Skeleton
-                    className={cn("w-12 h-12 rounded-2xl", colors.skeleton)}
-                  />
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Skeleton
-                        className={cn("h-4 w-32 rounded", colors.skeleton)}
-                      />
-                      <Skeleton
-                        className={cn("h-3 w-16 rounded", colors.skeleton)}
-                      />
-                    </div>
-                    <Skeleton
-                      className={cn("h-3 w-48 rounded", colors.skeleton)}
-                    />
-                    <div className="flex gap-2">
-                      <Skeleton
-                        className={cn("h-5 w-20 rounded-full", colors.skeleton)}
-                      />
-                      <Skeleton
-                        className={cn("h-5 w-24 rounded-full", colors.skeleton)}
-                      />
-                    </div>
-                  </div>
-                  <Skeleton
-                    className={cn("w-20 h-9 rounded-xl", colors.skeleton)}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : filteredUsers?.length === 0 ? (
-            // Empty state
-            <div className="flex flex-col items-center justify-center h-full text-center py-12">
-              <div
-                className={cn(
-                  "w-20 h-20 rounded-3xl flex items-center justify-center mb-4",
-                  colors.warningBg,
-                  colors.warningBorder
-                )}
-              >
-                <Search className={cn("w-8 h-8", colors.warningText)} />
-              </div>
-              <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
-                No users found
-              </h4>
-              <p className={cn("text-sm max-w-xs", colors.textMuted)}>
-                {debouncedQuery
-                  ? "Try adjusting your search terms or browse different categories"
-                  : "Start typing to search for users"}
-              </p>
-            </div>
-          ) : (
-            // User results
-            <div className="space-y-3">
-              {filteredUsers?.map((user) => (
-                <div
-                  key={user._id}
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300",
-                    colors.border,
-                    "hover:shadow-lg hover:border-orange-200"
-                  )}
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Avatar with tier badge */}
-                    <div className="relative">
-                      <Avatar className="w-14 h-14 rounded-2xl border-2 border-orange-200">
-                        <AvatarImage src={user.picture} />
-                        <AvatarFallback
-                          className={cn(
-                            "text-base font-semibold rounded-2xl",
-                            "bg-gradient-to-br from-orange-500/10 to-red-500/10"
-                          )}
-                        >
-                          {user.firstname?.[0]}
-                          {user.lastname?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.tier !== "free" && (
-                        <div className="absolute -top-1 -right-1">
-                          <div
-                            className={cn(
-                              "w-6 h-6 rounded-full border-2 border-white flex items-center justify-center",
-                              user.tier === "pro" && "bg-orange-500",
-                              user.tier === "premium" && "bg-purple-500",
-                              user.tier === "elite" && "bg-yellow-500"
-                            )}
-                          >
-                            <Crown className="w-3 h-3 text-white" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* User info */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h4
-                          className={cn("font-semibold text-lg", colors.text)}
-                        >
-                          {user.firstname} {user.lastname}
-                        </h4>
-                        {user.verified && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-blue-500 text-white text-xs"
-                          >
-                            Verified
-                          </Badge>
-                        )}
-                      </div>
-                      <p className={cn("text-sm", colors.textMuted)}>
-                        @{user.username}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {/* Role badge */}
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-xs",
-                            user.isMusician
-                              ? "border-purple-200 text-purple-700"
-                              : "border-blue-200 text-blue-700"
-                          )}
-                        >
-                          {user.isMusician ? (
-                            <>
-                              <Music className="w-3 h-3 mr-1" />
-                              Musician
-                            </>
-                          ) : (
-                            <>
-                              <Briefcase className="w-3 h-3 mr-1" />
-                              Client
-                            </>
-                          )}
-                        </Badge>
-
-                        {/* Tier badge */}
-                        {user.tier !== "free" && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              user.tier === "pro" &&
-                                "border-orange-200 text-orange-700",
-                              user.tier === "premium" &&
-                                "border-purple-200 text-purple-700",
-                              user.tier === "elite" &&
-                                "border-yellow-200 text-yellow-700"
-                            )}
-                          >
-                            <Crown className="w-3 h-3 mr-1" />
-                            {user.tier.charAt(0).toUpperCase() +
-                              user.tier.slice(1)}
-                          </Badge>
-                        )}
-
-                        {/* Location */}
-                        {user.city && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-gray-200 text-gray-700"
-                          >
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {user.city}
-                          </Badge>
-                        )}
-                      </div>
-                      {/* Specialization */}
-                      {user.instrument && (
-                        <p className={cn("text-sm", colors.textMuted)}>
-                          {user.instrument}
-                        </p>
-                      )}
-                      {/* Location */}
-                      {user.roleType && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs border-gray-200 text-gray-700"
-                        >
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {user.roleType}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action button */}
-                  <Button
-                    onClick={() => handleStartChat(user._id)}
-                    disabled={isCreatingChat}
-                    className={cn(
-                      "rounded-xl transition-all duration-300",
-                      colors.primaryBg,
-                      colors.primaryBgHover,
-                      "text-white",
-                      "hover:scale-105 active:scale-95",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                  >
-                    {isCreatingChat ? "Starting..." : "Message"}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Stats */}
-        <div className={cn("p-4 border-t", colors.border)}>
-          <div className="flex justify-between text-sm">
-            <span className={colors.textMuted}>
-              Showing {filteredUsers?.length || 0} of {allUsers?.length || 0}{" "}
-              users
-            </span>
-            <div className="flex gap-4">
-              <span className={cn("flex items-center gap-1", colors.textMuted)}>
-                <Music className="w-3 h-3" />
-                {allUsers?.filter((u) => u.isMusician).length} musicians
-              </span>
-              <span className={cn("flex items-center gap-1", colors.textMuted)}>
-                <Briefcase className="w-3 h-3" />
-                {allUsers?.filter((u) => u.isClient).length} clients
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // Main ChatListModal Component
@@ -525,22 +101,25 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
 
   const handleChatClick = async (chatId: string) => {
     try {
-      setTransitionStage("minimizing");
       setOpeningChatId(chatId);
 
-      // First, minimize the modal
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Show immediate visual feedback on the clicked chat
+      const chatElement = document.querySelector(`[data-chat-id="${chatId}"]`);
+      if (chatElement) {
+        chatElement.classList.add("bg-orange-50", "border-orange-200");
+      }
 
-      // Then open chat
+      // Start smooth transition
+      setTransitionStage("minimizing");
+
+      // Open chat immediately
       openChat(chatId);
-      setTransitionStage("opening");
 
-      // Close after chat should be visible
+      // Close modal with minimal delay for smooth animation
       setTimeout(() => {
-        onClose();
         setTransitionStage("idle");
         setOpeningChatId(null);
-      }, 500);
+      }, 100); // Just enough for the animation to be perceptible
     } catch (error) {
       console.error("Failed to open chat:", error);
       toast.error("Failed to open chat. Please try again.");
@@ -625,12 +204,10 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
         {/* Modal Container */}
         <div
           className={cn(
-            "relative w-full max-w-md h-[90vh] rounded-3xl shadow-2xl border flex flex-col transition-all duration-300",
+            "relative w-full max-w-md h-[90vh] rounded-3xl shadow-2xl border flex flex-col transition-all duration-200", // Shorter duration
             colors.card,
             colors.cardBorder,
-            "backdrop-blur-sm bg-white/95",
-            transitionStage === "minimizing" && "scale-95 opacity-70",
-            transitionStage === "opening" && "scale-90 opacity-0"
+            "backdrop-blur-sm bg-white/95"
           )}
         >
           {/* Header */}
@@ -688,7 +265,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
           </div>
 
           {/* Search Bar */}
-          <div className="px-6 pb-4">
+          <div className="px-6 pb-4 flex-col gap-8 ">
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -702,6 +279,13 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 )}
               />
             </div>
+            {searchQuery && (
+              <span
+                className={colors.textMuted + colors.borderMuted + "!my-[15px]"}
+              >
+                Search for {`"${searchQuery}"`}
+              </span>
+            )}
           </div>
 
           {/* Unread Messages Banner */}
@@ -1065,6 +649,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
         isOpen={showUserSearch}
         onClose={() => setShowUserSearch(false)}
         onUserSelect={handleUserSelect}
+        variant="modal" // Explicitly set to modal
       />
     </>
   );
