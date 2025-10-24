@@ -48,8 +48,8 @@ export default function UserSearchPanel({
     useUserCurrentChat();
 
   const { user } = useCurrentUser();
-  const users = useQuery(api.controllers.user.getAllUsers);
-  const allUsers = users?.filter((u) => u?._id !== user?._id);
+
+  const allUsers = useAllUsersWithPresence();
 
   // Transition states for modal variant
   const [isVisible, setIsVisible] = useState(false);

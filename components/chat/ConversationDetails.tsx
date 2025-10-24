@@ -34,6 +34,7 @@ import { UserListItem } from "./UserListItem";
 import { useChatToasts } from "@/hooks/useToasts";
 import { formatLastMessage } from "@/utils";
 import { Id } from "@/convex/_generated/dataModel";
+import { useAllUsersWithPresence } from "@/hooks/useAllUsers";
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
@@ -72,8 +73,7 @@ export default function ConversationList({
 
   const { user: currentUser } = useCurrentUser();
   // In your ConversationList component
-  const users = useQuery(api.presence.getAllUsersWithPresence); // New query
-  const allUsers = users?.filter((u) => u?._id !== currentUser?._id);
+  const allUsers = useAllUsersWithPresence();
 
   const { showChatCreationPromise } = useChatToasts();
   // Debounce search query

@@ -26,6 +26,7 @@ import { useChat } from "@/app/context/ChatContext";
 import GigLoader from "../(main)/GigLoader";
 import UserSearchPanel from "./UserSearchPanel";
 import { useChatToasts } from "@/hooks/useToasts";
+import { useAllUsersWithPresence } from "@/hooks/useAllUsers";
 
 interface ChatListModalProps {
   isOpen: boolean;
@@ -111,41 +112,32 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
   const handleStartNewChat = () => {
     setShowUserSearch(true);
   };
-
-  const handleUserSelect = async (userId: string, userName: string) => {
+  const allUsers = useAllUsersWithPresence();
+  // In ChatListModal.tsx - FIXED
+  const handleUserSelect = async (userId: string) => {
+    // ✅ userId, not chatId
     try {
       setIsCreatingChat(true);
 
-      // Option 1: Using promise-based toast (recommended)
-      const result = await showChatCreationPromise(
-        smartCreateOrOpenChat(userId),
+      // Get user info for toast
+      const user = allUsers?.find((u) => u._id === userId); // ✅ Use userId to find user
+      const userName = user ? `${user.firstname} ${user.lastname}` : "User";
+
+      // ✅ Pass userId (not chatId) to smartCreateOrOpenChat
+      const chatId = await showChatCreationPromise(
+        smartCreateOrOpenChat(userId), // ✅ This should take userId
         userName
       );
 
-      if (result) {
-        setNewlyCreatedChatId(result);
+      if (chatId) {
+        setNewlyCreatedChatId(chatId);
         setShowUserSearch(false);
-
-        // Auto-open the newly created chat after a brief delay
         setTimeout(() => {
-          handleChatClick(result);
+          handleChatClick(chatId); // ✅ Use the returned chatId here
         }, 500);
       }
-
-      // Option 2: Manual loading state (alternative)
-      // const loadingToast = showChatStartLoading();
-      // const result = await smartCreateOrOpenChat(userId);
-      // toast.dismiss(loadingToast);
-
-      // if (result) {
-      //   showChatStarted(userName);
-      //   setNewlyCreatedChatId(result);
-      //   setShowUserSearch(false);
-      //   setTimeout(() => handleChatClick(result), 500);
-      // }
     } catch (error) {
       console.error("Failed to create chat:", error);
-      // Error is automatically handled by the promise toast
     } finally {
       setIsCreatingChat(false);
     }

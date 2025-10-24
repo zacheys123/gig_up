@@ -118,3 +118,10 @@ export function useAllUsers() {
     nearbyMusiciansCount: nearbyMusicians.length,
   };
 }
+
+export function useAllUsersWithPresence() {
+  const { user: currentUser } = useCurrentUser();
+  const users = useQuery(api.presence.getAllUsersWithPresence);
+
+  return users?.filter((u) => u?._id !== currentUser?._id);
+}
