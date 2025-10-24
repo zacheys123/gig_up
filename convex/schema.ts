@@ -80,6 +80,13 @@ export default defineSchema({
   })
     .index("by_userId_chatId", ["userId", "chatId"])
     .index("by_chatId", ["chatId"]),
+  userPresence: defineTable({
+    userId: v.id("users"),
+    lastSeen: v.number(),
+    isOnline: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_lastSeen", ["lastSeen"]),
   activeChatSessions: defineTable({
     userId: v.id("users"), // User who has the chat open
     chatId: v.id("chats"), // Chat that is currently open

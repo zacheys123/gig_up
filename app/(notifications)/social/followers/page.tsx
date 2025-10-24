@@ -51,23 +51,6 @@ export default function FollowersPage() {
   const { colors } = useThemeColors();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { enableMobileModal, disableMobileModal, mobileModal } = useChat();
-
-  // Debug: Add console log to see if modals are enabled
-  useEffect(() => {
-    console.log("📱 FollowersPage: Mobile modals enabled?", mobileModal);
-  }, [mobileModal]);
-
-  // Enable mobile modals for this page
-  useEffect(() => {
-    console.log("🔧 FollowersPage: Enabling mobile modals");
-    enableMobileModal();
-
-    return () => {
-      console.log("🧹 FollowersPage: Disabling mobile modals (cleanup)");
-      disableMobileModal();
-    };
-  }, [enableMobileModal, disableMobileModal]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "musicians" | "clients">(

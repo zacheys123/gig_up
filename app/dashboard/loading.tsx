@@ -1,3 +1,4 @@
+"use client";
 import GigLoader from "@/components/(main)/GigLoader";
 import React from "react";
 

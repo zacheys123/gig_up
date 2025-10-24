@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogHeader, // Add this import
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
@@ -50,9 +51,12 @@ export const TrialExpiredModal = () => {
               "border"
             )}
           >
-            <DialogTitle className={cn("text-2xl font-bold", colors.text)}>
-              Free Trial Ended 🎉
-            </DialogTitle>
+            {/* Add DialogHeader wrapper */}
+            <DialogHeader>
+              <DialogTitle className={cn("text-2xl font-bold", colors.text)}>
+                Free Trial Ended 🎉
+              </DialogTitle>
+            </DialogHeader>
 
             <DialogDescription className={cn("text-base", colors.textMuted)}>
               Your 1-month free trial has ended.

@@ -339,3 +339,41 @@ export const getMissingFields = (
 
   return missing;
 };
+// utils/formatLastMessage.ts
+export function formatLastMessage(
+  lastMessage: string,
+  currentUserId: string,
+  senderId?: string
+): string {
+  if (!lastMessage) return "No messages yet";
+
+  // Truncate long messages
+  const truncated =
+    lastMessage.length > 50
+      ? lastMessage.substring(0, 50) + "..."
+      : lastMessage;
+
+  // Add "You: " prefix for user's own messages
+  if (senderId === currentUserId) {
+    return `You: ${truncated}`;
+  }
+
+  return truncated;
+}
+
+// For media messages
+export function getLastMessagePreview(
+  messageType: string,
+  content?: string
+): string {
+  switch (messageType) {
+    case "image":
+      return "📷 Image";
+    case "file":
+      return "📎 File";
+    case "audio":
+      return "🎤 Voice message";
+    default:
+      return content || "No messages yet";
+  }
+}

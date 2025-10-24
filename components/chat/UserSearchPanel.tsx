@@ -20,13 +20,15 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { useUserCurrentChat } from "@/hooks/useCurrentUserChat";
+import { UserListItem } from "./UserListItem";
+import { toast } from "sonner";
+import { useChatToasts } from "@/hooks/useToasts";
 
 interface UserSearchPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onUserSelect: (userId: string) => void;
+  onUserSelect: (userId: string, userName: string) => void;
   variant?: "modal" | "drawer";
 }
 
@@ -95,22 +97,28 @@ export default function UserSearchPanel({
 
     return matchesSearch && matchesCategory;
   });
-
+  const { showChatCreationPromise } = useChatToasts();
   const handleStartChat = async (userId: string) => {
     try {
       console.log("Starting chat with user:", userId);
-      const result = await smartCreateOrOpenChat(userId);
-      console.log("Chat creation result:", result);
+
+      // Get user info for the toast message
+      const user = allUsers?.find((u) => u._id === userId);
+      const userName = user ? `${user.firstname} ${user.lastname}` : "User";
+
+      // Use promise-based toast
+      const result = await showChatCreationPromise(
+        smartCreateOrOpenChat(userId),
+        userName
+      );
 
       if (result) {
-        toast.success("Chat started successfully!");
-        onUserSelect(userId);
-      } else {
-        toast.error("Failed to create chat. Please try again.");
+        onUserSelect(result, userName); // Pass the chat ID, not user ID
       }
+      // No need for manual success toast - it's handled by showChatCreationPromise
     } catch (error) {
       console.error("Failed to create chat:", error);
-      toast.error("Failed to start chat. Please try again.");
+      // Error is automatically handled by the promise toast
     }
   };
 
@@ -356,159 +364,12 @@ export default function UserSearchPanel({
             // User results with staggered animation
             <div className="space-y-3">
               {filteredUsers?.map((user, index) => (
-                <div
+                <UserListItem
                   key={user._id}
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 animate-in slide-in-from-bottom-4",
-                    colors.border,
-                    "hover:shadow-lg hover:border-orange-200 hover:scale-[1.02]"
-                  )}
-                  style={{
-                    animationDelay: `${Math.min(index * 50, 300)}ms`,
-                    animationDuration: "400ms",
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Avatar with tier badge */}
-                    <div className="relative">
-                      <Avatar className="w-14 h-14 rounded-2xl border-2 border-orange-200 transition-all duration-300 group-hover:scale-110">
-                        <AvatarImage src={user.picture} />
-                        <AvatarFallback
-                          className={cn(
-                            "text-base font-semibold rounded-2xl",
-                            "bg-gradient-to-br from-orange-500/10 to-red-500/10"
-                          )}
-                        >
-                          {user.firstname?.[0]}
-                          {user.lastname?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.tier !== "free" && (
-                        <div className="absolute -top-1 -right-1 transition-transform duration-300 group-hover:scale-110">
-                          <div
-                            className={cn(
-                              "w-6 h-6 rounded-full border-2 border-white flex items-center justify-center",
-                              user.tier === "pro" && "bg-orange-500",
-                              user.tier === "premium" && "bg-purple-500",
-                              user.tier === "elite" && "bg-yellow-500"
-                            )}
-                          >
-                            <Crown className="w-3 h-3 text-white" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* User info */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h4
-                          className={cn("font-semibold text-lg", colors.text)}
-                        >
-                          {user.firstname} {user.lastname}
-                        </h4>
-                        {user.verified && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-blue-500 text-white text-xs transition-all duration-200 hover:scale-105"
-                          >
-                            Verified
-                          </Badge>
-                        )}
-                      </div>
-                      <p className={cn("text-sm", colors.textMuted)}>
-                        @{user.username}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {/* Role badge */}
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-xs transition-all duration-200 hover:scale-105",
-                            user.isMusician
-                              ? "border-purple-200 text-purple-700"
-                              : "border-blue-200 text-blue-700"
-                          )}
-                        >
-                          {user.isMusician ? (
-                            <>
-                              <Music className="w-3 h-3 mr-1" />
-                              Musician
-                            </>
-                          ) : (
-                            <>
-                              <Briefcase className="w-3 h-3 mr-1" />
-                              Client
-                            </>
-                          )}
-                        </Badge>
-
-                        {/* Tier badge */}
-                        {user.tier !== "free" && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs transition-all duration-200 hover:scale-105",
-                              user.tier === "pro" &&
-                                "border-orange-200 text-orange-700",
-                              user.tier === "premium" &&
-                                "border-purple-200 text-purple-700",
-                              user.tier === "elite" &&
-                                "border-yellow-200 text-yellow-700"
-                            )}
-                          >
-                            <Crown className="w-3 h-3 mr-1" />
-                            {user.tier.charAt(0).toUpperCase() +
-                              user.tier.slice(1)}
-                          </Badge>
-                        )}
-
-                        {/* Location */}
-                        {user.city && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-gray-200 text-gray-700 transition-all duration-200 hover:scale-105"
-                          >
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {user.city}
-                          </Badge>
-                        )}
-                      </div>
-                      {/* Specialization */}
-                      {user.instrument && (
-                        <p className={cn("text-sm", colors.textMuted)}>
-                          {user.instrument}
-                        </p>
-                      )}
-                      {/* Role Type */}
-                      {user.roleType && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs border-gray-200 text-gray-700 transition-all duration-200 hover:scale-105"
-                        >
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {user.roleType}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action button */}
-                  <Button
-                    onClick={() => handleStartChat(user._id)}
-                    disabled={isCreatingChat}
-                    className={cn(
-                      "rounded-xl transition-all duration-300",
-                      colors.primaryBg,
-                      colors.primaryBgHover,
-                      "text-white",
-                      "hover:scale-105 active:scale-95",
-                      "disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                    )}
-                  >
-                    {isCreatingChat ? "Starting..." : "Message"}
-                  </Button>
-                </div>
+                  user={user}
+                  onStartChat={handleStartChat}
+                  isCreatingChat={isCreatingChat}
+                />
               ))}
             </div>
           )}

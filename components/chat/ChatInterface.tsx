@@ -26,6 +26,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { OnlineBadge } from "./OnlineBadge";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useChatMessages } from "@/hooks/useChatMessages";
+import { useChatToasts } from "@/hooks/useToasts";
 
 interface ChatInterfaceProps {
   chatId: string;
@@ -38,10 +40,19 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   const { colors } = useThemeColors();
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const typedUser = chatId as Id<"chats">;
+  // Use the new hook
+  const { sendMessage } = useChatMessages(chatId as Id<"chats">);
+  const {
+    showTypingStart,
+    dismissToast,
+    showMessageDelivered,
+    showMessageRead,
+  } = useChatToasts();
 
+  const typedUser = chatId as Id<"chats">;
   // Queries with loading states
   const chat = useQuery(api.controllers.chat.getChat, { chatId: typedUser });
   const messages = useQuery(api.controllers.chat.getMessages, {
@@ -53,10 +64,8 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     userId: currentUser?._id,
   });
 
-  // Mutations
-  const sendMessage = useMutation(api.controllers.chat.sendMessage);
   const markAsRead = useMutation(api.controllers.chat.markAsRead);
-  const updatePresence = useMutation(api.controllers.chat.updatePresence);
+  const updatePresence = useMutation(api.presence.updateUserPresence);
   const createActiveSession = useMutation(
     api.controllers.chat.createActiveChatSession
   );
@@ -151,18 +160,72 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     scrollToBottom();
   }, [messages]);
 
+  // Even cleaner version with useRef
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    let typingToast: string | number | null = null;
+
+    const handleTyping = () => {
+      if (isTyping && currentUser) {
+        typingToast = showTypingStart(chat?.displayName as string);
+      } else if (typingToast) {
+        dismissToast(typingToast);
+      }
+    };
+
+    // Clear any existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout
+    if (message.length > 0) {
+      setIsTyping(true);
+      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1000);
+    } else {
+      setIsTyping(false);
+    }
+
+    handleTyping();
+
+    return () => {
+      if (typingToast) dismissToast(typingToast);
+    };
+  }, [isTyping, chat?.displayName, showTypingStart, dismissToast, message]);
+
+  // Message status updates (when messages are delivered/read)
+  useEffect(() => {
+    // This would come from your real-time message status updates
+    // For now, we'll simulate it - in real app, this would come from your message status system
+    const lastMessage = messages?.[messages.length - 1];
+    if (lastMessage && lastMessage.senderId === currentUser?._id) {
+      // Simulate message delivered after 1 second
+      const deliveredTimer = setTimeout(() => {
+        showMessageDelivered();
+      }, 1000);
+
+      // Simulate message read after 3 seconds
+      const readTimer = setTimeout(() => {
+        showMessageRead();
+      }, 3000);
+
+      return () => {
+        clearTimeout(deliveredTimer);
+        clearTimeout(readTimer);
+      };
+    }
+  }, [messages, currentUser?._id, showMessageDelivered, showMessageRead]);
   const handleSendMessage = async () => {
-    if (!message.trim() || !currentUser || !typedUser || isSending) return;
+    if (!message.trim() || !currentUser || isSending) return;
 
     setIsSending(true);
     try {
-      await sendMessage({
-        chatId: typedUser,
-        content: message.trim(),
-        senderId: currentUser._id,
-      });
+      await sendMessage(message.trim(), currentUser._id);
       setMessage("");
+      setIsTyping(false); // Stop typing after sending
     } catch (error) {
+      // Error is already handled in the hook, just reset state
       console.error("Failed to send message:", error);
     } finally {
       setIsSending(false);

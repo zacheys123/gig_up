@@ -15,27 +15,15 @@ import {
   VideoIcon,
   Mail,
   Users,
-  Calendar,
-  Plus,
   Sun,
   Moon,
   Monitor,
-  Bell,
-  ArrowLeft,
-  Search as SearchIcon,
   Crown,
   Zap,
   Gem,
   Star,
-  CheckCircle,
   Lock,
   Sparkles,
-  X,
-  UserPlus,
-  Briefcase,
-  MapPin,
-  Pin,
-  CheckCheck,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -48,26 +36,14 @@ import { cn } from "@/lib/utils";
 import { GigUpAssistant } from "../ai/GigupAssistant";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import { Badge } from "@/components/ui/badge";
 import { useUserCurrentChat } from "@/hooks/useCurrentUserChat";
 import { useChat } from "@/app/context/ChatContext";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { toast } from "sonner";
-import UserSearchPanel from "../chat/UserSearchPanel";
 import ConversationList from "../chat/ConversationDetails";
-import MobileUserSearchPanel from "../chat/MobileUserSearchPanel";
 
 interface NavigationLink {
   label: string;
@@ -215,11 +191,10 @@ interface MobileSheetProps {
 
 export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
   const { userId } = useAuth();
-  const { isSignedIn, user: clerkUser } = useUser();
+  const { isSignedIn } = useUser();
   const { colors, theme } = useThemeColors();
-  const { setTheme } = useThemeToggle();
+  const { toggleDarkMode } = useThemeToggle();
   const pathname = usePathname();
-  const router = useRouter();
   const { user } = useCurrentUser();
   const { isInGracePeriod, isFirstMonthEnd } = useCheckTrial();
 
@@ -232,8 +207,6 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
   const [activeView, setActiveView] = useState<"main" | "conversations">(
     "main"
   );
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
-  const [showUserSearch, setShowUserSearch] = useState(false);
 
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -255,11 +228,6 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
 
   const handleMarkAllAsRead = () => {
     markAllAsRead();
-  };
-
-  const handleUserSelect = (userId: string) => {
-    setShowUserSearch(false);
-    setIsSheetOpen(false);
   };
 
   // Enhanced trial experience
@@ -318,27 +286,6 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
       setTimeout(() => setActiveView("main"), 300);
     }
   };
-
-  const themeOptions: ThemeOption[] = [
-    {
-      id: "light",
-      label: "Light",
-      icon: <Sun className="w-5 h-5" />,
-      description: "Bright and clean",
-    },
-    {
-      id: "dark",
-      label: "Dark",
-      icon: <Moon className="w-5 h-5" />,
-      description: "Easy on the eyes",
-    },
-    {
-      id: "system",
-      label: "System",
-      icon: <Monitor className="w-5 h-5" />,
-      description: "Match your device",
-    },
-  ];
 
   const userTier = user?.tier || "free";
   const currentTier = getTierInfo(userTier);
@@ -614,7 +561,6 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                     </div>
                   </div>
                   <button
-                    onClick={() => setIsThemeModalOpen(true)}
                     className={cn(
                       "p-2 rounded-xl transition-all duration-200",
                       "hover:bg-orange-100",
@@ -622,11 +568,11 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                     )}
                   >
                     {theme === "dark" ? (
-                      <Moon className="w-5 h-5" />
+                      <Sun className="w-5 h-5" onClick={toggleDarkMode} />
                     ) : theme === "light" ? (
-                      <Sun className="w-5 h-5" />
+                      <Moon className="w-5 h-5" onClick={toggleDarkMode} />
                     ) : (
-                      <Monitor className="w-5 h-5" />
+                      <Monitor className="w-5 h-5" onClick={toggleDarkMode} />
                     )}
                   </button>
                 </div>
@@ -640,78 +586,10 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
             <ConversationList
               onNavigateBack={handleBackToMain}
               onConversationSelect={handleSelectConversation}
-              setShowUserSearch={setShowUserSearch}
             />
           )}
-        </SheetContent>
+        </SheetContent>{" "}
       </Sheet>
-
-      <MobileUserSearchPanel
-        isOpen={showUserSearch}
-        onClose={() => setShowUserSearch(false)}
-        onUserSelect={handleUserSelect}
-      />
-
-      <Dialog open={isThemeModalOpen} onOpenChange={setIsThemeModalOpen}>
-        <DialogContent
-          className={cn(
-            "sm:max-w-md rounded-2xl border-0 shadow-2xl",
-            colors.card
-          )}
-        >
-          <DialogHeader>
-            <DialogTitle className={cn("text-xl font-bold", colors.text)}>
-              Choose Theme
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3 py-4">
-            {themeOptions.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => {
-                  setTheme(option.id as any);
-                  setIsThemeModalOpen(false);
-                }}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-xl border transition-all duration-200",
-                  "hover:border-orange-500 hover:bg-orange-50",
-                  theme === option.id
-                    ? "border-orange-500 bg-orange-50"
-                    : colors.border,
-                  "transform hover:scale-105"
-                )}
-              >
-                <div
-                  className={cn(
-                    "p-2 rounded-lg",
-                    theme === option.id
-                      ? "text-orange-600 bg-orange-100"
-                      : "bg-gray-100"
-                  )}
-                >
-                  {option.icon}
-                </div>
-                <div className="flex-1 text-left">
-                  <div
-                    className={cn(
-                      "font-semibold",
-                      theme === option.id ? "text-orange-600" : colors.text
-                    )}
-                  >
-                    {option.label}
-                  </div>
-                  <div className={cn("text-sm", colors.textMuted)}>
-                    {option.description}
-                  </div>
-                </div>
-                {theme === option.id && (
-                  <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                )}
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

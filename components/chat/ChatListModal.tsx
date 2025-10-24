@@ -4,44 +4,18 @@ import {
   X,
   Search,
   MessageCircle,
-  Plus,
   CheckCheck,
-  MoreHorizontal,
-  Video,
-  Phone,
   UserPlus,
-  Filter,
-  Archive,
-  Delete,
   Pin,
   CheckCircle2,
-  Crown,
-  Zap,
-  Users,
-  Music,
-  Briefcase,
-  MapPin,
-  Star,
-  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -51,6 +25,7 @@ import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useChat } from "@/app/context/ChatContext";
 import GigLoader from "../(main)/GigLoader";
 import UserSearchPanel from "./UserSearchPanel";
+import { useChatToasts } from "@/hooks/useToasts";
 
 interface ChatListModalProps {
   isOpen: boolean;
@@ -69,9 +44,13 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
   const [hoveredChat, setHoveredChat] = useState<string | null>(null);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const [openingChatId, setOpeningChatId] = useState<string | null>(null); // Track which chat is opening
+  const [openingChatId, setOpeningChatId] = useState<string | null>(null);
+  const [newlyCreatedChatId, setNewlyCreatedChatId] = useState<string | null>(
+    null
+  );
 
   const { byChat: unreadCounts, total: totalUnreadCount } = useUnreadCount();
+  const { showChatCreationPromise } = useChatToasts();
 
   // Close on escape key
   useEffect(() => {
@@ -119,7 +98,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
       setTimeout(() => {
         setTransitionStage("idle");
         setOpeningChatId(null);
-      }, 100); // Just enough for the animation to be perceptible
+        onClose(); // Close the modal after opening chat
+      }, 100);
     } catch (error) {
       console.error("Failed to open chat:", error);
       toast.error("Failed to open chat. Please try again.");
@@ -132,23 +112,40 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
     setShowUserSearch(true);
   };
 
-  const handleUserSelect = async (userId: string) => {
+  const handleUserSelect = async (userId: string, userName: string) => {
     try {
       setIsCreatingChat(true);
-      console.log("Creating chat with user:", userId);
-      const result = await smartCreateOrOpenChat(userId);
-      console.log("Chat creation result:", result);
+
+      // Option 1: Using promise-based toast (recommended)
+      const result = await showChatCreationPromise(
+        smartCreateOrOpenChat(userId),
+        userName
+      );
 
       if (result) {
-        toast.success("Chat started successfully!");
+        setNewlyCreatedChatId(result);
         setShowUserSearch(false);
-        // Don't close the modal immediately - let the user see the new chat in the list
-      } else {
-        toast.error("Failed to create chat. Please try again.");
+
+        // Auto-open the newly created chat after a brief delay
+        setTimeout(() => {
+          handleChatClick(result);
+        }, 500);
       }
+
+      // Option 2: Manual loading state (alternative)
+      // const loadingToast = showChatStartLoading();
+      // const result = await smartCreateOrOpenChat(userId);
+      // toast.dismiss(loadingToast);
+
+      // if (result) {
+      //   showChatStarted(userName);
+      //   setNewlyCreatedChatId(result);
+      //   setShowUserSearch(false);
+      //   setTimeout(() => handleChatClick(result), 500);
+      // }
     } catch (error) {
       console.error("Failed to create chat:", error);
-      toast.error("Failed to start chat. Please try again.");
+      // Error is automatically handled by the promise toast
     } finally {
       setIsCreatingChat(false);
     }
@@ -184,12 +181,26 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
     const aUnread = unreadCounts[a._id] || 0;
     const bUnread = unreadCounts[b._id] || 0;
 
+    // Show newly created chat at the top temporarily
+    if (a._id === newlyCreatedChatId) return -1;
+    if (b._id === newlyCreatedChatId) return 1;
+
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
     if (aUnread > 0 && bUnread === 0) return -1;
     if (aUnread === 0 && bUnread > 0) return 1;
     return (b.lastMessageAt || 0) - (a.lastMessageAt || 0);
   });
+
+  // Clear newly created chat highlight after 3 seconds
+  useEffect(() => {
+    if (newlyCreatedChatId) {
+      const timer = setTimeout(() => {
+        setNewlyCreatedChatId(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [newlyCreatedChatId]);
 
   if (!isOpen) return null;
 
@@ -201,10 +212,11 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
           className="absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-300"
           onClick={handleBackdropClick}
         />
+
         {/* Modal Container */}
         <div
           className={cn(
-            "relative w-full max-w-md h-[90vh] rounded-3xl shadow-2xl border flex flex-col transition-all duration-200", // Shorter duration
+            "relative w-full max-w-md h-[90vh] rounded-3xl shadow-2xl border flex flex-col transition-all duration-200",
             colors.card,
             colors.cardBorder,
             "backdrop-blur-sm bg-white/95"
@@ -228,6 +240,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 </h3>
                 <p className={cn("text-sm mt-0.5", colors.textMuted)}>
                   {sortedChats?.length || 0} conversations
+                  {newlyCreatedChatId && " • New chat created!"}
                 </p>
               </div>
             </div>
@@ -243,7 +256,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                   "rounded-2xl transition-all duration-300",
                   colors.hoverBg,
                   colors.primary,
-                  "disabled:opacity-50"
+                  "disabled:opacity-50",
+                  isCreatingChat && "animate-pulse"
                 )}
                 title="New conversation"
               >
@@ -265,7 +279,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
           </div>
 
           {/* Search Bar */}
-          <div className="px-6 pb-4 flex-col gap-8 ">
+          <div className="px-6 pb-4 flex-col gap-8">
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -436,7 +450,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                       colors.primaryBgHover,
                       "text-white",
                       "font-semibold shadow-lg hover:shadow-xl",
-                      "disabled:opacity-50"
+                      "disabled:opacity-50",
+                      isCreatingChat && "animate-pulse"
                     )}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -447,7 +462,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                 )}
               </div>
             ) : (
-              // Chat list with enhanced features from MobileSheet
+              // Chat list with enhanced features
               <div className="space-y-2">
                 {sortedChats?.map((chat) => {
                   const otherUser = chat.otherParticipants?.[0];
@@ -459,16 +474,20 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                     ? isUserOnline(otherUser._id)
                     : false;
                   const isOpening = openingChatId === chat._id;
+                  const isNewlyCreated = newlyCreatedChatId === chat._id;
 
                   return (
                     <div
                       key={chat._id}
+                      data-chat-id={chat._id}
                       className={cn(
                         "group relative rounded-2xl transition-all duration-300",
                         colors.hoverBg,
                         colors.border,
                         hasUnread && colors.warningBg,
-                        isOpening && "bg-orange-50 border-orange-200"
+                        isOpening && "bg-orange-50 border-orange-200",
+                        isNewlyCreated &&
+                          "bg-green-50 border-green-200 animate-pulse"
                       )}
                       onMouseEnter={() => setHoveredChat(chat._id)}
                       onMouseLeave={() => setHoveredChat(null)}
@@ -483,6 +502,13 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                               "fill-current"
                             )}
                           />
+                        </div>
+                      )}
+
+                      {/* New Chat Indicator */}
+                      {isNewlyCreated && (
+                        <div className="absolute right-3 top-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-ping" />
                         </div>
                       )}
 
@@ -529,10 +555,12 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                               <h4
                                 className={cn(
                                   "font-semibold text-sm truncate",
-                                  colors.text
+                                  colors.text,
+                                  isNewlyCreated && "text-green-700"
                                 )}
                               >
                                 {chat.displayName}
+                                {isNewlyCreated && " 🎉"}
                               </h4>
                               {isVerified && (
                                 <CheckCircle2 className="w-3 h-3 text-blue-500 fill-blue-500" />
@@ -544,7 +572,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                                   "text-xs whitespace-nowrap",
                                   hasUnread
                                     ? colors.warningText
-                                    : colors.textMuted
+                                    : colors.textMuted,
+                                  isNewlyCreated && "text-green-600"
                                 )}
                               >
                                 {formatTime(chat.lastMessageAt)}
@@ -570,17 +599,21 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
                                       "w-3 h-3 flex-shrink-0",
                                       hasUnread
                                         ? colors.warningText
-                                        : colors.textMuted
+                                        : colors.textMuted,
+                                      isNewlyCreated && "text-green-600"
                                     )}
                                   />
                                 )}
                                 <p
                                   className={cn(
                                     "text-sm truncate",
-                                    hasUnread ? colors.text : colors.textMuted
+                                    hasUnread ? colors.text : colors.textMuted,
+                                    isNewlyCreated && "text-green-700"
                                   )}
                                 >
-                                  {chat.lastMessage || "Say hello! 👋"}
+                                  {isNewlyCreated
+                                    ? "Say hello! 👋"
+                                    : chat.lastMessage || "Say hello! 👋"}
                                 </p>
                               </>
                             )}
@@ -636,7 +669,8 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
               </Button>
             </div>
           </div>
-        </div>{" "}
+        </div>
+
         {transitionStage !== "idle" && (
           <div className="absolute inset-0 flex items-center justify-center">
             <GigLoader size="md" />
@@ -649,7 +683,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
         isOpen={showUserSearch}
         onClose={() => setShowUserSearch(false)}
         onUserSelect={handleUserSelect}
-        variant="modal" // Explicitly set to modal
+        variant="modal"
       />
     </>
   );

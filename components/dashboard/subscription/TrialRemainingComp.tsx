@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogHeader, // Add this import
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
@@ -87,11 +88,14 @@ export const TrialRemainingModal = () => {
               "border"
             )}
           >
-            <DialogTitle className={cn("text-2xl font-bold", colors.text)}>
-              {trialRemainingDays <= 3
-                ? "Trial Ending Soon! ⏰"
-                : "Trial Active ✨"}
-            </DialogTitle>
+            {/* Add DialogHeader wrapper */}
+            <DialogHeader>
+              <DialogTitle className={cn("text-2xl font-bold", colors.text)}>
+                {trialRemainingDays <= 3
+                  ? "Trial Ending Soon! ⏰"
+                  : "Trial Active ✨"}
+              </DialogTitle>
+            </DialogHeader>
 
             <DialogDescription className={cn("text-base", colors.textMuted)}>
               You have{" "}

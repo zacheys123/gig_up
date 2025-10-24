@@ -1,6 +1,5 @@
 "use client";
 import { UserButton } from "@clerk/nextjs";
-import { Toaster } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -59,22 +58,6 @@ export default function SettingsLayout({
           }}
         />
       </div>
-
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          classNames: {
-            toast: "bg-card border-border text-card-foreground",
-            title: "text-card-foreground",
-            description: "text-muted-foreground",
-            actionButton:
-              "bg-primary text-primary-foreground hover:bg-primary/90",
-            cancelButton: "bg-muted text-muted-foreground hover:bg-muted/80",
-            closeButton: "bg-muted text-muted-foreground hover:bg-muted/80",
-          },
-        }}
-      />
 
       {/* <NotificationHandler /> */}
       {children}

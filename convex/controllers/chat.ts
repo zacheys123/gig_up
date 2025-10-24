@@ -210,110 +210,62 @@ export const getMessages = query({
 // In convex/controllers/chat.ts - getUserChats
 
 // convex/controllers/chat.ts - COMPLETELY REWRITTEN getUserChats
+// convex/controllers/chat.ts - Enhanced getUserChats
 export const getUserChats = query({
   args: {
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    if (!args.userId) {
-      console.log("❌ No user ID provided to getUserChats");
-      return [];
-    }
+    if (!args.userId) return [];
 
-    console.log("🔄 getUserChats - Fresh execution for user:", args.userId);
+    const allChats = await ctx.db.query("chats").collect();
+    const userChats = allChats.filter(
+      (chat) =>
+        chat.participantIds && chat.participantIds.includes(args.userId!)
+    );
 
-    try {
-      // Get ALL chats and filter manually (bypass any index issues)
-      const allChats = await ctx.db.query("chats").collect();
+    const chatsWithDetails = await Promise.all(
+      userChats.map(async (chat) => {
+        const participants = await Promise.all(
+          chat.participantIds.map((id) => ctx.db.get(id))
+        );
 
-      const userChats = allChats.filter(
-        (chat) =>
-          chat.participantIds && chat.participantIds.includes(args.userId!)
-      );
+        const validParticipants = participants.filter(Boolean);
+        const otherParticipants = validParticipants.filter(
+          (p) => p?._id !== args.userId
+        );
 
-      console.log("📊 getUserChats - Found chats:", userChats.length);
+        // Get the actual last message for more context
+        const lastMessages = await ctx.db
+          .query("messages")
+          .withIndex("by_chatId", (q) => q.eq("chatId", chat._id))
+          .order("desc")
+          .first();
 
-      // Process each chat with proper error handling
-      const chatsWithDetails = await Promise.all(
-        userChats.map(async (chat) => {
-          try {
-            // Get participant details
-            const participants = await Promise.all(
-              chat.participantIds.map((id) => ctx.db.get(id))
-            );
+        return {
+          ...chat,
+          participants: validParticipants,
+          displayName:
+            chat.type === "direct" && otherParticipants.length > 0
+              ? `${otherParticipants[0]?.firstname} ${otherParticipants[0]?.lastname}`.trim()
+              : chat.name || "Unknown User",
+          otherParticipants,
+          unreadCount: chat.unreadCounts?.[args.userId!] || 0,
+          lastMessageWithSender: lastMessages
+            ? {
+                content: lastMessages.content,
+                senderId: lastMessages.senderId,
+                messageType: lastMessages.messageType,
+                timestamp: lastMessages._creationTime,
+              }
+            : null,
+        };
+      })
+    );
 
-            const validParticipants = participants.filter(Boolean);
-            const otherParticipants = validParticipants.filter(
-              (p) => p?._id !== args.userId
-            );
-
-            // Determine chat display name
-            let displayName = "Unknown User";
-            if (chat.type === "direct" && otherParticipants.length > 0) {
-              const otherUser = otherParticipants[0];
-              displayName =
-                `${otherUser?.firstname} ${otherUser?.lastname}`.trim() ||
-                otherUser?.username ||
-                "Unknown User";
-            } else if (chat.name) {
-              displayName = chat.name;
-            }
-
-            // ✅ CRITICAL FIX: Get the CORRECT unread count for this user
-            const unreadCount = chat.unreadCounts?.[args.userId!] || 0;
-
-            console.log(`💬 getUserChats - Chat ${chat._id}:`, {
-              displayName,
-              unreadCount,
-              allUnreadCounts: chat.unreadCounts,
-              currentUserId: args.userId,
-              participantIds: chat.participantIds,
-            });
-
-            return {
-              // Spread the original chat data FIRST
-              ...chat,
-              // Then add our computed fields
-              participants: validParticipants,
-              displayName,
-              otherParticipants,
-              unreadCount, // This should reflect chat.unreadCounts[userId]
-            };
-          } catch (error) {
-            console.error(`❌ Error processing chat ${chat._id}:`, error);
-            // Return basic data if participant lookup fails
-            return {
-              ...chat,
-              participants: [],
-              displayName: "Unknown User",
-              otherParticipants: [],
-              unreadCount: chat.unreadCounts?.[args.userId!] || 0,
-            };
-          }
-        })
-      );
-
-      // Sort by last message time
-      const sortedChats = chatsWithDetails.sort(
-        (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
-      );
-
-      console.log("🎉 getUserChats - Final result count:", sortedChats.length);
-      console.log(
-        "📦 getUserChats - Final chats:",
-        sortedChats.map((chat) => ({
-          id: chat._id,
-          displayName: chat.displayName,
-          unreadCount: chat.unreadCount,
-          allUnreadCounts: chat.unreadCounts,
-        }))
-      );
-
-      return sortedChats;
-    } catch (error) {
-      console.error("💥 Critical error in getUserChats:", error);
-      return [];
-    }
+    return chatsWithDetails.sort(
+      (a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0)
+    );
   },
 });
 
@@ -354,35 +306,6 @@ export const markAsRead = mutation({
 });
 
 // Update user presence in chat
-export const updatePresence = mutation({
-  args: {
-    userId: v.id("users"),
-    chatId: v.id("chats"),
-    isOnline: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("chatPresence")
-      .withIndex("by_userId_chatId", (q) =>
-        q.eq("userId", args.userId).eq("chatId", args.chatId)
-      )
-      .first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        lastSeen: Date.now(),
-        isOnline: args.isOnline,
-      });
-    } else {
-      await ctx.db.insert("chatPresence", {
-        userId: args.userId,
-        chatId: args.chatId,
-        lastSeen: Date.now(),
-        isOnline: args.isOnline,
-      });
-    }
-  },
-});
 
 // Get online status for chat participants
 export const getChatPresence = query({
@@ -595,4 +518,4 @@ export const updateActiveSession = mutation({
   },
 });
 
-// convex/debugChats.ts
+// Update user presence (call this when user performs any action)

@@ -29,6 +29,7 @@ import type * as models_notificationsModel from "../models/notificationsModel.js
 import type * as models_push from "../models/push.js";
 import type * as models_userModel from "../models/userModel.js";
 import type * as notificationsTypes from "../notificationsTypes.js";
+import type * as presence from "../presence.js";
 import type * as test from "../test.js";
 
 /**
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "models/push": typeof models_push;
   "models/userModel": typeof models_userModel;
   notificationsTypes: typeof notificationsTypes;
+  presence: typeof presence;
   test: typeof test;
 }>;
 export declare const api: FilterApi<

@@ -4,8 +4,6 @@ import MobileSheet from "@/components/pages/MobileSheet";
 
 import { UserButton } from "@clerk/nextjs";
 
-import { Toaster } from "sonner";
-
 export default function FriendLayout({
   chat,
   reviews,
@@ -17,12 +15,6 @@ export default function FriendLayout({
 }>) {
   return (
     <div className="bg-black h-full w-full overflow-scroll">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-        }}
-      />{" "}
       {/* Mobile Navigation (hidden on desktop) */}
       <MobileNavigation />
       {/* Desktop Navigation (hidden on mobile) */}
