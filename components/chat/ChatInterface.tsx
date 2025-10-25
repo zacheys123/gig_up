@@ -1,6 +1,6 @@
-// components/chat/ChatInterface.tsx
+// components/chat/ChatInterface.tsx - COMPLETE REWRITTEN VERSION
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -16,6 +16,8 @@ import {
   AlertCircle,
   RefreshCw,
   Search,
+  Check,
+  CheckCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,45 +29,136 @@ import { OnlineBadge } from "./OnlineBadge";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChatMessages } from "@/hooks/useChatMessages";
-import { useChatToasts } from "@/hooks/useToasts";
 
 interface ChatInterfaceProps {
   chatId: string;
-
   onBack?: () => void;
 }
+
+// Message Status Component - IMPROVED VERSION
+const MessageStatus = ({
+  message,
+  isOwn,
+  chat,
+}: {
+  message: any;
+  isOwn: boolean;
+  chat: any;
+}) => {
+  if (!isOwn) return null;
+
+  const getStatusInfo = () => {
+    const totalParticipants = chat?.participantIds?.length || 1;
+
+    // Count other participants (excluding sender)
+    const otherParticipantsCount = totalParticipants - 1;
+
+    // Count read/delivered for OTHER participants (excluding sender)
+    const readByOthers =
+      message.readBy?.filter((id: string) => id !== message.senderId)?.length ||
+      0;
+    const deliveredToOthers =
+      message.deliveredTo?.filter((id: string) => id !== message.senderId)
+        ?.length || 0;
+
+    console.log("Message Status Debug:", {
+      messageId: message._id,
+      totalParticipants,
+      otherParticipantsCount,
+      readByOthers,
+      deliveredToOthers,
+      readBy: message.readBy,
+      deliveredTo: message.deliveredTo,
+      status: message.status,
+    });
+
+    if (readByOthers === otherParticipantsCount && otherParticipantsCount > 0) {
+      return {
+        icon: <CheckCheck className="w-3 h-3 fill-blue-500 text-blue-500" />,
+        text: "Read",
+        color: "text-blue-500",
+      };
+    } else if (readByOthers > 0) {
+      return {
+        icon: <CheckCheck className="w-3 h-3 fill-blue-400 text-blue-400" />,
+        text: `Read by ${readByOthers}`,
+        color: "text-blue-400",
+      };
+    } else if (
+      deliveredToOthers === otherParticipantsCount &&
+      otherParticipantsCount > 0
+    ) {
+      return {
+        icon: <CheckCheck className="w-3 h-3 text-gray-500" />,
+        text: "Delivered",
+        color: "text-gray-500",
+      };
+    } else if (deliveredToOthers > 0) {
+      return {
+        icon: <CheckCheck className="w-3 h-3 text-gray-400" />,
+        text: `Delivered to ${deliveredToOthers}`,
+        color: "text-gray-400",
+      };
+    } else {
+      return {
+        icon: <Check className="w-3 h-3 text-gray-400" />,
+        text: "Sent",
+        color: "text-gray-400",
+      };
+    }
+  };
+
+  const status = getStatusInfo();
+
+  return (
+    <div className={cn("flex items-center gap-1 mt-1", status.color)}>
+      {status.icon}
+      <span className="text-xs">{status.text}</span>
+    </div>
+  );
+};
 
 export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   const { user: currentUser } = useCurrentUser();
   const { colors } = useThemeColors();
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Use the new hook
+  // Use the chat messages hook with proper typing
   const { sendMessage } = useChatMessages(chatId as Id<"chats">);
-  const {
-    showTypingStart,
-    dismissToast,
-    showMessageDelivered,
-    showMessageRead,
-  } = useChatToasts();
 
-  const typedUser = chatId as Id<"chats">;
-  // Queries with loading states
-  const chat = useQuery(api.controllers.chat.getChat, { chatId: typedUser });
+  // Use typed chatId consistently
+  const typedChatId = chatId as Id<"chats">;
+
+  // Queries
+  const chat = useQuery(api.controllers.chat.getChat, {
+    chatId: typedChatId,
+  });
   const messages = useQuery(api.controllers.chat.getMessages, {
-    chatId: typedUser,
+    chatId: typedChatId,
   });
-
-  // Get user's chats to show suggestions when no chat is selected
+  const typingUsers = useQuery(api.controllers.chat.getTypingUsers, {
+    chatId: typedChatId,
+  });
   const userChats = useQuery(api.controllers.chat.getUserChats, {
-    userId: currentUser?._id,
+    userId: currentUser?._id as Id<"users">,
   });
 
+  // Mutations - ALL INCLUDED
   const markAsRead = useMutation(api.controllers.chat.markAsRead);
-  const updatePresence = useMutation(api.presence.updateUserPresence);
+  const markMessageAsRead = useMutation(api.controllers.chat.markMessageAsRead);
+  const markAllMessagesAsRead = useMutation(
+    api.controllers.chat.markAllMessagesAsRead
+  );
+  const bulkMarkMessagesAsRead = useMutation(
+    api.controllers.chat.bulkMarkMessagesAsRead
+  );
+  const startTyping = useMutation(api.controllers.chat.startTyping);
+  const stopTyping = useMutation(api.controllers.chat.stopTyping);
+  const markMessageAsDelivered = useMutation(
+    api.controllers.chat.markMessageAsDelivered
+  );
   const createActiveSession = useMutation(
     api.controllers.chat.createActiveChatSession
   );
@@ -76,9 +169,17 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     api.controllers.chat.updateActiveSession
   );
 
+  // Refs for typing management
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Filter out current user from typing users
+  const otherUsersTyping =
+    typingUsers?.filter((user) => user?._id !== currentUser?._id) || [];
+
   // Active session management
   useEffect(() => {
-    if (!currentUser?._id || !chatId) return;
+    if (!currentUser?._id || !typedChatId) return;
 
     let intervalId: NodeJS.Timeout;
 
@@ -86,14 +187,15 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
       try {
         await createActiveSession({
           userId: currentUser._id,
-          chatId: chatId as any,
+          chatId: typedChatId,
         });
 
+        // Update session every 30 seconds to keep it active
         intervalId = setInterval(async () => {
           try {
             await updateActiveSession({
               userId: currentUser._id,
-              chatId: chatId as any,
+              chatId: typedChatId,
             });
           } catch (error) {
             console.error("Failed to update active session:", error);
@@ -112,120 +214,212 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
       }
       deleteActiveSession({
         userId: currentUser._id,
-        chatId: chatId as any,
+        chatId: typedChatId,
       }).catch(console.error);
     };
   }, [
     currentUser?._id,
-    chatId,
+    typedChatId,
     createActiveSession,
     deleteActiveSession,
     updateActiveSession,
   ]);
 
-  // In your ChatInterface component
-  // In your ChatInterface component - FIXED useEffect
+  // Mark chat as read when opened (chat-level unread count)
   useEffect(() => {
-    if (typedUser && currentUser && chat) {
-      console.log("🔔 Marking chat as read:", {
-        chatId: typedUser,
+    if (typedChatId && currentUser && chat) {
+      markAsRead({
+        chatId: typedChatId,
         userId: currentUser._id,
-        currentUnreadCounts: chat.unreadCounts,
-      });
-
-      markAsRead({ chatId: typedUser, userId: currentUser._id });
-
-      // We can't use ctx in frontend, but we can verify by re-querying
-      console.log("📊 Before markAsRead - Unread counts:", chat.unreadCounts);
+      }).catch(console.error);
     }
-  }, [typedUser, currentUser, markAsRead, chat]);
+  }, [typedChatId, currentUser, markAsRead, chat]);
 
-  // Add this to see if markAsRead is working
-  const updatedChat = useQuery(api.controllers.chat.getChat, {
-    chatId: typedUser,
-  });
+  // IMPROVED: Mark messages as read with debouncing and bulk operations
   useEffect(() => {
-    if (updatedChat) {
-      console.log(
-        "📊 After markAsRead - Updated unread counts:",
-        updatedChat.unreadCounts
-      );
+    if (!currentUser?._id || !messages || !chat) return;
+
+    // Clear any existing timeout
+    if (markReadTimeoutRef.current) {
+      clearTimeout(markReadTimeoutRef.current);
     }
-  }, [updatedChat]);
+
+    markReadTimeoutRef.current = setTimeout(async () => {
+      const unreadMessages = messages.filter(
+        (message) =>
+          message.senderId !== currentUser._id &&
+          !message.readBy.includes(currentUser._id)
+      );
+
+      if (unreadMessages.length === 0) return;
+
+      console.log(`📖 Found ${unreadMessages.length} unread messages`);
+
+      try {
+        // Use bulk operation for efficiency
+        if (unreadMessages.length > 5) {
+          console.log(
+            "🚀 Using bulk operation for",
+            unreadMessages.length,
+            "messages"
+          );
+          await bulkMarkMessagesAsRead({
+            messageIds: unreadMessages.map((m) => m._id),
+            userId: currentUser._id,
+          });
+        } else {
+          // Individual calls for small numbers
+          console.log(
+            "📝 Using individual calls for",
+            unreadMessages.length,
+            "messages"
+          );
+          const promises = unreadMessages.map((message) =>
+            markMessageAsRead({
+              messageId: message._id,
+              userId: currentUser._id,
+            }).catch((error) => {
+              console.error(
+                `Failed to mark message ${message._id} as read:`,
+                error
+              );
+              return null;
+            })
+          );
+          await Promise.all(promises);
+        }
+        console.log("✅ Successfully marked messages as read");
+      } catch (error) {
+        console.error("❌ Failed to mark messages as read:", error);
+      }
+    }, 500); // Debounce to avoid rapid fires
+
+    return () => {
+      if (markReadTimeoutRef.current) {
+        clearTimeout(markReadTimeoutRef.current);
+      }
+    };
+  }, [
+    messages,
+    currentUser?._id,
+    markMessageAsRead,
+    bulkMarkMessagesAsRead,
+    chat,
+  ]);
+
+  // IMPROVED: Track message delivery status
+  useEffect(() => {
+    if (!currentUser?._id || !messages) return;
+
+    // Mark messages as delivered when they appear in the chat
+    const markMessagesAsDelivered = async () => {
+      const messagesToMark = messages.filter(
+        (message) =>
+          message.senderId !== currentUser._id &&
+          !message.deliveredTo.includes(currentUser._id)
+      );
+
+      if (messagesToMark.length === 0) return;
+
+      console.log(`📬 Marking ${messagesToMark.length} messages as delivered`);
+
+      // Use Promise.all for efficiency
+      const deliveryPromises = messagesToMark.map((message) =>
+        markMessageAsDelivered({
+          messageId: message._id,
+          userId: currentUser._id,
+        }).catch((error) => {
+          console.error(`Failed to mark message as delivered:`, error);
+          return null;
+        })
+      );
+
+      await Promise.all(deliveryPromises);
+      console.log("✅ Successfully marked messages as delivered");
+    };
+
+    markMessagesAsDelivered();
+  }, [messages, currentUser?._id, markMessageAsDelivered]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, otherUsersTyping]);
 
-  // Even cleaner version with useRef
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Real-time typing management
+  const sendTypingStart = useCallback(async () => {
+    if (!currentUser?._id || !typedChatId) return;
 
+    try {
+      await startTyping({
+        chatId: typedChatId,
+        userId: currentUser._id,
+      });
+    } catch (error) {
+      console.error("Failed to send typing start:", error);
+    }
+  }, [currentUser?._id, typedChatId, startTyping]);
+
+  const sendTypingStop = useCallback(async () => {
+    if (!currentUser?._id || !typedChatId) return;
+
+    try {
+      await stopTyping({
+        chatId: typedChatId,
+        userId: currentUser._id,
+      });
+    } catch (error) {
+      console.error("Failed to send typing stop:", error);
+    }
+  }, [currentUser?._id, typedChatId, stopTyping]);
+
+  // Handle typing events
   useEffect(() => {
-    let typingToast: string | number | null = null;
-
-    const handleTyping = () => {
-      if (isTyping && currentUser) {
-        typingToast = showTypingStart(chat?.displayName as string);
-      } else if (typingToast) {
-        dismissToast(typingToast);
-      }
-    };
-
-    // Clear any existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set new timeout
     if (message.length > 0) {
-      setIsTyping(true);
-      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1000);
+      sendTypingStart();
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingStop();
+      }, 1000);
     } else {
-      setIsTyping(false);
+      sendTypingStop();
     }
-
-    handleTyping();
 
     return () => {
-      if (typingToast) dismissToast(typingToast);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
-  }, [isTyping, chat?.displayName, showTypingStart, dismissToast, message]);
+  }, [message, sendTypingStart, sendTypingStop]);
 
-  // Message status updates (when messages are delivered/read)
+  // Clean up typing indicator when component unmounts
   useEffect(() => {
-    // This would come from your real-time message status updates
-    // For now, we'll simulate it - in real app, this would come from your message status system
-    const lastMessage = messages?.[messages.length - 1];
-    if (lastMessage && lastMessage.senderId === currentUser?._id) {
-      // Simulate message delivered after 1 second
-      const deliveredTimer = setTimeout(() => {
-        showMessageDelivered();
-      }, 1000);
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (markReadTimeoutRef.current) {
+        clearTimeout(markReadTimeoutRef.current);
+      }
+      sendTypingStop();
+    };
+  }, [sendTypingStop]);
 
-      // Simulate message read after 3 seconds
-      const readTimer = setTimeout(() => {
-        showMessageRead();
-      }, 3000);
-
-      return () => {
-        clearTimeout(deliveredTimer);
-        clearTimeout(readTimer);
-      };
-    }
-  }, [messages, currentUser?._id, showMessageDelivered, showMessageRead]);
   const handleSendMessage = async () => {
     if (!message.trim() || !currentUser || isSending) return;
 
     setIsSending(true);
     try {
+      await sendTypingStop();
       await sendMessage(message.trim(), currentUser._id);
       setMessage("");
-      setIsTyping(false); // Stop typing after sending
     } catch (error) {
-      // Error is already handled in the hook, just reset state
       console.error("Failed to send message:", error);
     } finally {
       setIsSending(false);
@@ -237,6 +431,51 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Typing indicator component
+  const TypingIndicator = () => {
+    if (otherUsersTyping.length === 0) return null;
+
+    const typingUser = otherUsersTyping[0];
+    const typingText =
+      otherUsersTyping.length > 1
+        ? `${otherUsersTyping.length} people are typing...`
+        : `${typingUser?.firstname || "Someone"} is typing...`;
+
+    return (
+      <div className="flex gap-3 animate-in fade-in duration-300">
+        <Avatar className="w-8 h-8 flex-shrink-0">
+          <AvatarImage src={typingUser?.picture} />
+          <AvatarFallback className={cn("text-xs", colors.text)}>
+            {typingUser?.firstname?.[0]}
+            {typingUser?.lastname?.[0]}
+          </AvatarFallback>
+        </Avatar>
+        <div
+          className={cn(
+            "max-w-xs lg:max-w-md px-4 py-3 rounded-2xl",
+            colors.backgroundMuted,
+            colors.text
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+              <div
+                className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+            </div>
+            <span className="text-sm text-gray-600">{typingText}</span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // No chat selected state
@@ -288,10 +527,14 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   }
 
   // Chat loading state
-  if (chat === undefined || messages === undefined) {
+  if (
+    chat === undefined ||
+    messages === undefined ||
+    typingUsers === undefined
+  ) {
     return (
       <div className="flex flex-col h-full">
-        {/* Loading Header */}
+        {/* Header Skeleton */}
         <div
           className={cn(
             "flex items-center gap-3 p-4 border-b",
@@ -306,7 +549,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
           </div>
         </div>
 
-        {/* Loading Messages */}
+        {/* Messages Skeleton */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {[...Array(5)].map((_, i) => (
             <div
@@ -321,7 +564,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
           ))}
         </div>
 
-        {/* Loading Input */}
+        {/* Input Skeleton */}
         <div className={cn("border-t p-4", colors.border, colors.card)}>
           <div className="flex gap-2">
             <Skeleton className="h-10 w-10 rounded-full" />
@@ -378,7 +621,6 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     (p) => p?._id !== currentUser?._id
   );
 
-  // No messages state (but chat exists)
   const isEmptyChat = messages?.length === 0;
 
   return (
@@ -420,12 +662,32 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <OnlineBadge
-              userId={otherParticipant?._id as Id<"users">}
-              size="xs"
-              showText={true}
-              showLastActive={true}
-            />
+            {otherUsersTyping.length > 0 ? (
+              <div className="flex items-center gap-1">
+                <div className="flex space-x-1">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                  <div
+                    className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
+                  <div
+                    className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"
+                    style={{ animationDelay: "0.4s" }}
+                  ></div>
+                </div>
+                <span className={cn("text-xs font-medium", "text-green-600")}>
+                  typing...
+                </span>
+              </div>
+            ) : (
+              <OnlineBadge
+                userId={otherParticipant?._id as Id<"users">}
+                size="xs"
+                showText={true}
+                showLastActive={true}
+              />
+            )}
+
             {chat.type === "group" && (
               <span className={cn("text-xs", colors.textMuted)}>
                 {chat.participants?.length} members
@@ -434,7 +696,6 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
           </div>
         </div>
 
-        {/* Connection status indicator */}
         <div className="flex items-center gap-2">
           {isSending && (
             <div className="flex items-center gap-1">
@@ -487,7 +748,6 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
           </div>
         ) : (
           <>
-            {/* Message count indicator */}
             <div className="text-center">
               <Badge variant="outline" className={cn("text-xs", colors.border)}>
                 {messages.length} message{messages.length !== 1 ? "s" : ""}
@@ -504,6 +764,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
               return (
                 <div
                   key={msg._id}
+                  data-message-id={msg._id} // For potential intersection observer
                   className={`flex gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
                 >
                   {!isOwn && (
@@ -532,22 +793,37 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                       </p>
                     )}
                     <p className="text-sm break-words">{msg.content}</p>
-                    <p
-                      className={cn(
-                        `text-xs opacity-70 mt-1 text-right ${
-                          isOwn ? "text-blue-100" : colors.textMuted
-                        }`
+
+                    <div className="flex items-center justify-between mt-2">
+                      <p
+                        className={cn(
+                          `text-xs opacity-70 ${
+                            isOwn ? "text-blue-100" : colors.textMuted
+                          }`
+                        )}
+                      >
+                        {new Date(msg._creationTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+
+                      {/* Message status for own messages */}
+                      {isOwn && (
+                        <MessageStatus
+                          message={msg}
+                          isOwn={isOwn}
+                          chat={chat}
+                        />
                       )}
-                    >
-                      {new Date(msg._creationTime).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    </div>
                   </div>
                 </div>
               );
             })}
+
+            {/* Real-time Typing Indicator */}
+            <TypingIndicator />
           </>
         )}
         <div ref={messagesEndRef} />
@@ -586,7 +862,6 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
           </Button>
         </div>
 
-        {/* Character count */}
         {message.length > 0 && (
           <div className={cn("text-xs text-right mt-2", colors.textMuted)}>
             {message.length}/1000

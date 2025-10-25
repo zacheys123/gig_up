@@ -85,6 +85,7 @@ export const getOrCreateDirectChat = mutation({
 
 // Send a message
 // In convex/controllers/chat.ts - Add detailed logging to sendMessage
+// convex/controllers/chat.ts - Enhanced sendMessage
 export const sendMessage = mutation({
   args: {
     chatId: v.id("chats"),
@@ -129,22 +130,22 @@ export const sendMessage = mutation({
       throw new Error("Chat not found or user not participant");
     }
 
-    console.log("📊 Current unreadCounts:", chat.unreadCounts);
-    console.log("👥 Participant IDs:", chat.participantIds);
-
-    // Get sender details for notification
+    // Get sender details
     const sender = await ctx.db.get(senderId);
     if (!sender) throw new Error("Sender not found");
 
-    // Create message
+    // Create message with initial status
     const messageId = await ctx.db.insert("messages", {
       chatId,
       senderId,
       content,
       messageType,
-      attachments,
+      attachments: attachments || [],
       repliedTo,
-      readBy: [senderId], // Mark as read by sender
+      readBy: [senderId], // Mark as read by sender immediately
+      deliveredTo: [senderId], // ✅ ADD THIS - Mark as delivered to sender
+      status: "sent", // ✅ ADD THIS - Initial status
+      isDeleted: false, // ✅ ADD THIS - Default value
     });
 
     // Update chat last message
@@ -158,15 +159,9 @@ export const sendMessage = mutation({
       (id) => id !== senderId
     );
 
-    console.log("🎯 Other participants to update:", otherParticipants);
-
     const updates = otherParticipants.map(async (participantId) => {
       const currentCount = chat.unreadCounts?.[participantId] || 0;
       const newCount = currentCount + 1;
-
-      console.log(
-        `📈 Updating unread count for ${participantId}: ${currentCount} -> ${newCount}`
-      );
 
       await ctx.db.patch(chatId, {
         unreadCounts: {
@@ -178,11 +173,8 @@ export const sendMessage = mutation({
 
     await Promise.all(updates);
 
-    // Verify the update worked
-    const updatedChat = await ctx.db.get(chatId);
-    console.log("✅ Updated unreadCounts:", updatedChat?.unreadCounts);
-
-    // ... rest of your sendMessage code
+    // Return message ID for potential real-time delivery tracking
+    return messageId;
   },
 });
 
@@ -519,3 +511,279 @@ export const updateActiveSession = mutation({
 });
 
 // Update user presence (call this when user performs any action)
+
+// Start typing indicator
+export const startTyping = mutation({
+  args: {
+    chatId: v.id("chats"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { chatId, userId }) => {
+    const existing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_chat_user", (q) =>
+        q.eq("chatId", chatId).eq("userId", userId)
+      )
+      .first();
+
+    const now = Date.now();
+
+    if (existing) {
+      // Update existing typing indicator
+      await ctx.db.patch(existing._id, {
+        isTyping: true,
+        lastUpdated: now,
+      });
+    } else {
+      // Create new typing indicator
+      await ctx.db.insert("typingIndicators", {
+        chatId,
+        userId,
+        isTyping: true,
+        lastUpdated: now,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+// Stop typing indicator
+export const stopTyping = mutation({
+  args: {
+    chatId: v.id("chats"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { chatId, userId }) => {
+    const existing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_chat_user", (q) =>
+        q.eq("chatId", chatId).eq("userId", userId)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        isTyping: false,
+        lastUpdated: Date.now(),
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+// Clean up expired typing indicators (older than 3 seconds)
+export const cleanupTypingIndicators = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const typingIndicators = await ctx.db.query("typingIndicators").collect();
+
+    const now = Date.now();
+    const expired = typingIndicators.filter(
+      (indicator) => now - indicator.lastUpdated > 3000
+    );
+
+    for (const indicator of expired) {
+      await ctx.db.delete(indicator._id);
+    }
+
+    return { cleaned: expired.length };
+  },
+});
+
+// Get active typing users for a chat
+export const getTypingUsers = query({
+  args: {
+    chatId: v.id("chats"),
+  },
+  handler: async (ctx, { chatId }) => {
+    const now = Date.now();
+    const typingIndicators = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_chat", (q) => q.eq("chatId", chatId))
+      .collect();
+
+    // Filter active typing indicators (updated in last 3 seconds and isTyping: true)
+    const activeTyping = typingIndicators.filter(
+      (indicator) => indicator.isTyping && now - indicator.lastUpdated < 3000
+    );
+
+    // Get user details for active typers
+    const typingUsers = await Promise.all(
+      activeTyping.map(async (indicator) => {
+        const user = await ctx.db.get(indicator.userId);
+        return user;
+      })
+    );
+
+    return typingUsers.filter(Boolean);
+  },
+});
+
+// convex/controllers/chat.ts - Add message status mutations
+// convex/controllers/chat.ts - FIXED markMessageAsDelivered
+export const markMessageAsDelivered = mutation({
+  args: {
+    messageId: v.id("messages"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { messageId, userId }) => {
+    const message = await ctx.db.get(messageId);
+    if (!message) throw new Error("Message not found");
+
+    // Add user to deliveredTo array if not already there
+    if (!message.deliveredTo.includes(userId)) {
+      const updatedDeliveredTo = [...message.deliveredTo, userId];
+
+      await ctx.db.patch(messageId, {
+        deliveredTo: updatedDeliveredTo,
+      });
+
+      // Update status to "delivered" if all participants have received it
+      const chat = await ctx.db.get(message.chatId);
+      if (chat) {
+        const allParticipantsDelivered = chat.participantIds.every(
+          (id) => updatedDeliveredTo.includes(id) // Use the UPDATED array
+        );
+
+        if (allParticipantsDelivered && message.status === "sent") {
+          await ctx.db.patch(messageId, {
+            status: "delivered",
+          });
+        }
+      }
+    }
+
+    return { success: true };
+  },
+});
+
+// Mark message as read by a user
+// convex/controllers/chat.ts - FIXED markMessageAsRead
+export const markMessageAsRead = mutation({
+  args: {
+    messageId: v.id("messages"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { messageId, userId }) => {
+    const message = await ctx.db.get(messageId);
+    if (!message) throw new Error("Message not found");
+
+    // Add user to readBy array if not already there
+    if (!message.readBy.includes(userId)) {
+      const updatedReadBy = [...message.readBy, userId];
+
+      await ctx.db.patch(messageId, {
+        readBy: updatedReadBy,
+      });
+
+      // Update status to "read" if all participants have read it
+      const chat = await ctx.db.get(message.chatId);
+      if (chat) {
+        const allParticipantsRead = chat.participantIds.every(
+          (id) => updatedReadBy.includes(id) // Use the UPDATED array
+        );
+
+        if (allParticipantsRead) {
+          await ctx.db.patch(messageId, {
+            status: "read",
+          });
+        }
+      }
+
+      // Update chat unread count
+      const currentCount = chat?.unreadCounts?.[userId] || 0;
+      if (currentCount > 0) {
+        await ctx.db.patch(message.chatId, {
+          unreadCounts: {
+            ...chat?.unreadCounts,
+            [userId]: currentCount - 1,
+          },
+        });
+      }
+    }
+
+    return { success: true };
+  },
+});
+
+// Mark all messages in chat as read
+export const markAllMessagesAsRead = mutation({
+  args: {
+    chatId: v.id("chats"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { chatId, userId }) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_chatId", (q) => q.eq("chatId", chatId))
+      .collect();
+
+    const updatePromises = messages.map(async (message) => {
+      if (!message.readBy.includes(userId)) {
+        await ctx.db.patch(message._id, {
+          readBy: [...message.readBy, userId],
+          status: message.status === "delivered" ? "read" : message.status,
+        });
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    // Reset unread count for this user
+    const chat = await ctx.db.get(chatId);
+    if (chat) {
+      await ctx.db.patch(chatId, {
+        unreadCounts: {
+          ...chat.unreadCounts,
+          [userId]: 0,
+        },
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+// convex/controllers/chat.ts - Add this mutation
+export const bulkMarkMessagesAsRead = mutation({
+  args: {
+    messageIds: v.array(v.id("messages")),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { messageIds, userId }) => {
+    console.log(
+      `📚 Bulk marking ${messageIds.length} messages as read for user:`,
+      userId
+    );
+
+    const updates = messageIds.map(async (messageId) => {
+      const message = await ctx.db.get(messageId);
+      if (message && !message.readBy.includes(userId)) {
+        const updatedReadBy = [...message.readBy, userId];
+
+        await ctx.db.patch(messageId, {
+          readBy: updatedReadBy,
+        });
+
+        // Update status to "read" if all participants have read it
+        const chat = await ctx.db.get(message.chatId);
+        if (chat) {
+          const allParticipantsRead = chat.participantIds.every((id) =>
+            updatedReadBy.includes(id)
+          );
+
+          if (allParticipantsRead) {
+            await ctx.db.patch(messageId, {
+              status: "read",
+            });
+          }
+        }
+      }
+    });
+
+    await Promise.all(updates);
+    return { success: true, count: messageIds.length };
+  },
+});

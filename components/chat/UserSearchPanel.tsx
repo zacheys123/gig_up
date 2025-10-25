@@ -48,8 +48,6 @@ export default function UserSearchPanel({
   const { smartCreateOrOpenChat, isLoading: isCreatingChat } =
     useUserCurrentChat();
 
-  const { user } = useCurrentUser();
-
   const allUsers = useAllUsersWithPresence();
 
   // Transition states for modal variant
@@ -114,7 +112,7 @@ export default function UserSearchPanel({
       );
 
       if (result) {
-        onUserSelect(result, userName); // Pass the chat ID, not user ID
+        onUserSelect(userId, userName); // Pass the chat ID, not user ID
       }
       // No need for manual success toast - it's handled by showChatCreationPromise
     } catch (error) {

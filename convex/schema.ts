@@ -43,11 +43,12 @@ export default defineSchema({
     .index("by_participants", ["participantIds"])
     .index("by_lastMessageAt", ["lastMessageAt"]),
 
+  // In your convex/schema.ts - Make fields optional
+  // convex/schema.ts - Update messages table
   messages: defineTable({
     chatId: v.id("chats"),
     senderId: v.id("users"),
     content: v.string(),
-    isDeleted: v.optional(v.boolean()),
     messageType: v.union(
       v.literal("text"),
       v.literal("image"),
@@ -64,12 +65,20 @@ export default defineSchema({
         })
       )
     ),
-    readBy: v.optional(v.array(v.id("users"))),
     repliedTo: v.optional(v.id("messages")),
+    readBy: v.array(v.id("users")),
+    deliveredTo: v.array(v.id("users")), // Remove optional
+    status: v.union(
+      // Remove optional
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("read")
+    ),
+    isDeleted: v.boolean(),
+    _creationTime: v.number(),
   })
     .index("by_chatId", ["chatId"])
     .index("by_senderId", ["senderId"]),
-  // Remove the by_chatId_creationTime index entirely
 
   // For tracking user online status in chats
   chatPresence: defineTable({
@@ -95,4 +104,31 @@ export default defineSchema({
     .index("by_user_id", ["userId"])
     .index("by_chat_id", ["chatId"])
     .index("by_user_and_chat", ["userId", "chatId"]),
+  // convex/schema.ts - Add this table
+  typingIndicators: defineTable({
+    chatId: v.id("chats"),
+    userId: v.id("users"),
+    isTyping: v.boolean(),
+    lastUpdated: v.number(),
+    _creationTime: v.number(),
+  }) // convex/schema.ts - Add these indexes
+    .index("by_chat_user", ["chatId", "userId"]) // For typingIndicators
+    .index("by_chat", ["chatId"]) // For typingIndicators
+    .index("by_lastUpdated", ["lastUpdated"]), // For cleanup
+  connections: defineTable({
+    user1Id: v.id("users"),
+    user2Id: v.id("users"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("rejected"),
+      v.literal("blocked")
+    ),
+    initiatedBy: v.id("users"),
+    createdAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+  })
+    .index("by_user1", ["user1Id"])
+    .index("by_user2", ["user2Id"])
+    .index("by_user_pair", ["user1Id", "user2Id"]),
 });

@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 
-// convex/debugChats.ts - Add this test mutation
 export const testSendMessage = mutation({
   args: {
     chatId: v.id("chats"),
@@ -9,53 +8,26 @@ export const testSendMessage = mutation({
     content: v.string(),
   },
   handler: async (ctx, args) => {
-    console.log("🧪 TEST: Sending message to debug unread counts");
-
-    const chat = await ctx.db.get(args.chatId);
-    console.log("📊 BEFORE - Chat unreadCounts:", chat?.unreadCounts);
-    console.log("👥 Participants:", chat?.participantIds);
-
-    // Call the actual sendMessage
     const messageId = await ctx.db.insert("messages", {
       chatId: args.chatId,
       senderId: args.senderId,
       content: args.content,
       messageType: "text",
+      attachments: [],
+      repliedTo: undefined,
       readBy: [args.senderId],
+      deliveredTo: [args.senderId], // ✅ ADD THIS - REQUIRED
+      status: "sent", // ✅ ADD THIS - REQUIRED
+      isDeleted: false, // ✅ ADD THIS - REQUIRED
     });
 
-    console.log("✅ Message created:", messageId);
-
-    // Update unread counts manually to be sure
-    const otherParticipants = chat!.participantIds.filter(
-      (id) => id !== args.senderId
-    );
-
-    console.log("🎯 Other participants:", otherParticipants);
-
-    const updates = otherParticipants.map(async (participantId) => {
-      const currentCount = chat!.unreadCounts?.[participantId] || 0;
-      const newCount = currentCount + 1;
-
-      console.log(
-        `📈 Updating ${participantId}: ${currentCount} → ${newCount}`
-      );
-
-      await ctx.db.patch(args.chatId, {
-        unreadCounts: {
-          ...chat!.unreadCounts,
-          [participantId]: newCount,
-        },
-      });
+    // Update chat last message
+    await ctx.db.patch(args.chatId, {
+      lastMessage: args.content,
+      lastMessageAt: Date.now(),
     });
 
-    await Promise.all(updates);
-
-    // Verify
-    const updatedChat = await ctx.db.get(args.chatId);
-    console.log("📊 AFTER - Updated unreadCounts:", updatedChat?.unreadCounts);
-
-    return { messageId, unreadCounts: updatedChat?.unreadCounts };
+    return messageId;
   },
 });
 

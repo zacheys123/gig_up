@@ -122,7 +122,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
     setShowUserSearch(true);
   };
   const allUsers = useAllUsersWithPresence();
-  const Select = async (userId: string) => {
+  const handleUserSelect = async (userId: string) => {
     console.log("🔄 [START] handleUserSelect called with userId:", userId);
 
     try {
@@ -696,7 +696,7 @@ export function ChatListModal({ isOpen, onClose }: ChatListModalProps) {
       <UserSearchPanel
         isOpen={showUserSearch}
         onClose={() => setShowUserSearch(false)}
-        onUserSelect={Select}
+        onUserSelect={handleUserSelect}
         variant="modal"
       />
     </>
