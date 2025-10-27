@@ -44,10 +44,10 @@ const notificationTypeToSettingMap = {
   new_follower: "followRequests",
   follow_request: "followRequests",
   follow_accepted: "followRequests",
-  like: "profileViews",
+  like: "likes",
   new_review: "profileViews",
   review_received: "profileViews",
-  share: "profileViews",
+  share: "shares",
   new_message: "newMessages",
   gig_invite: "gigInvites",
   gig_application: "bookingRequests",
@@ -55,7 +55,7 @@ const notificationTypeToSettingMap = {
   gig_rejected: "bookingRequests",
   gig_cancelled: "bookingRequests",
   gig_reminder: "gigReminders",
-  system_alert: "systemUpdates",
+  system_updates: "systemUpdates",
 } as const;
 
 export const useNotificationSystem = () => {
@@ -162,19 +162,27 @@ export const NotificationSystemProvider = ({
     return true;
   };
 
-  // FIXED: Show toasts only for NEW notifications
   useEffect(() => {
     if (
       notificationsData &&
       notificationsData.length > 0 &&
       notificationSettings
     ) {
+      console.log("🔔 Notification System Debug:", {
+        totalNotifications: notificationsData.length,
+        shownIds: shownNotificationIds.current.size,
+        notificationSettings: notificationSettings,
+      });
+
       // Get current time for comparison
       const currentTime = Date.now();
 
       notificationsData.forEach((notification) => {
         // Skip if we've already shown this notification
         if (shownNotificationIds.current.has(notification._id)) {
+          console.log(
+            `⏭️ Skipping already shown notification: ${notification._id}`
+          );
           return;
         }
 
@@ -182,11 +190,33 @@ export const NotificationSystemProvider = ({
         const isNewNotification =
           currentTime - notification._creationTime < 30000;
 
+        console.log(`📨 Processing notification:`, {
+          id: notification._id,
+          type: notification.type,
+          isNew: isNewNotification,
+          age: currentTime - notification._creationTime,
+          title: notification.title,
+        });
+
         if (isNewNotification) {
           const shouldShowToast = shouldDisplayToast(
             notification,
             notificationSettings
           );
+
+          console.log(`🎯 Should show toast: ${shouldShowToast}`, {
+            type: notification.type,
+            setting:
+              notificationTypeToSettingMap[
+                notification.type as keyof typeof notificationTypeToSettingMap
+              ],
+            settingValue:
+              notificationSettings[
+                notificationTypeToSettingMap[
+                  notification.type as keyof typeof notificationTypeToSettingMap
+                ]
+              ],
+          });
 
           if (shouldShowToast) {
             // Mark this notification as shown
@@ -201,12 +231,19 @@ export const NotificationSystemProvider = ({
               metadata: notification.metadata,
               createdAt: notification._creationTime,
             });
+
+            console.log(
+              `✅ Added toast for notification: ${notification.title}`
+            );
           }
+        } else {
+          console.log(
+            `⏰ Notification too old: ${notification._id} (${currentTime - notification._creationTime}ms old)`
+          );
         }
       });
     }
   }, [notificationsData, notificationSettings]);
-
   // Clean up shown IDs when notifications change significantly
   useEffect(() => {
     if (notificationsData && notificationsData.length === 0) {

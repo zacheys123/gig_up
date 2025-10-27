@@ -18,7 +18,7 @@ export const NOTIFICATION_TYPES = [
   "like",
   "share",
   "review_received",
-  "system_alert",
+  "system_updates",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -49,7 +49,7 @@ export const notificationSettingsSchema = {
   // System & Updates
   systemUpdates: v.boolean(),
   featureAnnouncements: v.boolean(),
-  securityAlerts: v.boolean(),
+  securityUpdates: v.boolean(),
 };
 
 // ==================== NOTIFICATION MODEL SCHEMA ====================
@@ -108,7 +108,7 @@ export type NotificationSettings = {
   // System & Updates
   systemUpdates: boolean;
   featureAnnouncements: boolean;
-  securityAlerts: boolean;
+  securityUpdates: boolean;
 
   // REMOVED: promotionalEmails & newsletter
 };
@@ -158,7 +158,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   // System & Updates
   systemUpdates: false,
   featureAnnouncements: false,
-  securityAlerts: false,
+  securityUpdates: false,
 
   // REMOVED: promotionalEmails & newsletter
 };
@@ -192,7 +192,7 @@ export const NOTIFICATION_TYPE_TO_SETTING_MAP: Record<
   gig_reminder: "gigReminders",
 
   // System
-  system_alert: "systemUpdates",
+  system_updates: "systemUpdates",
 };
 
 // ==================== HELPER TYPES ====================

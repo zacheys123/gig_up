@@ -82,10 +82,7 @@ export const getOrCreateDirectChat = mutation({
     return chatId;
   },
 });
-
-// Send a message
-// In convex/controllers/chat.ts - Add detailed logging to sendMessage
-// convex/controllers/chat.ts - Enhanced sendMessage
+// convex/controllers/chat.ts - UPDATED sendMessage
 export const sendMessage = mutation({
   args: {
     chatId: v.id("chats"),
@@ -110,6 +107,7 @@ export const sendMessage = mutation({
       )
     ),
     repliedTo: v.optional(v.id("messages")),
+    isViewerInGracePeriod: v.optional(v.boolean()), // ADD THIS
   },
   handler: async (ctx, args) => {
     const {
@@ -119,6 +117,7 @@ export const sendMessage = mutation({
       messageType = "text",
       attachments,
       repliedTo,
+      isViewerInGracePeriod = false, // DEFAULT TO FALSE
     } = args;
 
     console.log("💌 Sending message to chat:", chatId);
@@ -142,10 +141,10 @@ export const sendMessage = mutation({
       messageType,
       attachments: attachments || [],
       repliedTo,
-      readBy: [senderId], // Mark as read by sender immediately
-      deliveredTo: [senderId], // ✅ ADD THIS - Mark as delivered to sender
-      status: "sent", // ✅ ADD THIS - Initial status
-      isDeleted: false, // ✅ ADD THIS - Default value
+      readBy: [senderId],
+      deliveredTo: [senderId],
+      status: "sent",
+      isDeleted: false,
     });
 
     // Update chat last message
@@ -173,7 +172,22 @@ export const sendMessage = mutation({
 
     await Promise.all(updates);
 
-    // Return message ID for potential real-time delivery tracking
+    // ✅ FIXED: Pass isViewerInGracePeriod to createMessageNotifications
+    try {
+      await createMessageNotifications(ctx, {
+        chat,
+        sender,
+        messageContent: content,
+        messageType,
+        otherParticipants,
+        isViewerInGracePeriod, // ADD THIS
+      });
+      console.log("🔔 Message notifications created successfully");
+    } catch (error) {
+      console.error("Failed to create message notifications:", error);
+      // Don't throw here - we don't want to block message sending if notifications fail
+    }
+
     return messageId;
   },
 });
@@ -297,8 +311,6 @@ export const markAsRead = mutation({
   },
 });
 
-// Update user presence in chat
-
 // Get online status for chat participants
 export const getChatPresence = query({
   args: {
@@ -320,40 +332,52 @@ export const getChatPresence = query({
 });
 
 // Add these to your existing chat.ts file
-
-// Get unread counts for a user
-// In convex/controllers/chat.ts - getUnreadCounts
+// convex/controllers/chat.ts - FIXED getUnreadCounts
 export const getUnreadCounts = query({
   args: {
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     if (!args.userId) {
-      console.log("No user ID provided");
+      console.log("❌ No user ID provided to getUnreadCounts");
       return { total: 0, byChat: {} };
     }
 
-    const chats = await ctx.db
-      .query("chats")
-      .withIndex("by_participants", (q) =>
-        q.eq("participantIds", [args.userId!])
-      )
-      .collect();
+    try {
+      // Convert userId to string for indexing
+      const userIdString = args.userId;
 
-    console.log("Found chats for user:", chats.length);
+      // Get all chats where user is a participant
+      const allChats = await ctx.db.query("chats").collect();
+      const userChats = allChats.filter(
+        (chat) =>
+          chat.participantIds && chat.participantIds.includes(args.userId!)
+      );
 
-    let total = 0;
-    const byChat: Record<string, number> = {};
+      console.log(`📊 Found ${userChats.length} chats for user ${args.userId}`);
 
-    chats.forEach((chat) => {
-      const count = chat.unreadCounts?.[args.userId!] || 0;
-      byChat[chat._id] = count;
-      total += count;
-    });
+      let total = 0;
+      const byChat: Record<string, number> = {};
 
-    console.log("Calculated unread counts:", { total, byChat });
+      // Calculate unread counts for each chat
+      for (const chat of userChats) {
+        // Use string indexing - this should now work
+        const count = chat.unreadCounts?.[userIdString] || 0;
+        byChat[chat._id] = count;
+        total += count;
 
-    return { total, byChat };
+        if (count > 0) {
+          console.log(`📬 Chat ${chat._id}: ${count} unread messages`);
+        }
+      }
+
+      console.log("✅ Calculated unread counts:", { total, byChat });
+
+      return { total, byChat };
+    } catch (error) {
+      console.error("❌ Error in getUnreadCounts:", error);
+      return { total: 0, byChat: {} };
+    }
   },
 });
 
@@ -622,7 +646,7 @@ export const getTypingUsers = query({
 });
 
 // convex/controllers/chat.ts - Add message status mutations
-// convex/controllers/chat.ts - FIXED markMessageAsDelivered
+// convex/controllers/chat.ts - UPDATED markMessageAsDelivered
 export const markMessageAsDelivered = mutation({
   args: {
     messageId: v.id("messages"),
@@ -634,24 +658,25 @@ export const markMessageAsDelivered = mutation({
 
     // Add user to deliveredTo array if not already there
     if (!message.deliveredTo.includes(userId)) {
-      const updatedDeliveredTo = [...message.deliveredTo, userId];
-
       await ctx.db.patch(messageId, {
-        deliveredTo: updatedDeliveredTo,
+        deliveredTo: [...message.deliveredTo, userId],
       });
 
-      // Update status to "delivered" if all participants have received it
-      const chat = await ctx.db.get(message.chatId);
-      if (chat) {
-        const allParticipantsDelivered = chat.participantIds.every(
-          (id) => updatedDeliveredTo.includes(id) // Use the UPDATED array
-        );
+      console.log("📬 User marked message as delivered:", {
+        messageId,
+        userId,
+        deliveredTo: [...message.deliveredTo, userId],
+      });
 
-        if (allParticipantsDelivered && message.status === "sent") {
-          await ctx.db.patch(messageId, {
-            status: "delivered",
-          });
-        }
+      // Schedule status update
+      try {
+        await ctx.scheduler.runAfter(
+          100,
+          api.controllers.chat.updateMessageStatus,
+          { messageId }
+        );
+      } catch (error) {
+        console.error("Failed to update message status:", error);
       }
     }
 
@@ -659,8 +684,7 @@ export const markMessageAsDelivered = mutation({
   },
 });
 
-// Mark message as read by a user
-// convex/controllers/chat.ts - FIXED markMessageAsRead
+// convex/controllers/chat.ts - UPDATED markMessageAsRead
 export const markMessageAsRead = mutation({
   args: {
     messageId: v.id("messages"),
@@ -678,29 +702,25 @@ export const markMessageAsRead = mutation({
         readBy: updatedReadBy,
       });
 
-      // Update status to "read" if all participants have read it
-      const chat = await ctx.db.get(message.chatId);
-      if (chat) {
-        const allParticipantsRead = chat.participantIds.every(
-          (id) => updatedReadBy.includes(id) // Use the UPDATED array
-        );
-
-        if (allParticipantsRead) {
-          await ctx.db.patch(messageId, {
-            status: "read",
-          });
-        }
-      }
+      console.log("📖 User marked message as read:", {
+        messageId,
+        userId,
+        updatedReadBy,
+        currentStatus: message.status,
+      });
 
       // Update chat unread count
-      const currentCount = chat?.unreadCounts?.[userId] || 0;
-      if (currentCount > 0) {
-        await ctx.db.patch(message.chatId, {
-          unreadCounts: {
-            ...chat?.unreadCounts,
-            [userId]: currentCount - 1,
-          },
-        });
+      const chat = await ctx.db.get(message.chatId);
+      if (chat) {
+        const currentCount = chat?.unreadCounts?.[userId] || 0;
+        if (currentCount > 0) {
+          await ctx.db.patch(message.chatId, {
+            unreadCounts: {
+              ...chat?.unreadCounts,
+              [userId]: currentCount - 1,
+            },
+          });
+        }
       }
     }
 
@@ -746,7 +766,7 @@ export const markAllMessagesAsRead = mutation({
   },
 });
 
-// convex/controllers/chat.ts - Add this mutation
+// convex/controllers/chat.ts - UPDATED bulkMarkMessagesAsRead
 export const bulkMarkMessagesAsRead = mutation({
   args: {
     messageIds: v.array(v.id("messages")),
@@ -761,29 +781,82 @@ export const bulkMarkMessagesAsRead = mutation({
     const updates = messageIds.map(async (messageId) => {
       const message = await ctx.db.get(messageId);
       if (message && !message.readBy.includes(userId)) {
-        const updatedReadBy = [...message.readBy, userId];
-
         await ctx.db.patch(messageId, {
-          readBy: updatedReadBy,
+          readBy: [...message.readBy, userId],
         });
-
-        // Update status to "read" if all participants have read it
-        const chat = await ctx.db.get(message.chatId);
-        if (chat) {
-          const allParticipantsRead = chat.participantIds.every((id) =>
-            updatedReadBy.includes(id)
-          );
-
-          if (allParticipantsRead) {
-            await ctx.db.patch(messageId, {
-              status: "read",
-            });
-          }
-        }
       }
     });
 
     await Promise.all(updates);
+
+    // Update status for each message after marking as read
+    const statusUpdates = messageIds.map(async (messageId) => {
+      try {
+        await ctx.scheduler.runAfter(
+          100,
+          api.controllers.chat.updateMessageStatus,
+          { messageId }
+        );
+      } catch (error) {
+        console.error("Failed to update message status:", error);
+      }
+    });
+
+    await Promise.all(statusUpdates);
+
     return { success: true, count: messageIds.length };
+  },
+});
+
+// convex/controllers/chat.ts - ADD this function
+export const updateMessageStatus = mutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, { messageId }) => {
+    const message = await ctx.db.get(messageId);
+    if (!message) throw new Error("Message not found");
+
+    const chat = await ctx.db.get(message.chatId);
+    if (!chat) throw new Error("Chat not found");
+
+    const otherParticipants = chat.participantIds.filter(
+      (id) => id !== message.senderId
+    );
+    const allOtherParticipantsRead = otherParticipants.every((id) =>
+      message.readBy.includes(id)
+    );
+    const allOtherParticipantsDelivered = otherParticipants.every((id) =>
+      message.deliveredTo.includes(id)
+    );
+
+    console.log("🔄 Updating message status:", {
+      messageId,
+      currentStatus: message.status,
+      otherParticipants,
+      allOtherParticipantsRead,
+      allOtherParticipantsDelivered,
+    });
+
+    let newStatus = message.status;
+
+    if (allOtherParticipantsRead && otherParticipants.length > 0) {
+      newStatus = "read";
+    } else if (
+      allOtherParticipantsDelivered &&
+      otherParticipants.length > 0 &&
+      message.status === "sent"
+    ) {
+      newStatus = "delivered";
+    }
+
+    if (newStatus !== message.status) {
+      console.log("✅ Updating status from", message.status, "to", newStatus);
+      await ctx.db.patch(messageId, {
+        status: newStatus,
+      });
+    }
+
+    return { success: true, newStatus };
   },
 });

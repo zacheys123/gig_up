@@ -149,30 +149,6 @@ const SettingPage = () => {
     setNotifications((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  // Notification Toggle Component
-  const NotificationToggle = ({
-    name,
-    label,
-  }: {
-    name: keyof typeof notifications;
-    label: string;
-  }) => (
-    <div className="flex items-center justify-between py-3">
-      <span className={cn("font-medium text-sm", colors.textSecondary)}>
-        {label}
-      </span>
-      <div className="flex items-center gap-2">
-        <Switch
-          checked={notifications[name]}
-          onCheckedChange={() => handleToggleChange(name)}
-          className={cn(
-            notifications[name] ? colors.primaryBg : colors.backgroundMuted
-          )}
-        />
-      </div>
-    </div>
-  );
-
   // Delete Account Modal
   const DeleteAccountModal = () => {
     const [isDeleting, setIsDeleting] = useState(false);

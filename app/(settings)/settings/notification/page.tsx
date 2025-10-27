@@ -96,7 +96,6 @@ export default function NotificationSettingsPage() {
     // System
     "systemUpdates",
     "featureAnnouncements",
-    "securityAlerts",
   ] as const;
 
   type ValidInAppKey = (typeof validInAppKeys)[number];
@@ -395,7 +394,7 @@ export default function NotificationSettingsPage() {
               <button
                 onClick={() => router.back()}
                 className={cn(
-                  "flex items-center gap-2 p-2 rounded-lg transition-all duration-300",
+                  "md:hidden flex items-center gap-2 p-2 rounded-lg transition-all duration-300",
                   colors.hoverBg,
                   colors.textMuted,
                   "hover:text-opacity-100"

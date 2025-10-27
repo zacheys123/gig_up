@@ -215,7 +215,6 @@ export default function ConversationList({
         </div>
       </div>
 
-      {/* Main Tabs - Conversations vs Users */}
       <div className="px-4 pb-3">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList
@@ -227,17 +226,19 @@ export default function ConversationList({
             <TabsTrigger
               value="conversations"
               className={cn(
-                "text-xs rounded-xl",
+                "text-xs rounded-xl relative",
                 "data-[state=active]:bg-orange-500 data-[state=active]:text-white"
               )}
             >
               Conversations
-              {chats?.some((chat) => (unreadCounts[chat._id] || 0) > 0) && (
-                <Badge className="ml-1 h-4 w-4 p-0 text-[10px] bg-orange-500">
-                  {
-                    chats?.filter((chat) => (unreadCounts[chat._id] || 0) > 0)
-                      .length
-                  }
+              {unreadCounts.total > 0 && (
+                <Badge
+                  className={cn(
+                    "ml-1 h-4 w-4 p-0 text-[10px] bg-orange-500 text-white",
+                    "absolute -top-1 -right-1"
+                  )}
+                >
+                  {unreadCounts.total > 99 ? "99+" : unreadCounts.total}
                 </Badge>
               )}
             </TabsTrigger>
@@ -393,6 +394,7 @@ export default function ConversationList({
                 const tierInfo = getTierInfo(otherUser?.tier);
                 const TierIcon = tierInfo.icon;
                 const unreadCount = unreadCounts[conversation._id] || 0;
+                const hasUnread = unreadCount > 0;
                 const isOnline = otherUser
                   ? isUserOnline(otherUser._id)
                   : false;
@@ -404,133 +406,173 @@ export default function ConversationList({
                       conversation.lastMessageWithSender.senderId
                     )
                   : "Start a conversation";
+
+                console.log("💬 Chat Debug:", {
+                  chatId: conversation._id,
+                  displayName: conversation.displayName,
+                  unreadCount,
+                  hasUnread,
+                });
+
                 return (
-                  <button
-                    key={conversation._id}
-                    onClick={() => onConversationSelect(conversation._id)}
-                    className={cn(
-                      "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group relative",
-                      "hover:bg-gray-50",
-                      "border border-transparent hover:border-gray-200",
-                      "shadow-sm hover:shadow-md",
-                      unreadCount > 0 && colors.warningBg
-                    )}
-                  >
-                    {/* Pin Indicator */}
-                    {isPinned && (
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                        <Pin
-                          className={cn(
-                            "w-3 h-3",
-                            colors.warningText,
-                            "fill-current"
-                          )}
-                        />
+                  <>
+                    {process.env.NODE_ENV === "development" && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <h4 className="font-semibold text-blue-800 mb-2">
+                          Chat Debug Info:
+                        </h4>
+                        <div className="text-sm text-blue-700 space-y-1">
+                          <div>Total Chats: {chats?.length || 0}</div>
+                          <div>
+                            Filtered Chats: {filteredConversations?.length || 0}
+                          </div>
+                          <div>Search Filter: "{searchFilter}"</div>
+                          <div>Active Tab: {activeTab}</div>
+                          <div>Total Unread: {unreadCounts.total}</div>
+                          {chats?.slice(0, 3).map((chat) => (
+                            <div key={chat._id} className="ml-2">
+                              • {chat.displayName} -{" "}
+                              {chat.lastMessageAt
+                                ? "has messages"
+                                : "no messages"}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-
-                    <div className="relative">
-                      <Avatar className="w-14 h-14 rounded-2xl border-2 border-transparent group-hover:border-orange-200 transition-colors">
-                        <AvatarImage src={otherUser?.picture} />
-                        <AvatarFallback className="text-base font-semibold rounded-2xl">
-                          {otherUser?.firstname?.[0]}
-                          {otherUser?.lastname?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      {isOnline && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white" />
+                    <button
+                      key={conversation._id}
+                      onClick={() => onConversationSelect(conversation._id)}
+                      className={cn(
+                        "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group relative",
+                        "hover:bg-gray-50",
+                        "border border-transparent hover:border-gray-200",
+                        "shadow-sm hover:shadow-md",
+                        hasUnread && "bg-orange-50 border-orange-200"
                       )}
-
-                      {otherUser?.tier !== "free" && (
-                        <div className="absolute -top-1 -right-1">
-                          <TierIcon
+                    >
+                      {/* Pin Indicator */}
+                      {isPinned && (
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                          <Pin
                             className={cn(
-                              "w-5 h-5 p-1 rounded-full border-2 border-white",
-                              tierInfo.text,
-                              tierInfo.bg
+                              "w-3 h-3",
+                              colors.warningText,
+                              "fill-current"
                             )}
                           />
                         </div>
                       )}
 
-                      {unreadCount > 0 && (
-                        <div
-                          className={cn(
-                            "absolute -top-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white animate-pulse",
-                            colors.warningText,
-                            "bg-current"
-                          )}
-                        />
-                      )}
-                    </div>
+                      {/* Avatar with Status */}
+                      <div className="relative">
+                        <Avatar className="w-14 h-14 rounded-2xl border-2 border-transparent group-hover:border-orange-200 transition-colors">
+                          <AvatarImage src={otherUser?.picture} />
+                          <AvatarFallback className="text-base font-semibold rounded-2xl">
+                            {otherUser?.firstname?.[0]}
+                            {otherUser?.lastname?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
 
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <h4
+                        {/* Online Status */}
+                        {isOnline && (
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white" />
+                        )}
+
+                        {/* Tier Badge */}
+                        {otherUser?.tier !== "free" && (
+                          <div className="absolute -top-1 -right-1">
+                            <TierIcon
+                              className={cn(
+                                "w-5 h-5 p-1 rounded-full border-2 border-white",
+                                tierInfo.text,
+                                tierInfo.bg
+                              )}
+                            />
+                          </div>
+                        )}
+
+                        {/* Unread Dot */}
+                        {hasUnread && (
+                          <div
                             className={cn(
-                              "font-semibold text-base truncate",
-                              colors.text
+                              "absolute -top-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white animate-pulse",
+                              colors.warningText,
+                              "bg-current"
                             )}
-                          >
-                            {conversation.displayName}
-                          </h4>
-                          {otherUser?.verified && (
-                            <CheckCircle className="w-4 h-4 text-blue-500 fill-current" />
+                          />
+                        )}
+                      </div>
+
+                      {/* Chat Content */}
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <h4
+                              className={cn(
+                                "font-semibold text-base truncate",
+                                colors.text
+                              )}
+                            >
+                              {conversation.displayName}
+                            </h4>
+                            {otherUser?.verified && (
+                              <CheckCircle className="w-4 h-4 text-blue-500 fill-current" />
+                            )}
+                          </div>
+                          {conversation.lastMessageAt && (
+                            <span
+                              className={cn(
+                                "text-xs whitespace-nowrap",
+                                hasUnread
+                                  ? colors.warningText
+                                  : colors.textMuted
+                              )}
+                            >
+                              {formatTimestamp(conversation.lastMessageAt)}
+                            </span>
                           )}
                         </div>
-                        {conversation.lastMessageAt && (
+
+                        <div className="flex items-center gap-2">
+                          {conversation.lastMessage && (
+                            <CheckCheck
+                              className={cn(
+                                "w-3 h-3 flex-shrink-0",
+                                hasUnread
+                                  ? colors.warningText
+                                  : colors.textMuted
+                              )}
+                            />
+                          )}
+                          <p
+                            className={cn(
+                              "text-sm truncate",
+                              hasUnread
+                                ? "font-semibold text-gray-900"
+                                : colors.textMuted
+                            )}
+                          >
+                            {lastMessagePreview}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Unread Badge */}
+                      {hasUnread && (
+                        <div className="flex-shrink-0">
                           <span
                             className={cn(
-                              "text-xs whitespace-nowrap",
-                              unreadCount > 0
-                                ? colors.warningText
-                                : colors.textMuted
+                              "bg-orange-500 text-white text-xs font-semibold rounded-full px-2 py-1 min-w-[24px] text-center",
+                              "animate-pulse shadow-sm"
                             )}
                           >
-                            {formatTimestamp(conversation.lastMessageAt)}
+                            {unreadCount > 99 ? "99+" : unreadCount}
                           </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {conversation.lastMessage && (
-                          <CheckCheck
-                            className={cn(
-                              "w-3 h-3 flex-shrink-0",
-                              unreadCount > 0
-                                ? colors.warningText
-                                : colors.textMuted
-                            )}
-                          />
-                        )}
-                        <p
-                          className={cn(
-                            "text-sm truncate",
-                            unreadCount > 0
-                              ? "font-semibold text-gray-900"
-                              : colors.textMuted
-                          )}
-                        >
-                          {lastMessagePreview}
-                        </p>
-                      </div>
-                    </div>
-
-                    {unreadCount > 0 && (
-                      <div className="flex-shrink-0">
-                        <span
-                          className={cn(
-                            "bg-orange-500 text-white text-xs font-semibold rounded-full px-2 py-1 min-w-[24px] text-center",
-                            "animate-pulse shadow-sm"
-                          )}
-                        >
-                          {unreadCount > 99 ? "99+" : unreadCount}
-                        </span>
-                      </div>
-                    )}
-                  </button>
+                        </div>
+                      )}
+                    </button>
+                  </>
                 );
               })}
             </div>

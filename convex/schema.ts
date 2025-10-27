@@ -33,7 +33,7 @@ export default defineSchema({
     participantIds: v.array(v.id("users")),
     lastMessage: v.optional(v.string()),
     lastMessageAt: v.optional(v.number()),
-    unreadCounts: v.optional(v.record(v.id("users"), v.number())), // ← Use document IDs
+    unreadCounts: v.optional(v.record(v.string(), v.number())), // ← Use document IDs
     type: v.union(v.literal("direct"), v.literal("group")),
     isPinned: v.optional(v.boolean()),
     isArchived: v.optional(v.boolean()),

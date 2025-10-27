@@ -159,19 +159,7 @@ const NOTIFICATION_TYPE_CONFIG = {
     badgeText: "text-amber-700 dark:text-amber-300",
     iconBg: "bg-amber-100 dark:bg-amber-800",
   },
-  system_alert: {
-    icon: FiAlertCircle,
-    label: "System Alert",
-    bgColor: "bg-red-50 dark:bg-red-900/20",
-    borderColor: "border-red-200 dark:border-red-800",
-    hoverBorderColor: "hover:border-red-300 dark:hover:border-red-700",
-    ringColor: "ring-red-100 dark:ring-red-900",
-    iconColor: "text-red-600 dark:text-red-400",
-    textColor: "text-red-700 dark:text-red-300",
-    badgeBg: "bg-red-100 dark:bg-red-800",
-    badgeText: "text-red-700 dark:text-red-300",
-    iconBg: "bg-red-100 dark:bg-red-800",
-  },
+
   system_updates: {
     icon: FiSettings,
     label: "System Update",
@@ -208,7 +196,63 @@ const getNotificationConfig = (type: string) => {
     DEFAULT_CONFIG
   );
 };
+const groupNotifications = (notifications: any[]) => {
+  const grouped: any[] = [];
+  const messageGroups = new Map(); // For grouping messages by chatId
+  const seenNotifications = new Set(); // To avoid duplicates
 
+  notifications.forEach((notification) => {
+    // Skip if we've already processed this notification
+    if (seenNotifications.has(notification._id)) return;
+    seenNotifications.add(notification._id);
+
+    // Group messages by chatId
+    if (notification.type === "new_message" && notification.metadata?.chatId) {
+      const chatId = notification.metadata.chatId;
+
+      if (messageGroups.has(chatId)) {
+        // Add to existing group
+        const group = messageGroups.get(chatId);
+        group.notifications.push(notification);
+        group.count += 1;
+        group.latestTimestamp = Math.max(
+          group.latestTimestamp,
+          notification.createdAt
+        );
+      } else {
+        // Create new group
+        const group = {
+          _id: `group_${chatId}`,
+          type: "message_group",
+          title: "New Messages",
+          message: `${notification.metadata.senderName || "Someone"} sent messages`,
+          createdAt: notification.createdAt,
+          latestTimestamp: notification.createdAt,
+          isRead: notification.isRead,
+          chatId: chatId,
+          count: 1,
+          notifications: [notification],
+          metadata: {
+            ...notification.metadata,
+            isGrouped: true,
+            groupCount: 1,
+          },
+        };
+        messageGroups.set(chatId, group);
+        grouped.push(group);
+      }
+    } else {
+      // For non-message notifications, add as-is
+      grouped.push({
+        ...notification,
+        isGrouped: false,
+        count: 1,
+      });
+    }
+  });
+
+  return grouped;
+};
 export default function NotificationsPage() {
   const router = useRouter();
   const { colors } = useThemeColors();
@@ -229,6 +273,16 @@ export default function NotificationsPage() {
       if (filter === "unread") return !notification.isRead;
       return notification.type === filter;
     }) || [];
+
+  // Group the filtered notifications
+  const groupedNotifications = groupNotifications(filteredNotifications);
+
+  // Sort by latest timestamp (for groups) or creation time
+  const sortedNotifications = groupedNotifications.sort((a, b) => {
+    const timeA = a.latestTimestamp || a.createdAt;
+    const timeB = b.latestTimestamp || b.createdAt;
+    return timeB - timeA;
+  });
   const handleNotificationClick = async (notification: any) => {
     if (!notification.isRead) {
       await markAsRead(notification._id);
@@ -338,7 +392,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filter Bar - Simple Version */}
       <div
         className={cn(
           "border-b sticky top-[88px] z-10",
@@ -348,32 +402,58 @@ export default function NotificationsPage() {
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 py-4 overflow-x-auto">
-            {filterOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setFilter(option.value)}
-                className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-                  filter === option.value
-                    ? "bg-blue-500 text-white shadow-sm"
-                    : cn(
-                        "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700",
-                        colors.text,
-                        "hover:shadow-sm"
-                      )
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+            {filterOptions.map((option) => {
+              const isActive = filter === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setFilter(option.value)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+                    isActive
+                      ? cn("bg-blue-500 text-white shadow-sm", colors.primaryBg)
+                      : cn(
+                          "hover:bg-gray-100 dark:hover:bg-gray-800",
+                          colors.textMuted
+                        )
+                  )}
+                >
+                  {option.label}
+                  {option.value === "unread" && unreadCount > 0 && (
+                    <span
+                      className={cn(
+                        "ml-2 px-1.5 py-0.5 rounded-full text-xs",
+                        isActive
+                          ? "bg-white bg-opacity-20"
+                          : "bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300"
+                      )}
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
-
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div
+          className={cn(
+            "p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg mb-4"
+          )}
+        >
+          <p>Debug Info:</p>
+          <p>Filter: {filter}</p>
+          <p>Filter Options Count: {filterOptions.length}</p>
+          <p>Filter Bar Rendered: Yes</p>
+        </div>
+      </div>
       {/* Notifications List */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AnimatePresence mode="wait">
-          {filteredNotifications.length > 0 ? (
+          {sortedNotifications.length > 0 ? (
             <motion.div
               key="notifications-list"
               initial={{ opacity: 0 }}
@@ -381,8 +461,13 @@ export default function NotificationsPage() {
               exit={{ opacity: 0 }}
               className="space-y-3"
             >
-              {filteredNotifications.map((notification, index) => {
-                const config = getNotificationConfig(notification.type);
+              {sortedNotifications.map((notification, index) => {
+                const isGroup = notification.isGrouped;
+                const config = getNotificationConfig(
+                  isGroup
+                    ? notification.type.replace("_group", "")
+                    : notification.type
+                );
                 const IconComponent = config.icon;
 
                 return (
@@ -407,8 +492,8 @@ export default function NotificationsPage() {
                     )}
                   >
                     <div className="flex items-start gap-4">
-                      {/* Icon with consistent styling */}
-                      <div className="flex-shrink-0 mt-0.5">
+                      {/* Icon with group badge */}
+                      <div className="flex-shrink-0 mt-0.5 relative">
                         <div
                           className={cn(
                             "p-2 rounded-lg",
@@ -418,6 +503,17 @@ export default function NotificationsPage() {
                         >
                           <IconComponent size={18} />
                         </div>
+                        {isGroup && notification.count > 1 && (
+                          <div
+                            className={cn(
+                              "absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold",
+                              config.badgeBg,
+                              config.badgeText
+                            )}
+                          >
+                            {notification.count}
+                          </div>
+                        )}
                       </div>
 
                       {/* Content */}
@@ -434,6 +530,11 @@ export default function NotificationsPage() {
                                 )}
                               >
                                 {notification.title}
+                                {isGroup && notification.count > 1 && (
+                                  <span className="ml-2 text-xs opacity-75">
+                                    ({notification.count})
+                                  </span>
+                                )}
                               </h3>
                               {!notification.isRead && (
                                 <span
@@ -451,6 +552,11 @@ export default function NotificationsPage() {
                               )}
                             >
                               {notification.message}
+                              {isGroup && notification.count > 1 && (
+                                <span className="ml-1 text-xs opacity-75">
+                                  +{notification.count - 1} more
+                                </span>
+                              )}
                             </p>
 
                             {/* Metadata */}
@@ -462,7 +568,10 @@ export default function NotificationsPage() {
                                 )}
                               >
                                 <FiClock size={12} />
-                                {getTimeAgo(notification.createdAt)}
+                                {getTimeAgo(
+                                  notification.latestTimestamp ||
+                                    notification.createdAt
+                                )}
                               </span>
                               <span
                                 className={cn(
@@ -472,11 +581,10 @@ export default function NotificationsPage() {
                                 )}
                               >
                                 {config.label}
+                                {isGroup && " (Grouped)"}
                               </span>
                             </div>
                           </div>
-
-                          {/* Action Arrow */}
                           <FiArrowRight
                             className={cn(
                               "flex-shrink-0 mt-1 transition-transform group-hover:translate-x-1",

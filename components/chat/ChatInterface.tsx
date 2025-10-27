@@ -36,10 +36,11 @@ interface ChatInterfaceProps {
 }
 
 // Message Status Component - IMPROVED VERSION
+
+// SIMPLIFIED MessageStatus component
 const MessageStatus = ({
   message,
   isOwn,
-  chat,
 }: {
   message: any;
   isOwn: boolean;
@@ -47,64 +48,35 @@ const MessageStatus = ({
 }) => {
   if (!isOwn) return null;
 
+  console.log("🎯 MessageStatus rendering:", {
+    messageId: message._id,
+    status: message.status,
+    isOwn,
+  });
+
   const getStatusInfo = () => {
-    const totalParticipants = chat?.participantIds?.length || 1;
-
-    // Count other participants (excluding sender)
-    const otherParticipantsCount = totalParticipants - 1;
-
-    // Count read/delivered for OTHER participants (excluding sender)
-    const readByOthers =
-      message.readBy?.filter((id: string) => id !== message.senderId)?.length ||
-      0;
-    const deliveredToOthers =
-      message.deliveredTo?.filter((id: string) => id !== message.senderId)
-        ?.length || 0;
-
-    console.log("Message Status Debug:", {
-      messageId: message._id,
-      totalParticipants,
-      otherParticipantsCount,
-      readByOthers,
-      deliveredToOthers,
-      readBy: message.readBy,
-      deliveredTo: message.deliveredTo,
-      status: message.status,
-    });
-
-    if (readByOthers === otherParticipantsCount && otherParticipantsCount > 0) {
-      return {
-        icon: <CheckCheck className="w-3 h-3 fill-blue-500 text-blue-500" />,
-        text: "Read",
-        color: "text-blue-500",
-      };
-    } else if (readByOthers > 0) {
-      return {
-        icon: <CheckCheck className="w-3 h-3 fill-blue-400 text-blue-400" />,
-        text: `Read by ${readByOthers}`,
-        color: "text-blue-400",
-      };
-    } else if (
-      deliveredToOthers === otherParticipantsCount &&
-      otherParticipantsCount > 0
-    ) {
-      return {
-        icon: <CheckCheck className="w-3 h-3 text-gray-500" />,
-        text: "Delivered",
-        color: "text-gray-500",
-      };
-    } else if (deliveredToOthers > 0) {
-      return {
-        icon: <CheckCheck className="w-3 h-3 text-gray-400" />,
-        text: `Delivered to ${deliveredToOthers}`,
-        color: "text-gray-400",
-      };
-    } else {
-      return {
-        icon: <Check className="w-3 h-3 text-gray-400" />,
-        text: "Sent",
-        color: "text-gray-400",
-      };
+    switch (message.status) {
+      case "read":
+        return {
+          icon: (
+            <CheckCheck className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+          ),
+          text: "Read",
+          color: "text-yellow-100",
+        };
+      case "delivered":
+        return {
+          icon: <CheckCheck className="w-3 h-3 text-gray-500" />,
+          text: "Delivered",
+          color: "text-gray-500",
+        };
+      case "sent":
+      default:
+        return {
+          icon: <Check className="w-3 h-3 text-gray-200" />,
+          text: "Sent",
+          color: "text-gray-400",
+        };
     }
   };
 
@@ -113,7 +85,7 @@ const MessageStatus = ({
   return (
     <div className={cn("flex items-center gap-1 mt-1", status.color)}>
       {status.icon}
-      <span className="text-xs">{status.text}</span>
+      <span className="text-xs text-white">{status.text}</span>
     </div>
   );
 };
@@ -306,40 +278,34 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     bulkMarkMessagesAsRead,
     chat,
   ]);
-
-  // IMPROVED: Track message delivery status
+  // In your ChatInterface mutations - ADD this
+  const updateMessageStatus = useMutation(
+    api.controllers.chat.updateMessageStatus
+  );
+  // In your ChatInterface component - ADD this useEffect
   useEffect(() => {
-    if (!currentUser?._id || !messages) return;
+    if (!messages || !currentUser?._id) return;
 
-    // Mark messages as delivered when they appear in the chat
-    const markMessagesAsDelivered = async () => {
-      const messagesToMark = messages.filter(
-        (message) =>
-          message.senderId !== currentUser._id &&
-          !message.deliveredTo.includes(currentUser._id)
-      );
+    // Update status for messages that might need it
+    const updateMessageStatuses = async () => {
+      const messagesNeedingStatusUpdate = messages.filter((message) => {
+        // Only update messages that are sent by current user and not already read status
+        return (
+          message.senderId === currentUser._id && message.status !== "read"
+        );
+      });
 
-      if (messagesToMark.length === 0) return;
-
-      console.log(`📬 Marking ${messagesToMark.length} messages as delivered`);
-
-      // Use Promise.all for efficiency
-      const deliveryPromises = messagesToMark.map((message) =>
-        markMessageAsDelivered({
-          messageId: message._id,
-          userId: currentUser._id,
-        }).catch((error) => {
-          console.error(`Failed to mark message as delivered:`, error);
-          return null;
-        })
-      );
-
-      await Promise.all(deliveryPromises);
-      console.log("✅ Successfully marked messages as delivered");
+      for (const message of messagesNeedingStatusUpdate) {
+        try {
+          await updateMessageStatus({ messageId: message._id });
+        } catch (error) {
+          console.error("Failed to update message status:", error);
+        }
+      }
     };
 
-    markMessagesAsDelivered();
-  }, [messages, currentUser?._id, markMessageAsDelivered]);
+    updateMessageStatuses();
+  }, [messages, currentUser?._id, updateMessageStatus]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

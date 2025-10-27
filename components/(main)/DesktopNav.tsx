@@ -12,6 +12,7 @@ import {
   Users,
   Calendar,
   MessageCircle,
+  Settings,
 } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -103,9 +104,9 @@ export function DesktopNavigation() {
       condition: isSignedIn,
     },
     {
-      href: "/gigs",
-      label: isMusician ? "Find Gigs" : "Post Gig",
-      icon: <Calendar size={18} />,
+      href: "/settings",
+      label: "Settings",
+      icon: <Settings size={18} />,
       condition: hasRole,
     },
   ];

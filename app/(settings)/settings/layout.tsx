@@ -14,12 +14,6 @@ export default function SettingsLayout({
 }>) {
   const router = useRouter();
   const { colors } = useThemeColors();
-  const handleBack = () => {
-    router.back(); // Go back to previous page
-    // OR use specific route:
-    // router.push("/"); // Go to home page
-    // router.push("/dashboard"); // Go to dashboard
-  };
 
   return (
     <div className="bg-background text-foreground h-full w-full overflow-scroll">
@@ -29,7 +23,7 @@ export default function SettingsLayout({
         <button
           onClick={() => router.back()}
           className={cn(
-            "flex items-center gap-2 p-2 rounded-lg transition-all duration-300",
+            "flex items-center gap-2 p-2 rounded-lg transition-all duration-300 ",
             colors.hoverBg,
             colors.textMuted,
             "hover:text-opacity-100"

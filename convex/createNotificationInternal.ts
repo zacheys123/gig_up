@@ -126,6 +126,19 @@ export const createNotificationInternal = async (
       }
     }
 
+    // 4b. ✅ CHECK IF RECIPIENT CAN RECEIVE NOTIFICATIONS (OPTIONAL)
+    if ("tier" in recipientUser) {
+      const isRecipientPro = recipientUser.tier === "pro";
+      const canRecipientReceiveNotifications =
+        isRecipientPro || isViewerInGracePeriod;
+
+      if (!canRecipientReceiveNotifications) {
+        console.log(
+          `❌ Notification blocked: Recipient ${recipientUser.username} is free user after grace period`
+        );
+        return null;
+      }
+    }
     // 5. Check RECIPIENT'S notification settings
     const notificationSettings = await ctx.db
       .query("notificationSettings")
@@ -294,6 +307,7 @@ export const deleteFollowRequestNotification = async (
   }
 };
 
+// convex/notifications.ts - Update createMessageNotifications
 export const createMessageNotifications = async (
   ctx: MutationCtx,
   args: {
@@ -302,9 +316,17 @@ export const createMessageNotifications = async (
     messageContent: string;
     messageType: string;
     otherParticipants: any[];
+    isViewerInGracePeriod?: boolean; // ADD THIS PARAMETER
   }
 ) => {
-  const { chat, sender, messageContent, messageType, otherParticipants } = args;
+  const {
+    chat,
+    sender,
+    messageContent,
+    messageType,
+    otherParticipants,
+    isViewerInGracePeriod = false, // DEFAULT TO FALSE
+  } = args;
 
   // Get active chat sessions to see who has the chat open
   const activeChatSessions = await ctx.db
@@ -333,6 +355,7 @@ export const createMessageNotifications = async (
           image: sender.picture,
           actionUrl: `/chat/${chat._id}`,
           relatedUserDocumentId: sender._id, // SENDER's document ID
+          isViewerInGracePeriod, // PASS THIS THROUGH
           metadata: {
             chatId: chat._id.toString(),
             senderDocumentId: sender._id.toString(),
@@ -347,6 +370,7 @@ export const createMessageNotifications = async (
             instrument: sender.instrument,
             city: sender.city,
             truncatedMessage: truncateMessage(messageContent),
+            isViewerInGracePeriod, // INCLUDE IN METADATA TOO IF NEEDED
           },
         });
       } catch (error) {
