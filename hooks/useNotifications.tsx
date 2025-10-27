@@ -144,7 +144,7 @@ export const NotificationSystemProvider = ({
 
   const shouldDisplayToast = (notification: any, settings: any) => {
     // Critical notifications always show
-    const criticalTypes = ["system_alert"];
+    const criticalTypes = ["system_updates"];
     if (criticalTypes.includes(notification.type)) {
       return true;
     }

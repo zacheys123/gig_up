@@ -199,7 +199,7 @@ export const updateNotificationSettings = mutation({
       // System & Updates - ALL REQUIRED
       systemUpdates: v.boolean(),
       featureAnnouncements: v.boolean(),
-      securityAlerts: v.boolean(),
+      securityUpdates: v.boolean(),
     }),
   },
   handler: async (ctx, args) => {

@@ -2,14 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { useNotificationSystem } from "@/hooks/useNotifications";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Check, X, Loader2, Clock, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 interface NotificationItemProps {
@@ -18,6 +17,7 @@ interface NotificationItemProps {
   getNotificationIcon: (type: string) => React.ReactNode;
   themeConfig: any;
   iconConfig: any;
+  variant?: "desktop" | "mobile";
 }
 
 export function NotificationItem({
@@ -26,6 +26,7 @@ export function NotificationItem({
   getNotificationIcon,
   themeConfig,
   iconConfig,
+  variant = "desktop",
 }: NotificationItemProps) {
   const router = useRouter();
   const { markAsRead } = useNotificationSystem();
@@ -134,73 +135,99 @@ export function NotificationItem({
   const isClickable =
     Boolean(notification.actionUrl) && notification.type !== "follow_request";
 
-  const NotificationContent = () => (
+  // Consistent width handling - matches GroupedNotificationItem exactly
+  const widthClass = variant === "mobile" ? "w-full" : "w-[90%] mx-auto";
+
+  return (
     <motion.div
-      whileHover={{ scale: isClickable ? 1.02 : 1 }}
-      whileTap={{ scale: isClickable ? 0.98 : 1 }}
+      whileHover={{ scale: 1.01, y: -1 }}
+      whileTap={{ scale: 0.99 }}
+      onClick={isClickable ? handleClick : undefined}
       className={cn(
-        "p-4 transition-all duration-200",
-        isClickable && "cursor-pointer hover:shadow-md",
+        "p-3 transition-all duration-200 rounded-xl", // ✅ Removed 'border'
+        "hover:shadow-sm hover:border border-blue-300 dark:hover:border-blue-600", // ✅ Only show border on hover
+        widthClass,
+        widthClass, // ✅ Matches GroupedNotificationItem exactly
+        isClickable && "cursor-pointer",
         notification.isRead
-          ? themeConfig.surface.primary
+          ? cn(
+              themeConfig.card,
+              themeConfig.border,
+              "bg-white/50 dark:bg-gray-800/50"
+            )
           : cn(
-              themeConfig.surface.secondary,
-              "ring-1 ring-blue-500/20 dark:ring-blue-400/20"
+              themeConfig.accent.background,
+              "border-blue-200 dark:border-blue-800",
+              "ring-1 ring-blue-500/20 shadow-sm"
             )
       )}
     >
-      <div className="flex items-start gap-3">
-        {/* Notification Icon */}
-        <div className="flex-shrink-0 mt-0.5">
+      <div className="flex items-start gap-2">
+        {/* Notification Icon - Matches GroupedNotificationItem styling */}
+        <div className="flex-shrink-0">
           <div
             className={cn(
-              "p-2 rounded-lg",
+              "p-1.5 rounded-lg transition-colors duration-200",
               notification.isRead
-                ? "bg-gray-100 dark:bg-gray-800"
-                : "bg-blue-100 dark:bg-blue-900"
+                ? "bg-gray-100/80 dark:bg-gray-700/80 text-gray-600 dark:text-gray-400"
+                : "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
             )}
           >
             {getNotificationIcon(notification.type)}
           </div>
         </div>
 
-        {/* Notification Content */}
+        {/* Notification Content - Matches GroupedNotificationItem structure */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between mb-1">
-            <div className="flex-1">
-              <h4
-                className={cn(
-                  "font-semibold text-sm mb-1 leading-tight",
-                  themeConfig.text.primary,
-                  !notification.isRead && "font-bold"
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              {/* Title and status in one line - matches grouped style */}
+              <div className="flex items-center gap-2 mb-1">
+                <h4
+                  className={cn(
+                    "font-semibold text-xs leading-tight truncate flex-1",
+                    themeConfig.text.primary,
+                    !notification.isRead &&
+                      "font-bold text-blue-700 dark:text-blue-300"
+                  )}
+                >
+                  {notification.title}
+                </h4>
+                {!notification.isRead && (
+                  <div
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0",
+                      "bg-blue-500 shadow-sm"
+                    )}
+                  />
                 )}
-              >
-                {notification.title}
-              </h4>
+              </div>
+
+              {/* Message - more compact like grouped items */}
               <p
                 className={cn(
-                  "text-sm leading-relaxed",
+                  "text-xs leading-relaxed line-clamp-1 mb-1",
                   themeConfig.text.secondary
                 )}
               >
                 {notification.message}
               </p>
 
-              {/* Follow Request Actions */}
+              {/* Follow Request Actions - compact styling */}
               {notification.type === "follow_request" && (
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-2">
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                   >
                     <Button
                       onClick={handleAcceptFollowRequest}
                       disabled={isProcessing}
                       size="sm"
                       className={cn(
-                        "flex items-center gap-1.5 text-xs font-semibold",
-                        "bg-green-500 hover:bg-green-600 text-white",
-                        "transition-all duration-200"
+                        "flex items-center gap-1 text-xs font-semibold h-7 px-2",
+                        "bg-green-500 hover:bg-green-600 text-white shadow-sm",
+                        "transition-all duration-200 rounded-lg"
                       )}
                     >
                       {isProcessing ? (
@@ -213,8 +240,8 @@ export function NotificationItem({
                   </motion.div>
 
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                   >
                     <Button
                       onClick={handleDeclineFollowRequest}
@@ -222,9 +249,9 @@ export function NotificationItem({
                       size="sm"
                       variant="outline"
                       className={cn(
-                        "flex items-center gap-1.5 text-xs font-semibold",
-                        "text-red-500 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20",
-                        "transition-all duration-200"
+                        "flex items-center gap-1 text-xs font-semibold h-7 px-2",
+                        "text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30",
+                        "transition-all duration-200 rounded-lg"
                       )}
                     >
                       {isProcessing ? (
@@ -238,9 +265,9 @@ export function NotificationItem({
                 </div>
               )}
 
-              {/* Metadata */}
-              <div className="flex items-center gap-3 mt-2">
-                <span className={cn("text-xs", themeConfig.text.muted)}>
+              {/* Metadata - Single line like grouped items */}
+              <div className="flex items-center gap-2 mt-1">
+                <span className={cn("text-[10px]", themeConfig.text.muted)}>
                   {getTimeAgo(notification.createdAt)}
                 </span>
 
@@ -248,49 +275,34 @@ export function NotificationItem({
                 {isClickable && (
                   <span
                     className={cn(
-                      "text-xs px-2 py-1 rounded-full font-medium",
+                      "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
                       notification.isRead
                         ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                        : "bg-blue-500 text-white"
+                        : "bg-blue-500 text-white shadow-sm"
                     )}
                   >
                     View details
                   </span>
                 )}
+
+                {/* Type badge for better context */}
+                {!isClickable && notification.type !== "follow_request" && (
+                  <span
+                    className={cn(
+                      "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                      notification.isRead
+                        ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                        : "bg-blue-500 text-white shadow-sm"
+                    )}
+                  >
+                    {notification.type.replace("_", " ")}
+                  </span>
+                )}
               </div>
             </div>
-
-            {/* Unread indicator */}
-            {!notification.isRead && (
-              <div className="flex-shrink-0 ml-2">
-                <div
-                  className={cn(
-                    "w-2 h-2 rounded-full animate-pulse",
-                    themeConfig.accent.background
-                  )}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>
     </motion.div>
   );
-
-  // Render clickable or non-clickable notification
-  if (isClickable) {
-    return (
-      <div
-        onClick={handleClick}
-        className={cn(
-          "transition-colors duration-200",
-          isClickable && "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-        )}
-      >
-        <NotificationContent />
-      </div>
-    );
-  }
-
-  return <NotificationContent />;
 }

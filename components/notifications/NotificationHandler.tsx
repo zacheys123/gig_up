@@ -58,15 +58,11 @@ const NOTIFICATION_TYPE_CONFIG = {
     label: "Review Received",
     colorVariant: "success" as const,
   },
-  system_alert: {
-    icon: "⚠️",
-    label: "System Alert",
-    colorVariant: "danger" as const,
-  },
+
   system_updates: {
     icon: "🔄",
     label: "System Update",
-    colorVariant: "info" as const,
+    colorVariant: "danger" as const,
   },
 } as const;
 

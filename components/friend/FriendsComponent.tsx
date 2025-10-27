@@ -13,6 +13,7 @@ import {
   ArrowLeftIcon,
   Briefcase,
   Calendar,
+  Clock,
   DollarSign,
   MenuIcon,
   Music,
@@ -183,6 +184,14 @@ const FriendsComponent = () => {
                   _id={friend._id}
                   pendingFollowRequests={friend?.pendingFollowRequests}
                   targetUserFollowings={friend?.followings}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl bg-neutral-300 hover:bg-red-500/10 border-red-400",
+                    "border transition-all duration-200",
+
+                    "text-neutral-500 hover:text-red-600 dark:text-neutral-500 dark:hover:text-neutral-500",
+
+                    "backdrop-blur-sm"
+                  )}
                 />
               </div>
               <ReportButton userId={friend?._id || ""} />
@@ -534,7 +543,375 @@ const FriendsComponent = () => {
                 </div>
               </div>
             )}
+            {/* Add these sections after the "About Me" section */}
 
+            {/* Pricing & Rates */}
+            {(friend?.rate?.regular ||
+              friend?.rate?.function ||
+              friend?.rate?.concert ||
+              friend?.rate?.corporate) && (
+              <div
+                className={cn(
+                  "rounded-xl shadow-sm overflow-hidden border",
+                  getCardBackground()
+                )}
+              >
+                <div
+                  className={cn(
+                    "px-4 sm:px-6 py-3 sm:py-4",
+                    isDarkMode
+                      ? "bg-gradient-to-r from-amber-900/30 to-orange-900/30"
+                      : "bg-gradient-to-r from-amber-100 to-orange-100"
+                  )}
+                >
+                  <h2
+                    className={cn(
+                      "text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3",
+                      isDarkMode ? "text-amber-300" : "text-amber-700"
+                    )}
+                  >
+                    <DollarSign className="w-5 h-5" />
+                    Pricing & Rates
+                  </h2>
+                </div>
+                <div className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {friend?.rate?.regular && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg",
+                          getSecondaryBackground()
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Regular Gig
+                        </p>
+                        <p className={cn("text-lg font-bold text-green-600")}>
+                          KSh {friend.rate.regular}
+                        </p>
+                      </div>
+                    )}
+                    {friend?.rate?.function && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg",
+                          getSecondaryBackground()
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Private Function
+                        </p>
+                        <p className={cn("text-lg font-bold text-blue-600")}>
+                          KSh {friend.rate.function}
+                        </p>
+                      </div>
+                    )}
+                    {friend?.rate?.concert && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg",
+                          getSecondaryBackground()
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Concert
+                        </p>
+                        <p className={cn("text-lg font-bold text-purple-600")}>
+                          KSh {friend.rate.concert}
+                        </p>
+                      </div>
+                    )}
+                    {friend?.rate?.corporate && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg",
+                          getSecondaryBackground()
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Corporate Event
+                        </p>
+                        <p className={cn("text-lg font-bold text-indigo-600")}>
+                          KSh {friend.rate.corporate}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Availability & Booking */}
+            {friend?.isMusician && (
+              <>
+                <div
+                  className={cn(
+                    "rounded-xl shadow-sm overflow-hidden border",
+                    getCardBackground()
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "px-4 sm:px-6 py-3 sm:py-4",
+                      isDarkMode
+                        ? "bg-gradient-to-r from-blue-900/30 to-cyan-900/30"
+                        : "bg-gradient-to-r from-blue-100 to-cyan-100"
+                    )}
+                  >
+                    <h2
+                      className={cn(
+                        "text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3",
+                        isDarkMode ? "text-blue-300" : "text-blue-700"
+                      )}
+                    >
+                      <Calendar className="w-5 h-5" />
+                      Availability
+                    </h2>
+                  </div>
+                  <div className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Booking Status
+                        </p>
+                        <p className={cn("text-sm", colors.textMuted)}>
+                          {friend?.lastBookingDate
+                            ? "Recently Booked"
+                            : "Available for Gigs"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Response Time
+                        </p>
+                        <p className={cn("text-sm", colors.textMuted)}>
+                          {friend?.performanceStats?.responseTime
+                            ? `${friend.performanceStats.responseTime}h avg`
+                            : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Tier Status */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Membership Tier
+                        </p>
+                        <span
+                          className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium capitalize",
+                            friend?.tier === "pro"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                              : friend?.tier === "premium"
+                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                : friend?.tier === "elite"
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                          )}
+                        >
+                          {friend?.tier || "Free"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {(friend?.genres || friend?.musiciangenres) && (
+                  <div
+                    className={cn(
+                      "rounded-xl shadow-sm overflow-hidden border",
+                      getCardBackground()
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "px-4 sm:px-6 py-3 sm:py-4",
+                        isDarkMode
+                          ? "bg-gradient-to-r from-pink-900/30 to-rose-900/30"
+                          : "bg-gradient-to-r from-pink-100 to-rose-100"
+                      )}
+                    >
+                      <h2
+                        className={cn(
+                          "text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3",
+                          isDarkMode ? "text-pink-300" : "text-pink-700"
+                        )}
+                      >
+                        <Music className="w-5 h-5" />
+                        Genres & Specialties
+                      </h2>
+                    </div>
+                    <div className="p-4 sm:p-6">
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          friend?.musiciangenres ||
+                          friend?.genres?.split(",") ||
+                          []
+                        ).map((genre, index) => (
+                          <span
+                            key={index}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-sm font-medium border",
+                              isDarkMode
+                                ? "bg-gray-700/50 text-gray-300 border-gray-600"
+                                : "bg-white text-gray-700 border-gray-300"
+                            )}
+                          >
+                            {genre.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Social Media Handles with Platform Icons */}
+                {friend?.musicianhandles &&
+                  friend.musicianhandles.length > 0 && (
+                    <div
+                      className={cn(
+                        "rounded-xl shadow-sm overflow-hidden border",
+                        getCardBackground()
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "px-4 sm:px-6 py-3 sm:py-4",
+                          isDarkMode
+                            ? "bg-gradient-to-r from-indigo-900/30 to-violet-900/30"
+                            : "bg-gradient-to-r from-indigo-100 to-violet-100"
+                        )}
+                      >
+                        <h2
+                          className={cn(
+                            "text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3",
+                            isDarkMode ? "text-indigo-300" : "text-indigo-700"
+                          )}
+                        >
+                          <FaYoutube className="w-5 h-5" />
+                          Social Media & Portfolio
+                        </h2>
+                      </div>
+                      <div className="p-4 sm:p-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {friend.musicianhandles.map((handle, index) => (
+                            <a
+                              key={index}
+                              href={`https://${handle.platform}.com/${handle.handle}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:scale-105",
+                                getSecondaryBackground(),
+                                "hover:shadow-md"
+                              )}
+                            >
+                              <div
+                                className={cn(
+                                  "p-2 rounded-lg",
+                                  handle.platform === "youtube"
+                                    ? "bg-red-500 text-white"
+                                    : handle.platform === "instagram"
+                                      ? "bg-pink-600 text-white"
+                                      : handle.platform === "tiktok"
+                                        ? "bg-black text-white"
+                                        : handle.platform === "twitter"
+                                          ? "bg-blue-500 text-white"
+                                          : "bg-gray-500 text-white"
+                                )}
+                              >
+                                {handle.platform === "youtube" && (
+                                  <FaYoutube className="w-4 h-4" />
+                                )}
+                                {handle.platform === "instagram" && (
+                                  <BsInstagram className="w-4 h-4" />
+                                )}
+                                {handle.platform === "tiktok" && (
+                                  <FaTiktok className="w-4 h-4" />
+                                )}
+                                {handle.platform === "twitter" && (
+                                  <BsTwitter className="w-4 h-4" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={cn(
+                                    "text-sm font-medium truncate",
+                                    colors.text
+                                  )}
+                                >
+                                  @{handle.handle}
+                                </p>
+                                <p
+                                  className={cn(
+                                    "text-xs capitalize",
+                                    colors.textMuted
+                                  )}
+                                >
+                                  {handle.platform}
+                                </p>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </>
+            )}
+            {/* Recent Activity & Engagement */}
+            <div
+              className={cn(
+                "rounded-xl shadow-sm overflow-hidden border",
+                getCardBackground()
+              )}
+            >
+              <div
+                className={cn(
+                  "px-4 sm:px-6 py-3 sm:py-4",
+                  isDarkMode
+                    ? "bg-gradient-to-r from-gray-700/50 to-gray-800/50"
+                    : "bg-gradient-to-r from-gray-100 to-gray-200"
+                )}
+              >
+                <h2
+                  className={cn(
+                    "text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3",
+                    colors.text
+                  )}
+                >
+                  <Clock className="w-5 h-5" />
+                  Recent Activity
+                </h2>
+              </div>
+              <div className="p-4 sm:p-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <p className={cn("text-sm", colors.text)}>Last Active</p>
+                    <p className={cn("text-sm font-medium", colors.text)}>
+                      {friend?.lastActive
+                        ? new Date(friend.lastActive).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className={cn("text-sm", colors.text)}>Profile Views</p>
+                    <p className={cn("text-sm font-medium", colors.text)}>
+                      {friend?.profileViews?.totalCount || 0}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className={cn("text-sm", colors.text)}>Member Since</p>
+                    <p className={cn("text-sm font-medium", colors.text)}>
+                      {friend?._creationTime
+                        ? new Date(friend._creationTime).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
             {/* Social Media */}
             {friend?.handles && friend.handles.length > 0 && (
               <div

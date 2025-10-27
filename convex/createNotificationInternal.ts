@@ -56,7 +56,7 @@ export const notificationTypeToSettingMap: Record<
   gig_reminder: "gigReminders",
 
   // System
-  system_alert: "systemUpdates",
+  system_updates: "systemUpdates",
 };
 
 export const createNotificationInternal = async (
