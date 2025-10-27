@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { NotificationItem } from "./NotificationsItem";
+import { GroupedNotificationItem } from "./GroupedNotificationItem";
 import { motion, AnimatePresence } from "framer-motion";
+import { groupNotifications, isGroupedNotification } from "@/utils";
 
 interface NotificationDropdownProps {
   onClose: () => void;
@@ -36,8 +38,20 @@ export function NotificationDropdown({
   const { userId } = useAuth();
   const { colors, isDarkMode } = useThemeColors();
 
+  // ✅ APPLY GROUPING TO DROPDOWN NOTIFICATIONS
+  const groupedNotifications = groupNotifications(notifications || []);
+
+  // ✅ CALCULATE GROUPED UNREAD COUNT
+  const groupedUnreadCount = groupedNotifications.reduce((count, item) => {
+    if (isGroupedNotification(item)) {
+      return count + (item.isRead ? 0 : 1); // Count groups as 1 unread item
+    } else {
+      return count + (item.isRead ? 0 : 1);
+    }
+  }, 0);
+
   const handleMarkAllRead = async () => {
-    if (userId && unreadCount > 0) {
+    if (userId && groupedUnreadCount > 0) {
       await markAllAsRead();
     }
   };
@@ -203,7 +217,7 @@ export function NotificationDropdown({
                 >
                   Notifications
                 </h3>
-                {unreadCount > 0 ? (
+                {groupedUnreadCount > 0 ? (
                   <p
                     className={cn(
                       "text-sm font-semibold mt-1",
@@ -211,7 +225,8 @@ export function NotificationDropdown({
                       "drop-shadow-sm"
                     )}
                   >
-                    {unreadCount} new notification{unreadCount !== 1 ? "s" : ""}
+                    {groupedUnreadCount} new notification
+                    {groupedUnreadCount !== 1 ? "s" : ""}
                   </p>
                 ) : (
                   <p
@@ -228,7 +243,7 @@ export function NotificationDropdown({
 
             {/* Actions Section */}
             <div className="flex items-center gap-1">
-              {unreadCount > 0 && (
+              {groupedUnreadCount > 0 && (
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -270,21 +285,33 @@ export function NotificationDropdown({
             isDarkMode ? "scrollbar-dark" : "scrollbar-light"
           )}
         >
-          {notifications.length > 0 ? (
+          {groupedNotifications.length > 0 ? (
             <div className={cn("divide-y", themeConfig.divider)}>
-              {notifications.map((notification, index) => (
+              {groupedNotifications.map((item, index) => (
                 <motion.div
-                  key={notification._id}
+                  key={isGroupedNotification(item) ? item._id : item._id}
                   {...animationVariants.item}
                   transition={{ delay: index * 0.03 }}
                 >
-                  <NotificationItem
-                    notification={notification}
-                    onClose={onClose}
-                    getNotificationIcon={iconConfig.notification}
-                    themeConfig={themeConfig}
-                    iconConfig={iconConfig}
-                  />
+                  {isGroupedNotification(item) ? (
+                    // ✅ RENDER GROUPED NOTIFICATION
+                    <GroupedNotificationItem
+                      group={item}
+                      onClose={onClose}
+                      getNotificationIcon={iconConfig.notification}
+                      themeConfig={themeConfig}
+                      iconConfig={iconConfig}
+                    />
+                  ) : (
+                    // ✅ RENDER INDIVIDUAL NOTIFICATION (using your existing NotificationItem)
+                    <NotificationItem
+                      notification={item}
+                      onClose={onClose}
+                      getNotificationIcon={iconConfig.notification}
+                      themeConfig={themeConfig}
+                      iconConfig={iconConfig}
+                    />
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -343,7 +370,7 @@ export function NotificationDropdown({
         </div>
 
         {/* Enhanced Footer */}
-        {notifications.length > 0 && (
+        {groupedNotifications.length > 0 && (
           <div className={cn("p-4 border-t", themeConfig.border)}>
             <div className="flex items-center justify-between">
               <Link href="/notifications" onClick={onClose}>
@@ -365,7 +392,7 @@ export function NotificationDropdown({
 
               <div className="flex items-center gap-2 text-xs">
                 <span className={cn("font-semibold", themeConfig.text.muted)}>
-                  {notifications.length} total
+                  {groupedNotifications.length} total
                 </span>
               </div>
             </div>

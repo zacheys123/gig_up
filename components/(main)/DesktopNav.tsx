@@ -24,6 +24,7 @@ import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useChat } from "@/app/context/ChatContext";
 import { ChatListModal } from "@/components/chat/ChatListModal";
+import { MdDashboard } from "react-icons/md";
 
 export function DesktopNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
@@ -90,6 +91,12 @@ export function DesktopNavigation() {
       href: "/",
       label: "Home",
       icon: <Home size={18} />,
+    },
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: <MdDashboard size={18} />,
+      condition: hasRole,
     },
     {
       href: "/auth/search",

@@ -60,7 +60,7 @@ export function Sidebar() {
 
   const { openChat } = useChat();
   const [showChatListModal, setShowChatListModal] = useState(false);
-  const unReadCount = useUnreadCount();
+  const { total: unReadCount, byChat: unreadCounts } = useUnreadCount();
 
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
