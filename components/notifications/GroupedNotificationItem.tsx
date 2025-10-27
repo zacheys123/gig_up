@@ -1,4 +1,4 @@
-// components/notifications/GroupedNotificationItem.tsx
+// components/notifications/GroupedNotificationItem.tsx - UPDATED
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { GroupedNotification } from "@/utils";
 interface GroupedNotificationItemProps {
   group: GroupedNotification;
   onClose: () => void;
+  onGroupClick: (group: GroupedNotification) => void;
   getNotificationIcon: (type: string) => React.ReactNode;
   themeConfig: any;
   iconConfig: any;
@@ -18,6 +19,7 @@ interface GroupedNotificationItemProps {
 export function GroupedNotificationItem({
   group,
   onClose,
+  onGroupClick,
   getNotificationIcon,
   themeConfig,
   iconConfig,
@@ -35,11 +37,8 @@ export function GroupedNotificationItem({
       }
     }
 
-    // Close dropdown
-    onClose();
-
-    // Navigate to notifications page for grouped view
-    router.push("/notifications");
+    // Open the group modal instead of navigating to notifications page
+    onGroupClick(group);
   };
 
   const getTimeAgo = (timestamp: number) => {
@@ -154,7 +153,7 @@ export function GroupedNotificationItem({
                       : "bg-blue-500 text-white"
                   )}
                 >
-                  Grouped • View all
+                  Grouped • View details
                 </span>
               </div>
             </div>
