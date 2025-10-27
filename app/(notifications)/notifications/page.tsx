@@ -1,4 +1,4 @@
-// app/notifications/page.tsx
+// app/notifications/page.tsx - COMPLETELY REWRITTEN
 "use client";
 
 import { useThemeColors } from "@/hooks/useTheme";
@@ -15,9 +15,6 @@ import {
   FiMusic,
   FiSettings,
   FiArrowRight,
-  FiTrash2,
-  FiFilter,
-  FiCheckCircle,
   FiClock,
   FiUsers,
   FiAlertCircle,
@@ -26,8 +23,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotificationSystem } from "@/hooks/useNotifications";
+import { GroupedNotificationsModal } from "@/components/notifications/GroupedNotificationsModal";
+import {
+  GroupedNotification,
+  groupNotifications,
+  isGroupedNotification,
+  NotificationItem,
+} from "@/utils";
+import { Notification } from "@/convex/notificationsTypes";
 
-// Color configuration for each notification type
 const NOTIFICATION_TYPE_CONFIG = {
   profile_view: {
     icon: FiEye,
@@ -69,7 +73,7 @@ const NOTIFICATION_TYPE_CONFIG = {
     iconBg: "bg-green-100 dark:bg-green-800",
   },
   follow_accepted: {
-    icon: FiCheckCircle,
+    icon: FiCheck,
     label: "Follow Accepted",
     bgColor: "bg-emerald-50 dark:bg-emerald-900/20",
     borderColor: "border-emerald-200 dark:border-emerald-800",
@@ -95,7 +99,7 @@ const NOTIFICATION_TYPE_CONFIG = {
     iconBg: "bg-purple-100 dark:bg-purple-800",
   },
   gig_approved: {
-    icon: FiCheckCircle,
+    icon: FiCheck,
     label: "Gig Approved",
     bgColor: "bg-teal-50 dark:bg-teal-900/20",
     borderColor: "border-teal-200 dark:border-teal-800",
@@ -159,7 +163,6 @@ const NOTIFICATION_TYPE_CONFIG = {
     badgeText: "text-amber-700 dark:text-amber-300",
     iconBg: "bg-amber-100 dark:bg-amber-800",
   },
-
   system_updates: {
     icon: FiSettings,
     label: "System Update",
@@ -175,7 +178,6 @@ const NOTIFICATION_TYPE_CONFIG = {
   },
 } as const;
 
-// Default config for unknown types
 const DEFAULT_CONFIG = {
   icon: FiBell,
   label: "Notification",
@@ -196,77 +198,19 @@ const getNotificationConfig = (type: string) => {
     DEFAULT_CONFIG
   );
 };
-const groupNotifications = (notifications: any[]) => {
-  const grouped: any[] = [];
-  const messageGroups = new Map(); // For grouping messages by chatId
-  const seenNotifications = new Set(); // To avoid duplicates
 
-  notifications.forEach((notification) => {
-    // Skip if we've already processed this notification
-    if (seenNotifications.has(notification._id)) return;
-    seenNotifications.add(notification._id);
-
-    // Group messages by chatId
-    if (notification.type === "new_message" && notification.metadata?.chatId) {
-      const chatId = notification.metadata.chatId;
-
-      if (messageGroups.has(chatId)) {
-        // Add to existing group
-        const group = messageGroups.get(chatId);
-        group.notifications.push(notification);
-        group.count += 1;
-        group.latestTimestamp = Math.max(
-          group.latestTimestamp,
-          notification.createdAt
-        );
-      } else {
-        // Create new group
-        const group = {
-          _id: `group_${chatId}`,
-          type: "message_group",
-          title: "New Messages",
-          message: `${notification.metadata.senderName || "Someone"} sent messages`,
-          createdAt: notification.createdAt,
-          latestTimestamp: notification.createdAt,
-          isRead: notification.isRead,
-          chatId: chatId,
-          count: 1,
-          notifications: [notification],
-          metadata: {
-            ...notification.metadata,
-            isGrouped: true,
-            groupCount: 1,
-          },
-        };
-        messageGroups.set(chatId, group);
-        grouped.push(group);
-      }
-    } else {
-      // For non-message notifications, add as-is
-      grouped.push({
-        ...notification,
-        isGrouped: false,
-        count: 1,
-      });
-    }
-  });
-
-  return grouped;
-};
 export default function NotificationsPage() {
   const router = useRouter();
   const { colors } = useThemeColors();
   const [filter, setFilter] = useState<string>("all");
+  const [selectedGroup, setSelectedGroup] =
+    useState<GroupedNotification | null>(null);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
-  const {
-    notifications,
-    unreadCount,
-    isLoading,
-    markAsRead,
-    markAllAsRead,
-    refreshNotifications,
-  } = useNotificationSystem();
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } =
+    useNotificationSystem();
 
+  // Filter notifications first
   const filteredNotifications =
     notifications?.filter((notification) => {
       if (filter === "all") return true;
@@ -277,17 +221,37 @@ export default function NotificationsPage() {
   // Group the filtered notifications
   const groupedNotifications = groupNotifications(filteredNotifications);
 
-  // Sort by latest timestamp (for groups) or creation time
-  const sortedNotifications = groupedNotifications.sort((a, b) => {
-    const timeA = a.latestTimestamp || a.createdAt;
-    const timeB = b.latestTimestamp || b.createdAt;
-    return timeB - timeA;
-  });
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (item: NotificationItem) => {
+    if (isGroupedNotification(item)) {
+      // Handle grouped notifications
+      if (item.count > 1) {
+        setSelectedGroup(item);
+        setIsGroupModalOpen(true);
+      } else if (item.notifications[0]) {
+        // Single notification in group - handle as individual
+        const notification = item.notifications[0];
+        if (!notification.isRead) {
+          await markAsRead(notification._id);
+        }
+        if (notification.actionUrl) {
+          router.push(notification.actionUrl);
+        }
+      }
+    } else {
+      // Handle individual notifications
+      if (!item.isRead) {
+        await markAsRead(item._id);
+      }
+      if (item.actionUrl) {
+        router.push(item.actionUrl);
+      }
+    }
+  };
+
+  const handleGroupNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
       await markAsRead(notification._id);
     }
-
     if (notification.actionUrl) {
       router.push(notification.actionUrl);
     }
@@ -300,7 +264,6 @@ export default function NotificationsPage() {
   const getTimeAgo = (timestamp: number) => {
     const now = Date.now();
     const diff = now - timestamp;
-
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -309,20 +272,228 @@ export default function NotificationsPage() {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
-
     return new Date(timestamp).toLocaleDateString();
   };
 
   const filterOptions = [
     { value: "all", label: "All" },
     { value: "unread", label: "Unread" },
-    { value: "profile_view", label: "Profile Views" },
-    { value: "follow_request", label: "Follow Requests" },
-    { value: "new_follower", label: "Followers" },
-    { value: "gig_invite", label: "Gig Invites" },
     { value: "new_message", label: "Messages" },
-    { value: "new_review", label: "Reviews" },
+    { value: "new_follower", label: "Followers" },
+    { value: "follow_request", label: "Follow Requests" },
+    { value: "profile_view", label: "Profile Views" },
+    { value: "gig_invite", label: "Gig Invites" },
   ];
+
+  // Render grouped notification item
+  const renderGroupedNotification = (
+    group: GroupedNotification,
+    index: number
+  ) => {
+    const config = getNotificationConfig(group.type.replace("_group", ""));
+    const IconComponent = config.icon;
+
+    return (
+      <motion.div
+        key={group._id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        onClick={() => handleNotificationClick(group)}
+        className={cn(
+          "p-4 rounded-xl border cursor-pointer transition-all duration-200 group",
+          "hover:shadow-md active:scale-[0.98]",
+          group.isRead
+            ? cn(config.bgColor, config.borderColor)
+            : cn(
+                config.bgColor,
+                config.borderColor,
+                "ring-1",
+                config.ringColor
+              ),
+          config.hoverBorderColor
+        )}
+      >
+        <div className="flex items-start gap-4">
+          {/* Icon with group badge */}
+          <div className="flex-shrink-0 mt-0.5 relative">
+            <div
+              className={cn("p-2 rounded-lg", config.iconBg, config.iconColor)}
+            >
+              <IconComponent size={18} />
+            </div>
+            {group.count > 1 && (
+              <div
+                className={cn(
+                  "absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold",
+                  config.badgeBg,
+                  config.badgeText
+                )}
+              >
+                {group.count}
+              </div>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3
+                    className={cn(
+                      "font-semibold text-sm",
+                      group.isRead ? colors.text : config.textColor
+                    )}
+                  >
+                    {group.title}
+                  </h3>
+                  {!group.isRead && (
+                    <span
+                      className={cn(
+                        "w-2 h-2 rounded-full animate-pulse",
+                        config.badgeBg
+                      )}
+                    ></span>
+                  )}
+                </div>
+                <p className={cn("text-sm leading-relaxed", colors.textMuted)}>
+                  {group.description}
+                </p>
+
+                {/* Metadata */}
+                <div className="flex items-center gap-3 mt-2 text-xs">
+                  <span
+                    className={cn("flex items-center gap-1", colors.textMuted)}
+                  >
+                    <FiClock size={12} />
+                    {getTimeAgo(group.latestTimestamp)}
+                  </span>
+                  <span
+                    className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      config.badgeBg,
+                      config.badgeText
+                    )}
+                  >
+                    {config.label} • Grouped
+                  </span>
+                  <span className={cn("text-xs", colors.textMuted)}>
+                    {group.count} {group.count === 1 ? "item" : "items"}
+                  </span>
+                </div>
+              </div>
+
+              <FiArrowRight
+                className={cn(
+                  "flex-shrink-0 mt-1 transition-transform group-hover:translate-x-1",
+                  group.isRead ? "text-gray-400" : config.iconColor
+                )}
+                size={16}
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  // Render individual notification item
+  const renderIndividualNotification = (
+    notification: Notification,
+    index: number
+  ) => {
+    const config = getNotificationConfig(notification.type);
+    const IconComponent = config.icon;
+
+    return (
+      <motion.div
+        key={notification._id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        onClick={() => handleNotificationClick(notification)}
+        className={cn(
+          "p-4 rounded-xl border cursor-pointer transition-all duration-200 group",
+          "hover:shadow-md active:scale-[0.98]",
+          notification.isRead
+            ? cn(config.bgColor, config.borderColor)
+            : cn(
+                config.bgColor,
+                config.borderColor,
+                "ring-1",
+                config.ringColor
+              ),
+          config.hoverBorderColor
+        )}
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 mt-0.5">
+            <div
+              className={cn("p-2 rounded-lg", config.iconBg, config.iconColor)}
+            >
+              <IconComponent size={18} />
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3
+                    className={cn(
+                      "font-semibold text-sm",
+                      notification.isRead ? colors.text : config.textColor
+                    )}
+                  >
+                    {notification.title}
+                  </h3>
+                  {!notification.isRead && (
+                    <span
+                      className={cn(
+                        "w-2 h-2 rounded-full animate-pulse",
+                        config.badgeBg
+                      )}
+                    ></span>
+                  )}
+                </div>
+                <p className={cn("text-sm leading-relaxed", colors.textMuted)}>
+                  {notification.message}
+                </p>
+
+                {/* Metadata */}
+                <div className="flex items-center gap-3 mt-2 text-xs">
+                  <span
+                    className={cn("flex items-center gap-1", colors.textMuted)}
+                  >
+                    <FiClock size={12} />
+                    {getTimeAgo(notification.createdAt)}
+                  </span>
+                  <span
+                    className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      config.badgeBg,
+                      config.badgeText
+                    )}
+                  >
+                    {config.label}
+                  </span>
+                </div>
+              </div>
+
+              <FiArrowRight
+                className={cn(
+                  "flex-shrink-0 mt-1 transition-transform group-hover:translate-x-1",
+                  notification.isRead ? "text-gray-400" : config.iconColor
+                )}
+                size={16}
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -392,7 +563,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Filter Bar - Simple Version */}
+      {/* Filter Bar */}
       <div
         className={cn(
           "border-b sticky top-[88px] z-10",
@@ -410,12 +581,14 @@ export default function NotificationsPage() {
                   key={option.value}
                   onClick={() => setFilter(option.value)}
                   className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+                    "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 border",
+                    "flex items-center gap-2 min-w-max",
                     isActive
-                      ? cn("bg-blue-500 text-white shadow-sm", colors.primaryBg)
+                      ? "bg-blue-500 text-white border-blue-500 shadow-sm"
                       : cn(
-                          "hover:bg-gray-100 dark:hover:bg-gray-800",
-                          colors.textMuted
+                          "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300",
+                          "border-gray-300 dark:border-gray-600",
+                          "hover:bg-gray-50 dark:hover:bg-gray-700"
                         )
                   )}
                 >
@@ -423,9 +596,9 @@ export default function NotificationsPage() {
                   {option.value === "unread" && unreadCount > 0 && (
                     <span
                       className={cn(
-                        "ml-2 px-1.5 py-0.5 rounded-full text-xs",
+                        "px-1.5 py-0.5 rounded-full text-xs min-w-5 flex items-center justify-center",
                         isActive
-                          ? "bg-white bg-opacity-20"
+                          ? "bg-white bg-opacity-20 text-white"
                           : "bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300"
                       )}
                     >
@@ -435,25 +608,30 @@ export default function NotificationsPage() {
                 </button>
               );
             })}
+
+            {filter !== "all" && (
+              <button
+                onClick={() => setFilter("all")}
+                className={cn(
+                  "px-3 py-2 rounded-lg text-sm font-medium ml-auto",
+                  "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
+                  "border border-gray-300 dark:border-gray-600",
+                  "bg-white dark:bg-gray-800",
+                  "flex items-center gap-2 whitespace-nowrap"
+                )}
+              >
+                <FiX size={14} />
+                Clear Filter
+              </button>
+            )}
           </div>
         </div>
       </div>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div
-          className={cn(
-            "p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg mb-4"
-          )}
-        >
-          <p>Debug Info:</p>
-          <p>Filter: {filter}</p>
-          <p>Filter Options Count: {filterOptions.length}</p>
-          <p>Filter Bar Rendered: Yes</p>
-        </div>
-      </div>
+
       {/* Notifications List */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AnimatePresence mode="wait">
-          {sortedNotifications.length > 0 ? (
+          {groupedNotifications.length > 0 ? (
             <motion.div
               key="notifications-list"
               initial={{ opacity: 0 }}
@@ -461,144 +639,12 @@ export default function NotificationsPage() {
               exit={{ opacity: 0 }}
               className="space-y-3"
             >
-              {sortedNotifications.map((notification, index) => {
-                const isGroup = notification.isGrouped;
-                const config = getNotificationConfig(
-                  isGroup
-                    ? notification.type.replace("_group", "")
-                    : notification.type
-                );
-                const IconComponent = config.icon;
-
-                return (
-                  <motion.div
-                    key={notification._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={cn(
-                      "p-4 rounded-xl border cursor-pointer transition-all duration-200 group",
-                      "hover:shadow-md active:scale-[0.98]",
-                      notification.isRead
-                        ? cn(config.bgColor, config.borderColor)
-                        : cn(
-                            config.bgColor,
-                            config.borderColor,
-                            "ring-1",
-                            config.ringColor
-                          ),
-                      config.hoverBorderColor
-                    )}
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Icon with group badge */}
-                      <div className="flex-shrink-0 mt-0.5 relative">
-                        <div
-                          className={cn(
-                            "p-2 rounded-lg",
-                            config.iconBg,
-                            config.iconColor
-                          )}
-                        >
-                          <IconComponent size={18} />
-                        </div>
-                        {isGroup && notification.count > 1 && (
-                          <div
-                            className={cn(
-                              "absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold",
-                              config.badgeBg,
-                              config.badgeText
-                            )}
-                          >
-                            {notification.count}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3
-                                className={cn(
-                                  "font-semibold text-sm",
-                                  notification.isRead
-                                    ? colors.text
-                                    : config.textColor
-                                )}
-                              >
-                                {notification.title}
-                                {isGroup && notification.count > 1 && (
-                                  <span className="ml-2 text-xs opacity-75">
-                                    ({notification.count})
-                                  </span>
-                                )}
-                              </h3>
-                              {!notification.isRead && (
-                                <span
-                                  className={cn(
-                                    "w-2 h-2 rounded-full animate-pulse",
-                                    config.badgeBg
-                                  )}
-                                ></span>
-                              )}
-                            </div>
-                            <p
-                              className={cn(
-                                "text-sm leading-relaxed",
-                                colors.textMuted
-                              )}
-                            >
-                              {notification.message}
-                              {isGroup && notification.count > 1 && (
-                                <span className="ml-1 text-xs opacity-75">
-                                  +{notification.count - 1} more
-                                </span>
-                              )}
-                            </p>
-
-                            {/* Metadata */}
-                            <div className="flex items-center gap-3 mt-2 text-xs">
-                              <span
-                                className={cn(
-                                  "flex items-center gap-1",
-                                  colors.textMuted
-                                )}
-                              >
-                                <FiClock size={12} />
-                                {getTimeAgo(
-                                  notification.latestTimestamp ||
-                                    notification.createdAt
-                                )}
-                              </span>
-                              <span
-                                className={cn(
-                                  "px-2 py-1 rounded-full text-xs font-medium",
-                                  config.badgeBg,
-                                  config.badgeText
-                                )}
-                              >
-                                {config.label}
-                                {isGroup && " (Grouped)"}
-                              </span>
-                            </div>
-                          </div>
-                          <FiArrowRight
-                            className={cn(
-                              "flex-shrink-0 mt-1 transition-transform group-hover:translate-x-1",
-                              notification.isRead
-                                ? "text-gray-400"
-                                : config.iconColor
-                            )}
-                            size={16}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
+              {groupedNotifications.map((item, index) => {
+                if (isGroupedNotification(item)) {
+                  return renderGroupedNotification(item, index);
+                } else {
+                  return renderIndividualNotification(item, index);
+                }
               })}
             </motion.div>
           ) : (
@@ -628,6 +674,16 @@ export default function NotificationsPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Grouped Notifications Modal */}
+      {selectedGroup && (
+        <GroupedNotificationsModal
+          group={selectedGroup}
+          isOpen={isGroupModalOpen}
+          onClose={() => setIsGroupModalOpen(false)}
+          onNotificationClick={handleGroupNotificationClick}
+        />
+      )}
     </div>
   );
 }

@@ -390,27 +390,44 @@ export interface GroupedNotification {
   isRead: boolean;
   metadata: {
     groupedType: string;
-    primaryActionUrl?: string;
-    // Group-specific metadata
-    chatId?: string;
-    senderIds?: string[];
+    chatIds: string[];
+    senderIds: string[];
+    // Add optional fields for different group types
     followerIds?: string[];
     viewerIds?: string[];
     gigIds?: string[];
-    // For quick access to the latest notification
     latestNotification?: Notification;
   };
+  isGrouped: true;
 }
+
+// Type guard to check if it's a grouped notification
+export function isGroupedNotification(item: any): item is GroupedNotification {
+  return item && item.isGrouped === true;
+}
+
+// Type for the combined array
+export type NotificationItem = Notification | GroupedNotification;
 
 export const groupNotifications = (
   notifications: Notification[]
-): (Notification | GroupedNotification)[] => {
-  const grouped: (Notification | GroupedNotification)[] = [];
-  const groups = {
-    messages: new Map<string, GroupedNotification>(),
-    follows: new Map<string, GroupedNotification>(),
-    profileViews: new Map<string, GroupedNotification>(),
-    gigs: new Map<string, GroupedNotification>(),
+): NotificationItem[] => {
+  const grouped: NotificationItem[] = [];
+  const messageGroup: GroupedNotification = {
+    _id: "message_group_all",
+    type: "message_group",
+    title: "New Messages",
+    description: "",
+    count: 0,
+    notifications: [],
+    latestTimestamp: 0,
+    isRead: true, // Start as true, will update
+    isGrouped: true,
+    metadata: {
+      groupedType: "messages",
+      chatIds: [],
+      senderIds: [],
+    },
   };
 
   const seenNotifications = new Set<string>();
@@ -419,146 +436,117 @@ export const groupNotifications = (
     if (seenNotifications.has(notification._id)) return;
     seenNotifications.add(notification._id);
 
-    switch (notification.type) {
-      case "new_message":
-        groupMessageNotification(notification, groups.messages, grouped);
-        break;
+    // Handle message notifications - GROUP ALL TOGETHER
+    if (notification.type === "new_message") {
+      messageGroup.notifications.push(notification);
+      messageGroup.count += 1;
+      messageGroup.latestTimestamp = Math.max(
+        messageGroup.latestTimestamp,
+        notification.createdAt
+      );
+      messageGroup.isRead = messageGroup.isRead && notification.isRead;
 
-      case "new_follower":
-      case "follow_request":
-      case "follow_accepted":
-        groupFollowNotification(notification, groups.follows, grouped);
-        break;
+      // Collect unique chatIds
+      const chatId = notification.metadata?.chatId;
+      if (chatId && !messageGroup.metadata.chatIds.includes(chatId)) {
+        messageGroup.metadata.chatIds.push(chatId);
+      }
 
-      case "profile_view":
-        groupProfileViewNotification(
-          notification,
-          groups.profileViews,
-          grouped
-        );
-        break;
+      // Collect unique senderIds
+      const senderId = notification.metadata?.senderDocumentId;
+      if (senderId && !messageGroup.metadata.senderIds.includes(senderId)) {
+        messageGroup.metadata.senderIds.push(senderId);
+      }
 
-      case "gig_invite":
-      case "gig_application":
-      case "gig_approved":
-      case "gig_rejected":
-      case "gig_cancelled":
-      case "gig_reminder":
-        groupGigNotification(notification, groups.gigs, grouped);
-        break;
+      // Update description
+      if (messageGroup.count === 1) {
+        messageGroup.description = "1 new message";
+      } else {
+        messageGroup.description = `${messageGroup.count} new messages`;
+      }
 
-      default:
-        // Don't group other notification types
-        grouped.push(notification);
+      messageGroup.metadata.latestNotification = notification;
+    } else {
+      // For non-message notifications, handle individual grouping as before
+      handleNonMessageNotification(notification, grouped);
     }
   });
 
+  // Add message group if there are any messages
+  if (messageGroup.count > 0) {
+    grouped.push(messageGroup);
+  }
+
   // Sort all items by latest timestamp
   return grouped.sort((a, b) => {
-    const timeA = "latestTimestamp" in a ? a.latestTimestamp : a.createdAt;
-    const timeB = "latestTimestamp" in b ? b.latestTimestamp : b.createdAt;
+    const timeA = isGroupedNotification(a) ? a.latestTimestamp : a.createdAt;
+    const timeB = isGroupedNotification(b) ? b.latestTimestamp : b.createdAt;
     return timeB - timeA;
   });
 };
 
-const groupMessageNotification = (
+// Handle non-message notifications with individual grouping
+const handleNonMessageNotification = (
   notification: Notification,
-  groups: Map<string, GroupedNotification>,
-  grouped: (Notification | GroupedNotification)[]
+  grouped: NotificationItem[]
 ) => {
-  const chatId = notification.metadata?.chatId;
+  switch (notification.type) {
+    case "new_follower":
+    case "follow_request":
+    case "follow_accepted":
+      groupFollowNotification(notification, grouped);
+      break;
 
-  if (chatId) {
-    const groupKey = `messages_${chatId}`;
+    case "profile_view":
+      groupProfileViewNotification(notification, grouped);
+      break;
 
-    if (groups.has(groupKey)) {
-      const group = groups.get(groupKey)!;
-      group.notifications.push(notification);
-      group.count += 1;
-      group.latestTimestamp = Math.max(
-        group.latestTimestamp,
-        notification.createdAt
-      );
-      group.isRead = group.isRead && notification.isRead;
+    case "gig_invite":
+    case "gig_application":
+    case "gig_approved":
+    case "gig_rejected":
+    case "gig_cancelled":
+    case "gig_reminder":
+      groupGigNotification(notification, grouped);
+      break;
 
-      // Update metadata
-      if (!group.metadata.senderIds) group.metadata.senderIds = [];
-      const senderId = notification.metadata?.senderDocumentId;
-      if (senderId && !group.metadata.senderIds.includes(senderId)) {
-        group.metadata.senderIds.push(senderId);
-      }
-
-      // Update description based on count
-      if (group.count === 2) {
-        group.description = `2 new messages in chat`;
-      } else {
-        group.description = `${group.count} new messages in chat`;
-      }
-
-      group.metadata.latestNotification = notification;
-    } else {
-      const group: GroupedNotification = {
-        _id: `group_${groupKey}`,
-        type: "message_group",
-        title: "New Messages",
-        description: "1 new message in chat",
-        count: 1,
-        notifications: [notification],
-        latestTimestamp: notification.createdAt,
-        isRead: notification.isRead,
-        metadata: {
-          groupedType: "messages",
-          chatId: chatId,
-          senderIds: notification.metadata?.senderDocumentId
-            ? [notification.metadata.senderDocumentId]
-            : [],
-          latestNotification: notification,
-        },
-      };
-      groups.set(groupKey, group);
-      grouped.push(group);
-    }
-  } else {
-    grouped.push(notification);
+    default:
+      // Don't group other notification types
+      grouped.push(notification);
   }
 };
 
+// Follow grouping function
 const groupFollowNotification = (
   notification: Notification,
-  groups: Map<string, GroupedNotification>,
-  grouped: (Notification | GroupedNotification)[]
+  grouped: NotificationItem[]
 ) => {
   const followerId =
     notification.metadata?.followerDocumentId ||
     notification.metadata?.requesterDocumentId;
 
   if (followerId) {
-    const groupKey = `follows_${followerId}`;
+    // Find existing follow group for this user
+    const existingGroup = grouped.find(
+      (item) =>
+        isGroupedNotification(item) &&
+        item.type === "follow_group" &&
+        item.metadata.followerIds?.includes(followerId)
+    ) as GroupedNotification | undefined;
 
-    if (groups.has(groupKey)) {
-      const group = groups.get(groupKey)!;
-      group.notifications.push(notification);
-      group.count += 1;
-      group.latestTimestamp = Math.max(
-        group.latestTimestamp,
+    if (existingGroup) {
+      existingGroup.notifications.push(notification);
+      existingGroup.count += 1;
+      existingGroup.latestTimestamp = Math.max(
+        existingGroup.latestTimestamp,
         notification.createdAt
       );
-      group.isRead = group.isRead && notification.isRead;
+      existingGroup.isRead = existingGroup.isRead && notification.isRead;
 
-      // Update title and description based on activities
-      const activities = new Set(group.notifications.map((n) => n.type));
-      if (
-        activities.has("follow_request") &&
-        activities.has("follow_accepted")
-      ) {
-        group.title = "Follow Activities";
-        group.description = "Multiple follow activities";
-      }
-
-      group.metadata.latestNotification = notification;
+      existingGroup.metadata.latestNotification = notification;
     } else {
       const group: GroupedNotification = {
-        _id: `group_${groupKey}`,
+        _id: `follow_group_${followerId}`,
         type: "follow_group",
         title: getFollowGroupTitle(notification.type),
         description: getFollowGroupDescription(notification, 1),
@@ -566,13 +554,15 @@ const groupFollowNotification = (
         notifications: [notification],
         latestTimestamp: notification.createdAt,
         isRead: notification.isRead,
+        isGrouped: true,
         metadata: {
           groupedType: "follows",
+          chatIds: [],
+          senderIds: [],
           followerIds: [followerId],
           latestNotification: notification,
         },
       };
-      groups.set(groupKey, group);
       grouped.push(group);
     }
   } else {
@@ -580,31 +570,36 @@ const groupFollowNotification = (
   }
 };
 
+// Profile view grouping function
 const groupProfileViewNotification = (
   notification: Notification,
-  groups: Map<string, GroupedNotification>,
-  grouped: (Notification | GroupedNotification)[]
+  grouped: NotificationItem[]
 ) => {
   const viewerId = notification.metadata?.viewerDocumentId;
 
   if (viewerId) {
-    const groupKey = `profile_views_${viewerId}`;
+    // Find existing profile view group for this user
+    const existingGroup = grouped.find(
+      (item) =>
+        isGroupedNotification(item) &&
+        item.type === "profile_view_group" &&
+        item.metadata.viewerIds?.includes(viewerId)
+    ) as GroupedNotification | undefined;
 
-    if (groups.has(groupKey)) {
-      const group = groups.get(groupKey)!;
-      group.notifications.push(notification);
-      group.count += 1;
-      group.latestTimestamp = Math.max(
-        group.latestTimestamp,
+    if (existingGroup) {
+      existingGroup.notifications.push(notification);
+      existingGroup.count += 1;
+      existingGroup.latestTimestamp = Math.max(
+        existingGroup.latestTimestamp,
         notification.createdAt
       );
-      group.isRead = group.isRead && notification.isRead;
+      existingGroup.isRead = existingGroup.isRead && notification.isRead;
 
-      group.description = `${group.count} profile views from this user`;
-      group.metadata.latestNotification = notification;
+      existingGroup.description = `${existingGroup.count} profile views from this user`;
+      existingGroup.metadata.latestNotification = notification;
     } else {
       const group: GroupedNotification = {
-        _id: `group_${groupKey}`,
+        _id: `profile_view_group_${viewerId}`,
         type: "profile_view_group",
         title: "Profile View",
         description: "1 profile view",
@@ -612,13 +607,15 @@ const groupProfileViewNotification = (
         notifications: [notification],
         latestTimestamp: notification.createdAt,
         isRead: notification.isRead,
+        isGrouped: true,
         metadata: {
           groupedType: "profile_views",
+          chatIds: [],
+          senderIds: [],
           viewerIds: [viewerId],
           latestNotification: notification,
         },
       };
-      groups.set(groupKey, group);
       grouped.push(group);
     }
   } else {
@@ -626,33 +623,37 @@ const groupProfileViewNotification = (
   }
 };
 
+// Gig grouping function
 const groupGigNotification = (
   notification: Notification,
-  groups: Map<string, GroupedNotification>,
-  grouped: (Notification | GroupedNotification)[]
+  grouped: NotificationItem[]
 ) => {
   const gigId = notification.metadata?.gigId || notification.relatedGigId;
 
   if (gigId) {
-    const groupKey = `gigs_${gigId}`;
+    // Find existing gig group for this gig
+    const existingGroup = grouped.find(
+      (item) =>
+        isGroupedNotification(item) &&
+        item.type === "gig_group" &&
+        item.metadata.gigIds?.includes(gigId)
+    ) as GroupedNotification | undefined;
 
-    if (groups.has(groupKey)) {
-      const group = groups.get(groupKey)!;
-      group.notifications.push(notification);
-      group.count += 1;
-      group.latestTimestamp = Math.max(
-        group.latestTimestamp,
+    if (existingGroup) {
+      existingGroup.notifications.push(notification);
+      existingGroup.count += 1;
+      existingGroup.latestTimestamp = Math.max(
+        existingGroup.latestTimestamp,
         notification.createdAt
       );
-      group.isRead = group.isRead && notification.isRead;
+      existingGroup.isRead = existingGroup.isRead && notification.isRead;
 
-      // Update title to show multiple gig activities
-      group.title = "Gig Activities";
-      group.description = `${group.count} updates for this gig`;
-      group.metadata.latestNotification = notification;
+      existingGroup.title = "Gig Activities";
+      existingGroup.description = `${existingGroup.count} updates for this gig`;
+      existingGroup.metadata.latestNotification = notification;
     } else {
       const group: GroupedNotification = {
-        _id: `group_${groupKey}`,
+        _id: `gig_group_${gigId}`,
         type: "gig_group",
         title: getGigGroupTitle(notification.type),
         description: "1 gig update",
@@ -660,13 +661,15 @@ const groupGigNotification = (
         notifications: [notification],
         latestTimestamp: notification.createdAt,
         isRead: notification.isRead,
+        isGrouped: true,
         metadata: {
           groupedType: "gigs",
+          chatIds: [],
+          senderIds: [],
           gigIds: [gigId],
           latestNotification: notification,
         },
       };
-      groups.set(groupKey, group);
       grouped.push(group);
     }
   } else {
