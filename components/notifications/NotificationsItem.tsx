@@ -306,3 +306,11 @@ export function NotificationItem({
     </motion.div>
   );
 }
+
+// https://chat.deepseek.com/share/ep1nys5lucnbx3hljt
+// clients can create their own bands from using users profiles
+// the app can use ai to generate the program based on the clients suggestions
+// usig gig Playbook for guidance ,when users come in first in the crew battleground:::
+// first section is guided and already structured from ther gig info itself:
+// section two?:crew chat(dynamic meaning it neads the users interactions)
+// when i send a deputy request its liike a follow request:::when they accept i get a notification and in my profile i gaet in my list of deputies they are added...when you are a deputy to alot of people you get perks under the hood of cos

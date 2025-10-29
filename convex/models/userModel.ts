@@ -61,30 +61,19 @@ export const userModel = defineTable({
     )
   ),
 
-  // Videos and media
-  videosProfile: v.optional(
-    v.array(
-      v.object({
-        _id: v.string(),
-        url: v.string(),
-        title: v.string(),
-        createdAt: v.optional(v.number()),
-        isPublic: v.optional(v.boolean()),
-        description: v.optional(v.string()),
-      })
-    )
-  ),
+  // REMOVED: videosProfile - use dedicated videos table instead
+  // videosProfile: v.optional(...),
 
-  // Reviews - MAKE THESE OPTIONAL
+  // Reviews
   allreviews: v.optional(
     v.array(
       v.object({
         _id: v.string(),
-        postedBy: v.string(), // user ID
-        postedTo: v.string(), // user ID
+        postedBy: v.string(),
+        postedTo: v.string(),
         rating: v.optional(v.number()),
         comment: v.optional(v.string()),
-        gigId: v.optional(v.string()), // gig ID
+        gigId: v.optional(v.string()),
         updatedAt: v.optional(v.number()),
         createdAt: v.optional(v.number()),
       })
@@ -95,23 +84,24 @@ export const userModel = defineTable({
     v.array(
       v.object({
         _id: v.string(),
-        postedBy: v.string(), // user ID
-        postedTo: v.string(), // user ID
+        postedBy: v.string(),
+        postedTo: v.string(),
         rating: v.optional(v.number()),
         comment: v.optional(v.string()),
-        gigId: v.optional(v.string()), // gig ID
-        videoId: v.optional(v.array(v.string())), // video IDs
+        gigId: v.optional(v.string()),
+        videoId: v.optional(v.array(v.string())),
         updatedAt: v.optional(v.number()),
         createdAt: v.optional(v.number()),
       })
     )
   ),
 
-  // Social connections - MAKE THESE OPTIONAL
-  followers: v.optional(v.array(v.string())), // user IDs
-  followings: v.optional(v.array(v.string())), // user IDs
-  refferences: v.optional(v.array(v.string())), // user IDs
+  // Social connections
+  followers: v.optional(v.array(v.string())),
+  followings: v.optional(v.array(v.string())),
+  refferences: v.optional(v.array(v.string())),
   mutualFollowers: v.optional(v.number()),
+
   // Business and billing
   tier: v.union(
     v.literal("free"),
@@ -143,12 +133,12 @@ export const userModel = defineTable({
   cancelgigCount: v.number(),
   completedGigsCount: v.number(),
 
-  // Booking history - MAKE OPTIONAL
+  // Booking history
   bookingHistory: v.optional(
     v.array(
       v.object({
-        userId: v.array(v.string()), // user IDs
-        gigId: v.array(v.string()), // gig IDs
+        userId: v.array(v.string()),
+        gigId: v.array(v.string()),
         status: v.string(),
         date: v.number(),
         role: v.string(),
@@ -167,10 +157,10 @@ export const userModel = defineTable({
     })
   ),
 
-  // Saved content - MAKE THESE OPTIONAL
-  savedGigs: v.optional(v.array(v.string())), // gig IDs
-  favoriteGigs: v.optional(v.array(v.string())), // gig IDs
-  likedVideos: v.optional(v.array(v.string())), // video IDs
+  // Saved content
+  savedGigs: v.optional(v.array(v.string())),
+  favoriteGigs: v.optional(v.array(v.string())),
+  likedVideos: v.optional(v.array(v.string())), // References video IDs
 
   // User status and activity
   firstLogin: v.boolean(),
@@ -236,10 +226,11 @@ export const userModel = defineTable({
       lastUpdated: v.optional(v.number()),
     })
   ),
-  viewedProfiles: v.optional(v.array(v.string())), // Track who current user has viewed
-  isPrivate: v.optional(v.boolean()), // New field - default false
+  viewedProfiles: v.optional(v.array(v.string())),
+  isPrivate: v.optional(v.boolean()),
   pendingFollowRequests: v.optional(v.array(v.id("users"))),
 })
+  // ... keep your existing indexes
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])
   .index("by_username", ["username"])

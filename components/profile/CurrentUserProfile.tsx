@@ -198,17 +198,17 @@ const CurrentUserProfile = () => {
       setVocalistGenre(user.vocalistGenre || "");
 
       // Handle videos with proper privacy settings
-      const userVideos = user.videosProfile || [];
-      const videosWithPrivacy: VideoProfileProps[] = userVideos.map(
-        (video, index) => ({
-          _id: video._id,
-          title: video.title || `Performance Video ${index + 1}`,
-          url: video.url,
-          isPublic: video.isPublic !== undefined ? video.isPublic : true,
-          createdAt: video.createdAt,
-        })
-      );
-      setVideos(videosWithPrivacy);
+      // const userVideos = user.videosProfile || [];
+      // const videosWithPrivacy: VideoProfileProps[] = userVideos.map(
+      //   (video, index) => ({
+      //     _id: video._id,
+      //     title: video.title || `Performance Video ${index + 1}`,
+      //     url: video.url,
+      //     isPublic: video.isPublic !== undefined ? video.isPublic : true,
+      //     createdAt: video.createdAt,
+      //   })
+      // );
+      // setVideos(videosWithPrivacy);
 
       // Fix for rate object
       const userRate = user.rate || {};
@@ -870,6 +870,13 @@ const CurrentUserProfile = () => {
       url: newVideoUrl,
       isPublic: newVideoPrivacy,
       createdAt: Date.now(),
+      isProfileVideo: true,
+      videoType: "profile",
+      userId: "",
+      tags: [],
+      views: 0,
+      likes: 0,
+      updatedAt: 0,
     };
 
     setVideos((prev) => [...prev, newVideo]);

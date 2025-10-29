@@ -10,8 +10,9 @@ import { HiSwitchHorizontal } from "react-icons/hi";
 import { IoArrowBack } from "react-icons/io5";
 import { useUser } from "@clerk/nextjs";
 import { experiences, instruments } from "@/data";
-import Modal from "../modals/Modal";
+
 import { useUserMutations } from "@/hooks/useUserMutation";
+import { Modal } from "../modals/Modal";
 
 // Add the arrays at the top of the file
 const djGenres = [

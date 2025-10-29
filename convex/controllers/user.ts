@@ -100,12 +100,10 @@ export const syncUserProfile = mutation({
         musiciangenres: [],
         savedGigs: [],
         favoriteGigs: [],
-        likedVideos: [],
         bookingHistory: [],
         adminPermissions: [],
         allreviews: [],
         myreviews: [],
-        videosProfile: [],
         gigsBookedThisWeek: { count: 0, weekStart: now },
         badges: [],
         reliabilityScore: 100,
@@ -172,18 +170,6 @@ export const updateUserProfile = mutation({
         })
       ),
 
-      videosProfile: v.optional(
-        v.array(
-          v.object({
-            _id: v.string(),
-            url: v.string(),
-            title: v.string(),
-            createdAt: v.optional(v.number()),
-            isPublic: v.optional(v.boolean()),
-            description: v.optional(v.string()),
-          })
-        )
-      ),
       // ADD THESE NEW ROLE-SPECIFIC FIELDS:
       roleType: v.optional(v.string()),
       djGenre: v.optional(v.string()),
@@ -902,59 +888,6 @@ export const updateUserPrivacySettings = mutation({
     await ctx.db.patch(user._id, updates);
 
     return { success: true, updatedFields: Object.keys(updates) };
-  },
-});
-export const likeVideo = mutation({
-  args: {
-    videoId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
-
-    if (!user) throw new Error("User not found");
-
-    const likedVideos = user.likedVideos || [];
-
-    if (!likedVideos.includes(args.videoId)) {
-      await ctx.db.patch(user._id, {
-        likedVideos: [...likedVideos, args.videoId],
-        lastActive: Date.now(),
-      });
-    }
-
-    return { success: true };
-  },
-});
-
-export const unlikeVideo = mutation({
-  args: {
-    videoId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
-
-    if (!user) throw new Error("User not found");
-
-    const likedVideos = user.likedVideos || [];
-
-    await ctx.db.patch(user._id, {
-      likedVideos: likedVideos.filter((id) => id !== args.videoId),
-      lastActive: Date.now(),
-    });
-
-    return { success: true };
   },
 });
 

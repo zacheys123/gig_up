@@ -4,7 +4,7 @@ import { fileupload } from "@/hooks/fileUpload";
 import { UserProps, VideoProfileProps } from "@/types/userTypes";
 import { CircularProgress } from "@mui/material";
 import { motion } from "framer-motion";
-import React, { ChangeEvent, useCallback, useState } from "react";
+import React, { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { Music, Play, Trash2, Plus, X } from "lucide-react";
@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { Globe, Lock, Users } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+
 interface VideoProfileComponentProps {
   videos: VideoProfileProps[];
   onAddVideo: (video: VideoProfileProps) => void;
@@ -30,6 +34,14 @@ const VideoProfileComponent = ({
 }: VideoProfileComponentProps) => {
   const { colors } = useThemeColors();
 
+  // Convex queries and mutations
+  const createVideo = useMutation(api.controllers.videos.createVideo);
+  const deleteVideoMutation = useMutation(api.controllers.videos.deleteVideo);
+  const userVideos = useQuery(
+    api.controllers.videos.getUserProfileVideos,
+    user ? { userId: user.clerkId } : "skip"
+  );
+
   // State for file upload
   const [fileUrl, setFileUrl] = useState<string>("");
   const [uploading, setUploading] = useState<boolean>(false);
@@ -40,7 +52,21 @@ const VideoProfileComponent = ({
   const [addedVideos, setAddedVideos] = useState<string[]>([]);
   const [newVideoTitle, setNewVideoTitle] = useState("");
   const [newVideoDescription, setNewVideoDescription] = useState("");
-  const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true); // Default to public
+  const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true);
+  const [newVideoType, setNewVideoType] = useState<
+    "profile" | "gig" | "casual" | "promo" | "other"
+  >("profile");
+  const [newVideoTags, setNewVideoTags] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState("");
+
+  // Sync with database videos when component mounts
+  useEffect(() => {
+    if (userVideos && user) {
+      // You might want to sync the local state with database videos here
+      // Or handle this in the parent component
+    }
+  }, [userVideos, user]);
+
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const dep = "video";
@@ -59,27 +85,65 @@ const VideoProfileComponent = ({
 
       fileupload(
         event,
-        (file: string) => {
+        async (file: string) => {
           if (file) {
-            // Create a new video object with privacy settings
-            const newVideo: VideoProfileProps = {
-              _id: Date.now().toString(),
-              title: newVideoTitle,
-              description: newVideoDescription || undefined,
-              url: file,
-              isPublic: newVideoPrivacy,
-              createdAt: Date.now(),
-            };
-            onAddVideo(newVideo);
-            setAddedVideos((prev) =>
-              prev.length < 3 ? [...prev, file] : prev
-            );
+            try {
+              // Create video in database
+              const videoId = await createVideo({
+                userId: user.clerkId,
+                title: newVideoTitle,
+                description: newVideoDescription || "",
+                url: file,
+                isPublic: newVideoPrivacy,
+                videoType: newVideoType,
+                tags: newVideoTags,
+                // You might want to calculate duration or get thumbnail from Cloudinary
+                duration: 0, // You can extract this from the video file if needed
+                thumbnail: "", // You can generate thumbnail from video
+                gigId: undefined,
+                gigName: undefined,
+              });
 
-            // Reset form
-            setNewVideoTitle("");
-            setNewVideoDescription("");
-            setNewVideoPrivacy(true);
-            setUploadModal(false);
+              // Create local video object for immediate UI update
+              const newVideo: VideoProfileProps = {
+                _id: videoId,
+                userId: user.clerkId,
+                title: newVideoTitle,
+                description: newVideoDescription || undefined,
+                url: file,
+                thumbnail: "",
+                duration: 0,
+                isPublic: newVideoPrivacy,
+                videoType: newVideoType,
+                isProfileVideo: newVideoType === "profile",
+                gigId: undefined,
+                gigName: undefined,
+                tags: newVideoTags,
+                views: 0,
+                likes: 0,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+
+              onAddVideo(newVideo);
+              setAddedVideos((prev) =>
+                prev.length < 3 ? [...prev, file] : prev
+              );
+
+              // Reset form
+              setNewVideoTitle("");
+              setNewVideoDescription("");
+              setNewVideoPrivacy(true);
+              setNewVideoType("profile");
+              setNewVideoTags([]);
+              setNewTagInput("");
+              setUploadModal(false);
+
+              toast.success("Video uploaded successfully!");
+            } catch (error) {
+              console.error("Error creating video:", error);
+              toast.error("Failed to save video to database");
+            }
           }
         },
         toast,
@@ -101,18 +165,38 @@ const VideoProfileComponent = ({
       newVideoTitle,
       newVideoDescription,
       newVideoPrivacy,
+      newVideoType,
+      newVideoTags,
+      createVideo,
       onAddVideo,
       user,
     ]
   );
 
-  const deleteVideo = (videoId: string) => {
-    onRemoveVideo(videoId);
-    setAddedVideos(addedVideos.filter((video) => video !== videoId));
-    setCurrentVideo(undefined);
-    setVideopreview(false);
-    setVideomenu(false);
-    toast.success("Video removed! Don't forget to save your profile.");
+  const deleteVideo = async (videoId: string) => {
+    try {
+      await deleteVideoMutation({ videoId });
+      onRemoveVideo(videoId);
+      setAddedVideos(addedVideos.filter((video) => video !== videoId));
+      setCurrentVideo(undefined);
+      setVideopreview(false);
+      setVideomenu(false);
+      toast.success("Video deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      toast.error("Failed to delete video");
+    }
+  };
+
+  const addTag = () => {
+    if (newTagInput.trim() && !newVideoTags.includes(newTagInput.trim())) {
+      setNewVideoTags([...newVideoTags, newTagInput.trim()]);
+      setNewTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setNewVideoTags(newVideoTags.filter((tag) => tag !== tagToRemove));
   };
 
   const openVideoPreview = (video: VideoProfileProps) => {
@@ -200,6 +284,15 @@ const VideoProfileComponent = ({
       </div>
     </div>
   );
+
+  const videoTypes = [
+    { value: "profile", label: "Profile Showcase" },
+    { value: "gig", label: "Gig Recording" },
+    { value: "casual", label: "Casual Performance" },
+    { value: "promo", label: "Promotional Content" },
+    { value: "other", label: "Other" },
+  ];
+
   return (
     <>
       <div className="space-y-4">
@@ -253,19 +346,28 @@ const VideoProfileComponent = ({
                 <div className="aspect-video bg-black relative">
                   {/* Video Thumbnail */}
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-neutral-900 to-black">
-                    <div className="text-center">
-                      <Play
-                        size={32}
-                        className={cn("mx-auto mb-2", colors.textMuted)}
+                    {video.thumbnail ? (
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        className="w-full h-full object-cover"
                       />
-                      <p className={cn("text-sm font-medium", colors.text)}>
-                        {video.title}
-                      </p>
-                      <p className={cn("text-xs mt-1", colors.textMuted)}>
-                        Click to play
-                      </p>
-                    </div>
+                    ) : (
+                      <div className="text-center">
+                        <Play
+                          size={32}
+                          className={cn("mx-auto mb-2", colors.textMuted)}
+                        />
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          {video.title}
+                        </p>
+                        <p className={cn("text-xs mt-1", colors.textMuted)}>
+                          Click to play
+                        </p>
+                      </div>
+                    )}
                   </div>
+
                   {/* Privacy Badge */}
                   <div className="absolute top-2 left-2">
                     <Badge
@@ -286,11 +388,21 @@ const VideoProfileComponent = ({
                     </Badge>
                   </div>
 
+                  {/* Video Type Badge */}
+                  <div className="absolute top-2 right-12">
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-gray-800 text-white border-gray-600"
+                    >
+                      {video.videoType}
+                    </Badge>
+                  </div>
+
                   {/* Delete Button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRemoveVideo(video._id);
+                      deleteVideo(video._id);
                     }}
                     className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                     disabled={loading}
@@ -309,19 +421,60 @@ const VideoProfileComponent = ({
                   >
                     {video.title}
                   </p>
-                  <div className="flex justify-between items-center">
-                    <Badge
-                      variant="outline"
-                      className={cn("text-xs", colors.border)}
+                  {video.description && (
+                    <p
+                      className={cn(
+                        "text-xs mb-2 line-clamp-2",
+                        colors.textMuted
+                      )}
                     >
-                      {getPlatformFromUrl(video.url)}
-                    </Badge>
+                      {video.description}
+                    </p>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-1">
+                      <Badge
+                        variant="outline"
+                        className={cn("text-xs", colors.border)}
+                      >
+                        {getPlatformFromUrl(video.url)}
+                      </Badge>
+                      {video.views > 0 && (
+                        <Badge
+                          variant="outline"
+                          className={cn("text-xs", colors.border)}
+                        >
+                          {video.views} views
+                        </Badge>
+                      )}
+                    </div>
                     {video.createdAt && (
                       <p className={cn("text-xs", colors.textMuted)}>
                         {new Date(video.createdAt).toLocaleDateString()}
                       </p>
                     )}
                   </div>
+                  {video.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {video.tags.slice(0, 3).map((tag, index) => (
+                        <span
+                          key={index}
+                          className={cn(
+                            "text-xs px-1.5 py-0.5 rounded",
+                            colors.secondaryBackground,
+                            colors.textMuted
+                          )}
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                      {video.tags.length > 3 && (
+                        <span className={cn("text-xs", colors.textMuted)}>
+                          +{video.tags.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -329,6 +482,7 @@ const VideoProfileComponent = ({
         )}
       </div>
 
+      {/* Upload Modal */}
       {uploadModal && (
         <div className="flex justify-center items-center fixed inset-0 z-50 bg-black/40">
           <div className="relative w-[90%] mx-auto max-w-2xl bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
@@ -339,6 +493,9 @@ const VideoProfileComponent = ({
                 setNewVideoTitle("");
                 setNewVideoDescription("");
                 setNewVideoPrivacy(true);
+                setNewVideoType("profile");
+                setNewVideoTags([]);
+                setNewTagInput("");
               }}
               className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold"
             >
@@ -376,6 +533,71 @@ const VideoProfileComponent = ({
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
                 />
+              </div>
+
+              {/* Video Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Video Type
+                </label>
+                <select
+                  value={newVideoType}
+                  onChange={(e) => setNewVideoType(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  {videoTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {newVideoTags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X size={12} />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTag();
+                      }
+                    }}
+                    placeholder="Add a tag..."
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTag}
+                    className="px-3 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600"
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
 
               {/* Privacy Settings */}
@@ -458,6 +680,9 @@ const VideoProfileComponent = ({
                     setNewVideoTitle("");
                     setNewVideoDescription("");
                     setNewVideoPrivacy(true);
+                    setNewVideoType("profile");
+                    setNewVideoTags([]);
+                    setNewTagInput("");
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
@@ -465,7 +690,6 @@ const VideoProfileComponent = ({
                 </button>
                 <button
                   onClick={() => {
-                    // This will be handled by the file upload
                     document.getElementById("postvideo")?.click();
                   }}
                   disabled={uploading || !newVideoTitle.trim()}

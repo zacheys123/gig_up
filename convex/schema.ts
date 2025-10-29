@@ -6,6 +6,7 @@ import { gigModel } from "./models/gigModel";
 import { notificationModel } from "./models/notificationsModel"; // Make sure this path is correct
 import { notificationSettingsModel } from "./models/notificationSettings";
 import { pushSubscriptions } from "./models/push";
+import { videoModel } from "./models/videoModel";
 
 export default defineSchema({
   users: userModel,
@@ -24,10 +25,7 @@ export default defineSchema({
     version: v.string(),
     lastUpdated: v.number(),
   }),
-  videos: defineTable({
-    title: v.string(),
-    url: v.string(),
-  }),
+  videos: videoModel,
   pushSubscriptions: pushSubscriptions,
   chats: defineTable({
     participantIds: v.array(v.id("users")),

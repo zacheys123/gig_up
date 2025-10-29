@@ -108,9 +108,8 @@ export function NotificationDropdown({
     }
   };
 
-  const dropdownWidth = variant === "mobile" ? "w-full" : "w-[90%]";
-  const expandedWidth = variant === "mobile" ? "w-full" : "w-[90%] mx-auto";
-
+  const dropdownWidth = variant === "mobile" ? "w-full" : "w-96"; // ✅ Increased from w-[90%] to w-96
+  const expandedWidth = variant === "mobile" ? "w-full" : "w-[28rem]"; // ✅ Consistent expanded wid
   // Enhanced theme config that works with your color system
   const themeConfig = {
     background: colors.background,
@@ -120,6 +119,7 @@ export function NotificationDropdown({
       primary: colors.text,
       secondary: colors.textMuted,
       accent: colors.primary,
+      muted: colors.textMuted,
     },
     surface: {
       primary: isDarkMode ? "bg-gray-800/80" : "bg-gray-50/90",
@@ -188,7 +188,6 @@ export function NotificationDropdown({
           aria-hidden="true"
         />
 
-        {/* Main Dropdown Container */}
         <motion.div
           key={viewMode}
           initial={{
@@ -203,7 +202,7 @@ export function NotificationDropdown({
             scale: 1,
             y: 0,
             x: variant === "mobile" ? "-50%" : 0,
-            width: viewMode === "list" ? dropdownWidth : expandedWidth,
+            width: viewMode === "list" ? dropdownWidth : "28rem", // ✅ Increased width for group view
           }}
           exit={{
             opacity: 0,
@@ -218,7 +217,7 @@ export function NotificationDropdown({
             width: { duration: 0.3 },
           }}
           className={cn(
-            "absolute top-12 z-70 rounded-2xl shadow-2xl border transform-gpu overflow-hidden",
+            "absolute top-12 z-70 rounded-2xl shadow-2xl border transform-gpu overflow-hidden p-5",
             themeConfig.background,
             themeConfig.border,
             "ring-1",
@@ -330,7 +329,7 @@ export function NotificationDropdown({
                 )}
 
                 {viewMode === "list" && (
-                  <Link href="/settings/notifications" onClick={onClose}>
+                  <Link href="/settings/notification" onClick={onClose}>
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}

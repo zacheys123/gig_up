@@ -61,16 +61,6 @@ export interface UserSearchFilters {
   instrument?: string;
 }
 
-// In your userTypes.ts
-export interface VideoProfileProps {
-  _id: string;
-  title: string;
-  url: string;
-  createdAt?: number;
-  isPublic: boolean; // true = public, false = private (followers only)
-  description?: string; // Optional description field
-}
-
 // You can create a types file for privacy settings
 export type VideoPrivacy = "public" | "private";
 
@@ -86,3 +76,25 @@ export const VIDEO_PRIVACY_OPTIONS = {
     description: "Only visible to your mutual followers",
   },
 } as const;
+
+// types/userTypes.ts or create types/videoTypes.ts
+
+export interface VideoProfileProps {
+  _id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  url: string;
+  thumbnail?: string;
+  duration?: number;
+  isPublic: boolean;
+  videoType: "profile" | "gig" | "casual" | "promo" | "other";
+  isProfileVideo: boolean;
+  gigId?: string;
+  gigName?: string;
+  tags: string[];
+  views: number;
+  likes: number;
+  createdAt: number;
+  updatedAt: number;
+}
