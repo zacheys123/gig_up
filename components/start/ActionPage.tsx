@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { MusicIcon, Settings, UsersIcon } from "lucide-react";
+import { MusicIcon, Settings, UsersIcon, Briefcase } from "lucide-react";
 import { HiSwitchHorizontal } from "react-icons/hi";
 import { IoArrowBack } from "react-icons/io5";
 import { useUser } from "@clerk/nextjs";
@@ -53,12 +53,22 @@ const vocalistGenres = [
   "mix",
 ];
 
+const bookerSkillsList = [
+  "Band Management",
+  "Event Coordination",
+  "Talent Booking",
+  "Artist Management",
+  "Event Production",
+  "Venue Management",
+];
+
 type Error = string[];
 type RoleSteps = {
   instrumentalist: string[];
   dj: string[];
   mc: string[];
   vocalist: string[];
+  booker: string[];
   client: string[];
   default: string[];
 };
@@ -70,10 +80,15 @@ const ActionPage = () => {
   const router = useRouter();
   const [musicianload, setMusicianLoad] = useState(false);
   const [clientload, setClientLoad] = useState(false);
+  const [bookerload, setBookerLoad] = useState(false); // NEW: Booker loading state
   const [userload, setUserload] = useState(false);
   const { user: myuser } = useCurrentUser();
-  const { registerAsMusician, registerAsClient, registerAsAdmin } =
-    useUserMutations();
+  const {
+    registerAsMusician,
+    registerAsClient,
+    registerAsBooker,
+    registerAsAdmin,
+  } = useUserMutations(); // UPDATED: Added registerAsBooker
 
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [city, setCity] = useState("");
@@ -81,10 +96,10 @@ const ActionPage = () => {
   const [experience, setExperience] = useState("");
   const [error, setError] = useState<Error>([]);
 
-  const [roles, setRoles] = useState({
-    musician: false,
-    client: false,
-  });
+  // UPDATED: Three separate roles
+  const [selectedRole, setSelectedRole] = useState<
+    "musician" | "client" | "booker" | "both" | null
+  >(null);
 
   const [roleType, setRoleType] = useState<RoleType>("instrumentalist");
   const [djGenre, setDjGenre] = useState("");
@@ -94,7 +109,11 @@ const ActionPage = () => {
   const [mcLanguages, setMcLanguages] = useState("");
   const [talentbio, setTalentbio] = useState("");
   const [organization, setOrganization] = useState("");
+  const [selectedBookerSkills, setSelectedBookerSkills] = useState<string[]>(
+    []
+  );
 
+  // UPDATED: Separate validation for each role
   const validateMusicianFields = useCallback(() => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
@@ -102,16 +121,14 @@ const ActionPage = () => {
       errors.push("Instrument is required");
     if (!experience) errors.push("Experience is required");
     if (roleType === "dj" && (!djGenre || !djEquipment))
-      errors.push("DjGenre or Equipment is required");
+      errors.push("DJ Genre and Equipment are required");
     if (roleType === "vocalist" && !vocalistGenre)
-      errors.push("Genre is required");
-    if (roleType === "vocalist" && !experience)
-      errors.push(" Experience  is required");
+      errors.push("Vocal genre is required");
     if (roleType === "mc" && (!mcType || !mcLanguages))
-      errors.push("MCType or Languages is required");
-    if (!talentbio) errors.push("bio is required");
+      errors.push("MC type and languages are required");
+    if (!talentbio) errors.push("Bio is required");
     if (talentbio.length > 200)
-      errors.push("bio is too long (max 200 characters)");
+      errors.push("Bio is too long (max 200 characters)");
     return errors;
   }, [
     city,
@@ -129,32 +146,47 @@ const ActionPage = () => {
   const validateClientFields = useCallback(() => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
-    if (!organization) errors.push("  Organization is required");
+    if (!organization) errors.push("Organization is required");
+    if (!talentbio) errors.push("Bio is required");
     return errors;
-  }, [city, organization]);
+  }, [city, organization, talentbio]);
 
+  // NEW: Booker validation
+  const validateBookerFields = useCallback(() => {
+    const errors: string[] = [];
+    if (!city) errors.push("City is required");
+    if (!organization) errors.push("Company/Organization is required");
+    if (!experience) errors.push("Experience level is required");
+    if (selectedBookerSkills.length === 0)
+      errors.push("At least one booker skill is required");
+    if (!talentbio) errors.push("Bio is required");
+    if (talentbio.length > 200)
+      errors.push("Bio is too long (max 200 characters)");
+    return errors;
+  }, [city, organization, experience, selectedBookerSkills, talentbio]);
+
+  // UPDATED: Registration function for all three roles
   const registerUser = useCallback(
-    async (isMusician: boolean) => {
+    async (role: "musician" | "client" | "booker") => {
       if (!isSignedIn) {
         console.error("Not signed in");
         return false;
       }
 
-      const errors = isMusician
-        ? validateMusicianFields()
-        : validateClientFields();
+      const errors =
+        role === "musician"
+          ? validateMusicianFields()
+          : role === "client"
+            ? validateClientFields()
+            : validateBookerFields();
+
       if (errors.length > 0) {
         setError(errors);
         return false;
       }
 
-      if ((!isMusician && !organization) || organization === "undefined") {
-        toast.error("Organization is Required");
-        return false;
-      }
-
       try {
-        if (isMusician) {
+        if (role === "musician") {
           await registerAsMusician({
             city,
             instrument,
@@ -166,12 +198,21 @@ const ActionPage = () => {
             mcLanguages,
             talentbio,
             vocalistGenre,
-            organization,
+            organization: organization || "",
           });
-        } else {
+        } else if (role === "client") {
           await registerAsClient({
             city,
             organization,
+            talentbio,
+          });
+        } else if (role === "booker") {
+          // NEW: Booker registration
+          await registerAsBooker({
+            city,
+            organization,
+            experience,
+            bookerSkills: selectedBookerSkills,
             talentbio,
           });
         }
@@ -187,6 +228,7 @@ const ActionPage = () => {
       isSignedIn,
       validateMusicianFields,
       validateClientFields,
+      validateBookerFields,
       city,
       instrument,
       experience,
@@ -198,25 +240,30 @@ const ActionPage = () => {
       talentbio,
       vocalistGenre,
       organization,
+      selectedBookerSkills,
       registerAsMusician,
       registerAsClient,
+      registerAsBooker, // NEW
     ]
   );
 
   const [modal, setModal] = useState(false);
-  // In your ActionPage component, update the adminRole state
-  // Add this at the top of your file
   type AdminRole = "super" | "content" | "support" | "analytics";
-
-  // Then use it in your state
   const [adminRole, setAdminRoles] = useState<AdminRole | null>(null);
   const [adminCity, setAdminCity] = useState("");
   const [adminLoad, setAdminLoad] = useState(false);
 
   const connectAsAdmin = useCallback(async () => {
     setAdminLoad(true);
-    if (!adminCity) error.push("Your City is required");
-    if (!adminRole) error.push("Admin Role is required");
+    const errors: string[] = [];
+    if (!adminCity) errors.push("Your City is required");
+    if (!adminRole) errors.push("Admin Role is required");
+
+    if (errors.length > 0) {
+      setError(errors);
+      setAdminLoad(false);
+      return;
+    }
 
     try {
       await registerAsAdmin({
@@ -233,12 +280,13 @@ const ActionPage = () => {
     } finally {
       setAdminLoad(false);
     }
-  }, [router, adminCity, adminRole, error, registerAsAdmin]);
+  }, [router, adminCity, adminRole, registerAsAdmin]);
 
+  // UPDATED: Separate connection functions for each role
   const connectAsMusician = useCallback(async () => {
     setMusicianLoad(true);
     try {
-      const success = await registerUser(true);
+      const success = await registerUser("musician");
       if (success) {
         setMoreInfo(false);
         toast.success(
@@ -246,9 +294,9 @@ const ActionPage = () => {
             roleType === "instrumentalist"
               ? "Successfully Registered as an Instrumentalist"
               : roleType === "dj"
-                ? "Successfully Registered as a Dj"
+                ? "Successfully Registered as a DJ"
                 : roleType === "mc"
-                  ? "Successfully Registered as a EMcee"
+                  ? "Successfully Registered as an MC"
                   : roleType === "vocalist"
                     ? "Successfully Registered as a Vocalist"
                     : ""
@@ -264,13 +312,27 @@ const ActionPage = () => {
   const connectAsClient = useCallback(async () => {
     setClientLoad(true);
     try {
-      const success = await registerUser(false);
+      const success = await registerUser("client");
       if (success) {
-        toast.success("Registration successful!");
+        toast.success("Successfully Registered as Client!");
         router.push("/dashboard");
       }
     } finally {
       setClientLoad(false);
+    }
+  }, [registerUser, router]);
+
+  // NEW: Booker connection function
+  const connectAsBooker = useCallback(async () => {
+    setBookerLoad(true);
+    try {
+      const success = await registerUser("booker");
+      if (success) {
+        toast.success("Successfully Registered as Booker/Manager!");
+        router.push("/dashboard");
+      }
+    } finally {
+      setBookerLoad(false);
     }
   }, [registerUser, router]);
 
@@ -286,13 +348,19 @@ const ActionPage = () => {
     }
   }, [error]);
 
+  // UPDATED: Role selection handler for three roles
   const handleRoleSelection = useCallback(
-    (isMusician: boolean) => {
-      if (myuser?.isMusician || myuser?.isClient) {
+    (role: "musician" | "client" | "booker" | "both") => {
+      if (
+        myuser?.isMusician ||
+        myuser?.isClient ||
+        myuser?.isBooker ||
+        myuser?.isBoth
+      ) {
         setMoreInfo(true);
         return;
       }
-      setRoles({ musician: isMusician, client: !isMusician });
+      setSelectedRole(role);
       setMoreInfo(true);
     },
     [myuser]
@@ -315,7 +383,14 @@ const ActionPage = () => {
   const accentStyles = {
     orange: "hover:border-orange-500/30 hover:shadow-orange-500/10",
     cyan: "hover:border-blue-500/30 hover:shadow-blue-500/10",
+    emerald: "hover:border-emerald-500/30 hover:shadow-emerald-500/10",
     default: "hover:border-gray-500/30",
+  };
+
+  const toggleBookerSkill = (skill: string) => {
+    setSelectedBookerSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+    );
   };
 
   const renderAdminModal = () => {
@@ -379,20 +454,32 @@ const ActionPage = () => {
     );
   };
 
-  // More Information Modal starts here
+  // UPDATED: More Information Modal with three role flows
   const renderMoreInfoModal = () => {
     const roleSteps: RoleSteps = {
       instrumentalist: ["city", "instrument", "experience", "talentbio"],
       dj: ["city", "genre", "equipment", "experience", "talentbio"],
       mc: ["city", "type", "languages", "experience", "talentbio"],
-      client: ["organization", "talentbio"],
       vocalist: ["city", "vocalistgenre", "experience", "talentbio"],
+      booker: [
+        "city",
+        "organization",
+        "bookerSkills",
+        "experience",
+        "talentbio",
+      ],
+      client: ["city", "organization", "talentbio"],
       default: ["city", "talentbio"],
     };
 
-    const steps = roles.musician
-      ? roleSteps[roleType] || roleSteps.default
-      : roleSteps.default;
+    // Determine steps based on selected role
+    const steps =
+      selectedRole === "musician"
+        ? roleSteps[roleType] || roleSteps.default
+        : selectedRole === "client"
+          ? roleSteps.client
+          : roleSteps.booker;
+
     const handleNext = () => setCurrentStep((prev) => prev + 1);
     const handleBack = () => setCurrentStep((prev) => prev - 1);
 
@@ -405,6 +492,19 @@ const ActionPage = () => {
         </div>
       );
     }
+
+    const getFinalAction = () => {
+      if (selectedRole === "musician") return connectAsMusician;
+      if (selectedRole === "client") return connectAsClient;
+      if (selectedRole === "booker") return connectAsBooker;
+      return () => {};
+    };
+
+    const getButtonText = () => {
+      if (musicianload || clientload || bookerload) return "Processing...";
+      if (currentStep === steps.length - 1) return "Complete Registration";
+      return "Next";
+    };
 
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -433,19 +533,24 @@ const ActionPage = () => {
                 className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
               />
             )}
-            {roles.client && (
-              <>
+
+            {steps[currentStep] === "organization" &&
+              (selectedRole === "client" || selectedRole === "booker") && (
                 <input
                   type="text"
-                  placeholder="Enter Your Organization/Company Name"
+                  placeholder={
+                    selectedRole === "booker"
+                      ? "Your Company/Organization Name"
+                      : "Enter Your Organization/Company Name"
+                  }
                   value={organization}
                   onChange={(e) => setOrganization(e.target.value)}
                   className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
                 />
-              </>
-            )}
-            {/* Role Type Selection */}
-            {roles.musician && (
+              )}
+
+            {/* Role Type Selection (Musicians only) */}
+            {selectedRole === "musician" && steps[currentStep] === "city" && (
               <div className="mt-4">
                 <label className="block text-sm text-neutral-300 mb-2">
                   What do you do?
@@ -480,6 +585,7 @@ const ActionPage = () => {
                 onChange={(e) => setInstrument(e.target.value)}
                 className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
               >
+                <option value="">Select Instrument</option>
                 {instruments().map((inst) => (
                   <option key={inst.id} value={inst.name}>
                     {inst.val}
@@ -502,6 +608,7 @@ const ActionPage = () => {
                 ))}
               </select>
             )}
+
             {steps[currentStep] === "vocalistgenre" && (
               <select
                 value={vocalistGenre}
@@ -555,12 +662,42 @@ const ActionPage = () => {
               />
             )}
 
+            {steps[currentStep] === "bookerSkills" && (
+              <div className="space-y-3">
+                <label className="block text-sm text-neutral-300 mb-2">
+                  Select your booker skills
+                </label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+                  {bookerSkillsList.map((skill) => (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => toggleBookerSkill(skill)}
+                      className={`p-2 rounded border text-left text-[12px] transition-colors ${
+                        selectedBookerSkills.includes(skill)
+                          ? "border-blue-500 bg-blue-500/20 text-white"
+                          : "border-gray-600 text-neutral-300 hover:bg-gray-700"
+                      }`}
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                </div>
+                {selectedBookerSkills.length > 0 && (
+                  <div className="text-xs text-neutral-400 mt-2">
+                    Selected: {selectedBookerSkills.join(", ")}
+                  </div>
+                )}
+              </div>
+            )}
+
             {steps[currentStep] === "experience" && (
               <select
                 value={experience}
                 onChange={(e) => setExperience(e.target.value)}
                 className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
               >
+                <option value="">Select Experience Level</option>
                 {experiences().map((exp) => (
                   <option key={exp.id} value={exp.name}>
                     {exp.val}
@@ -570,40 +707,46 @@ const ActionPage = () => {
             )}
 
             {steps[currentStep] === "talentbio" && (
-              <textarea
-                placeholder="Brief description of your style/skills"
-                value={talentbio}
-                onChange={(e) => setTalentbio(e.target.value)}
-                rows={3}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-                name="talentbio"
-              />
+              <div className="space-y-2">
+                <textarea
+                  placeholder={
+                    selectedRole === "booker"
+                      ? "Describe your booking services and experience..."
+                      : selectedRole === "client"
+                        ? "Tell us about your organization and what you're looking for..."
+                        : "Brief description of your style/skills"
+                  }
+                  value={talentbio}
+                  onChange={(e) => setTalentbio(e.target.value)}
+                  rows={3}
+                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
+                  name="talentbio"
+                />
+                <div className="text-xs text-neutral-400 text-right">
+                  {talentbio.length}/200
+                </div>
+              </div>
             )}
           </div>
 
           {/* Navigation */}
           <button
             onClick={
-              currentStep === steps.length - 1
-                ? () =>
-                    roles.musician ? connectAsMusician() : connectAsClient()
-                : handleNext
+              currentStep === steps.length - 1 ? getFinalAction() : handleNext
             }
-            className="w-full py-2 bg-orange-500 rounded hover:bg-orange-600 text-white text-[13px]"
-            disabled={musicianload || clientload}
+            className="w-full py-2 bg-orange-500 rounded hover:bg-orange-600 text-white text-[13px] transition-colors"
+            disabled={musicianload || clientload || bookerload}
           >
-            {musicianload || clientload
-              ? "Processing..."
-              : currentStep === steps.length - 1
-                ? "Complete Registration"
-                : "Next"}
+            {getButtonText()}
           </button>
 
           {error.length > 0 && (
-            <div className="mt-4 text-red-400 text-sm">
-              {error.map((err, index) => (
-                <div key={index}>{err}</div>
-              ))}
+            <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded">
+              <div className="text-red-400 text-sm space-y-1">
+                {error.map((err, index) => (
+                  <div key={index}>• {err}</div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -677,7 +820,7 @@ const ActionPage = () => {
           </motion.p>
         </div>
 
-        {/* Role cards with glass morphism effect */}
+        {/* UPDATED: Role cards with three distinct roles */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {[
             {
@@ -688,7 +831,7 @@ const ActionPage = () => {
                 "Create gigs and book top-tier musicians, DJs, and performers",
               buttonText: "Join as Client",
               disabled: !!myuser?.isClient,
-              onClick: () => handleRoleSelection(false),
+              onClick: () => handleRoleSelection("client"),
             },
             {
               role: "musician",
@@ -697,16 +840,28 @@ const ActionPage = () => {
               description:
                 "Showcase your talent and connect with premium opportunities",
               buttonText: "Join as Talent",
-              onClick: () => handleRoleSelection(true),
               disabled: !!myuser?.isMusician,
+              onClick: () => handleRoleSelection("musician"),
             },
             {
-              role: "both",
-              title: "Dual Role",
-              accent: "gray",
-              description: "Coming soon: Switch between hiring and performing",
-              buttonText: "Coming Soon",
+              role: "booker", // NEW: Separate booker card
+              title: "Manage Talent",
+              accent: "emerald",
+              description:
+                "Book and manage bands, coordinate events, build your roster",
+              buttonText: "Join as Booker",
+              disabled: !!myuser?.isBooker,
+              onClick: () => handleRoleSelection("booker"),
+            },
+            {
+              role: "both", // NEW: Separate booker card
+              title: "Be a Client and Talent(Coming Soon)",
+              accent: "emerald",
+              description:
+                "Book and manage bands, coordinate events, build your roster",
+              buttonText: "Join as Dual User",
               disabled: true,
+              onClick: () => handleRoleSelection("both"),
             },
             ...(isAdminEmail(user?.emailAddresses[0]?.emailAddress)
               ? [
@@ -743,7 +898,9 @@ const ActionPage = () => {
             ? "from-orange-500/20 to-amber-600/10"
             : card.accent === "blue"
               ? "from-blue-500/20 to-cyan-600/10"
-              : "from-gray-700/20 to-gray-800/10"
+              : card.accent === "emerald"
+                ? "from-emerald-500/20 to-emerald-600/10"
+                : "from-gray-700/20 to-gray-800/10"
         }
       `}
               ></div>
@@ -759,7 +916,9 @@ const ActionPage = () => {
               ? "bg-orange-500"
               : card.accent === "blue"
                 ? "bg-blue-500"
-                : "bg-gray-600"
+                : card.accent === "emerald"
+                  ? "bg-emerald-500"
+                  : "bg-gray-600"
           }
         `}
                 ></div>
@@ -777,7 +936,9 @@ const ActionPage = () => {
                 ? "bg-orange-500/10 text-orange-400"
                 : card.accent === "blue"
                   ? "bg-blue-500/10 text-blue-400"
-                  : "bg-gray-600/10 text-gray-400"
+                  : card.accent === "emerald"
+                    ? "bg-emerald-500/10 text-emerald-400"
+                    : "bg-gray-600/10 text-gray-400"
             }
           `}
                   >
@@ -786,7 +947,7 @@ const ActionPage = () => {
                     ) : card.accent === "blue" ? (
                       <MusicIcon className="h-5 w-5" />
                     ) : card.accent === "emerald" ? (
-                      <Settings className="h-5 w-5" />
+                      <Briefcase className="h-5 w-5" />
                     ) : (
                       <HiSwitchHorizontal className="h-5 w-5" />
                     )}
@@ -816,7 +977,7 @@ const ActionPage = () => {
                   : card.accent === "blue"
                     ? "bg-blue-600 text-white hover:bg-blue-700"
                     : card.accent === "emerald"
-                      ? "bg-emerald-600 text-white hover:bg-orange-700"
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
                       : "bg-neutral-800 text-neutral-400"
             }
           `}

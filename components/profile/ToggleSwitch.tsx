@@ -8,20 +8,25 @@ interface ToggleSwitchProps {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  description?: string;
 }
 
 export const ToggleSwitch = ({
   label,
   checked,
   onChange,
+  description,
 }: ToggleSwitchProps) => {
   const { colors } = useThemeColors();
 
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border transition-colors hover:bg-opacity-50">
-      <Label className={cn("text-sm font-medium flex-1", colors.text)}>
-        {label}
-      </Label>
+      <div className="flex gap-3 flex-col">
+        <Label className={cn("text-sm font-medium flex-1", colors.text)}>
+          {label}
+        </Label>
+        <span className="text-xs text-neutral-400">{description}</span>
+      </div>
       <button
         onClick={() => onChange(!checked)}
         className={cn(

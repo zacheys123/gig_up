@@ -126,14 +126,14 @@ export const syncUserProfile = mutation({
     }
   },
 });
-// Add to convex/user.ts
+// convex/controllers/user.ts
 export const updateUserProfile = mutation({
   args: {
     userId: v.id("users"),
-    clerkId: v.string(), // Add this parameter
+    clerkId: v.string(),
     onboardingComplete: v.boolean(),
     updates: v.object({
-      // ... your existing fields ...
+      // Basic profile fields
       firstname: v.optional(v.string()),
       lastname: v.optional(v.string()),
       email: v.optional(v.string()),
@@ -148,6 +148,8 @@ export const updateUserProfile = mutation({
       phone: v.optional(v.string()),
       organization: v.optional(v.string()),
       firstTimeInProfile: v.optional(v.boolean()),
+
+      // Social and handles
       musicianhandles: v.optional(
         v.array(
           v.object({
@@ -159,8 +161,13 @@ export const updateUserProfile = mutation({
       musiciangenres: v.optional(v.array(v.string())),
       talentbio: v.optional(v.string()),
       handles: v.optional(v.string()),
+
+      // Role flags
       isMusician: v.optional(v.boolean()),
       isClient: v.optional(v.boolean()),
+      isBooker: v.optional(v.boolean()), // NEW: Booker flag
+
+      // Rates
       rate: v.optional(
         v.object({
           regular: v.optional(v.string()),
@@ -170,13 +177,18 @@ export const updateUserProfile = mutation({
         })
       ),
 
-      // ADD THESE NEW ROLE-SPECIFIC FIELDS:
+      // Role-specific fields
       roleType: v.optional(v.string()),
       djGenre: v.optional(v.string()),
       djEquipment: v.optional(v.string()),
       mcType: v.optional(v.string()),
       mcLanguages: v.optional(v.string()),
       vocalistGenre: v.optional(v.string()),
+
+      // NEW: Booker-specific fields
+      bookerSkills: v.optional(v.array(v.string())),
+      bookerBio: v.optional(v.string()),
+      managedBands: v.optional(v.array(v.string())),
     }),
   },
   handler: async (ctx, args) => {
@@ -204,6 +216,7 @@ export const updateUserProfile = mutation({
   },
 });
 // Helper function to create type-safe user data
+// convex/controllers/user.ts - UPDATE createUserData
 const createUserData = (args: any, now: number) => {
   return {
     ...args,
@@ -211,6 +224,7 @@ const createUserData = (args: any, now: number) => {
     // Boolean fields
     isMusician: false,
     isClient: false,
+    isBooker: false, // NEW: Add isBooker field
     isAdmin: false,
     isBoth: false,
     isBanned: false,
@@ -250,6 +264,7 @@ export const getAllUsers = query({
     return await ctx.db.query("users").collect();
   },
 });
+// convex/controllers/user.ts
 export const getCurrentUser = query({
   args: {
     clerkId: v.string(),
@@ -285,21 +300,59 @@ export const getCurrentUser = query({
       followings: user.followings || [],
       allreviews: user.allreviews || [],
       myreviews: user.myreviews || [],
+      bookerSkills: user.bookerSkills || [], // NEW
       firstLogin: user.firstLogin ?? true,
       onboardingComplete: user.onboardingComplete ?? false,
       isMusician: user.isMusician ?? false,
       isClient: user.isClient ?? false,
+      isBooker: user.isBooker ?? false, // NEW
       tier: user.tier ?? "free",
     };
   },
 });
+// convex/controllers/user.ts
+export const getBookers = query({
+  args: {
+    city: v.optional(v.string()),
+    skills: v.optional(v.array(v.string())),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    let bookers = await ctx.db
+      .query("users")
+      .withIndex("by_is_booker", (q) => q.eq("isBooker", true))
+      .collect();
 
+    // Filter by city if provided
+    if (args.city) {
+      bookers = bookers.filter((booker) =>
+        booker.city?.toLowerCase().includes(args.city!.toLowerCase())
+      );
+    }
+
+    // Filter by skills if provided
+    if (args.skills && args.skills.length > 0) {
+      bookers = bookers.filter((booker) =>
+        booker.bookerSkills?.some((skill: string) =>
+          args.skills!.includes(skill)
+        )
+      );
+    }
+
+    return bookers.slice(0, args.limit || 50);
+  },
+});
+// convex/controllers/user.ts
 export const updateUserAsMusician = mutation({
   args: {
     clerkId: v.string(),
     updates: v.object({
       isMusician: v.boolean(),
       isClient: v.boolean(),
+      isBooker: v.optional(v.boolean()), // NEW
+      bookerSkills: v.optional(v.array(v.string())), // NEW
+      bookerBio: v.optional(v.string()), // NEW
+      managedBands: v.optional(v.array(v.string())), // NEW
       city: v.string(),
       instrument: v.optional(v.string()),
       experience: v.string(),
@@ -477,13 +530,15 @@ export const updateUserAsAdmin = mutation({
     }
   },
 });
-// Add this utility function for user search
+// convex/controllers/user.ts
 export const searchUsers = query({
   args: {
     query: v.string(),
     isMusician: v.optional(v.boolean()),
+    isBooker: v.optional(v.boolean()), // NEW
     city: v.optional(v.string()),
     instrument: v.optional(v.string()),
+    bookerSkills: v.optional(v.array(v.string())), // NEW
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -499,10 +554,17 @@ export const searchUsers = query({
           user.username.toLowerCase().includes(searchTerm) ||
           user.email.toLowerCase().includes(searchTerm) ||
           user.city?.toLowerCase().includes(searchTerm) ||
-          user.instrument?.toLowerCase().includes(searchTerm);
+          user.instrument?.toLowerCase().includes(searchTerm) ||
+          user.organization?.toLowerCase().includes(searchTerm) || // For bookers
+          user.bookerSkills?.some((skill: string) =>
+            skill.toLowerCase().includes(searchTerm)
+          ); // For booker skills
 
         const matchesMusician =
           args.isMusician === undefined || user.isMusician === args.isMusician;
+
+        const matchesBooker =
+          args.isBooker === undefined || user.isBooker === args.isBooker;
 
         const matchesCity =
           !args.city ||
@@ -514,8 +576,20 @@ export const searchUsers = query({
             ?.toLowerCase()
             .includes(args.instrument.toLowerCase());
 
+        const matchesBookerSkills =
+          !args.bookerSkills ||
+          args.bookerSkills.length === 0 ||
+          user.bookerSkills?.some((skill: string) =>
+            args.bookerSkills!.includes(skill)
+          );
+
         return (
-          matchesSearch && matchesMusician && matchesCity && matchesInstrument
+          matchesSearch &&
+          matchesMusician &&
+          matchesBooker &&
+          matchesCity &&
+          matchesInstrument &&
+          matchesBookerSkills
         );
       })
       .slice(0, args.limit || 50);
@@ -1035,6 +1109,74 @@ export const updateLastActive = mutation({
       await ctx.db.patch(user._id, {
         lastActive: Date.now(),
       });
+    }
+  },
+});
+// convex/controllers/user.ts
+// convex/controllers/user.ts - ADD THIS MUTATION
+export const updateUserAsBooker = mutation({
+  args: {
+    clerkId: v.string(),
+    updates: v.object({
+      isMusician: v.boolean(),
+      isClient: v.boolean(),
+      isBooker: v.boolean(),
+      city: v.string(),
+      organization: v.string(),
+      experience: v.string(),
+      bookerSkills: v.array(v.string()),
+      talentbio: v.string(),
+      tier: v.union(v.literal("free"), v.literal("pro")),
+      nextBillingDate: v.optional(v.number()),
+      monthlyGigsPosted: v.optional(v.number()),
+      monthlyMessages: v.optional(v.number()),
+      monthlyGigsBooked: v.optional(v.number()),
+      gigsBookedThisWeek: v.optional(
+        v.object({
+          count: v.number(),
+          weekStart: v.number(),
+        })
+      ),
+      lastBookingDate: v.optional(v.number()),
+      earnings: v.optional(v.number()),
+      totalSpent: v.optional(v.number()),
+      firstLogin: v.optional(v.boolean()),
+      onboardingComplete: v.optional(v.boolean()),
+      lastActive: v.optional(v.number()),
+      isBanned: v.optional(v.boolean()),
+      banReason: v.optional(v.string()),
+      bannedAt: v.optional(v.number()),
+      lastAdminAction: v.optional(v.number()),
+      theme: v.optional(
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
+      ),
+    }),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+        .first();
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+      );
+
+      await ctx.db.patch(user._id, {
+        ...cleanUpdates,
+        bookerBio: args.updates.talentbio, // Map talentbio to bookerBio
+        lastActive: Date.now(),
+      });
+
+      return { success: true, userId: user._id };
+    } catch (error) {
+      console.error("Error updating user as booker:", error);
+      throw error;
     }
   },
 });

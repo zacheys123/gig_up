@@ -529,11 +529,22 @@ const VideoProfileComponent = ({
                     </Badge>
                   </div>
 
-                  {/* Video Type Badge */}
+                  {/* Video Type Badge - Only profile videos are clickable */}
                   <div className="absolute top-2 right-10 xs:right-12">
                     <Badge
                       variant="outline"
-                      className="text-xs bg-gray-800 text-white border-gray-600 max-w-[60px] truncate"
+                      className={cn(
+                        "text-xs max-w-[60px] truncate",
+                        video.videoType === "profile"
+                          ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-600 cursor-pointer"
+                          : "bg-gray-800 text-white border-gray-600 cursor-default"
+                      )}
+                      onClick={(e) => {
+                        if (video.videoType === "profile") {
+                          e.stopPropagation();
+                          navigateToVideoDetail(video._id);
+                        }
+                      }}
                     >
                       {video.videoType}
                     </Badge>
@@ -800,110 +811,110 @@ const VideoProfileComponent = ({
                       </div>
                     </div>
                   ) : (
-                    // VIEW MODE
+                    // VIEW MODE - Clean Professional Layout
                     <>
-                      <p
-                        className={cn(
-                          "text-base font-semibold mb-3 truncate",
-                          colors.text
-                        )}
-                      >
-                        {video.title}
-                      </p>
-                      {video.description && (
-                        <p
+                      {/* Title and Description */}
+                      <div className="space-y-2 mb-4">
+                        <h3
                           className={cn(
-                            "text-sm mb-4 line-clamp-2 leading-relaxed",
-                            colors.textMuted
+                            "font-semibold text-sm leading-tight line-clamp-2",
+                            colors.text
                           )}
                         >
-                          {video.description}
-                        </p>
-                      )}
-
-                      {/* Engagement Stats */}
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="flex gap-2 flex-wrap">
-                          <Badge
-                            variant="outline"
+                          {video.title}
+                        </h3>
+                        {video.description && (
+                          <p
                             className={cn(
-                              "text-sm font-medium",
+                              "text-xs leading-relaxed line-clamp-2",
+                              colors.textMuted
+                            )}
+                          >
+                            {video.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Compact Engagement Stats */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {/* Platform Badge */}
+                          <div
+                            className={cn(
+                              "text-xs font-medium px-2 py-1 rounded border",
                               colors.border,
                               colors.text
                             )}
                           >
                             {getPlatformFromUrl(video.url)}
-                          </Badge>
-                          {video.views > 0 && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-sm font-medium flex items-center gap-1",
-                                colors.border,
-                                colors.text
-                              )}
-                            >
-                              <Eye size={12} />
-                              {video.views}
-                            </Badge>
-                          )}
-                          {video.likes > 0 && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-sm font-medium flex items-center gap-1",
-                                colors.border,
-                                colors.text
-                              )}
-                            >
-                              <ThumbsUp size={12} />
-                              {video.likes}
-                            </Badge>
-                          )}
-                          {(video.commentCount || 0) > 0 && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-sm font-medium flex items-center gap-1 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors",
-                                colors.border,
-                                colors.text
-                              )}
-                              onClick={() => navigateToVideoDetail(video._id)}
-                            >
-                              <MessageCircle size={12} />
-                              {video.commentCount || 0}
-                            </Badge>
-                          )}
+                          </div>
+
+                          {/* Stats Row */}
+                          <div className="flex items-center gap-3 text-xs">
+                            {video.views > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Eye size={10} className={colors.textMuted} />
+                                <span className={colors.textMuted}>
+                                  {video.views}
+                                </span>
+                              </div>
+                            )}
+                            {video.likes > 0 && (
+                              <div className="flex items-center gap-1">
+                                <ThumbsUp
+                                  size={10}
+                                  className={colors.textMuted}
+                                />
+                                <span className={colors.textMuted}>
+                                  {video.likes}
+                                </span>
+                              </div>
+                            )}
+                            {(video.commentCount || 0) > 0 && (
+                              <div
+                                className="flex items-center gap-1 cursor-pointer hover:text-amber-600 transition-colors"
+                                onClick={() => navigateToVideoDetail(video._id)}
+                              >
+                                <MessageCircle
+                                  size={10}
+                                  className={colors.textMuted}
+                                />
+                                <span className={colors.textMuted}>
+                                  {video.commentCount || 0}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Upload Date */}
                         {video.createdAt && (
-                          <p className={cn("text-sm", colors.textMuted)}>
-                            {new Date(video.createdAt).toLocaleDateString()}
-                          </p>
+                          <span className={cn("text-xs", colors.textMuted)}>
+                            {new Date(video.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
+                          </span>
                         )}
                       </div>
 
-                      {/* Comments Button */}
-                      <div className="flex justify-between items-center mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigateToVideoDetail(video._id)}
-                          className="flex items-center gap-2 text-xs"
-                        >
-                          <MessageCircle size={14} />
-                          View Comments
-                        </Button>
-
+                      {/* Tags and Action Button */}
+                      <div className="flex items-center justify-between">
+                        {/* Tags */}
                         {video.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex items-center gap-1 flex-1 min-w-0">
                             {video.tags.slice(0, 2).map((tag, index) => (
                               <span
                                 key={index}
                                 className={cn(
-                                  "text-xs px-2 py-1 rounded-md font-medium transition-colors",
-                                  colors.secondaryBackground,
-                                  colors.textMuted
+                                  "text-xs px-1.5 py-0.5 rounded font-medium truncate max-w-[60px]",
+                                  "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
+                                  "border border-amber-200 dark:border-amber-800"
                                 )}
+                                title={tag}
                               >
                                 #{tag}
                               </span>
@@ -917,6 +928,21 @@ const VideoProfileComponent = ({
                             )}
                           </div>
                         )}
+
+                        {/* View Comments Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigateToVideoDetail(video._id)}
+                          className={cn(
+                            "h-7 px-2 text-xs font-medium transition-all duration-200",
+                            "hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/20 dark:hover:text-amber-300",
+                            colors.textMuted
+                          )}
+                        >
+                          <MessageCircle size={12} className="mr-1" />
+                          View
+                        </Button>
                       </div>
                     </>
                   )}
@@ -993,8 +1019,16 @@ const VideoProfileComponent = ({
                     className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     {videoTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
+                      <option
+                        key={type.value}
+                        value={type.value}
+                        disabled={type.value !== "profile"} // Only profile is selectable
+                        className={
+                          type.value !== "profile" ? "text-gray-400" : ""
+                        }
+                      >
+                        {type.label}{" "}
+                        {type.value !== "profile" && "(Coming Soon)"}
                       </option>
                     ))}
                   </select>

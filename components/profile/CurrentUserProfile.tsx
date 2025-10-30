@@ -29,6 +29,8 @@ import {
   Building,
   Play,
   Trash2,
+  Users,
+  Star,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,6 +71,18 @@ interface SocialHandle {
   handle: string;
 }
 
+// Booker-specific constants
+const bookerSkills = [
+  "Band Management",
+  "Event Coordination",
+  "Talent Booking",
+  "Artist Management",
+  "Event Production",
+  "Venue Management",
+  "Tour Management",
+  "Contract Negotiation",
+];
+
 const CurrentUserProfile = () => {
   // Authentication and user data
   const { user: userdata } = useUser();
@@ -78,7 +92,7 @@ const CurrentUserProfile = () => {
   // Convex mutations and queries
   const updateUser = useMutation(api.controllers.user.updateUserProfile);
 
-  // Video queries - using the new video database
+  // Video queries
   const userVideos = useQuery(
     api.controllers.videos.getUserProfileVideos,
     user ? { userId: user.clerkId, currentUserId: user?._id } : "skip"
@@ -125,6 +139,7 @@ const CurrentUserProfile = () => {
   // Account Type
   const [isMusician, setIsMusician] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [isBooker, setIsBooker] = useState(false);
 
   // Client Specific
   const [organization, setOrganization] = useState("");
@@ -133,11 +148,8 @@ const CurrentUserProfile = () => {
   // UI State
   const [showRates, setShowRates] = useState(false);
 
-  // Video Profile State - Now using data from the video database
+  // Video Profile State
   const [videos, setVideos] = useState<VideoProfileProps[]>([]);
-  const [showVideoModal, setShowVideoModal] = useState(false);
-  const [newVideoTitle, setNewVideoTitle] = useState("");
-  const [newVideoUrl, setNewVideoUrl] = useState("");
 
   // Role Type State
   const [roleType, setRoleType] = useState("");
@@ -147,9 +159,12 @@ const CurrentUserProfile = () => {
   const [mcLanguages, setMcLanguages] = useState("");
   const [vocalistGenre, setVocalistGenre] = useState("");
 
-  const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true); // Default to public
+  // Booker Specific State
+  const [bookerSkills, setBookerSkills] = useState<string[]>([]);
+  const [bookerBio, setBookerBio] = useState("");
+  const [showBookerSkillsModal, setShowBookerSkillsModal] = useState(false);
 
-  // Add this to your state declarations
+  // Validation
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     []
   );
@@ -180,7 +195,6 @@ const CurrentUserProfile = () => {
   }, [userVideos]);
 
   useEffect(() => {
-    // Only load data once when user is available and we haven't loaded it yet
     if (user && !userLoading && !hasLoadedInitialData.current) {
       console.log("🔄 Loading initial user data into form");
 
@@ -202,6 +216,7 @@ const CurrentUserProfile = () => {
       setTalentbio(user.talentbio || "");
       setIsMusician(user.isMusician || false);
       setIsClient(user.isClient || false);
+      setIsBooker(user.isBooker || false);
       setClientHandles(user.handles || "");
 
       // Load role-specific data
@@ -212,8 +227,9 @@ const CurrentUserProfile = () => {
       setMcLanguages(user.mcLanguages || "");
       setVocalistGenre(user.vocalistGenre || "");
 
-      // Videos are now handled by the separate video database query above
-      // No need to load videos from user.videosProfile anymore
+      // Booker specific data
+      setBookerSkills(user.bookerSkills || []);
+      setBookerBio(user.bookerBio || "");
 
       // Fix for rate object
       const userRate = user.rate || {};
@@ -224,10 +240,9 @@ const CurrentUserProfile = () => {
         corporate: userRate.corporate || "",
       });
 
-      // Mark that we've loaded the initial data
       hasLoadedInitialData.current = true;
     }
-  }, [user, userLoading]); // Only depend on user and loading state
+  }, [user, userLoading]);
 
   // Role Type Constants
   const roleTypes = [
@@ -235,6 +250,7 @@ const CurrentUserProfile = () => {
     { value: "dj", label: "DJ" },
     { value: "mc", label: "MC" },
     { value: "vocalist", label: "Vocalist" },
+    { value: "booker", label: "Booker/Manager" },
   ];
 
   const djGenres = [
@@ -508,6 +524,71 @@ const CurrentUserProfile = () => {
     </>
   );
 
+  const BookerSection = () => (
+    <>
+      <TextInput
+        label="Company/Organization"
+        value={organization}
+        onChange={setOrganization}
+        Icon={<Building size={16} />}
+        placeholder="Your booking agency or company name"
+      />
+
+      <div className="md:col-span-2">
+        <Label className={cn("text-sm font-medium", colors.text)}>
+          Booker Skills & Specialties
+        </Label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {bookerSkills.map((skill) => (
+            <Badge
+              key={skill}
+              variant="outline"
+              className={cn(
+                "flex items-center gap-1 bg-blue-500/10 text-blue-600 border-blue-200",
+                colors.text
+              )}
+            >
+              {skill}
+              <button
+                onClick={() => removeBookerSkill(skill)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+          <button
+            onClick={() => setShowBookerSkillsModal(true)}
+            className={cn(
+              "text-blue-500 hover:text-blue-600 text-sm flex items-center",
+              colors.text
+            )}
+          >
+            <Plus size={14} className="mr-1" /> Add Skill
+          </button>
+        </div>
+      </div>
+
+      <div className="md:col-span-2">
+        <Label className={cn("text-sm font-medium", colors.text)}>
+          Booker Bio
+        </Label>
+        <Textarea
+          value={bookerBio}
+          onChange={(e) => setBookerBio(e.target.value)}
+          placeholder="Describe your booking services, experience, and the types of events you specialize in..."
+          className={cn(
+            "min-h-[100px] resize-none",
+            colors.background,
+            colors.border,
+            colors.text,
+            "focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          )}
+        />
+      </div>
+    </>
+  );
+
   // Helper function to render role-specific content
   const renderRoleSpecificContent = () => {
     switch (roleType) {
@@ -519,12 +600,25 @@ const CurrentUserProfile = () => {
         return <MCSection />;
       case "vocalist":
         return <VocalistSection />;
+      case "booker":
+        return <BookerSection />;
       default:
         return null;
     }
   };
 
-  // Add this helper function
+  // Booker skill handlers
+  const toggleBookerSkill = (skill: string) => {
+    setBookerSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+    );
+  };
+
+  const removeBookerSkill = (skill: string) => {
+    setBookerSkills((prev) => prev.filter((s) => s !== skill));
+  };
+
+  // Scroll functions
   const scrollToField = (field: string) => {
     const fieldSelectors: Record<string, string> = {
       dateOfBirth: '[data-field="dateOfBirth"]',
@@ -535,14 +629,13 @@ const CurrentUserProfile = () => {
       city: '[data-field="location"]',
       talentbio: '[data-field="about"]',
       profile: '[data-field="personalInfo"]',
+      bookerSkills: '[data-field="bookerSkills"]',
     };
 
     const selector = fieldSelectors[field];
     if (selector) {
       const element = document.querySelector(selector);
       element?.scrollIntoView({ behavior: "smooth", block: "center" });
-
-      // Add highlight effect
       element?.classList.add("ring-2", "ring-amber-500");
       setTimeout(() => {
         element?.classList.remove("ring-2", "ring-amber-500");
@@ -550,14 +643,11 @@ const CurrentUserProfile = () => {
     }
   };
 
-  // FIXED: Enhanced rate validation function
+  // Enhanced rate validation function
   const isValidRateValue = (value: string): boolean => {
     if (!value || value.trim() === "") return false;
-
-    // Remove any currency symbols, commas, spaces
     let numericValue = value.replace(/[$,£€¥\s]/g, "").toLowerCase();
 
-    // Handle k/K for thousands and m/M for millions
     if (numericValue.includes("k")) {
       numericValue = numericValue.replace("k", "");
       const num = Number(numericValue);
@@ -570,15 +660,15 @@ const CurrentUserProfile = () => {
       return !isNaN(num) && num > 0 && num * 1000000 > 0;
     }
 
-    // Regular number validation
     const num = Number(numericValue);
     return !isNaN(num) && num > 0;
   };
 
-  // Add this function inside your component
+  // Enhanced validation function with Booker support
   const validateProfile = (): ValidationError[] => {
     const errors: ValidationError[] = [];
 
+    // Phone validation
     if (phone && phone.trim() !== "") {
       const phoneValidation = validateKenyanPhone(phone);
       if (!phoneValidation.isValid) {
@@ -591,22 +681,22 @@ const CurrentUserProfile = () => {
       }
     }
 
-    // Make phone required for musicians
-    if (isMusician && (!phone || phone.trim() === "")) {
+    // Make phone required for musicians and bookers
+    if ((isMusician || isBooker) && (!phone || phone.trim() === "")) {
       errors.push({
         field: "phone",
-        message: "Phone number is required for musicians",
+        message: "Phone number is required for professional accounts",
         importance: "high",
       });
     }
-    if (isMusician) {
-      if (!roleType) {
-        errors.push({
-          field: "roleType",
-          message: "Please select your role type",
-          importance: "high",
-        });
-      }
+
+    // Role type validation for musicians
+    if (isMusician && !roleType) {
+      errors.push({
+        field: "roleType",
+        message: "Please select your role type",
+        importance: "high",
+      });
     }
 
     // Instrument validation only for instrumentalists
@@ -644,30 +734,48 @@ const CurrentUserProfile = () => {
         importance: "high",
       });
     }
-    // Validate Date of Birth (for musicians)
-    if (isMusician) {
-      if (!age || !month || !year) {
+
+    // Booker-specific validations
+    if (roleType === "booker") {
+      if (!organization) {
         errors.push({
-          field: "dateOfBirth",
-          message: VALIDATION_MESSAGES.dateOfBirth.required,
+          field: "organization",
+          message: "Company/Organization name is required for bookers",
           importance: "high",
         });
-      } else if (
-        isNaN(Number(year)) ||
-        Number(year) < 1900 ||
-        Number(year) > new Date().getFullYear()
-      ) {
+      }
+      if (bookerSkills.length === 0) {
         errors.push({
-          field: "dateOfBirth",
-          message: VALIDATION_MESSAGES.dateOfBirth.invalid,
+          field: "bookerSkills",
+          message: "At least one booker skill is required",
           importance: "high",
         });
       }
     }
 
+    // Date of Birth validation (for musicians and bookers)
+    if ((isMusician || isBooker) && (!age || !month || !year)) {
+      errors.push({
+        field: "dateOfBirth",
+        message: VALIDATION_MESSAGES.dateOfBirth.required,
+        importance: "high",
+      });
+    } else if (
+      (isMusician || isBooker) &&
+      (isNaN(Number(year)) ||
+        Number(year) < 1900 ||
+        Number(year) > new Date().getFullYear())
+    ) {
+      errors.push({
+        field: "dateOfBirth",
+        message: VALIDATION_MESSAGES.dateOfBirth.invalid,
+        importance: "high",
+      });
+    }
+
+    // Rates validation (for musicians only)
     if (isMusician) {
       const hasValidRates = Object.values(rate).some(isValidRateValue);
-
       if (!hasValidRates) {
         errors.push({
           field: "rates",
@@ -677,7 +785,7 @@ const CurrentUserProfile = () => {
       }
     }
 
-    // Validate Videos (recommended but not required)
+    // Videos validation (recommended for musicians, optional for bookers)
     if (isMusician && videos.length === 0) {
       errors.push({
         field: "videos",
@@ -686,7 +794,7 @@ const CurrentUserProfile = () => {
       });
     }
 
-    // Validate essential profile fields
+    // Essential profile fields validation
     const essentialFields = [
       { value: firstname, field: "firstname", name: "First Name" },
       { value: lastname, field: "lastname", name: "Last Name" },
@@ -717,11 +825,10 @@ const CurrentUserProfile = () => {
       (error) => error.importance === "high"
     );
 
-    // If there are errors, handle them WITHOUT preventing form submission
+    // Handle validation errors
     if (validationErrors.length > 0) {
       setValidationErrors(validationErrors);
 
-      // Show toast but don't block submission for medium/low importance errors
       if (blockingErrors.length > 0) {
         toast.error(
           `Complete ${blockingErrors.length} required field(s) to save`,
@@ -734,9 +841,8 @@ const CurrentUserProfile = () => {
           }
         );
         scrollToValidationSummary();
-        return; // Only return for blocking errors
+        return;
       } else {
-        // For non-blocking errors, show warning but allow save
         toast.warning(
           `Profile can be saved, but ${validationErrors.length} recommendation(s) found`,
           {
@@ -747,14 +853,11 @@ const CurrentUserProfile = () => {
             },
           }
         );
-
-        // Don't return here - allow the save to proceed
-        // Just scroll to show the recommendations
         scrollToValidationSummary();
       }
     }
 
-    // Proceed with saving if no blocking errors
+    // Proceed with saving
     try {
       setLoading(true);
       const updateData = {
@@ -777,8 +880,8 @@ const CurrentUserProfile = () => {
         handles: clienthandles,
         isMusician,
         isClient,
+        isBooker: roleType === "booker",
         rate,
-        // REMOVED: videosProfile: videos, - Videos are now in separate database
         firstTimeInProfile: false,
 
         // Role-specific fields
@@ -788,6 +891,10 @@ const CurrentUserProfile = () => {
         mcType: roleType === "mc" ? mcType : "",
         mcLanguages: roleType === "mc" ? mcLanguages : "",
         vocalistGenre: roleType === "vocalist" ? vocalistGenre : "",
+
+        // Booker-specific fields
+        bookerSkills: roleType === "booker" ? bookerSkills : [],
+        bookerBio: roleType === "booker" ? bookerBio : "",
       };
 
       await updateUser({
@@ -807,7 +914,7 @@ const CurrentUserProfile = () => {
     }
   };
 
-  // Enhanced scroll function with highlight animation
+  // Enhanced scroll function
   const scrollToValidationSummary = () => {
     const validationElement = document.getElementById("validation-summary");
     if (validationElement) {
@@ -817,7 +924,6 @@ const CurrentUserProfile = () => {
         inline: "nearest",
       });
 
-      // Add highlight animation
       validationElement.animate(
         [
           { backgroundColor: "transparent" },
@@ -836,33 +942,34 @@ const CurrentUserProfile = () => {
     }
   };
 
-  // Custom confirmation dialog (optional)
-  const showConfirmationDialog = (
-    errors: ValidationError[]
-  ): Promise<boolean> => {
-    return new Promise((resolve) => {
-      // You can use a custom modal here instead of window.confirm
-      const shouldContinue = window.confirm(
-        `💡 Profile Recommendations\n\n` +
-          `Your profile can be saved, but we recommend:\n\n` +
-          `${errors.map((error) => `• ${getFieldDisplayName(error.field)}`).join("\n")}\n\n` +
-          `These improvements can help you get more bookings.\n` +
-          `Save anyway?`
-      );
-      resolve(shouldContinue);
-    });
+  // Account type toggle
+  const toggleAccountType = (type: "musician" | "client") => {
+    if (type === "musician") {
+      setIsMusician(true);
+      setIsClient(false);
+      setIsBooker(false);
+    } else {
+      setIsMusician(false);
+      setIsClient(true);
+      setIsBooker(false);
+    }
   };
 
-  // Add this scroll function
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+  // Role type change handler
+  const handleRoleTypeChange = (newRoleType: string) => {
+    setRoleType(newRoleType);
 
-  // Video handlers - Now these are handled by the VideoProfileComponent
-  // which directly interacts with the video database
+    // Auto-set account type based on role
+    if (newRoleType === "booker") {
+      setIsMusician(true); // Bookers are a subtype of musicians
+      setIsClient(false);
+      setIsBooker(true);
+    } else if (newRoleType) {
+      setIsMusician(true);
+      setIsClient(false);
+      setIsBooker(false);
+    }
+  };
 
   // Social media handlers
   const addSocialHandle = () => {
@@ -892,23 +999,11 @@ const CurrentUserProfile = () => {
     }
   };
 
-  // ADD THIS FUNCTION - IT WAS MISSING:
   const removeGenre = (genreToRemove: string) => {
     setGenre(genre.filter((g) => g !== genreToRemove));
   };
 
-  // Account type toggle
-  const toggleAccountType = (type: "musician" | "client") => {
-    if (type === "musician") {
-      setIsMusician(true);
-      setIsClient(false);
-    } else {
-      setIsMusician(false);
-      setIsClient(true);
-    }
-  };
-
-  // In your component:
+  // Loading state
   if (userLoading || !user) {
     return (
       <>
@@ -976,7 +1071,13 @@ const CurrentUserProfile = () => {
                       "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
                     )}
                   >
-                    {isMusician ? "Musician" : isClient ? "Client" : "Member"}
+                    {isBooker
+                      ? "Booker/Manager"
+                      : isMusician
+                        ? "Musician"
+                        : isClient
+                          ? "Client"
+                          : "Member"}
                   </Badge>
                   {user.tier === "pro" && (
                     <Badge
@@ -984,6 +1085,14 @@ const CurrentUserProfile = () => {
                       className="bg-purple-500 text-white"
                     >
                       PRO
+                    </Badge>
+                  )}
+                  {isBooker && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-500 text-white"
+                    >
+                      BOOKER
                     </Badge>
                   )}
                 </div>
@@ -997,10 +1106,12 @@ const CurrentUserProfile = () => {
             </Link>
           </div>
         </motion.div>
+
         <ValidationSummary
           errors={validationErrors}
           onFieldClick={scrollToField}
         />
+
         {/* Stats Overview */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1025,11 +1136,19 @@ const CurrentUserProfile = () => {
               icon: <Briefcase size={16} />,
             },
             {
-              label: isMusician ? "Videos" : "Gigs",
-              value: isMusician
-                ? videos.length || 0 // Now using the videos state which syncs with database
-                : user.monthlyGigsPosted || 0,
-              icon: isMusician ? <Music size={16} /> : <Briefcase size={16} />,
+              label: isBooker ? "Managed" : isMusician ? "Videos" : "Gigs",
+              value: isBooker
+                ? user.managedBands?.length || 0
+                : isMusician
+                  ? videos.length || 0
+                  : user.monthlyGigsPosted || 0,
+              icon: isBooker ? (
+                <Users size={16} />
+              ) : isMusician ? (
+                <Music size={16} />
+              ) : (
+                <Briefcase size={16} />
+              ),
             },
           ].map((stat, index) => (
             <div
@@ -1060,7 +1179,7 @@ const CurrentUserProfile = () => {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Performance Videos Section */}
-            {isMusician && user && (
+            {isMusician && !isBooker && user && (
               <SectionContainer
                 icon={<Music size={18} />}
                 title="Video Profile"
@@ -1099,9 +1218,17 @@ const CurrentUserProfile = () => {
               data-field="about"
             >
               <Textarea
-                value={talentbio}
-                onChange={(e) => setTalentbio(e.target.value)}
-                placeholder="Tell us about yourself, your skills, and your experience..."
+                value={isBooker ? bookerBio : talentbio}
+                onChange={(e) =>
+                  isBooker
+                    ? setBookerBio(e.target.value)
+                    : setTalentbio(e.target.value)
+                }
+                placeholder={
+                  isBooker
+                    ? "Describe your booking services, experience, and the types of events you specialize in..."
+                    : "Tell us about yourself, your skills, and your experience..."
+                }
                 className={cn(
                   "min-h-[120px] resize-none",
                   colors.background,
@@ -1118,13 +1245,13 @@ const CurrentUserProfile = () => {
               title="Experience & Skills"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {isMusician && (
+                {(isMusician || isBooker) && (
                   <>
                     {/* Role Type Selection */}
                     <SelectInput
                       label="Role Type"
                       value={roleType}
-                      onChange={setRoleType}
+                      onChange={handleRoleTypeChange}
                       options={roleTypes}
                     />
 
@@ -1176,7 +1303,7 @@ const CurrentUserProfile = () => {
                   disabled
                 />
 
-                {isMusician && (
+                {(isMusician || isBooker) && (
                   <div data-field="dateOfBirth">
                     <Label className={cn("text-sm font-medium", colors.text)}>
                       Date of Birth
@@ -1232,18 +1359,17 @@ const CurrentUserProfile = () => {
                   Icon={<Mail size={16} />}
                 />
 
-                {/* Replace the existing phone input with Kenyan phone input */}
                 <KenyanPhoneInput
                   value={phone}
                   onChange={setPhone}
                   label="Phone Number"
-                  required={isMusician} // Required for musicians, optional for clients
+                  required={isMusician || isBooker}
                 />
               </div>
             </SectionContainer>
 
-            {/* Rates Section (Musicians only) */}
-            {isMusician && (
+            {/* Rates Section (Musicians only, not bookers) */}
+            {isMusician && !isBooker && (
               <SectionContainer
                 icon={<DollarSign size={18} />}
                 title="Performance Rates"
@@ -1383,7 +1509,7 @@ const CurrentUserProfile = () => {
               title="Account Type"
               className={"pt-6 pb-[52px]"}
             >
-              <div className="space-y-4 ">
+              <div className="space-y-4">
                 <ToggleSwitch
                   label="Musician Account"
                   checked={isMusician}
@@ -1394,6 +1520,20 @@ const CurrentUserProfile = () => {
                   checked={isClient}
                   onChange={() => toggleAccountType("client")}
                 />
+                {isBooker && (
+                  <div
+                    className={cn(
+                      "p-3 rounded-lg bg-blue-500/10 border border-blue-200"
+                    )}
+                  >
+                    <p className={cn("text-sm font-medium text-blue-600")}>
+                      Booker/Manager Account
+                    </p>
+                    <p className={cn("text-xs text-blue-500 mt-1")}>
+                      Specialized in talent management and event coordination
+                    </p>
+                  </div>
+                )}
               </div>
               {/* Save Button */}
               <motion.div
@@ -1464,7 +1604,59 @@ const CurrentUserProfile = () => {
         />
       </Modal>
 
-      {/* Remove the old video modal since it's now handled by VideoProfileComponent */}
+      {/* Booker Skills Modal */}
+      <Modal
+        isOpen={showBookerSkillsModal}
+        onClose={() => setShowBookerSkillsModal(false)}
+        title="Select Booker Skills"
+      >
+        <div className="space-y-3">
+          <p className={cn("text-sm", colors.textMuted)}>
+            Select the skills that best describe your booking and management
+            services
+          </p>
+          <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+            {bookerSkills.map((skill) => (
+              <button
+                key={skill}
+                type="button"
+                onClick={() => toggleBookerSkill(skill)}
+                className={`p-3 rounded-lg border text-left transition-colors ${
+                  bookerSkills.includes(skill)
+                    ? "border-blue-500 bg-blue-500/10 text-blue-600"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{skill}</span>
+                  {bookerSkills.includes(skill) && (
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <ModalActions
+          onCancel={() => setShowBookerSkillsModal(false)}
+          onConfirm={() => setShowBookerSkillsModal(false)}
+          confirmText="Done"
+        />
+      </Modal>
     </div>
   );
 };

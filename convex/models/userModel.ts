@@ -33,6 +33,10 @@ export const userModel = defineTable({
   adminPermissions: v.optional(v.array(v.string())),
   adminNotes: v.optional(v.string()),
 
+  isBooker: v.optional(v.boolean()),
+  bookerSkills: v.optional(v.array(v.string())), // ["band_management", "event_coordination"]
+  managedBands: v.optional(v.array(v.string())), // References to band/crew IDs
+  bookerBio: v.optional(v.string()),
   // Musician specific fields
   instrument: v.optional(v.string()),
   experience: v.optional(v.string()),
@@ -236,6 +240,8 @@ export const userModel = defineTable({
   .index("by_city", ["city"])
   .index("by_is_musician", ["isMusician"])
   .index("by_is_client", ["isClient"])
+  .index("by_is_booker", ["isBooker"])
+  .index("by_is_both", ["isBoth"])
   .index("by_is_admin", ["isAdmin"])
   .index("by_tier", ["tier"])
   .index("by_is_banned", ["isBanned"])

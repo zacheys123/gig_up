@@ -184,7 +184,7 @@ export const ValidationSummary = ({
   );
 };
 
-// Helper function to get display names
+// In ValidationSummary component
 export const getFieldDisplayName = (field: string): string => {
   const displayNames: Record<string, string> = {
     phone: "Phone Number",
@@ -198,6 +198,12 @@ export const getFieldDisplayName = (field: string): string => {
     talentbio: "Bio",
     instrument: "Primary Instrument",
     experience: "Experience Level",
+    roleType: "Role Type",
+    djGenre: "DJ Genre",
+    mcType: "MC Type",
+    vocalistGenre: "Vocal Genre",
+    bookerSkills: "Booker Skills", // NEW
+    organization: "Company/Organization", // UPDATED
   };
   return displayNames[field] || field;
 };
