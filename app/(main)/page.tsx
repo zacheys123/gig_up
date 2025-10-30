@@ -111,6 +111,7 @@ export default function Home() {
           3) *
           100
       );
+
   const getDynamicHref = () => {
     if (!userId || !user?.firstname) return `/profile`; // Basic profile setup
     if (!user?.isClient && !user?.isMusician) return `/roles/${userId}`; // Role selection
@@ -324,9 +325,10 @@ export default function Home() {
                           : "Find Gigs"
                         : needsRoleSelection
                           ? "Choose Your Role"
-                          : "Complete Profile"
+                          : user?.isClient
+                            ? "Post Gigs"
+                            : "Complete Profile"
                       : "Get Started"}
-
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                   {isProfileComplete && (

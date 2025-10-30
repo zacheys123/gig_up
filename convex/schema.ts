@@ -7,6 +7,7 @@ import { notificationModel } from "./models/notificationsModel"; // Make sure th
 import { notificationSettingsModel } from "./models/notificationSettings";
 import { pushSubscriptions } from "./models/push";
 import { videoModel } from "./models/videoModel";
+import { commentsModel } from "./models/commentsModel";
 
 export default defineSchema({
   users: userModel,
@@ -26,6 +27,7 @@ export default defineSchema({
     lastUpdated: v.number(),
   }),
   videos: videoModel,
+  comments: commentsModel,
   pushSubscriptions: pushSubscriptions,
   chats: defineTable({
     participantIds: v.array(v.id("users")),

@@ -39,10 +39,10 @@ export const notificationTypeToSettingMap: Record<
   new_follower: "followRequests",
   follow_request: "followRequests",
   follow_accepted: "followRequests",
-  like: "profileViews",
-  new_review: "profileViews",
-  review_received: "profileViews",
-  share: "profileViews",
+  like: "likes",
+  new_review: "reviews",
+  review_received: "reviews",
+  share: "shares",
 
   // Messages & Communication
   new_message: "newMessages",
@@ -54,7 +54,7 @@ export const notificationTypeToSettingMap: Record<
   gig_rejected: "bookingRequests",
   gig_cancelled: "bookingRequests",
   gig_reminder: "gigReminders",
-
+  video_comment: "comments",
   // System
   system_updates: "systemUpdates",
 };
@@ -100,6 +100,8 @@ export const createNotificationInternal = async (
 
     // 3. Get the VIEWER/SENDER user by document ID if provided
     let viewerUser = null;
+    let viewerNotificationSettings = null;
+
     if (relatedUserDocumentId) {
       viewerUser = await ctx.db.get(relatedUserDocumentId);
 
@@ -110,10 +112,16 @@ export const createNotificationInternal = async (
       ) {
         console.error("Viewer document is not a user:", viewerUser);
         viewerUser = null;
+      } else if (viewerUser) {
+        // Get viewer's notification settings
+        viewerNotificationSettings = await ctx.db
+          .query("notificationSettings")
+          .withIndex("by_user_id", (q) => q.eq("userId", viewerUser!.clerkId))
+          .first();
       }
     }
 
-    // 4. ✅ CHECK IF VIEWER CAN CREATE NOTIFICATIONS
+    // 4. ✅ CHECK IF VIEWER CAN CREATE NOTIFICATIONS (tier check)
     if (viewerUser && "tier" in viewerUser) {
       const isViewerPro = viewerUser.tier === "pro";
       const canViewerCreateNotifications = isViewerPro || isViewerInGracePeriod;
@@ -126,7 +134,30 @@ export const createNotificationInternal = async (
       }
     }
 
-    // 4b. ✅ CHECK IF RECIPIENT CAN RECEIVE NOTIFICATIONS (OPTIONAL)
+    // 5. ✅ CHECK VIEWER'S NOTIFICATION SETTINGS (NEW)
+    // For actions initiated by the viewer (likes, follows, messages, etc.)
+    if (viewerNotificationSettings && viewerUser) {
+      const viewerSettingKey =
+        notificationTypeToSettingMap[
+          type as keyof typeof notificationTypeToSettingMap
+        ];
+
+      if (viewerSettingKey) {
+        const viewerSettings =
+          viewerNotificationSettings as NotificationSettings;
+        const isViewerSettingEnabled =
+          viewerSettings[viewerSettingKey] !== false;
+
+        if (!isViewerSettingEnabled) {
+          console.log(
+            `❌ Notification blocked: Viewer ${viewerUser.username} has ${type} notifications disabled in their settings`
+          );
+          return null;
+        }
+      }
+    }
+
+    // 6. ✅ CHECK IF RECIPIENT CAN RECEIVE NOTIFICATIONS (tier check)
     if ("tier" in recipientUser) {
       const isRecipientPro = recipientUser.tier === "pro";
       const canRecipientReceiveNotifications =
@@ -139,23 +170,27 @@ export const createNotificationInternal = async (
         return null;
       }
     }
-    // 5. Check RECIPIENT'S notification settings
-    const notificationSettings = await ctx.db
+
+    // 7. Check RECIPIENT'S notification settings
+    const recipientNotificationSettings = await ctx.db
       .query("notificationSettings")
       .withIndex("by_user_id", (q) => q.eq("userId", recipientUser.clerkId))
       .first();
 
-    // 6. DETERMINE IF WE SHOULD CREATE NOTIFICATION
+    // 8. DETERMINE IF WE SHOULD CREATE NOTIFICATION
     let shouldCreateNotification = true;
 
-    if (notificationSettings) {
-      const settingKey =
+    // Check recipient settings
+    if (recipientNotificationSettings) {
+      const recipientSettingKey =
         notificationTypeToSettingMap[
           type as keyof typeof notificationTypeToSettingMap
         ];
-      if (settingKey) {
-        const settings = notificationSettings as NotificationSettings;
-        shouldCreateNotification = settings[settingKey] !== false;
+      if (recipientSettingKey) {
+        const recipientSettings =
+          recipientNotificationSettings as NotificationSettings;
+        shouldCreateNotification =
+          recipientSettings[recipientSettingKey] !== false;
 
         if (!shouldCreateNotification) {
           console.log(
@@ -166,7 +201,7 @@ export const createNotificationInternal = async (
       }
     }
 
-    // 7. Create notification ONLY if both conditions are met
+    // 9. Create notification ONLY if all conditions are met
     if (shouldCreateNotification) {
       const notificationId = await ctx.db.insert("notifications", {
         userId: recipientUser.clerkId, // Store clerkId in notification for easy querying
@@ -191,7 +226,68 @@ export const createNotificationInternal = async (
     return null;
   }
 };
+// convex/notifications.ts - Add these functions
+export const cleanupLikeNotification = async (
+  ctx: MutationCtx,
+  videoOwnerDocumentId: Id<"users">,
+  likerDocumentId: Id<"users">,
+  videoId: Id<"videos">
+) => {
+  try {
+    const videoOwner = await ctx.db.get(videoOwnerDocumentId);
+    if (!videoOwner) return;
 
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user_id", (q) => q.eq("userId", videoOwner.clerkId))
+      .collect();
+
+    for (const notification of notifications) {
+      if (
+        notification.type === "like" &&
+        notification.metadata?.likerDocumentId === likerDocumentId.toString() &&
+        notification.metadata?.videoId === videoId.toString()
+      ) {
+        await ctx.db.delete(notification._id);
+        console.log(`🗑️ Deleted like notification for video ${videoId}`);
+        break;
+      }
+    }
+  } catch (error) {
+    console.error("Error in cleanupLikeNotification:", error);
+  }
+};
+
+export const cleanupVideoNotifications = async (
+  ctx: MutationCtx,
+  videoId: Id<"videos">
+) => {
+  try {
+    // Get all notifications for this video
+    const allNotifications = await ctx.db.query("notifications").collect();
+
+    let deletedCount = 0;
+
+    for (const notification of allNotifications) {
+      if (
+        (notification.type === "like" ||
+          notification.type === "video_comment") &&
+        notification.metadata?.videoId === videoId.toString()
+      ) {
+        await ctx.db.delete(notification._id);
+        deletedCount++;
+      }
+    }
+
+    console.log(
+      `🗑️ Deleted ${deletedCount} notifications for video ${videoId}`
+    );
+    return { success: true, deletedCount };
+  } catch (error) {
+    console.error("Error in cleanupVideoNotifications:", error);
+    return { success: false, error: "Failed to cleanup video notifications" };
+  }
+};
 // convex/notifications.ts - Add these helper functions
 export const cleanupFollowNotifications = async (
   ctx: MutationCtx,

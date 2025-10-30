@@ -30,6 +30,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import FollowButton from "../pages/FollowButton";
 import ReportButton from "../report/ReportButton";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 const FriendsComponent = () => {
   const { userId } = useAuth();
@@ -45,6 +46,7 @@ const FriendsComponent = () => {
     username ? { username: username as string } : "skip"
   );
 
+  const { isInGracePeriod } = useCheckTrial();
   // Get profile videos for the friend with privacy filtering
   // UPDATED: Using the correct path now that videos are moved from controllers folder
   const profileVideos = useQuery(
@@ -52,7 +54,7 @@ const FriendsComponent = () => {
     friend?.clerkId && currentUser?.clerkId
       ? {
           userId: friend.clerkId,
-          currentUserId: currentUser.clerkId,
+          currentUserId: currentUser._id,
         }
       : friend?.clerkId
         ? {
@@ -219,8 +221,33 @@ const FriendsComponent = () => {
       });
     }
 
-    // Video Profiles Section - UPDATED WITH PROPER PRIVACY FILTERING
-    if (profileVideos && profileVideos.length > 0) {
+    // In your profileSections memo, update the videos section:
+    if (profileVideos === undefined) {
+      // Still loading
+      sections.push({
+        type: "videos",
+        title: "Profile Videos",
+        gradient: isDarkMode
+          ? "bg-gradient-to-r from-green-900/30 to-emerald-900/30"
+          : "bg-gradient-to-r from-green-100 to-emerald-100",
+        titleColor: isDarkMode ? "text-green-300" : "text-green-700",
+        content: (
+          <div
+            className={cn(
+              "text-center py-8 rounded-lg",
+              themeStyles.secondaryBackground
+            )}
+          >
+            <div className="animate-pulse">
+              <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mx-auto mb-2"></div>
+              <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2 mx-auto"></div>
+            </div>
+          </div>
+        ),
+      });
+    } else if (profileVideos && profileVideos.length > 0) {
+      // Has videos
       sections.push({
         type: "videos",
         title: "Profile Videos",
@@ -267,6 +294,32 @@ const FriendsComponent = () => {
                   <p className={cn("text-xs mt-1", colors.textMuted)}>
                     {video.views || 0} views • {video.likes || 0} likes
                   </p>
+                  {video.description && (
+                    <p
+                      className={cn(
+                        "text-xs mt-1 line-clamp-2",
+                        colors.textMuted
+                      )}
+                    >
+                      {video.description}
+                    </p>
+                  )}
+                  {video.tags && video.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {video.tags.slice(0, 2).map((tag, index) => (
+                        <span
+                          key={index}
+                          className={cn(
+                            "text-xs px-1.5 py-0.5 rounded",
+                            colors.secondaryBackground,
+                            colors.textMuted
+                          )}
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {!video.isPublic && !isFollowingFriend && (
                     <p
                       className={cn(
@@ -283,8 +336,8 @@ const FriendsComponent = () => {
         ),
       });
     } else {
-      // Show message about videos based on privacy and follow status
-      const hasPrivateVideos = friend.isPrivate && !isFollowingFriend;
+      // No videos or empty array
+      const hasPrivateVideos = friend?.isPrivate && !isFollowingFriend;
 
       sections.push({
         type: "videos",
@@ -566,7 +619,9 @@ const FriendsComponent = () => {
                           : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                   )}
                 >
-                  {friend.tier || "Free"}
+                  {friend.tier === "free" && isInGracePeriod
+                    ? "Trial Month"
+                    : friend.tier}
                 </span>
               </div>
             </div>

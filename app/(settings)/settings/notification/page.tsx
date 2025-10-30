@@ -25,6 +25,7 @@ import {
   Star,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { FaComment } from "react-icons/fa";
 
 export default function NotificationSettingsPage() {
   const { settings, updateSettings, isLoading } = useNotificationSettings();
@@ -82,7 +83,7 @@ export default function NotificationSettingsPage() {
     "shares", // NEW
     "reviews", // NEW
     "followRequests",
-
+    "comments",
     // Gigs & Bookings
     "gigInvites",
     "bookingRequests",
@@ -445,8 +446,14 @@ export default function NotificationSettingsPage() {
             <ToggleRow
               label="Likes"
               description="When someone likes your posts or content"
-              inAppKey="likes"
+              inAppKey="comments"
               icon={<Heart className="w-4 h-4" />} // Add Heart icon import
+            />
+            <ToggleRow
+              label="Comments"
+              description="Enable to create or recieve comments on videos"
+              inAppKey="likes"
+              icon={<FaComment className="w-4 h-4" />} // Add Heart icon import
             />
             <ToggleRow
               label="Shares"
@@ -476,7 +483,7 @@ export default function NotificationSettingsPage() {
           >
             <ToggleRow
               label="Gig Invites"
-              description="When you're invited to perform"
+              description="When you're invited to perform or become a deputy"
               inAppKey="gigInvites"
               icon={<Calendar className="w-4 h-4" />}
             />

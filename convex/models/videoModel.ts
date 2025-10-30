@@ -20,7 +20,7 @@ export const videoModel = defineTable({
     v.literal("other") // Other types
   ),
   isProfileVideo: v.boolean(), // Quick filter flag
-
+  commentCount: v.optional(v.number()),
   // Optional gig reference
   gigId: v.optional(v.string()), // Reference to specific gig if applicable
   gigName: v.optional(v.string()), // Gig name for display

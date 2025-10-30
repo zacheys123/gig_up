@@ -1,5 +1,11 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
+import { Id } from "../_generated/dataModel";
+import {
+  cleanupLikeNotification,
+  cleanupVideoNotifications,
+  createNotificationInternal,
+} from "../createNotificationInternal";
 
 // Define types for better TypeScript support
 interface VideoDocument {
@@ -242,6 +248,7 @@ export const deleteVideo = mutationGeneric({
         likedVideos: updatedLikedVideos,
       });
     }
+    await cleanupVideoNotifications(ctx, video._id);
 
     return { success: true };
   },
@@ -250,61 +257,161 @@ export const deleteVideo = mutationGeneric({
 export const incrementVideoViews = mutationGeneric({
   args: {
     videoId: v.string(),
+    currentUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const video = await ctx.db
-      .query("videos")
-      .filter((q: any) => q.eq(q.field("_id"), args.videoId))
-      .first();
+    const video = await ctx.db.get(args.videoId as Id<"videos">);
 
     if (!video) {
       throw new Error("Video not found");
     }
 
+    // For logged-in users, track in user document with proper duplicate prevention
+    if (args.currentUserId) {
+      const currentUser = await ctx.db.get(args.currentUserId);
+      if (!currentUser) {
+        throw new Error("User not found");
+      }
+
+      const viewedVideos = currentUser.viewedVideos || [];
+
+      // Use Set to ensure uniqueness and check efficiently
+      const viewedSet = new Set(viewedVideos);
+
+      if (viewedSet.has(args.videoId)) {
+        return { success: true, action: "already_viewed" };
+      }
+
+      // Update user's viewed videos - add to the array (Convex will handle the update)
+      await ctx.db.patch(currentUser._id, {
+        viewedVideos: [...viewedVideos, args.videoId],
+      });
+    }
+    // For anonymous users, we rely on client-side tracking (localStorage)
+
+    // Increment video views
     await ctx.db.patch(video._id, {
       views: (video.views || 0) + 1,
     });
 
-    return { success: true };
+    return { success: true, action: "view_count_incremented" };
   },
 });
-
 export const likeVideo = mutationGeneric({
   args: {
-    videoId: v.string(),
     userId: v.string(),
+    videoId: v.id("videos"),
+    isViewerInGracePeriod: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const [video, user] = await Promise.all([
-      ctx.db
-        .query("videos")
-        .filter((q: any) => q.eq(q.field("_id"), args.videoId))
-        .first(),
+    if (!args.userId) throw new Error("Unauthorized");
+
+    const [currentUser, video] = await Promise.all([
       ctx.db
         .query("users")
         .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.userId))
         .first(),
+      ctx.db.get(args.videoId),
     ]);
 
-    if (!video || !user) {
-      throw new Error("Video or user not found");
+    if (!currentUser) throw new Error("User not found");
+    if (!video) throw new Error("Video not found");
+
+    const videoOwner = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", video.userId))
+      .first();
+
+    if (!videoOwner) throw new Error("Video owner not found");
+
+    // Check if already liked using likedVideos array
+    const hasLiked = currentUser.likedVideos?.includes(args.videoId) || false;
+
+    if (hasLiked) {
+      // Unlike: Remove from likedVideos array
+      const updatedLikedVideos =
+        currentUser.likedVideos?.filter(
+          (id: Id<"videos">) => id !== args.videoId
+        ) || [];
+
+      await ctx.db.patch(currentUser._id, {
+        likedVideos: updatedLikedVideos,
+      });
+
+      // Update video likes count
+      await ctx.db.patch(args.videoId, {
+        likes: Math.max(0, (video.likes || 0) - 1),
+      });
+
+      // Cleanup like notification
+      try {
+        await cleanupLikeNotification(
+          ctx,
+          videoOwner._id,
+          currentUser._id,
+          args.videoId
+        );
+      } catch (cleanupError) {
+        console.error("Failed to cleanup like notification:", cleanupError);
+      }
+
+      return { success: true, action: "unliked" };
+    } else {
+      // Like: Add to likedVideos array
+      const updatedLikedVideos = [
+        ...(currentUser.likedVideos || []),
+        args.videoId,
+      ];
+
+      await ctx.db.patch(currentUser._id, {
+        likedVideos: updatedLikedVideos,
+      });
+
+      // Update video likes count
+      await ctx.db.patch(args.videoId, {
+        likes: (video.likes || 0) + 1,
+      });
+
+      // Create like notification (only if not liking own video)
+      if (currentUser._id !== videoOwner._id) {
+        try {
+          await createNotificationInternal(ctx, {
+            userDocumentId: videoOwner._id,
+            type: "like",
+            title: "New Like",
+            message: `${currentUser.firstname || currentUser.username} liked your video "${video.title}"`,
+            image: currentUser.picture,
+            actionUrl: `/video/${args.videoId}?liked=true`,
+            relatedUserDocumentId: currentUser._id,
+            isViewerInGracePeriod: args.isViewerInGracePeriod,
+            metadata: {
+              likerDocumentId: currentUser._id.toString(),
+              likerClerkId: currentUser.clerkId,
+              likerName: currentUser.firstname,
+              likerUsername: currentUser.username,
+              likerPicture: currentUser.picture,
+              isLikerPro: currentUser.tier === "pro",
+              isLikerMusician: currentUser.isMusician,
+              isLikerClient: currentUser.isClient,
+              instrument: currentUser.instrument,
+              city: currentUser.city,
+              videoId: args.videoId.toString(),
+              videoTitle: video.title,
+              videoThumbnail: video.thumbnail,
+              videoType: video.videoType,
+              isProfileVideo: video.isProfileVideo,
+            },
+          });
+        } catch (notificationError) {
+          console.error(
+            "Failed to create like notification:",
+            notificationError
+          );
+        }
+      }
+
+      return { success: true, action: "liked" };
     }
-
-    const userLikedVideos = user.likedVideos || [];
-    if (userLikedVideos.includes(args.videoId)) {
-      throw new Error("Video already liked");
-    }
-
-    await ctx.db.patch(video._id, {
-      likes: (video.likes || 0) + 1,
-    });
-
-    await ctx.db.patch(user._id, {
-      likedVideos: [...userLikedVideos, args.videoId],
-      lastActive: Date.now(),
-    });
-
-    return { success: true };
   },
 });
 
@@ -346,11 +453,10 @@ export const unlikeVideo = mutationGeneric({
     return { success: true };
   },
 });
-
 export const getUserProfileVideos = queryGeneric({
   args: {
     userId: v.string(),
-    currentUserId: v.optional(v.string()),
+    currentUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args): Promise<VideoDocument[]> => {
     const [targetUser, currentUser] = await Promise.all([
@@ -358,14 +464,7 @@ export const getUserProfileVideos = queryGeneric({
         .query("users")
         .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.userId))
         .first(),
-      args.currentUserId
-        ? ctx.db
-            .query("users")
-            .withIndex("by_clerkId", (q: any) =>
-              q.eq("clerkId", args.currentUserId)
-            )
-            .first()
-        : null,
+      args.currentUserId ? ctx.db.get(args.currentUserId as Id<"users">) : null,
     ]);
 
     if (!targetUser) {
@@ -380,14 +479,46 @@ export const getUserProfileVideos = queryGeneric({
       .collect();
 
     const isFollowing = currentUser
-      ? targetUser.followers?.includes(currentUser.clerkId) || false
+      ? targetUser.followers?.includes(currentUser._id) || false
       : false;
 
-    return profileVideos.filter((video: VideoDocument) => {
-      if (video.isPublic) return true;
-      if (!video.isPublic && isFollowing) return true;
+    const isOwnProfile = currentUser?.clerkId === args.userId;
+
+    const filteredVideos = profileVideos.filter((video: VideoDocument) => {
+      // If it's the user's own profile, return ALL videos (both public and private)
+      if (isOwnProfile) {
+        return true;
+      }
+
+      // For other users, only return public videos OR private videos if following
+      if (video.isPublic) {
+        return true;
+      }
+
+      // Private videos are only visible to followers
+      if (!video.isPublic && isFollowing) {
+        return true;
+      }
+
       return false;
     });
+
+    // Get comment counts for each video
+    const videosWithCommentCounts = await Promise.all(
+      filteredVideos.map(async (video) => {
+        const comments = await ctx.db
+          .query("comments")
+          .withIndex("by_videoId", (q) => q.eq("videoId", video._id))
+          .collect();
+
+        return {
+          ...video,
+          commentCount: comments.length,
+        };
+      })
+    );
+
+    return videosWithCommentCounts;
   },
 });
 

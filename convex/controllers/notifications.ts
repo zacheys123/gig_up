@@ -182,7 +182,7 @@ export const updateNotificationSettings = mutation({
       // Profile & Social - ALL REQUIRED (since we're sending full object)
       profileViews: v.boolean(),
       followRequests: v.boolean(),
-
+      comments: v.boolean(),
       likes: v.boolean(), // NEW
       shares: v.boolean(), // NEW
       reviews: v.boolean(), // NEW
@@ -199,7 +199,6 @@ export const updateNotificationSettings = mutation({
       // System & Updates - ALL REQUIRED
       systemUpdates: v.boolean(),
       featureAnnouncements: v.boolean(),
-      securityUpdates: v.boolean(),
     }),
   },
   handler: async (ctx, args) => {

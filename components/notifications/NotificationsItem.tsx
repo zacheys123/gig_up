@@ -314,3 +314,5 @@ export function NotificationItem({
 // first section is guided and already structured from ther gig info itself:
 // section two?:crew chat(dynamic meaning it neads the users interactions)
 // when i send a deputy request its liike a follow request:::when they accept i get a notification and in my profile i gaet in my list of deputies they are added...when you are a deputy to alot of people you get perks under the hood of cos
+// a gig schema add reffered by::optional
+// add a confirmedRefferedGig:number increament after a a successful gig:::get the reffredById in the gigSchema and use it to update their  confirmedRefferedGig...form this count the user can get incentives like more priority to gigs...and also clients based on the confirmedREfferedGigs:

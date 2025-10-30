@@ -97,4 +97,5 @@ export interface VideoProfileProps {
   likes: number;
   createdAt: number;
   updatedAt: number;
+  commentCount?: number;
 }

@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as cloudinary from "../cloudinary.js";
 import type * as controllers_chat from "../controllers/chat.js";
+import type * as controllers_comments from "../controllers/comments.js";
 import type * as controllers_debug from "../controllers/debug.js";
 import type * as controllers_gigs from "../controllers/gigs.js";
 import type * as controllers_notifications from "../controllers/notifications.js";
@@ -24,6 +25,7 @@ import type * as controllers_theme from "../controllers/theme.js";
 import type * as controllers_user from "../controllers/user.js";
 import type * as controllers_videos from "../controllers/videos.js";
 import type * as createNotificationInternal from "../createNotificationInternal.js";
+import type * as models_commentsModel from "../models/commentsModel.js";
 import type * as models_gigModel from "../models/gigModel.js";
 import type * as models_notificationSettings from "../models/notificationSettings.js";
 import type * as models_notificationsModel from "../models/notificationsModel.js";
@@ -45,6 +47,7 @@ import type * as test from "../test.js";
 declare const fullApi: ApiFromModules<{
   cloudinary: typeof cloudinary;
   "controllers/chat": typeof controllers_chat;
+  "controllers/comments": typeof controllers_comments;
   "controllers/debug": typeof controllers_debug;
   "controllers/gigs": typeof controllers_gigs;
   "controllers/notifications": typeof controllers_notifications;
@@ -54,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "controllers/user": typeof controllers_user;
   "controllers/videos": typeof controllers_videos;
   createNotificationInternal: typeof createNotificationInternal;
+  "models/commentsModel": typeof models_commentsModel;
   "models/gigModel": typeof models_gigModel;
   "models/notificationSettings": typeof models_notificationSettings;
   "models/notificationsModel": typeof models_notificationsModel;

@@ -539,6 +539,19 @@ export const getUserByUsername = query({
     return user;
   },
 });
+export const getUserByClerkId = query({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    return user;
+  },
+});
 export const followUser = mutation({
   args: {
     userId: v.string(),

@@ -358,7 +358,7 @@ export function SearchUserCard({
         onConfirm={() => router.push(`/search/${user.username}`)}
         onCancel={() => null}
         title="View Profile"
-        question="Do you want to visit their profile?"
+        question="Already viewed this Profile"
         userInfo={{
           id: user._id,
           name: user.firstname + " " + user.lastname,
@@ -368,7 +368,7 @@ export function SearchUserCard({
           instrument: user.instrument,
           city: user.city,
         }}
-        confirmText="Yes, View"
+        confirmText="Yes, Proceed"
         cancelText="No, Thanks"
         variant="info"
       />

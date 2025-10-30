@@ -61,9 +61,6 @@ export const userModel = defineTable({
     )
   ),
 
-  // REMOVED: videosProfile - use dedicated videos table instead
-  // videosProfile: v.optional(...),
-
   // Reviews
   allreviews: v.optional(
     v.array(
@@ -161,6 +158,8 @@ export const userModel = defineTable({
   savedGigs: v.optional(v.array(v.string())),
   favoriteGigs: v.optional(v.array(v.string())),
   likedVideos: v.optional(v.array(v.string())), // References video IDs
+
+  viewedVideos: v.optional(v.array(v.string())), // References video IDs
 
   // User status and activity
   firstLogin: v.boolean(),

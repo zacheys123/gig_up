@@ -36,7 +36,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { SectionContainer } from "./SectionContainer";
@@ -75,8 +75,14 @@ const CurrentUserProfile = () => {
   const { user, isLoading: userLoading } = useCurrentUser();
   const { colors } = useThemeColors();
 
-  // Convex mutations
+  // Convex mutations and queries
   const updateUser = useMutation(api.controllers.user.updateUserProfile);
+
+  // Video queries - using the new video database
+  const userVideos = useQuery(
+    api.controllers.videos.getUserProfileVideos,
+    user ? { userId: user.clerkId, currentUserId: user?._id } : "skip"
+  );
 
   const [loading, setLoading] = useState(false);
 
@@ -127,7 +133,7 @@ const CurrentUserProfile = () => {
   // UI State
   const [showRates, setShowRates] = useState(false);
 
-  // Video Profile State
+  // Video Profile State - Now using data from the video database
   const [videos, setVideos] = useState<VideoProfileProps[]>([]);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [newVideoTitle, setNewVideoTitle] = useState("");
@@ -147,6 +153,7 @@ const CurrentUserProfile = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     []
   );
+
   // Constants
   const months = [
     "January",
@@ -164,6 +171,14 @@ const CurrentUserProfile = () => {
   ];
   const daysOfMonth = Array.from({ length: 31 }, (_, i) => i + 1);
   const hasLoadedInitialData = React.useRef(false);
+
+  // Sync videos from database
+  useEffect(() => {
+    if (userVideos) {
+      setVideos(userVideos);
+    }
+  }, [userVideos]);
+
   useEffect(() => {
     // Only load data once when user is available and we haven't loaded it yet
     if (user && !userLoading && !hasLoadedInitialData.current) {
@@ -197,18 +212,8 @@ const CurrentUserProfile = () => {
       setMcLanguages(user.mcLanguages || "");
       setVocalistGenre(user.vocalistGenre || "");
 
-      // Handle videos with proper privacy settings
-      // const userVideos = user.videosProfile || [];
-      // const videosWithPrivacy: VideoProfileProps[] = userVideos.map(
-      //   (video, index) => ({
-      //     _id: video._id,
-      //     title: video.title || `Performance Video ${index + 1}`,
-      //     url: video.url,
-      //     isPublic: video.isPublic !== undefined ? video.isPublic : true,
-      //     createdAt: video.createdAt,
-      //   })
-      // );
-      // setVideos(videosWithPrivacy);
+      // Videos are now handled by the separate video database query above
+      // No need to load videos from user.videosProfile anymore
 
       // Fix for rate object
       const userRate = user.rate || {};
@@ -223,6 +228,7 @@ const CurrentUserProfile = () => {
       hasLoadedInitialData.current = true;
     }
   }, [user, userLoading]); // Only depend on user and loading state
+
   // Role Type Constants
   const roleTypes = [
     { value: "instrumentalist", label: "Instrumentalist" },
@@ -311,7 +317,7 @@ const CurrentUserProfile = () => {
             >
               {g}
               <button
-                onClick={() => removeGenre(g)} // ← This calls removeGenre
+                onClick={() => removeGenre(g)}
                 className="text-red-500 hover:text-red-600"
               >
                 <X size={12} />
@@ -545,7 +551,6 @@ const CurrentUserProfile = () => {
   };
 
   // FIXED: Enhanced rate validation function
-
   const isValidRateValue = (value: string): boolean => {
     if (!value || value.trim() === "") return false;
 
@@ -773,7 +778,7 @@ const CurrentUserProfile = () => {
         isMusician,
         isClient,
         rate,
-        videosProfile: videos,
+        // REMOVED: videosProfile: videos, - Videos are now in separate database
         firstTimeInProfile: false,
 
         // Role-specific fields
@@ -856,41 +861,8 @@ const CurrentUserProfile = () => {
     });
   };
 
-  // Video handlers (LOCAL STATE ONLY - no separate API calls)
-  // Video handlers
-  const addVideo = () => {
-    if (!newVideoTitle.trim() || !newVideoUrl.trim()) {
-      toast.error("Please enter both title and URL");
-      return;
-    }
-
-    const newVideo: VideoProfileProps = {
-      _id: Date.now().toString(),
-      title: newVideoTitle,
-      url: newVideoUrl,
-      isPublic: newVideoPrivacy,
-      createdAt: Date.now(),
-      isProfileVideo: true,
-      videoType: "profile",
-      userId: "",
-      tags: [],
-      views: 0,
-      likes: 0,
-      updatedAt: 0,
-    };
-
-    setVideos((prev) => [...prev, newVideo]);
-    setNewVideoTitle("");
-    setNewVideoUrl("");
-    setNewVideoPrivacy(true);
-    setShowVideoModal(false);
-    toast.success("Video added! Don't forget to save your profile.");
-  };
-
-  const removeVideo = (videoId: string) => {
-    setVideos((prev) => prev.filter((video) => video._id !== videoId));
-    toast.success("Video removed! Don't forget to save your profile.");
-  };
+  // Video handlers - Now these are handled by the VideoProfileComponent
+  // which directly interacts with the video database
 
   // Social media handlers
   const addSocialHandle = () => {
@@ -1055,7 +1027,7 @@ const CurrentUserProfile = () => {
             {
               label: isMusician ? "Videos" : "Gigs",
               value: isMusician
-                ? videos.length || 0
+                ? videos.length || 0 // Now using the videos state which syncs with database
                 : user.monthlyGigsPosted || 0,
               icon: isMusician ? <Music size={16} /> : <Briefcase size={16} />,
             },
@@ -1093,31 +1065,25 @@ const CurrentUserProfile = () => {
                 icon={<Music size={18} />}
                 title="Video Profile"
                 data-field="videos"
-                // action={
-                //   <Button
-                //     onClick={() => setShowVideoModal(true)}
-                //     className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
-                //   >
-                //     <Plus size={16} className="mr-1" /> Add Video
-                //   </Button>
-                // }
               >
                 <VideoProfileComponent
                   videos={videos}
                   onAddVideo={(newVideo: VideoProfileProps) => {
-                    const videoWithId: VideoProfileProps = {
-                      ...newVideo,
-                      _id: Date.now().toString(),
-                      isPublic:
-                        newVideo.isPublic !== undefined
-                          ? newVideo.isPublic
-                          : true, // Default to public if not provided
-                    };
-                    setVideos((prev) => [...prev, videoWithId]);
+                    setVideos((prev) => [...prev, newVideo]);
                   }}
                   onRemoveVideo={(videoId: string) => {
                     setVideos((prev) =>
                       prev.filter((video) => video._id !== videoId)
+                    );
+                  }}
+                  onUpdateVideo={(
+                    videoId: string,
+                    updates: Partial<VideoProfileProps>
+                  ) => {
+                    setVideos((prev) =>
+                      prev.map((video) =>
+                        video._id === videoId ? { ...video, ...updates } : video
+                      )
                     );
                   }}
                   loading={loading}
@@ -1146,7 +1112,6 @@ const CurrentUserProfile = () => {
               />
             </SectionContainer>
 
-            {/* Experience Section */}
             {/* Experience Section */}
             <SectionContainer
               icon={<Briefcase size={18} />}
@@ -1499,176 +1464,7 @@ const CurrentUserProfile = () => {
         />
       </Modal>
 
-      <Modal
-        isOpen={showVideoModal}
-        onClose={() => {
-          setShowVideoModal(false);
-          setNewVideoTitle("");
-          setNewVideoUrl("");
-          setNewVideoPrivacy(true); // Reset to public
-        }}
-        title="Add Performance Video"
-      >
-        <div className="space-y-4 pb-[35px]">
-          <TextInput
-            label="Video Title"
-            value={newVideoTitle}
-            onChange={setNewVideoTitle}
-            placeholder="My Amazing Performance"
-            Icon={<Music size={16} />}
-          />
-
-          {/* Privacy Settings */}
-          <div>
-            <Label
-              className={cn("text-sm font-medium mb-3 block", colors.text)}
-            >
-              Privacy Settings
-            </Label>
-            <div className="space-y-3">
-              {/* Public Option */}
-              <div
-                onClick={() => setNewVideoPrivacy(true)}
-                className={cn(
-                  "border-2 rounded-lg p-4 cursor-pointer transition-all duration-200",
-                  newVideoPrivacy
-                    ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      "p-2 rounded-full",
-                      newVideoPrivacy ? "text-amber-600" : "text-gray-500"
-                    )}
-                  >
-                    <Globe size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <h4
-                      className={cn(
-                        "font-semibold",
-                        newVideoPrivacy
-                          ? "text-amber-900 dark:text-amber-100"
-                          : "text-gray-900 dark:text-gray-100"
-                      )}
-                    >
-                      Public
-                    </h4>
-                    <p
-                      className={cn(
-                        "text-sm mt-1",
-                        newVideoPrivacy
-                          ? "text-amber-700 dark:text-amber-300"
-                          : "text-gray-600 dark:text-gray-400"
-                      )}
-                    >
-                      Visible to everyone on the platform
-                    </p>
-                  </div>
-                  <div
-                    className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                      newVideoPrivacy
-                        ? "border-amber-500 bg-amber-500"
-                        : "border-gray-400"
-                    )}
-                  >
-                    {newVideoPrivacy && (
-                      <div className="w-2 h-2 rounded-full bg-white" />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Private Option */}
-              <div
-                onClick={() => setNewVideoPrivacy(false)}
-                className={cn(
-                  "border-2 rounded-lg p-4 cursor-pointer transition-all duration-200",
-                  !newVideoPrivacy
-                    ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      "p-2 rounded-full",
-                      !newVideoPrivacy ? "text-amber-600" : "text-gray-500"
-                    )}
-                  >
-                    <Lock size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <h4
-                      className={cn(
-                        "font-semibold",
-                        !newVideoPrivacy
-                          ? "text-amber-900 dark:text-amber-100"
-                          : "text-gray-900 dark:text-gray-100"
-                      )}
-                    >
-                      Followers Only
-                    </h4>
-                    <p
-                      className={cn(
-                        "text-sm mt-1",
-                        !newVideoPrivacy
-                          ? "text-amber-700 dark:text-amber-300"
-                          : "text-gray-600 dark:text-gray-400"
-                      )}
-                    >
-                      Only visible to your mutual followers
-                    </p>
-                  </div>
-                  <div
-                    className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                      !newVideoPrivacy
-                        ? "border-amber-500 bg-amber-500"
-                        : "border-gray-400"
-                    )}
-                  >
-                    {!newVideoPrivacy && (
-                      <div className="w-2 h-2 rounded-full bg-white" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <TextInput
-            label="Video URL"
-            value={newVideoUrl}
-            onChange={setNewVideoUrl}
-            placeholder="https://youtube.com/watch?v=..."
-            Icon={<Play size={16} />}
-          />
-          <div className={cn("p-4 rounded-lg", colors.secondaryBackground)}>
-            <p className={cn("text-sm font-medium mb-2", colors.text)}>
-              Supported platforms:
-            </p>
-            <ul className={cn("text-sm space-y-1", colors.textMuted)}>
-              <li>• YouTube URLs</li>
-              <li>• Vimeo URLs</li>
-              <li>• Direct video links (.mp4, .mov, etc.)</li>
-            </ul>
-          </div>
-        </div>
-        <ModalActions
-          onCancel={() => {
-            setShowVideoModal(false);
-            setNewVideoTitle("");
-            setNewVideoUrl("");
-            setNewVideoPrivacy(true);
-          }}
-          onConfirm={addVideo}
-          confirmText="Add Video"
-        />
-      </Modal>
+      {/* Remove the old video modal since it's now handled by VideoProfileComponent */}
     </div>
   );
 };

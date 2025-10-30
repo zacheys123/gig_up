@@ -17,6 +17,7 @@ export const NOTIFICATION_TYPES = [
   "new_review",
   "like",
   "share",
+  "video_comment",
   "review_received",
   "system_updates",
 ] as const;
@@ -35,7 +36,7 @@ export const notificationSettingsSchema = {
   shares: v.boolean(), // NEW
   reviews: v.boolean(), // NEW
   followRequests: v.boolean(),
-
+  comments: v.boolean(),
   // Gigs & Bookings
   gigInvites: v.boolean(),
   bookingRequests: v.boolean(),
@@ -49,7 +50,6 @@ export const notificationSettingsSchema = {
   // System & Updates
   systemUpdates: v.boolean(),
   featureAnnouncements: v.boolean(),
-  securityUpdates: v.boolean(),
 };
 
 // ==================== NOTIFICATION MODEL SCHEMA ====================
@@ -94,7 +94,7 @@ export type NotificationSettings = {
   shares: boolean; // NEW
   reviews: boolean; // NEW
   followRequests: boolean;
-
+  comments: boolean;
   // Gigs & Bookings
   gigInvites: boolean;
   bookingRequests: boolean;
@@ -107,8 +107,8 @@ export type NotificationSettings = {
 
   // System & Updates
   systemUpdates: boolean;
+
   featureAnnouncements: boolean;
-  securityUpdates: boolean;
 
   // REMOVED: promotionalEmails & newsletter
 };
@@ -144,7 +144,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   shares: false, // NEW
   reviews: false, // NEW
   followRequests: false,
-
+  comments: false,
   // Gigs & Bookings
   gigInvites: false,
   bookingRequests: false,
@@ -158,7 +158,6 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   // System & Updates
   systemUpdates: false,
   featureAnnouncements: false,
-  securityUpdates: false,
 
   // REMOVED: promotionalEmails & newsletter
 };
@@ -174,7 +173,7 @@ export const NOTIFICATION_TYPE_TO_SETTING_MAP: Record<
   share: "shares", // NEW - maps to "shares" setting
   new_review: "reviews", // NEW - maps to "reviews" setting
   review_received: "reviews", // NEW - maps to "reviews" setting
-
+  video_comment: "comments",
   // Follows
   new_follower: "followRequests",
   follow_request: "followRequests",
