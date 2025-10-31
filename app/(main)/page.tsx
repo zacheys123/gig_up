@@ -117,28 +117,29 @@ export default function Home() {
       );
 
   const getDynamicHref = () => {
-    if (!userId || !user?.firstname) return `/profile`; // Basic profile setup
+    if (!userId || !user?.firstname) return `/profile`;
     if (!user?.isClient && !user?.isMusician && !user?.isBooker)
-      return `/roles/${userId}`; // Role selection
+      return `/roles/${userId}`;
 
-    // For clients: Skip onboarding and go directly to create page
+    // All roles go to gigs hub, but see different default tabs
     if (user?.isClient) {
-      return `/create/${userId}`;
+      return !user?.onboardingComplete
+        ? `/dashboard`
+        : `/hub/gigs/${userId}?tab=create`;
     }
 
-    // For bookers: Similar to clients but with different dashboard
     if (user?.isBooker) {
       return !user?.onboardingComplete
         ? `/dashboard`
-        : `/hub/gigs/av_gigs/${userId}`;
+        : `/gigs/${userId}?tab=applications`;
     }
 
-    // For musicians: Check onboarding status
     if (user?.isMusician) {
-      return !user?.onboardingComplete ? `/dashboard` : `/community?tab=videos`;
+      return !user?.onboardingComplete
+        ? `/dashboard`
+        : `/hub/gigs/${userId}?tab=all`;
     }
 
-    // Fallback
     return `/roles/${userId}`;
   };
 
@@ -374,14 +375,14 @@ export default function Home() {
                     {isAuthenticated
                       ? isProfileComplete
                         ? user?.isClient
-                          ? "Create Gig"
+                          ? "Find Talent" // CHANGED
                           : user?.isBooker
-                            ? "Manage Events"
-                            : "Find Gigs"
+                            ? "Manage Gigs" // CHANGED
+                            : "Find Gigs" // CHANGED
                         : needsRoleSelection
                           ? "Choose Your Role"
                           : user?.isClient
-                            ? "Post Gigs"
+                            ? "Post Gigs" // CHANGED
                             : user?.isBooker
                               ? "Set Up Profile"
                               : "Complete Profile"
@@ -400,7 +401,7 @@ export default function Home() {
                       className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
                     >
                       {user?.isMusician
-                        ? "Find Gigs"
+                        ? "Browse Gigs" // CHANGED
                         : user?.isBooker
                           ? "Browse Talent"
                           : "Find Artists"}

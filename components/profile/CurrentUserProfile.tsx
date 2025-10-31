@@ -97,7 +97,7 @@ const CurrentUserProfile = () => {
   // Video queries
   const userVideos = useQuery(
     api.controllers.videos.getUserProfileVideos,
-    user ? { userId: user.clerkId, currentUserId: user?._id } : "skip"
+    user ? { userId: user.clerkId } : "skip"
   );
 
   const [loading, setLoading] = useState(false);

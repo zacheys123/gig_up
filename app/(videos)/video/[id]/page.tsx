@@ -1,3 +1,4 @@
+// app/video/[id]/page.tsx
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -38,7 +39,7 @@ import { useVideoSocial } from "@/hooks/useVideoSocial";
 
 export default function VideoDetailPage() {
   const { id } = useParams();
-  const { userId } = useAuth();
+  const { userId: clerkId } = useAuth();
   const router = useRouter();
   const { colors, isDarkMode } = useThemeColors();
   const { user } = useCurrentUser();
@@ -51,13 +52,13 @@ export default function VideoDetailPage() {
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  // Get video data - use "skip" when id is not available
+  // Get video data
   const video = useQuery(
     api.controllers.videos.getVideoById,
     id ? { videoId: id as string } : "skip"
   );
 
-  // Get comments - use "skip" when id is not available
+  // Get comments
   const comments = useQuery(
     api.controllers.comments.getVideoComments,
     id ? { videoId: id as Id<"videos"> } : "skip"
@@ -66,7 +67,7 @@ export default function VideoDetailPage() {
   // Get current user data for like status
   const currentUser = useQuery(
     api.controllers.user.getUserByClerkId,
-    userId ? { clerkId: userId } : "skip"
+    clerkId ? { clerkId } : "skip"
   );
 
   // Mutations
@@ -83,11 +84,10 @@ export default function VideoDetailPage() {
 
   // Increment views on page load (only once)
   useEffect(() => {
-    if (video && !hasViewed && !isTrackingView && userId !== video.userId) {
+    if (video && !hasViewed && !isTrackingView && clerkId !== video.userId) {
       setIsTrackingView(true);
       incrementViews({
         videoId: id as string,
-        currentUserId: user?._id as Id<"users">,
       })
         .then(() => {
           setHasViewed(true);
@@ -99,21 +99,21 @@ export default function VideoDetailPage() {
           setIsTrackingView(false);
         });
     }
-  }, [video, hasViewed, isTrackingView, id, incrementViews, userId, user?._id]);
+  }, [video, hasViewed, isTrackingView, id, incrementViews, clerkId]);
 
   // Handle like/unlike
   const handleLikeToggle = async () => {
-    if (!userId || !video || !id) return;
+    if (!clerkId || !video || !id) return;
 
     setIsLiking(true);
     try {
       if (hasLiked) {
-        await unlikeVideo({ videoId: id as string, userId });
+        await unlikeVideo({ videoId: id as string, userId: clerkId });
         toast.success("Removed from liked videos");
       } else {
         await likeVideo({
           videoId: id as Id<"videos">,
-          userId,
+          userId: clerkId,
           isViewerInGracePeriod: isInGracePeriod,
         });
         toast.success("Added to liked videos");
@@ -128,12 +128,12 @@ export default function VideoDetailPage() {
 
   // Handle add comment
   const handleAddComment = async () => {
-    if (!userId || !commentText.trim() || !id) return;
+    if (!clerkId || !commentText.trim() || !id) return;
 
     setIsSubmittingComment(true);
     try {
       await addComment({
-        userId,
+        userId: clerkId,
         videoId: id as Id<"videos">,
         content: commentText,
         isViewerInGracePeriod: isInGracePeriod,
@@ -150,12 +150,12 @@ export default function VideoDetailPage() {
 
   // Handle delete comment
   const handleDeleteComment = async (commentId: Id<"comments">) => {
-    if (!userId) return;
+    if (!clerkId) return;
 
     try {
       await deleteComment({
         commentId,
-        userId,
+        userId: clerkId,
       });
       toast.success("Comment deleted");
     } catch (error) {
@@ -164,7 +164,7 @@ export default function VideoDetailPage() {
     }
   };
 
-  // Get video owner data - use "skip" when video or video.userId is not available
+  // Get video owner data
   const videoOwner = useQuery(
     api.controllers.user.getUserByClerkId,
     video?.userId ? { clerkId: video.userId } : "skip"
@@ -315,7 +315,7 @@ export default function VideoDetailPage() {
                   variant={hasLiked ? "default" : "outline"}
                   size="sm"
                   onClick={handleLikeToggle}
-                  disabled={isLiking || !userId}
+                  disabled={isLiking || !clerkId}
                   className={cn(
                     "flex items-center gap-2",
                     hasLiked
@@ -397,7 +397,7 @@ export default function VideoDetailPage() {
               </h2>
 
               {/* Add Comment Form */}
-              {userId && (
+              {clerkId && (
                 <div className="mb-6">
                   <div className="flex gap-3">
                     <Avatar className="w-8 h-8">
@@ -462,7 +462,7 @@ export default function VideoDetailPage() {
                             </p>
                           </div>
                         </div>
-                        {comment.userId === userId && (
+                        {comment.userId === clerkId && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -620,7 +620,7 @@ export default function VideoDetailPage() {
                   variant="outline"
                   className="w-full justify-start gap-2"
                   onClick={handleLikeToggle}
-                  disabled={isLiking || !userId}
+                  disabled={isLiking || !clerkId}
                 >
                   <Heart
                     className={cn(

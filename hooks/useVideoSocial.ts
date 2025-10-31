@@ -32,7 +32,7 @@ export interface VideoFilters {
   searchQuery?: string;
 }
 
-export const useVideoSocial = (currentUserId?: Id<"users">) => {
+export const useVideoSocial = (clerkId?: string) => {
   // State
   const [filters, setFilters] = useState<VideoFilters>({});
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
@@ -52,7 +52,7 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
 
   const userVideos = useQuery(
     api.controllers.videos.getUserProfileVideos,
-    currentUserId ? { userId: currentUserId.toString() } : "skip"
+    clerkId ? { userId: clerkId } : "skip"
   );
 
   // Mutations
@@ -124,7 +124,7 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
   // Actions
   const likeVideo = useCallback(
     async (videoId: Id<"videos">) => {
-      if (!currentUserId) return { success: false, error: "Not authenticated" };
+      if (!clerkId) return { success: false, error: "Not authenticated" };
 
       const key = `like-${videoId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
@@ -132,8 +132,8 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
       try {
         await likeMutation({
           videoId,
-          userId: currentUserId.toString(),
-          isViewerInGracePeriod: false, // You can pass this based on user tier
+          userId: clerkId,
+          isViewerInGracePeriod: false,
         });
         return { success: true };
       } catch (error) {
@@ -142,12 +142,12 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
         setLoadingStates((prev) => ({ ...prev, [key]: false }));
       }
     },
-    [currentUserId, likeMutation]
+    [clerkId, likeMutation]
   );
 
   const unlikeVideo = useCallback(
     async (videoId: Id<"videos">) => {
-      if (!currentUserId) return { success: false, error: "Not authenticated" };
+      if (!clerkId) return { success: false, error: "Not authenticated" };
 
       const key = `unlike-${videoId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
@@ -155,7 +155,7 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
       try {
         await unlikeMutation({
           videoId: videoId.toString(),
-          userId: currentUserId.toString(),
+          userId: clerkId,
         });
         return { success: true };
       } catch (error) {
@@ -164,7 +164,7 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
         setLoadingStates((prev) => ({ ...prev, [key]: false }));
       }
     },
-    [currentUserId, unlikeMutation]
+    [clerkId, unlikeMutation]
   );
 
   const addComment = useCallback(
@@ -173,14 +173,14 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
       content: string,
       parentCommentId?: Id<"comments">
     ) => {
-      if (!currentUserId) return { success: false, error: "Not authenticated" };
+      if (!clerkId) return { success: false, error: "Not authenticated" };
 
       const key = `comment-${videoId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
 
       try {
         await addCommentMutation({
-          userId: currentUserId.toString(),
+          userId: clerkId,
           videoId,
           content,
           parentCommentId,
@@ -193,12 +193,12 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
         setLoadingStates((prev) => ({ ...prev, [key]: false }));
       }
     },
-    [currentUserId, addCommentMutation]
+    [clerkId, addCommentMutation]
   );
 
   const deleteComment = useCallback(
     async (commentId: Id<"comments">) => {
-      if (!currentUserId) return { success: false, error: "Not authenticated" };
+      if (!clerkId) return { success: false, error: "Not authenticated" };
 
       const key = `delete-comment-${commentId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
@@ -206,7 +206,7 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
       try {
         await deleteCommentMutation({
           commentId,
-          userId: currentUserId.toString(),
+          userId: clerkId,
         });
         return { success: true };
       } catch (error) {
@@ -215,7 +215,7 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
         setLoadingStates((prev) => ({ ...prev, [key]: false }));
       }
     },
-    [currentUserId, deleteCommentMutation]
+    [clerkId, deleteCommentMutation]
   );
 
   const incrementViews = useCallback(
@@ -226,7 +226,6 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
       try {
         await incrementViewsMutation({
           videoId: videoId.toString(),
-          currentUserId,
         });
         return { success: true };
       } catch (error) {
@@ -235,7 +234,7 @@ export const useVideoSocial = (currentUserId?: Id<"users">) => {
         setLoadingStates((prev) => ({ ...prev, [key]: false }));
       }
     },
-    [currentUserId, incrementViewsMutation]
+    [incrementViewsMutation]
   );
 
   // Helper functions

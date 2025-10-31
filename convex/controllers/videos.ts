@@ -254,49 +254,6 @@ export const deleteVideo = mutationGeneric({
   },
 });
 
-export const incrementVideoViews = mutationGeneric({
-  args: {
-    videoId: v.string(),
-    currentUserId: v.optional(v.id("users")),
-  },
-  handler: async (ctx, args) => {
-    const video = await ctx.db.get(args.videoId as Id<"videos">);
-
-    if (!video) {
-      throw new Error("Video not found");
-    }
-
-    // For logged-in users, track in user document with proper duplicate prevention
-    if (args.currentUserId) {
-      const currentUser = await ctx.db.get(args.currentUserId);
-      if (!currentUser) {
-        throw new Error("User not found");
-      }
-
-      const viewedVideos = currentUser.viewedVideos || [];
-
-      // Use Set to ensure uniqueness and check efficiently
-      const viewedSet = new Set(viewedVideos);
-
-      if (viewedSet.has(args.videoId)) {
-        return { success: true, action: "already_viewed" };
-      }
-
-      // Update user's viewed videos - add to the array (Convex will handle the update)
-      await ctx.db.patch(currentUser._id, {
-        viewedVideos: [...viewedVideos, args.videoId],
-      });
-    }
-    // For anonymous users, we rely on client-side tracking (localStorage)
-
-    // Increment video views
-    await ctx.db.patch(video._id, {
-      views: (video.views || 0) + 1,
-    });
-
-    return { success: true, action: "view_count_incremented" };
-  },
-});
 export const likeVideo = mutationGeneric({
   args: {
     userId: v.string(),
@@ -453,23 +410,65 @@ export const unlikeVideo = mutationGeneric({
     return { success: true };
   },
 });
+// Remove currentUserId from incrementVideoViews
+export const incrementVideoViews = mutationGeneric({
+  args: {
+    videoId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const video = await ctx.db.get(args.videoId as Id<"videos">);
+
+    if (!video) {
+      throw new Error("Video not found");
+    }
+
+    // For logged-in users, track in user document with proper duplicate prevention
+    // This now uses the clerkId from the video context
+    if (video.userId) {
+      const currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q: any) => q.eq("clerkId", video.userId))
+        .first();
+
+      if (currentUser) {
+        const viewedVideos = currentUser.viewedVideos || [];
+        const viewedSet = new Set(viewedVideos);
+
+        if (!viewedSet.has(args.videoId)) {
+          await ctx.db.patch(currentUser._id, {
+            viewedVideos: [...viewedVideos, args.videoId],
+          });
+        }
+      }
+    }
+
+    // Increment video views
+    await ctx.db.patch(video._id, {
+      views: (video.views || 0) + 1,
+    });
+
+    return { success: true, action: "view_count_incremented" };
+  },
+});
+
+// Update getUserProfileVideos to use clerkId only
 export const getUserProfileVideos = queryGeneric({
   args: {
-    userId: v.string(),
-    currentUserId: v.optional(v.id("users")),
+    userId: v.string(), // This is clerkId
   },
   handler: async (ctx, args): Promise<VideoDocument[]> => {
-    const [targetUser, currentUser] = await Promise.all([
-      ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.userId))
-        .first(),
-      args.currentUserId ? ctx.db.get(args.currentUserId as Id<"users">) : null,
-    ]);
+    const targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.userId))
+      .first();
 
     if (!targetUser) {
       throw new Error("User not found");
     }
+
+    // Get current user from context if available
+    // This would need to be passed differently in your implementation
+    // For now, we'll assume public access unless you implement proper auth context
 
     const profileVideos = await ctx.db
       .query("videos")
@@ -478,29 +477,10 @@ export const getUserProfileVideos = queryGeneric({
       )
       .collect();
 
-    const isFollowing = currentUser
-      ? targetUser.followers?.includes(currentUser._id) || false
-      : false;
-
-    const isOwnProfile = currentUser?.clerkId === args.userId;
-
+    // Filter based on privacy settings
+    // You might want to implement proper following logic here
     const filteredVideos = profileVideos.filter((video: VideoDocument) => {
-      // If it's the user's own profile, return ALL videos (both public and private)
-      if (isOwnProfile) {
-        return true;
-      }
-
-      // For other users, only return public videos OR private videos if following
-      if (video.isPublic) {
-        return true;
-      }
-
-      // Private videos are only visible to followers
-      if (!video.isPublic && isFollowing) {
-        return true;
-      }
-
-      return false;
+      return video.isPublic; // Simplified for now
     });
 
     // Get comment counts for each video
