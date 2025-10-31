@@ -121,23 +121,21 @@ export default function Home() {
     if (!user?.isClient && !user?.isMusician && !user?.isBooker)
       return `/roles/${userId}`;
 
-    // All roles go to gigs hub, but see different default tabs
+    // All roles go to gigs hub with role-specific default tabs
     if (user?.isClient) {
       return !user?.onboardingComplete
         ? `/dashboard`
-        : `/hub/gigs/${userId}?tab=create`;
+        : `/hub/gigs?tab=create_gigs`; // Changed from 'create' to 'my-gigs'
     }
 
     if (user?.isBooker) {
       return !user?.onboardingComplete
         ? `/dashboard`
-        : `/hub/gigs/${userId}?tab=applications`;
+        : `/hub/gigs?tab=applications`;
     }
 
     if (user?.isMusician) {
-      return !user?.onboardingComplete
-        ? `/dashboard`
-        : `/hub/gigs/${userId}?tab=all`;
+      return !user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=all`;
     }
 
     return `/roles/${userId}`;
