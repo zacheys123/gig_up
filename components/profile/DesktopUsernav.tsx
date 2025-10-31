@@ -18,6 +18,9 @@ import {
   Users,
   Globe,
   BellIcon,
+  BriefcaseIcon,
+  Users2Icon,
+  BuildingIcon,
 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
@@ -45,7 +48,16 @@ const DesktopUserNav = () => {
   }
 
   const isMusician = user?.isMusician;
+  const isBooker = user?.isBooker;
+  const isClient = user?.isClient;
   const isProTier = user?.tier === "pro";
+
+  const getRoleLabel = () => {
+    if (isBooker) return "Booker Account";
+    if (isMusician) return "Musician Account";
+    if (isClient) return "Client Account";
+    return "User Account";
+  };
 
   const navSections = [
     {
@@ -74,7 +86,7 @@ const DesktopUserNav = () => {
           icon: <History size={20} />,
           label: "Activity",
           description: "Recent actions",
-          pro: true, // Added pro tier
+          pro: true,
         },
       ],
     },
@@ -88,6 +100,16 @@ const DesktopUserNav = () => {
                 icon: <Music size={20} />,
                 label: "Musician Profile",
                 description: "Performance settings",
+              },
+            ]
+          : []),
+        ...(isBooker
+          ? [
+              {
+                href: `/profile/booker`,
+                icon: <BriefcaseIcon size={20} />,
+                label: "Booker Profile",
+                description: "Booking management",
               },
             ]
           : []),
@@ -115,10 +137,12 @@ const DesktopUserNav = () => {
                 icon: <Calendar size={20} />,
                 label: "Availability",
                 description: "Your schedule",
-                pro: true, // Added pro tier
+                pro: true,
               },
             ]
-          : [
+          : []),
+        ...(isClient
+          ? [
               {
                 href: `/profile/bookings`,
                 icon: <Calendar size={20} />,
@@ -130,9 +154,33 @@ const DesktopUserNav = () => {
                 icon: <Star size={20} />,
                 label: "Favorites",
                 description: "Saved musicians",
-                pro: true, // Added pro tier
+                pro: true,
               },
-            ]),
+            ]
+          : []),
+        ...(isBooker
+          ? [
+              {
+                href: `/profile/artists`,
+                icon: <Users2Icon size={20} />,
+                label: "My Artists",
+                description: "Manage your artists",
+              },
+              {
+                href: `/profile/coordination`,
+                icon: <BuildingIcon size={20} />,
+                label: "Coordination",
+                description: "Event coordination tools",
+                pro: true,
+              },
+              {
+                href: `/profile/commissions`,
+                icon: <DollarSign size={20} />,
+                label: "Commissions",
+                description: "Booking earnings",
+              },
+            ]
+          : []),
       ],
     },
   ];
@@ -160,7 +208,9 @@ const DesktopUserNav = () => {
             <div
               className={cn(
                 "w-12 h-12 rounded-xl flex items-center justify-center",
-                "bg-gradient-to-br from-amber-500 to-orange-500"
+                isBooker
+                  ? "bg-gradient-to-br from-blue-500 to-indigo-600"
+                  : "bg-gradient-to-br from-amber-500 to-orange-500"
               )}
             >
               <User className="text-white" size={24} />
@@ -170,7 +220,7 @@ const DesktopUserNav = () => {
                 My Profile
               </h2>
               <p className={cn("text-sm", colors.textMuted)}>
-                {isMusician ? "Musician Account" : "Client Account"}
+                {getRoleLabel()}
                 {isProTier && (
                   <span className="ml-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs px-2 py-1 rounded-full">
                     PRO
@@ -319,35 +369,31 @@ const DesktopUserNav = () => {
             </p>
 
             {/* Show missing fields if profile is incomplete */}
-            {missingFields.length > 0 &&
-              profileCompletion < 100 &&
-              user?.isMusician && (
-                <div className="mt-2">
-                  <p className={cn("text-xs font-medium mb-1", colors.text)}>
-                    Missing:
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {missingFields.slice(0, 3).map((field, index) => (
-                      <span
-                        key={index}
-                        className={cn(
-                          "text-xs px-2 py-1 rounded-full",
-                          "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
-                        )}
-                      >
-                        {field}
-                      </span>
-                    ))}
-                    {missingFields.length > 3 && (
-                      <span
-                        className={cn("text-xs px-2 py-1", colors.textMuted)}
-                      >
-                        +{missingFields.length - 3} more
-                      </span>
-                    )}
-                  </div>
+            {missingFields.length > 0 && profileCompletion < 100 && (
+              <div className="mt-2">
+                <p className={cn("text-xs font-medium mb-1", colors.text)}>
+                  Missing:
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {missingFields.slice(0, 3).map((field, index) => (
+                    <span
+                      key={index}
+                      className={cn(
+                        "text-xs px-2 py-1 rounded-full",
+                        "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+                      )}
+                    >
+                      {field}
+                    </span>
+                  ))}
+                  {missingFields.length > 3 && (
+                    <span className={cn("text-xs px-2 py-1", colors.textMuted)}>
+                      +{missingFields.length - 3} more
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
+            )}
           </div>
         </div>
       </div>

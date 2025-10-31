@@ -13,6 +13,7 @@ import {
   Calendar,
   MessageCircle,
   Settings,
+  BriefcaseIcon,
 } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -33,8 +34,11 @@ export function DesktopNavigation() {
   const { toggleDarkMode } = useThemeToggle();
 
   const { isInGracePeriod } = useCheckTrial();
-  const hasRole = currentUser?.isClient || currentUser?.isMusician;
+  const hasRole =
+    currentUser?.isClient || currentUser?.isMusician || currentUser?.isBooker;
   const isMusician = currentUser?.isMusician;
+  const isBooker = currentUser?.isBooker;
+  const isClient = currentUser?.isClient;
 
   const { total: unreadCount, byChat: unreadCounts } = useUnreadCount();
   const [showChatListModal, setShowChatListModal] = useState(false);
@@ -86,6 +90,33 @@ export function DesktopNavigation() {
     );
   }
 
+  const getActionButton = () => {
+    if (isBooker) {
+      return {
+        href: "/dashboard/gigs",
+        label: "Find Gigs",
+        icon: <BriefcaseIcon size={16} />,
+      };
+    }
+    if (isMusician) {
+      return {
+        href: "/gigs",
+        label: "Find Gigs",
+        icon: <Plus size={16} />,
+      };
+    }
+    if (isClient) {
+      return {
+        href: "/create-gig",
+        label: "Post Gig",
+        icon: <Plus size={16} />,
+      };
+    }
+    return null;
+  };
+
+  const actionButton = getActionButton();
+
   const navigationItems = [
     {
       href: "/",
@@ -117,6 +148,11 @@ export function DesktopNavigation() {
       condition: hasRole,
     },
   ];
+
+  const getGreetingName = () => {
+    if (isBooker) return "Booker";
+    return clerkUser?.firstName || clerkUser?.username;
+  };
 
   return (
     <>
@@ -189,16 +225,16 @@ export function DesktopNavigation() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {isSignedIn && hasRole && (
-                <Link href={isMusician ? "/gigs" : "/create-gig"}>
+              {isSignedIn && actionButton && (
+                <Link href={actionButton.href}>
                   <Button
                     className={cn(
                       "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
                       "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200"
                     )}
                   >
-                    <Plus size={16} />
-                    <span>{isMusician ? "Find Gigs" : "Post Gig"}</span>
+                    {actionButton.icon}
+                    <span>{actionButton.label}</span>
                   </Button>
                 </Link>
               )}
@@ -265,7 +301,7 @@ export function DesktopNavigation() {
               {isSignedIn ? (
                 <div className="flex items-center space-x-4">
                   <span className={cn("text-sm", colors.textMuted)}>
-                    Hi, {clerkUser?.firstName || clerkUser?.username}
+                    Hi, {getGreetingName()}
                   </span>
 
                   <Link

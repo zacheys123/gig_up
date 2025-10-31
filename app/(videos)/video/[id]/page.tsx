@@ -34,6 +34,7 @@ import GigLoader from "@/components/(main)/GigLoader";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useVideoSocial } from "@/hooks/useVideoSocial";
 
 export default function VideoDetailPage() {
   const { id } = useParams();

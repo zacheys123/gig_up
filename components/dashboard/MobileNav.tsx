@@ -23,6 +23,9 @@ import {
   XIcon,
   ChevronRightIcon,
   User,
+  BriefcaseIcon,
+  Users2Icon,
+  BuildingIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,8 +45,8 @@ interface NavLink {
   href: string;
   icon: React.ReactElement;
   exact: boolean;
-  pro?: boolean; // Make optional
-  description?: string; // Make optional
+  pro?: boolean;
+  description?: string;
 }
 
 export default function MobileNav() {
@@ -57,6 +60,7 @@ export default function MobileNav() {
   const { unreadCount } = useNotificationSystem();
   const { isInGracePeriod: canSeeNotification } = useCheckTrial();
   const router = useRouter();
+
   const musicianLinks: NavLink[] = [
     {
       name: "Dashboard",
@@ -82,7 +86,6 @@ export default function MobileNav() {
       icon: <DollarSignIcon className="w-5 h-5" />,
       exact: false,
     },
-
     {
       name: "Reviews",
       href: "/dashboard/reviews",
@@ -122,7 +125,6 @@ export default function MobileNav() {
       icon: <UsersIcon className="w-5 h-5" />,
       exact: false,
     },
-
     {
       name: "Favorites",
       href: "/dashboard/favorites",
@@ -137,10 +139,55 @@ export default function MobileNav() {
     },
   ];
 
+  const bookerLinks: NavLink[] = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: <MdDashboard className="w-5 h-5" />,
+      exact: true,
+    },
+    {
+      name: "Find Gigs",
+      href: "/dashboard/gigs",
+      icon: <BriefcaseIcon className="w-5 h-5" />,
+      exact: false,
+      description: "Browse available gigs",
+    },
+    {
+      name: "My Artists",
+      href: "/dashboard/artists",
+      icon: <Users2Icon className="w-5 h-5" />,
+      exact: false,
+      description: "Manage your artists",
+    },
+    {
+      name: "Bookings",
+      href: "/dashboard/bookings",
+      icon: <CalendarIcon className="w-5 h-5" />,
+      exact: false,
+      description: "Manage bookings",
+    },
+    {
+      name: "Coordination",
+      href: "/dashboard/coordination",
+      icon: <BuildingIcon className="w-5 h-5" />,
+      exact: false,
+      description: "Event coordination",
+      pro: true,
+    },
+    {
+      name: "Earnings",
+      href: "/dashboard/earnings",
+      icon: <DollarSignIcon className="w-5 h-5" />,
+      exact: false,
+      description: "Booking commissions",
+    },
+  ];
+
   const commonLinks: NavLink[] = [
     {
       name: "Profile",
-      href: "/profile", // Add this line
+      href: "/profile",
       icon: <User className="w-5 h-5" />,
       exact: false,
     },
@@ -171,7 +218,6 @@ export default function MobileNav() {
       icon: <HomeIcon className="w-5 h-5" />,
       exact: true,
     },
-
     {
       name: "Billing",
       href: "/dashboard/billing",
@@ -199,7 +245,7 @@ export default function MobileNav() {
       ),
       exact: true,
       pro: canSeeNotification,
-      description: "Notificcations with priority alerts",
+      description: "Notifications with priority alerts",
     },
     {
       name: "Documents",
@@ -218,11 +264,17 @@ export default function MobileNav() {
       description: "24/7 dedicated support",
     },
   ];
-  const roleLinks = user?.isMusician
-    ? musicianLinks
-    : user?.isClient
-      ? clientLinks
-      : [];
+
+  // Determine role-specific links
+  const getRoleLinks = () => {
+    if (user?.isBooker) return bookerLinks;
+    if (user?.isMusician) return musicianLinks;
+    if (user?.isClient) return clientLinks;
+    return [];
+  };
+
+  const roleLinks = getRoleLinks();
+
   // Add pro links to your existing allLinks array
   const allLinks = [...baseLinks, ...roleLinks, ...commonLinks, ...proLinks];
 
@@ -268,6 +320,27 @@ export default function MobileNav() {
     };
   }, [isOpen]);
 
+  const getUserRoleLabel = () => {
+    if (user?.isBooker) return "Booker";
+    if (user?.isMusician) return "Artist";
+    if (user?.isClient) return "Client";
+    return "User";
+  };
+
+  const getUserStatsLabel = () => {
+    if (user?.isBooker) return "Artists Managed";
+    if (user?.isMusician) return "Gigs Booked";
+    if (user?.isClient) return "Posts Created";
+    return "Activity";
+  };
+
+  const getUserStatsValue = () => {
+    if (user?.isBooker) return user.artistsManaged?.length || 0;
+    if (user?.isMusician) return user.gigsBooked || 0;
+    if (user?.isClient) return user.gigsPosted || 0;
+    return 0;
+  };
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-9999 md:hidden" ref={navRef}>
       <div className="relative h-20">
@@ -310,9 +383,8 @@ export default function MobileNav() {
                       Navigation
                     </h2>
                     <p className={cn("text-sm mt-1", colors.textMuted)}>
-                      {user?.isMusician ? "Artist" : "Client"} •{" "}
-                      {user?.gigsBooked || 0}{" "}
-                      {user?.isMusician ? "Gigs" : "Posts"}
+                      {getUserRoleLabel()} • {getUserStatsValue()}{" "}
+                      {getUserStatsLabel()}
                     </p>
                   </div>
                   <button
@@ -333,7 +405,7 @@ export default function MobileNav() {
                 <div className="p-4 space-y-2">
                   {allLinks.map((link, index) => {
                     const active = isActive(link.href, link.exact, link.pro);
-                    const isProFeature = link.pro && !isProTier; // true if pro feature AND user is not pro
+                    const isProFeature = link.pro && !isProTier;
 
                     const linkContent = (
                       <div
@@ -433,7 +505,6 @@ export default function MobileNav() {
                         }}
                       >
                         {isProFeature ? (
-                          // Pro feature - visible but not clickable
                           <div
                             className="relative"
                             title="Upgrade to Pro to access this feature"
@@ -441,7 +512,6 @@ export default function MobileNav() {
                             {linkContent}
                           </div>
                         ) : (
-                          // Regular link - clickable (including pro links for pro users)
                           <Link
                             href={link.href}
                             onClick={() => setIsOpen(false)}
@@ -544,5 +614,3 @@ export default function MobileNav() {
     </div>
   );
 }
-
-// Enhanced version with loading states

@@ -2,9 +2,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+type SubscriptionTierName = "free" | "pro" | "premium" | "elite";
+type UserRole = "musician" | "client" | "booker";
+
 interface SubscriptionTier {
   id: string;
-  name: "free" | "pro";
+  name: SubscriptionTierName;
   price: number;
   currency: string;
   features: string[];
@@ -14,11 +17,16 @@ interface SubscriptionTier {
     storageGB: number;
     analytics: boolean;
     prioritySupport: boolean;
+    featuredListings: boolean;
+    advancedAnalytics: boolean;
+    dedicatedSupport: boolean;
+    customBranding: boolean;
+    apiAccess: boolean;
   };
 }
 
 interface Subscription {
-  tier: "free" | "pro";
+  tier: SubscriptionTierName;
   status: "active" | "pending" | "canceled" | "expired";
   currentPeriodStart: number;
   currentPeriodEnd: number;
@@ -26,7 +34,6 @@ interface Subscription {
   nextBillingDate?: number;
 }
 
-// stores/useSubscriptionStore.ts - Keep as functions but fix typing
 interface SubscriptionStore {
   // State
   subscription: Subscription | null;
@@ -47,8 +54,10 @@ interface SubscriptionStore {
   setShowTrialModal: (show: boolean) => void;
   setTrialRemainingDays: (days: number | null) => void;
 
-  // Computed - Keep as functions but properly type them
+  // Computed
   isPro: () => boolean;
+  isPremium: () => boolean;
+  isElite: () => boolean;
   isActive: () => boolean;
   daysUntilRenewal: () => number;
   canUpgrade: () => boolean;
@@ -56,15 +65,34 @@ interface SubscriptionStore {
   // Get plans based on user role
   getPlansForUser: (
     isMusician?: boolean,
-    isClient?: boolean
+    isClient?: boolean,
+    isBooker?: boolean
   ) => Array<{
     name: string;
     price: string;
     features: string[];
     cta: string;
     current: boolean;
+    comingSoon?: boolean;
+    popular?: boolean;
   }>;
 }
+
+// Define feature types with proper typing
+type TierFeatures = {
+  [key in SubscriptionTierName]: string[];
+};
+
+type RoleFeatures = {
+  [key in UserRole]: TierFeatures;
+};
+
+// Define pricing structure
+type Pricing = {
+  [key in UserRole]: {
+    [key in SubscriptionTierName]: string;
+  };
+};
 
 export const useSubscriptionStore = create<SubscriptionStore>()(
   persist(
@@ -80,17 +108,22 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           currency: "KES",
           features: [
             "Basic profile",
-            "5 gigs per month",
-            "50 messages monthly",
-            "1GB storage",
+            "3 gigs per month",
+            "30 messages monthly",
+            "500MB storage",
             "Community support",
           ],
           limits: {
-            monthlyGigs: 5,
-            monthlyMessages: 50,
-            storageGB: 1,
+            monthlyGigs: 3,
+            monthlyMessages: 30,
+            storageGB: 0.5,
             analytics: false,
             prioritySupport: false,
+            featuredListings: false,
+            advancedAnalytics: false,
+            dedicatedSupport: false,
+            customBranding: false,
+            apiAccess: false,
           },
         },
         {
@@ -99,20 +132,81 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           price: 19.99,
           currency: "KES",
           features: [
-            "Premium profile",
-            "Unlimited gigs",
-            "Unlimited messages",
-            "10GB storage",
-            "Advanced analytics",
+            "Enhanced profile",
+            "15 gigs per month",
+            "200 messages monthly",
+            "5GB storage",
             "Priority support",
+            "Basic analytics",
             "Featured listings",
           ],
           limits: {
-            monthlyGigs: -1, // -1 means unlimited
-            monthlyMessages: -1,
-            storageGB: 10,
+            monthlyGigs: 15,
+            monthlyMessages: 200,
+            storageGB: 5,
             analytics: true,
             prioritySupport: true,
+            featuredListings: true,
+            advancedAnalytics: false,
+            dedicatedSupport: false,
+            customBranding: false,
+            apiAccess: false,
+          },
+        },
+        {
+          id: "premium",
+          name: "premium",
+          price: 49.99,
+          currency: "KES",
+          features: [
+            "Premium profile badge",
+            "Unlimited gigs",
+            "Unlimited messages",
+            "25GB storage",
+            "Advanced analytics",
+            "Dedicated support",
+            "Priority placement",
+            "Custom branding",
+          ],
+          limits: {
+            monthlyGigs: -1,
+            monthlyMessages: -1,
+            storageGB: 25,
+            analytics: true,
+            prioritySupport: true,
+            featuredListings: true,
+            advancedAnalytics: true,
+            dedicatedSupport: true,
+            customBranding: true,
+            apiAccess: false,
+          },
+        },
+        {
+          id: "elite",
+          name: "elite",
+          price: 99.99,
+          currency: "KES",
+          features: [
+            "Elite profile badge",
+            "Unlimited everything",
+            "100GB storage",
+            "White-label solutions",
+            "API access",
+            "24/7 dedicated support",
+            "Custom integrations",
+            "Early feature access",
+          ],
+          limits: {
+            monthlyGigs: -1,
+            monthlyMessages: -1,
+            storageGB: 100,
+            analytics: true,
+            prioritySupport: true,
+            featuredListings: true,
+            advancedAnalytics: true,
+            dedicatedSupport: true,
+            customBranding: true,
+            apiAccess: true,
           },
         },
       ],
@@ -135,11 +229,25 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
       setTrialRemainingDays: (trialRemainingDays) =>
         set({ trialRemainingDays }),
 
-      // ✅ FIX: Computed functions - properly typed
+      // Computed functions
       isPro: (): boolean => {
         const { subscription } = get();
         return (
           subscription?.tier === "pro" && subscription?.status === "active"
+        );
+      },
+
+      isPremium: (): boolean => {
+        const { subscription } = get();
+        return (
+          subscription?.tier === "premium" && subscription?.status === "active"
+        );
+      },
+
+      isElite: (): boolean => {
+        const { subscription } = get();
+        return (
+          subscription?.tier === "elite" && subscription?.status === "active"
         );
       },
 
@@ -163,77 +271,182 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
       canUpgrade: (): boolean => {
         const { subscription } = get();
         return (
-          subscription?.tier !== "pro" || subscription?.status !== "active"
+          subscription?.tier !== "elite" || subscription?.status !== "active"
         );
       },
 
-      // ✅ FIX: Update getPlansForUser to call isPro() function
-      getPlansForUser: (isMusician = false, isClient = false) => {
-        const { isPro } = get(); // Get the function from store
+      // Fixed getPlansForUser with proper typing
+      getPlansForUser: (
+        isMusician = false,
+        isClient = false,
+        isBooker = false
+      ) => {
+        const { isPro, isPremium, isElite, subscription } = get();
 
-        const musicianFreeFeatures = [
-          "Book to 2 gigs/week",
-          "Limited Messages to clients (50msgs a month)",
-          "Performance analytics",
-          "30 days of access",
-        ];
-
-        const musicianProFeatures = [
-          "Unlimited gig applications",
-          "Featured profile in search",
-          "Priority in client searches",
-          "Advanced analytics dashboard",
-          "Direct booking options",
-          "Unlimited messaging",
-        ];
-
-        const clientFreeFeatures = [
-          "Post 2 gigs/week",
-          "Browse musician profiles and musician reviews",
-          "Limited Messages to musicians (50msgs a month)",
-          "30 days of access",
-          "No scheduling of gigs",
-        ];
-
-        const clientProFeatures = [
-          "Unlimited gig postings",
-          "Featured listing placement",
-          "Advanced search filters",
-          "Verified musician access",
-          "Booking management tools",
-          "Unlimited messaging",
-          "Dedicated support",
-          "Scheduling gigs (automatic, regular and more)",
-        ];
-
-        return [
-          {
-            name: "Free Tier",
-            price: "$0",
-            features: isMusician
-              ? musicianFreeFeatures
-              : isClient
-                ? clientFreeFeatures
-                : [],
-            cta: isPro() ? "Downgrade" : "Current Plan", // ✅ Call isPro() function
-            current: !isPro(), // ✅ Call isPro() function
+        // Define features with proper typing
+        const baseFeatures: RoleFeatures = {
+          musician: {
+            free: [
+              "Apply to 3 gigs/week",
+              "30 messages monthly",
+              "Basic profile visibility",
+              "Performance tracking",
+            ],
+            pro: [
+              "Apply to 15 gigs/month",
+              "200 messages monthly",
+              "Enhanced profile",
+              "Featured in search results",
+              "Basic analytics dashboard",
+              "Priority client matching",
+            ],
+            premium: [
+              "Unlimited gig applications",
+              "Unlimited messaging",
+              "Premium profile badge",
+              "Top placement in searches",
+              "Advanced analytics",
+              "Custom profile branding",
+              "Dedicated support",
+            ],
+            elite: [
+              "Unlimited everything",
+              "Elite profile badge",
+              "White-label profile",
+              "API access for integrations",
+              "24/7 dedicated support",
+              "Custom feature requests",
+              "Early access to new features",
+            ],
           },
-          {
-            name: "Pro Tier",
-            price: isMusician
-              ? "1500 KES/month"
-              : isClient
-                ? "2000 KES/month"
-                : "",
-            features: isMusician
-              ? musicianProFeatures
-              : isClient
-                ? clientProFeatures
-                : [],
-            cta: isPro() ? "Current Plan" : "Upgrade", // ✅ Call isPro() function
-            current: isPro(), // ✅ Call isPro() function
+          client: {
+            free: [
+              "Post 3 gigs/month",
+              "Browse musician profiles",
+              "30 messages monthly",
+              "Basic scheduling tools",
+            ],
+            pro: [
+              "Post 15 gigs/month",
+              "Advanced search filters",
+              "200 messages monthly",
+              "Priority musician access",
+              "Booking management tools",
+              "Featured gig listings",
+            ],
+            premium: [
+              "Unlimited gig postings",
+              "Unlimited messaging",
+              "Premium verification badge",
+              "Advanced analytics dashboard",
+              "Custom branding on posts",
+              "Dedicated account manager",
+              "Automated scheduling",
+            ],
+            elite: [
+              "Unlimited everything",
+              "Elite verification badge",
+              "White-label solutions",
+              "API access for automation",
+              "24/7 dedicated support",
+              "Custom workflow integrations",
+              "Enterprise-grade features",
+            ],
           },
+          booker: {
+            free: [
+              "View 10 gigs/week",
+              "Apply to 3 gigs/month",
+              "30 messages monthly",
+              "Basic profile",
+              "Access to musician hub",
+            ],
+            pro: [
+              "View unlimited gigs",
+              "Apply to 15 gigs/month",
+              "200 messages monthly",
+              "Enhanced booker profile",
+              "Priority gig access",
+              "Advanced search filters",
+              "Basic coordination tools",
+            ],
+            premium: [
+              "Unlimited gig applications",
+              "Unlimited messaging",
+              "Premium booker badge",
+              "Featured in client searches",
+              "Advanced coordination suite",
+              "Custom booking workflows",
+              "Dedicated support line",
+            ],
+            elite: [
+              "Unlimited everything",
+              "Elite booker certification",
+              "White-label booking system",
+              "API access for integrations",
+              "24/7 dedicated support",
+              "Custom reporting tools",
+              "Enterprise client management",
+            ],
+          },
+        };
+
+        // Define pricing with proper typing
+        const pricing: Pricing = {
+          musician: {
+            free: "Free",
+            pro: "1,500 KES/month",
+            premium: "4,500 KES/month",
+            elite: "9,000 KES/month",
+          },
+          client: {
+            free: "Free",
+            pro: "2,000 KES/month",
+            premium: "5,000 KES/month",
+            elite: "10,000 KES/month",
+          },
+          booker: {
+            free: "Free",
+            pro: "1,800 KES/month",
+            premium: "4,800 KES/month",
+            elite: "9,500 KES/month",
+          },
+        };
+
+        // Determine user role with proper typing
+        const userRole: UserRole = isMusician
+          ? "musician"
+          : isClient
+            ? "client"
+            : "booker";
+        const currentTier: SubscriptionTierName = subscription?.tier || "free";
+
+        // Create plans array with proper typing
+        const plans: SubscriptionTierName[] = [
+          "free",
+          "pro",
+          "premium",
+          "elite",
         ];
+
+        return plans.map((tier) => {
+          const isCurrent = currentTier === tier;
+          const isPopular = tier === "pro";
+
+          return {
+            name: `${tier.charAt(0).toUpperCase() + tier.slice(1)} Tier`,
+            price: pricing[userRole][tier],
+            features: baseFeatures[userRole][tier],
+            cta: isCurrent
+              ? "Current Plan"
+              : tier === "free"
+                ? "Downgrade"
+                : "Upgrade",
+            current: isCurrent,
+            popular: isPopular,
+            comingSoon: false, // Set to true for tiers you want to hide
+          };
+        });
       },
     }),
     {

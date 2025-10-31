@@ -21,9 +21,12 @@ export function MobileNavigation() {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
   const { notifications } = useNotificationSystem();
-  // Check if user has a role
-  const hasRole = currentUser?.isClient || currentUser?.isMusician;
+
+  // Check if user has a role - now includes booker
+  const hasRole =
+    currentUser?.isClient || currentUser?.isMusician || currentUser?.isBooker;
   const { isFirstMonthEnd } = useCheckTrial();
+
   if (!clerkLoaded || (isSignedIn && currentUserLoading) || !mounted) {
     return (
       <nav
@@ -70,6 +73,12 @@ export function MobileNavigation() {
       </nav>
     );
   }
+
+  const getRoleSpecificGreeting = () => {
+    if (currentUser?.isBooker) return "Booker";
+    return clerkUser?.firstName || clerkUser?.username;
+  };
+
   return (
     <>
       <nav
@@ -118,7 +127,7 @@ export function MobileNavigation() {
                   {/* User Button */}
                   <UserButton />
 
-                  {/* Mobile Sheet - Only if user has role */}
+                  {/* Mobile Sheet - Only if user has role (now includes booker) */}
                   {hasRole && (
                     <MobileSheet
                       isTrialEnded={

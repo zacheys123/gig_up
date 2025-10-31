@@ -12,6 +12,7 @@ import {
   FiMic,
   FiUsers,
   FiRefreshCw,
+  FiBriefcase,
 } from "react-icons/fi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useState, useEffect } from "react";
@@ -78,6 +79,13 @@ export default function AboutPage() {
     );
   }
 
+  const getUserRoleDisplay = () => {
+    if (user?.isMusician) return "Artist";
+    if (user?.isClient) return "Client";
+    if (user?.isBooker) return "Booker";
+    return "User";
+  };
+
   return (
     <div
       className={`min-h-screen ${colors.background} ${colors.text} transition-colors duration-300 overflow-y-auto`}
@@ -104,7 +112,7 @@ export default function AboutPage() {
             transition={{ delay: 0.3, duration: 0.8 }}
             className="text-xl max-w-3xl mx-auto mb-10 text-blue-100"
           >
-            {`Whether you're a talented performer seeking gigs or a restaurant, hotel, or club looking
+            {`Whether you're a talented performer, event organizer, or venue looking
             for exceptional entertainment, we create perfect matches that
             inspire.`}
           </motion.p>
@@ -127,16 +135,22 @@ export default function AboutPage() {
             ) : (
               <>
                 <Link
-                  href="/signup"
+                  href="/signup?role=artist"
                   className="bg-amber-400 hover:bg-amber-300 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <FiMic className="mr-2" /> Artists Sign Up
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/signup?role=client"
                   className="bg-white hover:bg-gray-100 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <FiUsers className="mr-2" /> Clients Sign Up
+                </Link>
+                <Link
+                  href="/signup?role=booker"
+                  className="bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                >
+                  <FiBriefcase className="mr-2" /> Bookers Sign Up
                 </Link>
               </>
             )}
@@ -172,9 +186,9 @@ export default function AboutPage() {
           </div>
           <div>
             <div className={`text-4xl font-bold ${colors.primary} mb-2`}>
-              9K
+              5K+
             </div>
-            <div className={colors.textMuted}>Successful Bookings</div>
+            <div className={colors.textMuted}>Professional Bookers</div>
           </div>
           <div>
             <div className={`text-4xl font-bold ${colors.primary} mb-2`}>
@@ -341,6 +355,83 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* For Bookers Section */}
+      <section className={`py-20 px-4 max-w-6xl mx-auto ${colors.background}`}>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer}
+          className="text-center mb-16"
+        >
+          <motion.h2
+            variants={fadeInUp}
+            className={`text-3xl font-bold ${colors.text} mb-4`}
+          >
+            For <span className="text-purple-600">Bookers</span>
+          </motion.h2>
+          <motion.p
+            variants={fadeInUp}
+            className={`text-xl ${colors.textMuted} max-w-3xl mx-auto`}
+          >
+            Manage talent, coordinate events, and build your artist roster
+          </motion.p>
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer}
+          className="grid md:grid-cols-3 gap-8"
+        >
+          {[
+            {
+              icon: <FiBriefcase className="w-8 h-8" />,
+              title: "Talent Management",
+              desc: "Discover and manage talented musicians for your events.",
+            },
+            {
+              icon: <FiCalendar className="w-8 h-8" />,
+              title: "Event Coordination",
+              desc: "Organize and coordinate multiple gigs and performances.",
+            },
+            {
+              icon: <FiUsers className="w-8 h-8" />,
+              title: "Artist Rosters",
+              desc: "Build and manage your own roster of reliable performers.",
+            },
+            {
+              icon: <FiDollarSign className="w-8 h-8" />,
+              title: "Commission Tracking",
+              desc: "Track your earnings and manage payments seamlessly.",
+            },
+            {
+              icon: <FiStar className="w-8 h-8" />,
+              title: "Industry Connections",
+              desc: "Connect with venues and expand your network.",
+            },
+            {
+              icon: <FiCheckCircle className="w-8 h-8" />,
+              title: "Professional Tools",
+              desc: "All the tools you need to succeed as a talent booker.",
+            },
+          ].map((item, index) => (
+            <motion.div
+              key={index}
+              variants={fadeInUp}
+              className={`${colors.card} p-8 rounded-xl ${colors.shadow} hover:shadow-lg transition-all border-t-4 border-purple-500 ${colors.border}`}
+            >
+              <div className="text-purple-500 mb-4">{item.icon}</div>
+              <h3 className={`text-xl font-bold mb-3 ${colors.text}`}>
+                {item.title}
+              </h3>
+              <p className={colors.textMuted}>{item.desc}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </section>
+
       {/* Testimonial Section */}
       <section className={`py-14 ${colors.gradientPrimary} text-white`}>
         <div className="max-w-6xl mx-auto px-4">
@@ -358,7 +449,7 @@ export default function AboutPage() {
               variants={fadeInUp}
               className="text-xl text-blue-100 max-w-3xl mx-auto"
             >
-              Discover why artists and clients love using our platform
+              Discover why artists, clients, and bookers love using our platform
             </motion.p>
           </motion.div>
 
@@ -406,8 +497,8 @@ export default function AboutPage() {
             Ready to Transform Your Musical Journey?
           </h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join thousands of artists and venues creating magical experiences
-            together.
+            Join thousands of artists, venues, and bookers creating magical
+            experiences together.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             {user ? (
@@ -430,6 +521,12 @@ export default function AboutPage() {
                   className="bg-white hover:bg-gray-100 text-gray-900 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <FiUsers className="mr-2" /> Join as Client
+                </Link>
+                <Link
+                  href="/signup?role=booker"
+                  className="bg-purple-500 hover:bg-purple-400 text-white font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
+                >
+                  <FiBriefcase className="mr-2" /> Join as Booker
                 </Link>
               </>
             )}
@@ -512,30 +609,30 @@ export default function AboutPage() {
             </ul>
           </div>
           <div>
-            <h4 className="font-bold mb-4">Company</h4>
+            <h4 className="font-bold mb-4">For Bookers</h4>
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/about"
+                  href="/authenticate"
                   className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
-                  About Us
+                  Sign Up
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/blog"
+                  href="/booker-resources"
                   className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
-                  Blog
+                  Resources
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/contact"
+                  href="/booker-faq"
                   className={`${colors.textMuted} ${colors.hoverBg} transition px-2 py-1 rounded`}
                 >
-                  Contact
+                  FAQ
                 </Link>
               </li>
             </ul>
@@ -570,36 +667,3 @@ export default function AboutPage() {
     </div>
   );
 }
-
-// const { users } = useAllUsers();
-// const { gigs } = useAllGigs();
-// const { Allposts, isLoading: postsloading } = usePostComments();
-// const allmusicians = users?.users?.filter((u: UserProps) => u?.isMusician).length;
-// const allClients = users?.users?.filter((u: UserProps) => u?.isClient).length;
-// const allBookedGigs = gigs?.gigs?.filter((u: GigProps) => u?.isTaken).length;
-//   const musicians = users?.users?.filter((u: UserProps) => u?.isClient)
-// State for shuffled posts
-// console.log(musicians)
-// const [shuffledPosts, setShuffledPosts] = useState<ResponseProps[]>([]);
-
-// // Function to shuffle and select 2 random posts
-// const shufflePosts = () => {
-//   if (!Allposts || Allposts.length === 0) return;
-
-//   // Copy the array to avoid mutating the original
-//   const postsCopy = [...Allposts];
-
-//   // Shuffle the array using Fisher-Yates algorithm
-//   for (let i = postsCopy.length - 1; i > 0; i--) {
-//     const j = Math.floor(Math.random() * (i + 1));
-//     [postsCopy[i], postsCopy[j]] = [postsCopy[j], postsCopy[i]];
-//   }
-
-//   // Take the first 2 posts
-//   setShuffledPosts(postsCopy.slice(0, 2));
-// };
-
-// // Shuffle posts when Allposts changes or on component mount
-// useEffect(() => {
-//   shufflePosts();
-// }, [Allposts]);

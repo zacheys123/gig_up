@@ -23,6 +23,9 @@ import {
   Sun,
   Moon,
   MessageCircle,
+  BriefcaseIcon,
+  Users2Icon,
+  BuildingIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,6 +52,8 @@ interface NavLink {
   onClick?: (e: React.MouseEvent) => void; // Add onClick for custom actions
 }
 
+// ... existing imports ...
+
 export function Sidebar() {
   const { user } = useCurrentUser();
   const { isPro } = useSubscriptionStore();
@@ -66,6 +71,7 @@ export function Sidebar() {
     e.preventDefault();
     setShowChatListModal(true);
   };
+
   if (!user) {
     return <SidebarSkeleton />;
   }
@@ -99,7 +105,6 @@ export function Sidebar() {
       href: "/dashboard/earnings",
       icon: <DollarSignIcon className="w-5 h-5" />,
     },
-
     {
       name: "Reviews",
       href: "/dashboard/reviews",
@@ -139,7 +144,6 @@ export function Sidebar() {
       href: "/dashboard/artists",
       icon: <UsersIcon className="w-5 h-5" />,
     },
-
     {
       name: "Favorites",
       href: "/dashboard/favorites",
@@ -157,15 +161,60 @@ export function Sidebar() {
     },
   ];
 
-  // Common links for both roles
+  const bookerLinks: NavLink[] = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: <MdDashboard className="w-5 h-5" />,
+      exact: true,
+    },
+    {
+      name: "Find Gigs",
+      href: "/dashboard/gigs",
+      icon: <BriefcaseIcon className="w-5 h-5" />,
+      description: "Browse available gigs",
+    },
+    {
+      name: "My Artists",
+      href: "/dashboard/artists",
+      icon: <Users2Icon className="w-5 h-5" />,
+      description: "Manage your artists",
+    },
+    {
+      name: "Bookings",
+      href: "/dashboard/bookings",
+      icon: <CalendarIcon className="w-5 h-5" />,
+      description: "Manage bookings",
+    },
+    {
+      name: "Coordination",
+      href: "/dashboard/coordination",
+      icon: <BuildingIcon className="w-5 h-5" />,
+      description: "Event coordination",
+      pro: true,
+    },
+    {
+      name: "Earnings",
+      href: "/dashboard/earnings",
+      icon: <DollarSignIcon className="w-5 h-5" />,
+      description: "Booking commissions",
+    },
+    {
+      name: "Billing",
+      href: "/dashboard/billing",
+      icon: <CreditCardIcon className="w-5 h-5" />,
+    },
+  ];
+
+  // Common links for all roles
   const commonLinks: NavLink[] = [
     {
-      href: "/messages", // Keep href for fallback
+      href: "/messages",
       icon: <MessageCircle size={20} />,
       name: "Messages",
       description: "Chat conversations",
       badge: unReadCount,
-      onClick: handleOpenMessages, // Now opens the chat list modal
+      onClick: handleOpenMessages,
     },
     {
       name: "Settings",
@@ -229,14 +278,39 @@ export function Sidebar() {
     },
   ];
 
-  const roleLinks = user?.isMusician
-    ? musicianLinks
-    : user?.isClient
-      ? clientLinks
-      : [];
+  // Determine role-specific links
+  const getRoleLinks = () => {
+    if (user?.isBooker) return bookerLinks;
+    if (user?.isMusician) return musicianLinks;
+    if (user?.isClient) return clientLinks;
+    return [];
+  };
+
+  const roleLinks = getRoleLinks();
 
   // Combine all links in the same order as MobileNav
   const links = [...baseLinks, ...roleLinks, ...commonLinks, ...proLinks];
+
+  const getUserRoleLabel = () => {
+    if (user?.isBooker) return "Booker";
+    if (user?.isMusician) return "Artist";
+    if (user?.isClient) return "Client";
+    return "User";
+  };
+
+  const getUserStatsLabel = () => {
+    if (user?.isBooker) return "Artists Managed";
+    if (user?.isMusician) return "Gigs Booked";
+    if (user?.isClient) return "Posts Created";
+    return "Activity";
+  };
+
+  const getUserStatsValue = () => {
+    if (user?.isBooker) return user.artistsManaged?.length || 0;
+    if (user?.isMusician) return user.gigsBooked || 0;
+    if (user?.isClient) return user.gigsPosted || 0;
+    return 0;
+  };
 
   return (
     <>
@@ -274,7 +348,7 @@ export function Sidebar() {
                   {isPro() ? "PRO" : "FREE"}
                 </span>
                 <span className={cn("text-xs font-medium", colors.textMuted)}>
-                  {user?.isMusician ? "Artist" : "Client"}
+                  {getUserRoleLabel()}
                 </span>
               </div>
             </div>
@@ -375,7 +449,6 @@ export function Sidebar() {
             );
 
             return isProFeature ? (
-              // Pro feature - visible but not clickable
               <div
                 key={link.name}
                 className="relative"
@@ -384,7 +457,6 @@ export function Sidebar() {
                 {linkContent}
               </div>
             ) : (
-              // Regular link - clickable (including pro links for pro users)
               <Link key={link.name} href={link.href}>
                 {linkContent}
               </Link>
@@ -438,21 +510,14 @@ export function Sidebar() {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <div className={cn(colors.text)}>
-                  {user?.isMusician ? "Gigs Booked" : "Posts Created"}
-                </div>
+                <div className={cn(colors.text)}>{getUserStatsLabel()}</div>
                 <div className="text-amber-400 font-medium">
-                  {user?.gigsBooked || 0}
+                  {getUserStatsValue()}
                 </div>
               </div>
               <div className="flex justify-between text-sm">
                 <div className={cn(colors.text)}>Messages</div>
-                <div className="text-blue-400 font-medium">
-                  {
-                    // user?.unreadMessages
-                    0
-                  }
-                </div>
+                <div className="text-blue-400 font-medium">{unReadCount}</div>
               </div>
               <div className="flex justify-between text-sm">
                 <div className={cn(colors.text)}>Notifications</div>

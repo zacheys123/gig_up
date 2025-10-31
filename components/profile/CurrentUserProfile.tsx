@@ -1,3 +1,5 @@
+// In CurrentUserProfile component - replace the entire file with:
+
 "use client";
 
 import { CircularProgress } from "@mui/material";
@@ -72,7 +74,7 @@ interface SocialHandle {
 }
 
 // Booker-specific constants
-const bookerSkills = [
+const bookerSkillsList = [
   "Band Management",
   "Event Coordination",
   "Talent Booking",
@@ -136,7 +138,7 @@ const CurrentUserProfile = () => {
   const [newSocialPlatform, setNewSocialPlatform] = useState("");
   const [newSocialHandle, setNewSocialHandle] = useState("");
 
-  // Account Type
+  // Account Type - NOW THREE SEPARATE ROLES
   const [isMusician, setIsMusician] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isBooker, setIsBooker] = useState(false);
@@ -150,8 +152,11 @@ const CurrentUserProfile = () => {
 
   // Video Profile State
   const [videos, setVideos] = useState<VideoProfileProps[]>([]);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [newVideoUrl, setNewVideoUrl] = useState("");
 
-  // Role Type State
+  // Role Type State (for musicians only)
   const [roleType, setRoleType] = useState("");
   const [djGenre, setDjGenre] = useState("");
   const [djEquipment, setDjEquipment] = useState("");
@@ -163,6 +168,8 @@ const CurrentUserProfile = () => {
   const [bookerSkills, setBookerSkills] = useState<string[]>([]);
   const [bookerBio, setBookerBio] = useState("");
   const [showBookerSkillsModal, setShowBookerSkillsModal] = useState(false);
+
+  const [newVideoPrivacy, setNewVideoPrivacy] = useState<boolean>(true);
 
   // Validation
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
@@ -219,38 +226,43 @@ const CurrentUserProfile = () => {
       setIsBooker(user.isBooker || false);
       setClientHandles(user.handles || "");
 
-      // Load role-specific data
-      setRoleType(user.roleType || "");
-      setDjGenre(user.djGenre || "");
-      setDjEquipment(user.djEquipment || "");
-      setMcType(user.mcType || "");
-      setMcLanguages(user.mcLanguages || "");
-      setVocalistGenre(user.vocalistGenre || "");
+      // Load role-specific data (musicians only)
+      if (user.isMusician && !user.isBooker) {
+        setRoleType(user.roleType || "");
+        setDjGenre(user.djGenre || "");
+        setDjEquipment(user.djEquipment || "");
+        setMcType(user.mcType || "");
+        setMcLanguages(user.mcLanguages || "");
+        setVocalistGenre(user.vocalistGenre || "");
+      }
 
       // Booker specific data
-      setBookerSkills(user.bookerSkills || []);
-      setBookerBio(user.bookerBio || "");
+      if (user.isBooker) {
+        setBookerSkills(user.bookerSkills || []);
+        setBookerBio(user.bookerBio || "");
+      }
 
-      // Fix for rate object
-      const userRate = user.rate || {};
-      setRate({
-        regular: userRate.regular || "",
-        function: userRate.function || "",
-        concert: userRate.concert || "",
-        corporate: userRate.corporate || "",
-      });
+      // Fix for rate object (musicians only)
+      if (user.isMusician && !user.isBooker) {
+        const userRate = user.rate || {};
+        setRate({
+          regular: userRate.regular || "",
+          function: userRate.function || "",
+          concert: userRate.concert || "",
+          corporate: userRate.corporate || "",
+        });
+      }
 
       hasLoadedInitialData.current = true;
     }
   }, [user, userLoading]);
 
-  // Role Type Constants
+  // Role Type Constants (for musicians only)
   const roleTypes = [
     { value: "instrumentalist", label: "Instrumentalist" },
     { value: "dj", label: "DJ" },
     { value: "mc", label: "MC" },
     { value: "vocalist", label: "Vocalist" },
-    { value: "booker", label: "Booker/Manager" },
   ];
 
   const djGenres = [
@@ -534,9 +546,19 @@ const CurrentUserProfile = () => {
         placeholder="Your booking agency or company name"
       />
 
-      <div className="md:col-span-2">
+      <SelectInput
+        label="Experience Level"
+        value={experience}
+        onChange={setExperience}
+        options={experiences().map((ex) => ({
+          value: ex.name,
+          label: ex.val,
+        }))}
+      />
+
+      <div className="md:col-span-2" data-field="bookerSkills">
         <Label className={cn("text-sm font-medium", colors.text)}>
-          Booker Skills & Specialties
+          Booker Skills & Specialties *
         </Label>
         <div className="flex flex-wrap gap-2 mt-2">
           {bookerSkills.map((skill) => (
@@ -567,44 +589,35 @@ const CurrentUserProfile = () => {
             <Plus size={14} className="mr-1" /> Add Skill
           </button>
         </div>
-      </div>
-
-      <div className="md:col-span-2">
-        <Label className={cn("text-sm font-medium", colors.text)}>
-          Booker Bio
-        </Label>
-        <Textarea
-          value={bookerBio}
-          onChange={(e) => setBookerBio(e.target.value)}
-          placeholder="Describe your booking services, experience, and the types of events you specialize in..."
-          className={cn(
-            "min-h-[100px] resize-none",
-            colors.background,
-            colors.border,
-            colors.text,
-            "focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          )}
-        />
+        <p className={cn("text-xs text-red-500 mt-1")}>
+          {bookerSkills.length === 0 && "At least one skill is required"}
+        </p>
       </div>
     </>
   );
 
   // Helper function to render role-specific content
   const renderRoleSpecificContent = () => {
-    switch (roleType) {
-      case "instrumentalist":
-        return <InstrumentalistSection />;
-      case "dj":
-        return <DJSection />;
-      case "mc":
-        return <MCSection />;
-      case "vocalist":
-        return <VocalistSection />;
-      case "booker":
-        return <BookerSection />;
-      default:
-        return null;
+    if (isBooker) {
+      return <BookerSection />;
     }
+
+    if (isMusician) {
+      switch (roleType) {
+        case "instrumentalist":
+          return <InstrumentalistSection />;
+        case "dj":
+          return <DJSection />;
+        case "mc":
+          return <MCSection />;
+        case "vocalist":
+          return <VocalistSection />;
+        default:
+          return null;
+      }
+    }
+
+    return null;
   };
 
   // Booker skill handlers
@@ -630,6 +643,7 @@ const CurrentUserProfile = () => {
       talentbio: '[data-field="about"]',
       profile: '[data-field="personalInfo"]',
       bookerSkills: '[data-field="bookerSkills"]',
+      organization: '[data-field="organization"]',
     };
 
     const selector = fieldSelectors[field];
@@ -664,7 +678,7 @@ const CurrentUserProfile = () => {
     return !isNaN(num) && num > 0;
   };
 
-  // Enhanced validation function with Booker support
+  // Enhanced validation function with proper role separation
   const validateProfile = (): ValidationError[] => {
     const errors: ValidationError[] = [];
 
@@ -690,53 +704,74 @@ const CurrentUserProfile = () => {
       });
     }
 
-    // Role type validation for musicians
-    if (isMusician && !roleType) {
-      errors.push({
-        field: "roleType",
-        message: "Please select your role type",
-        importance: "high",
-      });
+    // MUSICIAN-SPECIFIC VALIDATIONS
+    if (isMusician && !isBooker) {
+      if (!roleType) {
+        errors.push({
+          field: "roleType",
+          message: "Please select your role type",
+          importance: "high",
+        });
+      }
+
+      // Instrument validation only for instrumentalists
+      if (roleType === "instrumentalist" && !instrument) {
+        errors.push({
+          field: "instrument",
+          message: "Instrument is required for instrumentalists",
+          importance: "high",
+        });
+      }
+
+      // DJ-specific validations
+      if (roleType === "dj" && !djGenre) {
+        errors.push({
+          field: "djGenre",
+          message: "DJ genre is required",
+          importance: "high",
+        });
+      }
+
+      // MC-specific validations
+      if (roleType === "mc" && !mcType) {
+        errors.push({
+          field: "mcType",
+          message: "MC type is required",
+          importance: "high",
+        });
+      }
+
+      // Vocalist-specific validations
+      if (roleType === "vocalist" && !vocalistGenre) {
+        errors.push({
+          field: "vocalistGenre",
+          message: "Vocal genre is required",
+          importance: "high",
+        });
+      }
+
+      // Rates validation (for musicians only)
+      const hasValidRates = Object.values(rate).some(isValidRateValue);
+      if (!hasValidRates) {
+        errors.push({
+          field: "rates",
+          message: VALIDATION_MESSAGES.rates.required,
+          importance: "high",
+        });
+      }
+
+      // Videos validation (recommended for musicians)
+      if (videos.length === 0) {
+        errors.push({
+          field: "videos",
+          message: VALIDATION_MESSAGES.videos.recommended,
+          importance: "medium",
+        });
+      }
     }
 
-    // Instrument validation only for instrumentalists
-    if (roleType === "instrumentalist" && !instrument) {
-      errors.push({
-        field: "instrument",
-        message: "Instrument is required for instrumentalists",
-        importance: "high",
-      });
-    }
-
-    // DJ-specific validations
-    if (roleType === "dj" && !djGenre) {
-      errors.push({
-        field: "djGenre",
-        message: "DJ genre is required",
-        importance: "high",
-      });
-    }
-
-    // MC-specific validations
-    if (roleType === "mc" && !mcType) {
-      errors.push({
-        field: "mcType",
-        message: "MC type is required",
-        importance: "high",
-      });
-    }
-
-    // Vocalist-specific validations
-    if (roleType === "vocalist" && !vocalistGenre) {
-      errors.push({
-        field: "vocalistGenre",
-        message: "Vocal genre is required",
-        importance: "high",
-      });
-    }
-
-    // Booker-specific validations
-    if (roleType === "booker") {
+    // BOOKER-SPECIFIC VALIDATIONS
+    if (isBooker) {
       if (!organization) {
         errors.push({
           field: "organization",
@@ -773,33 +808,16 @@ const CurrentUserProfile = () => {
       });
     }
 
-    // Rates validation (for musicians only)
-    if (isMusician) {
-      const hasValidRates = Object.values(rate).some(isValidRateValue);
-      if (!hasValidRates) {
-        errors.push({
-          field: "rates",
-          message: VALIDATION_MESSAGES.rates.required,
-          importance: "high",
-        });
-      }
-    }
-
-    // Videos validation (recommended for musicians, optional for bookers)
-    if (isMusician && videos.length === 0) {
-      errors.push({
-        field: "videos",
-        message: VALIDATION_MESSAGES.videos.recommended,
-        importance: "medium",
-      });
-    }
-
-    // Essential profile fields validation
+    // Essential profile fields validation (all roles)
     const essentialFields = [
       { value: firstname, field: "firstname", name: "First Name" },
       { value: lastname, field: "lastname", name: "Last Name" },
       { value: city, field: "city", name: "City" },
-      { value: talentbio, field: "talentbio", name: "Bio" },
+      {
+        value: isBooker ? bookerBio : talentbio,
+        field: "talentbio",
+        name: "Bio",
+      },
     ];
 
     const missingEssential = essentialFields.filter(
@@ -860,14 +878,14 @@ const CurrentUserProfile = () => {
     // Proceed with saving
     try {
       setLoading(true);
-      const updateData = {
+
+      // Base update data for all roles
+      const baseUpdateData = {
         firstname,
         lastname,
         email,
         username,
         city,
-        instrument: roleType === "instrumentalist" ? instrument : "",
-        experience,
         date: age,
         month,
         year,
@@ -875,26 +893,64 @@ const CurrentUserProfile = () => {
         phone,
         organization,
         musicianhandles: handles,
-        musiciangenres: genre,
-        talentbio,
+        talentbio: isBooker ? bookerBio : talentbio,
         handles: clienthandles,
         isMusician,
         isClient,
-        isBooker: roleType === "booker",
-        rate,
+        isBooker,
         firstTimeInProfile: false,
+        experience,
+      };
 
-        // Role-specific fields
-        roleType,
-        djGenre: roleType === "dj" ? djGenre : "",
-        djEquipment: roleType === "dj" ? djEquipment : "",
-        mcType: roleType === "mc" ? mcType : "",
-        mcLanguages: roleType === "mc" ? mcLanguages : "",
-        vocalistGenre: roleType === "vocalist" ? vocalistGenre : "",
+      // Role-specific data
+      const roleSpecificData = isBooker
+        ? {
+            // Booker-specific fields
+            bookerSkills,
+            bookerBio,
+            musiciangenres: [], // Bookers don't need genres
+            instrument: "", // Bookers don't need instruments
+            roleType: "", // Bookers don't need roleType
+            djGenre: "",
+            djEquipment: "",
+            mcType: "",
+            mcLanguages: "",
+            vocalistGenre: "",
+            rate: { regular: "", function: "", concert: "", corporate: "" }, // Bookers don't need rates
+          }
+        : isMusician
+          ? {
+              // Musician-specific fields
+              musiciangenres: genre,
+              instrument: roleType === "instrumentalist" ? instrument : "",
+              roleType,
+              djGenre: roleType === "dj" ? djGenre : "",
+              djEquipment: roleType === "dj" ? djEquipment : "",
+              mcType: roleType === "mc" ? mcType : "",
+              mcLanguages: roleType === "mc" ? mcLanguages : "",
+              vocalistGenre: roleType === "vocalist" ? vocalistGenre : "",
+              rate,
+              bookerSkills: [], // Musicians don't need booker skills
+              bookerBio: "", // Musicians don't need booker bio
+            }
+          : {
+              // Client-specific fields
+              musiciangenres: [],
+              instrument: "",
+              roleType: "",
+              djGenre: "",
+              djEquipment: "",
+              mcType: "",
+              mcLanguages: "",
+              vocalistGenre: "",
+              rate: { regular: "", function: "", concert: "", corporate: "" },
+              bookerSkills: [],
+              bookerBio: "",
+            };
 
-        // Booker-specific fields
-        bookerSkills: roleType === "booker" ? bookerSkills : [],
-        bookerBio: roleType === "booker" ? bookerBio : "",
+      const updateData = {
+        ...baseUpdateData,
+        ...roleSpecificData,
       };
 
       await updateUser({
@@ -942,32 +998,18 @@ const CurrentUserProfile = () => {
     }
   };
 
-  // Account type toggle
-  const toggleAccountType = (type: "musician" | "client") => {
-    if (type === "musician") {
-      setIsMusician(true);
-      setIsClient(false);
-      setIsBooker(false);
-    } else {
-      setIsMusician(false);
-      setIsClient(true);
-      setIsBooker(false);
+  // Account type toggle - NOW THREE SEPARATE ROLES
+  const toggleAccountType = (type: "musician" | "client" | "booker") => {
+    setIsMusician(type === "musician");
+    setIsClient(type === "client");
+    setIsBooker(type === "booker");
+
+    // Reset role-specific state when switching roles
+    if (type !== "musician") {
+      setRoleType("");
     }
-  };
-
-  // Role type change handler
-  const handleRoleTypeChange = (newRoleType: string) => {
-    setRoleType(newRoleType);
-
-    // Auto-set account type based on role
-    if (newRoleType === "booker") {
-      setIsMusician(true); // Bookers are a subtype of musicians
-      setIsClient(false);
-      setIsBooker(true);
-    } else if (newRoleType) {
-      setIsMusician(true);
-      setIsClient(false);
-      setIsBooker(false);
+    if (type !== "booker") {
+      setBookerSkills([]);
     }
   };
 
@@ -1068,7 +1110,11 @@ const CurrentUserProfile = () => {
                 <div className="flex gap-2">
                   <Badge
                     className={cn(
-                      "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                      isBooker
+                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                        : isMusician
+                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                          : "bg-gradient-to-r from-green-500 to-green-600 text-white"
                     )}
                   >
                     {isBooker
@@ -1085,14 +1131,6 @@ const CurrentUserProfile = () => {
                       className="bg-purple-500 text-white"
                     >
                       PRO
-                    </Badge>
-                  )}
-                  {isBooker && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-blue-500 text-white"
-                    >
-                      BOOKER
                     </Badge>
                   )}
                 </div>
@@ -1178,7 +1216,7 @@ const CurrentUserProfile = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Performance Videos Section */}
+            {/* Performance Videos Section (Musicians only) */}
             {isMusician && !isBooker && user && (
               <SectionContainer
                 icon={<Music size={18} />}
@@ -1242,18 +1280,20 @@ const CurrentUserProfile = () => {
             {/* Experience Section */}
             <SectionContainer
               icon={<Briefcase size={18} />}
-              title="Experience & Skills"
+              title={isBooker ? "Management Services" : "Experience & Skills"}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(isMusician || isBooker) && (
                   <>
-                    {/* Role Type Selection */}
-                    <SelectInput
-                      label="Role Type"
-                      value={roleType}
-                      onChange={handleRoleTypeChange}
-                      options={roleTypes}
-                    />
+                    {/* Role Type Selection (Musicians only) */}
+                    {isMusician && !isBooker && (
+                      <SelectInput
+                        label="Role Type"
+                        value={roleType}
+                        onChange={setRoleType}
+                        options={roleTypes}
+                      />
+                    )}
 
                     {/* Role-Specific Content */}
                     {renderRoleSpecificContent()}
@@ -1303,10 +1343,11 @@ const CurrentUserProfile = () => {
                   disabled
                 />
 
+                {/* Date of Birth (Musicians and Bookers only) */}
                 {(isMusician || isBooker) && (
                   <div data-field="dateOfBirth">
                     <Label className={cn("text-sm font-medium", colors.text)}>
-                      Date of Birth
+                      Date of Birth *
                     </Label>
                     <div className="flex gap-2 mt-1">
                       <SelectInput
@@ -1340,6 +1381,9 @@ const CurrentUserProfile = () => {
                         )}
                       />
                     </div>
+                    <p className={cn("text-xs text-red-500 mt-1")}>
+                      {(!age || !month || !year) && "Date of birth is required"}
+                    </p>
                   </div>
                 )}
               </div>
@@ -1514,26 +1558,20 @@ const CurrentUserProfile = () => {
                   label="Musician Account"
                   checked={isMusician}
                   onChange={() => toggleAccountType("musician")}
+                  description="Perform at gigs and events"
                 />
                 <ToggleSwitch
                   label="Client Account"
                   checked={isClient}
                   onChange={() => toggleAccountType("client")}
+                  description="Hire talent for your events"
                 />
-                {isBooker && (
-                  <div
-                    className={cn(
-                      "p-3 rounded-lg bg-blue-500/10 border border-blue-200"
-                    )}
-                  >
-                    <p className={cn("text-sm font-medium text-blue-600")}>
-                      Booker/Manager Account
-                    </p>
-                    <p className={cn("text-xs text-blue-500 mt-1")}>
-                      Specialized in talent management and event coordination
-                    </p>
-                  </div>
-                )}
+                <ToggleSwitch
+                  label="Booker/Manager Account"
+                  checked={isBooker}
+                  onChange={() => toggleAccountType("booker")}
+                  description="Manage talent and coordinate events"
+                />
               </div>
               {/* Save Button */}
               <motion.div
@@ -1616,7 +1654,7 @@ const CurrentUserProfile = () => {
             services
           </p>
           <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-            {bookerSkills.map((skill) => (
+            {bookerSkillsList.map((skill) => (
               <button
                 key={skill}
                 type="button"

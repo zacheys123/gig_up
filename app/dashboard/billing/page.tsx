@@ -5,14 +5,23 @@ import GigChart from "@/components/dashboard/GigChart";
 import BillingComponent from "@/components/dashboard/BillingComponent";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { motion } from "framer-motion";
-import { Sparkles, Zap, CreditCard, BarChart2, RefreshCw } from "lucide-react";
+import {
+  Sparkles,
+  Zap,
+  CreditCard,
+  BarChart2,
+  RefreshCw,
+  Briefcase,
+} from "lucide-react";
 import GigLoader from "@/components/(main)/GigLoader";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import BillingPageSkeleton from "@/components/skeletons/BillingPageSkeleton";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function BillingPage() {
   const { userId, isLoaded: authLoaded } = useAuth();
+  const { user } = useCurrentUser();
 
   // Get subscription directly from Convex
   const subscription = useQuery(
@@ -20,16 +29,6 @@ export default function BillingPage() {
     userId ? { clerkId: userId } : "skip"
   );
 
-  // if (!authLoaded || (userId && subscription === undefined)) {
-  //   return (
-  //     <GigLoader
-  //       title="Loading your dashboard..."
-  //       size="lg"
-  //       color="border-yellow-300"
-  //       fullScreen={true}
-  //     />
-  //   );
-  // }
   if (!authLoaded || (userId && subscription === undefined)) {
     return <BillingPageSkeleton />;
   }
@@ -52,6 +51,21 @@ export default function BillingPage() {
     );
   }
 
+  const getUserRoleIcon = () => {
+    if (user?.isMusician) return <Zap className="w-6 h-6 text-amber-400" />;
+    if (user?.isClient) return <BarChart2 className="w-6 h-6 text-blue-400" />;
+    if (user?.isBooker)
+      return <Briefcase className="w-6 h-6 text-purple-400" />;
+    return <CreditCard className="w-6 h-6 text-gray-400" />;
+  };
+
+  const getUserRoleLabel = () => {
+    if (user?.isMusician) return "Artist";
+    if (user?.isClient) return "Client";
+    if (user?.isBooker) return "Booker";
+    return "User";
+  };
+
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
       <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 md:space-y-10">
@@ -62,14 +76,21 @@ export default function BillingPage() {
           transition={{ duration: 0.5 }}
           className="flex justify-between items-center"
         >
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-              <CreditCard className="w-6 h-6 text-blue-400" />
-              <span>Billing & Subscription</span>
-            </h1>
-            <p className="text-sm md:text-base text-gray-400 mt-1">
-              Manage your plan, payment methods, and usage analytics
-            </p>
+          <div className="flex items-center gap-3">
+            {getUserRoleIcon()}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+                <span>Billing & Subscription</span>
+              </h1>
+              <p className="text-sm md:text-base text-gray-400 mt-1">
+                Manage your plan, payment methods, and usage analytics
+                {user && (
+                  <span className="ml-2 text-amber-400">
+                    ({getUserRoleLabel()})
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <button className="flex items-center gap-2 text-sm bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg transition-all">
@@ -103,7 +124,7 @@ export default function BillingPage() {
             </h2>
           </div>
 
-          {/* Show usage based on subscription tier */}
+          {/* Show usage based on subscription tier and user role */}
           <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-6">
             <motion.div
               whileHover={{ y: -5 }}
@@ -128,13 +149,21 @@ export default function BillingPage() {
                     <UsageMeter
                       current={-1}
                       max={-1}
-                      label="Gig Applications"
+                      label={
+                        user?.isBooker ? "Events Managed" : "Gig Applications"
+                      }
                     />
                   </>
                 ) : (
                   <>
                     <UsageMeter current={2} max={3} label="Gig Postings" />
-                    <UsageMeter current={1} max={5} label="Gig Applications" />
+                    <UsageMeter
+                      current={1}
+                      max={5}
+                      label={
+                        user?.isBooker ? "Events Managed" : "Gig Applications"
+                      }
+                    />
                   </>
                 )}
               </div>
@@ -149,7 +178,9 @@ export default function BillingPage() {
                   Activity Overview
                 </h3>
                 <p className="text-sm text-gray-400">
-                  Your gig posting trends over time
+                  {user?.isBooker
+                    ? "Your event management trends"
+                    : "Your gig posting trends over time"}
                 </p>
               </div>
               <GigChart />
@@ -172,9 +203,10 @@ export default function BillingPage() {
               <div>
                 <h3 className="text-lg font-medium text-white">Pro Tip</h3>
                 <p className="text-sm text-gray-300 mt-1">
-                  Upgrade to Pro for unlimited gig postings, premium analytics,
-                  and priority support. Get 20% off your first 3 months with
-                  code{" "}
+                  Upgrade to Pro for unlimited{" "}
+                  {user?.isBooker ? "event management" : "gig postings"},
+                  premium analytics, and priority support. Get 20% off your
+                  first 3 months with code{" "}
                   <span className="font-mono bg-gray-800 px-2 py-1 rounded text-blue-300">
                     PRO20
                   </span>

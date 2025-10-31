@@ -11,7 +11,12 @@ const BillingComponent = () => {
   const { user, isLoading } = useCurrentUser();
   const { getPlansForUser } = useSubscriptionStore();
 
-  const plans = getPlansForUser(user?.isMusician, user?.isClient);
+  // Updated to include booker role
+  const plans = getPlansForUser(
+    user?.isMusician,
+    user?.isClient,
+    user?.isBooker
+  );
 
   if (isLoading) {
     return <BillingComponentSkeleton />;

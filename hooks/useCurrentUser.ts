@@ -49,8 +49,7 @@ export const useSocialActions = () => {
   const declineFollowRequest = useMutation(
     api.controllers.user.declineFollowRequest
   );
-  const likeVideo = useMutation(api.controllers.user.likeVideo);
-  const unlikeVideo = useMutation(api.controllers.user.unlikeVideo);
+
   const { isInGracePeriod } = useCheckTrial();
 
   return {
@@ -77,17 +76,6 @@ export const useSocialActions = () => {
         requesterId: toUserId(requesterId),
         isViewerInGracePeriod: isInGracePeriod,
       });
-    },
-
-    toggleVideoLike: async (videoId: string) => {
-      const { user: currentUser } = useCurrentUser();
-      const isLiked = currentUser?.likedVideos?.includes(videoId);
-
-      if (isLiked) {
-        await unlikeVideo({ videoId });
-      } else {
-        await likeVideo({ videoId });
-      }
     },
   };
 };

@@ -36,6 +36,7 @@ export const userModel = defineTable({
   isBooker: v.optional(v.boolean()),
   bookerSkills: v.optional(v.array(v.string())), // ["band_management", "event_coordination"]
   managedBands: v.optional(v.array(v.string())), // References to band/crew IDs
+  artistsManaged: v.optional(v.array(v.string())),
   bookerBio: v.optional(v.string()),
   // Musician specific fields
   instrument: v.optional(v.string()),
@@ -232,6 +233,42 @@ export const userModel = defineTable({
   viewedProfiles: v.optional(v.array(v.string())),
   isPrivate: v.optional(v.boolean()),
   pendingFollowRequests: v.optional(v.array(v.id("users"))),
+  myDeputies: v.optional(
+    v.array(
+      v.object({
+        deputyUserId: v.id("users"),
+        forMySkill: v.string(),
+        gigType: v.optional(v.string()),
+        note: v.optional(v.string()),
+        status: v.union(
+          v.literal("pending"),
+          v.literal("accepted"),
+          v.literal("rejected")
+        ),
+        canBeBooked: v.boolean(),
+        dateAdded: v.number(),
+      })
+    )
+  ),
+
+  backUpFor: v.optional(
+    v.array(
+      v.object({
+        principalUserId: v.id("users"),
+        forTheirSkill: v.string(),
+        gigType: v.optional(v.string()),
+        status: v.union(
+          v.literal("pending"),
+          v.literal("accepted"),
+          v.literal("rejected")
+        ),
+        dateAdded: v.number(),
+      })
+    )
+  ),
+  backUpCount: v.optional(v.number()),
+
+  confirmedReferredGigs: v.optional(v.number()),
 })
   // ... keep your existing indexes
   .index("by_clerkId", ["clerkId"])

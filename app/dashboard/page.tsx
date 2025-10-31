@@ -14,7 +14,9 @@ import { useThemeColors } from "@/hooks/useTheme";
 import MusicianDashboardWithLoading from "@/components/dashboard/muscian";
 import GigLoader from "@/components/(main)/GigLoader";
 import { ClientDashboardWithLoading } from "@/components/dashboard/client";
+
 import { DashboardSkeleton } from "@/components/skeletons/DasboardSkeleton";
+import BookerDashboardWithLoading from "@/components/dashboard/booker";
 
 export default function Dashboard() {
   const { isLoaded, userId } = useAuth();
@@ -24,7 +26,7 @@ export default function Dashboard() {
 
   // Use the Convex hook to get user data
   const { user, isLoading, isAuthenticated } = useCurrentUser();
-  const { isMusician, isClient } = useUserRole();
+  const { isMusician, isClient, isBooker } = useUserRole(); // Add isBooker
   const [isDataRefreshing, setIsDataRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [refreshKey, setRefreshKey] = useState(0); // Force re-render key
@@ -39,6 +41,7 @@ export default function Dashboard() {
     console.log("user:", user);
     console.log("isMusician:", isMusician);
     console.log("isClient:", isClient);
+    console.log("isBooker:", isBooker); // Add booker logging
     console.log("======================");
   }, [
     isLoaded,
@@ -48,6 +51,7 @@ export default function Dashboard() {
     user,
     isMusician,
     isClient,
+    isBooker, // Add booker dependency
   ]);
 
   // Manual refresh function - using key to force re-render
@@ -215,6 +219,16 @@ export default function Dashboard() {
           isLoading={false}
           isDataLoading={isDataRefreshing}
         />
+      ) : isBooker ? (
+        <BookerDashboardWithLoading
+          managedBands={user?.managedBands?.length || 0}
+          artistsManaged={user?.artistsManaged?.length || 0}
+          firstLogin={user.firstLogin}
+          onboarding={user.onboardingComplete}
+          isPro={isPro()}
+          isLoading={false}
+          isDataLoading={isDataRefreshing}
+        />
       ) : (
         // Fallback for users without a role
         <div
@@ -227,7 +241,7 @@ export default function Dashboard() {
             </p>
             <p className={`text-sm ${colors.textMuted}`}>
               User roles: Musician: {isMusician ? "Yes" : "No"}, Client:{" "}
-              {isClient ? "Yes" : "No"}
+              {isClient ? "Yes" : "No"}, Booker: {isBooker ? "Yes" : "No"}
             </p>
             <div className="flex gap-2 justify-center">
               <button

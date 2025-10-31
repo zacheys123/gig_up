@@ -1,3 +1,4 @@
+// components/profile/UserNav.tsx
 "use client";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -15,6 +16,9 @@ import {
   Star,
   Settings,
   BellIcon,
+  BriefcaseIcon,
+  Users2Icon,
+  BuildingIcon,
 } from "lucide-react";
 import { IoHomeOutline } from "react-icons/io5";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -30,6 +34,8 @@ const UserNav = () => {
   const { user } = useCurrentUser();
   const { unreadCount } = useNotificationSystem();
   const isMusician = user?.isMusician;
+  const isBooker = user?.isBooker;
+  const isClient = user?.isClient;
   const isProTier = user?.tier === "pro";
 
   const navItems = [
@@ -49,7 +55,6 @@ const UserNav = () => {
       },
       label: "Account",
     },
-
     ...(isMusician
       ? [
           {
@@ -83,11 +88,12 @@ const UserNav = () => {
               inactive: <Calendar size={22} />,
             },
             label: "Schedule",
-            pro: true, // Added pro tier
+            pro: true,
           },
         ]
-      : [
-          // Client-specific items
+      : []),
+    ...(isClient
+      ? [
           {
             href: `/profile/bookings`,
             icon: {
@@ -103,9 +109,47 @@ const UserNav = () => {
               inactive: <Star size={22} />,
             },
             label: "Favorites",
-            pro: true, // Added pro tier
+            pro: true,
           },
-        ]),
+        ]
+      : []),
+    ...(isBooker
+      ? [
+          {
+            href: `/profile/booker`,
+            icon: {
+              active: <BriefcaseIcon size={22} className="fill-current" />,
+              inactive: <BriefcaseIcon size={22} />,
+            },
+            label: "Booker",
+          },
+          {
+            href: `/profile/artists`,
+            icon: {
+              active: <Users2Icon size={22} className="fill-current" />,
+              inactive: <Users2Icon size={22} />,
+            },
+            label: "Artists",
+          },
+          {
+            href: `/profile/commissions`,
+            icon: {
+              active: <DollarSign size={22} className="fill-current" />,
+              inactive: <DollarSign size={22} />,
+            },
+            label: "Earnings",
+          },
+          {
+            href: `/profile/coordination`,
+            icon: {
+              active: <BuildingIcon size={22} className="fill-current" />,
+              inactive: <BuildingIcon size={22} />,
+            },
+            label: "Coordination",
+            pro: true,
+          },
+        ]
+      : []),
   ];
 
   const isActive = (href: string) => {

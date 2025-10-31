@@ -29,7 +29,12 @@ export const getSubscription = query({
 export const updateSubscription = mutation({
   args: {
     clerkId: v.string(),
-    tier: v.union(v.literal("free"), v.literal("pro")),
+    tier: v.union(
+      v.literal("free"),
+      v.literal("pro"),
+      v.literal("premium"),
+      v.literal("elite")
+    ),
     tierStatus: v.union(
       v.literal("active"),
       v.literal("pending"),

@@ -150,7 +150,9 @@ const ProfilePage = () => {
                   ? "Musician"
                   : user?.isClient
                     ? "Client"
-                    : "Not Set",
+                    : user?.isBooker
+                      ? "Booker/Manager"
+                      : "Not Set",
                 color: "from-amber-500/10 to-amber-500/20",
               },
             ].map((stat, index) => (
@@ -171,7 +173,13 @@ const ProfilePage = () => {
                 >
                   {stat.icon}
                 </div>
-                <p className={cn("text-2xl font-bold", colors.text)}>
+                <p
+                  className={cn(
+                    "text-2xl font-bold",
+                    colors.text,
+                    user?.isBooker && "text-1xl"
+                  )}
+                >
                   {stat.value}
                 </p>
                 <p className={cn("text-sm mt-1", colors.textMuted)}>
