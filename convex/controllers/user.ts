@@ -209,6 +209,7 @@ export const updateUserProfile = mutation({
 
     await ctx.db.patch(args.userId, {
       ...cleanUpdates,
+      onboardingComplete: true,
       lastActive: Date.now(),
     });
 

@@ -131,7 +131,7 @@ export default function Home() {
     if (user?.isBooker) {
       return !user?.onboardingComplete
         ? `/dashboard`
-        : `/gigs/${userId}?tab=applications`;
+        : `/hub/gigs/${userId}?tab=applications`;
     }
 
     if (user?.isMusician) {
