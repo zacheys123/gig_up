@@ -1,27 +1,23 @@
 "use client";
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useVideoSocial } from "@/hooks/useVideoSocial";
-import { Id } from "@/convex/_generated/dataModel";
+import React, { useState, useCallback, useRef } from "react";
 import { VideoCard } from "./VideoCard";
 import { VideoFilters } from "./VideoFilters";
+import { useVideoSocial } from "@/hooks/useVideoSocial";
+import { Id } from "@/convex/_generated/dataModel";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { VideoCardSkeleton } from "../skeletons/VideoCardSkeletonComponent";
 
 // ---------------- Debounce Hook ----------------
 function useDebounce(callback: (...args: any[]) => void, delay: number) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const debouncedCallback = useCallback(
+  return useCallback(
     (...args: any[]) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => callback(...args), delay);
     },
     [callback, delay]
   );
-
-  return debouncedCallback;
 }
 
 interface VideoFeedProps {
@@ -93,16 +89,18 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({ clerkId }) => {
   );
 
   // ---------------- Intersection Observer for Lazy Loading ----------------
-  const observer = useRef<IntersectionObserver>(null);
+  const observer = useRef<IntersectionObserver | null>(null);
   const lastVideoRef = useCallback(
     (node: HTMLDivElement) => {
       if (isLoading("load-more")) return;
       if (observer.current) observer.current.disconnect();
+
       observer.current = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && hasMore) {
           loadMoreVideos();
         }
       });
+
       if (node) observer.current.observe(node);
     },
     [loadMoreVideos, hasMore, isLoading]
