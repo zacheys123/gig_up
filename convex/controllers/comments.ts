@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { mutationGeneric } from "convex/server";
 import { createNotificationInternal } from "../createNotificationInternal";
+import { Id } from "../_generated/dataModel";
 
 export const getVideoComments = query({
   args: {
@@ -151,5 +152,20 @@ export const deleteComment = mutationGeneric({
 
     await ctx.db.delete(args.commentId);
     return { success: true };
+  },
+});
+export const getVideoCommentCount = query({
+  args: {
+    videoId: v.id("videos"),
+  },
+  handler: async (ctx, args) => {
+    // Fetch all comments for the video
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_videoId", (q) => q.eq("videoId", args.videoId))
+      .collect();
+
+    // Count includes all top-level and reply comments
+    return comments.length;
   },
 });

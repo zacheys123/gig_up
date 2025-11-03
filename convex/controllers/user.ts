@@ -1033,11 +1033,6 @@ export const unlikeGig = mutation({
   },
 });
 
-// convex/user.ts
-
-// convex/user.ts
-// convex/notifications.ts
-
 export const deleteUserAccount = mutation({
   args: {
     userId: v.string(),
@@ -1179,5 +1174,49 @@ export const updateUserAsBooker = mutation({
       console.error("Error updating user as booker:", error);
       throw error;
     }
+  },
+});
+
+export const getTrendingMusicians = query({
+  handler: async (ctx) => {
+    // Fetch musicians
+    const musicians = await ctx.db
+      .query("users")
+      .withIndex("by_is_musician", (q) => q.eq("isMusician", true))
+      .collect();
+
+    // Fetch bookers
+    const bookers = await ctx.db
+      .query("users")
+      .withIndex("by_is_booker", (q) => q.eq("isBooker", true))
+      .collect();
+
+    // Combine and remove duplicates (users who are both)
+    const allUsersMap = new Map<string, any>();
+    [...musicians, ...bookers].forEach((u) => {
+      allUsersMap.set(u._id.toString(), u);
+    });
+    const allUsers = Array.from(allUsersMap.values());
+
+    // Sort by completedGigsCount descending
+    allUsers.sort(
+      (a, b) => (b.completedGigsCount || 0) - (a.completedGigsCount || 0)
+    );
+
+    // Return top 20
+    return allUsers.slice(0, 20).map((u) => ({
+      _id: u._id,
+      clerkId: u.clerkId,
+      username: u.username,
+      firstname: u.firstname,
+      lastname: u.lastname,
+      picture: u.picture,
+      completedGigsCount: u.completedGigsCount || 0,
+      tier: u.tier,
+      instrument: u.instrument,
+      city: u.city,
+      isMusician: u.isMusician,
+      isBooker: u.isBooker,
+    }));
   },
 });

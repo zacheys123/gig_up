@@ -505,6 +505,7 @@ export const getUserProfileVideos = queryGeneric({
 export const getPublicVideos = queryGeneric({
   args: {
     limit: v.optional(v.number()),
+    offset: v.optional(v.number()), // <-- add this
     videoType: v.optional(
       v.union(
         v.literal("profile"),
@@ -533,11 +534,13 @@ export const getPublicVideos = queryGeneric({
       (a: VideoDocument, b: VideoDocument) => b.createdAt - a.createdAt
     );
 
+    // Apply offset for pagination
+    const start = args.offset || 0;
     if (args.limit) {
-      return sortedVideos.slice(0, args.limit);
+      return sortedVideos.slice(start, start + args.limit);
     }
 
-    return sortedVideos;
+    return sortedVideos.slice(start);
   },
 });
 

@@ -1,25 +1,34 @@
-// components/community/VideoFeed.tsx
-import React, { useState, useCallback } from "react";
+"use client";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useVideoSocial } from "@/hooks/useVideoSocial";
 import { Id } from "@/convex/_generated/dataModel";
 import { VideoCard } from "./VideoCard";
 import { VideoFilters } from "./VideoFilters";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { VideoCardSkeleton } from "../skeletons/VideoCardSkeletonComponent";
 
-interface VideoFeedProps {
-  currentUserId?: Id<"users">;
-  initialFilters?: {
-    videoType?: "profile" | "gig" | "casual" | "promo" | "other" | "all";
-    sortBy?: "newest" | "popular" | "trending";
-  };
+// ---------------- Debounce Hook ----------------
+function useDebounce(callback: (...args: any[]) => void, delay: number) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedCallback = useCallback(
+    (...args: any[]) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => callback(...args), delay);
+    },
+    [callback, delay]
+  );
+
+  return debouncedCallback;
 }
 
-export const VideoFeed: React.FC<VideoFeedProps> = ({
-  currentUserId,
-  initialFilters = {},
-}) => {
+interface VideoFeedProps {
+  clerkId?: string;
+}
+
+export const VideoFeed: React.FC<VideoFeedProps> = ({ clerkId }) => {
   const {
     videos,
     trendingVideos,
@@ -33,17 +42,28 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
     isLoading,
     hasVideos,
     totalVideos,
-  } = useVideoSocial(currentUserId);
+    loadMoreVideos,
+    hasMore,
+  } = useVideoSocial(clerkId);
 
   const { colors } = useThemeColors();
   const [selectedVideo, setSelectedVideo] = useState<Id<"videos"> | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // ---------------- Debounced Search ----------------
+  const debouncedUpdateFilter = useDebounce(updateFilter, 300);
+  const handleUpdateFilter = useCallback(
+    (key: keyof typeof filters, value: any) => {
+      if (key === "searchQuery") debouncedUpdateFilter(key, value);
+      else updateFilter(key, value);
+    },
+    [updateFilter, debouncedUpdateFilter]
+  );
 
   const handleLike = useCallback(
     async (videoId: Id<"videos">) => {
       const result = await likeVideo(videoId);
-      if (!result.success) {
-        console.error("Failed to like video:", result.error);
-      }
+      if (!result.success) console.error(result.error);
     },
     [likeVideo]
   );
@@ -51,9 +71,7 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
   const handleUnlike = useCallback(
     async (videoId: Id<"videos">) => {
       const result = await unlikeVideo(videoId);
-      if (!result.success) {
-        console.error("Failed to unlike video:", result.error);
-      }
+      if (!result.success) console.error(result.error);
     },
     [unlikeVideo]
   );
@@ -61,9 +79,7 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
   const handleView = useCallback(
     async (videoId: Id<"videos">) => {
       const result = await incrementViews(videoId);
-      if (!result.success) {
-        console.error("Failed to increment views:", result.error);
-      }
+      if (!result.success) console.error(result.error);
     },
     [incrementViews]
   );
@@ -76,80 +92,88 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
     [handleView]
   );
 
-  return (
-    <div className="space-y-8">
-      {/* Filters Section */}
-      <VideoFilters
-        filters={filters}
-        availableTags={availableTags}
-        onUpdateFilter={updateFilter}
-        onClearFilters={clearFilters}
-        totalVideos={totalVideos}
-      />
+  // ---------------- Intersection Observer for Lazy Loading ----------------
+  const observer = useRef<IntersectionObserver>(null);
+  const lastVideoRef = useCallback(
+    (node: HTMLDivElement) => {
+      if (isLoading("load-more")) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMoreVideos();
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [loadMoreVideos, hasMore, isLoading]
+  );
 
-      {/* Content Section */}
+  return (
+    <div className="pb-safe relative space-y-8 px-4 md:px-6 lg:px-8">
+      {/* ---------- Filter Toggle ---------- */}
+      <div
+        className={cn(
+          "sticky top-0 z-50 flex justify-between items-center py-2 px-4 backdrop-blur-md shadow-md rounded-xl",
+          colors.background,
+          colors.border
+        )}
+      >
+        <div className={cn("text-sm font-medium", colors.text)}>
+          <span className="font-bold text-amber-500 text-lg">
+            {totalVideos}
+          </span>{" "}
+          video{totalVideos !== 1 ? "s" : ""} found
+        </div>
+        <button
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className="px-3 py-1 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 shadow-sm transition"
+        >
+          {filtersOpen ? "Hide Filters" : "Show Filters"}
+        </button>
+      </div>
+
+      {/* ---------- Filters Panel ---------- */}
+      <AnimatePresence>
+        {filtersOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            <VideoFilters
+              filters={filters}
+              availableTags={availableTags}
+              onUpdateFilter={handleUpdateFilter}
+              onClearFilters={clearFilters}
+              totalVideos={totalVideos}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------- Video Masonry Feed ---------- */}
       {!hasVideos ? (
         <EmptyState
           title="No videos found"
           message="Try adjusting your filters or check back later for new content."
         />
       ) : (
-        <>
-          {/* Stats Bar */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className={cn(
-              "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl",
-              colors.card,
-              colors.border,
-              "border shadow-sm"
-            )}
-          >
-            <div className="flex items-center gap-4">
-              <div className={cn("text-sm font-medium", colors.text)}>
-                <span className="text-2xl font-bold text-amber-500">
-                  {totalVideos}
-                </span>
-                <span className={cn("ml-2", colors.textMuted)}>
-                  video{totalVideos !== 1 ? "s" : ""} found
-                </span>
-              </div>
-            </div>
-
-            {Object.keys(filters).some(
-              (key) =>
-                filters[key as keyof typeof filters] &&
-                !["sortBy", "timeframe"].includes(key)
-            ) && (
-              <button
-                onClick={clearFilters}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                  "bg-amber-500 text-white hover:bg-amber-600",
-                  "shadow-md hover:shadow-lg"
-                )}
-              >
-                Clear All Filters
-              </button>
-            )}
-          </motion.div>
-
-          {/* Videos Grid */}
-          <motion.div
-            layout
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6"
-          >
-            {videos.map((video, index) => (
-              <motion.div
+        <div
+          className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4"
+          style={{ columnGap: "1rem" }}
+        >
+          {videos.map((video, index) => {
+            const isLast = index === videos.length - 1;
+            return (
+              <div
                 key={video._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                ref={isLast ? lastVideoRef : null}
+                className="mb-4 break-inside-avoid relative"
               >
                 <VideoCard
                   video={video}
-                  currentUserId={currentUserId}
+                  currentUserId={clerkId}
                   onLike={handleLike}
                   onUnlike={handleUnlike}
                   onView={handleView}
@@ -159,57 +183,37 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
                     isLoading(`like-${video._id}`) ||
                     isLoading(`unlike-${video._id}`)
                   }
+                  className="w-full rounded-lg overflow-hidden shadow-sm cursor-pointer hover:shadow-lg transition"
                 />
-              </motion.div>
-            ))}
-          </motion.div>
-        </>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* Trending Section */}
+      {/* ---------- Trending Section ---------- */}
       {trendingVideos.length > 0 && (
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
           className="mt-16"
         >
-          <div className="flex items-center gap-4 mb-8">
-            <div
-              className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center",
-                "bg-gradient-to-br from-amber-500 to-orange-500"
-              )}
-            >
-              <span className="text-xl">🔥</span>
-            </div>
-            <div>
-              <h2 className={cn("text-2xl font-bold", colors.text)}>
-                Trending Now
-              </h2>
-              <p className={cn("text-sm", colors.textMuted)}>
-                Most popular performances this week
-              </p>
-            </div>
-          </div>
+          <h2 className={cn("text-2xl font-bold mb-6", colors.text)}>
+            Trending Now 🔥
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trendingVideos.slice(0, 3).map((video, index) => (
-              <motion.div
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {trendingVideos.slice(0, 3).map((video) => (
+              <VideoCard
                 key={video._id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.2 }}
-              >
-                <VideoCard
-                  video={video}
-                  currentUserId={currentUserId}
-                  onLike={handleLike}
-                  onUnlike={handleUnlike}
-                  onView={handleView}
-                  variant="trending"
-                />
-              </motion.div>
+                video={video}
+                currentUserId={clerkId}
+                onLike={handleLike}
+                onUnlike={handleUnlike}
+                onView={handleView}
+                className="hover:scale-105 hover:shadow-lg transition-transform duration-200 cursor-pointer"
+              />
             ))}
           </div>
         </motion.section>
@@ -218,18 +222,19 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
   );
 };
 
+// ---------- Empty State ----------
 const EmptyState: React.FC<{ title: string; message: string }> = ({
   title,
   message,
 }) => {
   const { colors } = useThemeColors();
-
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
       className={cn(
-        "text-center py-16 px-8 rounded-2xl border-2 border-dashed",
+        "text-center py-16 px-4 sm:px-8 rounded-2xl border-2 border-dashed",
         colors.border
       )}
     >

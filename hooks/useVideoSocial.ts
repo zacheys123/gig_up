@@ -1,28 +1,7 @@
-// hooks/useVideoSocial.ts
 import { useQuery, useMutation } from "convex/react";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-
-export interface VideoSocialActions {
-  likeVideo: (
-    videoId: Id<"videos">
-  ) => Promise<{ success: boolean; error?: string }>;
-  unlikeVideo: (
-    videoId: Id<"videos">
-  ) => Promise<{ success: boolean; error?: string }>;
-  addComment: (
-    videoId: Id<"videos">,
-    content: string,
-    parentCommentId?: Id<"comments">
-  ) => Promise<{ success: boolean; error?: string }>;
-  deleteComment: (
-    commentId: Id<"comments">
-  ) => Promise<{ success: boolean; error?: string }>;
-  incrementViews: (
-    videoId: Id<"videos">
-  ) => Promise<{ success: boolean; error?: string }>;
-}
 
 export interface VideoFilters {
   videoType?: "profile" | "gig" | "casual" | "promo" | "other" | "all";
@@ -33,29 +12,22 @@ export interface VideoFilters {
 }
 
 export const useVideoSocial = (clerkId?: string) => {
-  // State
+  // ---------------- State ----------------
   const [filters, setFilters] = useState<VideoFilters>({});
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
     {}
   );
+  const [videos, setVideos] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
-  // Queries
-  const publicVideos = useQuery(api.controllers.videos.getPublicVideos, {
-    limit: 50,
-    videoType: filters.videoType === "all" ? undefined : filters.videoType,
-  });
-
+  // ---------------- Queries ----------------
   const trendingVideos = useQuery(api.controllers.videos.getTrendingVideos, {
     limit: 20,
     timeframe: filters.timeframe,
   });
 
-  const userVideos = useQuery(
-    api.controllers.videos.getUserProfileVideos,
-    clerkId ? { userId: clerkId } : "skip"
-  );
-
-  // Mutations
+  // ---------------- Mutations ----------------
   const likeMutation = useMutation(api.controllers.videos.likeVideo);
   const unlikeMutation = useMutation(api.controllers.videos.unlikeVideo);
   const addCommentMutation = useMutation(api.controllers.comments.addComment);
@@ -66,66 +38,46 @@ export const useVideoSocial = (clerkId?: string) => {
     api.controllers.videos.incrementVideoViews
   );
 
-  // Filtered videos
-  const filteredVideos = useMemo(() => {
-    let videos = publicVideos || [];
-
-    // Apply search filter
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      videos = videos.filter(
-        (video) =>
-          video.title.toLowerCase().includes(query) ||
-          video.description.toLowerCase().includes(query) ||
-          video.tags.some((tag) => tag.toLowerCase().includes(query))
-      );
-    }
-
-    // Apply tag filter
-    if (filters.tags && filters.tags.length > 0) {
-      videos = videos.filter((video) =>
-        filters.tags!.some((tag) => video.tags.includes(tag))
-      );
-    }
-
-    // Apply sorting
-    if (filters.sortBy === "popular") {
-      videos = [...videos].sort(
-        (a, b) => b.likes + b.views - (a.likes + a.views)
-      );
-    } else if (filters.sortBy === "trending") {
-      // Recent videos with high engagement
-      const now = Date.now();
-      const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-      videos = [...videos]
-        .filter((video) => video.createdAt >= weekAgo)
-        .sort((a, b) => {
-          const aEngagement = a.likes * 2 + a.views;
-          const bEngagement = b.likes * 2 + b.views;
-          return bEngagement - aEngagement;
+  // ---------------- Fetch Videos ----------------
+  const fetchVideos = useCallback(
+    async (page: number) => {
+      const limit = 20;
+      try {
+        const data = await api.controllers.videos.getPublicVideos({
+          limit,
+          offset: (page - 1) * limit,
+          videoType:
+            filters.videoType === "all" ? undefined : filters.videoType,
+          searchQuery: filters.searchQuery,
+          tags: filters.tags,
         });
-    } else {
-      // Default: newest first
-      videos = [...videos].sort((a, b) => b.createdAt - a.createdAt);
-    }
+        if (data.length < limit) setHasMore(false);
+        setVideos((prev) => [...prev, ...data]);
+      } catch (error) {
+        console.error("Failed to load videos:", error);
+      }
+    },
+    [filters]
+  );
 
-    return videos;
-  }, [publicVideos, filters]);
+  // Load first page on filters change
+  useEffect(() => {
+    setVideos([]);
+    setPage(1);
+    setHasMore(true);
+    fetchVideos(1);
+  }, [filters, fetchVideos]);
 
-  // Available tags from all videos
-  const availableTags = useMemo(() => {
-    const allTags = (publicVideos || [])
-      .flatMap((video) => video.tags)
-      .filter(Boolean);
+  const loadMoreVideos = useCallback(() => {
+    if (!hasMore) return;
+    fetchVideos(page + 1);
+    setPage((prev) => prev + 1);
+  }, [fetchVideos, page, hasMore]);
 
-    return Array.from(new Set(allTags)).sort();
-  }, [publicVideos]);
-
-  // Actions
+  // ---------------- Actions ----------------
   const likeVideo = useCallback(
     async (videoId: Id<"videos">) => {
       if (!clerkId) return { success: false, error: "Not authenticated" };
-
       const key = `like-${videoId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
 
@@ -148,15 +100,11 @@ export const useVideoSocial = (clerkId?: string) => {
   const unlikeVideo = useCallback(
     async (videoId: Id<"videos">) => {
       if (!clerkId) return { success: false, error: "Not authenticated" };
-
       const key = `unlike-${videoId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
 
       try {
-        await unlikeMutation({
-          videoId: videoId.toString(),
-          userId: clerkId,
-        });
+        await unlikeMutation({ videoId: videoId.toString(), userId: clerkId });
         return { success: true };
       } catch (error) {
         return { success: false, error: (error as Error).message };
@@ -174,7 +122,6 @@ export const useVideoSocial = (clerkId?: string) => {
       parentCommentId?: Id<"comments">
     ) => {
       if (!clerkId) return { success: false, error: "Not authenticated" };
-
       const key = `comment-${videoId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
 
@@ -199,15 +146,11 @@ export const useVideoSocial = (clerkId?: string) => {
   const deleteComment = useCallback(
     async (commentId: Id<"comments">) => {
       if (!clerkId) return { success: false, error: "Not authenticated" };
-
       const key = `delete-comment-${commentId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
 
       try {
-        await deleteCommentMutation({
-          commentId,
-          userId: clerkId,
-        });
+        await deleteCommentMutation({ commentId, userId: clerkId });
         return { success: true };
       } catch (error) {
         return { success: false, error: (error as Error).message };
@@ -224,9 +167,7 @@ export const useVideoSocial = (clerkId?: string) => {
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
 
       try {
-        await incrementViewsMutation({
-          videoId: videoId.toString(),
-        });
+        await incrementViewsMutation({ videoId: videoId.toString() });
         return { success: true };
       } catch (error) {
         return { success: false, error: (error as Error).message };
@@ -237,7 +178,7 @@ export const useVideoSocial = (clerkId?: string) => {
     [incrementViewsMutation]
   );
 
-  // Helper functions
+  // ---------------- Filters ----------------
   const updateFilter = useCallback((key: keyof VideoFilters, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
@@ -248,11 +189,16 @@ export const useVideoSocial = (clerkId?: string) => {
 
   const isLoading = (key: string) => loadingStates[key] || false;
 
+  // ---------------- Available Tags ----------------
+  const availableTags = useMemo(() => {
+    const allTags = videos.flatMap((v) => v.tags).filter(Boolean);
+    return Array.from(new Set(allTags)).sort();
+  }, [videos]);
+
   return {
     // Data
-    videos: filteredVideos,
+    videos,
     trendingVideos: trendingVideos || [],
-    userVideos: userVideos || [],
     availableTags,
 
     // Filters
@@ -269,7 +215,9 @@ export const useVideoSocial = (clerkId?: string) => {
 
     // State
     isLoading,
-    hasVideos: filteredVideos.length > 0,
-    totalVideos: filteredVideos.length,
+    hasVideos: videos.length > 0,
+    totalVideos: videos.length,
+    loadMoreVideos,
+    hasMore,
   };
 };

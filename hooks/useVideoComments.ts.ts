@@ -30,7 +30,8 @@ export interface CommentWithUser {
 
 export const useVideoComments = (
   videoId?: Id<"videos">,
-  currentUserId?: Id<"users">
+  currentUserId?: string, //  clerkId
+  fetchComments?: boolean
 ) => {
   const [replyingTo, setReplyingTo] = useState<Id<"comments"> | null>(null);
   const [editingComment, setEditingComment] = useState<Id<"comments"> | null>(
@@ -40,8 +41,13 @@ export const useVideoComments = (
   // Queries
   const comments = useQuery(
     api.controllers.comments.getVideoComments,
-    videoId ? { videoId } : "skip"
+    videoId && fetchComments ? { videoId } : "skip"
   ) as CommentWithUser[] | undefined;
+
+  const commentCount = useQuery(
+    api.controllers.comments.getVideoCommentCount,
+    videoId ? { videoId } : "skip"
+  );
 
   // Mutations
   const addCommentMutation = useMutation(api.controllers.comments.addComment);
@@ -156,6 +162,6 @@ export const useVideoComments = (
 
     // Helpers
     hasComments: (comments?.length || 0) > 0,
-    totalComments: comments?.length || 0,
+    totalComments: commentCount,
   };
 };

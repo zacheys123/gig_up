@@ -1,5 +1,4 @@
-// app/layout.tsx
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./provider";
 import { AuthSync } from "@/components/AuthSync";
@@ -8,6 +7,7 @@ import { NotificationSystemProvider } from "@/hooks/useNotifications";
 import { NotificationToastContainer } from "@/components/notifications/NotificationToastContainer";
 import { GlobalActivityTracker } from "@/components/GlobalActivityTracker";
 
+// ✅ Use separate exports now
 export const metadata: Metadata = {
   title: "Gigup",
   description: "New Gigup",
@@ -15,14 +15,18 @@ export const metadata: Metadata = {
   themeColor: "#f59e0b",
   appleWebApp: {
     capable: true,
-    title: "gigup",
+    title: "Gigup",
     statusBarStyle: "default",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
+};
+
+// ✅ Viewport is now its own export (Next.js 15+)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#f59e0b",
 };
 
 export default function RootLayout({
@@ -56,7 +60,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <GlobalActivityTracker /> {/* Add this here */}
+          <GlobalActivityTracker />
           <AuthSync />
           <NotificationSystemProvider>
             {children}

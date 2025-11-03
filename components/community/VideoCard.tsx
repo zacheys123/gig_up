@@ -10,7 +10,7 @@ import { VideoComments } from "./VideoComment";
 
 interface VideoCardProps {
   video: any;
-  currentUserId?: Id<"users">;
+  currentUserId?: string;
   onLike: (videoId: Id<"videos">) => void;
   onUnlike: (videoId: Id<"videos">) => void;
   onView: (videoId: Id<"videos">) => void;
@@ -18,6 +18,7 @@ interface VideoCardProps {
   isSelected?: boolean;
   isLoading?: boolean;
   variant?: "default" | "trending";
+  className?: string;
 }
 
 export const VideoCard: React.FC<VideoCardProps> = React.memo(
@@ -31,6 +32,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(
     isSelected = false,
     isLoading = false,
     variant = "default",
+    className,
   }) => {
     const [showComments, setShowComments] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
@@ -38,7 +40,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(
     const { colors } = useThemeColors();
 
     const { comments, addComment, deleteComment, totalComments } =
-      useVideoComments(showComments ? video._id : undefined, currentUserId);
+      useVideoComments(video._id, currentUserId, showComments);
 
     const handleLike = useCallback(() => {
       if (isLiked) {
@@ -80,14 +82,18 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(
     return (
       <motion.div
         whileHover={{ y: -4 }}
-        className={cn(
-          "rounded-2xl overflow-hidden transition-all duration-300 border",
-          colors.card,
-          colors.border,
-          isSelected && "ring-2 ring-amber-500",
-          isTrending && "border-2 border-amber-300 dark:border-amber-600",
-          "shadow-sm hover:shadow-xl"
-        )}
+        className={
+          className
+            ? className
+            : cn(
+                "rounded-2xl overflow-hidden transition-all duration-300 border",
+                colors.card,
+                colors.border,
+                isSelected && "ring-2 ring-amber-500",
+                isTrending && "border-2 border-amber-300 dark:border-amber-600",
+                "shadow-sm hover:shadow-xl"
+              )
+        }
       >
         {/* Video Thumbnail */}
         <div
@@ -205,7 +211,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(
             <div className="flex items-center gap-1">
               <span className={colors.textMuted}>💬</span>
               <span className={cn("font-medium", colors.text)}>
-                {formatCount(totalComments)}
+                {formatCount(totalComments ?? 0)}
               </span>
             </div>
           </div>

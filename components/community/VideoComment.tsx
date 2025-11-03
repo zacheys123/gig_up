@@ -6,7 +6,7 @@ import { CommentWithUser } from "@/hooks/useVideoComments.ts";
 
 interface VideoCommentsProps {
   videoId: Id<"videos">;
-  currentUserId?: Id<"users">;
+  currentUserId?: string;
   onAddComment: (
     content: string,
     parentCommentId?: Id<"comments">
@@ -144,7 +144,7 @@ export const VideoComments: React.FC<VideoCommentsProps> = ({
 
 const CommentItem: React.FC<{
   comment: CommentWithUser;
-  currentUserId?: Id<"users">;
+  currentUserId?: string;
   onReply: (commentId: Id<"comments">) => void;
   onDelete: (commentId: Id<"comments">) => void;
   formatTime: (timestamp: number) => string;
