@@ -336,7 +336,12 @@ export default function FollowingPage() {
                 )}
                 {filterType !== "all" && (
                   <Badge variant="secondary" className="gap-1">
-                    Type: {filterType === "musicians" ? "Musicians" : "Clients"}
+                    Type:{" "}
+                    {filterType === "musicians"
+                      ? "Musicians"
+                      : filterType === "clients"
+                        ? "Clients"
+                        : "Bookers"}
                     <X
                       className="w-3 h-3 cursor-pointer"
                       onClick={() => setFilterType("all")}
