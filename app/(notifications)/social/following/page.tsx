@@ -42,6 +42,7 @@ interface FollowingUser {
   instrument?: string;
   isMusician: boolean;
   isClient: boolean;
+  isBooker: boolean;
   tier: string;
   talentbio?: string;
   followers: number;
@@ -58,17 +59,17 @@ export default function FollowingPage() {
   const { colors, isDarkMode } = useThemeColors();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "musicians" | "clients">(
-    "all"
-  );
+  const [filterType, setFilterType] = useState<
+    "all" | "musicians" | "clients" | "bookers"
+  >("all");
 
   // Get users that current user is following with details
   const followingUsers = useQuery(
-    api.controllers.socials.getFollowersWithDetails,
+    api.controllers.socials.getFollowingWithDetails,
     currentUser?._id ? { userId: currentUser._id } : "skip"
   ) as FollowingUser[] | undefined;
 
-  const followUser = useMutation(api.controllers.user.followUser);
+  // const followUser = useMutation(api.controllers.user.followUser);
 
   // Filter and search users
   const filteredUsers = useMemo(() => {
@@ -94,6 +95,8 @@ export default function FollowingPage() {
       filtered = filtered.filter((user) => user.isMusician);
     } else if (filterType === "clients") {
       filtered = filtered.filter((user) => user.isClient);
+    } else if (filterType === "bookers") {
+      filtered = filtered.filter((user) => user.isBooker);
     }
 
     return filtered;
@@ -114,6 +117,7 @@ export default function FollowingPage() {
       total: followingUsers.length,
       musicians: followingUsers.filter((user) => user.isMusician).length,
       clients: followingUsers.filter((user) => user.isClient).length,
+      bookers: followingUsers.filter((user) => user.isBooker).length,
       proUsers: followingUsers.filter((user) => user.tier === "pro").length,
       mutualFollowers: followingUsers.filter(
         (user) => (user.mutualFollowers || 0) > 0
@@ -155,7 +159,7 @@ export default function FollowingPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
+              className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"
             >
               <div
                 className={cn(
@@ -204,6 +208,23 @@ export default function FollowingPage() {
                   {stats.clients}
                 </div>
                 <div className={cn("text-sm", colors.textMuted)}>Clients</div>
+              </div>
+              <div
+                className={cn(
+                  "p-4 rounded-xl border text-center",
+                  colors.card,
+                  colors.border
+                )}
+              >
+                <div
+                  className={cn(
+                    "text-2xl font-bold mb-1 text-green-600",
+                    isDarkMode && "text-green-400"
+                  )}
+                >
+                  {stats.bookers}
+                </div>
+                <div className={cn("text-sm", colors.textMuted)}>Bookers</div>
               </div>
 
               <div
@@ -381,16 +402,26 @@ export default function FollowingPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge
                               variant={
-                                user.isMusician ? "default" : "secondary"
+                                user.isMusician
+                                  ? "default"
+                                  : user.isClient
+                                    ? "secondary"
+                                    : "destructive"
                               }
                               className={cn(
                                 "text-xs",
                                 user.isMusician
                                   ? "bg-purple-500 text-white"
-                                  : "bg-green-500 text-white"
+                                  : user.isClient
+                                    ? "bg-green-500 text-white"
+                                    : "bg-purple-500 text-white"
                               )}
                             >
-                              {user.isMusician ? "Musician" : "Client"}
+                              {user.isMusician
+                                ? "Musician"
+                                : user.isClient
+                                  ? "Client"
+                                  : "Booker/Manager"}
                             </Badge>
                             {user.tier === "pro" && (
                               <Badge
@@ -405,9 +436,7 @@ export default function FollowingPage() {
                                 <Badge
                                   variant="outline"
                                   className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"
-                                >
-                                  {user.mutualFollowers} mutual
-                                </Badge>
+                                ></Badge>
                               )}
                           </div>
                         </div>
@@ -447,7 +476,18 @@ export default function FollowingPage() {
                         </div>
                       </div>
                     </div>
-                    <FollowButton _id={user?._id} variant="ghost" size="sm" />
+                    <FollowButton
+                      _id={user?._id}
+                      variant="default"
+                      size="sm"
+                      className={cn(
+                        "flex-1 rounded-lg transition-all duration-300",
+                        colors.primaryBg,
+                        colors.primaryBgHover,
+                        "text-white font-semibold shadow-lg hover:shadow-xl",
+                        "border-0 hover:scale-105"
+                      )}
+                    />
                   </div>
 
                   {/* Bio */}

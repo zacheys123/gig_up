@@ -74,10 +74,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       badge: null,
     },
     {
-      name: "I'm Following",
+      name: "My Following", // CHANGED: From "I'm Following" to "My Following"
       href: "/social/following",
       icon: UserCheck,
-      description: "People you follow",
+      description: "People you follow", // This description is correct
       badge: null,
     },
     {
@@ -418,7 +418,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         "text-xs",
                         currentUser.isMusician
                           ? "bg-purple-500/10 text-purple-600 border-purple-500/20"
-                          : "bg-green-500/10 text-green-600 border-green-500/20"
+                          : "bg-green-500/10 text-green-600 border-green-500-20"
                       )}
                     >
                       {currentUser.isMusician ? "Musician" : "Client"}

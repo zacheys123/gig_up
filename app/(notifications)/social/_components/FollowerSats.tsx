@@ -7,6 +7,7 @@ interface FollowersStatsProps {
     total: number;
     musicians: number;
     clients: number;
+    bookers: number;
     proUsers: number;
   };
   colors: any;
@@ -17,6 +18,7 @@ export default function FollowersStats({ stats, colors }: FollowersStatsProps) {
     { value: stats.total, label: "Total", color: colors.primaryBg },
     { value: stats.musicians, label: "Musicians", color: "bg-purple-500" },
     { value: stats.clients, label: "Clients", color: "bg-green-500" },
+    { value: stats.bookers, label: "bookers", color: "bg-red-500" },
   ];
 
   return (

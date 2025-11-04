@@ -4,12 +4,13 @@ import { Search, Music, Building, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Book } from "react-feather";
 
 interface FollowersSearchProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  filterType: "all" | "musicians" | "clients";
-  setFilterType: (type: "all" | "musicians" | "clients") => void;
+  filterType: "all" | "musicians" | "clients" | "bookers";
+  setFilterType: (type: "all" | "musicians" | "clients" | "bookers") => void;
   showMobileFilters: boolean;
   setShowMobileFilters: (show: boolean) => void;
   colors: any;
@@ -28,6 +29,7 @@ export default function FollowersSearch({
     { key: "all" as const, label: "All" },
     { key: "musicians" as const, label: "Musicians", icon: Music },
     { key: "clients" as const, label: "Clients", icon: Building },
+    { key: "bookers" as const, label: "Booker/Manager", icon: Book },
   ];
 
   return (
@@ -85,7 +87,9 @@ export default function FollowersSearch({
                 ? "All"
                 : filterType === "musicians"
                   ? "Musicians"
-                  : "Clients"}
+                  : filterType === "clients"
+                    ? "Clients"
+                    : "Booker/Manager"}
             </span>
             <ChevronDown
               className={cn(
@@ -145,7 +149,9 @@ export default function FollowersSearch({
                     ? cn("text-white shadow-sm", colors.primaryBg)
                     : key === "musicians"
                       ? "bg-purple-500 text-white shadow-sm"
-                      : "bg-green-500 text-white shadow-sm"
+                      : key === "clients"
+                        ? "bg-green-500 text-white shadow-sm"
+                        : "bg-red-500 text-white shadow-sm"
                   : cn(colors.textMuted, colors.hoverBg)
               )}
             >

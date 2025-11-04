@@ -49,6 +49,7 @@ interface Follower {
   instrument?: string;
   isMusician: boolean;
   isClient: boolean;
+  isBooker: boolean;
   tier: string;
   talentbio?: string;
   followers: number;
@@ -309,7 +310,6 @@ const ModernFollowerCard = ({
                   variant="ghost"
                   className="w-full justify-start hover:bg-transparent px-3 py-2"
                 >
-                  <MessageCircle className="w-4 h-4 mr-2" />
                   Message
                 </ChatIcon>
               </DropdownMenuItem>

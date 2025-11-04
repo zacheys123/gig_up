@@ -280,3 +280,52 @@ export const searchFollowers = query({
       .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0)); // Default sort by recent
   },
 });
+// convex/controllers/social.ts - ADD THIS
+export const getFollowingWithDetails = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const followingIds = user.followings || []; // ← This gets people the user follows
+    if (followingIds.length === 0) return [];
+
+    // Bulk get all users the current user follows
+    const followingUsers = await Promise.all(
+      followingIds.map((id) => ctx.db.get(id as Id<"users">))
+    );
+
+    const validFollowing = followingUsers.filter(Boolean);
+    const userFollowers = user.followers || [];
+
+    return validFollowing.map((followingUser) => {
+      const mutualFollowers =
+        followingUser?.followers?.filter((fid) => userFollowers.includes(fid))
+          .length || 0;
+
+      return {
+        _id: followingUser?._id,
+        clerkId: followingUser?.clerkId,
+        firstname: followingUser?.firstname,
+        lastname: followingUser?.lastname,
+        username: followingUser?.username,
+        picture: followingUser?.picture,
+        city: followingUser?.city,
+        instrument: followingUser?.instrument,
+        isMusician: followingUser?.isMusician ?? false,
+        isClient: followingUser?.isClient ?? false,
+        tier: followingUser?.tier ?? "free",
+        talentbio: followingUser?.talentbio,
+        followers: followingUser?.followers?.length || 0,
+        followings: followingUser?.followings?.length || 0,
+        mutualFollowers,
+        lastActive: followingUser?.lastActive,
+        isPrivate: followingUser?.isPrivate ?? false,
+        roleType: followingUser?.roleType,
+        experience: followingUser?.experience,
+      };
+    });
+  },
+});

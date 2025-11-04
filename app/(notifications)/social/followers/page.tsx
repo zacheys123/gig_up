@@ -37,6 +37,7 @@ interface Follower {
   instrument?: string;
   isMusician: boolean;
   isClient: boolean;
+  isBooker: boolean;
   tier: string;
   talentbio?: string;
   followers: number;
@@ -53,9 +54,9 @@ export default function FollowersPage() {
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "musicians" | "clients">(
-    "all"
-  );
+  const [filterType, setFilterType] = useState<
+    "all" | "musicians" | "clients" | "bookers"
+  >("all");
   const [selectedFollower, setSelectedFollower] = useState<Follower | null>(
     null
   );
@@ -96,7 +97,8 @@ export default function FollowersPage() {
       const matchesFilter =
         filterType === "all" ||
         (filterType === "musicians" && follower.isMusician) ||
-        (filterType === "clients" && follower.isClient);
+        (filterType === "clients" && follower.isClient) ||
+        (filterType === "bookers" && follower.isBooker);
 
       return matchesSearch && matchesFilter;
     }) || [];
@@ -105,6 +107,7 @@ export default function FollowersPage() {
     total: followersData?.length || 0,
     musicians: followersData?.filter((f) => f.isMusician).length || 0,
     clients: followersData?.filter((f) => f.isClient).length || 0,
+    bookers: followersData?.filter((f) => f.isBooker).length || 0,
     proUsers: followersData?.filter((f) => f.tier === "pro").length || 0,
   };
 
