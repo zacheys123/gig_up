@@ -258,7 +258,7 @@ export default function FollowingPage() {
               colors.border
             )}
           >
-            <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex flex-col lg:flex-row gap-4 z-[9999]">
               {/* Search Input */}
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -279,7 +279,9 @@ export default function FollowingPage() {
                       ? "All Types"
                       : filterType === "musicians"
                         ? "Musicians Only"
-                        : "Clients Only"}
+                        : filterType === "clients"
+                          ? "Clients Only"
+                          : "Bookers Only"}
                     {hasActiveFilters && (
                       <Badge className="ml-1 h-5 w-5 rounded-full p-0 bg-blue-500">
                         !
@@ -305,6 +307,12 @@ export default function FollowingPage() {
                     onCheckedChange={() => setFilterType("clients")}
                   >
                     Clients Only
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={filterType === "bookers"}
+                    onCheckedChange={() => setFilterType("bookers")}
+                  >
+                    Bookers Only
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
