@@ -1,12 +1,33 @@
-// components/community/VideoCard.tsx
-import React, { useState, useCallback } from "react";
-import { Id } from "@/convex/_generated/dataModel";
+"use client";
 
+// components/VideoCard.tsx
+import React, {
+  useState,
+  useCallback,
+  forwardRef,
+  useEffect,
+  useRef,
+} from "react";
+import { Id } from "@/convex/_generated/dataModel";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Play,
+  Heart,
+  MessageCircle,
+  Share,
+  Music,
+  Clock,
+  Eye,
+  MoreHorizontal,
+  X,
+} from "lucide-react";
+
 import { useVideoComments } from "@/hooks/useVideoComments.ts";
+import { ViewTracker } from "@/lib/viewTracking";
 import { VideoComments } from "./VideoComment";
+import { formatTimeAgo } from "@/utils";
 
 interface VideoCardProps {
   video: any;
@@ -17,335 +38,504 @@ interface VideoCardProps {
   onSelect?: (videoId: Id<"videos">) => void;
   isSelected?: boolean;
   isLoading?: boolean;
-  variant?: "default" | "trending";
   className?: string;
 }
+export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
+  (
+    {
+      video,
+      currentUserId,
+      onLike,
+      onUnlike,
+      onView,
+      onSelect,
+      isSelected = false,
+      isLoading = false,
+      className,
+    },
+    ref
+  ) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [isLiked, setIsLiked] = useState(video.isLiked || false);
+    const [hasViewed, setHasViewed] = useState(false);
+    const [showComments, setShowComments] = useState(false); // Add comments state
+    const { colors, isDarkMode } = useThemeColors();
 
-export const VideoCard: React.FC<VideoCardProps> = React.memo(
-  ({
-    video,
-    currentUserId,
-    onLike,
-    onUnlike,
-    onView,
-    onSelect,
-    isSelected = false,
-    isLoading = false,
-    variant = "default",
-    className,
-  }) => {
-    const [showComments, setShowComments] = useState(false);
-    const [isLiked, setIsLiked] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
-    const { colors } = useThemeColors();
-
+    // Use the comments hook
     const { comments, addComment, deleteComment, totalComments } =
       useVideoComments(video._id, currentUserId, showComments);
 
     const handleLike = useCallback(() => {
+      setIsLiked(!isLiked);
       if (isLiked) {
         onUnlike(video._id);
-        setIsLiked(false);
       } else {
         onLike(video._id);
-        setIsLiked(true);
       }
     }, [video._id, isLiked, onLike, onUnlike]);
-
     const handleView = useCallback(() => {
-      onView(video._id);
-      if (onSelect) {
-        onSelect(video._id);
-      }
-    }, [video._id, onView, onSelect]);
+      let shouldRecord = true;
 
-    const handleCommentSubmit = useCallback(
-      async (content: string) => {
-        const result = await addComment(content);
-        return result.success;
+      if (currentUserId) {
+        shouldRecord = ViewTracker.shouldRecordView(video._id, currentUserId);
+
+        if (shouldRecord) {
+          const viewRecorded = ViewTracker.recordView(video._id, currentUserId);
+          if (viewRecorded) {
+            onView(video._id);
+            setHasViewed(true);
+          }
+        }
+      } else {
+        onView(video._id);
+      }
+
+      if (onSelect) onSelect(video._id);
+    }, [video._id, currentUserId, onView, onSelect]);
+    // Comment handlers
+    const handleAddComment = useCallback(
+      async (content: string, parentCommentId?: Id<"comments">) => {
+        const result = await addComment(content, parentCommentId);
+        return result;
       },
       [addComment]
     );
 
-    const formatCount = (count: number): string => {
-      if (count >= 1000000) {
-        return (count / 1000000).toFixed(1) + "M";
+    const handleDeleteComment = useCallback(
+      async (commentId: Id<"comments">) => {
+        const result = await deleteComment(commentId);
+        return result;
+      },
+      [deleteComment]
+    );
+
+    const handleToggleComments = useCallback(() => {
+      setShowComments(!showComments);
+    }, [showComments]);
+
+    // Check on component mount if user has already viewed this video
+    React.useEffect(() => {
+      if (currentUserId) {
+        const viewed = ViewTracker.hasViewedRecently(video._id, currentUserId);
+        setHasViewed(viewed);
       }
-      if (count >= 1000) {
-        return (count / 1000).toFixed(1) + "K";
-      }
+    }, [video._id, currentUserId]);
+
+    const formatCount = (count: number) => {
+      if (count >= 1_000_000) return (count / 1_000_000).toFixed(1) + "M";
+      if (count >= 1_000) return (count / 1_000).toFixed(1) + "K";
       return count.toString();
     };
 
-    const isTrending = variant === "trending";
+    const [timeAgo, setTimeAgo] = useState(formatTimeAgo(video._creationTime));
 
-    return (
-      <motion.div
-        whileHover={{ y: -4 }}
-        className={
-          className
-            ? className
-            : cn(
-                "rounded-2xl overflow-hidden transition-all duration-300 border",
-                colors.card,
-                colors.border,
-                isSelected && "ring-2 ring-amber-500",
-                isTrending && "border-2 border-amber-300 dark:border-amber-600",
-                "shadow-sm hover:shadow-xl"
-              )
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setTimeAgo(formatTimeAgo(video._creationTime));
+      }, 60000);
+      return () => clearInterval(interval);
+    }, [video._creationTime]);
+
+    const [isPlaying, setIsPlaying] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    const handleVideoClick = useCallback(() => {
+      if (videoRef.current) {
+        if (isPlaying) {
+          videoRef.current.pause();
+          setIsPlaying(false);
+        } else {
+          videoRef.current.play();
+          setIsPlaying(true);
         }
-      >
-        {/* Video Thumbnail */}
-        <div
-          className="aspect-video bg-black relative cursor-pointer group"
-          onClick={handleView}
+      }
+      handleView(); // Track view on click
+    }, [isPlaying, handleView]);
+
+    // Auto-play on hover (optional)
+    useEffect(() => {
+      if (isHovered && videoRef.current) {
+        videoRef.current.play().then(() => setIsPlaying(true));
+      } else if (!isHovered && videoRef.current) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }, [isHovered]);
+    return (
+      <>
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className={cn(
+            "group rounded-2xl overflow-hidden transition-all duration-500 ease-out border",
+            colors.card,
+            colors.border,
+            isDarkMode
+              ? "hover:shadow-[0_4px_20px_rgba(255,255,255,0.05)]"
+              : "hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]",
+            // Make the card consistent and Facebook-like
+            "w-full max-w-[700px] mx-auto my-4 md:my-6",
+            "lg:p-4 lg:rounded-3xl lg:border lg:bg-background/40 backdrop-blur-sm",
+            className
+          )}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
-          {video.thumbnail ? (
-            <img
-              src={video.thumbnail}
-              alt={video.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
-              <div className="text-center text-white p-4">
-                <svg
-                  className="w-12 h-12 mx-auto mb-2 opacity-50"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1}
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-                <p className="text-sm font-medium">{video.title}</p>
+          {/* HEADER */}
+          <div
+            className={cn(
+              "flex items-center justify-between px-4 py-3",
+              "border-b",
+              colors.border
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <img
+                src={video.user?.picture || "/default-avatar.png"}
+                alt={video.user?.username}
+                className="w-10 h-10 rounded-full object-cover border"
+              />
+              <div>
+                <p className={cn("font-semibold text-sm", colors.text)}>
+                  {video.user?.username}
+                </p>
+                <p className={cn("text-xs", colors.textMuted)}>{timeAgo}</p>
               </div>
             </div>
-          )}
 
-          {/* Play Button Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center backdrop-blur-sm"
-            >
-              <svg
-                className="w-6 h-6 text-gray-900 ml-1"
-                fill="currentColor"
-                viewBox="0 0 24 24"
+            {hasViewed && (
+              <div
+                className={cn(
+                  "px-2 py-1 rounded-full text-[11px] font-medium",
+                  isDarkMode
+                    ? "bg-green-900/30 text-green-300"
+                    : "bg-green-100 text-green-700"
+                )}
               >
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </motion.div>
-          </div>
-
-          {/* Badges */}
-          <div className="absolute top-3 left-3 right-3 flex justify-between">
-            {isTrending && (
-              <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-lg">
-                🔥 Trending
-              </span>
+                Viewed
+              </div>
             )}
-            <span
-              className={cn(
-                "text-xs px-2 py-1.5 rounded-full backdrop-blur-sm font-medium",
-                colors.card,
-                colors.text
-              )}
-            >
-              {video.videoType}
-            </span>
           </div>
-        </div>
 
-        {/* Video Content */}
-        <div className="p-5">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-3">
-            <h3
-              className={cn(
-                "font-semibold leading-tight flex-1 pr-2",
-                colors.text
-              )}
-            >
-              {video.title}
-            </h3>
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className={cn("p-1 rounded-lg transition-colors", colors.hoverBg)}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {/* VIDEO AREA */}
+          <div
+            className={cn(
+              "relative w-full overflow-hidden bg-black/10",
+              // Aspect ratios for different devices
+              "aspect-[9/16] sm:aspect-[16/9] lg:aspect-square"
+            )}
+          >
+            {video.thumbnail ? (
+              <motion.img
+                src={video.thumbnail}
+                alt={video.title}
+                className="w-full h-full object-cover"
+                animate={{ scale: isHovered ? 1.05 : 1 }}
+                transition={{ duration: 0.5 }}
+              />
+            ) : (
+              <div
+                className={cn(
+                  "w-full h-full flex items-center justify-center",
+                  isDarkMode
+                    ? "bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900"
+                    : "bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50"
+                )}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                {" "}
+                <video
+                  ref={videoRef}
+                  src={video.videoUrl} // Make sure this prop exists
+                  poster={video.thumbnail}
+                  className="w-full h-full object-cover"
+                  controls={false}
+                  playsInline
+                  muted
+                  loop
+                  onClick={handleVideoClick}
                 />
-              </svg>
-            </button>
+                {video.thumbnail && (
+                  <Music
+                    className={cn(
+                      "w-14 h-14",
+                      isDarkMode ? "text-gray-600" : "text-gray-400"
+                    )}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Overlay gradient */}
+            <div
+              className={cn(
+                "absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent transition-opacity",
+                isHovered ? "opacity-100" : "opacity-80"
+              )}
+            />
+
+            {/* Play Button */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              animate={{ opacity: isHovered || !isPlaying ? 1 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg"
+                onClick={handleVideoClick}
+              >
+                {isPlaying ? (
+                  <div className="flex gap-1">
+                    <div className="w-2 h-6 bg-gray-900"></div>
+                    <div className="w-2 h-6 bg-gray-900"></div>
+                  </div>
+                ) : (
+                  <Play className="w-6 h-6 text-gray-900 ml-1 fill-current" />
+                )}
+              </motion.div>
+            </motion.div>
+
+            {/* Info chips */}
+            <div className="absolute bottom-3 left-3 right-3 flex gap-2">
+              <div className="flex items-center gap-1 bg-black/60 rounded-full px-2.5 py-1">
+                <Eye className="w-3 h-3 text-white" />
+                <span className="text-xs text-white">
+                  {formatCount(video.views || 0)}
+                </span>
+              </div>
+              {/* {video.duration && (
+                <div className="flex items-center gap-1 bg-black/60 rounded-full px-2.5 py-1">
+                  <Clock className="w-3 h-3 text-white" />
+                  <span className="text-xs text-white">{video.duration}</span>
+                </div>
+              )} */}
+            </div>
+
+            <div
+              className="absolute inset-0 cursor-pointer"
+              onClick={handleView}
+            />
           </div>
 
-          {/* Stats */}
-          <div className="flex items-center gap-4 text-sm mb-3">
-            <div className="flex items-center gap-1">
-              <span className={colors.textMuted}>👁️</span>
-              <span className={cn("font-medium", colors.text)}>
-                {formatCount(video.views)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className={colors.textMuted}>❤️</span>
-              <span className={cn("font-medium", colors.text)}>
-                {formatCount(video.likes)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className={colors.textMuted}>💬</span>
-              <span className={cn("font-medium", colors.text)}>
-                {formatCount(totalComments ?? 0)}
-              </span>
+          {/* ACTION BAR */}
+          <div
+            className="px-4 py-3 border-t border-b"
+            style={{ borderColor: isDarkMode ? "#333" : "#eee" }}
+          >
+            <div className="flex items-center justify-between">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={handleLike}
+                className={cn(
+                  "flex items-center gap-2",
+                  isLiked ? "text-red-500" : colors.text
+                )}
+              >
+                <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
+                <span className="text-sm">{formatCount(video.likes || 0)}</span>
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={handleToggleComments}
+                className={cn(
+                  "flex items-center gap-2",
+                  showComments ? "text-blue-500" : colors.text
+                )}
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span className="text-sm">
+                  {formatCount(totalComments || 0)}
+                </span>
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                className={cn("flex items-center gap-2", colors.text)}
+              >
+                <Share className="w-5 h-5" />
+                <span className="text-sm">Share</span>
+              </motion.button>
             </div>
           </div>
 
-          {/* Description */}
-          {video.description && (
-            <p className={cn("text-sm mb-3 line-clamp-2", colors.textMuted)}>
+          {/* DESCRIPTION */}
+          <div className="px-4 py-3">
+            <p className={cn("text-sm leading-relaxed", colors.text)}>
+              <span className="font-semibold">{video.user?.username}</span>{" "}
               {video.description}
             </p>
-          )}
 
-          {/* Tags */}
-          {video.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-4">
-              {video.tags.slice(0, 3).map((tag: string, index: number) => (
-                <span
-                  key={index}
+            {video.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {video.tags.slice(0, 3).map((tag: string, i: number) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "px-2 py-1 rounded-md text-xs",
+                      isDarkMode
+                        ? "bg-amber-900/30 text-amber-300"
+                        : "bg-amber-100 text-amber-700"
+                    )}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Comments Drawer - SLIDE UP from bottom (Best UX) */}
+        <AnimatePresence>
+          {showComments && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowComments(false)}
+                className="fixed inset-0 bg-black/50 z-40 "
+              />
+              <div className="md:hidden">
+                {/* Slide-up Drawer */}
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
                   className={cn(
-                    "text-xs px-2 py-1 rounded-full",
-                    colors.backgroundMuted,
-                    colors.textMuted
+                    "fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl",
+                    "max-h-[85vh] flex flex-col ",
+                    colors.card,
+                    colors.border,
+                    "border-b-0 border-x border-t shadow-2xl"
                   )}
                 >
-                  #{tag}
-                </span>
-              ))}
-              {video.tags.length > 3 && (
-                <span className={cn("text-xs px-2 py-1", colors.textMuted)}>
-                  +{video.tags.length - 3}
-                </span>
-              )}
-            </div>
+                  {/* Drawer Header */}
+                  <div
+                    className={cn(
+                      "flex items-center justify-between p-4 border-b",
+                      colors.border
+                    )}
+                  >
+                    <h3 className={cn("font-semibold text-lg", colors.text)}>
+                      Comments ({comments.length})
+                    </h3>
+                    <button
+                      onClick={() => setShowComments(false)}
+                      className={cn(
+                        "p-2 rounded-full transition-colors",
+                        colors.hoverBg,
+                        colors.text
+                      )}
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Comments Content - Scrollable */}
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="p-4">
+                      <VideoComments
+                        videoId={video._id}
+                        currentUserId={currentUserId}
+                        onAddComment={handleAddComment}
+                        onDeleteComment={handleDeleteComment}
+                        comments={comments}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+              <div className="hidden md:block">
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowComments(false)}
+                  className="fixed inset-0 bg-black/30 z-40"
+                />
+
+                {/* Side Panel */}
+                <motion.div
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                  className={cn(
+                    "fixed top-0 right-0 bottom-0 z-50 w-96 max-w-full",
+                    "flex flex-col border-l shadow-2xl",
+                    colors.card,
+                    colors.border
+                  )}
+                >
+                  {/* Panel Header */}
+                  <div
+                    className={cn(
+                      "flex items-center justify-between p-6 border-b",
+                      colors.border
+                    )}
+                  >
+                    <div>
+                      <h3 className={cn("font-semibold text-lg", colors.text)}>
+                        Comments
+                      </h3>
+                      <p className={cn("text-sm", colors.textMuted)}>
+                        {comments.length} comments
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowComments(false)}
+                      className={cn(
+                        "p-2 rounded-lg transition-colors",
+                        colors.hoverBg,
+                        colors.text
+                      )}
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Comments Content */}
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="p-6">
+                      <VideoComments
+                        videoId={video._id}
+                        currentUserId={currentUserId}
+                        onAddComment={handleAddComment}
+                        onDeleteComment={handleDeleteComment}
+                        comments={comments}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between border-t pt-3">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handleLike}
-              disabled={isLoading}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200",
-                isLiked
-                  ? "text-red-500 bg-red-50 dark:bg-red-900/20"
-                  : cn(colors.textMuted, colors.hoverBg),
-                isLoading && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <svg
-                className="w-5 h-5"
-                fill={isLiked ? "currentColor" : "none"}
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
-              </svg>
-              <span className="text-sm font-medium">Like</span>
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowComments(!showComments)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200",
-                showComments
-                  ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20"
-                  : cn(colors.textMuted, colors.hoverBg)
-              )}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <span className="text-sm font-medium">Comment</span>
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200",
-                colors.textMuted,
-                colors.hoverBg
-              )}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-              <span className="text-sm font-medium">Share</span>
-            </motion.button>
-          </div>
-
-          {/* Comments Section */}
-          {showComments && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-4 border-t pt-4"
-            >
-              <VideoComments
-                videoId={video._id}
-                currentUserId={currentUserId}
-                onAddComment={handleCommentSubmit}
-                onDeleteComment={deleteComment}
-                comments={comments || []}
-              />
-            </motion.div>
-          )}
-        </div>
-      </motion.div>
+        </AnimatePresence>
+      </>
     );
   }
 );
+
+VideoCard.displayName = "VideoCard";
+
+// // // Modal that centers on desktop
+// <motion.div
+//   initial={{ opacity: 0, scale: 0.95 }}
+//   animate={{ opacity: 1, scale: 1 }}
+//   exit={{ opacity: 0, scale: 0.95 }}
+//   className={cn(
+//     "fixed inset-4 md:inset-20 lg:inset-40 xl:inset-60 z-50",
+//     "bg-white dark:bg-gray-900 rounded-2xl shadow-2xl",
+//     "flex flex-col border",
+//     colors.border
+//   )}
+// >
+//   {/* Modal content */}
+// </motion.div>

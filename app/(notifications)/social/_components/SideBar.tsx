@@ -127,7 +127,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 "bg-blue-500/10 text-blue-600 border border-blue-500/20",
                 isDarkMode && "text-blue-400 border-blue-400/20 bg-blue-500/10"
               )
-            : cn("hover:bg-opacity-50", colors.hoverBg)
+            : cn("hover:bg-opacity-50", colors.hoverBg, colors.text)
         )}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -154,12 +154,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div
         className={cn(
           "hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r z-30",
-          colors.navBackground,
-          colors.navBorder
+          colors.background,
+          colors.border
         )}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 p-6 border-b">
+        <div
+          className={cn("flex items-center gap-3 p-6 border-b", colors.border)}
+        >
           <div
             className={cn(
               "p-2 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600"
@@ -168,9 +170,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <Users className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className={cn("font-bold text-lg", colors.navText)}>
-              Social Hub
-            </h2>
+            <h2 className={cn("font-bold text-lg", colors.text)}>Social Hub</h2>
             <p className={cn("text-sm", colors.textMuted)}>
               Connect with others
             </p>
@@ -191,10 +191,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <div
                   className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center",
-                    colors.secondaryBackground
+                    isDarkMode ? "bg-gray-700" : "bg-gray-200"
                   )}
                 >
-                  <User className="w-5 h-5 text-gray-400" />
+                  <User className={cn("w-5 h-5", colors.textMuted)} />
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -249,7 +249,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 variant="ghost"
                 className={cn(
                   "w-full justify-start gap-3 h-auto py-3 rounded-xl",
-                  colors.hoverBg
+                  colors.hoverBg,
+                  colors.text
                 )}
               >
                 {darkMode ? (
@@ -267,16 +268,37 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={() => setTheme("light")}>
+            <DropdownMenuContent
+              align="start"
+              className={cn("w-56", colors.card, colors.border)}
+            >
+              <DropdownMenuItem
+                onClick={() => setTheme("light")}
+                className={cn(
+                  colors.text,
+                  isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                )}
+              >
                 <Sun className="w-4 h-4 mr-2" />
                 Light
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")}>
+              <DropdownMenuItem
+                onClick={() => setTheme("dark")}
+                className={cn(
+                  colors.text,
+                  isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                )}
+              >
                 <Moon className="w-4 h-4 mr-2" />
                 Dark
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("system")}>
+              <DropdownMenuItem
+                onClick={() => setTheme("system")}
+                className={cn(
+                  colors.text,
+                  isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                )}
+              >
                 <Monitor className="w-4 h-4 mr-2" />
                 System
               </DropdownMenuItem>
@@ -304,7 +326,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                           "bg-blue-500/10 text-blue-600",
                           isDarkMode && "text-blue-400"
                         )
-                      : colors.hoverBg
+                      : cn(colors.hoverBg, colors.text)
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -320,13 +342,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div
         className={cn(
           "lg:hidden fixed left-0 top-0 h-screen w-80 max-w-[calc(100vw-80px)] border-r z-50 transform transition-transform duration-300 ease-in-out",
-          colors.navBackground,
-          colors.navBorder,
+          colors.background,
+          colors.border,
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Mobile Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div
+          className={cn(
+            "flex items-center justify-between p-6 border-b",
+            colors.border
+          )}
+        >
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -336,7 +363,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <Users className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className={cn("font-bold text-lg", colors.navText)}>
+              <h2 className={cn("font-bold text-lg", colors.text)}>
                 Social Hub
               </h2>
               <p className={cn("text-sm", colors.textMuted)}>
@@ -349,7 +376,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="rounded-xl"
+            className={cn("rounded-xl", colors.hoverBg, colors.text)}
           >
             <X className="w-5 h-5" />
           </Button>
@@ -371,10 +398,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <div
                     className={cn(
                       "w-12 h-12 rounded-xl flex items-center justify-center",
-                      colors.secondaryBackground
+                      isDarkMode ? "bg-gray-700" : "bg-gray-200"
                     )}
                   >
-                    <User className="w-6 h-6 text-gray-400" />
+                    <User className={cn("w-6 h-6", colors.textMuted)} />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -423,7 +450,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               onClick={toggleDarkMode}
               className={cn(
                 "w-full justify-center gap-2 rounded-xl",
-                colors.hoverBg
+                colors.hoverBg,
+                colors.text,
+                colors.border
               )}
             >
               {darkMode ? (
@@ -438,6 +467,39 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </>
               )}
             </Button>
+          </div>
+
+          {/* Mobile Secondary Navigation */}
+          <div className={cn("p-4 border-t", colors.border)}>
+            <div className="space-y-1">
+              {secondaryNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+
+                return (
+                  <Button
+                    key={item.name}
+                    variant="ghost"
+                    onClick={() => {
+                      router.push(item.href);
+                      onClose();
+                    }}
+                    className={cn(
+                      "w-full justify-start gap-3 h-auto py-2 rounded-xl text-sm",
+                      isActive
+                        ? cn(
+                            "bg-blue-500/10 text-blue-600",
+                            isDarkMode && "text-blue-400"
+                          )
+                        : cn(colors.hoverBg, colors.text)
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.name}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

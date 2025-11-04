@@ -11,6 +11,12 @@ export function useThemeColors() {
   const { userId } = useAuth();
   const [mounted, setMounted] = useState(false);
 
+  const [localTheme, setLocalTheme] = useState<string | null>(null);
+
+  useEffect(() => {
+    const theme = localStorage.getItem("theme");
+    setLocalTheme(theme);
+  }, []);
   // Get user's theme preference from Convex
   const userTheme = useQuery(
     api.controllers.theme.getUserTheme,
@@ -40,7 +46,7 @@ export function useThemeColors() {
       : "light";
   };
 
-  const effectiveTheme = userTheme || getSystemTheme() || "light";
+  const effectiveTheme = userTheme || getSystemTheme() || "light" || localTheme;
   const isDarkMode = effectiveTheme === "dark";
   const colors = {
     // Background colors

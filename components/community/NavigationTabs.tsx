@@ -29,25 +29,16 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   showThemeToggle,
   setShowThemeToggle,
   themeIsDark,
-  handleThemeToggle,
+
   colors,
 }) => {
   return (
     <div
-      className={cn(
-        "fixed bottom-0 left-0 right-0 border-t z-50",
-        "backdrop-blur-lg",
-        colors.border,
-        colors.card
-      )}
+      className={cn("border-t backdrop-blur-lg", colors.border, colors.card)}
     >
       {/* Glass background */}
       <div
-        className={cn(
-          "absolute inset-0 ",
-          colors.background,
-          "backdrop-blur-xl"
-        )}
+        className={cn("absolute inset-0 backdrop-blur-xl", colors.background)}
       />
 
       {/* Navigation Items */}
@@ -76,10 +67,13 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
             {/* Icon */}
             <div
               className={cn(
-                "relative z-10 text-lg",
+                "relative z-10 text-lg transition-all duration-300",
                 activeTab === tab.id
                   ? "text-white scale-110"
-                  : "text-gray-500 dark:text-gray-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                  : cn(
+                      "text-gray-500 dark:text-gray-400",
+                      "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                    )
               )}
             >
               {tab.icon}
@@ -95,10 +89,13 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
             {/* Label */}
             <span
               className={cn(
-                "relative z-10 text-[10px] mt-1 transition-all duration-300",
+                "relative z-10 text-[10px] mt-1 transition-all duration-300 font-medium",
                 activeTab === tab.id
-                  ? "text-white font-semibold"
-                  : "text-gray-500 dark:text-gray-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                  ? "text-white"
+                  : cn(
+                      "text-gray-500 dark:text-gray-400",
+                      "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                    )
               )}
             >
               {tab.label}
@@ -113,22 +110,41 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
+          {/* Active Background for Theme */}
+          {showThemeToggle && (
+            <motion.div
+              layoutId="bottomNavActive"
+              className={cn(
+                "absolute inset-0 rounded-xl",
+                "bg-gradient-to-br from-amber-500 to-orange-500",
+                "shadow-lg shadow-amber-500/25"
+              )}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          )}
+
           <div
             className={cn(
-              "relative z-10 p-1 rounded-xl transition-all duration-300",
+              "relative z-10 transition-all duration-300",
               showThemeToggle
-                ? "text-amber-600 dark:text-amber-400 scale-110"
-                : "text-gray-500 dark:text-gray-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                ? "text-white scale-110"
+                : cn(
+                    "text-gray-500 dark:text-gray-400",
+                    "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                  )
             )}
           >
             <Palette className="w-5 h-5" />
           </div>
           <span
             className={cn(
-              "relative z-10 text-[10px] mt-1 transition-all duration-300",
+              "relative z-10 text-[10px] mt-1 transition-all duration-300 font-medium",
               showThemeToggle
-                ? "text-amber-600 dark:text-amber-400 font-semibold"
-                : "text-gray-500 dark:text-gray-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                ? "text-white"
+                : cn(
+                    "text-gray-500 dark:text-gray-400",
+                    "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                  )
             )}
           >
             Theme

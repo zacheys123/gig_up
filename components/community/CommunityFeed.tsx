@@ -1,5 +1,7 @@
+// components/VideoFeed.tsx
 "use client";
-import React, { useState, useCallback, useRef } from "react";
+
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { VideoCard } from "./VideoCard";
 import { VideoFilters } from "./VideoFilters";
 import { useVideoSocial } from "@/hooks/useVideoSocial";
@@ -7,8 +9,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { Search, Filter, Sparkles, TrendingUp, Music2 } from "lucide-react";
 
-// ---------------- Debounce Hook ----------------
 function useDebounce(callback: (...args: any[]) => void, delay: number) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   return useCallback(
@@ -45,9 +47,10 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({ clerkId }) => {
   const { colors } = useThemeColors();
   const [selectedVideo, setSelectedVideo] = useState<Id<"videos"> | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"for-you" | "trending">("for-you");
 
-  // ---------------- Debounced Search ----------------
   const debouncedUpdateFilter = useDebounce(updateFilter, 300);
+
   const handleUpdateFilter = useCallback(
     (key: keyof typeof filters, value: any) => {
       if (key === "searchQuery") debouncedUpdateFilter(key, value);
@@ -88,7 +91,7 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({ clerkId }) => {
     [handleView]
   );
 
-  // ---------------- Intersection Observer for Lazy Loading ----------------
+  // Intersection Observer for Lazy Loading
   const observer = useRef<IntersectionObserver | null>(null);
   const lastVideoRef = useCallback(
     (node: HTMLDivElement) => {
@@ -106,143 +109,242 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({ clerkId }) => {
     [loadMoreVideos, hasMore, isLoading]
   );
 
+  const currentVideos = activeTab === "for-you" ? videos : trendingVideos;
+
+  const VideoCardSkeleton = () => (
+    <div
+      className={cn(
+        "bg-white dark:bg-gray-900 rounded-2xl overflow-hidden",
+        "border border-gray-100 dark:border-gray-800",
+        "animate-pulse"
+      )}
+    >
+      <div className="flex items-center gap-3 p-4">
+        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
+        <div className="space-y-2 flex-1">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+        </div>
+      </div>
+      <div className="aspect-[4/5] bg-gray-200 dark:bg-gray-700" />
+      <div className="p-4 space-y-3">
+        <div className="flex gap-4">
+          {[1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded"
+            />
+          ))}
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="pb-safe relative space-y-8 px-4 md:px-6 lg:px-8">
-      {/* ---------- Filter Toggle ---------- */}
+    <div className={cn("min-h-screen", colors.background)}>
+      {/* Header */}
       <div
         className={cn(
-          "sticky top-0 z-50 flex justify-between items-center py-2 px-4 backdrop-blur-md shadow-md rounded-xl",
-          colors.background,
-          colors.border
+          "sticky top-0 z-50 border-b backdrop-blur-xl",
+          colors.border,
+          colors.background
         )}
       >
-        <div className={cn("text-sm font-medium", colors.text)}>
-          <span className="font-bold text-amber-500 text-lg">
-            {totalVideos}
-          </span>{" "}
-          video{totalVideos !== 1 ? "s" : ""} found
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Music2 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className={cn("text-xl font-bold", colors.text)}>
+                  Performances
+                </h1>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  {totalVideos} musical moments
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-1 max-w-2xl">
+              {/* Search - Fixed width to prevent overflow */}
+              <div className="flex-1 min-w-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search performances..."
+                    value={filters.searchQuery || ""}
+                    onChange={(e) =>
+                      handleUpdateFilter("searchQuery", e.target.value)
+                    }
+                    className={cn(
+                      "w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-all duration-300",
+                      "",
+                      "focus:ring-2 focus:ring-amber-500 focus:border-transparent",
+                      colors.text,
+                      colors.borderSecondary,
+                      colors.card
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Filter Button */}
+              <motion.button
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={cn(
+                  "p-2.5 rounded-xl transition-all duration-300 flex-shrink-0",
+                  filtersOpen ||
+                    Object.keys(filters).some(
+                      (key) => filters[key as keyof typeof filters]
+                    )
+                    ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-sm"
+                    : cn(
+                        colors.textSecondary,
+                        colors.backgroundMuted,
+                        "hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-700"
+                      )
+                )}
+              >
+                <Filter className="w-5 h-5" />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div
+            className={cn(
+              "flex gap-1 rounded-xl p-1 w-fit",
+              colors.backgroundMuted,
+              colors.border,
+              "border"
+            )}
+          >
+            {[
+              { id: "for-you", label: "For You", icon: Sparkles },
+              { id: "trending", label: "Trending", icon: TrendingUp },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300",
+                  activeTab === tab.id
+                    ? cn(colors.activeBg, colors.text, "shadow-sm")
+                    : cn(
+                        colors.textMuted,
+                        colors.hoverBg,
+                        "hover:" + colors.text.replace("text-", "text-")
+                      )
+                )}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <button
-          onClick={() => setFiltersOpen(!filtersOpen)}
-          className="px-3 py-1 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 shadow-sm transition"
-        >
-          {filtersOpen ? "Hide Filters" : "Show Filters"}
-        </button>
       </div>
 
-      {/* ---------- Filters Panel ---------- */}
+      {/* Filters Panel */}
       <AnimatePresence>
         {filtersOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className={cn("border-b", colors.border, colors.background)}
           >
-            <VideoFilters
-              filters={filters}
-              availableTags={availableTags}
-              onUpdateFilter={handleUpdateFilter}
-              onClearFilters={clearFilters}
-              totalVideos={totalVideos}
-            />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+              <VideoFilters
+                filters={filters}
+                availableTags={availableTags}
+                onUpdateFilter={handleUpdateFilter}
+                onClearFilters={clearFilters}
+                totalVideos={totalVideos}
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ---------- Video Masonry Feed ---------- */}
-      {!hasVideos ? (
-        <EmptyState
-          title="No videos found"
-          message="Try adjusting your filters or check back later for new content."
-        />
-      ) : (
-        <div
-          className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4"
-          style={{ columnGap: "1rem" }}
-        >
-          {videos.map((video, index) => {
-            const isLast = index === videos.length - 1;
-            return (
-              <div
-                key={video._id}
-                ref={isLast ? lastVideoRef : null}
-                className="mb-4 break-inside-avoid relative"
-              >
-                <VideoCard
-                  video={video}
-                  currentUserId={clerkId}
-                  onLike={handleLike}
-                  onUnlike={handleUnlike}
-                  onView={handleView}
-                  onSelect={handleVideoSelect}
-                  isSelected={selectedVideo === video._id}
-                  isLoading={
-                    isLoading(`like-${video._id}`) ||
-                    isLoading(`unlike-${video._id}`)
-                  }
-                  className="w-full rounded-lg overflow-hidden shadow-sm cursor-pointer hover:shadow-lg transition"
-                />
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ---------- Trending Section ---------- */}
-      {trendingVideos.length > 0 && (
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-16"
-        >
-          <h2 className={cn("text-2xl font-bold mb-6", colors.text)}>
-            Trending Now 🔥
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trendingVideos.slice(0, 3).map((video) => (
-              <VideoCard
-                key={video._id}
-                video={video}
-                currentUserId={clerkId}
-                onLike={handleLike}
-                onUnlike={handleUnlike}
-                onView={handleView}
-                className="hover:scale-105 hover:shadow-lg transition-transform duration-200 cursor-pointer"
-              />
-            ))}
+      {/* Video Grid */}
+      {/* Video Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {!hasVideos ? (
+          <div className="text-center py-20">
+            <Music2 className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className={cn("text-xl font-semibold mb-2", colors.text)}>
+              No performances found
+            </h3>
+            <p className={cn("text-sm", colors.textMuted)}>
+              {filters.searchQuery ||
+              filters.tags?.length ||
+              filters.videoType !== "all"
+                ? "Try adjusting your filters"
+                : "Check back later for new content"}
+            </p>
           </div>
-        </motion.section>
-      )}
-    </div>
-  );
-};
+        ) : (
+          <>
+            {/* Responsive Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-1 lg:hidden gap-6 ">
+              {currentVideos.map((video, index) => {
+                const isLast = index === currentVideos.length - 1;
+                return (
+                  <VideoCard
+                    key={video._id}
+                    video={video}
+                    currentUserId={clerkId}
+                    onLike={handleLike}
+                    onUnlike={handleUnlike}
+                    onView={handleView}
+                    onSelect={handleVideoSelect}
+                    isSelected={selectedVideo === video._id}
+                    isLoading={
+                      isLoading(`like-${video._id}`) ||
+                      isLoading(`unlike-${video._id}`)
+                    }
+                    ref={isLast ? lastVideoRef : null}
+                  />
+                );
+              })}
+            </div>
 
-// ---------- Empty State ----------
-const EmptyState: React.FC<{ title: string; message: string }> = ({
-  title,
-  message,
-}) => {
-  const { colors } = useThemeColors();
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0 }}
-      className={cn(
-        "text-center py-16 px-4 sm:px-8 rounded-2xl border-2 border-dashed",
-        colors.border
-      )}
-    >
-      <div className="w-24 h-24 mx-auto mb-6 text-amber-400">
-        <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M18 9.5V5.5C18 4.4 17.1 3.5 16 3.5H8C6.9 3.5 6 4.4 6 5.5V9.5C6 10.6 6.9 11.5 8 11.5H16C17.1 11.5 18 10.6 18 9.5ZM16 9.5H8V5.5H16V9.5ZM18 14.5V18.5C18 19.6 17.1 20.5 16 20.5H8C6.9 20.5 6 19.6 6 18.5V14.5C6 13.4 6.9 12.5 8 12.5H16C17.1 12.5 18 13.4 18 14.5ZM16 18.5V14.5H8V18.5H16Z" />
-        </svg>
+            {/* Large Screen View – single wide card */}
+            <div className="hidden  lg:flex flex-col items-center gap-12">
+              {currentVideos.map((video, index) => (
+                <div
+                  key={video._id}
+                  className="w-full max-w-4xl lg:px-6 xl:px-10"
+                >
+                  <VideoCard
+                    video={video}
+                    currentUserId={clerkId}
+                    onLike={handleLike}
+                    onUnlike={handleUnlike}
+                    onView={handleView}
+                    onSelect={handleVideoSelect}
+                    isSelected={selectedVideo === video._id}
+                    isLoading={
+                      isLoading(`like-${video._id}`) ||
+                      isLoading(`unlike-${video._id}`)
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-      <h3 className={cn("text-xl font-semibold mb-3", colors.text)}>{title}</h3>
-      <p className={cn("text-lg", colors.textMuted)}>{message}</p>
-    </motion.div>
+    </div>
   );
 };

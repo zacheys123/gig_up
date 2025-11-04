@@ -99,30 +99,6 @@ export default function FollowingPage() {
     return filtered;
   }, [followingUsers, searchQuery, filterType]);
 
-  const handleUnfollow = async (
-    targetUserId: string,
-    targetUsername: string
-  ) => {
-    if (!currentUser?.clerkId) {
-      toast.error("Please log in to unfollow users");
-      return;
-    }
-
-    try {
-      const result = await followUser({
-        userId: currentUser.clerkId,
-        tId: targetUserId as any,
-      });
-
-      if (result.action === "unfollowed") {
-        toast.success(`Unfollowed ${targetUsername}`);
-      }
-    } catch (error) {
-      console.error("Failed to unfollow user:", error);
-      toast.error("Failed to unfollow user");
-    }
-  };
-
   const clearFilters = () => {
     setSearchQuery("");
     setFilterType("all");
@@ -471,11 +447,7 @@ export default function FollowingPage() {
                         </div>
                       </div>
                     </div>
-                    <FollowButton
-                      _id={user?._id}
-                      variant="secondary"
-                      size="sm"
-                    />
+                    <FollowButton _id={user?._id} variant="ghost" size="sm" />
                   </div>
 
                   {/* Bio */}

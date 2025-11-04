@@ -8,7 +8,7 @@ import { Palette, ChevronLeft, ChevronRight } from "lucide-react";
 interface Tab {
   id: string;
   label: string;
-  icon: string;
+  icon: string | React.ReactNode;
 }
 
 interface CommunitySidebarProps {
@@ -17,6 +17,9 @@ interface CommunitySidebarProps {
   setActiveTab: (tabId: string) => void;
   handleThemeToggle: () => void;
   colors: Record<string, string>;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+  isDarkMode: boolean;
 }
 
 export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
@@ -25,17 +28,17 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
   setActiveTab,
   handleThemeToggle,
   colors,
+  collapsed,
+  setCollapsed,
 }) => {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
-    <aside
-      className={cn(
-        "hidden sm:flex sm:flex-col relative border-r",
-        collapsed ? "w-20" : "w-64 lg:w-72"
-      )}
+    <motion.aside
+      initial={false}
+      animate={{ width: collapsed ? 80 : 288 }} // 20/72 rem
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      className="hidden sm:flex sm:flex-col relative border-r flex-shrink-0"
     >
-      {/* Glass effect background */}
+      {/* Glass effect */}
       <div
         className={cn(
           "absolute inset-0 bg-white/80 dark:bg-gray-900/80",
@@ -67,14 +70,12 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                 : "text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400"
             )}
           >
-            {/* Active Background */}
             {activeTab === tab.id && (
               <motion.div
                 layoutId="sidebarActiveTab"
                 className="absolute inset-0 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/25"
               />
             )}
-
             <span className="relative z-10">{tab.icon}</span>
             {!collapsed && <span className="relative z-10">{tab.label}</span>}
           </button>
@@ -89,6 +90,6 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
           {!collapsed && <span className="relative z-10">Theme</span>}
         </button>
       </nav>
-    </aside>
+    </motion.aside>
   );
 };

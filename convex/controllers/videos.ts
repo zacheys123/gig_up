@@ -502,10 +502,11 @@ export const getUserProfileVideos = queryGeneric({
   },
 });
 
+// convex/videos.ts - Update getPublicVideos
 export const getPublicVideos = queryGeneric({
   args: {
     limit: v.optional(v.number()),
-    offset: v.optional(v.number()), // <-- add this
+    offset: v.optional(v.number()),
     videoType: v.optional(
       v.union(
         v.literal("profile"),
@@ -516,33 +517,180 @@ export const getPublicVideos = queryGeneric({
         v.literal("all")
       )
     ),
+    currentUserId: v.optional(v.string()), // Add current user's clerkId
   },
-  handler: async (ctx, args): Promise<VideoDocument[]> => {
-    const publicVideos = await ctx.db
-      .query("videos")
-      .withIndex("by_isPublic", (q: any) => q.eq("isPublic", true))
-      .collect();
+  handler: async (
+    ctx,
+    args
+  ): Promise<(VideoDocument & { user?: any; canSeeVideo?: boolean })[]> => {
+    console.log("🎬 Convex Query Called:", {
+      limit: args.limit,
+      offset: args.offset,
+      videoType: args.videoType,
+      currentUserId: args.currentUserId,
+    });
 
-    let filteredVideos = publicVideos;
+    // Get ALL public videos first
+    const allPublicVideos = await ctx.db.query("videos").collect();
+    console.log("📊 Total videos in DB:", allPublicVideos.length);
+
+    // Get current user if provided
+    let currentUser = null;
+    if (args.currentUserId) {
+      currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.currentUserId!))
+        .first();
+    }
+
+    let filteredVideos = allPublicVideos;
+
+    // Filter by video type if specified
     if (args.videoType && args.videoType !== "all") {
-      filteredVideos = publicVideos.filter(
+      filteredVideos = allPublicVideos.filter(
         (video: VideoDocument) => video.videoType === args.videoType
       );
     }
 
+    console.log("🎯 After filtering:", filteredVideos.length, "videos");
+
+    // Sort by creation date (newest first)
     const sortedVideos = filteredVideos.sort(
       (a: VideoDocument, b: VideoDocument) => b.createdAt - a.createdAt
     );
 
-    // Apply offset for pagination
+    // Apply pagination
     const start = args.offset || 0;
-    if (args.limit) {
-      return sortedVideos.slice(start, start + args.limit);
-    }
+    const end = args.limit ? start + args.limit : sortedVideos.length;
+    const paginatedVideos = sortedVideos.slice(start, end);
 
-    return sortedVideos.slice(start);
+    console.log("📄 Pagination result:", {
+      start,
+      end,
+      returned: paginatedVideos.length,
+    });
+
+    // Fetch user data and check visibility for paginated videos
+    const videosWithUsers = await Promise.all(
+      paginatedVideos.map(async (video) => {
+        try {
+          const videoOwner = await ctx.db
+            .query("users")
+            .withIndex("by_clerkId", (q) => q.eq("clerkId", video.userId))
+            .first();
+
+          // Check if current user can see this video
+          const canSeeVideo = await checkVideoVisibility(
+            ctx,
+            video,
+            videoOwner,
+            currentUser
+          );
+
+          return {
+            ...video,
+            user: videoOwner
+              ? {
+                  _id: videoOwner._id,
+                  clerkId: videoOwner.clerkId,
+                  username: videoOwner.username,
+                  firstname: videoOwner.firstname,
+                  lastname: videoOwner.lastname,
+                  picture: videoOwner.picture,
+                  instrument: videoOwner.instrument,
+                  city: videoOwner.city,
+                }
+              : null,
+            canSeeVideo,
+          };
+        } catch (error) {
+          console.error(`Error fetching user for video ${video._id}:`, error);
+          return {
+            ...video,
+            user: null,
+            canSeeVideo: false, // Default to false if there's an error
+          };
+        }
+      })
+    );
+
+    console.log("✅ Final videos returned:", videosWithUsers.length);
+    return videosWithUsers;
   },
 });
+
+// Add this helper function to check video visibility
+async function checkVideoVisibility(
+  ctx: any,
+  video: VideoDocument,
+  videoOwner: any,
+  currentUser: any
+): Promise<boolean> {
+  // If video is public, anyone can see it
+  if (video.isPublic) {
+    return true;
+  }
+
+  // If no current user, can't see private videos
+  if (!currentUser) {
+    return false;
+  }
+
+  // User can always see their own videos
+  if (currentUser.clerkId === video.userId) {
+    return true;
+  }
+
+  // Check if current user follows the video owner
+  if (videoOwner) {
+    const isFollowing = await checkIfFollowing(
+      ctx,
+      currentUser._id,
+      videoOwner._id
+    );
+    return isFollowing;
+  }
+
+  return false;
+}
+
+// Helper function to check follow status
+// convex/videos.ts - Updated checkIfFollowing function
+async function checkIfFollowing(
+  ctx: any,
+  currentUserId: Id<"users">,
+  targetUserId: Id<"users">
+): Promise<boolean> {
+  try {
+    // Get both users
+    const [currentUser, targetUser] = await Promise.all([
+      ctx.db.get(currentUserId),
+      ctx.db.get(targetUserId),
+    ]);
+
+    if (!currentUser || !targetUser) {
+      console.log("One or both users not found");
+      return false;
+    }
+
+    // Check if current user follows target user
+    // currentUser.following contains clerkIds of people the user follows
+    const isFollowing =
+      currentUser.followings?.includes(targetUser.clerkId) || false;
+
+    console.log("🔍 Follow check:", {
+      currentUser: currentUser.username,
+      targetUser: targetUser.username,
+      currentUserFollowing: currentUser.followings,
+      isFollowing,
+    });
+
+    return isFollowing;
+  } catch (error) {
+    console.error("Error checking follow status:", error);
+    return false;
+  }
+}
 
 export const getTrendingVideos = queryGeneric({
   args: {

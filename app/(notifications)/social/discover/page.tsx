@@ -32,6 +32,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { UserProps } from "@/types/userTypes";
+import { Book } from "react-feather";
 
 export default function DiscoverPage() {
   const { user: currentUser } = useCurrentUser();
@@ -45,7 +46,7 @@ export default function DiscoverPage() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [activeCategory, setActiveCategory] = useState<
-    "all" | "musicians" | "clients" | "pro"
+    "all" | "musicians" | "clients" | "pro" | "bookers"
   >("all");
 
   // Search users with filters
@@ -110,6 +111,7 @@ export default function DiscoverPage() {
   // Group users by category for better organization
   const categorizedUsers = useMemo(() => {
     const musicians = enhancedUsers.filter((user) => user.isMusician);
+    const bookers = enhancedUsers.filter((user) => user.isBooker);
     const clients = enhancedUsers.filter((user) => user.isClient);
     const proUsers = enhancedUsers.filter((user) => user.tier === "pro");
 
@@ -119,7 +121,14 @@ export default function DiscoverPage() {
       .sort((a, b) => (b.followers?.length || 0) - (a.followers?.length || 0))
       .slice(0, 8);
 
-    return { musicians, clients, proUsers, popularUsers, all: enhancedUsers };
+    return {
+      musicians,
+      clients,
+      proUsers,
+      popularUsers,
+      all: enhancedUsers,
+      bookers,
+    };
   }, [enhancedUsers]);
 
   // Get users for current active category
@@ -129,6 +138,8 @@ export default function DiscoverPage() {
         return categorizedUsers.musicians;
       case "clients":
         return categorizedUsers.clients;
+      case "bookers":
+        return categorizedUsers.bookers;
       case "pro":
         return categorizedUsers.proUsers;
       default:
@@ -211,6 +222,14 @@ export default function DiscoverPage() {
       description: "Connect with event organizers",
     },
     {
+      id: "bookers" as const,
+      title: "Bookers",
+      count: categorizedUsers.bookers.length,
+      icon: Book,
+      color: "bg-purple-500",
+      description: "Book Gigs Manage bands",
+    },
+    {
       id: "pro" as const,
       title: "Pro Users",
       count: categorizedUsers.proUsers.length,
@@ -240,7 +259,10 @@ export default function DiscoverPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={cn("text-sm", colors.border)}>
+              <Badge
+                variant="outline"
+                className={cn("text-sm", colors.border, colors.text)}
+              >
                 {enhancedUsers.length} users
               </Badge>
             </div>
@@ -251,7 +273,7 @@ export default function DiscoverPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+            className="grid grid-cols-2 lg:grid-cols-5 gap-2 mb-6"
           >
             {categoryCards.map((category) => (
               <motion.div
@@ -259,10 +281,11 @@ export default function DiscoverPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
-                  "p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                  "p-4 rounded-xl border cursor-pointer transition-all duration-200 w-full",
                   colors.card,
                   colors.border,
-                  activeCategory === category.id && "ring-2 ring-blue-500"
+                  activeCategory === category.id && "ring-2 ring-blue-500",
+                  isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50"
                 )}
                 onClick={() => setActiveCategory(category.id)}
               >
@@ -270,7 +293,10 @@ export default function DiscoverPage() {
                   <category.icon
                     className={`w-8 h-8 ${category.color} text-white p-1.5 rounded-lg`}
                   />
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge
+                    variant="secondary"
+                    className={cn("text-xs", colors.text)}
+                  >
                     {category.count}
                   </Badge>
                 </div>
@@ -298,19 +324,36 @@ export default function DiscoverPage() {
             <div className="flex flex-col lg:flex-row gap-4">
               {/* Search Input */}
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search
+                  className={cn(
+                    "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
+                    colors.textMuted
+                  )}
+                />
                 <Input
                   placeholder="Search by name, username, city, instrument..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 rounded-xl"
+                  className={cn(
+                    "pl-10 pr-4 py-2 rounded-xl",
+                    colors.background,
+                    colors.border,
+                    colors.text
+                  )}
                 />
               </div>
 
               {/* Filter Dropdown */}
               <DropdownMenu open={showFilters} onOpenChange={setShowFilters}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl gap-2">
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "rounded-xl gap-2",
+                      colors.border,
+                      colors.text
+                    )}
+                  >
                     <Filter className="w-4 h-4" />
                     Filters
                     {hasActiveFilters && (
@@ -320,7 +363,10 @@ export default function DiscoverPage() {
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuContent
+                  align="end"
+                  className={cn("w-80", colors.card, colors.border)}
+                >
                   <div className="p-4">
                     <h4 className={cn("font-semibold mb-3", colors.text)}>
                       Filter Users
@@ -383,7 +429,12 @@ export default function DiscoverPage() {
                             city: e.target.value,
                           }))
                         }
-                        className="rounded-lg"
+                        className={cn(
+                          "rounded-lg",
+                          colors.background,
+                          colors.border,
+                          colors.text
+                        )}
                       />
                     </div>
 
@@ -401,18 +452,26 @@ export default function DiscoverPage() {
                             instrument: e.target.value,
                           }))
                         }
-                        className="rounded-lg"
+                        className={cn(
+                          "rounded-lg",
+                          colors.background,
+                          colors.border,
+                          colors.text
+                        )}
                       />
                     </div>
                   </div>
 
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className={colors.border} />
 
                   <div className="p-2">
                     <Button
                       variant="ghost"
                       onClick={clearFilters}
-                      className="w-full justify-center text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className={cn(
+                        "w-full justify-center text-red-600 hover:text-red-700",
+                        isDarkMode ? "hover:bg-red-900/20" : "hover:bg-red-50"
+                      )}
                     >
                       <X className="w-4 h-4 mr-2" />
                       Clear All Filters
@@ -430,7 +489,10 @@ export default function DiscoverPage() {
                 className="flex flex-wrap gap-2 mt-4"
               >
                 {searchQuery && (
-                  <Badge variant="secondary" className="gap-1">
+                  <Badge
+                    variant="secondary"
+                    className={cn("gap-1", colors.text)}
+                  >
                     Search: "{searchQuery}"
                     <X
                       className="w-3 h-3 cursor-pointer"
@@ -439,7 +501,10 @@ export default function DiscoverPage() {
                   </Badge>
                 )}
                 {filters.isMusician !== undefined && (
-                  <Badge variant="secondary" className="gap-1">
+                  <Badge
+                    variant="secondary"
+                    className={cn("gap-1", colors.text)}
+                  >
                     Type: {filters.isMusician ? "Musicians" : "Clients"}
                     <X
                       className="w-3 h-3 cursor-pointer"
@@ -453,7 +518,10 @@ export default function DiscoverPage() {
                   </Badge>
                 )}
                 {filters.city && (
-                  <Badge variant="secondary" className="gap-1">
+                  <Badge
+                    variant="secondary"
+                    className={cn("gap-1", colors.text)}
+                  >
                     City: {filters.city}
                     <X
                       className="w-3 h-3 cursor-pointer"
@@ -464,7 +532,10 @@ export default function DiscoverPage() {
                   </Badge>
                 )}
                 {filters.instrument && (
-                  <Badge variant="secondary" className="gap-1">
+                  <Badge
+                    variant="secondary"
+                    className={cn("gap-1", colors.text)}
+                  >
                     Instrument: {filters.instrument}
                     <X
                       className="w-3 h-3 cursor-pointer"
@@ -475,7 +546,10 @@ export default function DiscoverPage() {
                   </Badge>
                 )}
                 {activeCategory !== "all" && (
-                  <Badge variant="secondary" className="gap-1">
+                  <Badge
+                    variant="secondary"
+                    className={cn("gap-1", colors.text)}
+                  >
                     Category: {activeCategory}
                     <X
                       className="w-3 h-3 cursor-pointer"
@@ -501,7 +575,8 @@ export default function DiscoverPage() {
                   className={cn(
                     "rounded-xl border p-6 transition-all duration-300 hover:shadow-lg flex flex-col",
                     colors.card,
-                    colors.border
+                    colors.border,
+                    isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50"
                   )}
                 >
                   {/* User Header */}
@@ -512,16 +587,18 @@ export default function DiscoverPage() {
                           <img
                             src={user.picture}
                             alt={user.firstname || user.username}
-                            className="rounded-xl object-cover wq-[48px] h-[48px]"
+                            className="rounded-xl object-cover w-12 h-12"
                           />
                         ) : (
                           <div
                             className={cn(
                               "w-12 h-12 rounded-xl flex items-center justify-center",
-                              colors.secondaryBackground
+                              isDarkMode ? "bg-gray-700" : "bg-gray-200"
                             )}
                           >
-                            <Users className="w-6 h-6 text-gray-400" />
+                            <Users
+                              className={cn("w-6 h-6", colors.textMuted)}
+                            />
                           </div>
                         )}
                         {user.tier === "pro" && (
@@ -543,7 +620,12 @@ export default function DiscoverPage() {
                     </div>
 
                     {user.isPrivate && (
-                      <Shield className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <Shield
+                        className={cn(
+                          "w-4 h-4 flex-shrink-0",
+                          colors.textMuted
+                        )}
+                      />
                     )}
                   </div>
 
@@ -571,7 +653,10 @@ export default function DiscoverPage() {
                     )}
 
                     {user.instrument && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge
+                        variant="outline"
+                        className={cn("text-xs", colors.border, colors.text)}
+                      >
                         <Music className="w-2 h-2 mr-1" />
                         {user.instrument}
                       </Badge>
@@ -582,7 +667,7 @@ export default function DiscoverPage() {
                   <div className="space-y-2 mb-4 flex-1">
                     {user.city && (
                       <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="w-3 h-3 text-gray-400" />
+                        <MapPin className={cn("w-3 h-3", colors.textMuted)} />
                         <span className={colors.textMuted}>{user.city}</span>
                       </div>
                     )}
@@ -663,7 +748,9 @@ export default function DiscoverPage() {
               colors.border
             )}
           >
-            <Search className="mx-auto text-gray-400 w-16 h-16 mb-4" />
+            <Search
+              className={cn("mx-auto w-16 h-16 mb-4", colors.textMuted)}
+            />
             <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
               No Users Found
             </h3>
@@ -675,7 +762,11 @@ export default function DiscoverPage() {
                 : "Start by searching for users or exploring different categories."}
             </p>
             {hasActiveFilters && (
-              <Button onClick={clearFilters} variant="outline">
+              <Button
+                onClick={clearFilters}
+                variant="outline"
+                className={cn(colors.border, colors.text)}
+              >
                 Clear Filters
               </Button>
             )}
