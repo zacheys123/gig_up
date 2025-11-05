@@ -287,6 +287,9 @@ export const userModel = defineTable({
   //     lastCalculated: v.number(),
   //   })
   // ),
+  availability: v.optional(
+    v.union(v.literal("available"), v.literal("notavailable"))
+  ),
 })
   // ... keep your existing indexes
   .index("by_clerkId", ["clerkId"])

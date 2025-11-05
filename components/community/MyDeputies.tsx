@@ -3,13 +3,39 @@ import React, { useState } from "react";
 import { useDeputies } from "@/hooks/useDeputies";
 import { Id } from "@/convex/_generated/dataModel";
 import { EmptyState } from "./EmptyState";
+import { cn } from "@/lib/utils";
+import { useThemeColors } from "@/hooks/useTheme";
+import {
+  Edit3,
+  Trash2,
+  Save,
+  X,
+  Users,
+  MapPin,
+  Music,
+  Calendar,
+  CheckCircle2,
+  UserCheck,
+  Shield,
+  BookOpen,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface MyDeputiesProps {
   user: any;
 }
 
 export const MyDeputies: React.FC<MyDeputiesProps> = ({ user }) => {
-  const [editingDeputy, setEditingDeputy] = useState<Id<"users"> | null>(null);
+  const [editingDeputy, setEditingDeputy] = useState<any | null>(null);
+  const { colors } = useThemeColors();
   const {
     myDeputies,
     removeDeputy,
@@ -20,159 +46,351 @@ export const MyDeputies: React.FC<MyDeputiesProps> = ({ user }) => {
   } = useDeputies(user._id as Id<"users">);
 
   const handleRemove = async (deputyId: Id<"users">) => {
-    if (confirm("Are you sure you want to remove this deputy?")) {
+    if (
+      confirm("Are you sure you want to remove this deputy from your team?")
+    ) {
       const result = await removeDeputy(deputyId);
-      if (!result.success) {
-        alert(`Failed to remove deputy: ${result.error}`);
+      if (result.success) {
+        toast.success("Deputy removed successfully");
+      } else {
+        toast.error(`Failed to remove deputy: ${result.error}`);
       }
+    }
+  };
+
+  const handleToggleBookable = async (
+    deputyId: Id<"users">,
+    currentValue: boolean
+  ) => {
+    const result = await updateDeputySettings(deputyId, {
+      canBeBooked: !currentValue,
+    });
+
+    if (result.success) {
+      toast.success(
+        `Deputy ${!currentValue ? "enabled" : "disabled"} for direct booking`
+      );
+    } else {
+      toast.error("Failed to update booking status");
+    }
+  };
+
+  const handleOpenEditModal = (deputy: any) => {
+    setEditingDeputy({
+      ...deputy,
+      settings: {
+        canBeBooked: deputy?.relationship.canBeBooked ?? true,
+        note: deputy?.relationship.note || "",
+        gigType: deputy?.relationship.gigType || "",
+      },
+    });
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingDeputy(null);
+  };
+
+  const handleSaveSettings = async (updates: any) => {
+    if (!editingDeputy) return;
+
+    const result = await updateDeputySettings(editingDeputy._id, updates);
+    if (result.success) {
+      toast.success("Deputy settings updated");
+      handleCloseEditModal();
+    } else {
+      toast.error("Failed to update settings");
     }
   };
 
   if (!hasDeputies) {
     return (
       <EmptyState
-        title="No deputies yet"
-        message="Add trusted musicians as your deputies to cover gigs when you're unavailable."
+        title="No Team Members Yet"
+        message="Build your team by adding trusted musicians as deputies to cover gigs when you're unavailable."
         action={() => (window.location.href = "/community?tab=deputies")}
         actionText="Find Deputies"
+        icon={<Users className="w-12 h-12" />}
       />
     );
   }
 
   return (
-    <div className="space-y-6">
-      <Header title="My Deputies" count={totalDeputies} />
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className={cn("rounded-2xl p-8 border", colors.border, colors.card)}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div
+              className={cn(
+                "p-3 rounded-xl",
+                "bg-gradient-to-br from-amber-500 to-orange-500"
+              )}
+            >
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className={cn("text-3xl font-bold", colors.text)}>My Team</h1>
+              <p className={cn("text-lg mt-2", colors.textMuted)}>
+                Manage your trusted deputies and their settings
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div
+              className={cn(
+                "px-4 py-2 rounded-full border text-sm font-medium",
+                colors.border,
+                colors.text
+              )}
+            >
+              <span className="font-bold text-amber-600">{totalDeputies}</span>
+              <span className={cn("ml-1", colors.textMuted)}>
+                {totalDeputies === 1 ? "trusted deputy" : "trusted deputies"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Deputies Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {myDeputies.map((deputy) => (
           <DeputyManagementCard
             key={deputy?._id}
             deputy={deputy}
-            isEditing={editingDeputy === deputy?._id}
             isLoading={
               isLoading(`remove-${deputy?._id}`) ||
               isLoading(`update-${deputy?._id}`)
             }
-            onEdit={() => setEditingDeputy(deputy?._id as Id<"users">)}
-            onCancelEdit={() => setEditingDeputy(null)}
-            onSaveSettings={updateDeputySettings}
+            onEdit={() => handleOpenEditModal(deputy)}
             onRemove={() => handleRemove(deputy?._id as Id<"users">)}
+            onToggleBookable={handleToggleBookable}
           />
         ))}
       </div>
-    </div>
-  );
-};
 
-const DeputyManagementCard: React.FC<{
-  deputy: any;
-  isEditing: boolean;
-  isLoading: boolean;
-  onEdit: () => void;
-  onCancelEdit: () => void;
-  onSaveSettings: (id: Id<"users">, updates: any) => Promise<any>;
-  onRemove: () => void;
-}> = ({
-  deputy,
-  isEditing,
-  isLoading,
-  onEdit,
-  onCancelEdit,
-  onSaveSettings,
-  onRemove,
-}) => {
-  const [settings, setSettings] = useState({
-    canBeBooked: deputy?.relationship.canBeBooked ?? true,
-    note: deputy?.relationship.note || "",
-    gigType: deputy?.relationship.gigType || "",
-  });
-
-  const handleSave = async () => {
-    const result = await onSaveSettings(deputy?._id, settings);
-    if (result.success) {
-      onCancelEdit();
-    }
-  };
-
-  return (
-    <div className="border rounded-lg p-6 bg-white shadow-sm">
-      <DeputyHeader deputy={deputy} />
-      <DeputyInfo deputy={deputy} />
-
-      {!isEditing ? (
-        <ActionButtons
-          onEdit={onEdit}
-          onRemove={onRemove}
-          isLoading={isLoading}
-        />
-      ) : (
-        <EditForm
-          settings={settings}
-          onChange={setSettings}
-          onSave={handleSave}
-          onCancel={onCancelEdit}
-          isLoading={isLoading}
+      {/* Edit Modal */}
+      {editingDeputy && (
+        <EditModal
+          deputy={editingDeputy}
+          settings={editingDeputy.settings}
+          onSave={handleSaveSettings}
+          onClose={handleCloseEditModal}
+          isLoading={isLoading(`update-${editingDeputy._id}`)}
         />
       )}
     </div>
   );
 };
 
-const DeputyHeader: React.FC<{ deputy: any }> = ({ deputy }) => (
-  <div className="flex items-center gap-4 mb-4">
-    <img
-      src={deputy?.picture || "/default-avatar.png"}
-      alt={deputy?.username}
-      className="w-16 h-16 rounded-full border-2 border-green-500"
-    />
-    <div className="flex-1">
-      <h3 className="font-semibold text-lg truncate">
-        {deputy?.firstname} {deputy?.lastname}
-      </h3>
-      <p className="text-gray-600 truncate">@{deputy?.username}</p>
-      <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full mt-1">
-        Active Deputy
-      </span>
-    </div>
-  </div>
-);
+const DeputyManagementCard: React.FC<{
+  deputy: any;
+  isLoading: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+  onToggleBookable: (id: Id<"users">, currentValue: boolean) => void;
+}> = ({ deputy, isLoading, onEdit, onRemove, onToggleBookable }) => {
+  const { colors } = useThemeColors();
 
-const DeputyInfo: React.FC<{ deputy: any }> = ({ deputy }) => (
-  <div className="space-y-3 mb-4">
-    <InfoField label="Role" value={deputy?.relationship.forMySkill} />
-    <InfoField label="Gig Type" value={deputy?.relationship.gigType} />
-    <InfoField
-      label="Bookable"
-      value={deputy?.relationship.canBeBooked ? "Yes" : "No"}
-      valueClassName={
-        deputy?.relationship.canBeBooked ? "text-green-600" : "text-gray-600"
-      }
-    />
-    <InfoField label="Instrument" value={deputy?.instrument} />
-    <InfoField label="Location" value={deputy?.city} />
-    <InfoField label="Backs up" value={`${deputy?.backupCount} principals`} />
+  const handleDirectToggle = () => {
+    onToggleBookable(deputy?._id, deputy?.relationship.canBeBooked);
+  };
 
-    {deputy?.relationship.note && (
-      <div className="p-3 bg-gray-50 rounded-lg">
-        <p className="text-sm text-gray-700 italic">
-          "{deputy?.relationship.note}"
-        </p>
+  return (
+    <div
+      className={cn(
+        "group relative rounded-2xl border transition-all duration-300 hover:shadow-xl",
+        "hover:scale-[1.02] hover:-translate-y-1",
+        colors.border,
+        colors.card
+      )}
+    >
+      {/* Background Gradient Effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+      <div className="relative p-6">
+        <DeputyHeader
+          deputy={deputy}
+          onToggleBookable={handleDirectToggle}
+          isLoading={isLoading}
+        />
+        <DeputyInfo deputy={deputy} />
+        <ActionButtons
+          onEdit={onEdit}
+          onRemove={onRemove}
+          isLoading={isLoading}
+        />
       </div>
-    )}
-  </div>
-);
+    </div>
+  );
+};
+
+const DeputyHeader: React.FC<{
+  deputy: any;
+  onToggleBookable: () => void;
+  isLoading: boolean;
+}> = ({ deputy, onToggleBookable, isLoading }) => {
+  const { colors } = useThemeColors();
+
+  return (
+    <div className="flex items-start gap-4 mb-6">
+      <div className="relative">
+        <img
+          src={deputy?.picture || "/default-avatar.png"}
+          alt={deputy?.username}
+          className="w-16 h-16 rounded-2xl border-2 border-white shadow-lg"
+        />
+        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+          <CheckCircle2 className="w-3 h-3 text-white" />
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className={cn("font-bold text-lg truncate", colors.text)}>
+            {deputy?.firstname} {deputy?.lastname}
+          </h3>
+          <button
+            onClick={onToggleBookable}
+            disabled={isLoading}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all duration-200",
+              "hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed",
+              deputy?.relationship.canBeBooked
+                ? "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20"
+                : "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20"
+            )}
+          >
+            {deputy?.relationship.canBeBooked ? (
+              <ToggleRight className="w-3 h-3" />
+            ) : (
+              <ToggleLeft className="w-3 h-3" />
+            )}
+            {deputy?.relationship.canBeBooked ? "Bookable" : "Unavailable"}
+          </button>
+        </div>
+        <p className={cn("text-sm truncate mb-2", colors.textMuted)}>
+          @{deputy?.username}
+        </p>
+
+        {/* Role Badge */}
+        <Badge
+          variant="secondary"
+          className="bg-amber-500/10 text-amber-600 border-amber-500/20"
+        >
+          <UserCheck className="w-3 h-3 mr-1" />
+          {deputy?.relationship?.forMySkill}
+        </Badge>
+      </div>
+    </div>
+  );
+};
+
+const DeputyInfo: React.FC<{ deputy: any }> = ({ deputy }) => {
+  const { colors } = useThemeColors();
+
+  return (
+    <div className="space-y-4 mb-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <InfoField
+          icon={<Music className="w-4 h-4" />}
+          label="Instrument"
+          value={deputy?.instrument}
+        />
+        <InfoField
+          icon={<MapPin className="w-4 h-4" />}
+          label="Location"
+          value={deputy?.city}
+        />
+        <InfoField
+          icon={<Users className="w-4 h-4" />}
+          label="Experience"
+          value={`BackUp to ${deputy?.backupCount || 0} musicians`}
+        />
+      </div>
+
+      {/* Quick Status Info */}
+      <div
+        className={cn(
+          "p-3 rounded-xl border text-sm",
+          colors.border,
+          deputy?.relationship.canBeBooked
+            ? "bg-green-500/5 text-green-700"
+            : "bg-amber-500/5 text-amber-700"
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <Shield className="w-4 h-4" />
+          <span className="font-medium">
+            {deputy?.relationship.canBeBooked
+              ? "Available for direct bookings"
+              : "Not available for direct bookings"}
+          </span>
+        </div>
+      </div>
+
+      {/* Gig Type */}
+      {deputy?.relationship.gigType && (
+        <div className="flex items-center gap-2">
+          <Calendar className={cn("w-4 h-4", colors.textMuted)} />
+          <span className={cn("text-sm font-medium", colors.text)}>
+            {deputy.relationship.gigType}
+          </span>
+        </div>
+      )}
+
+      {/* Personal Note */}
+      {deputy?.relationship.note && (
+        <div
+          className={cn(
+            "p-3 rounded-xl border",
+            colors.border,
+            "bg-amber-500/5"
+          )}
+        >
+          <div className="flex items-start gap-2">
+            <BookOpen
+              className={cn("w-4 h-4 mt-0.5 flex-shrink-0", colors.textMuted)}
+            />
+            <p className={cn("text-sm italic leading-relaxed", colors.text)}>
+              "{deputy.relationship.note}"
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const InfoField: React.FC<{
+  icon: React.ReactNode;
   label: string;
   value?: string;
   valueClassName?: string;
-}> = ({ label, value, valueClassName = "" }) =>
-  value ? (
-    <div className="flex justify-between">
-      <span className="text-sm text-gray-600">{label}:</span>
-      <span className={`text-sm font-medium ${valueClassName}`}>{value}</span>
+}> = ({ icon, label, value, valueClassName = "" }) => {
+  const { colors } = useThemeColors();
+
+  return value ? (
+    <div className="flex items-center gap-2">
+      <div className={cn("p-1.5 rounded-lg", colors.backgroundMuted)}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className={cn("text-xs", colors.textMuted)}>{label}</div>
+        <div
+          className={cn(
+            "text-sm font-medium truncate",
+            colors.text,
+            valueClassName
+          )}
+        >
+          {value}
+        </div>
+      </div>
     </div>
   ) : null;
+};
 
 const ActionButtons: React.FC<{
   onEdit: () => void;
@@ -180,128 +398,202 @@ const ActionButtons: React.FC<{
   isLoading: boolean;
 }> = ({ onEdit, onRemove, isLoading }) => (
   <div className="flex gap-2">
-    <button
+    <Button
       onClick={onEdit}
       disabled={isLoading}
-      className="flex-1 px-3 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 disabled:opacity-50"
+      variant="outline"
+      className="flex-1 gap-2"
     >
-      Edit
-    </button>
-    <button
+      <Edit3 className="w-4 h-4" />
+      Edit Settings
+    </Button>
+    <Button
       onClick={onRemove}
       disabled={isLoading}
-      className="flex-1 px-3 py-2 bg-red-500 text-white rounded text-sm hover:bg-red-600 disabled:opacity-50"
+      variant="outline"
+      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 gap-2"
     >
+      <Trash2 className="w-4 h-4" />
       Remove
-    </button>
+    </Button>
   </div>
 );
 
-const EditForm: React.FC<{
+// NEW: Edit Modal Component
+const EditModal: React.FC<{
+  deputy: any;
   settings: any;
-  onChange: (settings: any) => void;
-  onSave: () => void;
-  onCancel: () => void;
+  onSave: (updates: any) => void;
+  onClose: () => void;
   isLoading: boolean;
-}> = ({ settings, onChange, onSave, onCancel, isLoading }) => (
-  <div className="mt-4 p-4 border-t border-gray-200">
-    <h4 className="font-medium mb-3">Edit Deputy Settings</h4>
-    <div className="space-y-3">
-      <Checkbox
-        label="Allow clients to book this deputy directly"
-        checked={settings.canBeBooked}
-        onChange={(checked) => onChange({ ...settings, canBeBooked: checked })}
-      />
-      <Input
-        label="Gig Type"
-        value={settings.gigType}
-        onChange={(value) => onChange({ ...settings, gigType: value })}
-        placeholder="e.g., Wedding, Corporate, Concert"
-      />
-      <Textarea
-        label="Personal Note"
-        value={settings.note}
-        onChange={(value) => onChange({ ...settings, note: value })}
-        placeholder="Add a note about this deputy?..."
-      />
-      <div className="flex gap-2">
-        <button
-          onClick={onSave}
-          disabled={isLoading}
-          className="flex-1 px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50"
+}> = ({ deputy, settings, onSave, onClose, isLoading }) => {
+  const { colors } = useThemeColors();
+  const [localSettings, setLocalSettings] = useState(settings);
+
+  const handleSave = () => {
+    onSave(localSettings);
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className={cn(
+          "relative w-full max-w-md rounded-2xl border shadow-2xl animate-in zoom-in-95",
+          colors.border,
+          colors.card
+        )}
+      >
+        {/* Modal Header */}
+        <div
+          className={cn(
+            "flex items-center justify-between p-6 border-b",
+            colors.border
+          )}
         >
-          Save
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={isLoading}
-          className="flex-1 px-3 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 disabled:opacity-50"
-        >
-          Cancel
-        </button>
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "p-2 rounded-lg",
+                "bg-gradient-to-br from-amber-500 to-orange-500"
+              )}
+            >
+              <Edit3 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className={cn("text-xl font-bold", colors.text)}>
+                Edit Deputy Settings
+              </h2>
+              <p className={cn("text-sm", colors.textMuted)}>
+                {deputy?.firstname} {deputy?.lastname}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              "hover:bg-gray-100 dark:hover:bg-gray-800",
+              colors.textMuted
+            )}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+          {/* Deputy Info Summary */}
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+            <img
+              src={deputy?.picture || "/default-avatar.png"}
+              alt={deputy?.username}
+              className="w-12 h-12 rounded-xl"
+            />
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>
+                {deputy?.firstname} {deputy?.lastname}
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                @{deputy?.username} • {deputy?.relationship.forMySkill}
+              </p>
+            </div>
+          </div>
+
+          {/* Settings Form */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="canBeBooked" className="text-base font-medium">
+                  Allow Direct Booking
+                </Label>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Let clients book this deputy directly for gigs
+                </p>
+              </div>
+              <Switch
+                id="canBeBooked"
+                checked={localSettings.canBeBooked}
+                onCheckedChange={(checked) =>
+                  setLocalSettings({ ...localSettings, canBeBooked: checked })
+                }
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="gigType" className="text-base font-medium">
+                Preferred Gig Types
+              </Label>
+              <p className={cn("text-sm", colors.textMuted)}>
+                Specify the types of gigs this deputy is best suited for
+              </p>
+              <Input
+                id="gigType"
+                value={localSettings.gigType}
+                onChange={(e) =>
+                  setLocalSettings({
+                    ...localSettings,
+                    gigType: e.target.value,
+                  })
+                }
+                placeholder="e.g., Wedding, Corporate, Concert, Club"
+                className="rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="note" className="text-base font-medium">
+                Personal Note
+              </Label>
+              <p className={cn("text-sm", colors.textMuted)}>
+                Add a private note about this deputy (only you can see this)
+              </p>
+              <Textarea
+                id="note"
+                value={localSettings.note}
+                onChange={(e) =>
+                  setLocalSettings({ ...localSettings, note: e.target.value })
+                }
+                placeholder="e.g., Great with jazz standards, available weekends, prefers acoustic settings..."
+                rows={4}
+                className="rounded-lg resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className={cn("flex gap-3 p-6 border-t", colors.border)}>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1"
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="flex-1 gap-2 bg-amber-500 hover:bg-amber-600"
+          >
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Save Changes
+          </Button>
+        </div>
       </div>
     </div>
-  </div>
-);
-
-const Checkbox: React.FC<{
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}> = ({ label, checked, onChange }) => (
-  <div className="flex items-center gap-2">
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={(e) => onChange(e.target.checked)}
-      className="rounded"
-    />
-    <label className="text-sm">{label}</label>
-  </div>
-);
-
-const Input: React.FC<{
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}> = ({ label, value, onChange, placeholder }) => (
-  <div>
-    <label className="block text-sm font-medium mb-1">{label}</label>
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full p-2 border rounded text-sm"
-    />
-  </div>
-);
-
-const Textarea: React.FC<{
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}> = ({ label, value, onChange, placeholder }) => (
-  <div>
-    <label className="block text-sm font-medium mb-1">{label}</label>
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={2}
-      className="w-full p-2 border rounded text-sm"
-    />
-  </div>
-);
-
-const Header: React.FC<{ title: string; count: number }> = ({
-  title,
-  count,
-}) => (
-  <div className="flex justify-between items-center">
-    <h2 className="text-2xl font-bold">{title}</h2>
-    <p className="text-gray-600">{count} trusted deputies</p>
-  </div>
-);
+  );
+};

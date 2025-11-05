@@ -20,7 +20,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
   const { colors } = useThemeColors();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10 pb-20">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-6 mb-10 pb-20">
       {musicians
         .slice(0, 4)
         .map((musician: TrendingMusician, index: number) => (
@@ -38,10 +38,15 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
           >
             {/* 🔥 Top 3 Badge */}
             {index < 3 && (
-              <div className="absolute -top-3 -right-3 bg-gradient-to-br from-amber-500 to-orange-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-md flex items-center gap-3">
-                <ComprehensiveRating rating={musician.rating} size="sm" />
-                <span></span>
-                🔥 Top {index + 1}
+              <div className="absolute w-full  -top-3 -right-3 my-5 rounded-full font-semibold shadow-md flex  items-center gap-3">
+                <ComprehensiveRating
+                  rating={musician.rating}
+                  size="sm"
+                  className="flex-1"
+                />
+                <span className="px-3 py-1  bg-gradient-to-br from-amber-500 to-orange-500 text-white text-xs">
+                  🔥 Top {index + 1}
+                </span>
               </div>
             )}
 

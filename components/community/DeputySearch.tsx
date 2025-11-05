@@ -468,11 +468,11 @@ const DeputyCard: React.FC<{
               )}
             </div>
           </div>
-          {/* <ComprehensiveRating
+          <ComprehensiveRating
             rating={deputy.rating}
             size="sm"
             className="mt-2"
-          /> */}
+          />
         </div>
 
         <div className="flex flex-wrap gap-2">
