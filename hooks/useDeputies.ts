@@ -4,6 +4,10 @@ import { useState, useCallback } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
+interface handles {
+  platform: string;
+  handle: string;
+}
 export interface DeputyUser {
   _id: Id<"users">;
   clerkId: string;
@@ -22,6 +26,7 @@ export interface DeputyUser {
     status: "pending" | "accepted" | "rejected";
     forTheirSkill: string;
   };
+  musicianhandles?: handles[];
 }
 
 export interface DeputyRelationship {

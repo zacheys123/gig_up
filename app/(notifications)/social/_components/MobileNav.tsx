@@ -13,6 +13,7 @@ import {
   Moon,
   Sun,
   Settings,
+  Home,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,12 @@ export function MobileNav({ onMenuClick }: MobileNavProps) {
   const pendingCount = pendingRequests?.length || 0;
 
   const navItems = [
+    {
+      name: "Home",
+      href: "/",
+      icon: Home,
+      badge: null,
+    },
     {
       name: "Followers",
       href: "/social/followers",

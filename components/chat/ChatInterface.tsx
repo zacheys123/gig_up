@@ -1,4 +1,3 @@
-// components/chat/ChatInterface.tsx - COMPLETE REWRITTEN VERSION
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
@@ -27,15 +26,13 @@ import { cn } from "@/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
 import { OnlineBadge } from "./OnlineBadge";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useChatMessages } from "@/hooks/useChatMessages";
+import GigLoader from "../(main)/GigLoader";
 
 interface ChatInterfaceProps {
   chatId: string;
   onBack?: () => void;
 }
-
-// Message Status Component - IMPROVED VERSION
 
 // SIMPLIFIED MessageStatus component
 const MessageStatus = ({
@@ -47,12 +44,6 @@ const MessageStatus = ({
   chat: any;
 }) => {
   if (!isOwn) return null;
-
-  console.log("🎯 MessageStatus rendering:", {
-    messageId: message._id,
-    status: message.status,
-    isOwn,
-  });
 
   const getStatusInfo = () => {
     switch (message.status) {
@@ -95,6 +86,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   const { colors } = useThemeColors();
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Use the chat messages hook with proper typing
@@ -117,7 +109,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     userId: currentUser?._id as Id<"users">,
   });
 
-  // Mutations - ALL INCLUDED
+  // Mutations
   const markAsRead = useMutation(api.controllers.chat.markAsRead);
   const markMessageAsRead = useMutation(api.controllers.chat.markMessageAsRead);
   const markAllMessagesAsRead = useMutation(
@@ -140,6 +132,9 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   const updateActiveSession = useMutation(
     api.controllers.chat.updateActiveSession
   );
+  const updateMessageStatus = useMutation(
+    api.controllers.chat.updateMessageStatus
+  );
 
   // Refs for typing management
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -148,6 +143,30 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   // Filter out current user from typing users
   const otherUsersTyping =
     typingUsers?.filter((user) => user?._id !== currentUser?._id) || [];
+
+  // FIXED: Improved loading state detection with proper initialization
+  const isLoading =
+    chat === undefined ||
+    messages === undefined ||
+    typingUsers === undefined ||
+    !hasLoaded;
+
+  // Track when data is fully loaded
+  useEffect(() => {
+    if (
+      chat !== undefined &&
+      messages !== undefined &&
+      typingUsers !== undefined &&
+      !hasLoaded
+    ) {
+      setHasLoaded(true);
+    }
+  }, [chat, messages, typingUsers, hasLoaded]);
+
+  // Reset hasLoaded when chatId changes
+  useEffect(() => {
+    setHasLoaded(false);
+  }, [chatId]);
 
   // Active session management
   useEffect(() => {
@@ -199,17 +218,17 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
 
   // Mark chat as read when opened (chat-level unread count)
   useEffect(() => {
-    if (typedChatId && currentUser && chat) {
+    if (typedChatId && currentUser && chat && hasLoaded) {
       markAsRead({
         chatId: typedChatId,
         userId: currentUser._id,
       }).catch(console.error);
     }
-  }, [typedChatId, currentUser, markAsRead, chat]);
+  }, [typedChatId, currentUser, markAsRead, chat, hasLoaded]);
 
   // IMPROVED: Mark messages as read with debouncing and bulk operations
   useEffect(() => {
-    if (!currentUser?._id || !messages || !chat) return;
+    if (!currentUser?._id || !messages || !chat || !hasLoaded) return;
 
     // Clear any existing timeout
     if (markReadTimeoutRef.current) {
@@ -225,27 +244,15 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
 
       if (unreadMessages.length === 0) return;
 
-      console.log(`📖 Found ${unreadMessages.length} unread messages`);
-
       try {
         // Use bulk operation for efficiency
         if (unreadMessages.length > 5) {
-          console.log(
-            "🚀 Using bulk operation for",
-            unreadMessages.length,
-            "messages"
-          );
           await bulkMarkMessagesAsRead({
             messageIds: unreadMessages.map((m) => m._id),
             userId: currentUser._id,
           });
         } else {
           // Individual calls for small numbers
-          console.log(
-            "📝 Using individual calls for",
-            unreadMessages.length,
-            "messages"
-          );
           const promises = unreadMessages.map((message) =>
             markMessageAsRead({
               messageId: message._id,
@@ -260,7 +267,6 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
           );
           await Promise.all(promises);
         }
-        console.log("✅ Successfully marked messages as read");
       } catch (error) {
         console.error("❌ Failed to mark messages as read:", error);
       }
@@ -277,19 +283,15 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     markMessageAsRead,
     bulkMarkMessagesAsRead,
     chat,
+    hasLoaded,
   ]);
-  // In your ChatInterface mutations - ADD this
-  const updateMessageStatus = useMutation(
-    api.controllers.chat.updateMessageStatus
-  );
-  // In your ChatInterface component - ADD this useEffect
-  useEffect(() => {
-    if (!messages || !currentUser?._id) return;
 
-    // Update status for messages that might need it
+  // Update message statuses
+  useEffect(() => {
+    if (!messages || !currentUser?._id || !hasLoaded) return;
+
     const updateMessageStatuses = async () => {
       const messagesNeedingStatusUpdate = messages.filter((message) => {
-        // Only update messages that are sent by current user and not already read status
         return (
           message.senderId === currentUser._id && message.status !== "read"
         );
@@ -305,19 +307,23 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     };
 
     updateMessageStatuses();
-  }, [messages, currentUser?._id, updateMessageStatus]);
+  }, [messages, currentUser?._id, updateMessageStatus, hasLoaded]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollToBottom = useCallback(() => {
+    if (hasLoaded && messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [hasLoaded]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, otherUsersTyping]);
+  }, [messages, otherUsersTyping, scrollToBottom]);
 
   // Real-time typing management
   const sendTypingStart = useCallback(async () => {
-    if (!currentUser?._id || !typedChatId) return;
+    if (!currentUser?._id || !typedChatId || !hasLoaded) return;
 
     try {
       await startTyping({
@@ -327,10 +333,10 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     } catch (error) {
       console.error("Failed to send typing start:", error);
     }
-  }, [currentUser?._id, typedChatId, startTyping]);
+  }, [currentUser?._id, typedChatId, startTyping, hasLoaded]);
 
   const sendTypingStop = useCallback(async () => {
-    if (!currentUser?._id || !typedChatId) return;
+    if (!currentUser?._id || !typedChatId || !hasLoaded) return;
 
     try {
       await stopTyping({
@@ -340,7 +346,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     } catch (error) {
       console.error("Failed to send typing stop:", error);
     }
-  }, [currentUser?._id, typedChatId, stopTyping]);
+  }, [currentUser?._id, typedChatId, stopTyping, hasLoaded]);
 
   // Handle typing events
   useEffect(() => {
@@ -348,7 +354,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    if (message.length > 0) {
+    if (message.length > 0 && hasLoaded) {
       sendTypingStart();
       typingTimeoutRef.current = setTimeout(() => {
         sendTypingStop();
@@ -362,7 +368,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [message, sendTypingStart, sendTypingStop]);
+  }, [message, sendTypingStart, sendTypingStop, hasLoaded]);
 
   // Clean up typing indicator when component unmounts
   useEffect(() => {
@@ -378,7 +384,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   }, [sendTypingStop]);
 
   const handleSendMessage = async () => {
-    if (!message.trim() || !currentUser || isSending) return;
+    if (!message.trim() || !currentUser || isSending || !hasLoaded) return;
 
     setIsSending(true);
     try {
@@ -401,7 +407,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
 
   // Typing indicator component
   const TypingIndicator = () => {
-    if (otherUsersTyping.length === 0) return null;
+    if (otherUsersTyping.length === 0 || !hasLoaded) return null;
 
     const typingUser = otherUsersTyping[0];
     const typingText =
@@ -492,59 +498,8 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     );
   }
 
-  // Chat loading state
-  if (
-    chat === undefined ||
-    messages === undefined ||
-    typingUsers === undefined
-  ) {
-    return (
-      <div className="flex flex-col h-full">
-        {/* Header Skeleton */}
-        <div
-          className={cn(
-            "flex items-center gap-3 p-4 border-b",
-            colors.border,
-            colors.card
-          )}
-        >
-          <Skeleton className="w-8 h-8 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        </div>
-
-        {/* Messages Skeleton */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className={`flex gap-3 ${i % 2 === 0 ? "flex-row-reverse" : "flex-row"}`}
-            >
-              {i % 2 !== 0 && <Skeleton className="w-8 h-8 rounded-full" />}
-              <div className="space-y-2">
-                <Skeleton className={`h-16 ${i % 2 === 0 ? "w-48" : "w-56"}`} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Input Skeleton */}
-        <div className={cn("border-t p-4", colors.border, colors.card)}>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-10 flex-1 rounded-full" />
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-10 w-10 rounded-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Chat not found state
-  if (chat === null) {
+  // Chat not found state - check for null after loading
+  if (chat === null && hasLoaded) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 text-center">
         <div
@@ -583,257 +538,294 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
     );
   }
 
-  const otherParticipant = chat.participants?.find(
+  const otherParticipant = chat?.participants?.find(
     (p) => p?._id !== currentUser?._id
   );
 
-  const isEmptyChat = messages?.length === 0;
+  // Handle empty messages array properly
+  const isEmptyChat = !messages || messages.length === 0;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div
-        className={cn(
-          "flex items-center gap-3 p-4 border-b",
-          colors.border,
-          colors.card
-        )}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="mr-2 md:hidden"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
+    <div className="flex flex-col h-full relative">
+      {/* Subtle Blurred Overlay Loader - Shows until everything is fully loaded */}
+      {isLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop blur */}
+          <div className="absolute inset-0 bg-white/70 dark:bg-black/50 backdrop-blur-sm rounded-lg" />
 
-        <Avatar className="w-8 h-8">
-          <AvatarImage src={otherParticipant?.picture} />
-          <AvatarFallback className={cn("text-xs", colors.text)}>
-            {otherParticipant?.firstname?.[0]}
-            {otherParticipant?.lastname?.[0]}
-          </AvatarFallback>
-        </Avatar>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className={cn("font-semibold text-sm truncate", colors.text)}>
-              {chat.displayName}
-            </h3>
-            {otherParticipant?.verified && (
-              <Badge variant="secondary" className="h-4 px-1 text-xs">
-                ✓
-              </Badge>
-            )}
+          {/* Loader */}
+          <div className="relative z-10">
+            <GigLoader
+              type="spinner"
+              size="lg"
+              fullScreen={false}
+              title="Loading conversation..."
+              className="border-blue-500"
+            />
           </div>
-          <div className="flex items-center gap-2">
-            {otherUsersTyping.length > 0 ? (
-              <div className="flex items-center gap-1">
-                <div className="flex space-x-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                  <div
-                    className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
-                  <div
-                    className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"
-                    style={{ animationDelay: "0.4s" }}
-                  ></div>
+        </div>
+      )}
+
+      {/* Only show chat content when fully loaded */}
+      {hasLoaded && (
+        <>
+          {/* Chat Header */}
+          <div
+            className={cn(
+              "flex items-center gap-3 p-4 border-b",
+              colors.border,
+              colors.card
+            )}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="mr-2 md:hidden"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={otherParticipant?.picture} />
+              <AvatarFallback className={cn("text-xs", colors.text)}>
+                {otherParticipant?.firstname?.[0]}
+                {otherParticipant?.lastname?.[0]}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3
+                  className={cn("font-semibold text-sm truncate", colors.text)}
+                >
+                  {chat?.displayName}
+                </h3>
+                {otherParticipant?.verified && (
+                  <Badge variant="secondary" className="h-4 px-1 text-xs">
+                    ✓
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {otherUsersTyping.length > 0 ? (
+                  <div className="flex items-center gap-1">
+                    <div className="flex space-x-1">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"
+                        style={{ animationDelay: "0.4s" }}
+                      ></div>
+                    </div>
+                    <span
+                      className={cn("text-xs font-medium", "text-green-600")}
+                    >
+                      typing...
+                    </span>
+                  </div>
+                ) : (
+                  <OnlineBadge
+                    userId={otherParticipant?._id as Id<"users">}
+                    size="xs"
+                    showText={true}
+                    showLastActive={true}
+                  />
+                )}
+
+                {chat?.type === "group" && (
+                  <span className={cn("text-xs", colors.textMuted)}>
+                    {chat?.participants?.length} members
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isSending && (
+                <div className="flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
+                  <span className={cn("text-xs", colors.textMuted)}>
+                    Sending...
+                  </span>
                 </div>
-                <span className={cn("text-xs font-medium", "text-green-600")}>
-                  typing...
-                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {isEmptyChat ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div
+                  className={cn(
+                    "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4",
+                    colors.backgroundMuted
+                  )}
+                >
+                  <MessageCircle className={cn("w-8 h-8", colors.textMuted)} />
+                </div>
+                <p className={cn("font-medium mb-2", colors.text)}>
+                  Start a conversation with {otherParticipant?.firstname}
+                </p>
+                <p className={cn("text-sm mb-6", colors.textMuted)}>
+                  Send the first message to begin your chat
+                </p>
+                <div
+                  className={cn(
+                    "px-4 py-3 rounded-xl text-sm max-w-md",
+                    colors.backgroundMuted,
+                    colors.textMuted
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4" />
+                    <span className="font-medium">
+                      Tips for great conversations:
+                    </span>
+                  </div>
+                  <ul className="text-left space-y-1 text-xs">
+                    <li>• Introduce yourself and be friendly</li>
+                    <li>• Ask open-ended questions</li>
+                    <li>• Share common interests</li>
+                  </ul>
+                </div>
               </div>
             ) : (
-              <OnlineBadge
-                userId={otherParticipant?._id as Id<"users">}
-                size="xs"
-                showText={true}
-                showLastActive={true}
-              />
-            )}
-
-            {chat.type === "group" && (
-              <span className={cn("text-xs", colors.textMuted)}>
-                {chat.participants?.length} members
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isSending && (
-            <div className="flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
-              <span className={cn("text-xs", colors.textMuted)}>
-                Sending...
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {isEmptyChat ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div
-              className={cn(
-                "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4",
-                colors.backgroundMuted
-              )}
-            >
-              <MessageCircle className={cn("w-8 h-8", colors.textMuted)} />
-            </div>
-            <p className={cn("font-medium mb-2", colors.text)}>
-              Start a conversation with {otherParticipant?.firstname}
-            </p>
-            <p className={cn("text-sm mb-6", colors.textMuted)}>
-              Send the first message to begin your chat
-            </p>
-            <div
-              className={cn(
-                "px-4 py-3 rounded-xl text-sm max-w-md",
-                colors.backgroundMuted,
-                colors.textMuted
-              )}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4" />
-                <span className="font-medium">
-                  Tips for great conversations:
-                </span>
-              </div>
-              <ul className="text-left space-y-1 text-xs">
-                <li>• Introduce yourself and be friendly</li>
-                <li>• Ask open-ended questions</li>
-                <li>• Share common interests</li>
-              </ul>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="text-center">
-              <Badge variant="outline" className={cn("text-xs", colors.border)}>
-                {messages.length} message{messages.length !== 1 ? "s" : ""}
-              </Badge>
-            </div>
-
-            {/* Messages */}
-            {messages?.map((msg) => {
-              const isOwn = msg.senderId === currentUser?._id;
-              const sender = chat.participants?.find(
-                (p) => p?._id === msg.senderId
-              );
-
-              return (
-                <div
-                  key={msg._id}
-                  data-message-id={msg._id} // For potential intersection observer
-                  className={`flex gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
-                >
-                  {!isOwn && (
-                    <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarImage src={sender?.picture} />
-                      <AvatarFallback className={cn("text-xs", colors.text)}>
-                        {sender?.firstname?.[0]}
-                        {sender?.lastname?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-
-                  <div
-                    className={cn(
-                      `max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                        isOwn
-                          ? "bg-blue-500 text-white rounded-br-md"
-                          : colors.backgroundMuted
-                      }`,
-                      !isOwn && colors.text
-                    )}
+              <>
+                <div className="text-center">
+                  <Badge
+                    variant="outline"
+                    className={cn("text-xs", colors.border)}
                   >
-                    {!isOwn && chat.type === "group" && (
-                      <p className="text-xs font-medium mb-1">
-                        {sender?.firstname} {sender?.lastname}
-                      </p>
-                    )}
-                    <p className="text-sm break-words">{msg.content}</p>
+                    {messages.length} message{messages.length !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <p
+                {/* Messages */}
+                {messages.map((msg) => {
+                  const isOwn = msg.senderId === currentUser?._id;
+                  const sender = chat?.participants?.find(
+                    (p) => p?._id === msg.senderId
+                  );
+
+                  return (
+                    <div
+                      key={msg._id}
+                      data-message-id={msg._id}
+                      className={`flex gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
+                    >
+                      {!isOwn && (
+                        <Avatar className="w-8 h-8 flex-shrink-0">
+                          <AvatarImage src={sender?.picture} />
+                          <AvatarFallback
+                            className={cn("text-xs", colors.text)}
+                          >
+                            {sender?.firstname?.[0]}
+                            {sender?.lastname?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+
+                      <div
                         className={cn(
-                          `text-xs opacity-70 ${
-                            isOwn ? "text-blue-100" : colors.textMuted
-                          }`
+                          `max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                            isOwn
+                              ? "bg-blue-500 text-white rounded-br-md"
+                              : colors.backgroundMuted
+                          }`,
+                          !isOwn && colors.text
                         )}
                       >
-                        {new Date(msg._creationTime).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
+                        {!isOwn && chat?.type === "group" && (
+                          <p className="text-xs font-medium mb-1">
+                            {sender?.firstname} {sender?.lastname}
+                          </p>
+                        )}
+                        <p className="text-sm break-words">{msg.content}</p>
 
-                      {/* Message status for own messages */}
-                      {isOwn && (
-                        <MessageStatus
-                          message={msg}
-                          isOwn={isOwn}
-                          chat={chat}
-                        />
-                      )}
+                        <div className="flex items-center justify-between mt-2">
+                          <p
+                            className={cn(
+                              `text-xs opacity-70 ${
+                                isOwn ? "text-blue-100" : colors.textMuted
+                              }`
+                            )}
+                          >
+                            {new Date(msg._creationTime).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </p>
+
+                          {/* Message status for own messages */}
+                          {isOwn && (
+                            <MessageStatus
+                              message={msg}
+                              isOwn={isOwn}
+                              chat={chat}
+                            />
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
 
-            {/* Real-time Typing Indicator */}
-            <TypingIndicator />
-          </>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className={cn("border-t p-4", colors.border, colors.card)}>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" className="rounded-full">
-            <Paperclip className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-full">
-            <Image className="w-4 h-4" />
-          </Button>
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={isEmptyChat ? "Say hello..." : "Type a message..."}
-            className={cn("flex-1 rounded-full", colors.backgroundMuted)}
-            disabled={isSending}
-          />
-          <Button variant="ghost" size="sm" className="rounded-full">
-            <Mic className="w-4 h-4" />
-          </Button>
-          <Button
-            onClick={handleSendMessage}
-            disabled={!message.trim() || isSending}
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full disabled:opacity-50"
-          >
-            {isSending ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
+                {/* Real-time Typing Indicator */}
+                <TypingIndicator />
+              </>
             )}
-          </Button>
-        </div>
-
-        {message.length > 0 && (
-          <div className={cn("text-xs text-right mt-2", colors.textMuted)}>
-            {message.length}/1000
+            <div ref={messagesEndRef} />
           </div>
-        )}
-      </div>
+
+          {/* Input Area */}
+          <div className={cn("border-t p-4", colors.border, colors.card)}>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" className="rounded-full">
+                <Paperclip className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="rounded-full">
+                <Image className="w-4 h-4" />
+              </Button>
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={isEmptyChat ? "Say hello..." : "Type a message..."}
+                className={cn("flex-1 rounded-full", colors.backgroundMuted)}
+                disabled={isSending}
+              />
+              <Button variant="ghost" size="sm" className="rounded-full">
+                <Mic className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!message.trim() || isSending}
+                className="bg-blue-500 hover:bg-blue-600 text-white rounded-full disabled:opacity-50"
+              >
+                {isSending ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+
+            {message.length > 0 && (
+              <div className={cn("text-xs text-right mt-2", colors.textMuted)}>
+                {message.length}/1000
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@ import type * as controllers_debug from "../controllers/debug.js";
 import type * as controllers_deputies from "../controllers/deputies.js";
 import type * as controllers_gigs from "../controllers/gigs.js";
 import type * as controllers_notifications from "../controllers/notifications.js";
+import type * as controllers_ratings from "../controllers/ratings.js";
 import type * as controllers_socials from "../controllers/socials.js";
 import type * as controllers_subscription from "../controllers/subscription.js";
 import type * as controllers_theme from "../controllers/theme.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   "controllers/deputies": typeof controllers_deputies;
   "controllers/gigs": typeof controllers_gigs;
   "controllers/notifications": typeof controllers_notifications;
+  "controllers/ratings": typeof controllers_ratings;
   "controllers/socials": typeof controllers_socials;
   "controllers/subscription": typeof controllers_subscription;
   "controllers/theme": typeof controllers_theme;

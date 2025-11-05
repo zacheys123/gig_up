@@ -269,6 +269,24 @@ export const userModel = defineTable({
   backUpCount: v.optional(v.number()),
 
   confirmedReferredGigs: v.optional(v.number()),
+  // cachedRating: v.optional(
+  //   v.object({
+  //     overall: v.number(),
+  //     score: v.number(),
+  //     breakdown: v.object({
+  //       gigExperience: v.number(),
+  //       activityRecency: v.number(),
+  //       platformUsage: v.number(),
+  //       reviewQuality: v.number(),
+  //       reliability: v.number(),
+  //       tierStatus: v.number(),
+  //       socialProof: v.number(),
+  //       deputyEngagement: v.number(),
+  //     }),
+  //     reviewCount: v.number(),
+  //     lastCalculated: v.number(),
+  //   })
+  // ),
 })
   // ... keep your existing indexes
   .index("by_clerkId", ["clerkId"])

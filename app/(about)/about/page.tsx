@@ -44,6 +44,7 @@ export default function AboutPage() {
   const updateFirstLogin = useMutation(api.controllers.user.updateFirstLogin);
   const { colors, isDarkMode, mounted } = useThemeColors();
 
+  console.log(user);
   useEffect(() => {
     const markFirstLoginComplete = async () => {
       if (!userId) {
@@ -63,7 +64,7 @@ export default function AboutPage() {
     markFirstLoginComplete();
   }, [userId]);
 
-  if (!userId) {
+  if (!userId || !user) {
     return (
       <div className={`min-h-screen ${colors.background}`}>
         <GigLoader color="border-green-400" title="Welcome to Gigup..." />

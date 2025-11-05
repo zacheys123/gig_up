@@ -230,7 +230,8 @@ const ProfilePage = () => {
                         key={index}
                         className={cn(
                           "text-xs px-2 py-1 rounded-full",
-                          "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+                          colors.backgroundMuted,
+                          colors.destructive
                         )}
                       >
                         {field}

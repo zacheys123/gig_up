@@ -53,35 +53,36 @@ export function DesktopNavigation() {
       <nav
         className={cn(
           "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
-          "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700"
+          "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700",
+          "hidden lg:block" // Keep hidden on mobile
         )}
       >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-10">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 xl:px-12 2xl:px-16">
+          <div className="flex justify-between items-center h-14 lg:h-16 xl:h-18">
+            <div className="flex items-center space-x-6 lg:space-x-10 xl:space-x-12">
               <div className="flex items-center space-x-2">
-                <Skeleton className="w-8 h-8 rounded-lg" />
-                <Skeleton className="w-16 h-6 rounded" />
+                <Skeleton className="w-7 h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 rounded-lg" />
+                <Skeleton className="w-14 h-5 lg:w-16 lg:h-6 xl:w-18 xl:h-7 rounded" />
               </div>
 
-              <div className="hidden lg:flex items-center space-x-8">
+              <div className="hidden lg:flex items-center space-x-6 xl:space-x-8 2xl:space-x-10">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <Skeleton className="w-4 h-4 rounded" />
-                    <Skeleton className="w-16 h-4 rounded" />
+                    <Skeleton className="w-14 lg:w-16 xl:w-18 h-4 rounded" />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <Skeleton className="w-24 h-9 rounded-md" />
-              <Skeleton className="w-20 h-9 rounded-lg" />
-              <Skeleton className="w-8 h-8 rounded-md" />
-              <div className="flex items-center space-x-3">
-                <Skeleton className="w-20 h-4 rounded" />
-                <Skeleton className="w-16 h-9 rounded-lg" />
-                <Skeleton className="w-8 h-8 rounded-full" />
+            <div className="flex items-center space-x-3 lg:space-x-4 xl:space-x-5">
+              <Skeleton className="w-20 lg:w-24 xl:w-28 h-8 lg:h-9 xl:h-10 rounded-md" />
+              <Skeleton className="w-16 lg:w-20 xl:w-24 h-8 lg:h-9 xl:h-10 rounded-lg" />
+              <Skeleton className="w-7 h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 rounded-md" />
+              <div className="flex items-center space-x-2 lg:space-x-3 xl:space-x-4">
+                <Skeleton className="w-16 lg:w-20 xl:w-24 h-4 rounded" />
+                <Skeleton className="w-14 lg:w-16 xl:w-18 h-8 lg:h-9 xl:h-10 rounded-lg" />
+                <Skeleton className="w-7 h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 rounded-full" />
               </div>
             </div>
           </div>
@@ -95,21 +96,21 @@ export function DesktopNavigation() {
       return {
         href: "/dashboard/gigs",
         label: "Find Gigs",
-        icon: <BriefcaseIcon size={16} />,
+        icon: <BriefcaseIcon size={18} />,
       };
     }
     if (isMusician) {
       return {
         href: "/gigs",
         label: "Find Gigs",
-        icon: <Plus size={16} />,
+        icon: <Plus size={18} />,
       };
     }
     if (isClient) {
       return {
         href: "/create-gig",
         label: "Post Gig",
-        icon: <Plus size={16} />,
+        icon: <Plus size={18} />,
       };
     }
     return null;
@@ -121,30 +122,30 @@ export function DesktopNavigation() {
     {
       href: "/",
       label: "Home",
-      icon: <Home size={18} />,
+      icon: <Home size={20} />,
     },
     {
       href: "/dashboard",
       label: "Dashboard",
-      icon: <MdDashboard size={18} />,
+      icon: <MdDashboard size={20} />,
       condition: hasRole,
     },
     {
       href: "/auth/search",
       label: "Discover",
-      icon: <Search size={18} />,
+      icon: <Search size={20} />,
       condition: isSignedIn && hasRole,
     },
     {
       href: "/community",
       label: "Community",
-      icon: <Users size={18} />,
+      icon: <Users size={20} />,
       condition: isSignedIn,
     },
     {
       href: "/settings",
       label: "Settings",
-      icon: <Settings size={18} />,
+      icon: <Settings size={20} />,
       condition: hasRole,
     },
   ];
@@ -161,35 +162,46 @@ export function DesktopNavigation() {
           "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
           colors.navBackground,
           colors.navBorder,
-          "hidden lg:block"
+          "hidden lg:block" // Only show on lg screens and up
         )}
       >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-10">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 xl:px-12 2xl:px-16">
+          {/* Increased height for larger screens */}
+          <div className="flex justify-between items-center h-14 lg:h-16 xl:h-18">
+            {/* Left Section - Logo & Navigation */}
+            <div className="flex items-center space-x-6 lg:space-x-10 xl:space-x-12">
+              {/* Logo */}
               <Link href="/" className="flex items-center space-x-2">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="flex items-center space-x-2"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">G</span>
+                  <div className="w-7 h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm lg:text-base">
+                      G
+                    </span>
                   </div>
-                  <span className={cn("text-xl font-bold", colors.text)}>
+                  <span
+                    className={cn(
+                      "text-lg lg:text-xl xl:text-2xl font-bold",
+                      colors.text
+                    )}
+                  >
                     GigUp
                   </span>
                 </motion.div>
               </Link>
 
-              <div className="flex items-center space-x-8">
+              {/* Navigation Items */}
+              <div className="hidden lg:flex items-center space-x-6 xl:space-x-8 2xl:space-x-10">
                 {navigationItems.map((item) => {
                   if (item.condition === false) return null;
 
                   const linkContent = (
                     <div
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative",
+                        "flex items-center gap-2 px-3 py-2 lg:px-4 lg:py-2.5 rounded-lg text-sm lg:text-base font-medium transition-all duration-200 group relative",
                         colors.textMuted,
                         "hover:text-amber-600 dark:hover:text-amber-400"
                       )}
@@ -203,7 +215,7 @@ export function DesktopNavigation() {
                       >
                         {item.icon}
                       </div>
-                      <span className="transition-colors duration-200">
+                      <span className="transition-colors duration-200 whitespace-nowrap">
                         {item.label}
                       </span>
                       <div
@@ -224,32 +236,38 @@ export function DesktopNavigation() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            {/* Right Section - Actions & User */}
+            <div className="flex items-center space-x-3 lg:space-x-4 xl:space-x-5">
+              {/* Action Button */}
               {isSignedIn && actionButton && (
                 <Link href={actionButton.href}>
                   <Button
                     className={cn(
                       "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                      "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200"
+                      "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200",
+                      "text-sm lg:text-base h-8 lg:h-9 xl:h-10 px-3 lg:px-4"
                     )}
                   >
                     {actionButton.icon}
-                    <span>{actionButton.label}</span>
+                    <span className="whitespace-nowrap">
+                      {actionButton.label}
+                    </span>
                   </Button>
                 </Link>
               )}
 
+              {/* Messages */}
               {isSignedIn && (
                 <button onClick={handleOpenMessages} className="relative group">
                   <div
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative",
+                      "flex items-center gap-2 px-3 py-2 lg:px-4 lg:py-2.5 rounded-lg text-sm lg:text-base font-medium transition-all duration-200 relative",
                       colors.textMuted,
                       "hover:text-amber-600 dark:hover:text-amber-400"
                     )}
                   >
-                    <MessageCircle size={18} />
-                    <span>Messages</span>
+                    <MessageCircle size={18} className="lg:w-5 lg:h-5" />
+                    <span className="whitespace-nowrap">Messages</span>
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
                         {unreadCount > 99 ? "99+" : unreadCount}
@@ -266,6 +284,7 @@ export function DesktopNavigation() {
                 </button>
               )}
 
+              {/* Notifications */}
               {(isSignedIn && currentUser?.tier === "pro") ||
                 (isInGracePeriod && (
                   <div className="hover:scale-105 transition-transform duration-200">
@@ -273,6 +292,7 @@ export function DesktopNavigation() {
                   </div>
                 ))}
 
+              {/* Theme Toggle */}
               <button
                 onClick={toggleDarkMode}
                 className={cn(
@@ -285,9 +305,9 @@ export function DesktopNavigation() {
                 }
               >
                 {isDarkMode ? (
-                  <Sun className="w-5 h-5 transition-colors duration-200" />
+                  <Sun className="w-5 h-5 lg:w-6 lg:h-6 transition-colors duration-200" />
                 ) : (
-                  <Moon className="w-5 h-5 transition-colors duration-200" />
+                  <Moon className="w-5 h-5 lg:w-6 lg:h-6 transition-colors duration-200" />
                 )}
 
                 <div
@@ -298,21 +318,27 @@ export function DesktopNavigation() {
                 />
               </button>
 
+              {/* User Section */}
               {isSignedIn ? (
-                <div className="flex items-center space-x-4">
-                  <span className={cn("text-sm", colors.textMuted)}>
+                <div className="flex items-center space-x-3 lg:space-x-4 xl:space-x-5">
+                  <span
+                    className={cn(
+                      "text-sm lg:text-base whitespace-nowrap",
+                      colors.textMuted
+                    )}
+                  >
                     Hi, {getGreetingName()}
                   </span>
 
                   <Link
                     href="/profile"
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+                      "flex items-center gap-2 px-3 py-2 lg:px-4 lg:py-2.5 rounded-lg text-sm lg:text-base font-medium transition-all duration-200 relative group",
                       colors.text,
                       "hover:text-amber-600 dark:hover:text-amber-400"
                     )}
                   >
-                    <span className="transition-colors duration-200">
+                    <span className="transition-colors duration-200 whitespace-nowrap">
                       Profile
                     </span>
 
@@ -329,16 +355,16 @@ export function DesktopNavigation() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 lg:space-x-3">
                   <Link
                     href="/sign-in"
                     className={cn(
-                      "px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 relative group",
+                      "px-3 py-2 lg:px-4 lg:py-2.5 text-sm lg:text-base font-medium rounded-md transition-all duration-200 relative group",
                       colors.text,
                       "hover:text-amber-600 dark:hover:text-amber-400"
                     )}
                   >
-                    <span className="transition-colors duration-200">
+                    <span className="transition-colors duration-200 whitespace-nowrap">
                       Sign In
                     </span>
 
@@ -352,8 +378,9 @@ export function DesktopNavigation() {
                   <Link
                     href="/sign-up"
                     className={cn(
-                      "px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                      "text-white text-sm font-medium rounded-md transition-all duration-200 shadow-md hover:shadow-lg"
+                      "px-3 py-2 lg:px-4 lg:py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                      "text-white text-sm lg:text-base font-medium rounded-md transition-all duration-200 shadow-md hover:shadow-lg whitespace-nowrap",
+                      "h-8 lg:h-9 xl:h-10 flex items-center justify-center"
                     )}
                   >
                     Sign Up

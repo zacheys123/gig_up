@@ -17,6 +17,7 @@ import {
   Crown,
   Music,
   Building,
+  Home,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pendingCount = pendingRequests?.length || 0;
 
   const mainNavItems = [
+    {
+      name: "Home",
+      href: "/",
+      icon: Home,
+      badge: null,
+    },
     {
       name: "Discover Users",
       href: "/social/discover",

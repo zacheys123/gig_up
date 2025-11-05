@@ -111,23 +111,23 @@ export const respondToDeputyRequest = mutation({
       throw new Error("Deputy request not found");
     }
 
-    // Update deputy's backUpFor array
-    const updatedBackUpFor =
-      deputy.backUpFor?.map((rel) =>
-        rel.principalUserId === principalId ? { ...rel, status } : rel
-      ) || [];
+    let updates: any = {};
 
-    await ctx.db.patch(deputyId, {
-      backUpFor: updatedBackUpFor,
-    });
-    let updates: any = { backUpFor: updatedBackUpFor };
     if (status === "accepted") {
-      updates.backupCount = (deputy.backUpCount || 0) + 1;
+      // ✅ ACCEPTED: Update status and add to principal's myDeputies
+      const updatedBackUpFor =
+        deputy.backUpFor?.map((rel) =>
+          rel.principalUserId === principalId ? { ...rel, status } : rel
+        ) || [];
+
+      updates.backUpFor = updatedBackUpFor;
+      updates.backUpCount = (deputy.backUpCount || 0) + 1;
+
       // Add to principal's myDeputies array
       const principalDeputyData = {
         deputyUserId: deputyId,
         forMySkill: deputyRelationship.forTheirSkill,
-        gigType: deputyRelationship.gigType, // This will be undefined if it was undefined
+        gigType: deputyRelationship.gigType,
         status: "accepted" as const,
         canBeBooked: true,
         dateAdded: Date.now(),
@@ -141,12 +141,24 @@ export const respondToDeputyRequest = mutation({
       await ctx.db.patch(principalId, {
         myDeputies: updatedPrincipalDeputies,
       });
+    } else {
+      // ❌ REJECTED: COMPLETELY REMOVE from backUpFor
+      const updatedBackUpFor =
+        deputy.backUpFor?.filter(
+          (rel) => rel.principalUserId !== principalId
+        ) || [];
+
+      updates.backUpFor = updatedBackUpFor;
+      // No change to backUpCount since it was never accepted
     }
+
+    // Update deputy's data
+    await ctx.db.patch(deputyId, updates);
 
     // Notify the principal about the response
     await createNotificationInternal(ctx, {
       userDocumentId: principalId,
-      type: status === "accepted" ? "gig_approved" : "gig_rejected",
+      type: "gig_invite",
       title:
         status === "accepted"
           ? "Deputy Request Accepted"

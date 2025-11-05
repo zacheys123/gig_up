@@ -39,7 +39,10 @@ export const SelectInput = ({
         )}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value.toLowerCase().replace(/\s+/g, "")}
+          >
             {option.label}
           </option>
         ))}
