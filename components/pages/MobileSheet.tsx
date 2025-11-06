@@ -174,9 +174,21 @@ const getNavigationLinks = (
 
 const hasMinimumData = (user: any): boolean => {
   if (!user) return false;
-  const hasDateInfo = user.date || user.year || user.month;
-  const hasVideoData = user.videoProfile;
-  return hasDateInfo || hasVideoData;
+
+  // Clients only need phone number to access full features
+  if (user.isClient) {
+    return !!user.phone;
+  }
+
+  // Musicians need more complete profile data
+  if (user.isMusician) {
+    const hasDateInfo = user.date || user.year || user.month;
+    const hasVideoData = user.videoProfile;
+    return hasDateInfo || (hasVideoData && user.isMusician);
+  }
+
+  // Default case
+  return false;
 };
 
 const getEssentialLinks = (): NavigationLink[] => [

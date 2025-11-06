@@ -149,12 +149,13 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({ clerkId }) => {
       {/* Header */}
       <div
         className={cn(
-          "sticky top-0 z-50 border-b backdrop-blur-xl",
+          "sticky top-0 z-50 border-b backdrop-blur-xl ",
           colors.border,
           colors.background
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          {/* Remove the fixed class from this div - that's what's breaking it */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
@@ -184,11 +185,11 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({ clerkId }) => {
                     }
                     className={cn(
                       "w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-all duration-300",
-                      "",
+                      "border-2",
                       "focus:ring-2 focus:ring-amber-500 focus:border-transparent",
                       colors.text,
                       colors.borderSecondary,
-                      colors.card
+                      colors.backgroundMuted
                     )}
                   />
                 </div>

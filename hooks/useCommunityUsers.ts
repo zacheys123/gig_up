@@ -41,6 +41,9 @@ export interface TrendingMusician {
   roleType: string;
   followers: string[];
   followings: string[];
+  availability?: "available" | "notavailable";
+  experience?: string;
+  genre?: string;
 }
 
 // For the component props

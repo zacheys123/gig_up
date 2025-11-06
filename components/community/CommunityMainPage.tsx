@@ -24,6 +24,11 @@ import {
   Clock,
   TrendingUp,
   UserCheck,
+  Star,
+  Heart,
+  Building,
+  UserPlus,
+  FolderOpen,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -50,7 +55,12 @@ const CommunityMainPage = () => {
     );
   }
 
-  const tabs = [
+  const isClient = user?.isClient && !user?.isMusician;
+  const isMusician = user?.isMusician;
+  const isBooker = user?.isBooker; // Assuming these fields exist
+
+  // Base tabs that everyone sees
+  const baseTabs = [
     {
       id: "videos",
       label: "Videos",
@@ -60,6 +70,18 @@ const CommunityMainPage = () => {
       longDescription:
         "Discover amazing musical performances from our community. Watch videos, engage with content, and connect with musicians through their art.",
     },
+    {
+      id: "trending-musicians",
+      label: "Trending Musicians",
+      icon: "🎤",
+      description: "Discover popular and rising musicians in the community",
+      longDescription:
+        "Explore the most active and popular musicians in our network. Find inspiration and connect with trending artists and performers.",
+    },
+  ];
+
+  // Musician-only tabs
+  const musicianTabs = [
     {
       id: "deputies",
       label: "Discover",
@@ -85,14 +107,54 @@ const CommunityMainPage = () => {
       longDescription:
         "Handle all pending deputy requests in one place. Accept or decline collaboration opportunities and manage your incoming invitations.",
     },
+  ];
+
+  // Client-only tabs (regular clients)
+  const clientTabs = [
     {
-      id: "trending-musicians",
-      label: "Trending Musicians",
-      icon: "🎤",
-      description: "Discover popular and rising musicians in the community",
+      id: "favorites",
+      label: "My Favorites",
+      icon: "⭐",
+      description: "Your saved musicians and preferred performers",
       longDescription:
-        "Explore the most active and popular musicians in our network. Find inspiration and connect with trending artists and performers.",
+        "Access your favorite musicians and performers. Quick access to the talent you love working with for future bookings.",
     },
+  ];
+
+  // Booker/Manager specific tabs
+  const bookerTabs = [
+    {
+      id: "talent-pool",
+      label: "My Talent Pool",
+      icon: "👥",
+      description: "Manage your curated list of trusted musicians",
+      longDescription:
+        "Build and maintain your personal talent pool. Save musicians you frequently work with and organize them by skills or projects.",
+    },
+    {
+      id: "band-profiles",
+      label: "Band Profiles",
+      icon: "🎸",
+      description: "Create and manage band lineups and profiles",
+      longDescription:
+        "Build professional band profiles with specific lineups. Save your go-to combinations for different types of gigs and events.",
+    },
+    {
+      id: "quick-assemble",
+      label: "Quick Assemble",
+      icon: "⚡",
+      description: "Quickly assemble bands for last-minute gigs",
+      longDescription:
+        "Rapidly put together bands using your talent pool. Filter by availability, location, and instrument to fill gigs efficiently.",
+    },
+  ];
+
+  // Combine tabs based on user type
+  const tabs = [
+    ...baseTabs,
+    ...(isMusician ? musicianTabs : []),
+    ...(isClient && !isBooker ? clientTabs : []),
+    ...(isBooker ? bookerTabs : []),
   ];
 
   const getTabDescription = (tabId: string) => {
@@ -116,6 +178,14 @@ const CommunityMainPage = () => {
         return <Clock className="w-5 h-5" />;
       case "trending-musicians":
         return <TrendingUp className="w-5 h-5" />;
+      case "favorites":
+        return <Heart className="w-5 h-5" />;
+      case "talent-pool":
+        return <UserPlus className="w-5 h-5" />;
+      case "band-profiles":
+        return <Building className="w-5 h-5" />;
+      case "quick-assemble":
+        return <FolderOpen className="w-5 h-5" />;
       default:
         return <Info className="w-5 h-5" />;
     }
@@ -126,13 +196,29 @@ const CommunityMainPage = () => {
       case "videos":
         return <VideoFeed clerkId={user?.clerkId as string} />;
       case "deputies":
-        return <DeputySearch user={user} />;
+        return isMusician ? <DeputySearch user={user} /> : null;
       case "my-deputies":
-        return <MyDeputies user={user} />;
+        return isMusician ? <MyDeputies user={user} /> : null;
       case "requests":
-        return <PendingRequests user={user} />;
+        return isMusician ? <PendingRequests user={user} /> : null;
       case "trending-musicians":
         return <TrendingMusiciansTab user={user} />;
+      case "favorites":
+        return isClient ? (
+          <div>Favorites Tab - Implement this component</div>
+        ) : null;
+      case "talent-pool":
+        return isBooker ? (
+          <div>Talent Pool Tab - Implement this component</div>
+        ) : null;
+      case "band-profiles":
+        return isBooker ? (
+          <div>Band Profiles Tab - Implement this component</div>
+        ) : null;
+      case "quick-assemble":
+        return isBooker ? (
+          <div>Quick Assemble Tab - Implement this component</div>
+        ) : null;
       default:
         return <VideoFeed clerkId={user?.clerkId as string} />;
     }
@@ -144,6 +230,18 @@ const CommunityMainPage = () => {
   };
 
   const router = useRouter();
+
+  const getWelcomeMessage = () => {
+    if (isBooker) {
+      return "Discover talent, build bands, and manage your musical roster efficiently";
+    } else if (isClient) {
+      return "Discover amazing musicians, save favorites, and find perfect performers";
+    } else if (isMusician) {
+      return "Connect with talented musicians, share performances, and build your professional network";
+    } else {
+      return "Connect with talented musicians and share performances";
+    }
+  };
 
   return (
     <div className={cn("min-h-screen flex", colors.background)}>
@@ -161,10 +259,7 @@ const CommunityMainPage = () => {
 
       {/* Main Content */}
       <main
-        className={cn(
-          "flex-1 px-4 sm:px-6 lg:px-8 py-8 overflow-auto",
-          colors.background
-        )}
+        className={cn("flex-1 px-4 sm:px-6 lg:px-8 py-8 ", colors.background)}
       >
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -188,11 +283,13 @@ const CommunityMainPage = () => {
             <div className="flex-1">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg">
-                  <span className="text-2xl">🎵</span>
+                  <span className="text-2xl">
+                    {isBooker ? "📋" : isClient ? "🎭" : "🎵"}
+                  </span>
                 </div>
                 <div>
                   <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-                    Community Hub
+                    {isBooker ? "Talent Hub" : "Community Hub"}
                   </h1>
                   <p
                     className={cn(
@@ -200,50 +297,12 @@ const CommunityMainPage = () => {
                       colors.textMuted
                     )}
                   >
-                    Connect with talented musicians, share performances, and
-                    build your professional network
+                    {getWelcomeMessage()}
                   </p>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Tab Description Section */}
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className={cn(
-              "rounded-2xl p-6 mb-8 border",
-              colors.border,
-              colors.card
-            )}
-          >
-            <div className="flex items-start gap-4">
-              <div
-                className={cn(
-                  "p-3 rounded-xl",
-                  "bg-amber-500/10 border border-amber-500/20"
-                )}
-              >
-                {getTabIcon(activeTab)}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className={cn("text-2xl font-bold", colors.text)}>
-                    {tabs.find((t) => t.id === activeTab)?.label}
-                  </h2>
-                  <span className="text-2xl">
-                    {tabs.find((t) => t.id === activeTab)?.icon}
-                  </span>
-                </div>
-                <p className={cn("text-lg leading-relaxed", colors.textMuted)}>
-                  {getTabDescription(activeTab)}
-                </p>
-              </div>
-            </div>
-          </motion.div>
         </motion.div>
 
         {/* Active Tab Content */}
