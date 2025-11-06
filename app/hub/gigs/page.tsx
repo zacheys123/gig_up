@@ -14,6 +14,8 @@ import {
   PendingGigs,
   ReviewedGigs,
   SavedGigs,
+  InstantGigs,
+  GigInvites,
 } from "./_components";
 import { Applications } from "./_components/Application";
 import { FavoriteGigs } from "./_components/FavouriteGigs";
@@ -83,7 +85,6 @@ export default function GigsHub() {
             </span>
           </div>
         </div>
-        // In your app/hub/gigs/page.tsx - UPDATE THE TABS SECTION
         {/* Tab Navigation - Hidden Scroll */}
         <div className="border-b border-gray-200 dark:border-gray-700 mb-8">
           <nav className="-mb-px flex space-x-8 overflow-x-auto scrollbar-hide">
@@ -120,6 +121,7 @@ const getUserGigTabs = (user: any) => {
         { id: "favorites", label: "⭐ Favorites" },
         { id: "saved", label: "💾 Saved" },
         { id: "payments", label: "💰 Payments" },
+        { id: "invites", label: "💰 GigInvites" },
       ],
       defaultTab: "pending",
     };
@@ -132,6 +134,7 @@ const getUserGigTabs = (user: any) => {
         { id: "pre-booking", label: "👥 Pre-Booking" },
         { id: "booked", label: "✅ Booked" },
         { id: "reviewed", label: "⭐ Reviewed" },
+        { id: "invites", label: "⭐ Invites" },
       ],
       defaultTab: "my-gigs",
     };
@@ -200,6 +203,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         return <SavedGigs user={user} />;
       case "payments":
         return <PaymentHistory user={user} />;
+      case "invites":
+        return <GigInvites user={user} />;
+
       default:
         return <AllGigs user={user} />;
     }
@@ -216,6 +222,10 @@ const renderGigContent = (user: any, activeTab: string) => {
         return <BookedGigs user={user} />;
       case "reviewed":
         return <ReviewedGigs user={user} />;
+      case "invites":
+        return <GigInvites user={user} />;
+      case "urgent-gigs":
+        return <InstantGigs user={user} />;
       default:
         return <MyGigs user={user} />;
     }

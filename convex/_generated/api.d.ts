@@ -29,6 +29,7 @@ import type * as controllers_videos from "../controllers/videos.js";
 import type * as createNotificationInternal from "../createNotificationInternal.js";
 import type * as models_commentsModel from "../models/commentsModel.js";
 import type * as models_gigModel from "../models/gigModel.js";
+import type * as models_instanGigsModel from "../models/instanGigsModel.js";
 import type * as models_notificationSettings from "../models/notificationSettings.js";
 import type * as models_notificationsModel from "../models/notificationsModel.js";
 import type * as models_push from "../models/push.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   createNotificationInternal: typeof createNotificationInternal;
   "models/commentsModel": typeof models_commentsModel;
   "models/gigModel": typeof models_gigModel;
+  "models/instanGigsModel": typeof models_instanGigsModel;
   "models/notificationSettings": typeof models_notificationSettings;
   "models/notificationsModel": typeof models_notificationsModel;
   "models/push": typeof models_push;

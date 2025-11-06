@@ -13,7 +13,6 @@ import MobileSheet from "../pages/MobileSheet";
 
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useNotificationSystem } from "@/hooks/useNotifications";
-import Logo from "../Logo";
 
 export function MobileNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();

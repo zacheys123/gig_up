@@ -8,15 +8,9 @@ import {
 } from "@/hooks/useCommunityUsers";
 import { useThemeColors } from "@/hooks/useTheme";
 import { ComprehensiveRating } from "../ui/ComprehensiveRating";
-import {
-  MapPin,
-  Users,
-  Calendar,
-  Star,
-  Music2,
-  Mic2,
-  Disc3,
-} from "lucide-react";
+import { MapPin, Users, Calendar, Star, Music2, Disc3 } from "lucide-react";
+import { OnlineBadge } from "../chat/OnlineBadge";
+import { ChatIcon } from "../chat/ChatIcon";
 
 interface TrendingMusiciansTabProps {
   user?: any;
@@ -26,7 +20,60 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
   user,
 }) => {
   const musicians = useTrendingMusicians();
-  const { colors } = useThemeColors();
+  const { colors, isDarkMode, mounted } = useThemeColors();
+
+  // Show loading state until theme is mounted
+  if (!mounted) {
+    return (
+      <div
+        className={cn(
+          "w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 pb-20"
+        )}
+      >
+        {[...Array(8)].map((_, index) => (
+          <div
+            key={index}
+            className={cn(
+              "rounded-3xl p-4 animate-pulse",
+              colors.card,
+              colors.border
+            )}
+          >
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div
+                  className={cn("w-16 h-16 rounded-2xl", colors.disabledBg)}
+                />
+                <div className="flex-1 space-y-2">
+                  <div className={cn("h-4 rounded", colors.disabledBg)} />
+                  <div className={cn("h-3 rounded w-3/4", colors.disabledBg)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className={cn("h-6 rounded", colors.disabledBg)} />
+                <div className={cn("h-4 rounded", colors.disabledBg)} />
+              </div>
+              <div
+                className={cn(
+                  "grid grid-cols-3 gap-3 p-3 rounded-2xl",
+                  colors.backgroundMuted
+                )}
+              >
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="text-center">
+                    <div
+                      className={cn("h-6 rounded mb-1", colors.disabledBg)}
+                    />
+                    <div className={cn("h-3 rounded", colors.disabledBg)} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -47,21 +94,20 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
               }}
               className={cn(
                 "group relative rounded-3xl p-4 transition-all duration-300 cursor-pointer",
-                colors.card, // Theme card background
-                colors.border, // Theme border
+                colors.card,
+                colors.border,
+                colors.hoverBg,
                 "backdrop-blur-sm",
-                "hover:shadow-xl",
-                colors.hoverShadow || "hover:shadow-amber-500/5", // Theme hover shadow
-                colors.hoverBorder ||
-                  "hover:border-amber-300/50 dark:hover:border-amber-600/50" // Theme hover border
+                "hover:shadow-xl"
               )}
             >
-              {/* Background Gradient Effect with Theme */}
+              {/* Background Gradient Effect */}
               <div
                 className={cn(
                   "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl",
-                  colors.hoverGradient ||
-                    "bg-gradient-to-br from-amber-500/3 to-orange-500/3"
+                  isDarkMode
+                    ? "bg-gradient-to-br from-orange-500/5 to-red-500/5"
+                    : "bg-gradient-to-br from-amber-500/3 to-orange-500/3"
                 )}
               />
 
@@ -72,8 +118,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                     <div
                       className={cn(
                         "px-3 py-1 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1",
-                        colors.accentGradient ||
-                          "bg-gradient-to-r from-amber-500 to-orange-500"
+                        colors.gradientPrimary
                       )}
                     >
                       <Star className="w-3 h-3 fill-current" />
@@ -91,7 +136,9 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                     <div
                       className={cn(
                         "w-16 h-16 rounded-2xl overflow-hidden border-2 shadow-lg",
-                        colors.accentBorder || "border-amber-400/80"
+                        isDarkMode
+                          ? "border-orange-400/80"
+                          : "border-amber-400/80"
                       )}
                     >
                       <img
@@ -101,7 +148,12 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                       />
                     </div>
                     {/* Online Status */}
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
+                    <OnlineBadge
+                      userId={musician?._id}
+                      size="sm"
+                      showText={true}
+                      className="flex items-start"
+                    />
                   </div>
 
                   {/* Rating & Basic Info */}
@@ -118,8 +170,9 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                         className={cn(
                           "font-bold text-lg leading-tight truncate",
                           colors.text,
-                          colors.hoverText ||
-                            "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                          isDarkMode
+                            ? "group-hover:text-orange-400"
+                            : "group-hover:text-amber-600"
                         )}
                       >
                         {musician.firstname || musician.username}{" "}
@@ -140,17 +193,16 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                       <RoleBadge
                         roleType={musician.roleType}
                         isBooker={musician.isBooker}
-                        colors={colors}
+                        isDarkMode={isDarkMode}
                       />
                     )}
                     {musician.isBooker && (
                       <span
                         className={cn(
                           "px-2 py-1 rounded-full text-xs font-medium border",
-                          colors.secondaryBg || "bg-purple-500/10",
-                          colors.secondaryText ||
-                            "text-purple-600 dark:text-purple-400",
-                          colors.secondaryBorder || "border-purple-500/20"
+                          isDarkMode
+                            ? "bg-purple-900/20 text-purple-400 border-purple-700/50"
+                            : "bg-purple-500/10 text-purple-600 border-purple-500/20"
                         )}
                       >
                         Booker
@@ -164,7 +216,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                       <Music2
                         className={cn(
                           "w-3 h-3",
-                          colors.accentText || "text-amber-500"
+                          isDarkMode ? "text-orange-400" : "text-amber-500"
                         )}
                       />
                       <span className={cn("font-medium", colors.text)}>
@@ -176,12 +228,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                   {/* Genres/Styles */}
                   {musician.genre && (
                     <div className="flex items-center gap-1 text-sm">
-                      <Disc3
-                        className={cn(
-                          "w-3 h-3",
-                          colors.infoText || "text-blue-500"
-                        )}
-                      />
+                      <Disc3 className={cn("w-3 h-3", colors.infoText)} />
                       <span className={cn("font-medium", colors.text)}>
                         {musician.genre}
                       </span>
@@ -196,13 +243,11 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                       <MapPin
                         className={cn(
                           "w-4 h-4",
-                          colors.accentText || "text-amber-500"
+                          isDarkMode ? "text-orange-400" : "text-amber-500"
                         )}
                       />
                       <span className={cn("font-medium", colors.text)}>
                         {musician.city}
-                        {musician.state && `, ${musician.state}`}
-                        {musician.country && `, ${musician.country}`}
                       </span>
                     </div>
                   )}
@@ -214,14 +259,14 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                         "px-2 py-1 rounded-full text-xs font-medium text-center border",
                         musician.availability === "available"
                           ? cn(
-                              colors.successBg || "bg-green-500/10",
-                              colors.successText || "text-green-600",
-                              colors.successBorder || "border-green-500/20"
+                              colors.successBg,
+                              colors.successText,
+                              colors.successBorder
                             )
                           : cn(
-                              colors.mutedBg || "bg-gray-500/10",
-                              colors.mutedText || "text-gray-600",
-                              colors.mutedBorder || "border-gray-500/20"
+                              colors.disabledBg,
+                              colors.disabledText,
+                              colors.disabledBorder
                             )
                       )}
                     >
@@ -236,8 +281,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                 <div
                   className={cn(
                     "grid grid-cols-3 gap-3 p-3 rounded-2xl",
-                    colors.backgroundMuted ||
-                      "bg-gray-50/50 dark:bg-gray-800/50"
+                    colors.backgroundMuted
                   )}
                 >
                   <div className="text-center">
@@ -245,7 +289,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                       <Users
                         className={cn(
                           "w-3 h-3",
-                          colors.accentText || "text-amber-500"
+                          isDarkMode ? "text-orange-400" : "text-amber-500"
                         )}
                       />
                       <span className={cn("font-bold text-sm", colors.text)}>
@@ -261,12 +305,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
 
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 mb-1">
-                      <Calendar
-                        className={cn(
-                          "w-3 h-3",
-                          colors.successText || "text-green-500"
-                        )}
-                      />
+                      <Calendar className={cn("w-3 h-3", colors.successText)} />
                       <span className={cn("font-bold text-sm", colors.text)}>
                         {musician.completedGigsCount || 0}
                       </span>
@@ -280,12 +319,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
 
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 mb-1">
-                      <Star
-                        className={cn(
-                          "w-3 h-3",
-                          colors.infoText || "text-blue-500"
-                        )}
-                      />
+                      <Star className={cn("w-3 h-3", colors.infoText)} />
                       <span className={cn("font-bold text-sm", colors.text)}>
                         {musician.followings?.length || 0}
                       </span>
@@ -302,7 +336,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                 <div className="flex items-center justify-between">
                   {/* Tier Badge */}
                   {musician.tier && musician.tier !== "free" && (
-                    <TierBadge tier={musician.tier} colors={colors} />
+                    <TierBadge tier={musician.tier} isDarkMode={isDarkMode} />
                   )}
 
                   {/* Experience Level */}
@@ -310,9 +344,9 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                     <div
                       className={cn(
                         "px-2 py-1 rounded-full text-xs font-medium border",
-                        colors.mutedBg || "bg-gray-500/10",
-                        colors.mutedText || "text-gray-600",
-                        colors.mutedBorder || "border-gray-500/20"
+                        colors.disabledBg,
+                        colors.disabledText,
+                        colors.disabledBorder
                       )}
                     >
                       {musician.experience}
@@ -322,20 +356,14 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
 
                 {/* Quick Actions */}
                 <div
-                  className={cn(
-                    "flex gap-2 pt-2 border-t",
-                    colors.borderMuted ||
-                      "border-gray-200/50 dark:border-gray-700/50"
-                  )}
+                  className={cn("flex gap-2 pt-2 border-t", colors.borderMuted)}
                 >
                   <button
                     className={cn(
                       "flex-1 py-2 px-3 rounded-xl text-xs font-medium transition-all border",
-                      colors.primaryBg || "bg-amber-500/10",
-                      colors.primaryText || "text-amber-600",
-                      colors.primaryBorder || "border-amber-500/20",
-                      colors.primaryHover ||
-                        "hover:bg-amber-500/20 hover:border-amber-500/40"
+                      isDarkMode
+                        ? "bg-orange-900/20 text-orange-400 border-orange-700/50 hover:bg-orange-900/30 hover:border-orange-600/50 whitespace-nowrap"
+                        : "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40"
                     )}
                   >
                     View Profile
@@ -343,14 +371,23 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                   <button
                     className={cn(
                       "flex-1 py-2 px-3 rounded-xl text-xs font-medium transition-all border",
-                      colors.secondaryBg || "bg-blue-500/10",
-                      colors.secondaryText || "text-blue-600",
-                      colors.secondaryBorder || "border-blue-500/20",
-                      colors.secondaryHover ||
-                        "hover:bg-blue-500/20 hover:border-blue-500/40"
+                      colors.infoBg,
+                      colors.infoText,
+                      colors.infoBorder,
+                      isDarkMode
+                        ? "hover:bg-blue-900/30 hover:border-blue-600/50"
+                        : "hover:bg-blue-500/20 hover:border-blue-500/40"
                     )}
                   >
-                    Message
+                    {" "}
+                    <ChatIcon
+                      userId={musician._id}
+                      variant="ghost"
+                      className="w-full justify-start hover:bg-transparent px-3 py-2"
+                      showText={true}
+                      size="lg"
+                      text="Message Me"
+                    />{" "}
                   </button>
                 </div>
               </div>
@@ -361,57 +398,47 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
   );
 };
 
-// Supporting Components with Theme
+// Supporting Components
 const RoleBadge: React.FC<{
   roleType: string;
   isBooker?: boolean;
-  colors: any;
-}> = ({ roleType, isBooker, colors }) => {
+  isDarkMode: boolean;
+}> = ({ roleType, isBooker, isDarkMode }) => {
   const roleConfig = {
     dj: {
       label: "DJ",
       emoji: "🎧",
-      color: cn(
-        colors.infoBg || "bg-blue-500/10",
-        colors.infoText || "text-blue-600",
-        colors.infoBorder || "border-blue-500/20"
-      ),
+      color: isDarkMode
+        ? "bg-blue-900/20 text-blue-400 border-blue-700/50"
+        : "bg-blue-500/10 text-blue-600 border-blue-500/20",
     },
     mc: {
       label: "MC",
       emoji: "🎤",
-      color: cn(
-        colors.errorBg || "bg-red-500/10",
-        colors.errorText || "text-red-600",
-        colors.errorBorder || "border-red-500/20"
-      ),
+      color: isDarkMode
+        ? "bg-red-900/20 text-red-400 border-red-700/50"
+        : "bg-red-500/10 text-red-600 border-red-500/20",
     },
     vocalist: {
       label: "Vocalist",
       emoji: "🎵",
-      color: cn(
-        colors.warningBg || "bg-pink-500/10",
-        colors.warningText || "text-pink-600",
-        colors.warningBorder || "border-pink-500/20"
-      ),
+      color: isDarkMode
+        ? "bg-pink-900/20 text-pink-400 border-pink-700/50"
+        : "bg-pink-500/10 text-pink-600 border-pink-500/20",
     },
     instrumentalist: {
       label: "Musician",
       emoji: "🎸",
-      color: cn(
-        colors.accentBg || "bg-amber-500/10",
-        colors.accentText || "text-amber-600",
-        colors.accentBorder || "border-amber-500/20"
-      ),
+      color: isDarkMode
+        ? "bg-orange-900/20 text-orange-400 border-orange-700/50"
+        : "bg-amber-500/10 text-amber-600 border-amber-500/20",
     },
     producer: {
       label: "Producer",
       emoji: "🎛️",
-      color: cn(
-        colors.secondaryBg || "bg-purple-500/10",
-        colors.secondaryText || "text-purple-600",
-        colors.secondaryBorder || "border-purple-500/20"
-      ),
+      color: isDarkMode
+        ? "bg-purple-900/20 text-purple-400 border-purple-700/50"
+        : "bg-purple-500/10 text-purple-600 border-purple-500/20",
     },
   };
 
@@ -431,28 +458,31 @@ const RoleBadge: React.FC<{
   );
 };
 
-const TierBadge: React.FC<{ tier: string; colors: any }> = ({
+const TierBadge: React.FC<{ tier: string; isDarkMode: boolean }> = ({
   tier,
-  colors,
+  isDarkMode,
 }) => {
   const tierConfig = {
     pro: {
       label: "PRO",
-      gradient: colors.accentGradient || "from-amber-500 to-orange-500",
-      text: colors.accentTextInverse || "text-amber-100",
-      shadow: colors.accentShadow || "shadow-amber-500/25",
+      gradient: isDarkMode
+        ? "from-orange-500 to-red-500"
+        : "from-amber-500 to-orange-500",
+      text: "text-white",
     },
     premium: {
       label: "PREMIUM",
-      gradient: colors.secondaryGradient || "from-purple-500 to-pink-500",
-      text: colors.secondaryTextInverse || "text-purple-100",
-      shadow: colors.secondaryShadow || "shadow-purple-500/25",
+      gradient: isDarkMode
+        ? "from-purple-500 to-pink-500"
+        : "from-purple-500 to-pink-500",
+      text: "text-white",
     },
     elite: {
       label: "ELITE",
-      gradient: colors.premiumGradient || "from-yellow-500 to-red-500",
-      text: colors.premiumTextInverse || "text-yellow-100",
-      shadow: colors.premiumShadow || "shadow-yellow-500/25",
+      gradient: isDarkMode
+        ? "from-yellow-500 to-red-500"
+        : "from-yellow-500 to-red-500",
+      text: "text-white",
     },
   };
 
@@ -463,8 +493,7 @@ const TierBadge: React.FC<{ tier: string; colors: any }> = ({
       className={cn(
         "px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r shadow-lg",
         config.gradient,
-        config.text,
-        config.shadow
+        config.text
       )}
     >
       {config.label}

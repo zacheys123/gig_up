@@ -42,15 +42,16 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
       transition={{ type: "spring", stiffness: 260, damping: 20 }}
       className={cn(
         "hidden sm:flex sm:flex-col relative border-r flex-shrink-0 h-screen sticky top-0",
-        colors.border // Apply border color from theme
+        colors.border,
+        colors.navBackground || colors.background
       )}
     >
       {/* Glass effect with theme colors */}
       <div
         className={cn(
           "absolute inset-0 backdrop-blur-xl",
-          colors.card, // Use theme card background
-          "bg-opacity-80" // Maintain transparency
+          colors.navBackground || colors.background,
+          "bg-opacity-95"
         )}
       />
 
@@ -58,7 +59,12 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
         {/* Collapse Button */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-4 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg z-20 hover:bg-amber-600 transition-colors"
+          className={cn(
+            "absolute -right-3 top-4 w-6 h-6 rounded-full flex items-center justify-center shadow-lg z-20 transition-colors",
+            colors.primaryBg || "bg-amber-500",
+            colors.primaryBgHover || "hover:bg-amber-600",
+            "text-white"
+          )}
         >
           {collapsed ? (
             <ChevronRight className="w-4 h-4" />
@@ -68,26 +74,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
         </button>
 
         {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className={cn(
-              "relative flex items-center gap-3 px-3 py-3 rounded-lg w-full transition-all overflow-hidden group",
-              activeTab === tab.id
-                ? cn(
-                    " font-semibold shadow-lg",
-                    colors.textMuted,
-                    colors.card,
-                    // Use theme colors for active state
-                    colors.activeBg ||
-                      "bg-gradient-to-br from-amber-500 to-orange-500"
-                  )
-                : cn(
-                    colors.textSecondary, // Use theme text color
-                    colors.hoverBg, // Use theme hover background
-                    colors.backGroundMuted // Keep amber accents
-                  )
-            )}
-          >
+          <div key={tab.id} className="relative w-full">
             <button
               onMouseEnter={() => setHoveredTab(tab.id)}
               onMouseLeave={() => setHoveredTab(null)}
@@ -96,16 +83,18 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                 "relative flex items-center gap-3 px-3 py-3 rounded-lg w-full transition-all overflow-hidden group",
                 activeTab === tab.id
                   ? cn(
-                      " font-semibold shadow-lg",
-                      colors.textMuted,
-                      // Use theme colors for active state
-                      colors.activeBg ||
-                        "bg-gradient-to-br from-amber-500 to-orange-500"
+                      "text-white font-semibold shadow-lg", // Force white text for active state
+                      // Use solid background for active state
+                      isDarkMode
+                        ? "bg-amber-600 border-amber-500"
+                        : "bg-amber-500 border-amber-400"
                     )
                   : cn(
-                      colors.textSecondary, // Use theme text color
+                      colors.text, // Use main text color
                       colors.hoverBg, // Use theme hover background
-                      "hover:text-amber-600 dark:hover:text-amber-400" // Keep amber accents
+                      "border border-transparent",
+                      "hover:border-amber-200 dark:hover:border-amber-800",
+                      "hover:text-amber-600 dark:hover:text-amber-400"
                     )
               )}
             >
@@ -113,20 +102,35 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                 <motion.div
                   layoutId="sidebarActiveTab"
                   className={cn(
-                    "absolute inset-0 rounded-lg shadow-lg",
-                    colors.activeBg ||
-                      "bg-gradient-to-br from-amber-500 to-orange-500",
-                    colors.activeShadow || "shadow-amber-500/25"
+                    "absolute inset-0 rounded-lg",
+                    isDarkMode
+                      ? "bg-amber-600 shadow-amber-500/25"
+                      : "bg-amber-500 shadow-amber-500/25"
                   )}
                 />
               )}
-              <span className="relative z-10 text-lg">{tab.icon}</span>
+
+              {/* Icon - Always visible with proper contrast */}
+              <span
+                className={cn(
+                  "relative z-10 text-lg transition-colors",
+                  activeTab === tab.id
+                    ? "text-white" // Force white for active state
+                    : colors.text // Use theme text for inactive
+                )}
+              >
+                {tab.icon}
+              </span>
+
+              {/* Text content - Only visible when not collapsed */}
               {!collapsed && (
                 <div className="relative z-10 flex-1 text-left">
                   <span
                     className={cn(
                       "block font-medium transition-colors",
-                      activeTab === tab.id ? "text-white" : colors.text
+                      activeTab === tab.id
+                        ? "text-white" // Force white for active state
+                        : colors.text // Use theme text for inactive
                     )}
                   >
                     {tab.label}
@@ -136,8 +140,8 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                       className={cn(
                         "text-xs mt-1 leading-tight transition-all duration-200",
                         activeTab === tab.id
-                          ? "text-amber-100" // Light text for active state
-                          : colors.textMuted // Use theme muted text
+                          ? "text-amber-100" // Light amber for active description
+                          : colors.textMuted // Use theme muted text for inactive
                       )}
                     >
                       {tab.description}
@@ -156,9 +160,10 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
               >
                 <div
                   className={cn(
-                    colors.tooltipBg || "bg-gray-900 dark:bg-gray-100",
-                    colors.tooltipText || "text-white dark:text-gray-900",
-                    "px-3 py-2 rounded-lg shadow-xl text-sm font-medium whitespace-nowrap"
+                    colors.card || "bg-white dark:bg-gray-900",
+                    colors.text || "text-gray-900 dark:text-gray-100",
+                    "px-3 py-2 rounded-lg shadow-xl border text-sm font-medium whitespace-nowrap",
+                    colors.border || "border-gray-200 dark:border-gray-700"
                   )}
                 >
                   <div className="font-semibold">{tab.label}</div>
@@ -166,8 +171,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                     <div
                       className={cn(
                         "text-xs mt-1 max-w-xs",
-                        colors.tooltipTextMuted ||
-                          "text-gray-300 dark:text-gray-600"
+                        colors.textMuted || "text-gray-600 dark:text-gray-400"
                       )}
                     >
                       {tab.description}
@@ -178,7 +182,8 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                   <div
                     className={cn(
                       "w-2 h-2 rotate-45",
-                      colors.tooltipBg || "bg-gray-900 dark:bg-gray-100"
+                      colors.card || "bg-white dark:bg-gray-900",
+                      colors.border || "border-gray-200 dark:border-gray-700"
                     )}
                   />
                 </div>
@@ -194,13 +199,20 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
         <button
           onClick={handleThemeToggle}
           className={cn(
-            "relative flex items-center gap-3 px-3 py-3 rounded-lg w-full transition-all group",
-            colors.textSecondary,
+            "relative flex items-center gap-3 px-3 py-3 rounded-lg w-full transition-all group border",
+            colors.text,
             colors.hoverBg,
-            "hover:text-amber-600 dark:hover:text-amber-400" // Keep amber accent on hover
+            colors.border || "border-gray-200 dark:border-gray-700",
+            "hover:border-amber-300 dark:hover:border-amber-600",
+            "hover:text-amber-600 dark:hover:text-amber-400"
           )}
         >
-          <Palette className="w-5 h-5" />
+          <Palette
+            className={cn(
+              "w-5 h-5 transition-colors",
+              "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+            )}
+          />
           {!collapsed && (
             <div className="flex-1 text-left">
               <span className={cn("block font-medium", colors.text)}>

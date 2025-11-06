@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Users, Calendar, DollarSign } from "lucide-react";
+import { Book } from "react-feather";
 
 interface PlaceholderSectionProps {
   title: string;
@@ -88,6 +89,20 @@ export const PlaceholderSection: React.FC<PlaceholderSectionProps> = ({
           <Button className="bg-teal-500 hover:bg-teal-600">
             <Plus className="w-4 h-4 mr-2" />
             Add Musicians
+          </Button>
+        );
+      case "urgent-gigs":
+        return (
+          <Button className="bg-teal-500 hover:bg-teal-600">
+            <Book className="w-4 h-4 mr-2" />
+            create urgent Gigs
+          </Button>
+        );
+      case "my-invites":
+        return (
+          <Button className="bg-teal-500 hover:bg-teal-600">
+            <Plus className="w-4 h-4 mr-2" />
+            All invited Gigs
           </Button>
         );
 

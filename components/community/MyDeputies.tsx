@@ -224,10 +224,10 @@ const DeputyManagementCard: React.FC<{
     </div>
   );
 };
-
+// components/DeputyManagementCard.tsx - UPDATED
 const DeputyHeader: React.FC<{
   deputy: any;
-  onToggleBookable: () => void;
+  onToggleBookable: (deputyId: string, currentValue: boolean) => void;
   isLoading: boolean;
 }> = ({ deputy, onToggleBookable, isLoading }) => {
   const { colors } = useThemeColors();
@@ -250,15 +250,19 @@ const DeputyHeader: React.FC<{
           <h3 className={cn("font-bold text-lg truncate", colors.text)}>
             {deputy?.firstname} {deputy?.lastname}
           </h3>
+
+          {/* PER-DEPUTY TOGGLE */}
           <button
-            onClick={onToggleBookable}
+            onClick={() =>
+              onToggleBookable(deputy?._id, deputy?.relationship.canBeBooked)
+            }
             disabled={isLoading}
             className={cn(
               "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all duration-200",
               "hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed",
               deputy?.relationship.canBeBooked
                 ? "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20"
-                : "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20"
+                : "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20"
             )}
           >
             {deputy?.relationship.canBeBooked ? (
@@ -266,21 +270,33 @@ const DeputyHeader: React.FC<{
             ) : (
               <ToggleLeft className="w-3 h-3" />
             )}
-            {deputy?.relationship.canBeBooked ? "Bookable" : "Unavailable"}
+            {deputy?.relationship.canBeBooked
+              ? "Can be booked"
+              : "Cannot be booked"}
           </button>
         </div>
+
         <p className={cn("text-sm truncate mb-2", colors.textMuted)}>
           @{deputy?.username}
         </p>
 
-        {/* Role Badge */}
-        <Badge
-          variant="secondary"
-          className="bg-amber-500/10 text-amber-600 border-amber-500/20"
-        >
-          <UserCheck className="w-3 h-3 mr-1" />
-          {deputy?.relationship?.forMySkill}
-        </Badge>
+        {/* Role and Gig Type Info */}
+        <div className="space-y-1">
+          <Badge
+            variant="secondary"
+            className="bg-amber-500/10 text-amber-600 border-amber-500/20"
+          >
+            <UserCheck className="w-3 h-3 mr-1" />
+            {deputy?.relationship?.forMySkill}
+          </Badge>
+
+          {deputy?.relationship.gigType && (
+            <Badge variant="outline" className="text-xs">
+              <Calendar className="w-3 h-3 mr-1" />
+              {deputy.relationship.gigType}
+            </Badge>
+          )}
+        </div>
       </div>
     </div>
   );

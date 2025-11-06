@@ -24,6 +24,7 @@ import {
   Star,
   Lock,
   Sparkles,
+  Plus,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -53,6 +54,7 @@ interface NavigationLink {
   condition?: boolean;
   onClick?: (e: React.MouseEvent) => void;
   proOnly?: boolean;
+  proBadge?: boolean;
 }
 
 interface ThemeOption {
@@ -108,7 +110,8 @@ const getNavigationLinks = (
   userId: string | undefined,
   user: any,
   isPro: boolean,
-  isTrialEnded?: boolean
+  isTrialEnded?: boolean,
+  isInGracePeriod?: boolean
 ): NavigationLink[] => {
   const coreLinks: NavigationLink[] = [
     { label: "Home", href: "/", icon: <Home size={22} /> },
@@ -116,7 +119,12 @@ const getNavigationLinks = (
     { label: "Search", href: "/auth/search", icon: <Search size={22} /> },
     { label: "Profile", href: "/profile", icon: <User size={22} /> },
     { label: "Settings", href: "/settings", icon: <Settings size={22} /> },
-    { label: "Games", href: "/game", icon: <Gamepad size={22} /> },
+    {
+      label: "Games",
+      href: "/game",
+      icon: <Gamepad size={22} />,
+      proBadge: true, // Add Pro badge to Games
+    },
   ];
 
   const proLinks: NavigationLink[] = [
@@ -133,6 +141,22 @@ const getNavigationLinks = (
       proOnly: true,
     },
   ];
+
+  // Add Urgent Gigs with Pro badge (same condition as DesktopNavigation)
+  const shouldShowUrgentGigs =
+    !user?.isMusician &&
+    user?.isClient &&
+    (user?.tier === "pro" || isInGracePeriod);
+
+  if (shouldShowUrgentGigs) {
+    coreLinks.splice(4, 0, {
+      // Insert before Games
+      label: "Urgent Gigs",
+      href: "/hub/gigs?tab=urgent-gigs",
+      icon: <Zap size={22} />,
+      proBadge: true, // Add Pro badge to Urgent Gigs
+    });
+  }
 
   if (user?._id) {
     coreLinks.splice(
@@ -159,7 +183,7 @@ const getNavigationLinks = (
     }
 
     coreLinks.splice(6, 0, {
-      label: "Gigs",
+      label: "Create Gigs",
       href: user?.isClient ? `/create/${userId}` : `/av_gigs/${userId}`,
       icon: <Music size={22} />,
     });
@@ -244,11 +268,18 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
 
   // Enhanced trial experience
   const showTrialEnded = isTrialEnded || isFirstMonthEnd;
-  const showGracePeriod = isInGracePeriod && !isPro;
-  const showUpgradePrompt = showTrialEnded || showGracePeriod || !isPro;
+  const showGracePeriod = isInGracePeriod;
+  const showUpgradePrompt =
+    showTrialEnded || showGracePeriod || user?.tier === "free";
 
   const navigationLinks: NavigationLink[] = hasMinimumData(user)
-    ? getNavigationLinks(userId as string, user, isPro(), showTrialEnded)
+    ? getNavigationLinks(
+        userId as string,
+        user,
+        isPro(),
+        showTrialEnded,
+        isInGracePeriod
+      )
     : getEssentialLinks();
 
   const displayTotalUnread = totalUnread > 0 ? totalUnread : null;
@@ -417,6 +448,7 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                     const isActive = pathname === link.href;
                     const isProOnly =
                       link.proOnly && (showTrialEnded || !isPro);
+                    const hasProBadge = link.proBadge;
 
                     const linkElement = (
                       <div
@@ -427,7 +459,9 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                             : colors.hoverBg,
                           "hover:border-orange-200",
                           "border border-transparent",
-                          isProOnly && "opacity-60"
+                          (isProOnly ||
+                            (hasProBadge && !isPro && !isInGracePeriod)) &&
+                            "opacity-60"
                         )}
                       >
                         <div className="flex items-center gap-4">
@@ -437,7 +471,9 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                               isActive
                                 ? "text-orange-600"
                                 : "group-hover:text-orange-600",
-                              isProOnly && "text-gray-400"
+                              (isProOnly ||
+                                (hasProBadge && !isPro && !isInGracePeriod)) &&
+                                "text-gray-400"
                             )}
                           >
                             {link.icon}
@@ -446,12 +482,28 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                             className={cn(
                               "text-base font-medium transition-colors duration-200",
                               isActive ? "text-orange-600" : colors.text,
-                              isProOnly && "text-gray-500"
+                              (isProOnly ||
+                                (hasProBadge && !isPro && !isInGracePeriod)) &&
+                                "text-gray-500"
                             )}
                           >
                             {link.label}
                           </span>
+
+                          {/* Show Lock for pro-only features */}
                           {isProOnly && (
+                            <Lock className="w-3 h-3 text-orange-500" />
+                          )}
+
+                          {/* Show Pro badge for features with proBadge */}
+                          {hasProBadge && (isPro || isInGracePeriod) && (
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs px-2 py-0.5 border-0">
+                              PRO
+                            </Badge>
+                          )}
+
+                          {/* Show Lock for proBadge features when user doesn't have access */}
+                          {hasProBadge && !isPro && !isInGracePeriod && (
                             <Lock className="w-3 h-3 text-orange-500" />
                           )}
                         </div>
@@ -474,10 +526,15 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                         <button
                           key={index}
                           onClick={isProOnly ? undefined : link.onClick}
-                          disabled={isProOnly}
+                          disabled={
+                            isProOnly ||
+                            (hasProBadge && !isPro && !isInGracePeriod)
+                          }
                           className={cn(
                             "w-full text-left",
-                            isProOnly && "cursor-not-allowed"
+                            (isProOnly ||
+                              (hasProBadge && !isPro && !isInGracePeriod)) &&
+                              "cursor-not-allowed"
                           )}
                         >
                           {linkElement}
@@ -485,12 +542,19 @@ export function MobileSheet({ children, isTrialEnded }: MobileSheetProps) {
                       );
                     }
 
+                    const shouldBlockAccess =
+                      isProOnly || (hasProBadge && !isPro && !isInGracePeriod);
+
                     return (
                       <Link
                         key={index}
-                        href={isProOnly ? "/upgrade" : link.href}
-                        onClick={() => !isProOnly && setIsSheetOpen(false)}
-                        className={cn(isProOnly && "cursor-not-allowed")}
+                        href={shouldBlockAccess ? "/upgrade" : link.href}
+                        onClick={() =>
+                          !shouldBlockAccess && setIsSheetOpen(false)
+                        }
+                        className={cn(
+                          shouldBlockAccess && "cursor-not-allowed"
+                        )}
                       >
                         {linkElement}
                       </Link>

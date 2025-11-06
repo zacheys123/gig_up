@@ -246,6 +246,7 @@ export const userModel = defineTable({
           v.literal("rejected")
         ),
         canBeBooked: v.boolean(),
+        utoBookable: v.optional(v.boolean()), // Auto-available when you're unavailable
         dateAdded: v.number(),
       })
     )
