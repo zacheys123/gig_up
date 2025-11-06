@@ -135,6 +135,8 @@ const getUserGigTabs = (user: any) => {
         { id: "booked", label: "✅ Booked" },
         { id: "reviewed", label: "⭐ Reviewed" },
         { id: "invites", label: "⭐ Invites" },
+        { id: "crew-management", label: "👥 Crew Management" },
+        { id: "urgent-gigs", label: "⭐ Urgent Gigs" },
       ],
       defaultTab: "my-gigs",
     };
@@ -222,6 +224,8 @@ const renderGigContent = (user: any, activeTab: string) => {
         return <BookedGigs user={user} />;
       case "reviewed":
         return <ReviewedGigs user={user} />;
+      case "crew-management":
+        return <CrewManagement user={user} />;
       case "invites":
         return <GigInvites user={user} />;
       case "urgent-gigs":

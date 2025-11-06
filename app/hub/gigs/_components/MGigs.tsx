@@ -1,7 +1,7 @@
-import { PlaceholderSection } from "./PlaceholderSection";
+import { GigSectionHeader } from "./GigSectionHeader";
 
 export const MyGigs = ({ user }: { user: any }) => (
-  <PlaceholderSection
+  <GigSectionHeader
     title="📋 My Posted Gigs"
     description="Manage gigs you've posted as a client"
     user={user}

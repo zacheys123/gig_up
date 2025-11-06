@@ -1,7 +1,7 @@
-import { PlaceholderSection } from "./PlaceholderSection";
+import { GigSectionHeader } from "./GigSectionHeader";
 
 export const FavoriteGigs = ({ user }: { user: any }) => (
-  <PlaceholderSection
+  <GigSectionHeader
     title="⭐ Favorite Gigs"
     description="Gigs you've marked as favorites"
     user={user}

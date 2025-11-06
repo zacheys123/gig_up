@@ -13,7 +13,7 @@ export { CrewManagement } from "./CrewManagement";
 export { ClientPreBooking } from "./ClientPreBooking";
 export { GigInvites } from "./GigInvites";
 export { InstantGigs } from "./InstantGigs";
-export { PlaceholderSection } from "./PlaceholderSection";
+export { GigSectionHeader } from "./GigSectionHeader";
 export {
   GigsLoadingSkeleton,
   CompactGigsSkeleton,

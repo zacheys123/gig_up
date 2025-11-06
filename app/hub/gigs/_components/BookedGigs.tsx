@@ -1,7 +1,7 @@
-import { PlaceholderSection } from "./PlaceholderSection";
+import { GigSectionHeader } from "./GigSectionHeader";
 
 export const BookedGigs = ({ user }: { user: any }) => (
-  <PlaceholderSection
+  <GigSectionHeader
     title="✅ Booked Gigs"
     description="Gigs you've successfully booked"
     user={user}

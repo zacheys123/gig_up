@@ -1,7 +1,7 @@
-import { PlaceholderSection } from "./PlaceholderSection";
+import { GigSectionHeader } from "./GigSectionHeader";
 
 export const PaymentHistory = ({ user }: { user: any }) => (
-  <PlaceholderSection
+  <GigSectionHeader
     title="💰 Payment History"
     description="Track your earnings and payments"
     user={user}

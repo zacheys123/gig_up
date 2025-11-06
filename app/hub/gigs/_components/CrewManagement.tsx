@@ -1,8 +1,8 @@
-import { PlaceholderSection } from "./PlaceholderSection";
+import { GigSectionHeader } from "./GigSectionHeader";
 
 // components/gigs/CrewManagement.tsx
 export const CrewManagement = ({ user }: { user: any }) => (
-  <PlaceholderSection
+  <GigSectionHeader
     title="👥 Crew Management"
     description="Manage musicians and build your crews"
     user={user}
