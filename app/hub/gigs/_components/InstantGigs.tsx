@@ -1,274 +1,263 @@
-// app/hub/gigs/_components/InstantGigs.tsx
+// app/hub/gigs/_components/InstantGigs.tsx - ADD UPDATE HANDLER
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Users, Star, Crown, Check } from "lucide-react";
+import { Plus, Edit, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
+
+import { CreateTemplateTab } from "./tabs/CreateTemplateTab";
+
+import { useTemplates } from "@/hooks/useTemplates";
+import { useInstantGigs } from "@/hooks/useInstantGigs";
+import { GigTemplate } from "@/convex/instantGigsTypes";
+import { OnboardingModal } from "./tabs/OnBoardingModal";
 import { GigSectionHeader } from "./GigSectionHeader";
+import { MyTemplatesTab } from "./tabs/MyTemplateTab";
+import { ProMusiciansTab } from "./ProMusicianTab";
+import { BookingModal } from "./tabs/BookingModal";
+import { useProMusicians } from "@/hooks/useProMusicians";
 
 export const InstantGigs = ({ user }: { user: any }) => {
   const router = useRouter();
   const { colors } = useThemeColors();
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "create" | "templates" | "musicians"
+  >("create");
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedMusician, setSelectedMusician] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [createTabMode, setCreateTabMode] = useState<
+    "default" | "guided" | "custom"
+  >("default");
+  const [editingTemplate, setEditingTemplate] = useState<GigTemplate | null>(
+    null
+  ); // NEW: For edit mode
 
-  // Pre-defined templates
-  const gigTemplates = [
-    {
-      id: "wedding",
-      title: "💒 Wedding Ceremony",
-      description: "Elegant music for wedding ceremonies",
-      duration: "2-3 hours",
-      budget: "$300-600",
-      popular: true,
-      icon: "💒",
-    },
-    {
-      id: "corporate",
-      title: "🏢 Corporate Event",
-      description: "Professional background music for corporate functions",
-      duration: "3-4 hours",
-      budget: "$400-800",
-      popular: true,
-      icon: "🏢",
-    },
-    {
-      id: "private-party",
-      title: "🎉 Private Party",
-      description: "Entertainment for birthdays, anniversaries, celebrations",
-      duration: "2-4 hours",
-      budget: "$250-500",
-      icon: "🎉",
-    },
-    {
-      id: "concert",
-      title: "🎤 Concert/Show",
-      description: "Live performance for concerts and shows",
-      duration: "1-2 hours",
-      budget: "$500-1000",
-      icon: "🎤",
-    },
-    {
-      id: "restaurant",
-      title: "🍽️ Restaurant/Lounge",
-      description: "Ambient music for dining establishments",
-      duration: "3-5 hours",
-      budget: "$200-400",
-      icon: "🍽️",
-    },
-    {
-      id: "custom",
-      title: "➕ Custom Template",
-      description: "Create your own gig template from scratch",
-      duration: "Flexible",
-      budget: "Custom",
-      custom: true,
-      icon: "➕",
-    },
-  ];
+  // Use optimized hooks
+  const {
+    templates,
+    isLoading: templatesLoading,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+  } = useTemplates(user._id);
+  const { stats, createGig } = useInstantGigs(user._id);
+  const { featuredMusicians: proMusicians } = useProMusicians();
+  // Check if user is new and show onboarding
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem(
+      "instant_gigs_onboarding_seen"
+    );
+    if (!hasSeenOnboarding && templates.length === 0 && !templatesLoading) {
+      setShowOnboarding(true);
+    }
+  }, [templates, templatesLoading]);
 
-  const handleTemplateSelect = (templateId: string) => {
-    setSelectedTemplate(templateId);
+  const handleCreateTemplate = async (templateData: any) => {
+    await createTemplate(templateData);
+    setActiveTab("templates");
+    setCreateTabMode("default");
   };
 
-  const handleCreateGig = () => {
-    if (selectedTemplate) {
-      setIsCreating(true);
-      // Simulate API call or navigation
-      setTimeout(() => {
-        const template = gigTemplates.find((t) => t.id === selectedTemplate);
-        if (template?.custom) {
-          router.push("/hub/gigs?tab=instant-gigs&create=custom");
-        } else {
-          router.push(`/search?template=${selectedTemplate}&type=instant-gig`);
-        }
-        setIsCreating(false);
-      }, 1000);
+  // NEW: Handle template updates
+  const handleUpdateTemplate = async (
+    templateId: string,
+    updates: Partial<GigTemplate>
+  ) => {
+    await updateTemplate(templateId, updates);
+  };
+
+  // NEW: Start editing a template
+  const handleStartEdit = (template: GigTemplate) => {
+    setEditingTemplate(template);
+    setActiveTab("create");
+    setCreateTabMode("custom");
+  };
+
+  // NEW: Cancel editing
+  const handleCancelEdit = () => {
+    setEditingTemplate(null);
+    setCreateTabMode("default");
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    await deleteTemplate(templateId);
+  };
+
+  const handleRequestToBook = (musician: any) => {
+    setSelectedMusician(musician);
+    setShowBookingModal(true);
+  };
+
+  const handleSubmitBooking = async (templateId: string) => {
+    setIsLoading(true);
+    try {
+      const template = templates.find((t) => t.id === templateId);
+      if (!template || !selectedMusician) return;
+
+      // Create the gig in Convex
+      await createGig({
+        title: template.title,
+        description: template.description,
+        date: template.date,
+        venue: template.venue,
+        budget: template.budget,
+        gigType: template.gigType,
+        duration: template.duration,
+        setlist: template.setlist,
+        clientId: user._id,
+        clientName: user.name,
+        invitedMusicianId: selectedMusician.id,
+        musicianName: selectedMusician.name,
+      });
+
+      setShowBookingModal(false);
+      setSelectedMusician(null);
+
+      // Show success message
+      console.log("Booking submitted successfully!");
+    } catch (error) {
+      console.error("Error submitting booking:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const selectedTemplateData = gigTemplates.find(
-    (t) => t.id === selectedTemplate
-  );
+  const handleOnboardingComplete = () => {
+    localStorage.setItem("instant_gigs_onboarding_seen", "true");
+    setShowOnboarding(false);
+  };
+
+  const handleGuidedCreation = () => {
+    setShowOnboarding(false);
+    setActiveTab("create");
+    setCreateTabMode("guided");
+  };
+
+  const handleCustomCreation = () => {
+    setShowOnboarding(false);
+    setActiveTab("create");
+    setCreateTabMode("custom");
+  };
+
+  const handleFormClose = () => {
+    setCreateTabMode("default");
+    setEditingTemplate(null); // NEW: Reset editing state
+  };
+
+  const draftTemplates = templates;
 
   return (
     <div className="space-y-6">
-      {/* Gig Section Header */}
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleOnboardingComplete}
+        onGuidedCreation={handleGuidedCreation}
+        onCustomCreation={handleCustomCreation}
+      />
+
       <GigSectionHeader
         title="Instant Gigs"
-        description="Create gig templates and invite specific musicians directly"
+        description="Create templates and book premium musicians instantly"
         user={user}
         type="urgent-gigs"
         stats={{
-          total: gigTemplates.length - 1, // Exclude custom template
-          active: 0,
-          completed: 0,
-          pending: 0,
+          total: templates.length,
+          used: templates.filter((t) => t.timesUsed && t.timesUsed > 0).length, // Templates actually used
+          musicians: proMusicians.length, // Available musicians
+          bookings: stats.total, // Actual gigs booked
         }}
         onAction={(action) => {
           if (action === "create-urgent") {
-            router.push("/hub/gigs?tab=instant-gigs&create=custom");
+            setActiveTab("create");
+            setCreateTabMode("custom");
           }
         }}
       />
-
-      {/* Main Content */}
+      {/* Tabs Navigation */}
       <div
-        className={cn("rounded-2xl p-6", colors.card, colors.border, "border")}
+        className={cn("rounded-2xl p-1", colors.card, colors.border, "border")}
       >
-        {/* Template Selection Grid */}
-        <div className="mb-8">
-          <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
-            Select a Template
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {gigTemplates.map((template) => (
-              <div
-                key={template.id}
-                onClick={() => handleTemplateSelect(template.id)}
+        <div className="flex space-x-1">
+          {[
+            { id: "create", label: "🎵 Create Template", icon: Plus },
+            { id: "templates", label: "📋 My Templates", icon: Edit },
+            { id: "musicians", label: "👑 Pro Musicians", icon: Crown },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+                  if (tab.id === "create") {
+                    setCreateTabMode("default");
+                    setEditingTemplate(null); // NEW: Reset editing when switching tabs
+                  }
+                }}
                 className={cn(
-                  "border rounded-2xl p-5 cursor-pointer transition-all duration-200",
-                  colors.border,
-                  "group relative",
-                  selectedTemplate === template.id
-                    ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20 border-blue-500"
-                    : cn(colors.hoverBg, "hover:border-amber-400")
+                  "flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex-1 justify-center",
+                  activeTab === tab.id
+                    ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                    : cn(colors.textMuted, "hover:" + colors.text)
                 )}
               >
-                {/* Selection Indicator */}
-                {selectedTemplate === template.id && (
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Check className="w-4 h-4 text-white" />
-                  </div>
-                )}
-
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{template.icon}</span>
-                    <h4 className={cn("font-bold", colors.text)}>
-                      {template.title}
-                    </h4>
-                  </div>
-                  {template.popular && (
-                    <span className="px-2 py-1 bg-amber-500 text-white text-xs rounded-full">
-                      Popular
-                    </span>
-                  )}
-                </div>
-
-                <p className={cn("text-sm mb-4", colors.textMuted)}>
-                  {template.description}
-                </p>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className={colors.textMuted}>Duration:</span>
-                    <span className={cn("font-medium", colors.text)}>
-                      {template.duration}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={colors.textMuted}>Budget Range:</span>
-                    <span className={cn("font-medium", colors.text)}>
-                      {template.budget}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedTemplate === template.id && (
-                  <Button
-                    className="w-full mt-4"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCreateGig();
-                    }}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? "Creating..." : "Use This Template"}
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Selected Template Preview */}
-        {selectedTemplateData && (
-          <div
-            className={cn(
-              "rounded-2xl p-6 mb-6 border",
-              colors.border,
-              "bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20"
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className={cn("text-lg font-bold mb-2", colors.text)}>
-                  Selected: {selectedTemplateData.title}
-                </h3>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  Ready to create your gig with this template
-                </p>
-              </div>
-              <Button
-                onClick={handleCreateGig}
-                disabled={isCreating}
-                className="bg-blue-500 hover:bg-blue-600"
-              >
-                {isCreating ? (
-                  <>Creating...</>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Gig
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Premium Musician Section */}
-        <div className={cn("rounded-2xl p-6 mb-6", colors.backgroundMuted)}>
-          <div className="flex items-center gap-3 mb-4">
-            <Crown className="w-6 h-6 text-amber-500" />
-            <h3 className={cn("font-bold text-xl", colors.text)}>
-              Featured Premium Musicians
-            </h3>
-          </div>
-          <p className={cn("text-sm mb-4", colors.textMuted)}>
-            Top-rated verified musicians available for instant booking
-          </p>
-          <Button
-            onClick={() => router.push("/search?tier=premium&type=instant-gig")}
-            className="bg-amber-500 hover:bg-amber-600"
-          >
-            <Star className="w-4 h-4 mr-2" />
-            Browse Premium Musicians
-          </Button>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div className={cn("p-4 rounded-xl", colors.backgroundMuted)}>
-            <div className={cn("text-2xl font-bold", colors.text)}>
-              {gigTemplates.length - 1}
-            </div>
-            <div className={cn("text-sm", colors.textMuted)}>Templates</div>
-          </div>
-          <div className={cn("p-4 rounded-xl", colors.backgroundMuted)}>
-            <div className={cn("text-2xl font-bold", colors.text)}>0</div>
-            <div className={cn("text-sm", colors.textMuted)}>Sent Invites</div>
-          </div>
-          <div className={cn("p-4 rounded-xl", colors.backgroundMuted)}>
-            <div className={cn("text-2xl font-bold", colors.text)}>0</div>
-            <div className={cn("text-sm", colors.textMuted)}>Accepted</div>
-          </div>
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
+      {/* Tab Content */}
+      <div className="min-h-[400px]">
+        {activeTab === "create" && (
+          <CreateTemplateTab
+            onCreateTemplate={handleCreateTemplate}
+            onUpdateTemplate={
+              editingTemplate ? handleUpdateTemplate : undefined
+            } // NEW: Pass update function when editing
+            user={user}
+            existingTemplates={templates}
+            mode={createTabMode}
+            onFormClose={handleFormClose}
+            isLoading={templatesLoading}
+            editingTemplate={editingTemplate} // NEW: Pass the template being edited
+          />
+        )}
+
+        {activeTab === "templates" && (
+          <MyTemplatesTab
+            templates={templates}
+            onStartEdit={handleStartEdit} // NEW: Use start edit function
+            onDeleteTemplate={handleDeleteTemplate}
+            onRequestToBook={handleRequestToBook}
+            isLoading={templatesLoading}
+          />
+        )}
+
+        {activeTab === "musicians" && (
+          <ProMusiciansTab
+            onRequestToBook={handleRequestToBook}
+            user={user}
+            hasTemplates={templates.length > 0}
+          />
+        )}
+      </div>
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        musician={selectedMusician}
+        templates={draftTemplates}
+        onSubmitBooking={handleSubmitBooking}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

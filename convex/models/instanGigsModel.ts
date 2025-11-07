@@ -10,11 +10,11 @@ export const instantGigs = defineTable({
   venue: v.string(),
   budget: v.string(),
   gigType: v.string(),
-
+  duration: v.string(),
   // Client info
   clientId: v.id("users"),
   clientName: v.string(),
-
+  setlist: v.optional(v.string()),
   // Target musician
   invitedMusicianId: v.id("users"),
   status: v.union(
@@ -29,3 +29,30 @@ export const instantGigs = defineTable({
 })
   .index("by_client", ["clientId"])
   .index("by_musician", ["invitedMusicianId"]);
+// convex/instantgigs.ts - SIMPLIFIED SCHEMA
+export const instantGigsTemplate = defineTable({
+  // Template details
+  title: v.string(),
+  description: v.string(),
+  date: v.optional(v.string()),
+  venue: v.optional(v.string()),
+  budget: v.string(),
+  gigType: v.string(),
+  duration: v.string(),
+  setlist: v.optional(v.string()),
+  icon: v.string(),
+
+  // Client info
+  clientId: v.id("users"),
+  clientName: v.string(),
+
+  // REMOVED: status field - templates are just templates!
+
+  // Usage stats (optional - can track which templates you use most)
+  timesUsed: v.number(),
+
+  // Timestamps
+  createdAt: v.number(),
+  updatedAt: v.number(),
+}).index("by_client", ["clientId"]);
+// REMOVED: status-based indexes

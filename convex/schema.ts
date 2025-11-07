@@ -8,7 +8,7 @@ import { notificationSettingsModel } from "./models/notificationSettings";
 import { pushSubscriptions } from "./models/push";
 import { videoModel } from "./models/videoModel";
 import { commentsModel } from "./models/commentsModel";
-import { instantGigs } from "./models/instanGigsModel";
+import { instantGigs, instantGigsTemplate } from "./models/instanGigsModel";
 
 export default defineSchema({
   users: userModel,
@@ -16,6 +16,7 @@ export default defineSchema({
   notifications: notificationModel,
   notificationSettings: notificationSettingsModel,
   instantgigs: instantGigs,
+  instantGigsTemplate: instantGigsTemplate,
   // Other tables...
   aiSuggestions: defineTable({
     questions: v.object({

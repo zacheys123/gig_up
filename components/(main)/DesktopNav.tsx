@@ -379,12 +379,14 @@ export function DesktopNavigation() {
                             <DropdownMenuItem key={item.href} asChild>
                               <Link
                                 href={
-                                  shouldBlockAccess ? "/upgrade" : item.href
+                                  shouldBlockAccess
+                                    ? "/dashboard/billing"
+                                    : item.href
                                 }
                                 onClick={() => setIsDropdownOpen(false)}
                                 className={cn(
                                   "flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition-colors duration-200",
-                                  "hover:bg-amber-50 dark:hover:bg-amber-800",
+                                  colors.hoverBg,
                                   colors.textMuted,
                                   shouldBlockAccess &&
                                     "opacity-60 cursor-not-allowed"
