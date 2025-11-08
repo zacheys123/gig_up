@@ -11,8 +11,6 @@ import { GlobalActivityTracker } from "@/components/GlobalActivityTracker";
 export const metadata: Metadata = {
   title: "Gigup",
   description: "New Gigup",
-  manifest: "/manifest.json",
-  themeColor: "#f59e0b",
   appleWebApp: {
     capable: true,
     title: "Gigup",

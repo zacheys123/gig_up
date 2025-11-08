@@ -1,22 +1,120 @@
-// hooks/useThemeColors.ts
+// hooks/useThemeColors.ts - OPTIMIZED
 import { useTheme as useNextTheme } from "next-themes";
-import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useEffect, useState, useMemo } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 
-// In your useThemeColors hook, ensure this:
+// Pre-defined color schemes to prevent runtime object creation
+const LIGHT_COLORS = {
+  background: "bg-white",
+  backgroundMuted: "bg-gray-50",
+  text: "text-gray-900",
+  textMuted: "text-gray-600",
+  textInverted: "text-white",
+  primary: "text-orange-600",
+  primaryBg: "bg-orange-600",
+  primaryBgHover: "hover:bg-orange-700",
+  border: "border-gray-200",
+  borderMuted: "border-gray-300",
+  hoverBg: "hover:bg-gray-100",
+  activeBg: "bg-gray-100",
+  navBackground: "bg-white",
+  navBorder: "border-gray-200",
+  navText: "text-gray-900",
+  navHover: "hover:bg-gray-50",
+  card: "bg-white",
+  cardBorder: "border-gray-200",
+  destructive: "text-red-600",
+  destructiveBg: "bg-red-50",
+  destructiveHover: "hover:bg-red-100",
+  warning: "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100",
+  warningText: "text-amber-600",
+  warningBg: "bg-amber-50",
+  warningBorder: "border-amber-200",
+  warningHover: "hover:bg-amber-100",
+  successText: "text-green-600",
+  successBg: "bg-green-50",
+  successBorder: "border-green-200",
+  secondaryBackground: "bg-gray-100",
+  hoverBackground: "bg-gray-200",
+  backgroundSecondary: "bg-gray-50",
+  textSecondary: "text-gray-700",
+  borderSecondary: "border-gray-300",
+  focusBg: "focus:bg-gray-100",
+  focusBorder: "focus:border-gray-400",
+  infoText: "text-blue-600",
+  infoBg: "bg-blue-50",
+  infoBorder: "border-blue-200",
+  gradientPrimary: "bg-gradient-to-r from-orange-400 to-red-400",
+  gradientSecondary: "bg-gradient-to-br from-gray-50 via-white to-gray-100",
+  shadow: "shadow-gray-400/20",
+  overlay: "bg-white/50",
+  disabledText: "text-gray-400",
+  disabledBg: "bg-gray-200",
+  disabledBorder: "border-gray-300",
+  danger: "bg-red-50 border-red-200 text-red-800 hover:bg-red-100",
+  skeleton: "border-gray-300",
+};
+
+const DARK_COLORS = {
+  background: "bg-gray-900",
+  backgroundMuted: "bg-gray-800",
+  text: "text-gray-100",
+  textMuted: "text-gray-400",
+  textInverted: "text-gray-900",
+  primary: "text-orange-400",
+  primaryBg: "bg-orange-400",
+  primaryBgHover: "hover:bg-orange-300",
+  border: "border-gray-700",
+  borderMuted: "border-gray-600",
+  hoverBg: "hover:bg-gray-800",
+  activeBg: "bg-gray-800",
+  navBackground: "bg-gray-900",
+  navBorder: "border-gray-700",
+  navText: "text-gray-100",
+  navHover: "hover:bg-gray-800",
+  card: "bg-gray-800",
+  cardBorder: "border-gray-700",
+  destructive: "text-red-400",
+  destructiveBg: "bg-red-900/20",
+  destructiveHover: "hover:bg-red-900/30",
+  warning:
+    "bg-amber-900/20 border-amber-800 text-amber-200 hover:bg-amber-900/30",
+  warningText: "text-amber-400",
+  warningBg: "bg-amber-900/20",
+  warningBorder: "border-amber-800",
+  warningHover: "hover:bg-amber-900/30",
+  successText: "text-green-400",
+  successBg: "bg-green-900/20",
+  successBorder: "border-green-700",
+  secondaryBackground: "bg-gray-800",
+  hoverBackground: "bg-gray-700",
+  backgroundSecondary: "bg-gray-800",
+  textSecondary: "text-gray-300",
+  borderSecondary: "border-gray-600",
+  focusBg: "focus:bg-gray-800",
+  focusBorder: "focus:border-gray-600",
+  infoText: "text-blue-400",
+  infoBg: "bg-blue-900/20",
+  infoBorder: "border-blue-700",
+  gradientPrimary: "bg-gradient-to-r from-orange-500 to-red-500",
+  gradientSecondary: "bg-gradient-to-br from-gray-900 via-gray-800 to-black",
+  shadow: "shadow-gray-900/50",
+  overlay: "bg-black/50",
+  disabledText: "text-gray-500",
+  disabledBg: "bg-gray-700",
+  disabledBorder: "border-gray-600",
+  danger: "bg-red-900/20 border-red-800 text-red-200 hover:bg-red-900/30",
+  skeleton: "border-gray-600/30",
+};
+
 export function useThemeColors() {
   const { theme, setTheme, resolvedTheme } = useNextTheme();
   const { userId } = useAuth();
   const [mounted, setMounted] = useState(false);
-
   const [localTheme, setLocalTheme] = useState<string | null>(null);
 
-  useEffect(() => {
-    const theme = localStorage.getItem("theme");
-    setLocalTheme(theme);
-  }, []);
   // Get user's theme preference from Convex
   const userTheme = useQuery(
     api.controllers.theme.getUserTheme,
@@ -34,6 +132,10 @@ export function useThemeColors() {
 
   useEffect(() => {
     setMounted(true);
+
+    // Load local theme
+    const theme = localStorage.getItem("theme");
+    setLocalTheme(theme);
   }, []);
 
   // Only consider theme ready when mounted AND (for authenticated users, userTheme is loaded)
@@ -48,118 +150,24 @@ export function useThemeColors() {
 
   const effectiveTheme = userTheme || getSystemTheme() || "light" || localTheme;
   const isDarkMode = effectiveTheme === "dark";
-  const colors = {
-    // Background colors
-    background: isDarkMode ? "bg-gray-900" : "bg-white",
-    backgroundMuted: isDarkMode ? "bg-gray-800" : "bg-gray-50",
 
-    // Text colors
-    text: isDarkMode ? "text-gray-100" : "text-gray-900",
-    textMuted: isDarkMode ? "text-gray-400" : "text-gray-600",
-    textInverted: isDarkMode ? "text-gray-900" : "text-white",
-
-    // Primary colors
-    primary: isDarkMode ? "text-orange-400" : "text-orange-600",
-    primaryBg: isDarkMode ? "bg-orange-400" : "bg-orange-600",
-    primaryBgHover: isDarkMode ? "hover:bg-orange-300" : "hover:bg-orange-700",
-
-    // Border colors
-    border: isDarkMode ? "border-gray-700" : "border-gray-200",
-    borderMuted: isDarkMode ? "border-gray-600" : "border-gray-300",
-
-    // Interactive states
-    hoverBg: isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-100",
-    activeBg: isDarkMode ? "bg-gray-800" : "bg-gray-100",
-
-    // Specific component colors
-    navBackground: isDarkMode ? "bg-gray-900" : "bg-white",
-    navBorder: isDarkMode ? "border-gray-700" : "border-gray-200",
-    navText: isDarkMode ? "text-gray-100" : "text-gray-900",
-    navHover: isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50",
-
-    // Card colors
-    card: isDarkMode ? "bg-gray-800" : "bg-white",
-    cardBorder: isDarkMode ? "border-gray-700" : "border-gray-200",
-
-    // Destructive colors
-    destructive: isDarkMode ? "text-red-400" : "text-red-600",
-    destructiveBg: isDarkMode ? "bg-red-900/20" : "bg-red-50",
-    destructiveHover: isDarkMode ? "hover:bg-red-900/30" : "hover:bg-red-100",
-
-    // Warning colors
-    warning: isDarkMode
-      ? "bg-amber-900/20 border-amber-800 text-amber-200 hover:bg-amber-900/30"
-      : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100",
-    warningText: isDarkMode ? "text-amber-400" : "text-amber-600",
-    warningBg: isDarkMode ? "bg-amber-900/20" : "bg-amber-50",
-    warningBorder: isDarkMode ? "border-amber-800" : "border-amber-200",
-    warningHover: isDarkMode ? "hover:bg-amber-900/30" : "hover:bg-amber-100",
-
-    // Success colors
-    successText: isDarkMode ? "text-green-400" : "text-green-600",
-    successBg: isDarkMode ? "bg-green-900/20" : "bg-green-50",
-    successBorder: isDarkMode ? "border-green-700" : "border-green-200",
-
-    // Secondary background
-    secondaryBackground: isDarkMode ? "bg-gray-800" : "bg-gray-100",
-
-    // Hover background
-    hoverBackground: isDarkMode ? "bg-gray-700" : "bg-gray-200",
-
-    // Additional background variants
-    backgroundSecondary: isDarkMode ? "bg-gray-800" : "bg-gray-50",
-
-    // Additional text variants
-    textSecondary: isDarkMode ? "text-gray-300" : "text-gray-700",
-
-    // Additional border variants
-    borderSecondary: isDarkMode ? "border-gray-600" : "border-gray-300",
-
-    // Additional state colors
-    focusBg: isDarkMode ? "focus:bg-gray-800" : "focus:bg-gray-100",
-    focusBorder: isDarkMode ? "focus:border-gray-600" : "focus:border-gray-400",
-
-    // Additional semantic colors
-    infoText: isDarkMode ? "text-blue-400" : "text-blue-600",
-    infoBg: isDarkMode ? "bg-blue-900/20" : "bg-blue-50",
-    infoBorder: isDarkMode ? "border-blue-700" : "border-blue-200",
-
-    // Gradient backgrounds
-    gradientPrimary: isDarkMode
-      ? "bg-gradient-to-r from-orange-500 to-red-500"
-      : "bg-gradient-to-r from-orange-400 to-red-400",
-    gradientSecondary: isDarkMode
-      ? "bg-gradient-to-br from-gray-900 via-gray-800 to-black"
-      : "bg-gradient-to-br from-gray-50 via-white to-gray-100",
-
-    // Shadow colors
-    shadow: isDarkMode ? "shadow-gray-900/50" : "shadow-gray-400/20",
-
-    // Overlay colors
-    overlay: isDarkMode ? "bg-black/50" : "bg-white/50",
-
-    // Disabled states
-    disabledText: isDarkMode ? "text-gray-500" : "text-gray-400",
-    disabledBg: isDarkMode ? "bg-gray-700" : "bg-gray-200",
-    disabledBorder: isDarkMode ? "border-gray-600" : "border-gray-300",
-
-    danger: isDarkMode
-      ? "bg-red-900/20 border-red-800 text-red-200 hover:bg-red-900/30"
-      : "bg-red-50 border-red-200 text-red-800 hover:bg-red-100",
-
-    skeleton: isDarkMode ? "border-gray-600/30" : "border-gray-300",
-  };
+  // Memoize colors based on theme to prevent object recreation
+  const colors = useMemo(
+    () => (isDarkMode ? DARK_COLORS : LIGHT_COLORS),
+    [isDarkMode]
+  );
 
   return {
     colors,
     isDarkMode: isThemeReady ? isDarkMode : false,
-    mounted: isThemeReady, // Return when theme is actually ready
+    mounted: isThemeReady,
     theme: isThemeReady ? effectiveTheme : "light",
     userTheme,
     effectiveTheme: isThemeReady ? effectiveTheme : "light",
     resolvedTheme: isThemeReady ? resolvedTheme : "light",
   };
 }
+
 export function useThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useNextTheme();
   const { userId } = useAuth();

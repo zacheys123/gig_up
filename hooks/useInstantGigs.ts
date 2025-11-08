@@ -1,19 +1,33 @@
-// hooks/useInstantGigs.ts - SIMPLIFIED
+// hooks/useInstantGigs.ts - OPTIMIZED
 import { useMutation, useQuery } from "convex/react";
+import { useCallback, useMemo } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
-export const useInstantGigs = (userId: Id<"users">) => {
-  // Queries
-  const gigs = useQuery(api.controllers.instantGigs.getClientInstantGigs, {
-    clientId: userId,
-  });
+// Default stats to prevent undefined errors
+const DEFAULT_STATS = {
+  total: 0,
+  pending: 0,
+  accepted: 0,
+  declined: 0,
+  deputySuggested: 0,
+};
 
+export const useInstantGigs = (userId: Id<"users">) => {
+  // Memoize query parameters
+  const queryParams = useMemo(
+    () => (userId ? { clientId: userId } : "skip"),
+    [userId]
+  );
+
+  // Queries
+  const gigs = useQuery(
+    api.controllers.instantGigs.getClientInstantGigs,
+    queryParams
+  );
   const stats = useQuery(
     api.controllers.instantGigs.getClientInstantGigsStats,
-    {
-      clientId: userId,
-    }
+    queryParams
   );
 
   // Mutations (only gig operations, no template operations)
@@ -22,23 +36,20 @@ export const useInstantGigs = (userId: Id<"users">) => {
     api.controllers.instantGigs.updateInstantGigStatus
   );
 
-  return {
-    // Data
-    gigs: gigs || [],
-    stats: stats || {
-      total: 0,
-      pending: 0,
-      accepted: 0,
-      declined: 0,
-      deputySuggested: 0,
-    },
+  // Memoize data to prevent unnecessary re-renders
+  const memoizedGigs = useMemo(() => gigs || [], [gigs]);
+  const memoizedStats = useMemo(() => stats || DEFAULT_STATS, [stats]);
 
-    // Mutations
-    createGig: async (gigData: any) => {
+  // Memoize mutation wrappers
+  const createGigWrapper = useCallback(
+    async (gigData: any) => {
       return await createGig(gigData);
     },
+    [createGig]
+  );
 
-    updateGigStatus: async (
+  const updateGigStatusWrapper = useCallback(
+    async (
       gigId: Id<"instantgigs">,
       status: string,
       musicianId: Id<"users">
@@ -49,5 +60,16 @@ export const useInstantGigs = (userId: Id<"users">) => {
         musicianId,
       });
     },
+    [updateGigStatus]
+  );
+
+  return {
+    // Data
+    gigs: memoizedGigs,
+    stats: memoizedStats,
+
+    // Mutations
+    createGig: createGigWrapper,
+    updateGigStatus: updateGigStatusWrapper,
   };
 };

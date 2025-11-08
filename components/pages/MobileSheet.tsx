@@ -183,7 +183,7 @@ const getNavigationLinks = (
     }
 
     coreLinks.splice(6, 0, {
-      label: "Create Gigs",
+      label: " Gigs",
       href: user?.isClient ? `/create/${userId}` : `/av_gigs/${userId}`,
       icon: <Music size={22} />,
     });

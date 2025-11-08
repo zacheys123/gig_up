@@ -1,3 +1,4 @@
+// components/modals/ThemeModal.tsx - FIXED POSITIONING
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,7 @@ interface ThemeModalProps {
   themeIsDark: boolean;
   onClose: () => void;
   colors: Record<string, string>;
+  position?: string;
 }
 
 export const ThemeModal: React.FC<ThemeModalProps> = ({
@@ -17,18 +19,21 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
   themeIsDark,
   onClose,
   colors,
+  position,
 }) => {
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
           className={cn(
-            "absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4",
-            "p-4 rounded-2xl border backdrop-blur-xl shadow-2xl",
+            position === "top"
+              ? "absolute  left-1/2 transform -translate-x-1/2"
+              : "absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50",
+            "p-4 rounded-2xl border backdrop-blur-xl shadow-2xl min-w-[200px]",
             colors.card,
             colors.border
           )}
@@ -87,14 +92,14 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
             </button>
           </div>
 
-          {/* Arrow pointing down */}
+          {/* Arrow pointing UP */}
           <div
             className={cn(
-              "absolute -bottom-2 left-1/2 transform -translate-x-1/2",
+              "absolute -top-2 left-1/2 transform -translate-x-1/2",
               "w-4 h-4 rotate-45",
               colors.card,
               colors.border,
-              "border-b border-r"
+              "border-t border-l"
             )}
           />
         </motion.div>

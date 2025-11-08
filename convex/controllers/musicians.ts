@@ -1,6 +1,9 @@
-// convex/musicians.ts
+// convex/musicians.ts - OPTIMIZED
 import { query } from "../_generated/server";
 import { v } from "convex/values";
+
+// Tier order for sorting
+const TIER_ORDER = { elite: 4, premium: 3, pro: 2, free: 1 };
 
 export const getProMusicians = query({
   args: {
@@ -31,10 +34,11 @@ export const getProMusicians = query({
       )
       .collect();
 
-    // Apply filters
+    // Apply filters efficiently
     if (args.city) {
+      const cityLower = args.city.toLowerCase();
       musicians = musicians.filter((m) =>
-        m.city?.toLowerCase().includes(args.city!.toLowerCase())
+        m.city?.toLowerCase().includes(cityLower)
       );
     }
 
@@ -43,24 +47,22 @@ export const getProMusicians = query({
     }
 
     if (args.instrument) {
+      const instrumentLower = args.instrument.toLowerCase();
       musicians = musicians.filter(
         (m) =>
-          m.instrument
-            ?.toLowerCase()
-            .includes(args.instrument!.toLowerCase()) ||
-          m.roleType?.toLowerCase().includes(args.instrument!.toLowerCase())
+          m.instrument?.toLowerCase().includes(instrumentLower) ||
+          m.roleType?.toLowerCase().includes(instrumentLower)
       );
     }
 
     if (args.genre) {
+      const genreLower = args.genre.toLowerCase();
       musicians = musicians.filter(
         (m) =>
-          m.musiciangenres?.some((g) =>
-            g.toLowerCase().includes(args.genre!.toLowerCase())
-          ) ||
-          m.genres?.toLowerCase().includes(args.genre!.toLowerCase()) ||
-          m.djGenre?.toLowerCase().includes(args.genre!.toLowerCase()) ||
-          m.vocalistGenre?.toLowerCase().includes(args.genre!.toLowerCase())
+          m.musiciangenres?.some((g) => g.toLowerCase().includes(genreLower)) ||
+          m.genres?.toLowerCase().includes(genreLower) ||
+          m.djGenre?.toLowerCase().includes(genreLower) ||
+          m.vocalistGenre?.toLowerCase().includes(genreLower)
       );
     }
 
@@ -72,8 +74,7 @@ export const getProMusicians = query({
 
     // Sort by tier (elite > premium > pro > free), then by rating
     musicians.sort((a, b) => {
-      const tierOrder = { elite: 4, premium: 3, pro: 2, free: 1 };
-      const tierDiff = tierOrder[b.tier] - tierOrder[a.tier];
+      const tierDiff = TIER_ORDER[b.tier] - TIER_ORDER[a.tier];
       if (tierDiff !== 0) return tierDiff;
 
       return (b.avgRating || 0) - (a.avgRating || 0);
@@ -149,19 +150,19 @@ export const searchMusicians = query({
 
     // Apply city filter if provided
     if (args.city) {
+      const cityLower = args.city.toLowerCase();
       musicians = musicians.filter((m) =>
-        m.city?.toLowerCase().includes(args.city!.toLowerCase())
+        m.city?.toLowerCase().includes(cityLower)
       );
     }
 
     // Apply instrument filter if provided
     if (args.instrument) {
+      const instrumentLower = args.instrument.toLowerCase();
       musicians = musicians.filter(
         (m) =>
-          m.instrument
-            ?.toLowerCase()
-            .includes(args.instrument!.toLowerCase()) ||
-          m.roleType?.toLowerCase().includes(args.instrument!.toLowerCase())
+          m.instrument?.toLowerCase().includes(instrumentLower) ||
+          m.roleType?.toLowerCase().includes(instrumentLower)
       );
     }
 
