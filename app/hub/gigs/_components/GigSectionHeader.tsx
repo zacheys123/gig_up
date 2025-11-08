@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { HiTemplate } from "react-icons/hi";
-
+// In GigSectionHeaderProps interface, add:
 interface GigSectionHeaderProps {
   title: string;
   description: string;
@@ -33,7 +33,6 @@ interface GigSectionHeaderProps {
     active?: number;
     completed?: number;
     pending?: number;
-    // Add the missing properties from your backend
     accepted?: number;
     declined?: number;
     deputySuggested?: number;
@@ -44,6 +43,8 @@ interface GigSectionHeaderProps {
   showStats?: boolean;
   showSampleData?: boolean;
   onAction?: (action: string) => void;
+  // Add this new prop
+  onScrollToTemplates?: () => void;
 }
 
 // Memoize icon components to prevent recreation
@@ -186,7 +187,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                   "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
                   colors.textInverted
                 )}
-                onClick={() => onAction?.("create-urgent")}
+                onClick={() => onAction?.("create")}
               >
                 <Zap className="w-4 h-4 mr-2" />
                 Create Template
@@ -447,7 +448,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
       }
     }, [type, stats]);
     const displaySampleData = sampleData || defaultSampleData;
-    const displayActions = actions || defaultActions;
+    const displayActions = actions ? actions : defaultActions;
 
     return (
       <div

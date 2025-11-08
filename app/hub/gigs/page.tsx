@@ -22,7 +22,7 @@ import { FavoriteGigs } from "./_components/FavouriteGigs";
 import { ThemeModal } from "@/components/modals/ThemeModal";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { Moon, Sun } from "lucide-react";
+import { ArrowLeft, Moon, Sun } from "lucide-react";
 
 // Memoize static data to prevent recreation on every render
 const GigsLoadingSkeleton = React.memo(() => (
@@ -265,10 +265,60 @@ export default function GigsHub() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div>
-              <h1 className={cn("text-3xl font-bold", colors.text)}>Gig Hub</h1>
-              <p className={cn("mt-2", colors.textMuted)}>{subtitle}</p>
+          <div className="flex items-center justify-between gap-6 mb-8">
+            {/* Left Section */}
+            <div className="flex items-center gap-4 flex-1">
+              {/* Back Button */}
+              <button
+                onClick={() => router.back()}
+                className={cn(
+                  "group flex items-center justify-center w-10 h-10 rounded-xl border transition-all duration-200",
+                  colors.border,
+                  colors.hoverBg,
+                  "hover:border-blue-400 hover:shadow-md"
+                )}
+              >
+                <ArrowLeft
+                  className={cn(
+                    "w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5",
+                    colors.text
+                  )}
+                />
+              </button>
+
+              {/* Title Section */}
+              <div className="flex-1">
+                <h1
+                  className={cn(
+                    "text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent",
+                    "mb-1 drop-shadow-sm"
+                  )}
+                >
+                  Gig Hub
+                </h1>
+                <p
+                  className={cn(
+                    "text-base lg:text-lg font-normal",
+                    colors.textMuted
+                  )}
+                >
+                  {subtitle}
+                </p>
+              </div>
+            </div>
+
+            {/* Right Section - Optional Quick Actions */}
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl border text-sm",
+                  colors.border,
+                  colors.backgroundMuted
+                )}
+              >
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className={cn("font-medium", colors.text)}>Active</span>
+              </div>
             </div>
           </div>
 
@@ -336,7 +386,7 @@ export default function GigsHub() {
                 className={cn(
                   "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0",
                   activeTab === tab.id
-                    ? cn("border-blue-500 text-blue-600", colors.primary)
+                    ? cn("border-neutral-300 text-blue-600", colors.primary)
                     : cn(
                         "border-transparent",
                         colors.textMuted,
@@ -358,3 +408,5 @@ export default function GigsHub() {
     </div>
   );
 }
+
+// after registration the users who have pro status they can request other with pro musicians inside  the app to become part of their band...when the appm limits members to 5...so after  5 musicians the app locks those musicians in as abandN/Bthis idea can restrict the other users to not book gigs that require a band to force them to upgrade to join a band...after locking in 5 members the app can prompt the user to create a band profile and manage their band members from there...maybe create in the musician who requested the others to join the band as the band leader with special permissions to manage gigs and members...also the criteria for this leader he should have amazing scores ratings long time user pro tier etc...now this leader can be booking the gigs and can be locked in in the  clients bookingLotto array where now he can chat with the client  after agreeing then a crew battleground is created with the client as the admin and all the other users as memebers...this place now they can plan the gig and discuss details.......also the booker can do ther same if they agree with a client they can then agree whether the client wants to join as a viewonly or a admin the another crew batleground can be created.....for normal single bookings is just a normal booking...

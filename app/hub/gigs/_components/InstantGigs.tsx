@@ -1,7 +1,14 @@
 // app/hub/gigs/_components/InstantGigs.tsx - UPDATED WITH PROPER THEME USAGE
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  memo,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Crown, Zap, Users, TrendingUp } from "lucide-react";
@@ -146,10 +153,58 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const router = useRouter();
   const { colors } = useThemeColors();
 
+  const createTemplatesRef = useRef<HTMLDivElement>(null);
+  const musicianTemplatesRef = useRef<HTMLDivElement>(null);
+
   // State management with guided/custom flows
   const [activeTab, setActiveTab] = useState<
     "create" | "templates" | "musicians"
   >("create");
+
+  //
+
+  // Fixed scroll function
+  const scrollToMusicians = useCallback(() => {
+    // Switch to create tab first (where the templates are)
+    setActiveTab("musicians");
+
+    // Wait for tab switch and content to render, then scroll
+    setTimeout(() => {
+      if (musicianTemplatesRef.current) {
+        musicianTemplatesRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      } else {
+        // Fallback: scroll to top of the component
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    }, 300); // Increased delay to ensure content is rendered
+  }, []);
+
+  const scrollToTemplates = useCallback(() => {
+    // Switch to create tab first (where the templates are)
+    setActiveTab("create");
+
+    // Wait for tab switch and content to render, then scroll
+    setTimeout(() => {
+      if (createTemplatesRef.current) {
+        createTemplatesRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      } else {
+        // Fallback: scroll to top of the component
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    }, 300); // Increased delay to ensure content is rendered
+  }, []);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedMusician, setSelectedMusician] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -174,7 +229,6 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   } = useTemplates(userId);
 
   const { stats, createGig } = useInstantGigs(userId);
-  const { featuredMusicians: proMusicians } = useProMusicians();
 
   // Memoize templates data
   const memoizedTemplates = useMemo(() => templates, [templates?.length]);
@@ -327,18 +381,22 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     switch (activeTab) {
       case "create":
         return (
-          <CreateTemplateTab
-            onCreateTemplate={handleCreateTemplate}
-            onUpdateTemplate={
-              editingTemplate ? handleUpdateTemplate : undefined
-            }
-            user={user}
-            existingTemplates={memoizedTemplates}
-            mode={createTabMode}
-            onFormClose={handleCancelEdit}
-            isLoading={templatesLoading}
-            editingTemplate={editingTemplate}
-          />
+          <div ref={createTemplatesRef}>
+            {" "}
+            {/* Add ref here */}
+            <CreateTemplateTab
+              onCreateTemplate={handleCreateTemplate}
+              onUpdateTemplate={
+                editingTemplate ? handleUpdateTemplate : undefined
+              }
+              user={user}
+              existingTemplates={memoizedTemplates}
+              mode={createTabMode}
+              onFormClose={handleCancelEdit}
+              isLoading={templatesLoading}
+              editingTemplate={editingTemplate}
+            />
+          </div>
         );
 
       case "templates":
@@ -354,11 +412,13 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
 
       case "musicians":
         return (
-          <ProMusiciansTab
-            onRequestToBook={handleRequestToBook}
-            user={user}
-            hasTemplates={hasTemplates}
-          />
+          <div ref={musicianTemplatesRef}>
+            <ProMusiciansTab
+              onRequestToBook={handleRequestToBook}
+              user={user}
+              hasTemplates={hasTemplates}
+            />
+          </div>
         );
 
       default:
@@ -412,10 +472,12 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             deputySuggested: stats?.deputySuggested || 0,
             templates: memoizedTemplates?.length || 0,
           }}
+          onScrollToTemplates={scrollToTemplates} // Add this prop
+          // In your InstantGigs component, update the actions prop:
           actions={
             <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end">
               <Button
-                onClick={() => handleTabChange("create")}
+                onClick={scrollToTemplates} // Use the scroll function directly
                 className={cn(
                   "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300",
                   colors.textInverted
@@ -426,7 +488,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => handleTabChange("musicians")}
+                onClick={scrollToMusicians} // Use the scroll function directly
                 className={cn(
                   "border-2 hover:border-blue-300 transition-all duration-300",
                   colors.border,
@@ -439,7 +501,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             </div>
           }
         >
-          {/* Your custom content */}
+          {/* Your custom content remains the same */}
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-4">
