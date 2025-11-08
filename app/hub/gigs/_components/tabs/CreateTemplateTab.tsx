@@ -431,9 +431,8 @@ TemplateForm.displayName = "TemplateForm";
 // Memoize GuidedInterface component
 const GuidedInterface = memo(
   ({ useExampleTemplate, handleCustomTemplate, colors, user }: any) => {
-    const isPremiumUser =
-      user?.tier === "premium" || user?.subscription === "premium";
-    const isProUser = user?.tier === "pro" || user?.subscription === "pro";
+    const isPremiumUser = user?.tier === "premium";
+    const isProUser = user?.tier === "pro";
     const canUseAdvancedFeatures = isPremiumUser || isProUser;
 
     const handleCustomTemplateClick = () => {
@@ -580,6 +579,12 @@ const GuidedInterface = memo(
                       <Clock className={cn("w-4 h-4", colors.primary)} />
                       <span className={cn("font-medium", colors.text)}>
                         {template.duration}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className={cn("w-4 h-4", colors.primary)} />
+                      <span className={cn("font-medium", colors.text)}>
+                        {template.fromTime}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -977,6 +982,12 @@ const DefaultInterface = memo(
                     <span className={colors.textMuted}>Duration:</span>
                     <span className={cn("font-medium", colors.text)}>
                       {template.duration}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={colors.textMuted}>Start Time:</span>
+                    <span className={cn("font-medium", colors.text)}>
+                      {template.fromTime}
                     </span>
                   </div>
                   <div className="flex justify-between">

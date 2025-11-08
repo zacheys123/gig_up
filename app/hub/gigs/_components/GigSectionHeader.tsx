@@ -278,6 +278,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
               type: "Wedding",
               budget: "KES 25,000 - 40,000",
               duration: "3-4 hours",
+              fromTime: "3pm",
               icon: "💒",
             },
             {
@@ -285,6 +286,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
               type: "Corporate",
               budget: "KES 35,000 - 60,000",
               duration: "4 hours",
+              fromTime: "11am",
               icon: "🏢",
             },
             {
@@ -292,6 +294,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
               type: "Party",
               budget: "KES 20,000 - 35,000",
               duration: "3 hours",
+              fromTime: "9pm",
               icon: "🎉",
             },
           ];
