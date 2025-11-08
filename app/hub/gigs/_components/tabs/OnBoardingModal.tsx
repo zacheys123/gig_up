@@ -1,4 +1,4 @@
-// app/hub/gigs/_components/tabs/OnBoardingModal.tsx - UPDATED WITH GUIDED/CUSTOM
+// app/hub/gigs/_components/tabs/OnBoardingModal.tsx - UPDATED WITH THEME COLORS
 "use client";
 
 import React, { useMemo, memo, useCallback } from "react";
@@ -10,7 +10,6 @@ import {
   Users,
   Star,
   Crown,
-  Lightbulb,
   CheckCircle,
   ArrowRight,
   BookOpen,
@@ -21,8 +20,6 @@ import {
   Rocket,
   Target,
   Calendar,
-  Music,
-  MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -34,36 +31,36 @@ interface OnboardingModalProps {
   onCustomCreation: () => void;
 }
 
-// Memoize feature cards data
-const FEATURE_CARDS = [
+// Memoize feature cards data - updated with theme colors
+const getFeatureCards = (colors: any) => [
   {
     icon: Zap,
     title: "Instant Booking",
     description:
       "Book premium musicians in seconds with pre-approved templates",
     color: "text-blue-500",
-    bgColor: "bg-blue-50 dark:bg-blue-950/20",
+    bgColor: colors.infoBg,
   },
   {
     icon: Clock,
     title: "Save Time",
     description: "No more back-and-forth negotiations for similar events",
     color: "text-green-500",
-    bgColor: "bg-green-50 dark:bg-green-950/20",
+    bgColor: colors.successBg,
   },
   {
     icon: Crown,
     title: "Premium Talent",
     description: "Access verified pro musicians with proven track records",
     color: "text-amber-500",
-    bgColor: "bg-amber-50 dark:bg-amber-950/20",
+    bgColor: colors.warningBg,
   },
   {
     icon: Shield,
     title: "Reliable Service",
     description: "95% booking success rate with backup options available",
     color: "text-purple-500",
-    bgColor: "bg-purple-50 dark:bg-purple-950/20",
+    bgColor: colors.card,
   },
 ];
 
@@ -85,8 +82,8 @@ const STAT_ITEMS = [
   { value: "95%", label: "Success Rate", icon: TrendingUp },
 ];
 
-// Memoize creation options
-const CREATION_OPTIONS = [
+// Memoize creation options - updated with theme colors
+const getCreationOptions = (colors: any) => [
   {
     id: "guided",
     title: "Guided Creation",
@@ -98,10 +95,10 @@ const CREATION_OPTIONS = [
       "Best practices guidance",
       "Quick setup",
     ],
-    color: "from-blue-500 to-cyan-500",
+    color: "from-violet-300 to-yellow-500",
     buttonText: "Start Guided Creation",
-    iconBg: "bg-blue-100 dark:bg-blue-900/30",
-    iconColor: "text-blue-600 dark:text-blue-400",
+    iconBg: colors.infoBg,
+    iconColor: colors.infoText,
   },
   {
     id: "custom",
@@ -116,8 +113,8 @@ const CREATION_OPTIONS = [
     ],
     color: "from-purple-500 to-pink-500",
     buttonText: "Start Custom Creation",
-    iconBg: "bg-purple-100 dark:bg-purple-900/30",
-    iconColor: "text-purple-600 dark:text-purple-400",
+    iconBg: colors.card,
+    iconColor: colors.primary,
   },
 ];
 
@@ -176,15 +173,10 @@ const StatItem = memo(({ stat, colors }: any) => {
       className={cn(
         "text-center p-3 rounded-xl border transition-all duration-200 hover:scale-105",
         colors.border,
-        "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
+        colors.backgroundMuted
       )}
     >
-      <Icon
-        className={cn(
-          "w-6 h-6 mx-auto mb-2",
-          "text-blue-600 dark:text-blue-400"
-        )}
-      />
+      <Icon className={cn("w-6 h-6 mx-auto mb-2", colors.infoText)} />
       <div className={cn("text-lg font-bold mb-1", colors.text)}>
         {stat.value}
       </div>
@@ -214,8 +206,9 @@ const CreationOption = memo(({ option, onSelect, colors }: any) => {
       className={cn(
         "rounded-2xl p-6 border-2 transition-all duration-300 group cursor-pointer",
         colors.border,
-        "hover:scale-105 hover:shadow-xl bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
-        "hover:border-blue-300 dark:hover:border-blue-600"
+        colors.card,
+        "hover:scale-105 hover:shadow-xl",
+        "hover:border-blue-300"
       )}
     >
       <div className="text-center mb-6">
@@ -265,6 +258,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
   ({ isOpen, onClose, onGuidedCreation, onCustomCreation }) => {
     const { colors } = useThemeColors();
 
+    // Memoize dynamic data based on theme
+    const featureCards = useMemo(() => getFeatureCards(colors), [colors]);
+    const creationOptions = useMemo(() => getCreationOptions(colors), [colors]);
+
     // Memoize event handlers
     const handleClose = useCallback(() => {
       onClose();
@@ -300,7 +297,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
               "rounded-3xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col",
               colors.card,
               colors.border,
-              "border-2 shadow-2xl bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
+              "border-2 shadow-2xl"
             )}
           >
             {/* Header */}
@@ -308,7 +305,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
               className={cn(
                 "p-8 border-b",
                 colors.border,
-                "bg-gradient-to-r from-blue-500/5 to-purple-500/5"
+                colors.backgroundMuted
               )}
             >
               <div className="flex items-center justify-between">
@@ -329,7 +326,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                   variant="ghost"
                   size="icon"
                   onClick={handleClose}
-                  className="rounded-xl hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                  className={cn(
+                    "rounded-xl",
+                    colors.hoverBg,
+                    "hover:text-red-600"
+                  )}
                 >
                   <X className="w-6 h-6" />
                 </Button>
@@ -341,8 +342,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
               <div className="p-8 space-y-12">
                 {/* Hero Section */}
                 <div className="text-center">
-                  <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-lg">
-                    <Rocket className="w-12 h-12 text-blue-600 dark:text-blue-400" />
+                  <div
+                    className={cn(
+                      "w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-lg",
+                      colors.backgroundMuted
+                    )}
+                  >
+                    <Rocket className={cn("w-12 h-12", colors.infoText)} />
                   </div>
                   <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
                     Book Musicians Faster Than Ever
@@ -370,7 +376,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                 <div>
                   <div className="text-center mb-8">
                     <div className="flex items-center justify-center gap-3 mb-4">
-                      <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                      <Target className={cn("w-8 h-8", colors.infoText)} />
                       <h4 className={cn("text-2xl font-bold", colors.text)}>
                         Choose Your Creation Style
                       </h4>
@@ -386,7 +392,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    {CREATION_OPTIONS.map((option) => (
+                    {creationOptions.map((option) => (
                       <CreationOption
                         key={option.id}
                         option={option}
@@ -400,7 +406,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                 {/* Features Grid */}
                 <div>
                   <div className="flex items-center gap-3 justify-center mb-8">
-                    <TrendingUp className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                    <TrendingUp className={cn("w-8 h-8", colors.infoText)} />
                     <h4
                       className={cn(
                         "text-2xl font-bold text-center",
@@ -411,7 +417,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                     </h4>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {FEATURE_CARDS.map((feature, index) => (
+                    {featureCards.map((feature, index) => (
                       <FeatureCard
                         key={index}
                         feature={feature}
@@ -460,7 +466,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                     <div className="text-center group">
-                      <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <div
+                        className={cn(
+                          "w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300",
+                          colors.backgroundMuted
+                        )}
+                      >
                         <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
                           1
                         </div>
@@ -484,7 +495,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                       </p>
                     </div>
                     <div className="text-center group">
-                      <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <div
+                        className={cn(
+                          "w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300",
+                          colors.backgroundMuted
+                        )}
+                      >
                         <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
                           2
                         </div>
@@ -508,7 +524,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                       </p>
                     </div>
                     <div className="text-center group">
-                      <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <div
+                        className={cn(
+                          "w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300",
+                          colors.backgroundMuted
+                        )}
+                      >
                         <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
                           3
                         </div>
@@ -571,8 +592,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                         className={cn(
                           "text-center p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg",
                           colors.border,
-                          "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
-                          "hover:border-blue-300 dark:hover:border-blue-600"
+                          colors.card,
+                          "hover:border-blue-300"
                         )}
                       >
                         <div className="text-3xl mb-3">{event.icon}</div>
@@ -594,12 +615,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
               className={cn(
                 "p-6 border-t text-center",
                 colors.border,
-                "bg-gradient-to-r from-blue-500/5 to-purple-500/5"
+                colors.backgroundMuted
               )}
             >
               <p className={cn("text-sm", colors.textMuted)}>
                 Join{" "}
-                <span className="font-bold text-blue-600 dark:text-blue-400">
+                <span className={cn("font-bold", colors.infoText)}>
                   500+ event planners
                 </span>{" "}
                 already using Instant Gigs
@@ -608,7 +629,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
           </div>
         </div>
       );
-    }, [isOpen, handleClose, handleCreationSelect, colors]);
+    }, [
+      isOpen,
+      handleClose,
+      handleCreationSelect,
+      colors,
+      featureCards,
+      creationOptions,
+    ]);
 
     return modalContent;
   }

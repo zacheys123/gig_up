@@ -1,4 +1,4 @@
-// components/gigs/GigSectionHeader.tsx - UPDATED WITH PROPER THEME USAGE
+// components/gigs/GigSectionHeader.tsx - UPDATED WITH THEME COLORS ONLY
 "use client";
 import React, { useMemo, memo } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import {
   Music,
   Zap,
   Star,
+  CheckCircle,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -31,6 +33,10 @@ interface GigSectionHeaderProps {
     active?: number;
     completed?: number;
     pending?: number;
+    // Add the missing properties from your backend
+    accepted?: number;
+    declined?: number;
+    deputySuggested?: number;
   };
   actions?: React.ReactNode;
   children?: React.ReactNode;
@@ -101,24 +107,24 @@ const StatCard: React.FC<{
 
   const colorClasses = {
     blue: {
-      text: "text-blue-600 dark:text-blue-400",
-      bg: "bg-blue-500/10 dark:bg-blue-500/20",
-      hover: "hover:bg-blue-500/15 dark:hover:bg-blue-500/25",
+      text: colors.infoText,
+      bg: colors.infoBg,
+      hover: colors.hoverBg,
     },
     green: {
-      text: "text-green-600 dark:text-green-400",
-      bg: "bg-green-500/10 dark:bg-green-500/20",
-      hover: "hover:bg-green-500/15 dark:hover:bg-green-500/25",
+      text: colors.successText,
+      bg: colors.successBg,
+      hover: colors.hoverBg,
     },
     amber: {
-      text: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-500/10 dark:bg-amber-500/20",
-      hover: "hover:bg-amber-500/15 dark:hover:bg-amber-500/25",
+      text: colors.warningText,
+      bg: colors.warningBg,
+      hover: colors.hoverBg,
     },
     purple: {
-      text: "text-purple-600 dark:text-purple-400",
-      bg: "bg-purple-500/10 dark:bg-purple-500/20",
-      hover: "hover:bg-purple-500/15 dark:hover:bg-purple-500/25",
+      text: colors.primary,
+      bg: colors.card,
+      hover: colors.hoverBg,
     },
   };
 
@@ -351,58 +357,88 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
       }
     }, [type]);
 
-    // Memoize stats calculation
+    // Updated stats calculation in GigSectionHeader component
     const relevantStats = useMemo(() => {
       switch (type) {
         case "urgent-gigs":
+        case "instant-gigs":
           return [
             {
-              value: stats.templates ?? stats.total ?? 0,
+              value: stats?.templates ?? 0,
               label: "Templates",
               color: "blue",
               icon: HiTemplate,
             },
             {
-              value: stats.used ?? 0,
-              label: "Used",
+              value: stats?.accepted ?? stats?.used ?? 0,
+              label: "Accepted",
               color: "green",
               icon: Zap,
             },
             {
-              value: stats.musicians ?? 0,
-              label: "Musicians",
-              color: "purple",
-              icon: Users,
-            },
-            {
-              value: stats.bookings ?? 0,
-              label: "Bookings",
-              color: "amber",
-              icon: Calendar,
-            },
-          ];
-        default:
-          return [
-            {
-              value: stats.templates ?? stats.active ?? 0,
-              label: "Active",
-              color: "blue",
-              icon: HiTemplate,
-            },
-            {
-              value: stats.used ?? 0,
-              label: "Completed",
-              color: "green",
-              icon: Zap,
-            },
-            {
-              value: stats.musicians ?? stats.pending ?? 0,
+              value: stats?.pending ?? 0,
               label: "Pending",
               color: "amber",
               icon: Users,
             },
             {
-              value: stats.bookings ?? stats.total ?? 0,
+              value: stats?.total ?? stats?.bookings ?? 0,
+              label: "Total",
+              color: "purple",
+              icon: Calendar,
+            },
+          ];
+
+        case "my-gigs":
+          return [
+            {
+              value: stats?.active ?? stats?.total ?? 0,
+              label: "Active",
+              color: "blue",
+              icon: Zap,
+            },
+            {
+              value: stats?.completed ?? stats?.accepted ?? 0,
+              label: "Completed",
+              color: "green",
+              icon: CheckCircle,
+            },
+            {
+              value: stats?.pending ?? 0,
+              label: "Pending",
+              color: "amber",
+              icon: Clock,
+            },
+            {
+              value: stats?.total ?? 0,
+              label: "Total",
+              color: "purple",
+              icon: Calendar,
+            },
+          ];
+
+        default:
+          return [
+            {
+              value: stats?.templates ?? stats?.active ?? 0,
+              label: "Active",
+              color: "blue",
+              icon: HiTemplate,
+            },
+            {
+              value: stats?.completed ?? stats?.accepted ?? 0,
+              label: "Completed",
+              color: "green",
+              icon: CheckCircle,
+            },
+            {
+              value: stats?.pending ?? 0,
+              label: "Pending",
+              color: "amber",
+              icon: Clock,
+            },
+            {
+              value: stats?.total ?? 0,
               label: "Total",
               color: "purple",
               icon: Calendar,
@@ -410,7 +446,6 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
           ];
       }
     }, [type, stats]);
-
     const displaySampleData = sampleData || defaultSampleData;
     const displayActions = actions || defaultActions;
 
@@ -449,7 +484,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     "border rounded-xl p-5 hover:shadow-lg transition-all duration-200",
                     colors.border,
                     colors.hoverBg,
-                    "hover:border-blue-300 dark:hover:border-blue-600"
+                    "hover:border-blue-300"
                   )}
                 >
                   {"icon" in item && (
@@ -497,10 +532,22 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                             className={cn(
                               "inline-block px-2 py-1 text-xs rounded-full",
                               item.status === "Active"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                ? cn(
+                                    "bg-green-100 text-green-800",
+                                    colors.successBg,
+                                    colors.successText
+                                  )
                                 : item.status === "Draft"
-                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                                  : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                  ? cn(
+                                      "bg-amber-100 text-amber-800",
+                                      colors.warningBg,
+                                      colors.warningText
+                                    )
+                                  : cn(
+                                      "bg-blue-100 text-blue-800",
+                                      colors.infoBg,
+                                      colors.infoText
+                                    )
                             )}
                           >
                             {item.status}
@@ -542,7 +589,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 colors.backgroundMuted
               )}
             >
-              <div className="w-20 h-20 mx-auto mb-4 text-blue-500 dark:text-blue-400">
+              <div className={cn("w-20 h-20 mx-auto mb-4", colors.infoText)}>
                 {type === "urgent-gigs" ? (
                   <HiTemplate className="w-full h-full" />
                 ) : type.includes("gigs") ? (

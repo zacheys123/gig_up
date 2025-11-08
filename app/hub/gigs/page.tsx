@@ -1,4 +1,4 @@
-// app/hub/gigs/page.tsx - FIXED WITH THEME MODAL PROPS
+// app/hub/gigs/page.tsx - UPDATED WITH BACKGROUND COLORS
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -261,18 +261,14 @@ export default function GigsHub() {
   const subtitle = getUserSubtitle(memoizedUser);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className={cn("min-h-screen", colors.background)}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Gig Hub
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">
-                {subtitle}
-              </p>
+              <h1 className={cn("text-3xl font-bold", colors.text)}>Gig Hub</h1>
+              <p className={cn("mt-2", colors.textMuted)}>{subtitle}</p>
             </div>
           </div>
 
@@ -281,10 +277,10 @@ export default function GigsHub() {
             <span
               className={`px-3 py-1 rounded-full text-sm font-medium ${
                 memoizedUser.isMusician
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                  ? "bg-green-100 text-green-800"
                   : memoizedUser.isClient
-                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-purple-100 text-purple-800"
               }`}
             >
               {memoizedUser.isMusician
@@ -326,17 +322,27 @@ export default function GigsHub() {
         </div>
 
         {/* Tab Navigation - Hidden Scroll */}
-        <div className="border-b border-gray-200 dark:border-gray-700 mb-8">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto scrollbar-hide">
+        <div className={cn("border-b mb-8", colors.border)}>
+          <nav
+            className={cn(
+              "-mb-px flex space-x-8 overflow-x-auto scrollbar-hide",
+              colors.background
+            )}
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0 ${
+                className={cn(
+                  "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0",
                   activeTab === tab.id
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                }`}
+                    ? cn("border-blue-500 text-blue-600", colors.primary)
+                    : cn(
+                        "border-transparent",
+                        colors.textMuted,
+                        "hover:text-gray-700 hover:border-gray-300"
+                      )
+                )}
               >
                 {tab.label}
               </button>
@@ -345,7 +351,9 @@ export default function GigsHub() {
         </div>
 
         {/* Tab Content */}
-        <div>{tabContent}</div>
+        <div className={cn("rounded-lg", colors.card, colors.border, "border")}>
+          {tabContent}
+        </div>
       </div>
     </div>
   );

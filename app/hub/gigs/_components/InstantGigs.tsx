@@ -179,21 +179,28 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   // Memoize templates data
   const memoizedTemplates = useMemo(() => templates, [templates?.length]);
 
-  // Check if user is new and show onboarding
+  // In your InstantGigs component, add this useEffect for debugging:
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem(
       "instant_gigs_onboarding_seen"
     );
+    console.log("Onboarding debug:", {
+      hasSeenOnboarding,
+      templatesLength: memoizedTemplates.length,
+      templatesLoading,
+      showOnboarding,
+    });
+
     if (
       !hasSeenOnboarding &&
       memoizedTemplates.length === 0 &&
       !templatesLoading &&
       !showOnboarding
     ) {
+      console.log("SHOWING ONBOARDING MODAL");
       setShowOnboarding(true);
     }
   }, [memoizedTemplates.length, templatesLoading, showOnboarding]);
-
   // FIXED: Modal handlers with proper state updates
   const handleCloseOnboarding = useCallback(() => {
     setShowOnboarding(false);
@@ -393,62 +400,70 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           colors.background
         )}
       >
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Zap className="w-6 h-6 text-white" />
+        <GigSectionHeader
+          title="Instant Gigs"
+          description="Book premium musicians in minutes, not days"
+          user={user}
+          type="instant-gigs"
+          stats={{
+            total: stats?.total || 0,
+            accepted: stats?.accepted || 0,
+            pending: stats?.pending || 0,
+            deputySuggested: stats?.deputySuggested || 0,
+            templates: memoizedTemplates?.length || 0,
+          }}
+          actions={
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end">
+              <Button
+                onClick={() => handleTabChange("create")}
+                className={cn(
+                  "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300",
+                  colors.textInverted
+                )}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Template
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleTabChange("musicians")}
+                className={cn(
+                  "border-2 hover:border-blue-300 transition-all duration-300",
+                  colors.border,
+                  colors.hoverBg
+                )}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Browse Musicians
+              </Button>
+            </div>
+          }
+        >
+          {/* Your custom content */}
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className={cn("text-sm mb-6 max-w-2xl", colors.textMuted)}>
+                    Create reusable templates, discover verified pro musicians,
+                    and book instantly. Perfect for weddings, corporate events,
+                    parties, and more.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className={cn("text-2xl font-bold", colors.text)}>
-                  Instant Gigs
-                </h1>
-                <p className={cn("text-lg", colors.textMuted)}>
-                  Book premium musicians in minutes, not days
-                </p>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-4 max-w-md">
+                {QUICK_STATS.map((stat, index) => (
+                  <QuickStat key={index} stat={stat} colors={colors} />
+                ))}
               </div>
             </div>
-
-            <p className={cn("text-sm mb-6 max-w-2xl", colors.textMuted)}>
-              Create reusable templates, discover verified pro musicians, and
-              book instantly. Perfect for weddings, corporate events, parties,
-              and more.
-            </p>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4 max-w-md">
-              {QUICK_STATS.map((stat, index) => (
-                <QuickStat key={index} stat={stat} colors={colors} />
-              ))}
-            </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end">
-            <Button
-              onClick={() => handleTabChange("create")}
-              className={cn(
-                "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300",
-                colors.textInverted
-              )}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Template
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleTabChange("musicians")}
-              className={cn(
-                "border-2 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300",
-                colors.border,
-                colors.hoverBg
-              )}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Browse Musicians
-            </Button>
-          </div>
-        </div>
+        </GigSectionHeader>
       </div>
 
       {/* Enhanced Tab Navigation */}
