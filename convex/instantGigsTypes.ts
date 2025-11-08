@@ -8,6 +8,7 @@ export interface GigTemplateBase {
   budget: string;
   gigType: string;
   duration: string;
+  fromTime?: string;
   setlist?: string;
   icon: string;
 }
@@ -30,6 +31,7 @@ export interface ConvexGigTemplate {
   budget: string;
   gigType: string;
   duration: string;
+  fromTime?: string;
   setlist?: string;
   icon: string;
   clientId: Id<"users">;

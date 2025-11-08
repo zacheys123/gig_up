@@ -52,6 +52,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Wedding Ceremony",
     description: "Elegant musical accompaniment for ceremonies and receptions",
     duration: "3-4 hours",
+    fromTime: "10am",
     budget: "KES 25,000 - 40,000",
     icon: "💒",
     gigType: "wedding",
@@ -61,6 +62,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Corporate Event",
     description: "Professional entertainment for business functions and galas",
     duration: "4 hours",
+    fromTime: "6pm",
     budget: "KES 35,000 - 60,000",
     icon: "🏢",
     gigType: "corporate",
@@ -70,6 +72,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Private Party",
     description: "Customized entertainment for birthdays and celebrations",
     duration: "3-4 hours",
+    fromTime: "1pm",
     budget: "KES 20,000 - 35,000",
     icon: "🎉",
     gigType: "private-party",
@@ -79,6 +82,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Concert/Show",
     description: "Dynamic performances for live shows and events",
     duration: "2-3 hours",
+    fromTime: "9pm",
     budget: "KES 30,000 - 50,000",
     icon: "🎤",
     gigType: "concert",
@@ -89,6 +93,7 @@ const EXAMPLE_TEMPLATES = [
     description: "Atmospheric music for dining and social venues",
     duration: "4 hours",
     budget: "KES 15,000 - 25,000",
+    fromTime: "4pm",
     icon: "🍽️",
     gigType: "restaurant",
   },
@@ -97,6 +102,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Church Service",
     description: "Inspirational music for worship services and events",
     duration: "2-3 hours",
+    fromTime: "7am",
     budget: "KES 10,000 - 20,000",
     icon: "⛪",
     gigType: "church",
@@ -106,6 +112,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Festival",
     description: "High-energy performances for large audience events",
     duration: "1-2 hours",
+    fromTime: "4pm",
     budget: "KES 40,000 - 80,000",
     icon: "🎪",
     gigType: "festival",
@@ -115,6 +122,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Club Night",
     description: "Energetic sets for nightlife and social events",
     duration: "4 hours",
+    fromTime: "8pm",
     budget: "KES 20,000 - 35,000",
     icon: "🎭",
     gigType: "club",
@@ -124,6 +132,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Recording Session",
     description: "Professional musicians for studio recording projects",
     duration: "4-6 hours",
+    fromTime: "4pm",
     budget: "KES 25,000 - 45,000",
     icon: "🎹",
     gigType: "recording",
@@ -133,6 +142,7 @@ const EXAMPLE_TEMPLATES = [
     title: "Solo Musician",
     description: "Versatile individual performers for any occasion",
     duration: "3-4 hours",
+    fromTime: "12am",
     budget: "KES 5,000 - 20,000",
     icon: "✨",
     gigType: "individual",
@@ -319,6 +329,23 @@ const TemplateForm = memo(
                   placeholder="e.g., 2-3 hours"
                   value={formData.duration}
                   onChange={(e) => handleChange("duration", e.target.value)}
+                  required
+                  className={cn(colors.border, "focus:ring-blue-500")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="fromTime"
+                  className={cn("text-sm font-medium", colors.text)}
+                >
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  Start Time
+                </Label>
+                <Input
+                  id="duration"
+                  placeholder="e.g., 7pm"
+                  value={formData.duration}
+                  onChange={(e) => handleChange("fromTime", e.target.value)}
                   required
                   className={cn(colors.border, "focus:ring-blue-500")}
                 />
@@ -1038,6 +1065,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
       budget: "",
       gigType: "",
       duration: "",
+      fromTime: "",
       setlist: "",
     });
 
@@ -1058,6 +1086,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
           budget: editingTemplate.budget,
           gigType: editingTemplate.gigType,
           duration: editingTemplate.duration,
+          fromTime: editingTemplate.fromTime || "",
           setlist: editingTemplate.setlist || "",
         });
         setInternalMode("custom");
@@ -1078,6 +1107,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
           budget: "",
           gigType: "",
           duration: "",
+          fromTime: "",
           setlist: "",
         });
       } else {
@@ -1101,6 +1131,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         budget: template.budget.split(" - ")[0],
         gigType: template.gigType,
         duration: template.duration,
+        fromTime: template.fromTime || "",
         setlist: "",
       });
       setInternalMode("custom");
@@ -1116,6 +1147,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         budget: "",
         gigType: "",
         duration: "",
+        fromTime: "",
         setlist: "",
       });
       setInternalMode("custom");
@@ -1154,6 +1186,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         budget: "",
         gigType: "",
         duration: "",
+        fromTime: "",
         setlist: "",
       });
       setInternalMode("default");
@@ -1174,6 +1207,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         budget: "",
         gigType: "",
         duration: "",
+        fromTime: "",
         setlist: "",
       });
       setInternalMode("guided");
@@ -1189,6 +1223,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         budget: "",
         gigType: "",
         duration: "",
+        fromTime: "",
         setlist: "",
       });
       setInternalMode("default");

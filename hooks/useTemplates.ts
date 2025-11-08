@@ -46,6 +46,7 @@ export const useTemplates = (userId: Id<"users">) => {
       budget: t.budget,
       gigType: t.gigType,
       duration: t.duration,
+      fromTime: t.fromTime || "", // Added fromTime handling
       setlist: t.setlist,
       icon: t.icon || "✨",
       createdAt: t.createdAt,
@@ -88,6 +89,7 @@ export const useTemplates = (userId: Id<"users">) => {
         budget: t.budget,
         gigType: t.gigType,
         duration: t.duration,
+        fromTime: t.fromTime || "", // Added fromTime handling
         setlist: t.setlist,
         icon: t.icon || "✨",
         createdAt: t.createdAt,
@@ -128,6 +130,7 @@ export const useTemplates = (userId: Id<"users">) => {
           budget: templateData.budget,
           gigType: templateData.gigType,
           duration: templateData.duration,
+          fromTime: templateData.fromTime,
           setlist: templateData.setlist,
           icon: templateData.icon,
           clientId: userId,
@@ -191,6 +194,7 @@ export const useTemplates = (userId: Id<"users">) => {
             budget: updates.budget || templateToUpdate.budget,
             gigType: updates.gigType || templateToUpdate.gigType,
             duration: updates.duration || templateToUpdate.duration,
+            fromTime: updates.fromTime || templateToUpdate.fromTime,
             setlist: updates.setlist || templateToUpdate.setlist,
             icon: updates.icon || templateToUpdate.icon,
             clientId: userId,

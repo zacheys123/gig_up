@@ -131,6 +131,7 @@ export const saveTemplate = mutation({
     icon: v.string(),
     clientId: v.id("users"),
     clientName: v.string(),
+    fromTime: v.optional(v.string()),
     // REMOVED: status parameter
   },
   handler: async (ctx, args) => {
@@ -196,6 +197,7 @@ export const createInstantGig = mutation({
     clientName: v.string(),
     invitedMusicianId: v.id("users"),
     musicianName: v.string(),
+    fromTime: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const gigId = await ctx.db.insert("instantgigs", {

@@ -11,6 +11,7 @@ export const instantGigs = defineTable({
   budget: v.string(),
   gigType: v.string(),
   duration: v.string(),
+  fromTime: v.optional(v.string()),
   // Client info
   clientId: v.id("users"),
   clientName: v.string(),
@@ -39,6 +40,7 @@ export const instantGigsTemplate = defineTable({
   budget: v.string(),
   gigType: v.string(),
   duration: v.string(),
+  fromTime: v.optional(v.string()),
   setlist: v.optional(v.string()),
   icon: v.string(),
 

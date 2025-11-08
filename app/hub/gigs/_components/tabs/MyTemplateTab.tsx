@@ -62,38 +62,27 @@ const TemplateCard = memo(
               <h4 className={cn("font-bold text-sm", colors.text)}>
                 {template.title}
               </h4>
-              <span
-                className={cn(
-                  "text-xs px-2 py-1 rounded-full",
-                  status === "draft"
-                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                    : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                )}
-              >
-                {status === "draft" ? "Draft" : "Ready"}
-              </span>
             </div>
           </div>
-          {status === "draft" && (
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onEdit}
-                className="w-8 h-8"
-              >
-                <Edit className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onDelete}
-                className="w-8 h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="w-8 h-8"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="w-8 h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Description */}
@@ -118,6 +107,7 @@ const TemplateCard = memo(
           <div className="flex items-center gap-2">
             <Clock className="w-3 h-3" />
             <span className={colors.textMuted}>{template.duration}</span>
+            <span className={colors.textMuted}>{template.fromTime}</span>
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="w-3 h-3" />
