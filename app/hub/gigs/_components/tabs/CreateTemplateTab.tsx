@@ -1,4 +1,4 @@
-// app/hub/gigs/_components/tabs/CreateTemplateTab.tsx - OPTIMIZED
+// app/hub/gigs/_components/tabs/CreateTemplateTab.tsx - UPDATED
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
@@ -40,11 +40,33 @@ interface CreateTemplateTabProps {
   ) => void;
   user: any;
   existingTemplates: GigTemplate[];
-  mode: "default" | "guided" | "custom";
+  mode: "default" | "guided" | "scratch" | "custom";
   onFormClose: () => void;
   isLoading: boolean;
   editingTemplate?: GigTemplate | null;
 }
+
+// Clear mode separation
+const MODE_FLOW = {
+  guided: {
+    description: "Start with professional templates",
+    showTemplates: true,
+    showCustomOption: true,
+    allowScratch: false,
+  },
+  scratch: {
+    description: "Build completely from scratch",
+    showTemplates: false,
+    showCustomOption: false,
+    allowScratch: true,
+  },
+  custom: {
+    description: "Editing or customizing",
+    showTemplates: false,
+    showCustomOption: false,
+    allowScratch: false,
+  },
+} as const;
 
 const EXAMPLE_TEMPLATES = [
   {
@@ -167,15 +189,20 @@ const GIG_TYPES = [
 const TemplateForm = memo(
   ({
     formData,
-    internalMode,
+    creationMode,
     editingTemplate,
     selectedExample,
     handleSubmit,
     handleChange,
-    handleBackToExamples,
+    handleBackToGuided,
     handleBackToDefault,
     colors,
+    user,
   }: any) => {
+    const isPremiumUser = user?.tier === "premium";
+    const isProUser = user?.tier === "pro";
+    const canUseAdvancedFeatures = isPremiumUser || isProUser;
+
     return (
       <div
         className={cn("rounded-2xl p-6", colors.card, colors.border, "border")}
@@ -183,8 +210,8 @@ const TemplateForm = memo(
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={
-              internalMode === "guided"
-                ? handleBackToExamples
+              creationMode === "guided"
+                ? handleBackToGuided
                 : handleBackToDefault
             }
             className={cn(
@@ -200,14 +227,18 @@ const TemplateForm = memo(
                 ? "Edit Template"
                 : selectedExample
                   ? "Customize Template"
-                  : "Create Custom Template"}
+                  : creationMode === "scratch"
+                    ? "Start from Scratch"
+                    : "Create Custom Template"}
             </h3>
             <p className={cn("text-sm", colors.textMuted)}>
               {editingTemplate
                 ? "Update your template details"
                 : selectedExample
                   ? "Modify the example to fit your needs"
-                  : "Design your perfect gig template once, use it forever"}
+                  : creationMode === "scratch"
+                    ? "Build your perfect template from the ground up"
+                    : "Design your perfect gig template once, use it forever"}
             </p>
           </div>
         </div>
@@ -333,6 +364,7 @@ const TemplateForm = memo(
                   className={cn(colors.border, "focus:ring-blue-500")}
                 />
               </div>
+
               <div className="space-y-2">
                 <Label
                   htmlFor="fromTime"
@@ -342,11 +374,10 @@ const TemplateForm = memo(
                   Start Time
                 </Label>
                 <Input
-                  id="duration"
+                  id="fromTime"
                   placeholder="e.g., 7pm"
-                  value={formData.duration}
+                  value={formData.fromTime}
                   onChange={(e) => handleChange("fromTime", e.target.value)}
-                  required
                   className={cn(colors.border, "focus:ring-blue-500")}
                 />
               </div>
@@ -394,13 +425,13 @@ const TemplateForm = memo(
               type="button"
               variant="outline"
               onClick={
-                internalMode === "guided"
-                  ? handleBackToExamples
+                creationMode === "guided"
+                  ? handleBackToGuided
                   : handleBackToDefault
               }
               className="flex-1"
             >
-              {internalMode === "guided" ? "Back to Examples" : "Cancel"}
+              {creationMode === "guided" ? "Back to Templates" : "Cancel"}
             </Button>
             <Button
               type="submit"
@@ -417,7 +448,9 @@ const TemplateForm = memo(
                 ? "Update Template"
                 : selectedExample
                   ? "Save Customized Template"
-                  : "Save as Template"}
+                  : creationMode === "scratch"
+                    ? "Create Template"
+                    : "Save as Template"}
             </Button>
           </div>
         </form>
@@ -428,26 +461,163 @@ const TemplateForm = memo(
 
 TemplateForm.displayName = "TemplateForm";
 
-// Memoize GuidedInterface component
-const GuidedInterface = memo(
-  ({ useExampleTemplate, handleCustomTemplate, colors, user }: any) => {
+// New Scratch Interface Component
+const ScratchInterface = memo(
+  ({ handleBackToDefault, colors, user, onStartScratch }: any) => {
     const isPremiumUser = user?.tier === "premium";
     const isProUser = user?.tier === "pro";
     const canUseAdvancedFeatures = isPremiumUser || isProUser;
 
-    const handleCustomTemplateClick = () => {
+    const handleStartCreating = () => {
       if (!canUseAdvancedFeatures) {
         alert(
-          "Advanced template creation is available for Premium users. Please upgrade your account to access this feature."
+          "Start from scratch is available for Premium users only. Please upgrade your account."
         );
         return;
       }
-      handleCustomTemplate();
+      onStartScratch(); // This should transition to the form
     };
 
-    const handleUpgradeClick = () => {
-      alert("Redirecting to upgrade page...");
-    };
+    return (
+      <div
+        className={cn("rounded-2xl p-6", colors.card, colors.border, "border")}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={handleBackToDefault}
+            className={cn(
+              "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+              colors.text
+            )}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h3 className={cn("text-xl font-bold", colors.text)}>
+              Start from Scratch
+            </h3>
+            <p className={cn("text-sm", colors.textMuted)}>
+              Build your perfect template from the ground up
+            </p>
+          </div>
+        </div>
+
+        {/* Empty State - No Templates! */}
+        <div
+          className={cn(
+            "border-2 border-dashed rounded-2xl p-12 text-center",
+            colors.border,
+            colors.backgroundMuted
+          )}
+        >
+          <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+            <Sparkles className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+          </div>
+
+          <h4 className={cn("text-2xl font-bold mb-4", colors.text)}>
+            Blank Canvas
+          </h4>
+
+          <p className={cn("text-lg mb-6 max-w-md mx-auto", colors.textMuted)}>
+            You've chosen to start from scratch. No templates, no examples -
+            just your vision.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 max-w-2xl mx-auto">
+            {[
+              {
+                icon: "🎨",
+                title: "Complete Freedom",
+                desc: "No predefined structures",
+              },
+              {
+                icon: "⚡",
+                title: "Pure Customization",
+                desc: "Every field is your choice",
+              },
+              {
+                icon: "🚀",
+                title: "Advanced Control",
+                desc: "For unique requirements",
+              },
+            ].map((item, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "p-4 rounded-xl text-center",
+                  colors.backgroundMuted,
+                  colors.border,
+                  "border"
+                )}
+              >
+                <div className="text-2xl mb-2">{item.icon}</div>
+                <div className={cn("font-semibold mb-1", colors.text)}>
+                  {item.title}
+                </div>
+                <div className={cn("text-sm", colors.textMuted)}>
+                  {item.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            onClick={handleStartCreating} // Use the fixed handler
+            className={cn(
+              "bg-blue-500 hover:bg-blue-600 text-white px-8 py-3",
+              colors.shadow
+            )}
+            size="lg"
+            disabled={!canUseAdvancedFeatures}
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Begin Creating
+          </Button>
+
+          {!canUseAdvancedFeatures && (
+            <div className="mt-4 text-center">
+              <p className={cn("text-sm", colors.textMuted)}>
+                Upgrade to Premium to access Start from Scratch feature
+              </p>
+              <Button
+                onClick={() => alert("Redirecting to upgrade page...")}
+                className="mt-2"
+                variant="outline"
+                size="sm"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Upgrade Now
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Tips for Scratch Users */}
+        <div className={cn("rounded-2xl p-4 mt-6", colors.backgroundMuted)}>
+          <div className="flex items-center gap-2 text-sm">
+            <Lightbulb className="w-4 h-4 text-amber-500" />
+            <span className={cn("font-medium", colors.text)}>Pro Tip:</span>
+            <span className={colors.textMuted}>
+              Starting from scratch works best for unique event types,
+              specialized requirements, or when you have very specific
+              preferences.
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
+ScratchInterface.displayName = "ScratchInterface";
+
+// Updated GuidedInterface component
+const GuidedInterface = memo(
+  ({ useExampleTemplate, handleStartFromScratch, colors, user }: any) => {
+    const isPremiumUser = user?.tier === "premium";
+    const isProUser = user?.tier === "pro";
+    const canUseAdvancedFeatures = isPremiumUser || isProUser;
 
     return (
       <div
@@ -484,8 +654,8 @@ const GuidedInterface = memo(
               colors.textMuted
             )}
           >
-            Start with professionally designed templates or create your own{" "}
-            {canUseAdvancedFeatures ? "with advanced customization" : ""}
+            Start with professionally designed templates or create your own from
+            scratch
           </p>
 
           {/* User Tier Badge */}
@@ -519,11 +689,9 @@ const GuidedInterface = memo(
                 className={cn("text-lg lg:text-xl font-semibold", colors.text)}
               >
                 Professional Templates{" "}
-                {!canUseAdvancedFeatures && (
-                  <span className={cn("text-sm ml-2", colors.primary)}>
-                    (Free)
-                  </span>
-                )}
+                <span className={cn("text-sm ml-2", colors.primary)}>
+                  (Free)
+                </span>
               </h3>
             </div>
 
@@ -584,7 +752,7 @@ const GuidedInterface = memo(
                     <div className="flex items-center gap-2">
                       <Clock className={cn("w-4 h-4", colors.primary)} />
                       <span className={cn("font-medium", colors.text)}>
-                        {template.fromTime}
+                        Start @{template.fromTime}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -615,7 +783,7 @@ const GuidedInterface = memo(
             </div>
           </div>
 
-          {/* Custom Template Column */}
+          {/* Start from Scratch Column */}
           <div className="space-y-4 lg:space-y-6">
             <div className="flex items-center gap-3 mb-4 lg:mb-6">
               <div
@@ -627,7 +795,7 @@ const GuidedInterface = memo(
               <h3
                 className={cn("text-lg lg:text-xl font-semibold", colors.text)}
               >
-                Advanced Creation{" "}
+                Start from Scratch{" "}
                 {!canUseAdvancedFeatures && (
                   <span className={cn("text-sm ml-2", colors.primary)}>
                     (Premium)
@@ -637,18 +805,16 @@ const GuidedInterface = memo(
             </div>
 
             <div
-              onClick={
-                canUseAdvancedFeatures
-                  ? handleCustomTemplateClick
-                  : handleUpgradeClick
-              }
+              onClick={handleStartFromScratch}
               className={cn(
                 "border rounded-xl lg:rounded-2xl p-6 lg:p-8 cursor-pointer transition-all duration-300 group",
                 colors.border,
                 colors.card,
                 colors.shadow,
                 "hover:scale-[1.02] hover:shadow-lg",
-                colors.hoverBg
+                canUseAdvancedFeatures
+                  ? colors.hoverBg
+                  : "opacity-60 cursor-not-allowed"
               )}
             >
               {/* Premium Badge */}
@@ -688,7 +854,7 @@ const GuidedInterface = memo(
                   )}
                 >
                   {canUseAdvancedFeatures ? (
-                    <Plus className="w-8 h-8 text-white" />
+                    <Sparkles className="w-8 h-8 text-white" />
                   ) : (
                     <Lock className={cn("w-8 h-8", colors.textMuted)} />
                   )}
@@ -699,13 +865,26 @@ const GuidedInterface = memo(
                     canUseAdvancedFeatures ? colors.primary : colors.text
                   )}
                 >
-                  Custom Template
+                  Start from Scratch
                 </h3>
                 <p className={cn("text-lg leading-relaxed", colors.textMuted)}>
                   {canUseAdvancedFeatures
-                    ? "Build from scratch with complete creative control"
-                    : "Upgrade to Premium for advanced template creation"}
+                    ? "Build completely from scratch with no templates"
+                    : "Upgrade to Premium for advanced creation tools"}
                 </p>
+              </div>
+
+              {/* Key Difference Highlight */}
+              <div
+                className={cn(
+                  "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mb-6 mx-auto flex justify-center",
+                  canUseAdvancedFeatures
+                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                )}
+              >
+                <Shield className="w-4 h-4" />
+                No templates • Complete freedom
               </div>
 
               {/* Features Grid */}
@@ -713,12 +892,24 @@ const GuidedInterface = memo(
                 {[
                   {
                     icon: "🎨",
-                    title: "Full Design",
-                    desc: "Complete customization",
+                    title: "Complete Freedom",
+                    desc: "No predefined structures",
                   },
-                  { icon: "⚡", title: "Advanced", desc: "Premium features" },
-                  { icon: "🔧", title: "Flexible", desc: "Adapt to any event" },
-                  { icon: "🎯", title: "Precise", desc: "Exact requirements" },
+                  {
+                    icon: "⚡",
+                    title: "Pure Custom",
+                    desc: "Every field your choice",
+                  },
+                  {
+                    icon: "🔧",
+                    title: "Advanced Control",
+                    desc: "For unique needs",
+                  },
+                  {
+                    icon: "🎯",
+                    title: "Total Precision",
+                    desc: "Exact requirements",
+                  },
                 ].map((feature, index) => (
                   <div
                     key={index}
@@ -742,43 +933,6 @@ const GuidedInterface = memo(
                 ))}
               </div>
 
-              {/* Benefits List */}
-              <div className="space-y-3 mb-6">
-                {[
-                  "Unlimited customization options",
-                  "Advanced pricing models",
-                  "Custom requirement fields",
-                  "Template duplication",
-                  "Priority support access",
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    {canUseAdvancedFeatures ? (
-                      <CheckCircle
-                        className={cn(
-                          "w-5 h-5 flex-shrink-0",
-                          colors.successText
-                        )}
-                      />
-                    ) : (
-                      <Lock
-                        className={cn(
-                          "w-4 h-4 flex-shrink-0",
-                          colors.textMuted
-                        )}
-                      />
-                    )}
-                    <span
-                      className={cn(
-                        "text-sm",
-                        canUseAdvancedFeatures ? colors.text : colors.textMuted
-                      )}
-                    >
-                      {benefit}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
               {/* Enhanced CTA */}
               <Button
                 className={cn(
@@ -792,24 +946,21 @@ const GuidedInterface = memo(
                         colors.primaryBgHover,
                         colors.textInverted
                       )
-                    : cn(
-                        colors.primaryBg,
-                        colors.primaryBgHover,
-                        colors.textInverted
-                      )
+                    : cn("bg-gray-400 text-gray-800 cursor-not-allowed")
                 )}
                 size="lg"
+                disabled={!canUseAdvancedFeatures}
               >
                 {canUseAdvancedFeatures ? (
                   <>
-                    <Wand2 className="w-5 h-5 mr-2" />
-                    Start Custom Creation
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Start from Blank Canvas
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 ) : (
                   <>
-                    <Crown className="w-5 h-5 mr-2" />
-                    Upgrade to Premium
+                    <Lock className="w-5 h-5 mr-2" />
+                    Upgrade to Unlock
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -892,7 +1043,7 @@ const GuidedInterface = memo(
             </Button>
             {!canUseAdvancedFeatures && (
               <Button
-                onClick={handleUpgradeClick}
+                onClick={() => alert("Redirecting to upgrade page...")}
                 className={cn(
                   colors.primaryBg,
                   colors.primaryBgHover,
@@ -913,14 +1064,21 @@ const GuidedInterface = memo(
 );
 
 GuidedInterface.displayName = "GuidedInterface";
+
 // Memoize DefaultInterface component
 const DefaultInterface = memo(
   ({
     existingTemplates,
     useExampleTemplate,
-    handleCustomTemplate,
+    handleStartGuided,
+    handleStartScratch,
     colors,
+    user,
   }: any) => {
+    const isPremiumUser = user?.tier === "premium";
+    const isProUser = user?.tier === "pro";
+    const canUseAdvancedFeatures = isPremiumUser || isProUser;
+
     return (
       <div
         className={cn("rounded-2xl p-6", colors.card, colors.border, "border")}
@@ -944,88 +1102,93 @@ const DefaultInterface = memo(
           </div>
         )}
 
-        {/* Example Templates Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="w-5 h-5 text-blue-500" />
-            <h3 className={cn("font-bold", colors.text)}>Example Templates</h3>
+        {/* Creation Options Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Guided Creation Card */}
+          <div
+            onClick={handleStartGuided}
+            className={cn(
+              "border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 group",
+              colors.border,
+              "hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+            )}
+          >
+            <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+              <BookOpen className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className={cn("font-bold text-xl mb-2", colors.text)}>
+              Use Templates
+            </h3>
+            <p className={cn("text-sm mb-4", colors.textMuted)}>
+              Start with professionally designed templates for common event
+              types
+            </p>
+            <div className={cn("text-xs", colors.textMuted)}>
+              Perfect for weddings, corporate events, parties, and more
+            </div>
+            <Button className="w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              Start with Templates
+            </Button>
           </div>
-          <p className={cn("text-sm mb-4", colors.textMuted)}>
-            Get started with these examples or create your own from scratch
-          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {EXAMPLE_TEMPLATES.map((template) => (
-              <div
-                key={template.id}
-                onClick={() => useExampleTemplate(template)}
-                className={cn(
-                  "border rounded-2xl p-5 cursor-pointer transition-all duration-200 group",
-                  colors.border,
-                  colors.hoverBg,
-                  "hover:border-blue-500 hover:shadow-lg"
-                )}
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <span className="text-2xl">{template.icon}</span>
-                  <h4 className={cn("font-bold", colors.text)}>
-                    {template.title}
-                  </h4>
-                </div>
-
-                <p className={cn("text-sm mb-4", colors.textMuted)}>
-                  {template.description}
-                </p>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className={colors.textMuted}>Duration:</span>
-                    <span className={cn("font-medium", colors.text)}>
-                      {template.duration}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={colors.textMuted}>Start Time:</span>
-                    <span className={cn("font-medium", colors.text)}>
-                      {template.fromTime}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={colors.textMuted}>Budget Range:</span>
-                    <span className={cn("font-medium", colors.text)}>
-                      {template.budget}
-                    </span>
-                  </div>
-                </div>
-
-                <Button className="w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Use as Example
-                </Button>
+          {/* Start from Scratch Card */}
+          <div
+            onClick={handleStartScratch}
+            className={cn(
+              "border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 group",
+              colors.border,
+              canUseAdvancedFeatures
+                ? "hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                : "opacity-60 cursor-not-allowed"
+            )}
+          >
+            {!canUseAdvancedFeatures && (
+              <div className="absolute top-4 right-4">
+                <Lock className={cn("w-5 h-5", colors.textMuted)} />
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Custom Template Card */}
-        <div
-          onClick={handleCustomTemplate}
-          className={cn(
-            "border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 group",
-            colors.border,
-            "hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20"
-          )}
-        >
-          <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Lightbulb className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h3 className={cn("font-bold text-xl mb-2", colors.text)}>
-            Create Custom Template
-          </h3>
-          <p className={cn("text-sm mb-4", colors.textMuted)}>
-            Design a completely custom gig template from scratch
-          </p>
-          <div className={cn("text-xs", colors.textMuted)}>
-            Perfect for unique events, specific requirements, or recurring gigs
+            )}
+            <div
+              className={cn(
+                "w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform",
+                canUseAdvancedFeatures
+                  ? "bg-purple-100 dark:bg-purple-900/30"
+                  : "bg-gray-100 dark:bg-gray-800"
+              )}
+            >
+              <Sparkles
+                className={cn(
+                  "w-8 h-8",
+                  canUseAdvancedFeatures
+                    ? "text-purple-600 dark:text-purple-400"
+                    : "text-gray-400"
+                )}
+              />
+            </div>
+            <h3 className={cn("font-bold text-xl mb-2", colors.text)}>
+              Start from Scratch
+            </h3>
+            <p className={cn("text-sm mb-4", colors.textMuted)}>
+              {canUseAdvancedFeatures
+                ? "Build completely from scratch with no templates"
+                : "Upgrade to Premium for advanced creation"}
+            </p>
+            <div className={cn("text-xs", colors.textMuted)}>
+              {canUseAdvancedFeatures
+                ? "For unique events and specific requirements"
+                : "Premium feature - upgrade to unlock"}
+            </div>
+            <Button
+              className={cn(
+                "w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity",
+                !canUseAdvancedFeatures && "cursor-not-allowed"
+              )}
+              variant={canUseAdvancedFeatures ? "default" : "outline"}
+              disabled={!canUseAdvancedFeatures}
+            >
+              {canUseAdvancedFeatures
+                ? "Start from Scratch"
+                : "Premium Feature"}
+            </Button>
           </div>
         </div>
 
@@ -1062,9 +1225,17 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
     editingTemplate,
   }) => {
     const { colors } = useThemeColors();
-    const [internalMode, setInternalMode] = useState<
-      "default" | "guided" | "custom"
-    >(mode);
+    const [creationMode, setCreationMode] = useState<
+      "guided" | "scratch" | "custom"
+    >(
+      editingTemplate
+        ? "custom"
+        : mode === "scratch"
+          ? "scratch"
+          : mode === "guided"
+            ? "guided"
+            : "guided" // default to guided
+    );
     const [selectedExample, setSelectedExample] = useState<string | null>(null);
 
     // Memoize form data state
@@ -1100,36 +1271,19 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
           fromTime: editingTemplate.fromTime || "",
           setlist: editingTemplate.setlist || "",
         });
-        setInternalMode("custom");
+        setCreationMode("custom");
       }
     }, [editingTemplate]);
 
-    // Sync with parent mode changes
-    const syncMode = useCallback((newMode: "default" | "guided" | "custom") => {
-      setInternalMode(newMode);
-
-      if (newMode === "guided" || newMode === "custom") {
-        setSelectedExample(null);
-        setFormData({
-          title: "",
-          description: "",
-          date: "",
-          venue: "",
-          budget: "",
-          gigType: "",
-          duration: "",
-          fromTime: "",
-          setlist: "",
-        });
-      } else {
-        setSelectedExample(null);
-      }
-    }, []);
-
-    // Use effect to sync with parent mode
     useEffect(() => {
-      syncMode(mode);
-    }, [mode, syncMode]);
+      if (mode === "scratch" && creationMode !== "scratch") {
+        setCreationMode("scratch");
+      } else if (mode === "guided" && creationMode !== "guided") {
+        setCreationMode("guided");
+      } else if (mode === "custom" && creationMode !== "custom") {
+        setCreationMode("custom");
+      }
+    }, [mode, creationMode]);
 
     // Memoize event handlers
     const useExampleTemplate = useCallback((template: any) => {
@@ -1145,10 +1299,21 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         fromTime: template.fromTime || "",
         setlist: "",
       });
-      setInternalMode("custom");
+      setCreationMode("custom");
     }, []);
 
-    const handleCustomTemplate = useCallback(() => {
+    const handleStartFromScratch = useCallback(() => {
+      const isPremiumUser = user?.tier === "premium";
+      const isProUser = user?.tier === "pro";
+      const canUseAdvancedFeatures = isPremiumUser || isProUser;
+
+      if (!canUseAdvancedFeatures) {
+        alert(
+          "Start from scratch is available for Premium users only. Please upgrade your account."
+        );
+        return;
+      }
+
       setSelectedExample(null);
       setFormData({
         title: "",
@@ -1161,7 +1326,15 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         fromTime: "",
         setlist: "",
       });
-      setInternalMode("custom");
+      setCreationMode("scratch");
+    }, [user]);
+
+    const handleStartScratchForm = useCallback(() => {
+      setCreationMode("custom");
+    }, []);
+
+    const handleStartGuided = useCallback(() => {
+      setCreationMode("guided");
     }, []);
 
     const handleSubmit = useCallback(
@@ -1200,7 +1373,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         fromTime: "",
         setlist: "",
       });
-      setInternalMode("default");
+      setCreationMode("guided");
       onFormClose();
     }, [onFormClose]);
 
@@ -1208,7 +1381,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
       setFormData((prev) => ({ ...prev, [field]: value }));
     }, []);
 
-    const handleBackToExamples = useCallback(() => {
+    const handleBackToGuided = useCallback(() => {
       setSelectedExample(null);
       setFormData({
         title: "",
@@ -1221,7 +1394,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         fromTime: "",
         setlist: "",
       });
-      setInternalMode("guided");
+      setCreationMode("guided");
     }, []);
 
     const handleBackToDefault = useCallback(() => {
@@ -1237,7 +1410,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         fromTime: "",
         setlist: "",
       });
-      setInternalMode("default");
+      setCreationMode("guided");
       onFormClose();
     }, [onFormClose]);
 
@@ -1245,58 +1418,79 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
     const templateFormProps = useMemo(
       () => ({
         formData,
-        internalMode,
+        creationMode,
         editingTemplate,
         selectedExample,
         handleSubmit,
         handleChange,
-        handleBackToExamples,
+        handleBackToGuided,
         handleBackToDefault,
         colors,
+        user,
       }),
       [
         formData,
-        internalMode,
+        creationMode,
         editingTemplate,
         selectedExample,
         handleSubmit,
         handleChange,
-        handleBackToExamples,
+        handleBackToGuided,
         handleBackToDefault,
         colors,
+        user,
       ]
     );
 
     const guidedInterfaceProps = useMemo(
       () => ({
         useExampleTemplate,
-        handleCustomTemplate,
+        handleStartFromScratch,
         colors,
+        user,
       }),
-      [useExampleTemplate, handleCustomTemplate, colors]
+      [useExampleTemplate, handleStartFromScratch, colors, user]
+    );
+
+    const scratchInterfaceProps = useMemo(
+      () => ({
+        handleBackToDefault,
+        colors,
+        user,
+        onStartScratch: handleStartScratchForm,
+      }),
+      [handleBackToDefault, colors, user, handleStartScratchForm]
     );
 
     const defaultInterfaceProps = useMemo(
       () => ({
         existingTemplates: memoizedExistingTemplates,
         useExampleTemplate,
-        handleCustomTemplate,
+        handleStartGuided,
+        handleStartScratch: handleStartFromScratch,
         colors,
+        user,
       }),
       [
         memoizedExistingTemplates,
         useExampleTemplate,
-        handleCustomTemplate,
+        handleStartGuided,
+        handleStartFromScratch,
         colors,
+        user,
       ]
     );
 
-    // Main render with minimal conditional logic
-    if (internalMode === "custom") {
+    // Main render with clear mode separation
+    if (creationMode === "custom") {
       return <TemplateForm {...templateFormProps} />;
     }
 
-    if (internalMode === "guided") {
+    if (creationMode === "scratch") {
+      return <ScratchInterface {...scratchInterfaceProps} />;
+    }
+
+    if (creationMode === "guided") {
       return <GuidedInterface {...guidedInterfaceProps} />;
     }
 

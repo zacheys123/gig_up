@@ -20,6 +20,7 @@ import {
   Rocket,
   Target,
   Calendar,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -29,6 +30,7 @@ interface OnboardingModalProps {
   onClose: () => void;
   onGuidedCreation: () => void;
   onCustomCreation: () => void;
+  onScratchCreation?: () => void; // ADD THIS
 }
 
 // Memoize feature cards data - updated with theme colors
@@ -101,6 +103,22 @@ const getCreationOptions = (colors: any) => [
     iconColor: colors.infoText,
   },
   {
+    id: "scratch", // NEW OPTION
+    title: "Start from Scratch",
+    description: "For complete creative freedom",
+    icon: Sparkles, // Make sure to import Sparkles
+    features: [
+      "Blank canvas",
+      "No templates or examples",
+      "Total customization",
+      "Advanced options",
+    ],
+    color: "from-purple-500 to-pink-500",
+    buttonText: "Start from Scratch",
+    iconBg: colors.card,
+    iconColor: colors.primary,
+  },
+  {
     id: "custom",
     title: "Custom Creation",
     description: "For experienced users",
@@ -111,10 +129,10 @@ const getCreationOptions = (colors: any) => [
       "Flexible templates",
       "Complete control",
     ],
-    color: "from-purple-500 to-pink-500",
+    color: "from-blue-500 to-green-500",
     buttonText: "Start Custom Creation",
-    iconBg: colors.card,
-    iconColor: colors.primary,
+    iconBg: colors.successBg,
+    iconColor: colors.successText,
   },
 ];
 
@@ -194,11 +212,7 @@ const CreationOption = memo(({ option, onSelect, colors }: any) => {
   const Icon = option.icon;
 
   const handleClick = useCallback(() => {
-    if (option.id === "guided") {
-      onSelect("guided");
-    } else {
-      onSelect("custom");
-    }
+    onSelect(option.id); // This can now be "guided", "scratch", or "custom"
   }, [option.id, onSelect]);
 
   return (
@@ -255,7 +269,13 @@ const CreationOption = memo(({ option, onSelect, colors }: any) => {
 CreationOption.displayName = "CreationOption";
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
-  ({ isOpen, onClose, onGuidedCreation, onCustomCreation }) => {
+  ({
+    isOpen,
+    onClose,
+    onGuidedCreation,
+    onCustomCreation,
+    onScratchCreation,
+  }) => {
     const { colors } = useThemeColors();
 
     // Memoize dynamic data based on theme
@@ -275,15 +295,29 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
       onCustomCreation();
     }, [onCustomCreation]);
 
+    const handleScratchCreation = useCallback(() => {
+      if (onScratchCreation) {
+        onScratchCreation();
+      }
+    }, [onScratchCreation]);
+
+    // UPDATE: Fix the creation select handler to include scratch
     const handleCreationSelect = useCallback(
-      (type: "guided" | "custom") => {
+      (type: "guided" | "custom" | "scratch") => {
         if (type === "guided") {
           handleGuidedCreation();
-        } else {
+        } else if (type === "custom") {
           handleCustomCreation();
+        } else if (type === "scratch" && onScratchCreation) {
+          handleScratchCreation();
         }
       },
-      [handleGuidedCreation, handleCustomCreation]
+      [
+        handleGuidedCreation,
+        handleCustomCreation,
+        handleScratchCreation,
+        onScratchCreation,
+      ]
     );
 
     // Memoize modal content to prevent unnecessary re-renders

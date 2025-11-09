@@ -210,7 +210,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [createTabMode, setCreateTabMode] = useState<
-    "default" | "guided" | "custom"
+    "default" | "guided" | "custom" | "scratch"
   >("default");
   const [editingTemplate, setEditingTemplate] = useState<GigTemplate | null>(
     null
@@ -261,6 +261,14 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     localStorage.setItem("instant_gigs_onboarding_seen", "true");
   }, []);
 
+  const handleScratchCreation = useCallback(() => {
+    setShowOnboarding(false);
+    setActiveTab("create");
+    setCreateTabMode("scratch");
+    localStorage.setItem("instant_gigs_onboarding_seen", "true");
+  }, []);
+
+  // UPDATE: Modify the onboarding handlers to include scratch
   const handleGuidedCreation = useCallback(() => {
     setShowOnboarding(false);
     setActiveTab("create");
@@ -382,8 +390,6 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
       case "create":
         return (
           <div ref={createTemplatesRef}>
-            {" "}
-            {/* Add ref here */}
             <CreateTemplateTab
               onCreateTemplate={handleCreateTemplate}
               onUpdateTemplate={
@@ -391,7 +397,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
               }
               user={user}
               existingTemplates={memoizedTemplates}
-              mode={createTabMode}
+              mode={createTabMode} // This now includes "scratch"
               onFormClose={handleCancelEdit}
               isLoading={templatesLoading}
               editingTemplate={editingTemplate}
@@ -442,14 +448,13 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Onboarding Modal with Guided/Custom Options */}
       <OnboardingModal
         isOpen={showOnboarding}
         onClose={handleCloseOnboarding}
         onGuidedCreation={handleGuidedCreation}
         onCustomCreation={handleCustomCreation}
+        onScratchCreation={handleScratchCreation} // This should work now
       />
-
       {/* Enhanced Header Section */}
       <div
         className={cn(
@@ -527,7 +532,6 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           </div>
         </GigSectionHeader>
       </div>
-
       {/* Enhanced Tab Navigation */}
       <div
         className={cn(
@@ -550,10 +554,8 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           ))}
         </div>
       </div>
-
       {/* Tab Content */}
       <div className="min-h-[500px]">{tabContent}</div>
-
       {/* Booking Modal */}
       <BookingModal
         isOpen={showBookingModal}
@@ -563,7 +565,6 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         onSubmitBooking={handleSubmitBooking}
         isLoading={isLoading}
       />
-
       {/* Help Section */}
       {memoizedTemplates.length === 0 &&
         activeTab === "create" &&
