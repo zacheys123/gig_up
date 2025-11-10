@@ -21,9 +21,13 @@ import {
   Target,
   Calendar,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
+import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -31,6 +35,7 @@ interface OnboardingModalProps {
   onGuidedCreation: () => void;
   onCustomCreation: () => void;
   onScratchCreation?: () => void; // ADD THIS
+  scrollToTemplates?: () => void; // NEW PROP
 }
 
 // Memoize feature cards data - updated with theme colors
@@ -85,56 +90,74 @@ const STAT_ITEMS = [
 ];
 
 // Memoize creation options - updated with theme colors
-const getCreationOptions = (colors: any) => [
-  {
-    id: "guided",
-    title: "Guided Creation",
-    description: "Perfect for first-time users",
-    icon: Wand2,
-    features: [
-      "Step-by-step template builder",
-      "Pre-built examples",
-      "Best practices guidance",
-      "Quick setup",
-    ],
-    color: "from-violet-300 to-yellow-500",
-    buttonText: "Start Guided Creation",
-    iconBg: colors.infoBg,
-    iconColor: colors.infoText,
-  },
-  {
-    id: "scratch", // NEW OPTION
-    title: "Start from Scratch",
-    description: "For complete creative freedom",
-    icon: Sparkles, // Make sure to import Sparkles
-    features: [
-      "Blank canvas",
-      "No templates or examples",
-      "Total customization",
-      "Advanced options",
-    ],
-    color: "from-purple-500 to-pink-500",
-    buttonText: "Start from Scratch",
-    iconBg: colors.card,
-    iconColor: colors.primary,
-  },
-  {
-    id: "custom",
-    title: "Custom Creation",
-    description: "For experienced users",
-    icon: Settings,
-    features: [
-      "Full customization",
-      "Advanced options",
-      "Flexible templates",
-      "Complete control",
-    ],
-    color: "from-blue-500 to-green-500",
-    buttonText: "Start Custom Creation",
-    iconBg: colors.successBg,
-    iconColor: colors.successText,
-  },
-];
+// In your OnboardingModal.tsx - UPDATED TIER SYSTEM
+const getCreationOptions = (
+  colors: any,
+  user: any,
+  isInGracePeriod: boolean,
+  trialRemainingDays: number | null
+) => {
+  const userTier = user?.tier || "free";
+
+  return [
+    {
+      id: "guided",
+      title: "Use Templates",
+      description: "Start with professionally designed templates",
+      icon: BookOpen,
+      features: [
+        "50+ pre-built templates",
+        "Quick 2-minute setup",
+        "Best practices included",
+        "Perfect for common events",
+      ],
+      color: "from-blue-500 to-purple-500",
+      buttonText: "Browse Templates",
+      tier: "free",
+      available: true, // Always available
+      iconBg: colors.infoBg,
+      iconColor: colors.infoText,
+    },
+    {
+      id: "custom",
+      title: "Custom Creation",
+      description: "Advanced customization with template foundation",
+      icon: Settings,
+      features: [
+        "Modify any template extensively",
+        "Advanced field options",
+        "Save custom variations",
+        "Priority template access",
+      ],
+      color: "from-green-500 to-emerald-500",
+      buttonText:
+        userTier === "free" ? "Upgrade to Pro" : "Start Custom Creation",
+      tier: "pro",
+      available: userTier === "pro" || userTier === "premium",
+      iconBg: colors.successBg,
+      iconColor: colors.successText,
+    },
+    {
+      id: "scratch",
+      title: "Start from Scratch",
+      description: "Complete creative freedom",
+      icon: Sparkles,
+      features: [
+        "Blank canvas experience",
+        "Total design control",
+        "Advanced customization",
+        "White-glove support",
+      ],
+      color: "from-amber-500 to-orange-500",
+      buttonText:
+        userTier === "premium" ? "Start Creating" : "Upgrade to Premium",
+      tier: "premium",
+      available: userTier === "premium",
+      iconBg: colors.warningBg,
+      iconColor: colors.warningText,
+    },
+  ];
+};
 
 // Memoize FeatureCard component
 const FeatureCard = memo(({ feature, colors }: any) => {
@@ -207,64 +230,127 @@ const StatItem = memo(({ stat, colors }: any) => {
 
 StatItem.displayName = "StatItem";
 
-// Memoize CreationOption component
-const CreationOption = memo(({ option, onSelect, colors }: any) => {
-  const Icon = option.icon;
+// Enhanced CreationOption component
+const CreationOption = memo(
+  ({ option, onSelect, colors, user, isInGracePeriod, daysLeft }: any) => {
+    const Icon = option.icon;
 
-  const handleClick = useCallback(() => {
-    onSelect(option.id); // This can now be "guided", "scratch", or "custom"
-  }, [option.id, onSelect]);
+    const handleClick = useCallback(() => {
+      if (!option.available) {
+        // Show upgrade modal based on required tier
+        if (option.tier === "pro") {
+          alert("Upgrade to Pro to access Custom Creation features");
+        } else if (option.tier === "premium") {
+          alert("Upgrade to Premium to start from scratch");
+        }
+        return;
+      }
+      onSelect(option.id);
+    }, [option, onSelect]);
 
-  return (
-    <div
-      className={cn(
-        "rounded-2xl p-6 border-2 transition-all duration-300 group cursor-pointer",
-        colors.border,
-        colors.card,
-        "hover:scale-105 hover:shadow-xl",
-        "hover:border-blue-300"
-      )}
-    >
-      <div className="text-center mb-6">
+    return (
+      <div
+        className={cn(
+          "rounded-2xl p-6 border-2 transition-all duration-300 group cursor-pointer relative",
+          colors.border,
+          colors.card,
+          option.available
+            ? "hover:scale-105 hover:shadow-xl hover:border-blue-300"
+            : "opacity-70 cursor-not-allowed"
+        )}
+      >
+        {/* Tier Badge */}
         <div
           className={cn(
-            "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110",
-            option.iconBg
+            "absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold",
+            option.tier === "free" && "bg-blue-500 text-white",
+            option.tier === "pro" && "bg-green-500 text-white",
+            option.tier === "premium" && "bg-amber-500 text-white"
           )}
         >
-          <Icon className={cn("w-8 h-8", option.iconColor)} />
+          {option.tier === "free" || isInGracePeriod
+            ? "Trial Month"
+            : option.tier === "free"
+              ? "FREE"
+              : option.tier.toUpperCase()}
         </div>
-        <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
-          {option.title}
-        </h3>
-        <p className={cn("text-sm mb-4", colors.textMuted)}>
-          {option.description}
-        </p>
-      </div>
 
-      <div className="space-y-3 mb-6">
-        {option.features.map((feature: string, index: number) => (
-          <div key={index} className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-            <span className={cn("text-xs", colors.textMuted)}>{feature}</span>
+        {/* Lock for unavailable options */}
+        {!option.available && (
+          <div className="absolute top-4 left-4">
+            <Lock className={cn("w-5 h-5", colors.textMuted)} />
           </div>
-        ))}
-      </div>
-
-      <Button
-        onClick={handleClick}
-        className={cn(
-          "w-full bg-gradient-to-r transition-all duration-300 hover:scale-105",
-          option.color
         )}
-        size="lg"
-      >
-        {option.buttonText}
-        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-      </Button>
-    </div>
-  );
-});
+
+        <div className="text-center mb-6">
+          <div
+            className={cn(
+              "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-300",
+              option.available ? "group-hover:scale-110" : "",
+              option.iconBg
+            )}
+          >
+            <Icon className={cn("w-8 h-8", option.iconColor)} />
+            <span>${daysLeft} days </span>
+          </div>
+          <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+            {option.title}
+          </h3>
+          <p className={cn("text-sm mb-4", colors.textMuted)}>
+            {option.description}
+          </p>
+        </div>
+
+        {/* Features List */}
+        <div className="space-y-3 mb-6">
+          {option.features.map((feature: string, index: number) => (
+            <div key={index} className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "w-2 h-2 rounded-full flex-shrink-0",
+                  option.available ? "bg-blue-500" : "bg-gray-400"
+                )}
+              ></div>
+              <span className={cn("text-xs", colors.textMuted)}>{feature}</span>
+            </div>
+          ))}
+        </div>
+
+        <Button
+          onClick={handleClick}
+          className={cn(
+            "w-full bg-gradient-to-r transition-all duration-300",
+            option.available
+              ? "hover:scale-105 " + option.color
+              : "bg-gray-400 text-gray-800 cursor-not-allowed"
+          )}
+          size="lg"
+          disabled={!option.available}
+        >
+          {option.buttonText}
+          {option.available && (
+            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+          )}
+        </Button>
+
+        {/* Upgrade Prompt */}
+        {!option.available && option.tier !== "free" && (
+          <div className="text-center mt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => alert(`Redirecting to ${option.tier} upgrade...`)}
+              className="text-xs"
+            >
+              <Crown className="w-3 h-3 mr-1" />
+              Upgrade to {option.tier}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 CreationOption.displayName = "CreationOption";
 
@@ -275,12 +361,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     onGuidedCreation,
     onCustomCreation,
     onScratchCreation,
+    scrollToTemplates,
   }) => {
     const { colors } = useThemeColors();
-
+    const { user } = useCurrentUser(); // ADD THIS TO GET USER INFO
+    const { isInGracePeriod } = useCheckTrial();
+    const { trialRemainingDays } = useSubscriptionStore();
     // Memoize dynamic data based on theme
     const featureCards = useMemo(() => getFeatureCards(colors), [colors]);
-    const creationOptions = useMemo(() => getCreationOptions(colors), [colors]);
+    const creationOptions = useMemo(
+      () =>
+        getCreationOptions(user, colors, isInGracePeriod, trialRemainingDays),
+      [colors]
+    );
 
     // Memoize event handlers
     const handleClose = useCallback(() => {
@@ -289,15 +382,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
 
     const handleGuidedCreation = useCallback(() => {
       onGuidedCreation();
+      if (scrollToTemplates) {
+        scrollToTemplates();
+      }
     }, [onGuidedCreation]);
 
     const handleCustomCreation = useCallback(() => {
       onCustomCreation();
+      if (scrollToTemplates) {
+        scrollToTemplates();
+      }
     }, [onCustomCreation]);
 
     const handleScratchCreation = useCallback(() => {
       if (onScratchCreation) {
         onScratchCreation();
+        if (scrollToTemplates) {
+          scrollToTemplates();
+        }
       }
     }, [onScratchCreation]);
 

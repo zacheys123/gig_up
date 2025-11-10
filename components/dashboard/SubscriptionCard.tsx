@@ -18,6 +18,14 @@ import {
   Lock,
   Trophy,
   Gem,
+  Calendar,
+  Users,
+  FileText,
+  Wand2,
+  Palette,
+  Globe,
+  Shield,
+  Headphones,
 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useTheme";
 import { useSubscriptionUpdates } from "@/hooks/useSubscriptionUpdates";
@@ -35,6 +43,42 @@ interface SubscriptionCardProps {
     popular?: boolean;
   };
 }
+
+// Tier-specific feature highlights
+const TIER_FEATURES = {
+  free: {
+    templates: "5+ Free Templates",
+    creation: "Guided Creation",
+    customization: "Basic Fields",
+    support: "Standard Support",
+    icon: Star,
+    color: "from-gray-400 to-gray-600",
+  },
+  pro: {
+    templates: "50+ Pro Templates",
+    creation: "Custom Creation",
+    customization: "Advanced Fields",
+    support: "Priority Support",
+    icon: Crown,
+    color: "from-green-500 to-emerald-600",
+  },
+  premium: {
+    templates: "All Templates + Scratch",
+    creation: "Start from Scratch",
+    customization: "Complete Freedom",
+    support: "White-Glove Support",
+    icon: Trophy,
+    color: "from-blue-500 to-purple-600",
+  },
+  elite: {
+    templates: "Everything + AI Features",
+    creation: "AI-Powered Creation",
+    customization: "Unlimited Everything",
+    support: "Dedicated Manager",
+    icon: Gem,
+    color: "from-purple-600 to-pink-600",
+  },
+};
 
 export function SubscriptionCard({ plan }: SubscriptionCardProps) {
   const { userId } = useAuth();
@@ -96,7 +140,6 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
           nextBillingDate: tierName !== "free" ? nextBillingDate : undefined,
         });
 
-        // Show success notification
         subscriptionSuccess(tierName === "free" ? "downgraded" : "upgraded");
         console.log("Subscription updated successfully!");
       }
@@ -117,30 +160,38 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
       return {
         gradient: "from-purple-600 via-pink-500 to-red-500",
         icon: Gem,
-        iconColor: "text-purple-300",
+        iconColor: "text-purple-200",
         badgeColor: "from-purple-500 to-pink-600",
+        glow: "shadow-purple-500/25",
+        tierFeatures: TIER_FEATURES.elite,
       };
     } else if (tierName.includes("premium")) {
       return {
-        gradient: "from-blue-600 via-purple-500 to-indigo-500",
+        gradient: "from-blue-600 via-purple-500 to-indigo-600",
         icon: Trophy,
-        iconColor: "text-blue-300",
+        iconColor: "text-blue-200",
         badgeColor: "from-blue-500 to-purple-600",
+        glow: "shadow-blue-500/25",
+        tierFeatures: TIER_FEATURES.premium,
       };
     } else if (tierName.includes("pro")) {
       return {
-        gradient: "from-green-600 via-teal-500 to-cyan-500",
+        gradient: "from-green-500 via-emerald-500 to-teal-600",
         icon: Crown,
-        iconColor: "text-yellow-300",
+        iconColor: "text-green-200",
         badgeColor: "from-green-500 to-teal-600",
+        glow: "shadow-green-500/25",
+        tierFeatures: TIER_FEATURES.pro,
         popular: plan.popular,
       };
     } else {
       return {
-        gradient: "",
+        gradient: "from-gray-400 to-gray-600",
         icon: Star,
-        iconColor: "text-gray-400",
-        badgeColor: "",
+        iconColor: "text-gray-300",
+        badgeColor: "from-gray-400 to-gray-500",
+        glow: "shadow-gray-400/20",
+        tierFeatures: TIER_FEATURES.free,
       };
     }
   };
@@ -158,31 +209,38 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ scale: plan.comingSoon ? 1 : 1.02 }}
         whileTap={{ scale: plan.comingSoon ? 1 : 0.98 }}
-        className={`relative w-full rounded-2xl border transition-all duration-300 overflow-hidden group
+        className={`relative w-full rounded-3xl border transition-all duration-300 overflow-hidden group
           ${
             isPaidPlan
-              ? `min-h-[460px] bg-gradient-to-br ${tierConfig.gradient} text-white shadow-lg border-transparent`
-              : `${colors.card} ${colors.border} shadow-lg`
+              ? `min-h-[520px] bg-gradient-to-br ${tierConfig.gradient} text-white shadow-2xl ${tierConfig.glow} border-transparent`
+              : `${colors.card} ${colors.border} shadow-xl ${colors.shadow}`
           } 
-          ${isCurrentPlan ? "ring-2 ring-green-400" : ""}
-          ${plan.comingSoon ? "opacity-60 grayscale" : ""}
-          p-4 sm:p-6 md:p-8 lg:p-8
-          min-h-[360px] sm:min-h-[520px] md:min-h-[560px]
+          ${isCurrentPlan ? "ring-3 ring-green-400 ring-opacity-50" : ""}
+          ${plan.comingSoon ? "opacity-60 grayscale cursor-not-allowed" : "cursor-pointer"}
+          p-6 sm:p-8
+          min-h-[480px] sm:min-h-[520px] lg:min-h-[560px]
+          flex flex-col
         `}
       >
         {/* Animated background gradient for paid plans */}
         {isPaidPlan && (
-          <div
-            className={`absolute inset-0 bg-gradient-to-br ${tierConfig.gradient}/20`}
-          />
+          <div className="absolute inset-0 bg-gradient-to-br opacity-10 from-white/20 to-transparent" />
         )}
+
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.15)_1px,transparent_0)] bg-[length:20px_20px] opacity-20" />
 
         {/* Coming Soon Overlay */}
         {plan.comingSoon && (
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-30 flex items-center justify-center">
-            <div className="text-center p-4">
-              <Lock className="w-12 h-12 text-white mb-2 mx-auto" />
-              <span className="text-white font-bold text-lg">Coming Soon</span>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center rounded-3xl">
+            <div className="text-center p-6">
+              <Lock className="w-16 h-16 text-white mb-4 mx-auto opacity-80" />
+              <span className="text-white font-bold text-xl tracking-wide">
+                Coming Soon
+              </span>
+              <p className="text-white/70 text-sm mt-2 max-w-xs">
+                We're working on something amazing
+              </p>
             </div>
           </div>
         )}
@@ -192,61 +250,71 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
-            className="absolute -top-2 sm:-top-3 left-1 transform z-10 pt-5"
+            className="absolute -top-3 -right-3 z-20"
           >
             <div
-              className={`bg-gradient-to-r ${tierConfig.badgeColor} text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg mt-4`}
+              className={`bg-gradient-to-r ${tierConfig.badgeColor} text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg rotate-12`}
             >
-              <Sparkles className="w-3 h-3 sm:w-3 sm:h-3" />
-              <span className="text-xs sm:text-sm">POPULAR</span>
+              <Sparkles className="w-3 h-3" />
+              <span className="text-xs">MOST POPULAR</span>
             </div>
           </motion.div>
         )}
 
         {/* Current Plan Badge */}
         {isCurrentPlan && (
-          <div className="absolute -top-2 sm:-top-3 left-1 transform z-10 my-4">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-20"
+          >
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 shadow-lg">
               <Check className="w-3 h-3" />
-              <span className="text-xs">CURRENT</span>
+              <span className="text-xs">CURRENT PLAN</span>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Header */}
-        <div className="text-center mb-4 sm:mb-6 md:mb-8 relative z-20">
-          <motion.div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+        {/* Header Section */}
+        <div className="text-center mb-6 relative z-20">
+          <motion.div className="flex items-center justify-center gap-3 mb-4">
             <div
-              className={`p-2 sm:p-3 ${isPaidPlan ? "bg-white/20 backdrop-blur-sm" : colors.backgroundMuted} rounded-xl sm:rounded-2xl`}
+              className={`p-3 rounded-2xl ${
+                isPaidPlan
+                  ? "bg-white/20 backdrop-blur-sm border border-white/30"
+                  : `${colors.backgroundMuted} ${colors.border} border`
+              }`}
             >
               <TierIcon
-                className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isPaidPlan ? tierConfig.iconColor : "text-gray-400"}`}
+                className={`w-6 h-6 sm:w-7 sm:h-7 ${
+                  isPaidPlan ? tierConfig.iconColor : colors.textMuted
+                }`}
               />
             </div>
             <h3
-              className={`font-bold 
+              className={`font-bold tracking-tight
               ${isPaidPlan ? "text-white" : colors.text} 
-              text-lg sm:text-xl md:text-2xl lg:text-2xl
+              text-xl sm:text-2xl
             `}
             >
               {plan.name}
             </h3>
           </motion.div>
 
-          <div className="mb-1 sm:mb-2">
+          <div className="mb-2">
             <span
-              className={`font-black 
+              className={`font-black tracking-tight
               ${isPaidPlan ? "text-white" : colors.primary}
-              text-2xl sm:text-3xl md:text-4xl lg:text-4xl
+              text-3xl sm:text-4xl
             `}
             >
               {plan.price}
             </span>
             {isPaidPlan && (
               <span
-                className={`font-medium ml-1
-                ${isPaidPlan ? "text-yellow-100" : colors.textMuted}
-                text-sm sm:text-base md:text-base
+                className={`font-medium ml-2
+                ${isPaidPlan ? "text-white/80" : colors.textMuted}
+                text-base
               `}
               >
                 /month
@@ -256,39 +324,74 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
 
           {isPaidPlan && (
             <p
-              className={`text-xs sm:text-sm ${isPaidPlan ? "text-purple-100" : colors.textMuted}`}
+              className={`text-sm ${isPaidPlan ? "text-white/70" : colors.textMuted}`}
             >
-              Cancel anytime
+              Cancel anytime • No hidden fees
             </p>
           )}
         </div>
 
+        {/* Tier Feature Highlights */}
+        <div className="grid grid-cols-2 gap-3 mb-6 relative z-20">
+          {[
+            { icon: FileText, label: tierConfig.tierFeatures.templates },
+            { icon: Wand2, label: tierConfig.tierFeatures.creation },
+            { icon: Palette, label: tierConfig.tierFeatures.customization },
+            { icon: Headphones, label: tierConfig.tierFeatures.support },
+          ].map((item, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className={`flex items-center gap-2 p-2 rounded-xl text-xs font-medium ${
+                isPaidPlan
+                  ? "bg-white/10 backdrop-blur-sm border border-white/20"
+                  : `${colors.backgroundMuted} ${colors.border} border`
+              }`}
+            >
+              <item.icon
+                className={`w-3 h-3 flex-shrink-0 ${
+                  isPaidPlan ? "text-white/80" : colors.textMuted
+                }`}
+              />
+              <span
+                className={`leading-tight ${
+                  isPaidPlan ? "text-white/90" : colors.text
+                }`}
+              >
+                {item.label}
+              </span>
+            </motion.div>
+          ))}
+        </div>
+
         {/* Features List */}
-        <div className="space-y-2 sm:space-y-3 md:space-y-4 mb-4 sm:mb-6 md:mb-8 relative z-20">
+        <div className="space-y-3 mb-6 flex-1 relative z-20">
           {plan.features.map((feature, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg transition-all duration-200 hover:bg-white/5"
+              className="flex items-start gap-3 p-3 rounded-xl transition-all duration-200 group hover:scale-[1.02]"
             >
               <div
-                className={`p-1 sm:p-1.5 rounded-full flex-shrink-0 mt-0.5
-                ${isPaidPlan ? "bg-green-500/20" : "bg-green-100"}
-              `}
+                className={`p-1.5 rounded-full flex-shrink-0 mt-0.5 ${
+                  isPaidPlan
+                    ? "bg-green-400/20 border border-green-400/30"
+                    : "bg-green-100 border border-green-200"
+                }`}
               >
                 <Check
-                  className={`w-3 h-3 sm:w-4 sm:h-4
-                  ${isPaidPlan ? "text-green-300" : "text-green-600"}
-                `}
+                  className={`w-3 h-3 ${
+                    isPaidPlan ? "text-green-300" : "text-green-600"
+                  }`}
                 />
               </div>
               <span
-                className={`leading-relaxed font-medium
+                className={`leading-relaxed font-medium text-sm
                 ${isPaidPlan ? "text-gray-100" : colors.text}
-                text-xs sm:text-sm md:text-sm
-                line-clamp-2
               `}
               >
                 {feature}
@@ -302,50 +405,48 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
           onClick={handleSubscriptionClick}
           disabled={isLoading || isCurrentPlan || plan.comingSoon}
           whileHover={{
-            scale: isLoading || isCurrentPlan || plan.comingSoon ? 1 : 1.03,
+            scale: isLoading || isCurrentPlan || plan.comingSoon ? 1 : 1.05,
+            y: isLoading || isCurrentPlan || plan.comingSoon ? 0 : -2,
           }}
           whileTap={{
-            scale: isLoading || isCurrentPlan || plan.comingSoon ? 1 : 0.97,
+            scale: isLoading || isCurrentPlan || plan.comingSoon ? 1 : 0.95,
           }}
-          className={`w-full rounded-xl font-bold transition-all duration-300 relative overflow-hidden group
+          className={`w-full rounded-2xl font-bold transition-all duration-300 relative overflow-hidden group
             ${
               isCurrentPlan
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-inner"
                 : plan.comingSoon
                   ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                   : isPaidPlan
-                    ? "bg-white text-purple-600 hover:bg-gray-50 shadow-md hover:shadow-lg"
-                    : `bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600 shadow-md hover:shadow-lg`
+                    ? "bg-white text-gray-900 hover:bg-gray-50 shadow-lg hover:shadow-xl border border-white/30"
+                    : `bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600 shadow-lg hover:shadow-xl`
             } 
             disabled:opacity-50 disabled:cursor-not-allowed
-            py-3 sm:py-3 md:py-4 lg:py-4
-            px-4 sm:px-4 md:px-6 lg:px-6
-            text-sm sm:text-sm md:text-base lg:text-base
+            py-4 px-6
+            text-base font-semibold
           `}
         >
           {/* Button shimmer effect */}
           {!isCurrentPlan && !plan.comingSoon && (
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
           )}
 
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 sm:gap-3 relative z-10">
-              <Loader2 className="w-4 h-4 sm:w-4 sm:h-4 animate-spin" />
-              <span className="font-semibold text-xs sm:text-sm">
-                Processing...
-              </span>
+            <div className="flex items-center justify-center gap-3 relative z-10">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="font-semibold">Processing...</span>
             </div>
           ) : (
-            <div className="flex items-center justify-center gap-2 sm:gap-3 relative z-10">
-              <span className="font-semibold text-xs sm:text-sm">
+            <div className="flex items-center justify-center gap-3 relative z-10">
+              <span className="font-semibold tracking-wide">
                 {plan.comingSoon ? "Coming Soon" : plan.cta}
               </span>
               {isPaidPlan && !isCurrentPlan && !plan.comingSoon && (
                 <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
+                  animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <TierIcon className="w-4 h-4 sm:w-4 sm:h-4" />
+                  <TierIcon className="w-5 h-5" />
                 </motion.div>
               )}
             </div>
@@ -357,14 +458,15 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
           <motion.div
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="absolute -bottom-1 sm:-bottom-2 left-1/2 transform -translate-x-1/2 mt-[20px]"
+            className="text-center mt-4"
           >
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-semibold shadow-lg whitespace-nowrap">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white/90 px-3 py-1.5 rounded-full text-xs font-medium border border-white/30">
+              <Sparkles className="w-3 h-3" />
               {plan.name.includes("Elite")
-                ? "🎉 Save 30%"
+                ? "🎉 Save 30% vs monthly"
                 : plan.name.includes("Premium")
-                  ? "🎉 Save 25%"
-                  : "🎉 Save 20%"}
+                  ? "🎉 Save 25% vs monthly"
+                  : "🎉 Save 20% vs monthly"}
             </div>
           </motion.div>
         )}
@@ -379,6 +481,7 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
             onConfirm={handleSubscription}
             onCancel={() => setShowConfirmation(false)}
             colors={colors}
+            tierConfig={tierConfig}
           />
         )}
       </AnimatePresence>
@@ -386,13 +489,14 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
   );
 }
 
-// Separate Confirmation Modal Component for better organization
+// Enhanced Confirmation Modal
 function ConfirmationModal({
   plan,
   isLoading,
   onConfirm,
   onCancel,
   colors,
+  tierConfig,
 }: any) {
   const getTierIcon = (tierName: string) => {
     if (tierName.includes("Elite")) return Gem;
@@ -402,6 +506,7 @@ function ConfirmationModal({
   };
 
   const TierIcon = getTierIcon(plan.name);
+  const isUpgrade = !plan.name.includes("Free");
 
   return (
     <motion.div
@@ -416,31 +521,35 @@ function ConfirmationModal({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className={`relative w-full max-w-md rounded-2xl shadow-2xl ${colors.card} ${colors.border} border`}
+        className={`relative w-full max-w-md rounded-3xl shadow-2xl ${colors.card} ${colors.border} border overflow-hidden`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-500/20 rounded-full">
-              <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+        {/* Modal Header with Gradient */}
+        <div
+          className={`bg-gradient-to-r ${tierConfig.gradient} p-6 text-white`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                <AlertCircle className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold">
+                Confirm {isUpgrade ? "Upgrade" : "Downgrade"}
+              </h3>
             </div>
-            <h3 className={`text-xl font-bold ${colors.text}`}>
-              Confirm {plan.name.includes("Free") ? "Downgrade" : "Upgrade"}
-            </h3>
+            <button
+              onClick={onCancel}
+              className="p-2 rounded-full hover:bg-white/20 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={onCancel}
-            className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${colors.textMuted}`}
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Content */}
         <div className="p-6">
           <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center gap-3 mb-4">
               <TierIcon className="w-8 h-8 text-yellow-500" />
               <span className={`text-2xl font-bold ${colors.primary}`}>
                 {plan.name}
@@ -449,46 +558,47 @@ function ConfirmationModal({
 
             <p className={`text-lg font-semibold mb-2 ${colors.text}`}>
               {plan.price}
+              {isUpgrade && <span className="text-sm ml-1">/month</span>}
             </p>
 
             <p className={`mb-4 ${colors.textMuted}`}>
-              {plan.name.includes("Free")
-                ? "You're about to downgrade to the Free plan"
-                : `You're about to upgrade to our ${plan.name}`}
+              {isUpgrade
+                ? `You're about to upgrade to ${plan.name}`
+                : "You're about to downgrade to the Free plan"}
             </p>
           </div>
 
+          {/* Key Features Highlight */}
           <div
-            className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6`}
+            className={`rounded-2xl p-4 mb-6 ${colors.infoBg} ${colors.infoBorder} border`}
           >
-            <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <h4
-                  className={`font-semibold text-blue-800 dark:text-blue-300 mb-1`}
-                >
-                  What you'll get:
-                </h4>
-                <ul className={`text-sm space-y-1 ${colors.textMuted}`}>
-                  {plan.features
-                    .slice(0, 3)
-                    .map((feature: string, index: number) => (
-                      <li key={index}>• {feature}</li>
-                    ))}
-                  {plan.features.length > 3 && (
-                    <li className="font-semibold text-blue-600 dark:text-blue-400">
-                      + {plan.features.length - 3} more features
-                    </li>
-                  )}
-                </ul>
-              </div>
+            <h4
+              className={`font-semibold ${colors.infoText} mb-3 flex items-center gap-2`}
+            >
+              <Check className="w-4 h-4" />
+              What you'll unlock:
+            </h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {[
+                tierConfig.tierFeatures.templates,
+                tierConfig.tierFeatures.creation,
+                tierConfig.tierFeatures.customization,
+                tierConfig.tierFeatures.support,
+              ].map((feature, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+                  <span className={colors.textMuted}>{feature}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className={`text-xs ${colors.textMuted} text-center mb-6`}>
-            {plan.name.includes("Free")
-              ? "Your premium features will be disabled immediately."
-              : "Your subscription will auto-renew monthly. You can cancel anytime."}
+          <div
+            className={`text-xs ${colors.textMuted} text-center mb-6 p-3 rounded-xl ${colors.backgroundMuted}`}
+          >
+            {isUpgrade
+              ? "Your subscription will auto-renew monthly. You can cancel anytime."
+              : "Your premium features will be disabled immediately."}
           </div>
 
           {/* Action Buttons */}
@@ -505,11 +615,11 @@ function ConfirmationModal({
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className="flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white 
-                hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r ${tierConfig.gradient} text-white 
+                shadow-lg hover:shadow-xl
                 transition-all duration-200 hover:scale-105 active:scale-95
                 disabled:opacity-50 disabled:cursor-not-allowed
-              "
+              `}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -517,7 +627,7 @@ function ConfirmationModal({
                   Processing...
                 </div>
               ) : (
-                `Confirm ${plan.name.includes("Free") ? "Downgrade" : "Upgrade"}`
+                `Confirm ${isUpgrade ? "Upgrade" : "Downgrade"}`
               )}
             </button>
           </div>

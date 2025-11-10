@@ -454,6 +454,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         onGuidedCreation={handleGuidedCreation}
         onCustomCreation={handleCustomCreation}
         onScratchCreation={handleScratchCreation} // This should work now
+        scrollToTemplates={scrollToTemplates}
       />
       {/* Enhanced Header Section */}
       <div

@@ -1,4 +1,4 @@
-// app/hub/gigs/_components/tabs/CreateTemplateTab.tsx - UPDATED
+// app/hub/gigs/_components/tabs/CreateTemplateTab.tsx - UPDATED WITH TIER SYSTEM
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
@@ -25,11 +25,24 @@ import {
   Lock,
   Crown,
   Star,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { GigTemplate } from "@/convex/instantGigsTypes";
 
+// Add these imports at the top of CreateTemplateTab.tsx
+import { useRouter } from "next/navigation";
+import ConfirmPrompt from "@/components/ConfirmPrompt"; // Adjust path as needed
+
+// Add this interface for prompt data
+interface PromptData {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  requiredTier: "pro" | "premium";
+  templateName?: string;
+}
 interface CreateTemplateTabProps {
   onCreateTemplate: (
     template: Omit<GigTemplate, "id" | "status" | "createdAt">
@@ -46,25 +59,22 @@ interface CreateTemplateTabProps {
   editingTemplate?: GigTemplate | null;
 }
 
-// Clear mode separation
+// Clear mode separation with tier requirements
 const MODE_FLOW = {
   guided: {
     description: "Start with professional templates",
     showTemplates: true,
-    showCustomOption: true,
-    allowScratch: false,
-  },
-  scratch: {
-    description: "Build completely from scratch",
-    showTemplates: false,
-    showCustomOption: false,
-    allowScratch: true,
+    tier: "free",
   },
   custom: {
-    description: "Editing or customizing",
+    description: "Advanced customization with template foundation",
     showTemplates: false,
-    showCustomOption: false,
-    allowScratch: false,
+    tier: "pro",
+  },
+  scratch: {
+    description: "Complete creative freedom from blank canvas",
+    showTemplates: false,
+    tier: "premium",
   },
 } as const;
 
@@ -78,6 +88,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 25,000 - 40,000",
     icon: "💒",
     gigType: "wedding",
+    tier: "free",
   },
   {
     id: "corporate-example",
@@ -88,6 +99,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 35,000 - 60,000",
     icon: "🏢",
     gigType: "corporate",
+    tier: "free",
   },
   {
     id: "private-party-example",
@@ -98,6 +110,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 20,000 - 35,000",
     icon: "🎉",
     gigType: "private-party",
+    tier: "pro",
   },
   {
     id: "concert-example",
@@ -108,6 +121,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 30,000 - 50,000",
     icon: "🎤",
     gigType: "concert",
+    tier: "pro",
   },
   {
     id: "restaurant-example",
@@ -118,6 +132,7 @@ const EXAMPLE_TEMPLATES = [
     fromTime: "4pm",
     icon: "🍽️",
     gigType: "restaurant",
+    tier: "free",
   },
   {
     id: "church-example",
@@ -128,6 +143,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 10,000 - 20,000",
     icon: "⛪",
     gigType: "church",
+    tier: "free",
   },
   {
     id: "festival-example",
@@ -138,6 +154,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 40,000 - 80,000",
     icon: "🎪",
     gigType: "festival",
+    tier: "premium",
   },
   {
     id: "club-example",
@@ -148,6 +165,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 20,000 - 35,000",
     icon: "🎭",
     gigType: "club",
+    tier: "pro",
   },
   {
     id: "recording-example",
@@ -158,6 +176,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 25,000 - 45,000",
     icon: "🎹",
     gigType: "recording",
+    tier: "pro",
   },
   {
     id: "individual-example",
@@ -168,6 +187,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 5,000 - 20,000",
     icon: "✨",
     gigType: "individual",
+    tier: "free",
   },
 ];
 
@@ -185,7 +205,16 @@ const GIG_TYPES = [
   { value: "other", label: "✨ Other" },
 ];
 
-// Memoize TemplateForm component
+// Helper function to check user tier access
+const canAccessTier = (userTier: string, requiredTier: string) => {
+  const tierLevels = { free: 0, pro: 1, premium: 2 };
+  return (
+    tierLevels[userTier as keyof typeof tierLevels] >=
+    tierLevels[requiredTier as keyof typeof tierLevels]
+  );
+};
+
+// In the TemplateForm component, update the form fields:
 const TemplateForm = memo(
   ({
     formData,
@@ -198,10 +227,20 @@ const TemplateForm = memo(
     handleBackToDefault,
     colors,
     user,
+    showUpgradePrompt,
   }: any) => {
-    const isPremiumUser = user?.tier === "premium";
-    const isProUser = user?.tier === "pro";
-    const canUseAdvancedFeatures = isPremiumUser || isProUser;
+    const userTier = user?.tier || "free";
+    const isUsingTemplate = !!selectedExample && !editingTemplate;
+
+    // Simple tier-based locking
+    const isFreeUser = userTier === "free";
+    const lockedForFreeUsers = isUsingTemplate && isFreeUser;
+
+    // Fields that should be locked for free template users
+    const LOCKED_FIELDS = ["title", "gigType", "budget", "duration", "setlist"];
+
+    const isFieldLocked = (fieldName: string) =>
+      lockedForFreeUsers && LOCKED_FIELDS.includes(fieldName);
 
     return (
       <div
@@ -226,22 +265,53 @@ const TemplateForm = memo(
               {editingTemplate
                 ? "Edit Template"
                 : selectedExample
-                  ? "Customize Template"
+                  ? lockedForFreeUsers
+                    ? "Use Template"
+                    : "Customize Template"
                   : creationMode === "scratch"
                     ? "Start from Scratch"
-                    : "Create Custom Template"}
+                    : "Custom Creation"}
             </h3>
             <p className={cn("text-sm", colors.textMuted)}>
               {editingTemplate
                 ? "Update your template details"
                 : selectedExample
-                  ? "Modify the example to fit your needs"
+                  ? lockedForFreeUsers
+                    ? "Free users can use templates as-is. Upgrade to customize."
+                    : "Modify the example to fit your needs"
                   : creationMode === "scratch"
                     ? "Build your perfect template from the ground up"
-                    : "Design your perfect gig template once, use it forever"}
+                    : "Advanced customization with template foundation"}
             </p>
           </div>
         </div>
+
+        {lockedForFreeUsers && (
+          <div
+            className={cn(
+              "mb-6 p-4 rounded-xl border-2 border-dashed text-center",
+              colors.border,
+              colors.backgroundMuted
+            )}
+          >
+            <Crown className={cn("w-8 h-8 mx-auto mb-2", colors.warningText)} />
+            <h4 className={cn("font-bold mb-2", colors.text)}>
+              Upgrade to Pro to Customize
+            </h4>
+            <p className={cn("text-sm mb-3", colors.textMuted)}>
+              Free users can use templates as-is. Upgrade to Pro to unlock field
+              customization.
+            </p>
+
+            <Button
+              onClick={() => showUpgradePrompt("pro")}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Upgrade to Pro
+            </Button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -252,7 +322,7 @@ const TemplateForm = memo(
                   htmlFor="title"
                   className={cn("text-sm font-medium", colors.text)}
                 >
-                  Gig Title *
+                  Gig Title {isFieldLocked("title") && "🔒"}
                 </Label>
                 <Input
                   id="title"
@@ -260,13 +330,24 @@ const TemplateForm = memo(
                   value={formData.title}
                   onChange={(e) => handleChange("title", e.target.value)}
                   required
-                  className={cn(colors.border, "focus:ring-blue-500")}
+                  readOnly={isFieldLocked("title")}
+                  className={cn(
+                    colors.border,
+                    "focus:ring-blue-500",
+                    isFieldLocked("title") &&
+                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                  )}
                 />
+                {isFieldLocked("title") && (
+                  <p className={cn("text-xs", colors.textMuted)}>
+                    Title locked for free users. Upgrade to Pro to customize.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label className={cn("text-sm font-medium", colors.text)}>
-                  Gig Type *
+                  Gig Type {isFieldLocked("gigType") && "🔒"}
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
                   {GIG_TYPES.map((type) => (
@@ -274,20 +355,29 @@ const TemplateForm = memo(
                       key={type.value}
                       type="button"
                       onClick={() => handleChange("gigType", type.value)}
+                      disabled={isFieldLocked("gigType")}
                       className={cn(
                         "border rounded-lg p-3 text-sm text-left transition-all",
                         colors.border,
                         formData.gigType === type.value
                           ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20 border-blue-500"
-                          : cn(colors.hoverBg, "hover:border-blue-300")
+                          : cn(colors.hoverBg, "hover:border-blue-300"),
+                        isFieldLocked("gigType") &&
+                          "opacity-60 cursor-not-allowed"
                       )}
                     >
                       {type.label}
                     </button>
                   ))}
                 </div>
+                {isFieldLocked("gigType") && (
+                  <p className={cn("text-xs", colors.textMuted)}>
+                    Gig type locked for free users. Upgrade to Pro to customize.
+                  </p>
+                )}
               </div>
 
+              {/* Keep Date and Venue editable for all */}
               <div className="space-y-2">
                 <Label
                   htmlFor="date"
@@ -331,7 +421,7 @@ const TemplateForm = memo(
                   className={cn("text-sm font-medium", colors.text)}
                 >
                   <DollarSign className="w-4 h-4 inline mr-2" />
-                  Budget (KES) *
+                  Budget (KES) {isFieldLocked("budget") && "🔒"}
                 </Label>
                 <Input
                   id="budget"
@@ -339,12 +429,24 @@ const TemplateForm = memo(
                   value={formData.budget}
                   onChange={(e) => handleChange("budget", e.target.value)}
                   required
-                  className={cn(colors.border, "focus:ring-blue-500")}
+                  readOnly={isFieldLocked("budget")}
+                  className={cn(
+                    colors.border,
+                    "focus:ring-blue-500",
+                    isFieldLocked("budget") &&
+                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                  )}
                 />
-                <p className={cn("text-xs", colors.textMuted)}>
-                  Typical rates: Wedding KES 25-40K • Corporate KES 30-60K •
-                  Private Party KES 20-35K
-                </p>
+                {isFieldLocked("budget") ? (
+                  <p className={cn("text-xs", colors.textMuted)}>
+                    Budget locked for free users. Upgrade to Pro to customize.
+                  </p>
+                ) : (
+                  <p className={cn("text-xs", colors.textMuted)}>
+                    Typical rates: Wedding KES 25-40K • Corporate KES 30-60K •
+                    Private Party KES 20-35K
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -353,7 +455,7 @@ const TemplateForm = memo(
                   className={cn("text-sm font-medium", colors.text)}
                 >
                   <Clock className="w-4 h-4 inline mr-2" />
-                  Duration *
+                  Duration {isFieldLocked("duration") && "🔒"}
                 </Label>
                 <Input
                   id="duration"
@@ -361,10 +463,22 @@ const TemplateForm = memo(
                   value={formData.duration}
                   onChange={(e) => handleChange("duration", e.target.value)}
                   required
-                  className={cn(colors.border, "focus:ring-blue-500")}
+                  readOnly={isFieldLocked("duration")}
+                  className={cn(
+                    colors.border,
+                    "focus:ring-blue-500",
+                    isFieldLocked("duration") &&
+                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                  )}
                 />
+                {isFieldLocked("duration") && (
+                  <p className={cn("text-xs", colors.textMuted)}>
+                    Duration locked for free users. Upgrade to Pro to customize.
+                  </p>
+                )}
               </div>
 
+              {/* Keep Start Time editable for all */}
               <div className="space-y-2">
                 <Label
                   htmlFor="fromTime"
@@ -382,6 +496,7 @@ const TemplateForm = memo(
                 />
               </div>
 
+              {/* Keep Description editable for all */}
               <div className="space-y-2">
                 <Label
                   htmlFor="description"
@@ -400,13 +515,15 @@ const TemplateForm = memo(
                 />
               </div>
 
+              {/* Setlist field with locking */}
               <div className="space-y-2">
                 <Label
                   htmlFor="setlist"
                   className={cn("text-sm font-medium", colors.text)}
                 >
                   <Music className="w-4 h-4 inline mr-2" />
-                  Setlist/Song Requests (Optional)
+                  Setlist/Song Requests (Optional){" "}
+                  {isFieldLocked("setlist") && "🔒"}
                 </Label>
                 <Textarea
                   id="setlist"
@@ -414,8 +531,19 @@ const TemplateForm = memo(
                   rows={2}
                   value={formData.setlist}
                   onChange={(e) => handleChange("setlist", e.target.value)}
-                  className={cn(colors.border, "focus:ring-blue-500")}
+                  readOnly={isFieldLocked("setlist")}
+                  className={cn(
+                    colors.border,
+                    "focus:ring-blue-500",
+                    isFieldLocked("setlist") &&
+                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                  )}
                 />
+                {isFieldLocked("setlist") && (
+                  <p className={cn("text-xs", colors.textMuted)}>
+                    Setlist locked for free users. Upgrade to Pro to customize.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -447,7 +575,9 @@ const TemplateForm = memo(
               {editingTemplate
                 ? "Update Template"
                 : selectedExample
-                  ? "Save Customized Template"
+                  ? lockedForFreeUsers
+                    ? "Use Template As-Is"
+                    : "Save Customized Template"
                   : creationMode === "scratch"
                     ? "Create Template"
                     : "Save as Template"}
@@ -460,22 +590,24 @@ const TemplateForm = memo(
 );
 
 TemplateForm.displayName = "TemplateForm";
-
-// New Scratch Interface Component
+// Scratch Interface Component - Premium Tier
 const ScratchInterface = memo(
-  ({ handleBackToDefault, colors, user, onStartScratch }: any) => {
-    const isPremiumUser = user?.tier === "premium";
-    const isProUser = user?.tier === "pro";
-    const canUseAdvancedFeatures = isPremiumUser || isProUser;
+  ({
+    handleBackToDefault,
+    colors,
+    user,
+    onStartScratch,
+    showUpgradePrompt,
+  }: any) => {
+    const userTier = user?.tier || "free";
+    const canUseScratch = canAccessTier(userTier, "premium");
 
     const handleStartCreating = () => {
-      if (!canUseAdvancedFeatures) {
-        alert(
-          "Start from scratch is available for Premium users only. Please upgrade your account."
-        );
+      if (!canUseScratch) {
+        showUpgradePrompt("premium");
         return;
       }
-      onStartScratch(); // This should transition to the form
+      onStartScratch();
     };
 
     return (
@@ -498,7 +630,7 @@ const ScratchInterface = memo(
               Start from Scratch
             </h3>
             <p className={cn("text-sm", colors.textMuted)}>
-              Build your perfect template from the ground up
+              Complete creative freedom from blank canvas
             </p>
           </div>
         </div>
@@ -563,31 +695,31 @@ const ScratchInterface = memo(
           </div>
 
           <Button
-            onClick={handleStartCreating} // Use the fixed handler
+            onClick={handleStartCreating}
             className={cn(
               "bg-blue-500 hover:bg-blue-600 text-white px-8 py-3",
               colors.shadow
             )}
             size="lg"
-            disabled={!canUseAdvancedFeatures}
+            disabled={!canUseScratch}
           >
             <Plus className="w-5 h-5 mr-2" />
             Begin Creating
           </Button>
 
-          {!canUseAdvancedFeatures && (
+          {!canUseScratch && (
             <div className="mt-4 text-center">
               <p className={cn("text-sm", colors.textMuted)}>
                 Upgrade to Premium to access Start from Scratch feature
               </p>
               <Button
-                onClick={() => alert("Redirecting to upgrade page...")}
+                onClick={() => showUpgradePrompt("premium")}
                 className="mt-2"
                 variant="outline"
                 size="sm"
               >
                 <Crown className="w-4 h-4 mr-2" />
-                Upgrade Now
+                Upgrade to Premium
               </Button>
             </div>
           )}
@@ -612,12 +744,19 @@ const ScratchInterface = memo(
 
 ScratchInterface.displayName = "ScratchInterface";
 
-// Updated GuidedInterface component
+// Updated GuidedInterface with proper tier system
 const GuidedInterface = memo(
-  ({ useExampleTemplate, handleStartFromScratch, colors, user }: any) => {
-    const isPremiumUser = user?.tier === "premium";
-    const isProUser = user?.tier === "pro";
-    const canUseAdvancedFeatures = isPremiumUser || isProUser;
+  ({
+    useExampleTemplate,
+    handleStartCustom,
+    handleStartScratch,
+    colors,
+    user,
+    showUpgradePrompt,
+  }: any) => {
+    const userTier = user?.tier || "free";
+    const canUseCustom = canAccessTier(userTier, "pro");
+    const canUseScratch = canAccessTier(userTier, "premium");
 
     return (
       <div
@@ -646,7 +785,7 @@ const GuidedInterface = memo(
               colors.text
             )}
           >
-            Choose Your Template Style
+            Choose Your Creation Style
           </h2>
           <p
             className={cn(
@@ -654,8 +793,7 @@ const GuidedInterface = memo(
               colors.textMuted
             )}
           >
-            Start with professionally designed templates or create your own from
-            scratch
+            Start with templates or unlock advanced creation options
           </p>
 
           {/* User Tier Badge */}
@@ -664,19 +802,25 @@ const GuidedInterface = memo(
               className={cn(
                 "px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-xs lg:text-sm font-medium",
                 colors.shadow,
-                canUseAdvancedFeatures
-                  ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-                  : cn(colors.primaryBg, colors.textInverted)
+                userTier === "premium"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white"
+                  : userTier === "pro"
+                    ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                    : cn(colors.primaryBg, colors.textInverted)
               )}
             >
-              {canUseAdvancedFeatures ? "🎉 Premium Access" : "✨ Free Plan"}
+              {userTier === "premium"
+                ? "🎉 Premium"
+                : userTier === "pro"
+                  ? "⚡ Pro"
+                  : "✨ Free Plan"}
             </div>
           </div>
         </div>
 
-        {/* Professional Template Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 mb-8 lg:mb-12">
-          {/* Example Templates Column */}
+        {/* Three Column Layout for Tiers */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8 mb-8 lg:mb-12">
+          {/* Free Tier - Templates */}
           <div className="space-y-4 lg:space-y-6">
             <div className="flex items-center gap-3 mb-4 lg:mb-6">
               <div
@@ -688,156 +832,224 @@ const GuidedInterface = memo(
               <h3
                 className={cn("text-lg lg:text-xl font-semibold", colors.text)}
               >
-                Professional Templates{" "}
-                <span className={cn("text-sm ml-2", colors.primary)}>
-                  (Free)
-                </span>
+                Professional Templates
               </h3>
+              <span
+                className={cn(
+                  "px-2 py-1 rounded-full text-xs font-bold bg-blue-500 text-white"
+                )}
+              >
+                FREE
+              </span>
             </div>
 
-            {/* Template cards with subtle shadows */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3 lg:gap-4">
-              {EXAMPLE_TEMPLATES.map((template) => (
-                <div
-                  key={template.id}
-                  onClick={() => useExampleTemplate(template)}
-                  className={cn(
-                    "border rounded-xl p-4 cursor-pointer transition-all duration-200 group",
-                    colors.border,
-                    colors.card,
-                    colors.shadow,
-                    "hover:scale-[1.02] hover:shadow-md",
-                    colors.backgroundMuted
-                  )}
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        colors.backgroundMuted,
-                        colors.border,
-                        colors.shadow,
-                        "group-hover:scale-110 transition-transform duration-200"
-                      )}
-                    >
-                      <span className="text-lg">{template.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3
-                        className={cn(
-                          "font-semibold text-base mb-1 group-hover:text-blue-600 transition-colors",
-                          colors.text
-                        )}
-                      >
-                        {template.title}
-                      </h3>
-                      <p
-                        className={cn(
-                          "text-sm leading-relaxed line-clamp-2",
-                          colors.textMuted
-                        )}
-                      >
-                        {template.description}
-                      </p>
-                    </div>
-                  </div>
+            {/* Template cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3 lg:gap-4">
+              {EXAMPLE_TEMPLATES.map((template) => {
+                const canUseTemplate = canAccessTier(
+                  userTier,
+                  template.tier || "free"
+                );
 
-                  <div className="flex justify-between items-center text-sm mb-3">
-                    <div className="flex items-center gap-2">
-                      <Clock className={cn("w-4 h-4", colors.primary)} />
-                      <span className={cn("font-medium", colors.text)}>
-                        {template.duration}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className={cn("w-4 h-4", colors.primary)} />
-                      <span className={cn("font-medium", colors.text)}>
-                        Start @{template.fromTime}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign
-                        className={cn("w-4 h-4", colors.successText)}
-                      />
-                      <span className={cn("font-medium", colors.text)}>
-                        {template.budget.split(" - ")[0]}+
-                      </span>
-                    </div>
-                  </div>
-
-                  <Button
+                return (
+                  <div
+                    key={template.id}
+                    onClick={() =>
+                      canUseTemplate
+                        ? useExampleTemplate(template)
+                        : showUpgradePrompt(
+                            template.tier as "pro" | "premium",
+                            template.title
+                          )
+                    }
                     className={cn(
-                      "w-full mt-2 transition-all duration-200 transform group-hover:scale-105",
-                      "text-sm py-2",
-                      colors.primaryBg,
-                      colors.primaryBgHover,
-                      colors.textInverted,
-                      colors.shadow
+                      "border rounded-xl p-4 cursor-pointer transition-all duration-200 group relative",
+                      colors.border,
+                      colors.card,
+                      colors.shadow,
+                      canUseTemplate
+                        ? "hover:scale-[1.02] hover:shadow-md " +
+                            colors.backgroundMuted
+                        : "opacity-60 cursor-not-allowed"
                     )}
                   >
-                    Use Template
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </div>
-              ))}
+                    {/* Tier Badge for Premium Templates */}
+                    {template.tier !== "free" && (
+                      <div
+                        className={cn(
+                          "absolute -top-2 -right-2 px-2 py-1 rounded-full text-xs font-bold",
+                          template.tier === "pro" && "bg-green-500 text-white",
+                          template.tier === "premium" &&
+                            "bg-amber-500 text-white"
+                        )}
+                      >
+                        {template.tier?.toUpperCase()}
+                      </div>
+                    )}
+
+                    {/* Lock Icon for unavailable templates */}
+                    {!canUseTemplate && (
+                      <div className="absolute top-2 left-2">
+                        <Lock className={cn("w-4 h-4", colors.textMuted)} />
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-3 mb-3">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          colors.backgroundMuted,
+                          colors.border,
+                          canUseTemplate &&
+                            "group-hover:scale-110 transition-transform duration-200"
+                        )}
+                      >
+                        <span className="text-lg">{template.icon}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3
+                          className={cn(
+                            "font-semibold text-base mb-1",
+                            canUseTemplate
+                              ? "group-hover:text-blue-600 transition-colors " +
+                                  colors.text
+                              : colors.textMuted
+                          )}
+                        >
+                          {template.title}
+                        </h3>
+                        <p
+                          className={cn(
+                            "text-sm leading-relaxed line-clamp-2",
+                            colors.textMuted
+                          )}
+                        >
+                          {template.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm mb-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className={cn("w-4 h-4", colors.primary)} />
+                        <span className={cn("font-medium", colors.text)}>
+                          {template.duration}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className={cn("w-4 h-4", colors.primary)} />
+                        <span className={cn("font-medium", colors.text)}>
+                          Start @{template.fromTime}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <DollarSign
+                          className={cn("w-4 h-4", colors.successText)}
+                        />
+                        <span className={cn("font-medium", colors.text)}>
+                          {template.budget.split(" - ")[0]}+
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      className={cn(
+                        "w-full mt-2 transition-all duration-200 transform",
+                        canUseTemplate
+                          ? "group-hover:scale-105 " +
+                              colors.primaryBg +
+                              " " +
+                              colors.primaryBgHover +
+                              " " +
+                              colors.textInverted
+                          : "bg-gray-400 text-gray-800 cursor-not-allowed"
+                      )}
+                      disabled={!canUseTemplate}
+                    >
+                      {canUseTemplate
+                        ? "Use Template"
+                        : `Upgrade to ${template.tier}`}
+                      {canUseTemplate && (
+                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                      )}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Free Tier Benefits */}
+            <div
+              className={cn(
+                "rounded-2xl p-4 border-2 border-dashed",
+                colors.border,
+                colors.backgroundMuted
+              )}
+            >
+              <h4 className={cn("font-semibold mb-3 text-sm", colors.text)}>
+                Free Plan Includes:
+              </h4>
+              <div className="space-y-2 text-xs">
+                {[
+                  "Access to 50+ professional templates",
+                  "Basic template customization",
+                  "Up to 5 saved templates",
+                  "Standard email support",
+                ].map((benefit, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <CheckCircle
+                      className={cn(
+                        "w-3 h-3 flex-shrink-0",
+                        colors.successText
+                      )}
+                    />
+                    <span className={colors.text}>{benefit}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Start from Scratch Column */}
+          {/* Pro Tier - Custom Creation */}
           <div className="space-y-4 lg:space-y-6">
             <div className="flex items-center gap-3 mb-4 lg:mb-6">
               <div
                 className={cn(
                   "w-2 h-2 lg:w-3 lg:h-3 rounded-full flex-shrink-0",
-                  colors.primaryBg
+                  colors.successBg
                 )}
               ></div>
               <h3
                 className={cn("text-lg lg:text-xl font-semibold", colors.text)}
               >
-                Start from Scratch{" "}
-                {!canUseAdvancedFeatures && (
-                  <span className={cn("text-sm ml-2", colors.primary)}>
-                    (Premium)
-                  </span>
-                )}
+                Custom Creation
               </h3>
+              <span
+                className={cn(
+                  "px-2 py-1 rounded-full text-xs font-bold",
+                  canUseCustom
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-400 text-gray-800"
+                )}
+              >
+                PRO
+              </span>
             </div>
 
             <div
-              onClick={handleStartFromScratch}
+              onClick={() =>
+                canUseCustom ? handleStartCustom() : showUpgradePrompt("pro")
+              }
               className={cn(
-                "border rounded-xl lg:rounded-2xl p-6 lg:p-8 cursor-pointer transition-all duration-300 group",
+                "border rounded-xl lg:rounded-2xl p-6 lg:p-8 cursor-pointer transition-all duration-300 group h-full",
                 colors.border,
                 colors.card,
-                colors.shadow,
                 "hover:scale-[1.02] hover:shadow-lg",
-                canUseAdvancedFeatures
-                  ? colors.hoverBg
-                  : "opacity-60 cursor-not-allowed"
+                canUseCustom ? colors.hoverBg : "opacity-60 cursor-not-allowed"
               )}
             >
-              {/* Premium Badge */}
-              <div className="absolute top-4 right-4">
-                <div
-                  className={cn(
-                    "px-3 py-1 rounded-full text-xs font-medium",
-                    colors.shadow,
-                    canUseAdvancedFeatures
-                      ? cn(colors.primaryBg, colors.textInverted)
-                      : cn(
-                          colors.backgroundMuted,
-                          colors.textMuted,
-                          colors.border
-                        )
-                  )}
-                >
-                  {canUseAdvancedFeatures ? "PREMIUM" : "UPGRADE"}
-                </div>
-              </div>
-
-              {/* Lock Icon for non-premium users */}
-              {!canUseAdvancedFeatures && (
+              {!canUseCustom && (
                 <div className="absolute top-4 left-4">
                   <Lock className={cn("w-5 h-5", colors.textMuted)} />
                 </div>
@@ -847,164 +1059,204 @@ const GuidedInterface = memo(
                 <div
                   className={cn(
                     "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
-                    colors.shadow,
-                    canUseAdvancedFeatures
-                      ? colors.primaryBg
-                      : colors.backgroundMuted
+                    canUseCustom
+                      ? "bg-green-100 dark:bg-green-900/30"
+                      : "bg-gray-100 dark:bg-gray-800"
                   )}
                 >
-                  {canUseAdvancedFeatures ? (
-                    <Sparkles className="w-8 h-8 text-white" />
-                  ) : (
-                    <Lock className={cn("w-8 h-8", colors.textMuted)} />
-                  )}
+                  <Settings
+                    className={cn(
+                      "w-8 h-8",
+                      canUseCustom
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-400"
+                    )}
+                  />
                 </div>
                 <h3
                   className={cn(
                     "text-2xl font-bold mb-3",
-                    canUseAdvancedFeatures ? colors.primary : colors.text
+                    canUseCustom ? colors.successText : colors.text
+                  )}
+                >
+                  Custom Creation
+                </h3>
+                <p className={cn("text-lg leading-relaxed", colors.textMuted)}>
+                  {canUseCustom
+                    ? "Advanced customization with template foundation"
+                    : "Upgrade to Pro for advanced customization"}
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {[
+                  "Modify any template extensively",
+                  "Advanced field options",
+                  "Save custom variations",
+                  "Priority template access",
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "w-2 h-2 rounded-full flex-shrink-0",
+                        canUseCustom ? "bg-green-500" : "bg-gray-400"
+                      )}
+                    ></div>
+                    <span className={cn("text-xs", colors.textMuted)}>
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                className={cn(
+                  "w-full font-semibold py-3",
+                  canUseCustom
+                    ? "bg-green-500 hover:bg-green-600 text-white"
+                    : "bg-gray-400 text-gray-800 cursor-not-allowed"
+                )}
+                size="lg"
+                disabled={!canUseCustom}
+              >
+                {canUseCustom ? (
+                  <>
+                    <Settings className="w-5 h-5 mr-2" />
+                    Start Custom Creation
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5 mr-2" />
+                    Upgrade to Pro
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Premium Tier - Start from Scratch */}
+          <div className="space-y-4 lg:space-y-6">
+            <div className="flex items-center gap-3 mb-4 lg:mb-6">
+              <div
+                className={cn(
+                  "w-2 h-2 lg:w-3 lg:h-3 rounded-full flex-shrink-0",
+                  colors.warningBg
+                )}
+              ></div>
+              <h3
+                className={cn("text-lg lg:text-xl font-semibold", colors.text)}
+              >
+                Start from Scratch
+              </h3>
+              <span
+                className={cn(
+                  "px-2 py-1 rounded-full text-xs font-bold",
+                  canUseScratch
+                    ? "bg-amber-500 text-white"
+                    : "bg-gray-400 text-gray-800"
+                )}
+              >
+                PREMIUM
+              </span>
+            </div>
+
+            <div
+              onClick={() =>
+                canUseScratch
+                  ? handleStartScratch()
+                  : showUpgradePrompt("premium")
+              }
+              className={cn(
+                "border rounded-xl lg:rounded-2xl p-6 lg:p-8 cursor-pointer transition-all duration-300 group h-full",
+                colors.border,
+                colors.card,
+                "hover:scale-[1.02] hover:shadow-lg",
+                canUseScratch ? colors.hoverBg : "opacity-60 cursor-not-allowed"
+              )}
+            >
+              {!canUseScratch && (
+                <div className="absolute top-4 left-4">
+                  <Lock className={cn("w-5 h-5", colors.textMuted)} />
+                </div>
+              )}
+
+              <div className="text-center mb-6">
+                <div
+                  className={cn(
+                    "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
+                    canUseScratch
+                      ? "bg-amber-100 dark:bg-amber-900/30"
+                      : "bg-gray-100 dark:bg-gray-800"
+                  )}
+                >
+                  <Sparkles
+                    className={cn(
+                      "w-8 h-8",
+                      canUseScratch
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-gray-400"
+                    )}
+                  />
+                </div>
+                <h3
+                  className={cn(
+                    "text-2xl font-bold mb-3",
+                    canUseScratch ? colors.warningText : colors.text
                   )}
                 >
                   Start from Scratch
                 </h3>
                 <p className={cn("text-lg leading-relaxed", colors.textMuted)}>
-                  {canUseAdvancedFeatures
-                    ? "Build completely from scratch with no templates"
-                    : "Upgrade to Premium for advanced creation tools"}
+                  {canUseScratch
+                    ? "Complete creative freedom from blank canvas"
+                    : "Upgrade to Premium for complete creative freedom"}
                 </p>
               </div>
 
-              {/* Key Difference Highlight */}
-              <div
-                className={cn(
-                  "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mb-6 mx-auto flex justify-center",
-                  canUseAdvancedFeatures
-                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                )}
-              >
-                <Shield className="w-4 h-4" />
-                No templates • Complete freedom
-              </div>
-
-              {/* Features Grid */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="space-y-3 mb-6">
                 {[
-                  {
-                    icon: "🎨",
-                    title: "Complete Freedom",
-                    desc: "No predefined structures",
-                  },
-                  {
-                    icon: "⚡",
-                    title: "Pure Custom",
-                    desc: "Every field your choice",
-                  },
-                  {
-                    icon: "🔧",
-                    title: "Advanced Control",
-                    desc: "For unique needs",
-                  },
-                  {
-                    icon: "🎯",
-                    title: "Total Precision",
-                    desc: "Exact requirements",
-                  },
+                  "Blank canvas experience",
+                  "Total design control",
+                  "Advanced customization",
+                  "White-glove support",
                 ].map((feature, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      "text-center p-4 rounded-xl border",
-                      colors.backgroundMuted,
-                      colors.border,
-                      colors.shadow
-                    )}
-                  >
-                    <div className="text-2xl mb-2">{feature.icon}</div>
+                  <div key={index} className="flex items-center gap-3">
                     <div
-                      className={cn("font-semibold text-sm mb-1", colors.text)}
-                    >
-                      {feature.title}
-                    </div>
-                    <div className={cn("text-xs", colors.textMuted)}>
-                      {feature.desc}
-                    </div>
+                      className={cn(
+                        "w-2 h-2 rounded-full flex-shrink-0",
+                        canUseScratch ? "bg-amber-500" : "bg-gray-400"
+                      )}
+                    ></div>
+                    <span className={cn("text-xs", colors.textMuted)}>
+                      {feature}
+                    </span>
                   </div>
                 ))}
               </div>
 
-              {/* Enhanced CTA */}
               <Button
                 className={cn(
                   "w-full font-semibold py-3",
-                  "transform hover:scale-105 transition-all duration-300",
-                  colors.shadow,
-                  "hover:shadow-lg",
-                  canUseAdvancedFeatures
-                    ? cn(
-                        colors.primaryBg,
-                        colors.primaryBgHover,
-                        colors.textInverted
-                      )
-                    : cn("bg-gray-400 text-gray-800 cursor-not-allowed")
+                  canUseScratch
+                    ? "bg-amber-500 hover:bg-amber-600 text-white"
+                    : "bg-gray-400 text-gray-800 cursor-not-allowed"
                 )}
                 size="lg"
-                disabled={!canUseAdvancedFeatures}
+                disabled={!canUseScratch}
               >
-                {canUseAdvancedFeatures ? (
+                {canUseScratch ? (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Start from Blank Canvas
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    Start from Scratch
                   </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5 mr-2" />
-                    Upgrade to Unlock
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    Upgrade to Premium
                   </>
                 )}
               </Button>
             </div>
-
-            {/* Free User Benefits */}
-            {!canUseAdvancedFeatures && (
-              <div
-                className={cn(
-                  "rounded-2xl p-6 border-2 border-dashed",
-                  colors.border,
-                  colors.backgroundMuted,
-                  colors.shadow
-                )}
-              >
-                <div className="text-center mb-4">
-                  <Star
-                    className={cn("w-8 h-8 mx-auto mb-2", colors.primary)}
-                  />
-                  <h4 className={cn("font-semibold mb-2", colors.text)}>
-                    Free Plan Includes
-                  </h4>
-                </div>
-                <div className="space-y-2 text-sm">
-                  {[
-                    "Access to all professional templates",
-                    "Basic template customization",
-                    "Up to 5 saved templates",
-                    "Standard email support",
-                  ].map((benefit, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <CheckCircle
-                        className={cn(
-                          "w-4 h-4 flex-shrink-0",
-                          colors.successText
-                        )}
-                      />
-                      <span className={colors.text}>{benefit}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1020,13 +1272,13 @@ const GuidedInterface = memo(
           <div className="flex items-center justify-center gap-3 mb-3">
             <Shield className={cn("w-6 h-6", colors.successText)} />
             <h4 className={cn("text-lg font-semibold", colors.text)}>
-              {canUseAdvancedFeatures ? "Premium Support" : "Ready for More?"}
+              {userTier === "premium" ? "Premium Support" : "Ready for More?"}
             </h4>
           </div>
           <p className={cn("text-sm mb-4 max-w-md mx-auto", colors.textMuted)}>
-            {canUseAdvancedFeatures
+            {userTier === "premium"
               ? "Get dedicated support and advanced features with your Premium account."
-              : "Upgrade to Premium for advanced template creation and priority support."}
+              : "Upgrade to unlock advanced template creation and priority support."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
@@ -1039,11 +1291,12 @@ const GuidedInterface = memo(
               )}
             >
               <HelpCircle className="w-4 h-4 mr-2" />
-              {canUseAdvancedFeatures ? "Contact Support" : "View Features"}
+              {userTier === "premium" ? "Contact Support" : "View Features"}
             </Button>
-            {!canUseAdvancedFeatures && (
+
+            {userTier !== "premium" && (
               <Button
-                onClick={() => alert("Redirecting to upgrade page...")}
+                onClick={() => showUpgradePrompt("premium")}
                 className={cn(
                   colors.primaryBg,
                   colors.primaryBgHover,
@@ -1065,19 +1318,21 @@ const GuidedInterface = memo(
 
 GuidedInterface.displayName = "GuidedInterface";
 
-// Memoize DefaultInterface component
+// Default Interface Component
 const DefaultInterface = memo(
   ({
     existingTemplates,
     useExampleTemplate,
     handleStartGuided,
+    handleStartCustom,
     handleStartScratch,
     colors,
     user,
+    showUpgradePrompt,
   }: any) => {
-    const isPremiumUser = user?.tier === "premium";
-    const isProUser = user?.tier === "pro";
-    const canUseAdvancedFeatures = isPremiumUser || isProUser;
+    const userTier = user?.tier || "free";
+    const canUseCustom = canAccessTier(userTier, "pro");
+    const canUseScratch = canAccessTier(userTier, "premium");
 
     return (
       <div
@@ -1103,91 +1358,192 @@ const DefaultInterface = memo(
         )}
 
         {/* Creation Options Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Guided Creation Card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Free Tier - Templates */}
           <div
             onClick={handleStartGuided}
             className={cn(
-              "border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 group",
+              "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group h-full flex flex-col",
               colors.border,
               "hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20"
             )}
           >
-            <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-              <BookOpen className="w-8 h-8 text-green-600 dark:text-green-400" />
+            <div className="flex-1">
+              <div className="w-12 h-12 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div
+                className={cn(
+                  "px-2 py-1 rounded-full text-xs font-bold bg-blue-500 text-white inline-block mb-3"
+                )}
+              >
+                FREE
+              </div>
+              <h3 className={cn("font-bold text-lg mb-2", colors.text)}>
+                Use Templates
+              </h3>
+              <p className={cn("text-sm mb-4", colors.textMuted)}>
+                Start with professionally designed templates
+              </p>
+              <div className={cn("text-xs space-y-1", colors.textMuted)}>
+                <div>• 50+ pre-built templates</div>
+                <div>• Quick setup</div>
+                <div>• Best practices included</div>
+              </div>
             </div>
-            <h3 className={cn("font-bold text-xl mb-2", colors.text)}>
-              Use Templates
-            </h3>
-            <p className={cn("text-sm mb-4", colors.textMuted)}>
-              Start with professionally designed templates for common event
-              types
-            </p>
-            <div className={cn("text-xs", colors.textMuted)}>
-              Perfect for weddings, corporate events, parties, and more
-            </div>
-            <Button className="w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              className="w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"
+              size="sm"
+            >
               Start with Templates
             </Button>
           </div>
 
-          {/* Start from Scratch Card */}
+          {/* Pro Tier - Custom Creation */}
           <div
-            onClick={handleStartScratch}
+            onClick={() =>
+              canUseCustom ? handleStartCustom() : showUpgradePrompt("pro")
+            }
             className={cn(
-              "border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 group",
+              "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group h-full flex flex-col",
               colors.border,
-              canUseAdvancedFeatures
-                ? "hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+              canUseCustom
+                ? "hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950/20"
                 : "opacity-60 cursor-not-allowed"
             )}
           >
-            {!canUseAdvancedFeatures && (
+            {!canUseCustom && (
               <div className="absolute top-4 right-4">
-                <Lock className={cn("w-5 h-5", colors.textMuted)} />
+                <Lock className={cn("w-4 h-4", colors.textMuted)} />
               </div>
             )}
-            <div
-              className={cn(
-                "w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform",
-                canUseAdvancedFeatures
-                  ? "bg-purple-100 dark:bg-purple-900/30"
-                  : "bg-gray-100 dark:bg-gray-800"
-              )}
-            >
-              <Sparkles
+            <div className="flex-1">
+              <div
                 className={cn(
-                  "w-8 h-8",
-                  canUseAdvancedFeatures
-                    ? "text-purple-600 dark:text-purple-400"
-                    : "text-gray-400"
+                  "w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform",
+                  canUseCustom
+                    ? "bg-green-100 dark:bg-green-900/30"
+                    : "bg-gray-100 dark:bg-gray-800"
                 )}
-              />
-            </div>
-            <h3 className={cn("font-bold text-xl mb-2", colors.text)}>
-              Start from Scratch
-            </h3>
-            <p className={cn("text-sm mb-4", colors.textMuted)}>
-              {canUseAdvancedFeatures
-                ? "Build completely from scratch with no templates"
-                : "Upgrade to Premium for advanced creation"}
-            </p>
-            <div className={cn("text-xs", colors.textMuted)}>
-              {canUseAdvancedFeatures
-                ? "For unique events and specific requirements"
-                : "Premium feature - upgrade to unlock"}
+              >
+                <Settings
+                  className={cn(
+                    "w-6 h-6",
+                    canUseCustom
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-400"
+                  )}
+                />
+              </div>
+              <div
+                className={cn(
+                  "px-2 py-1 rounded-full text-xs font-bold inline-block mb-3",
+                  canUseCustom
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-400 text-gray-800"
+                )}
+              >
+                PRO
+              </div>
+              <h3 className={cn("font-bold text-lg mb-2", colors.text)}>
+                Custom Creation
+              </h3>
+              <p className={cn("text-sm mb-4", colors.textMuted)}>
+                {canUseCustom
+                  ? "Advanced customization with template foundation"
+                  : "Upgrade to Pro for advanced features"}
+              </p>
+              <div className={cn("text-xs space-y-1", colors.textMuted)}>
+                <div>• Modify templates extensively</div>
+                <div>• Advanced field options</div>
+                <div>• Save custom variations</div>
+              </div>
             </div>
             <Button
               className={cn(
                 "w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity",
-                !canUseAdvancedFeatures && "cursor-not-allowed"
+                !canUseCustom && "cursor-not-allowed"
               )}
-              variant={canUseAdvancedFeatures ? "default" : "outline"}
-              disabled={!canUseAdvancedFeatures}
+              variant={canUseCustom ? "default" : "outline"}
+              size="sm"
+              disabled={!canUseCustom}
             >
-              {canUseAdvancedFeatures
-                ? "Start from Scratch"
-                : "Premium Feature"}
+              {canUseCustom ? "Custom Creation" : "Upgrade to Pro"}
+            </Button>
+          </div>
+
+          {/* Premium Tier - Start from Scratch */}
+          <div
+            onClick={() =>
+              canUseScratch
+                ? handleStartScratch()
+                : showUpgradePrompt("premium")
+            }
+            className={cn(
+              "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group h-full flex flex-col",
+              colors.border,
+              canUseScratch
+                ? "hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                : "opacity-60 cursor-not-allowed"
+            )}
+          >
+            {!canUseScratch && (
+              <div className="absolute top-4 right-4">
+                <Lock className={cn("w-4 h-4", colors.textMuted)} />
+              </div>
+            )}
+            <div className="flex-1">
+              <div
+                className={cn(
+                  "w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform",
+                  canUseScratch
+                    ? "bg-amber-100 dark:bg-amber-900/30"
+                    : "bg-gray-100 dark:bg-gray-800"
+                )}
+              >
+                <Sparkles
+                  className={cn(
+                    "w-6 h-6",
+                    canUseScratch
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-gray-400"
+                  )}
+                />
+              </div>
+              <div
+                className={cn(
+                  "px-2 py-1 rounded-full text-xs font-bold inline-block mb-3",
+                  canUseScratch
+                    ? "bg-amber-500 text-white"
+                    : "bg-gray-400 text-gray-800"
+                )}
+              >
+                PREMIUM
+              </div>
+              <h3 className={cn("font-bold text-lg mb-2", colors.text)}>
+                Start from Scratch
+              </h3>
+              <p className={cn("text-sm mb-4", colors.textMuted)}>
+                {canUseScratch
+                  ? "Complete creative freedom"
+                  : "Upgrade to Premium for complete freedom"}
+              </p>
+              <div className={cn("text-xs space-y-1", colors.textMuted)}>
+                <div>• Blank canvas experience</div>
+                <div>• Total design control</div>
+                <div>• Advanced customization</div>
+              </div>
+            </div>
+            <Button
+              className={cn(
+                "w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity",
+                !canUseScratch && "cursor-not-allowed"
+              )}
+              variant={canUseScratch ? "default" : "outline"}
+              size="sm"
+              disabled={!canUseScratch}
+            >
+              {canUseScratch ? "Start from Scratch" : "Upgrade to Premium"}
             </Button>
           </div>
         </div>
@@ -1224,16 +1580,19 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
     isLoading,
     editingTemplate,
   }) => {
+    const router = useRouter(); // Add this line
     const { colors } = useThemeColors();
+    const userTier = user?.tier || "free";
+
     const [creationMode, setCreationMode] = useState<
       "guided" | "scratch" | "custom"
     >(
       editingTemplate
         ? "custom"
-        : mode === "scratch"
+        : mode === "scratch" && canAccessTier(userTier, "premium")
           ? "scratch"
-          : mode === "guided"
-            ? "guided"
+          : mode === "custom" && canAccessTier(userTier, "pro")
+            ? "custom"
             : "guided" // default to guided
     );
     const [selectedExample, setSelectedExample] = useState<string | null>(null);
@@ -1275,60 +1634,119 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
       }
     }, [editingTemplate]);
 
+    // Sync with mode prop changes - only run when mode prop actually changes
     useEffect(() => {
-      if (mode === "scratch" && creationMode !== "scratch") {
+      // Only sync when the mode prop changes, not on every render
+      if (
+        mode === "scratch" &&
+        canAccessTier(userTier, "premium") &&
+        creationMode !== "scratch"
+      ) {
         setCreationMode("scratch");
+      } else if (
+        mode === "custom" &&
+        canAccessTier(userTier, "pro") &&
+        creationMode !== "custom"
+      ) {
+        setCreationMode("custom");
       } else if (mode === "guided" && creationMode !== "guided") {
         setCreationMode("guided");
-      } else if (mode === "custom" && creationMode !== "custom") {
-        setCreationMode("custom");
       }
-    }, [mode, creationMode]);
+    }, [mode]); // Only depend on mode prop, not creationMode or userTier
+    // Add state for confirm prompt
+    const [promptData, setPromptData] = useState<PromptData>({
+      isOpen: false,
+      title: "",
+      message: "",
+      requiredTier: "pro",
+      templateName: "",
+    });
+    // Add this helper function inside the CreateTemplateTab component
+    const showUpgradePrompt = useCallback(
+      (requiredTier: "pro" | "premium", templateName?: string) => {
+        const tierNames = {
+          pro: "Pro",
+          premium: "Premium",
+        };
 
-    // Memoize event handlers
-    const useExampleTemplate = useCallback((template: any) => {
-      setSelectedExample(template.id);
-      setFormData({
-        title: template.title,
-        description: template.description,
-        date: "",
-        venue: "",
-        budget: template.budget.split(" - ")[0],
-        gigType: template.gigType,
-        duration: template.duration,
-        fromTime: template.fromTime || "",
-        setlist: "",
-      });
-      setCreationMode("custom");
-    }, []);
+        const tierBenefits = {
+          pro: [
+            "Custom template creation",
+            "Advanced field customization",
+            "Priority template access",
+            "Save custom variations",
+          ],
+          premium: [
+            "Start from scratch feature",
+            "Complete creative freedom",
+            "Advanced customization options",
+            "White-glove support",
+          ],
+        };
 
-    const handleStartFromScratch = useCallback(() => {
-      const isPremiumUser = user?.tier === "premium";
-      const isProUser = user?.tier === "pro";
-      const canUseAdvancedFeatures = isPremiumUser || isProUser;
+        setPromptData({
+          isOpen: true,
+          title: `Upgrade to ${tierNames[requiredTier]}`,
+          message: `This feature requires ${tierNames[requiredTier]} tier. Upgrade to unlock:`,
+          requiredTier,
+          templateName,
+        });
+      },
+      []
+    );
+    const useExampleTemplate = useCallback(
+      (template: any) => {
+        console.log("useExampleTemplate called with:", template);
+        const canUseTemplate = canAccessTier(userTier, template.tier || "free");
 
-      if (!canUseAdvancedFeatures) {
-        alert(
-          "Start from scratch is available for Premium users only. Please upgrade your account."
-        );
+        if (!canUseTemplate) {
+          showUpgradePrompt(template.tier as "pro" | "premium", template.title);
+          return;
+        }
+
+        console.log("Setting selectedExample to:", template.id);
+        setSelectedExample(template.id);
+        setFormData({
+          title: template.title,
+          description: template.description,
+          date: "",
+          venue: "",
+          budget: template.budget,
+          gigType: template.gigType,
+          duration: template.duration,
+          fromTime: template.fromTime || "",
+          setlist: "",
+        });
+        console.log("Setting creationMode to: custom");
+        setCreationMode("custom");
+      },
+      [userTier, showUpgradePrompt]
+    );
+
+    // Also add debugging to see state changes
+    useEffect(() => {
+      console.log(
+        "State updated - creationMode:",
+        creationMode,
+        "selectedExample:",
+        selectedExample
+      );
+    }, [creationMode, selectedExample]);
+
+    const handleStartScratch = useCallback(() => {
+      if (!canAccessTier(userTier, "premium")) {
+        showUpgradePrompt("premium");
         return;
       }
-
-      setSelectedExample(null);
-      setFormData({
-        title: "",
-        description: "",
-        date: "",
-        venue: "",
-        budget: "",
-        gigType: "",
-        duration: "",
-        fromTime: "",
-        setlist: "",
-      });
       setCreationMode("scratch");
-    }, [user]);
-
+    }, [userTier, showUpgradePrompt]);
+    const handleStartCustom = useCallback(() => {
+      if (!canAccessTier(userTier, "pro")) {
+        showUpgradePrompt("pro");
+        return;
+      }
+      setCreationMode("custom");
+    }, [userTier, showUpgradePrompt]);
     const handleStartScratchForm = useCallback(() => {
       setCreationMode("custom");
     }, []);
@@ -1414,7 +1832,6 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
       onFormClose();
     }, [onFormClose]);
 
-    // Memoize template props to prevent unnecessary re-renders
     const templateFormProps = useMemo(
       () => ({
         formData,
@@ -1427,6 +1844,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         handleBackToDefault,
         colors,
         user,
+        showUpgradePrompt, // Add this line - you're missing it!
       }),
       [
         formData,
@@ -1439,17 +1857,27 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         handleBackToDefault,
         colors,
         user,
+        showUpgradePrompt, // Add this here too
       ]
     );
 
     const guidedInterfaceProps = useMemo(
       () => ({
         useExampleTemplate,
-        handleStartFromScratch,
+        handleStartCustom,
+        handleStartScratch,
         colors,
         user,
+        showUpgradePrompt, // Add this line
       }),
-      [useExampleTemplate, handleStartFromScratch, colors, user]
+      [
+        useExampleTemplate,
+        handleStartCustom,
+        handleStartScratch,
+        colors,
+        user,
+        showUpgradePrompt,
+      ]
     );
 
     const scratchInterfaceProps = useMemo(
@@ -1458,43 +1886,81 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         colors,
         user,
         onStartScratch: handleStartScratchForm,
+        showUpgradePrompt,
       }),
-      [handleBackToDefault, colors, user, handleStartScratchForm]
+      [
+        handleBackToDefault,
+        colors,
+        user,
+        handleStartScratchForm,
+        showUpgradePrompt,
+      ]
     );
 
+    // Update the defaultInterfaceProps to include showUpgradePrompt:
     const defaultInterfaceProps = useMemo(
       () => ({
         existingTemplates: memoizedExistingTemplates,
         useExampleTemplate,
         handleStartGuided,
-        handleStartScratch: handleStartFromScratch,
+        handleStartCustom,
+        handleStartScratch,
         colors,
         user,
+        showUpgradePrompt, // Add this line
       }),
       [
         memoizedExistingTemplates,
         useExampleTemplate,
         handleStartGuided,
-        handleStartFromScratch,
+        handleStartCustom,
+        handleStartScratch,
         colors,
         user,
+        showUpgradePrompt,
       ]
     );
 
-    // Main render with clear mode separation
-    if (creationMode === "custom") {
-      return <TemplateForm {...templateFormProps} />;
-    }
+    return (
+      <>
+        {(() => {
+          switch (creationMode) {
+            case "custom":
+              return <TemplateForm {...templateFormProps} />;
+            case "scratch":
+              return <ScratchInterface {...scratchInterfaceProps} />;
+            case "guided":
+              return <GuidedInterface {...guidedInterfaceProps} />;
+            default:
+              return <DefaultInterface {...defaultInterfaceProps} />;
+          }
+        })()}
 
-    if (creationMode === "scratch") {
-      return <ScratchInterface {...scratchInterfaceProps} />;
-    }
-
-    if (creationMode === "guided") {
-      return <GuidedInterface {...guidedInterfaceProps} />;
-    }
-
-    return <DefaultInterface {...defaultInterfaceProps} />;
+        {/* Confirm Prompt */}
+        <ConfirmPrompt
+          isOpen={promptData.isOpen}
+          onClose={() => setPromptData((prev) => ({ ...prev, isOpen: false }))}
+          onConfirm={() => {
+            router.push(`/dashboard/billing?tier=${promptData.requiredTier}`);
+          }}
+          onCancel={() => setPromptData((prev) => ({ ...prev, isOpen: false }))}
+          title={promptData.title}
+          question={promptData.message}
+          userInfo={{
+            id: user._id,
+            name: user.firstname + " " + user.lastname,
+            username: user.username,
+            image: user.picture,
+            type: user.isMusician ? "musician" : "client",
+            instrument: user.instrument,
+            city: user.city,
+          }}
+          confirmText={`Upgrade to ${promptData.requiredTier === "pro" ? "Pro" : "Premium"}`}
+          cancelText="Maybe Later"
+          variant="info"
+        />
+      </>
+    );
   }
 );
 
