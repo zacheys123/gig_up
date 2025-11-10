@@ -192,13 +192,14 @@ const calculateOptimalForGigType = (
   return instruments.includes(musicianInstrument);
 };
 
+// convex/controllers/musicians.ts - UPDATE QUERIES TO BE MORE INCLUSIVE
 export const getProMusicians = query({
   args: {
     city: v.optional(v.string()),
     instrument: v.optional(v.string()),
     genre: v.optional(v.string()),
     limit: v.optional(v.number()),
-    minRating: v.optional(v.number()),
+    minRating: v.optional(v.number()), // Make this optional
     tier: v.optional(
       v.union(
         v.literal("free"),
@@ -216,17 +217,17 @@ export const getProMusicians = query({
       instrument,
       genre,
       limit = 12,
-      minRating = 4.0,
+      minRating, // Now optional - don't filter if not provided
       tier,
       gigType,
-      availableOnly = true,
+      availableOnly = false, // Default to false to show more users
     } = args;
 
     let query = ctx.db
       .query("users")
       .withIndex("by_is_musician", (q) => q.eq("isMusician", true));
 
-    // Apply filters
+    // Apply filters - make them optional
     if (city) {
       query = query.filter((q) => q.eq(q.field("city"), city));
     }
@@ -239,20 +240,32 @@ export const getProMusicians = query({
       query = query.filter((q) => q.eq(q.field("tier"), tier));
     }
 
+    // Only apply availability filter if explicitly requested
     if (availableOnly) {
       query = query.filter((q) =>
         q.neq(q.field("availability"), "notavailable")
       );
     }
 
+    // Only apply rating filter if minRating is provided
     if (minRating) {
       query = query.filter((q) => q.gte(q.field("avgRating"), minRating));
     }
 
     let musicians = await query.collect();
 
-    // Filter out banned users
+    // Only filter out banned users
     musicians = musicians.filter((musician) => !musician.isBanned);
+
+    // If no musicians found, try a broader search
+    if (musicians.length === 0) {
+      console.log("No musicians found with filters, trying broader search...");
+      musicians = await ctx.db
+        .query("users")
+        .withIndex("by_is_musician", (q) => q.eq("isMusician", true))
+        .filter((q) => q.eq(q.field("isBanned"), false))
+        .collect();
+    }
 
     // Apply gig type compatibility scoring and sorting
     if (gigType) {
@@ -271,7 +284,7 @@ export const getProMusicians = query({
         })
         .sort((a, b) => b.gigTypeCompatibility - a.gigTypeCompatibility);
     } else {
-      // Default sorting by rating and reliability
+      // Default sorting - be more flexible
       musicians = musicians
         .map((musician) => {
           const enhancedMusician = {
@@ -283,6 +296,7 @@ export const getProMusicians = query({
           return enhancedMusician;
         })
         .sort((a, b) => {
+          // Sort by rating if available, otherwise by creation time
           const scoreA = (a.avgRating || 0) * 20 + (a.reliabilityScore || 0);
           const scoreB = (b.avgRating || 0) * 20 + (b.reliabilityScore || 0);
           return scoreB - scoreA;
@@ -293,23 +307,45 @@ export const getProMusicians = query({
   },
 });
 
+// Update featured musicians to be less restrictive
 export const getFeaturedMusicians = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const { limit = 8 } = args;
 
+    // First try to get high-rated musicians
     let musicians = await ctx.db
       .query("users")
       .withIndex("by_is_musician", (q) => q.eq("isMusician", true))
       .filter((q) =>
         q.and(
           q.eq(q.field("isBanned"), false),
-          q.neq(q.field("availability"), "notavailable"),
-          q.neq(q.field("tier"), "free"),
-          q.gte(q.field("avgRating"), 4.5)
+          q.gte(q.field("avgRating"), 4.0) // Lowered from 4.5
         )
       )
       .collect();
+
+    // If not enough, get any pro+ musicians
+    if (musicians.length < limit) {
+      const additionalMusicians = await ctx.db
+        .query("users")
+        .withIndex("by_is_musician", (q) => q.eq("isMusician", true))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("isBanned"), false),
+            q.neq(q.field("tier"), "free")
+          )
+        )
+        .collect();
+
+      // Combine and remove duplicates
+      const allMusicians = [...musicians, ...additionalMusicians];
+      const uniqueMusicians = allMusicians.filter(
+        (musician, index, self) =>
+          index === self.findIndex((m) => m._id === musician._id)
+      );
+      musicians = uniqueMusicians;
+    }
 
     // Sort by tier and rating
     const tierOrder = { elite: 4, premium: 3, pro: 2, free: 1 };

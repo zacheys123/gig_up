@@ -68,13 +68,20 @@ const ModalHeader = memo(
 
 ModalHeader.displayName = "ModalHeader";
 
-// Memoize MusicianInfo component
 const MusicianInfo = memo(
   ({ musician, colors }: { musician: EnhancedMusician; colors: any }) => {
     const displayName =
       musician.firstname && musician.lastname
         ? `${musician.firstname} ${musician.lastname}`
         : musician.username || "Musician";
+
+    const instrument =
+      musician.instrument || musician.roleType || "Professional Musician";
+    const rating = musician.avgRating?.toFixed(1) || "New";
+    const reviewCount = musician.allreviews?.length || 0;
+    const gigsCount = musician.completedGigsCount || 0;
+    const reliability = musician.reliabilityScore || 95;
+    const city = musician.city || "Nairobi";
 
     return (
       <div
@@ -105,16 +112,11 @@ const MusicianInfo = memo(
                 <Crown className="w-5 h-5 text-amber-500" />
               )}
             </div>
-            <p className={cn("text-sm mb-2", colors.textMuted)}>
-              {musician.instrument ||
-                musician.roleType ||
-                "Professional Musician"}
-            </p>
+            <p className={cn("text-sm mb-2", colors.textMuted)}>{instrument}</p>
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
               <span className={cn("text-sm font-medium", colors.text)}>
-                {musician.avgRating?.toFixed(1) || "New"} •{" "}
-                {musician.allreviews?.length || 0} reviews
+                {rating} • {reviewCount} reviews
               </span>
             </div>
           </div>
@@ -125,9 +127,7 @@ const MusicianInfo = memo(
             <MapPin className="w-4 h-4 text-blue-500" />
             <div>
               <div className={cn("text-xs", colors.textMuted)}>Location</div>
-              <div className={cn("font-medium", colors.text)}>
-                {musician.city || "Nairobi"}
-              </div>
+              <div className={cn("font-medium", colors.text)}>{city}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ const MusicianInfo = memo(
             <div>
               <div className={cn("text-xs", colors.textMuted)}>Experience</div>
               <div className={cn("font-medium", colors.text)}>
-                {musician.completedGigsCount || 0} gigs
+                {gigsCount} gigs
               </div>
             </div>
           </div>
@@ -144,7 +144,7 @@ const MusicianInfo = memo(
             <div>
               <div className={cn("text-xs", colors.textMuted)}>Reliability</div>
               <div className={cn("font-medium", colors.text)}>
-                {musician.reliabilityScore || 95}%
+                {reliability}%
               </div>
             </div>
           </div>
@@ -191,9 +191,6 @@ const MusicianInfo = memo(
     );
   }
 );
-
-MusicianInfo.displayName = "MusicianInfo";
-
 // Memoize TemplateList component with auto-scroll
 const TemplateList = memo(
   ({

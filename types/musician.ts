@@ -1,5 +1,7 @@
-// Essential musician fields for display and booking
-export interface Musician {
+// types/musician.ts
+import { Id } from "@/convex/_generated/dataModel";
+
+export interface EnhancedMusician {
   _id: Id<"users">;
   firstname?: string;
   lastname?: string;
@@ -28,6 +30,16 @@ export interface Musician {
     corporate?: string;
   };
 
+  allreviews?: Array<{
+    _id: string;
+    postedBy: string;
+    postedTo: string;
+    rating?: number;
+    comment?: string;
+    gigId?: string;
+    updatedAt?: number;
+    createdAt?: number;
+  }>;
   // Social & genres
   musiciangenres?: string[];
   followers?: string[];
