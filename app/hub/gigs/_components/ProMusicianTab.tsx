@@ -1,4 +1,4 @@
-// app/hub/gigs/_components/tabs/ProMusiciansTab.tsx - OPTIMIZED
+// app/hub/gigs/_components/tabs/ProMusiciansTab.tsx - UPDATED
 "use client";
 
 import React, { useState, useMemo, useCallback, memo } from "react";
@@ -13,12 +13,14 @@ import {
   Eye,
   Search,
   Zap,
+  Target,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { useProMusicians, useMusicianSearch } from "@/hooks/useProMusicians";
+import { EnhancedMusician } from "@/types/musician";
 
 interface ProMusiciansTabProps {
   onRequestToBook: (musician: any) => void;
@@ -26,7 +28,21 @@ interface ProMusiciansTabProps {
   hasTemplates: boolean;
 }
 
-// Memoize static configuration
+// Gig types configuration
+const GIG_TYPES = [
+  { value: "wedding", label: "💒 Wedding" },
+  { value: "corporate", label: "🏢 Corporate Event" },
+  { value: "private-party", label: "🎉 Private Party" },
+  { value: "concert", label: "🎤 Concert/Show" },
+  { value: "restaurant", label: "🍽️ Restaurant/Lounge" },
+  { value: "church", label: "⛪ Church Service" },
+  { value: "festival", label: "🎪 Festival" },
+  { value: "club", label: "🎭 Club Night" },
+  { value: "recording", label: "🎹 Recording Session" },
+  { value: "individual", label: "✨ Individual" },
+  { value: "other", label: "✨ Other" },
+];
+
 const TIER_CONFIG = {
   elite: {
     label: "Elite",
@@ -68,12 +84,20 @@ const INSTRUMENT_ICONS: Record<string, string> = {
   mc: "🎤",
 };
 
-// Memoize MusicianCard component
 const MusicianCard = memo(
-  ({ musician, onRequestToBook, getTierBadge }: any) => {
+  ({
+    musician,
+    onRequestToBook,
+    getTierBadge,
+    selectedGigType,
+  }: {
+    musician: EnhancedMusician;
+    onRequestToBook: (musician: EnhancedMusician) => void;
+    getTierBadge: (tier: string) => React.ReactNode;
+    selectedGigType?: string;
+  }) => {
     const { colors } = useThemeColors();
 
-    // Calculate display name
     const displayName = useMemo(
       () =>
         musician.firstname && musician.lastname
@@ -82,57 +106,68 @@ const MusicianCard = memo(
       [musician.firstname, musician.lastname, musician.username]
     );
 
-    // Calculate rate based on tier or use default
-    const displayRate = useMemo(() => {
-      if (musician.rate?.regular) return musician.rate.regular;
-
-      const tierRates = {
-        elite: "KES 25,000+",
-        premium: "KES 15,000+",
-        pro: "KES 10,000+",
-        free: "KES 5,000+",
-      };
-
-      return (
-        tierRates[musician.tier as keyof typeof tierRates] || "Contact for rate"
-      );
-    }, [musician.tier, musician.rate]);
-
-    // Get genres for display
     const displayGenres = useMemo(
       () =>
         musician.musiciangenres ||
-        (musician.genres ? [musician.genres] : []) || ["Various Genres"],
+        [musician.genres || "Various Genres"].filter(Boolean),
       [musician.musiciangenres, musician.genres]
     );
 
-    // Get tags based on musician data
     const tags = useMemo(() => {
       const tagList = [];
       if (musician.verified) tagList.push("Verified");
-      if (musician.completedGigsCount > 10) tagList.push("Experienced");
-      if (musician.reliabilityScore > 90) tagList.push("Highly Reliable");
-      if (musician.avgRating > 4.5) tagList.push("Top Rated");
+      if (musician.completedGigsCount && musician.completedGigsCount > 10)
+        tagList.push("Experienced");
+      if (musician.reliabilityScore && musician.reliabilityScore > 90)
+        tagList.push("Highly Reliable");
+      if (musician.avgRating && musician.avgRating > 4.5)
+        tagList.push("Top Rated");
+      if (musician.isOptimalForGigType) tagList.push("Optimal Match");
       return tagList.slice(0, 3);
     }, [
       musician.verified,
       musician.completedGigsCount,
       musician.reliabilityScore,
       musician.avgRating,
+      musician.isOptimalForGigType,
     ]);
 
-    const instrumentIcon =
-      INSTRUMENT_ICONS[musician.instrument?.toLowerCase()] || "🎵";
+    const instrumentIcon = musician.instrument
+      ? INSTRUMENT_ICONS[musician.instrument.toLowerCase()] || "🎵"
+      : "🎵";
 
     return (
       <div
         className={cn(
-          "rounded-2xl p-6 border transition-all duration-200 hover:shadow-lg",
+          "rounded-2xl p-6 border transition-all duration-200 hover:shadow-lg relative",
           colors.card,
           colors.border,
-          "hover:scale-[1.02] hover:border-amber-400 group"
+          "hover:scale-[1.02] hover:border-amber-400 group",
+          musician.isOptimalForGigType && "ring-2 ring-green-500"
         )}
       >
+        {/* Optimal Match Badge */}
+        {musician.isOptimalForGigType && (
+          <div className="absolute -top-2 -right-2">
+            <Badge className="bg-green-500 text-white text-xs">
+              <Target className="w-3 h-3 mr-1" />
+              Optimal
+            </Badge>
+          </div>
+        )}
+
+        {/* Compatibility Score */}
+        {selectedGigType && musician.gigTypeCompatibility && (
+          <div className="absolute -top-2 -left-2">
+            <Badge
+              variant="outline"
+              className="text-xs bg-blue-50 dark:bg-blue-900/30"
+            >
+              {musician.gigTypeCompatibility}% Match
+            </Badge>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -165,9 +200,11 @@ const MusicianCard = memo(
           </div>
           <div className="text-right">
             <div className={cn("font-bold text-lg", colors.text)}>
-              {displayRate}
+              {musician.displayRate}
             </div>
-            <div className={cn("text-xs", colors.textMuted)}>per gig</div>
+            <div className={cn("text-xs", colors.textMuted)}>
+              {selectedGigType ? `for ${selectedGigType}` : "per gig"}
+            </div>
           </div>
         </div>
 
@@ -254,39 +291,32 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
     const [selectedInstrument, setSelectedInstrument] = useState("");
+    const [selectedGigType, setSelectedGigType] = useState("");
 
-    // Memoize filter options
     const filterOptions = useMemo(
       () => ({
         city: selectedCity || undefined,
         instrument: selectedInstrument || undefined,
+        gigType: selectedGigType || undefined,
         minRating: 4.0,
+        availableOnly: true,
       }),
-      [selectedCity, selectedInstrument]
+      [selectedCity, selectedInstrument, selectedGigType]
     );
 
-    // Get featured musicians (premium/elite with high ratings)
-    const { featuredMusicians, isLoading: featuredLoading } = useProMusicians({
-      limit: 8,
-    });
-
-    // Get all pro musicians with filters
-    const { musicians, isLoading } = useProMusicians(filterOptions);
-
-    // Search results
+    const { musicians, featuredMusicians, isLoading } =
+      useProMusicians(filterOptions);
     const { results: searchResults } = useMusicianSearch(
       searchQuery,
       selectedCity,
       selectedInstrument
     );
 
-    // Memoize displayed musicians
     const displayMusicians = useMemo(
       () => (searchQuery ? searchResults : musicians),
       [searchQuery, searchResults, musicians]
     );
 
-    // Memoize tier badge function
     const getTierBadge = useCallback((tier: string) => {
       const config =
         TIER_CONFIG[tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.free;
@@ -299,7 +329,6 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
       );
     }, []);
 
-    // Memoize filter handlers
     const handleCityChange = useCallback(
       (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedCity(e.target.value);
@@ -310,6 +339,13 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
     const handleInstrumentChange = useCallback(
       (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedInstrument(e.target.value);
+      },
+      []
+    );
+
+    const handleGigTypeChange = useCallback(
+      (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedGigType(e.target.value);
       },
       []
     );
@@ -356,7 +392,6 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
             </Button>
           </div>
 
-          {/* Quick Stats Preview */}
           <div className="mt-8 grid grid-cols-3 gap-4 max-w-md mx-auto">
             <div
               className={cn(
@@ -404,7 +439,9 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
               Premium Musicians
             </h3>
             <p className={cn("text-sm", colors.textMuted)}>
-              Top-rated verified musicians available for instant booking
+              {selectedGigType
+                ? `Top musicians for ${GIG_TYPES.find((g) => g.value === selectedGigType)?.label}`
+                : "Top-rated verified musicians available for instant booking"}
             </p>
           </div>
         </div>
@@ -462,11 +499,29 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                 </option>
               ))}
             </select>
+
+            {/* Gig Type Filter */}
+            <select
+              value={selectedGigType}
+              onChange={handleGigTypeChange}
+              className={cn(
+                "px-3 py-2 rounded-lg border bg-transparent",
+                colors.border,
+                colors.text
+              )}
+            >
+              <option value="">All Gig Types</option>
+              {GIG_TYPES.map((gigType) => (
+                <option key={gigType.value} value={gigType.value}>
+                  {gigType.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
         {/* Featured Musicians Section */}
-        {featuredMusicians.length > 0 && (
+        {featuredMusicians.length > 0 && !selectedGigType && (
           <div>
             <h3 className={cn("text-lg font-semibold mb-4", colors.text)}>
               🏆 Featured Musicians
@@ -478,6 +533,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   musician={musician}
                   onRequestToBook={onRequestToBook}
                   getTierBadge={getTierBadge}
+                  selectedGigType={selectedGigType}
                 />
               ))}
             </div>
@@ -487,7 +543,11 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
         {/* All Pro Musicians */}
         <div>
           <h3 className={cn("text-lg font-semibold mb-4", colors.text)}>
-            {searchQuery ? "Search Results" : "All Pro Musicians"}
+            {selectedGigType
+              ? `Musicians for ${GIG_TYPES.find((g) => g.value === selectedGigType)?.label}`
+              : searchQuery
+                ? "Search Results"
+                : "All Pro Musicians"}
           </h3>
 
           {isLoading ? (
@@ -499,7 +559,9 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
               <div className="text-muted-foreground text-center">
                 {searchQuery
                   ? "No musicians found matching your search."
-                  : "No pro musicians available."}
+                  : selectedGigType
+                    ? `No musicians available for ${selectedGigType} events.`
+                    : "No pro musicians available."}
               </div>
             </div>
           ) : (
@@ -510,6 +572,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   musician={musician}
                   onRequestToBook={onRequestToBook}
                   getTierBadge={getTierBadge}
+                  selectedGigType={selectedGigType}
                 />
               ))}
             </div>
@@ -519,8 +582,9 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
         {/* Stats Footer */}
         <div className="mt-8 pt-6 border-t flex items-center justify-between">
           <div className={cn("text-sm", colors.textMuted)}>
-            Showing {displayMusicians.length} musicians in Kenya
+            Showing {displayMusicians.length} musicians
             {selectedCity && ` in ${selectedCity}`}
+            {selectedGigType && ` for ${selectedGigType} events`}
           </div>
           <Button variant="outline" size="sm">
             Load More

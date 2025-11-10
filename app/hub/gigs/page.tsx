@@ -352,9 +352,15 @@ export default function GigsHub() {
                 )}
               >
                 {isDarkMode ? (
-                  <Moon className="w-4 h-4 text-amber-400" />
+                  <span className="flex items-center gap-2">
+                    Dark
+                    <Moon className="w-4 h-4 text-amber-400" />
+                  </span>
                 ) : (
-                  <Sun className="w-4 h-4 text-amber-500" />
+                  <span className="flex items-center gap-2">
+                    Light
+                    <Sun className="w-4 h-4 text-amber-500" />
+                  </span>
                 )}
               </button>
 
@@ -388,9 +394,11 @@ export default function GigsHub() {
                   activeTab === tab.id
                     ? cn("border-neutral-300 text-blue-600", colors.primary)
                     : cn(
-                        "border-transparent",
-                        colors.textMuted,
-                        "hover:text-gray-700 hover:border-gray-300"
+                        "border-transparent text-gray-700 dark:text-gray-300 ",
+
+                        " hover:border-gray-300 hover:shadow-md hover:scale-105 transition-all duration-200 hover:opacity-80",
+                        colors.warningHover,
+                        colors.hoverBg
                       )
                 )}
               >

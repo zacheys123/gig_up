@@ -104,6 +104,7 @@ export const getPopularTemplates = query({
 export const getClientTemplates = query({
   args: {
     clientId: v.id("users"),
+    refetchTrigger: v.optional(v.number()), // ADD THIS
   },
   handler: async (ctx, args) => {
     const templates = await ctx.db
@@ -116,7 +117,6 @@ export const getClientTemplates = query({
   },
 });
 
-// convex/instantGigs.ts - SIMPLIFIED MUTATION
 export const saveTemplate = mutation({
   args: {
     templateId: v.optional(v.string()),
@@ -132,31 +132,56 @@ export const saveTemplate = mutation({
     clientId: v.id("users"),
     clientName: v.string(),
     fromTime: v.optional(v.string()),
-    // REMOVED: status parameter
   },
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    if (args.templateId && args.templateId.startsWith("[")) {
+    console.log("🏁 [CONVEX DEBUG] saveTemplate called with args:", args);
+    console.log("🆔 [CONVEX DEBUG] Template ID:", args.templateId);
+
+    // Extract templateId from args to avoid including it in the document
+    const { templateId, ...templateData } = args;
+
+    if (templateId) {
+      console.log(
+        "📝 [CONVEX DEBUG] Attempting to patch existing template:",
+        templateId
+      );
       try {
-        await ctx.db.patch(args.templateId as any, {
-          ...args,
-          updatedAt: now,
-        });
-        return args.templateId;
+        const result = await ctx.db.patch(
+          templateId as Id<"instantGigsTemplate">,
+          {
+            ...templateData,
+            updatedAt: now,
+          }
+        );
+        console.log(
+          "✅ [CONVEX DEBUG] Template patched successfully:",
+          templateId
+        );
+        return templateId;
       } catch (error) {
-        console.log("Patch failed, creating new template");
+        console.log(
+          "❌ [CONVEX DEBUG] Patch failed, creating new template. Error:",
+          error
+        );
+        // Continue to create new template if patch fails
       }
     }
 
-    const templateId = await ctx.db.insert("instantGigsTemplate", {
-      ...args,
-      timesUsed: 0, // Start with 0 uses
+    console.log("🆕 [CONVEX DEBUG] Creating new template");
+    const newTemplateId = await ctx.db.insert("instantGigsTemplate", {
+      ...templateData,
+      timesUsed: 0,
       createdAt: now,
       updatedAt: now,
     });
 
-    return templateId;
+    console.log(
+      "🎉 [CONVEX DEBUG] New template created with ID:",
+      newTemplateId
+    );
+    return newTemplateId;
   },
 });
 

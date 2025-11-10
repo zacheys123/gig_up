@@ -1,8 +1,9 @@
-// hooks/useProMusicians.ts - OPTIMIZED
+// hooks/useProMusicians.ts - COMPLETE UPDATED VERSION
 import { useQuery } from "convex/react";
 import { useMemo } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { EnhancedMusician } from "@/types/musician";
 
 interface UseProMusiciansProps {
   city?: string;
@@ -11,19 +12,16 @@ interface UseProMusiciansProps {
   limit?: number;
   minRating?: number;
   tier?: "free" | "pro" | "premium" | "elite";
+  gigType?: string;
+  availableOnly?: boolean;
 }
 
-// Memoize default filters to prevent unnecessary re-renders
-const DEFAULT_FILTERS = {
-  limit: 12,
-  minRating: 4.0,
-};
-
 export const useProMusicians = (filters: UseProMusiciansProps = {}) => {
-  // Merge with default filters and memoize
   const queryFilters = useMemo(
     () => ({
-      ...DEFAULT_FILTERS,
+      limit: 12,
+      minRating: 4.0,
+      availableOnly: true,
       ...filters,
     }),
     [
@@ -33,32 +31,34 @@ export const useProMusicians = (filters: UseProMusiciansProps = {}) => {
       filters.limit,
       filters.minRating,
       filters.tier,
+      filters.gigType,
+      filters.availableOnly,
     ]
   );
 
   const musicians = useQuery(
     api.controllers.musicians.getProMusicians,
     queryFilters
-  );
+  ) as EnhancedMusician[] | undefined;
 
   const featuredMusicians = useQuery(
     api.controllers.musicians.getFeaturedMusicians,
     { limit: queryFilters.limit }
-  );
+  ) as EnhancedMusician[] | undefined;
 
-  // Memoize results to prevent unnecessary re-renders
-  const memoizedMusicians = useMemo(() => musicians || [], [musicians]);
-  const memoizedFeaturedMusicians = useMemo(
-    () => featuredMusicians || [],
-    [featuredMusicians]
-  );
+  // Memoize results
+  const enhancedMusicians = useMemo(() => {
+    return musicians || [];
+  }, [musicians]);
 
-  const isLoading = musicians === undefined || featuredMusicians === undefined;
+  const enhancedFeaturedMusicians = useMemo(() => {
+    return featuredMusicians || [];
+  }, [featuredMusicians]);
 
   return {
-    musicians: memoizedMusicians,
-    featuredMusicians: memoizedFeaturedMusicians,
-    isLoading,
+    musicians: enhancedMusicians,
+    featuredMusicians: enhancedFeaturedMusicians,
+    isLoading: musicians === undefined || featuredMusicians === undefined,
   };
 };
 
@@ -67,7 +67,6 @@ export const useMusicianSearch = (
   city?: string,
   instrument?: string
 ) => {
-  // Memoize search parameters
   const searchParams = useMemo(
     () => (searchQuery ? { query: searchQuery, city, instrument } : "skip"),
     [searchQuery, city, instrument]
@@ -76,9 +75,8 @@ export const useMusicianSearch = (
   const results = useQuery(
     api.controllers.musicians.searchMusicians,
     searchParams
-  );
+  ) as EnhancedMusician[] | undefined;
 
-  // Memoize results
   const memoizedResults = useMemo(() => results || [], [results]);
 
   return {
@@ -88,18 +86,13 @@ export const useMusicianSearch = (
 };
 
 export const useMusicianById = (musicianId: Id<"users"> | null) => {
-  const queryParams = useMemo(
-    () => (musicianId ? { musicianId } : "skip"),
-    [musicianId]
-  );
-
   const musician = useQuery(
     api.controllers.musicians.getMusicianById,
-    queryParams
-  );
+    musicianId ? { musicianId } : "skip"
+  ) as EnhancedMusician | undefined;
 
   return {
-    musician,
+    musician: musician || null,
     isLoading: musician === undefined,
   };
 };

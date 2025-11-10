@@ -85,7 +85,6 @@ const QuickStat = memo(({ stat, colors }: any) => {
 
 QuickStat.displayName = "QuickStat";
 
-// Memoize TabButton component
 const TabButton = memo(
   ({
     tab,
@@ -103,56 +102,116 @@ const TabButton = memo(
       <button
         onClick={onClick}
         className={cn(
-          "flex flex-col items-center gap-2 px-4 py-4 rounded-xl text-sm font-medium transition-all duration-200 flex-1 justify-center group",
+          // Base styles
+          "flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4 rounded-xl",
+          "text-xs sm:text-sm font-medium transition-all duration-200",
+          "flex-1 min-w-0 justify-center group relative",
+          "hover:scale-105 transform-gpu",
+
+          // Mobile: horizontal layout, Desktop: can be vertical if needed
+          "flex-row sm:flex-col",
+
+          // Active state
           isActive
             ? cn(
-                "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg",
+                "bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg",
+                "shadow-blue-500/25 dark:shadow-blue-600/25",
+                "border border-transparent",
                 colors.textInverted
               )
             : cn(
+                // Inactive state
+                "border hover:shadow-md",
                 colors.border,
                 colors.hoverBg,
-                "border hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md"
+                "hover:border-blue-300 dark:hover:border-blue-600",
+                colors.text
               )
         )}
       >
-        <Icon
+        {/* Icon with responsive sizing */}
+        <div
           className={cn(
-            "w-5 h-5 transition-transform duration-200",
-            isActive
-              ? "text-white scale-110"
-              : cn("text-blue-600 dark:text-blue-400 group-hover:scale-110")
+            "flex-shrink-0 transition-all duration-200",
+            "flex items-center justify-center",
+            isActive ? "scale-110" : "group-hover:scale-105"
           )}
-        />
-        <div className="text-center">
+        >
+          <Icon
+            className={cn(
+              "transition-colors duration-200",
+              "w-4 h-4 sm:w-5 sm:h-5", // Responsive icon sizing
+              isActive
+                ? "text-white"
+                : cn("text-blue-600 dark:text-blue-400", colors.textMuted)
+            )}
+          />
+        </div>
+
+        {/* Text content */}
+        <div
+          className={cn(
+            "text-left sm:text-center min-w-0 flex-1",
+            "flex flex-col gap-0.5 sm:gap-1"
+          )}
+        >
+          {/* Main label */}
           <div
             className={cn(
-              "font-medium transition-colors duration-200",
+              "font-semibold transition-colors duration-200",
+              "truncate", // Prevent text overflow
               isActive ? "text-white" : colors.text
             )}
           >
             {tab.label}
           </div>
+
+          {/* Description - hidden on very small screens, shown on mobile+ */}
           <div
             className={cn(
-              "text-xs mt-1 transition-colors duration-200",
-              isActive ? "text-blue-100 dark:text-blue-200" : colors.textMuted
+              "transition-colors duration-200",
+              "hidden xs:block", // Hide on very small screens (below 320px)
+              "text-xs leading-tight",
+              isActive
+                ? "text-blue-100 dark:text-blue-200"
+                : cn(colors.textMuted, "opacity-80")
             )}
           >
             {tab.description}
           </div>
         </div>
+
+        {/* Active indicator dot for mobile */}
+        {isActive && (
+          <>
+            {/* Desktop active indicator */}
+            <div
+              className={cn(
+                "absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-400",
+                "hidden sm:block", // Only show on desktop
+                "shadow-lg shadow-green-400/50"
+              )}
+            />
+
+            {/* Mobile active indicator */}
+            <div
+              className={cn(
+                "absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-400",
+                "block sm:hidden", // Only show on mobile
+                "shadow-lg shadow-green-400/50"
+              )}
+            />
+          </>
+        )}
       </button>
     );
   }
 );
 
 TabButton.displayName = "TabButton";
-
 export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const router = useRouter();
   const { colors } = useThemeColors();
-
   const createTemplatesRef = useRef<HTMLDivElement>(null);
   const musicianTemplatesRef = useRef<HTMLDivElement>(null);
 
@@ -219,13 +278,15 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   // Memoize user ID to prevent hook re-runs
   const userId = useMemo(() => user?._id, [user?._id]);
 
-  // Use optimized hooks
   const {
     templates,
     isLoading: templatesLoading,
     createTemplate,
     updateTemplate,
     deleteTemplate,
+    templateLimitInfo, // GET THIS FROM useTemplates
+    refetchTemplates,
+    isRefetching,
   } = useTemplates(userId);
 
   const { stats, createGig } = useInstantGigs(userId);
@@ -299,6 +360,9 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
       setActiveTab("templates");
       setEditingTemplate(null);
       setCreateTabMode("default");
+      setTimeout(() => {
+        refetchTemplates();
+      }, 1000);
     },
     [updateTemplate]
   );
@@ -397,10 +461,11 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
               }
               user={user}
               existingTemplates={memoizedTemplates}
-              mode={createTabMode} // This now includes "scratch"
+              mode={createTabMode}
               onFormClose={handleCancelEdit}
               isLoading={templatesLoading}
               editingTemplate={editingTemplate}
+              templateLimitInfo={templateLimitInfo} // PASS THIS PROP
             />
           </div>
         );
@@ -413,6 +478,8 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             onDeleteTemplate={handleDeleteTemplate}
             onRequestToBook={handleRequestToBook}
             isLoading={templatesLoading}
+            refetchTemplates={refetchTemplates}
+            isRefetching={isRefetching} // ADD THIS
           />
         );
 

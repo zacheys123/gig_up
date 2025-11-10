@@ -1,6 +1,6 @@
-// components/gigs/GigSectionHeader.tsx - UPDATED WITH THEME COLORS ONLY
+// components/gigs/GigSectionHeader.tsx - UPDATED WITH ANIMATED COLLAPSING
 "use client";
-import React, { useMemo, memo } from "react";
+import React, { useMemo, memo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -14,11 +14,13 @@ import {
   Star,
   CheckCircle,
   Clock,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { HiTemplate } from "react-icons/hi";
-// In GigSectionHeaderProps interface, add:
+
 interface GigSectionHeaderProps {
   title: string;
   description: string;
@@ -43,11 +45,12 @@ interface GigSectionHeaderProps {
   showStats?: boolean;
   showSampleData?: boolean;
   onAction?: (action: string) => void;
-  // Add this new prop
   onScrollToTemplates?: () => void;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 }
 
-// Memoize icon components to prevent recreation
+// Memoize icon components
 const CalendarIcon = memo(() => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
@@ -97,7 +100,7 @@ DollarSignIcon.displayName = "DollarSignIcon";
 ApplicationsIcon.displayName = "ApplicationsIcon";
 CrewIcon.displayName = "CrewIcon";
 
-// Memoize StatCard component
+// Responsive StatCard component
 const StatCard: React.FC<{
   value: number | string;
   label: string;
@@ -135,7 +138,9 @@ const StatCard: React.FC<{
   return (
     <div
       className={cn(
-        "text-center p-4 rounded-xl transition-all duration-200 hover:scale-105",
+        "text-center p-3 sm:p-4 rounded-xl transition-all duration-200",
+        "hover:scale-105 transform-gpu",
+        "min-w-0 flex-1", // Flex basis for responsive behavior
         colorConfig.bg,
         colorConfig.hover
       )}
@@ -143,17 +148,24 @@ const StatCard: React.FC<{
       {Icon && (
         <div
           className={cn(
-            "w-8 h-8 mx-auto mb-2 rounded-lg flex items-center justify-center",
+            "w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 rounded-lg flex items-center justify-center",
             colorConfig.bg
           )}
         >
-          <Icon className={cn("w-4 h-4", colorConfig.text)} />
+          <Icon className={cn("w-3 h-3 sm:w-4 sm:h-4", colorConfig.text)} />
         </div>
       )}
-      <div className={cn("text-2xl font-bold mb-1", colorConfig.text)}>
+      <div
+        className={cn(
+          "text-lg sm:text-xl lg:text-2xl font-bold mb-1",
+          colorConfig.text
+        )}
+      >
         {value}
       </div>
-      <div className={cn("text-sm font-medium", colors.textMuted)}>{label}</div>
+      <div className={cn("text-xs sm:text-sm font-medium", colors.textMuted)}>
+        {label}
+      </div>
     </div>
   );
 });
@@ -173,99 +185,142 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
     showStats = true,
     showSampleData = true,
     onAction,
+    collapsible = false,
+    defaultCollapsed = false,
   }) => {
     const { colors } = useThemeColors();
+    const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+    const [isAnimating, setIsAnimating] = useState(false);
 
-    // Memoize default actions
+    const toggleCollapse = () => {
+      if (isAnimating) return;
+
+      setIsAnimating(true);
+      setIsCollapsed(!isCollapsed);
+
+      // Reset animation state after transition completes
+      setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+    };
+
+    // Responsive default actions
     const defaultActions = useMemo(() => {
-      switch (type) {
-        case "urgent-gigs":
-          return (
-            <div className="flex gap-3">
-              <Button
-                className={cn(
-                  "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
-                  colors.textInverted
-                )}
-                onClick={() => onAction?.("create")}
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Create Template
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => onAction?.("browse-musicians")}
-                className={cn(colors.border, colors.hoverBg)}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Browse Musicians
-              </Button>
-            </div>
-          );
-
-        case "all-gigs":
-          return (
-            <div className="flex gap-3">
-              <Button
-                className={cn(
-                  "bg-blue-500 hover:bg-blue-600",
-                  colors.textInverted
-                )}
-                onClick={() => onAction?.("search")}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Search Gigs
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => onAction?.("filter")}
-                className={cn(colors.border, colors.hoverBg)}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Filter by Type
-              </Button>
-            </div>
-          );
-
-        case "my-gigs":
-          return (
+      const baseActions = {
+        "urgent-gigs": (
+          <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 w-full xs:w-auto">
             <Button
               className={cn(
-                "bg-green-500 hover:bg-green-600",
-                colors.textInverted
+                "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
+                colors.textInverted,
+                "text-sm sm:text-base",
+                "w-full xs:w-auto justify-center"
               )}
               onClick={() => onAction?.("create")}
+              size="sm"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Gig
+              <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="truncate">Create Template</span>
             </Button>
-          );
-
-        case "template-management":
-          return (
-            <Button
-              className={cn(
-                "bg-teal-500 hover:bg-teal-600",
-                colors.textInverted
-              )}
-              onClick={() => onAction?.("create-template")}
-            >
-              <HiTemplate className="w-4 h-4 mr-2" />
-              New Template
-            </Button>
-          );
-
-        default:
-          return (
             <Button
               variant="outline"
-              onClick={() => onAction?.("explore")}
-              className={cn(colors.border, colors.hoverBg)}
+              onClick={() => onAction?.("browse-musicians")}
+              className={cn(
+                colors.border,
+                colors.hoverBg,
+                "text-sm sm:text-base",
+                "w-full xs:w-auto justify-center"
+              )}
+              size="sm"
             >
-              Explore Features
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="truncate">Browse</span>
             </Button>
-          );
-      }
+          </div>
+        ),
+
+        "all-gigs": (
+          <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 w-full xs:w-auto">
+            <Button
+              className={cn(
+                "bg-blue-500 hover:bg-blue-600",
+                colors.textInverted,
+                "text-sm sm:text-base",
+                "w-full xs:w-auto justify-center"
+              )}
+              onClick={() => onAction?.("search")}
+              size="sm"
+            >
+              <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="truncate">Search</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => onAction?.("filter")}
+              className={cn(
+                colors.border,
+                colors.hoverBg,
+                "text-sm sm:text-base",
+                "w-full xs:w-auto justify-center"
+              )}
+              size="sm"
+            >
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="truncate">Filter</span>
+            </Button>
+          </div>
+        ),
+
+        "my-gigs": (
+          <Button
+            className={cn(
+              "bg-green-500 hover:bg-green-600",
+              colors.textInverted,
+              "text-sm sm:text-base",
+              "w-full xs:w-auto justify-center"
+            )}
+            onClick={() => onAction?.("create")}
+            size="sm"
+          >
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">Create Gig</span>
+          </Button>
+        ),
+
+        "template-management": (
+          <Button
+            className={cn(
+              "bg-teal-500 hover:bg-teal-600",
+              colors.textInverted,
+              "text-sm sm:text-base",
+              "w-full xs:w-auto justify-center"
+            )}
+            onClick={() => onAction?.("create-template")}
+            size="sm"
+          >
+            <HiTemplate className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">New Template</span>
+          </Button>
+        ),
+      };
+
+      return (
+        baseActions[type as keyof typeof baseActions] || (
+          <Button
+            variant="outline"
+            onClick={() => onAction?.("explore")}
+            className={cn(
+              colors.border,
+              colors.hoverBg,
+              "text-sm sm:text-base",
+              "w-full xs:w-auto justify-center"
+            )}
+            size="sm"
+          >
+            Explore
+          </Button>
+        )
+      );
     }, [type, onAction, colors]);
 
     // Memoize sample data
@@ -361,7 +416,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
       }
     }, [type]);
 
-    // Updated stats calculation in GigSectionHeader component
+    // Stats calculation
     const relevantStats = useMemo(() => {
       switch (type) {
         case "urgent-gigs":
@@ -450,6 +505,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
           ];
       }
     }, [type, stats]);
+
     const displaySampleData = sampleData || defaultSampleData;
     const displayActions = actions ? actions : defaultActions;
 
@@ -460,200 +516,299 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
           colors.card,
           colors.border,
           "border",
-          "shadow-sm"
+          "shadow-sm",
+          "w-full",
+          "transition-all duration-300", // Add transition to main container
+          isCollapsed ? "pb-0" : "pb-4" // Remove bottom padding when collapsed
         )}
       >
-        {/* Header */}
-        <div className={cn("p-6 border-b", colors.border)}>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h2 className={cn("text-2xl font-bold", colors.text)}>{title}</h2>
-              <p className={cn("mt-1", colors.textMuted)}>{description}</p>
+        {/* Header - Always visible */}
+        <div className={cn("p-4 sm:p-6 border-b", colors.border)}>
+          <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3">
+                {!collapsible && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleCollapse}
+                    disabled={isAnimating}
+                    className={cn(
+                      "p-1 h-8 w-8 sm:h-10 sm:w-10 rounded-lg transition-all duration-200 flex-shrink-0",
+                      colors.hoverBg,
+                      isAnimating && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {isCollapsed ? (
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300" />
+                    )}
+                  </Button>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h2
+                    className={cn(
+                      "text-xl sm:text-2xl lg:text-3xl font-bold truncate",
+                      colors.text
+                    )}
+                  >
+                    {title}
+                  </h2>
+                  <p
+                    className={cn(
+                      "mt-1 text-sm sm:text-base",
+                      colors.textMuted,
+                      "line-clamp-2 sm:line-clamp-3"
+                    )}
+                  >
+                    {description}
+                  </p>
+                </div>
+              </div>
             </div>
-            {displayActions}
+
+            {/* Actions - Responsive positioning */}
+            <div className="w-full xs:w-auto">{displayActions}</div>
           </div>
         </div>
 
-        {/* Custom Children Content */}
-        {children && <div className="p-6">{children}</div>}
+        <div
+          className={cn(
+            "transition-all duration-300 ease-in-out overflow-hidden",
+            isCollapsed
+              ? "max-h-0 opacity-0 -translate-y-2 scale-y-0 origin-top"
+              : "max-h-[2000px] opacity-100 translate-y-0 scale-y-100 origin-top"
+          )}
+        >
+          {/* Custom Children Content */}
+          {children && (
+            <div className="p-4 sm:p-6 animate-in slide-in-from-top-5 duration-300">
+              {children}
+            </div>
+          )}
 
-        {/* Sample Data (only shown when no children and showSampleData is true) */}
-        {!children && showSampleData && (
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {displaySampleData.map((item, index) => (
+          {/* Sample Data Grid */}
+          {!children && showSampleData && (
+            <div className="p-4 sm:p-6 animate-in slide-in-from-top-5 duration-300 delay-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                {displaySampleData.map((item, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "border rounded-xl p-4 sm:p-5 transition-all duration-200",
+                      "hover:shadow-lg transform-gpu hover:scale-105",
+                      colors.border,
+                      colors.hoverBg,
+                      "hover:border-blue-300",
+                      "animate-in slide-in-from-top-5 duration-300",
+                      `delay-${(index % 3) * 100 + 150}` // Stagger animation
+                    )}
+                  >
+                    {"icon" in item && (
+                      <div className="text-2xl mb-3">{item.icon}</div>
+                    )}
+                    {"title" in item ? (
+                      <>
+                        <h3
+                          className={cn(
+                            "font-semibold mb-2 text-base sm:text-lg truncate",
+                            colors.text
+                          )}
+                        >
+                          {item.title}
+                        </h3>
+                        <div
+                          className={cn(
+                            "space-y-2 text-xs sm:text-sm",
+                            colors.textMuted
+                          )}
+                        >
+                          {"type" in item && (
+                            <div className="flex items-center gap-2">
+                              <Music className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                              <span className="truncate">{item.type}</span>
+                            </div>
+                          )}
+                          {"budget" in item && (
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                              <span className="truncate">{item.budget}</span>
+                            </div>
+                          )}
+                          {"duration" in item && (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                              <span className="truncate">{item.duration}</span>
+                            </div>
+                          )}
+                          {"applicants" in item && (
+                            <div className="flex items-center gap-2">
+                              <Users className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                              <span>{item.applicants} applicants</span>
+                            </div>
+                          )}
+                          {"status" in item && (
+                            <div
+                              className={cn(
+                                "inline-block px-2 py-1 text-xs rounded-full mt-2",
+                                item.status === "Active"
+                                  ? cn(
+                                      "bg-green-100 text-green-800",
+                                      colors.successBg,
+                                      colors.successText
+                                    )
+                                  : item.status === "Draft"
+                                    ? cn(
+                                        "bg-amber-100 text-amber-800",
+                                        colors.warningBg,
+                                        colors.warningText
+                                      )
+                                    : cn(
+                                        "bg-blue-100 text-blue-800",
+                                        colors.infoBg,
+                                        colors.infoText
+                                      )
+                              )}
+                            >
+                              {item.status}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : "name" in item ? (
+                      <>
+                        <h3
+                          className={cn(
+                            "font-semibold mb-2 truncate",
+                            colors.text
+                          )}
+                        >
+                          {item.name}
+                        </h3>
+                        <div
+                          className={cn(
+                            "space-y-1 text-xs sm:text-sm",
+                            colors.textMuted
+                          )}
+                        >
+                          <div className="truncate">Role: {item.role}</div>
+                          {"rating" in item && (
+                            <div className="flex items-center gap-1">
+                              <span>Rating:</span>
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400 flex-shrink-0" />
+                              <span>{item.rating}</span>
+                            </div>
+                          )}
+                          {"applied" in item && (
+                            <div className="truncate">
+                              Applied: {item.applied}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              {/* Empty State Illustration */}
+              <div
+                className={cn(
+                  "text-center py-8 sm:py-12 border-2 border-dashed rounded-xl",
+                  colors.border,
+                  colors.backgroundMuted,
+                  "animate-in slide-in-from-top-5 duration-300 delay-300"
+                )}
+              >
                 <div
-                  key={index}
                   className={cn(
-                    "border rounded-xl p-5 hover:shadow-lg transition-all duration-200",
-                    colors.border,
-                    colors.hoverBg,
-                    "hover:border-blue-300"
+                    "w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4",
+                    colors.infoText
                   )}
                 >
-                  {"icon" in item && (
-                    <div className="text-2xl mb-3">{item.icon}</div>
+                  {type === "urgent-gigs" ? (
+                    <HiTemplate className="w-full h-full" />
+                  ) : type.includes("gigs") ? (
+                    <CalendarIcon />
+                  ) : type.includes("payment") ? (
+                    <DollarSignIcon />
+                  ) : type.includes("applications") ? (
+                    <ApplicationsIcon />
+                  ) : (
+                    <CrewIcon />
                   )}
-                  {"title" in item ? (
-                    <>
-                      <h3
-                        className={cn(
-                          "font-semibold mb-2 text-lg",
-                          colors.text
-                        )}
-                      >
-                        {item.title}
-                      </h3>
-                      <div
-                        className={cn("space-y-2 text-sm", colors.textMuted)}
-                      >
-                        {"type" in item && (
-                          <div className="flex items-center gap-2">
-                            <Music className="w-4 h-4" />
-                            <span>{item.type}</span>
-                          </div>
-                        )}
-                        {"budget" in item && (
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="w-4 h-4" />
-                            <span>{item.budget}</span>
-                          </div>
-                        )}
-                        {"duration" in item && (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>{item.duration}</span>
-                          </div>
-                        )}
-                        {"applicants" in item && (
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4" />
-                            <span>{item.applicants} applicants</span>
-                          </div>
-                        )}
-                        {"status" in item && (
-                          <div
-                            className={cn(
-                              "inline-block px-2 py-1 text-xs rounded-full",
-                              item.status === "Active"
-                                ? cn(
-                                    "bg-green-100 text-green-800",
-                                    colors.successBg,
-                                    colors.successText
-                                  )
-                                : item.status === "Draft"
-                                  ? cn(
-                                      "bg-amber-100 text-amber-800",
-                                      colors.warningBg,
-                                      colors.warningText
-                                    )
-                                  : cn(
-                                      "bg-blue-100 text-blue-800",
-                                      colors.infoBg,
-                                      colors.infoText
-                                    )
-                            )}
-                          >
-                            {item.status}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : "name" in item ? (
-                    <>
-                      <h3 className={cn("font-semibold mb-2", colors.text)}>
-                        {item.name}
-                      </h3>
-                      <div
-                        className={cn("space-y-1 text-sm", colors.textMuted)}
-                      >
-                        <div>Role: {item.role}</div>
-                        {"rating" in item && (
-                          <div className="flex items-center gap-1">
-                            <span>Rating:</span>
-                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                            <span>{item.rating}</span>
-                          </div>
-                        )}
-                        {"applied" in item && (
-                          <div>Applied: {item.applied}</div>
-                        )}
-                      </div>
-                    </>
-                  ) : null}
                 </div>
-              ))}
+                <h4
+                  className={cn(
+                    "text-lg sm:text-xl font-semibold mb-2 px-4",
+                    colors.text
+                  )}
+                >
+                  {type === "urgent-gigs"
+                    ? "Ready to Create Your First Template?"
+                    : `${title} Content`}
+                </h4>
+                <p
+                  className={cn(
+                    "max-w-md mx-auto mb-6 px-4 text-sm sm:text-base",
+                    colors.textMuted
+                  )}
+                >
+                  {type === "urgent-gigs"
+                    ? "Create custom gig templates and book premium musicians in seconds. Start with examples or build from scratch."
+                    : `This section will display ${description.toLowerCase()}. The actual content and functionality will be implemented here.`}
+                </p>
+                <div className="flex flex-col xs:flex-row justify-center gap-3 px-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      colors.border,
+                      colors.hoverBg,
+                      "w-full xs:w-auto justify-center"
+                    )}
+                  >
+                    Learn More
+                  </Button>
+                  <Button
+                    size="sm"
+                    className={cn(
+                      "bg-blue-500 hover:bg-blue-600",
+                      colors.textInverted,
+                      "w-full xs:w-auto justify-center"
+                    )}
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              </div>
             </div>
+          )}
 
-            {/* Empty State Illustration */}
+          {/* Stats Section */}
+          {showStats && (
             <div
               className={cn(
-                "text-center py-12 border-2 border-dashed rounded-xl",
+                "p-4 sm:p-6 border-t",
                 colors.border,
-                colors.backgroundMuted
+                "animate-in slide-in-from-top-5 duration-300 delay-200"
               )}
             >
-              <div className={cn("w-20 h-20 mx-auto mb-4", colors.infoText)}>
-                {type === "urgent-gigs" ? (
-                  <HiTemplate className="w-full h-full" />
-                ) : type.includes("gigs") ? (
-                  <CalendarIcon />
-                ) : type.includes("payment") ? (
-                  <DollarSignIcon />
-                ) : type.includes("applications") ? (
-                  <ApplicationsIcon />
-                ) : (
-                  <CrewIcon />
-                )}
-              </div>
-              <h4 className={cn("text-xl font-semibold mb-2", colors.text)}>
-                {type === "urgent-gigs"
-                  ? "Ready to Create Your First Template?"
-                  : `${title} Content`}
-              </h4>
-              <p className={cn("max-w-md mx-auto mb-6", colors.textMuted)}>
-                {type === "urgent-gigs"
-                  ? "Create custom gig templates and book premium musicians in seconds. Start with examples or build from scratch."
-                  : `This section will display ${description.toLowerCase()}. The actual content and functionality will be implemented here.`}
-              </p>
-              <div className="flex justify-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(colors.border, colors.hoverBg)}
-                >
-                  Learn More
-                </Button>
-                <Button
-                  size="sm"
-                  className={cn(
-                    "bg-blue-500 hover:bg-blue-600",
-                    colors.textInverted
-                  )}
-                >
-                  Get Started
-                </Button>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                {relevantStats.map((stat, index) => (
+                  <StatCard
+                    key={index}
+                    value={stat.value}
+                    label={stat.label}
+                    color={stat.color}
+                    icon={stat.icon}
+                  />
+                ))}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Stats Section */}
-        {showStats && (
-          <div className={cn("p-6 border-t", colors.border)}>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {relevantStats.map((stat, index) => (
-                <StatCard
-                  key={index}
-                  value={stat.value}
-                  label={stat.label}
-                  color={stat.color}
-                  icon={stat.icon}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }

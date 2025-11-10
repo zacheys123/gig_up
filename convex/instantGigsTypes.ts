@@ -12,13 +12,11 @@ export interface GigTemplateBase {
   setlist?: string;
   icon: string;
 }
-// types/instantGigs.ts - SIMPLIFIED TYPE
 export interface GigTemplate extends GigTemplateBase {
   id: string;
-  // REMOVED: status field
   createdAt: number;
-  _id?: Id<"instantGigsTemplate">;
-  timesUsed?: number; // Optional usage tracking
+  _id?: Id<"instantGigsTemplate"> | string; // Allow both
+  timesUsed?: number;
 }
 
 export interface ConvexGigTemplate {

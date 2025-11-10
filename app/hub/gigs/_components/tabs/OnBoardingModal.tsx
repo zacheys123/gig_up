@@ -230,14 +230,12 @@ const StatItem = memo(({ stat, colors }: any) => {
 
 StatItem.displayName = "StatItem";
 
-// Enhanced CreationOption component
 const CreationOption = memo(
   ({ option, onSelect, colors, user, isInGracePeriod, daysLeft }: any) => {
     const Icon = option.icon;
 
     const handleClick = useCallback(() => {
       if (!option.available) {
-        // Show upgrade modal based on required tier
         if (option.tier === "pro") {
           alert("Upgrade to Pro to access Custom Creation features");
         } else if (option.tier === "premium") {
@@ -259,7 +257,7 @@ const CreationOption = memo(
             : "opacity-70 cursor-not-allowed"
         )}
       >
-        {/* Tier Badge */}
+        {/* CORRECTED Tier Badge */}
         <div
           className={cn(
             "absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold",
@@ -268,8 +266,8 @@ const CreationOption = memo(
             option.tier === "premium" && "bg-amber-500 text-white"
           )}
         >
-          {option.tier === "free" || isInGracePeriod
-            ? "Trial Month"
+          {option.tier === "free" && isInGracePeriod
+            ? `Trial (${daysLeft} days)`
             : option.tier === "free"
               ? "FREE"
               : option.tier.toUpperCase()}
@@ -291,7 +289,6 @@ const CreationOption = memo(
             )}
           >
             <Icon className={cn("w-8 h-8", option.iconColor)} />
-            <span>${daysLeft} days </span>
           </div>
           <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
             {option.title}
@@ -365,14 +362,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
   }) => {
     const { colors } = useThemeColors();
     const { user } = useCurrentUser(); // ADD THIS TO GET USER INFO
-    const { isInGracePeriod } = useCheckTrial();
-    const { trialRemainingDays } = useSubscriptionStore();
+    const { isInGracePeriod, daysLeft: trialRemainingDays } = useCheckTrial();
+
+    console.log(isInGracePeriod);
     // Memoize dynamic data based on theme
     const featureCards = useMemo(() => getFeatureCards(colors), [colors]);
     const creationOptions = useMemo(
       () =>
-        getCreationOptions(user, colors, isInGracePeriod, trialRemainingDays),
-      [colors]
+        getCreationOptions(colors, user, isInGracePeriod, trialRemainingDays),
+      [colors, user, isInGracePeriod, trialRemainingDays] // Add all dependencies
     );
 
     // Memoize event handlers
@@ -534,6 +532,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                         option={option}
                         onSelect={handleCreationSelect}
                         colors={colors}
+                        isInGracePeriod={isInGracePeriod}
+                        user={user}
+                        daysLeft={trialRemainingDays}
                       />
                     ))}
                   </div>
