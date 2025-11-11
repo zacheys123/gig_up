@@ -49,7 +49,7 @@ interface MobileNavProps {
   className?: string;
 }
 
-export function MobileNav({ className }: MobileNavProps) {
+export default function MobileNav({ className }: MobileNavProps) {
   const { user } = useCurrentUser();
   const { isPro } = useSubscriptionStore();
   const pathname = usePathname();
