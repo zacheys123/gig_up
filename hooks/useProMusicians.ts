@@ -71,7 +71,15 @@ export const useProMusicians = (filters: UseProMusiciansProps = {}) => {
       ...musician,
       // Ensure all required fields have fallbacks
       firstname: musician.firstname || "Musician",
-      instrument: musician.instrument || "Various Instruments",
+      instrument: musician.instrument
+        ? musician.instrument
+        : musician.roleType === "dj"
+          ? "Deejay"
+          : musician.roleType === "mc"
+            ? "EMCee"
+            : musician.roleType === "vocalist"
+              ? "Vocalist"
+              : "Various Instruments",
       avgRating: musician.avgRating || 0,
       completedGigsCount: musician.completedGigsCount || 0,
       reliabilityScore: musician.reliabilityScore || 80,

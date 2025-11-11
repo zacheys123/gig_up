@@ -125,28 +125,83 @@ const INSTRUMENT_COMPATIBILITY: Record<string, Record<string, number>> = {
   },
 };
 
-// Helper functions
 const calculateGigTypeCompatibility = (
   musician: any,
   gigType: string
 ): number => {
   let score = 0;
 
-  // Instrument compatibility (50% of score)
-  const instrument = musician.instrument?.toLowerCase();
-  const instrumentScore = INSTRUMENT_COMPATIBILITY[gigType]?.[instrument] || 50;
-  score += instrumentScore * 0.5;
+  // Role compatibility (20% of score)
+  const roleCompatibility = {
+    dj: {
+      club: 100,
+      festival: 95,
+      "private-party": 90,
+      corporate: 70,
+      wedding: 30,
+      church: 10,
+      restaurant: 20,
+    },
+    mc: {
+      club: 100,
+      festival: 90,
+      "private-party": 85,
+      corporate: 75,
+      wedding: 40,
+      church: 15,
+      restaurant: 25,
+    },
+    vocalist: {
+      wedding: 95,
+      concert: 90,
+      church: 85,
+      restaurant: 80,
+      corporate: 75,
+      "private-party": 85,
+      club: 70,
+      festival: 80,
+    },
+    instrumentalist: {
+      wedding: 80,
+      concert: 90,
+      church: 85,
+      restaurant: 80,
+      corporate: 75,
+      "private-party": 80,
+      club: 70,
+      festival: 85,
+    },
+  };
 
-  // Rating and reliability (30% of score)
+  const musicianRole = musician.role?.toLowerCase();
+
+  // Safe role score calculation
+  let roleScore = 50; // Default score
+  if (
+    musicianRole &&
+    roleCompatibility[musicianRole as keyof typeof roleCompatibility]
+  ) {
+    const roleScores =
+      roleCompatibility[musicianRole as keyof typeof roleCompatibility];
+    // Use type assertion for the gigType access
+    roleScore = (roleScores as any)[gigType] || 50;
+  }
+  score += roleScore * 0.2;
+
+  // Instrument compatibility (30% of score) - reduced from 50%
+  const instrument = musician.instrument?.toLowerCase();
+  const instrumentScore =
+    (INSTRUMENT_COMPATIBILITY as any)[gigType]?.[instrument] || 50;
+  score += instrumentScore * 0.3;
+
+  // Rest of your existing scoring (50%)
   const ratingScore = (musician.avgRating || 0) * 20;
   const reliabilityScore = musician.reliabilityScore || 50;
   score += (ratingScore + reliabilityScore) * 0.15;
 
-  // Experience bonus (10% of score)
   const experienceBonus = Math.min((musician.completedGigsCount || 0) / 2, 20);
   score += experienceBonus;
 
-  // Tier bonus (10% of score)
   const tierBonus = {
     elite: 20,
     premium: 15,
@@ -175,15 +230,128 @@ const calculateOptimalForGigType = (
   gigType: string
 ): boolean => {
   const optimalInstruments: Record<string, string[]> = {
-    wedding: ["violin", "piano", "vocalist", "guitar", "harp", "cello"],
-    corporate: ["piano", "dj", "mc", "saxophone"],
-    concert: ["guitar", "drums", "bass", "vocalist", "keyboard"],
-    "private-party": ["dj", "mc", "guitar", "vocalist"],
-    restaurant: ["piano", "guitar", "violin", "saxophone"],
-    church: ["piano", "violin", "vocalist", "organ"],
-    festival: ["dj", "guitar", "drums", "bass", "mc"],
-    club: ["dj", "mc", "saxophone"],
-    recording: ["guitar", "piano", "bass", "drums", "violin"],
+    wedding: [
+      "violin",
+      "piano",
+      "vocalist",
+      "guitar",
+      "harp",
+      "cello",
+      "string quartet",
+      "organ",
+      "flute",
+      "trumpet",
+      "choir",
+    ],
+    corporate: [
+      "piano",
+      "dj",
+      "mc",
+      "saxophone",
+      "jazz trio",
+      "guitar",
+      "violin",
+      "keyboard",
+      "background music",
+      "string quartet",
+    ],
+    concert: [
+      "guitar",
+      "drums",
+      "bass",
+      "vocalist",
+      "keyboard",
+      "piano",
+      "saxophone",
+      "trumpet",
+      "violin",
+      "backing vocals",
+      "band",
+    ],
+    "private-party": [
+      "dj",
+      "mc",
+      "guitar",
+      "vocalist",
+      "saxophone",
+      "bass",
+      "drums",
+      "keyboard",
+      "piano",
+      "band",
+      "entertainer",
+    ],
+    restaurant: [
+      "piano",
+      "guitar",
+      "violin",
+      "saxophone",
+      "cello",
+      "flute",
+      "jazz trio",
+      "keyboard",
+      "harp",
+      "background music",
+    ],
+    church: [
+      "piano",
+      "violin",
+      "vocalist",
+      "organ",
+      "cello",
+      "choir",
+      "trumpet",
+      "flute",
+      "harp",
+      "guitar",
+    ],
+    festival: [
+      "dj",
+      "guitar",
+      "drums",
+      "bass",
+      "mc",
+      "vocalist",
+      "keyboard",
+      "saxophone",
+      "trumpet",
+      "band",
+      "backing vocals",
+    ],
+    club: [
+      "dj",
+      "mc",
+      "saxophone",
+      "trumpet",
+      "bass",
+      "drums",
+      "keyboard",
+      "vocalist",
+      "guitar",
+      "electronic",
+    ],
+    recording: [
+      "guitar",
+      "piano",
+      "bass",
+      "drums",
+      "violin",
+      "cello",
+      "vocalist",
+      "saxophone",
+      "trumpet",
+      "keyboard",
+      "session musician",
+    ],
+    individual: [
+      "guitar",
+      "piano",
+      "violin",
+      "vocalist",
+      "saxophone",
+      "keyboard",
+    ],
+    other: ["guitar", "piano", "violin", "vocalist", "keyboard", "dj"],
   };
 
   const instruments = optimalInstruments[gigType] || [];
@@ -192,14 +360,58 @@ const calculateOptimalForGigType = (
   return instruments.includes(musicianInstrument);
 };
 
-// convex/controllers/musicians.ts - UPDATE QUERIES TO BE MORE INCLUSIVE
+// convex/controllers/musicians.ts - ADD INCOMPATIBLE INSTRUMENTS FILTER
+
+const INCOMPATIBLE_ROLE_COMBINATIONS: Record<string, string[]> = {
+  wedding: ["dj", "electronic"], // No DJs in weddings
+  corporate: ["dj"], // Most roles okay in corporate (depends on style)
+  church: ["dj", "mc", "electronic"], // No DJs/MCs in church
+  restaurant: ["dj", "mc"], // No DJs/MCs in restaurants
+  club: ["mc"], // All roles typically welcome in clubs
+  festival: [], // All roles welcome in festivals
+  concert: [], // All roles possible in concerts
+  "private-party": [], // All roles welcome in private parties
+  recording: ["mc", "dj"], // All roles possible in recording
+  individual: ["dj", "mc"], // All roles possible
+  other: [], // All roles possible
+};
+
+// Replace both functions with this single, improved version:
+const isMusicianCompatibleWithGigType = (
+  musician: any,
+  gigType: string
+): boolean => {
+  if (!gigType) return true;
+
+  const incompatibleRoles = INCOMPATIBLE_ROLE_COMBINATIONS[gigType] || [];
+  const musicianRole = musician.role?.toLowerCase();
+
+  // Check role compatibility first
+  if (musicianRole && incompatibleRoles.includes(musicianRole)) {
+    return false;
+  }
+
+  // Also check if instrument name contains incompatible terms
+  const musicianInstrument = musician.instrument?.toLowerCase();
+  if (musicianInstrument) {
+    return !incompatibleRoles.some((incompatible) =>
+      musicianInstrument.includes(incompatible)
+    );
+  }
+
+  return true;
+};
+
+// Then update the mapping part to use the same function:
+
+// Update your getProMusicians query to include compatibility filter
 export const getProMusicians = query({
   args: {
     city: v.optional(v.string()),
     instrument: v.optional(v.string()),
     genre: v.optional(v.string()),
     limit: v.optional(v.number()),
-    minRating: v.optional(v.number()), // Make this optional
+    minRating: v.optional(v.number()),
     tier: v.optional(
       v.union(
         v.literal("free"),
@@ -210,6 +422,7 @@ export const getProMusicians = query({
     ),
     gigType: v.optional(v.string()),
     availableOnly: v.optional(v.boolean()),
+    enforceCompatibility: v.optional(v.boolean()), // NEW: Add this flag
   },
   handler: async (ctx, args) => {
     const {
@@ -217,17 +430,18 @@ export const getProMusicians = query({
       instrument,
       genre,
       limit = 12,
-      minRating, // Now optional - don't filter if not provided
+      minRating,
       tier,
       gigType,
-      availableOnly = false, // Default to false to show more users
+      availableOnly = false,
+      enforceCompatibility = true, // NEW: Default to true to enforce compatibility
     } = args;
 
     let query = ctx.db
       .query("users")
       .withIndex("by_is_musician", (q) => q.eq("isMusician", true));
 
-    // Apply filters - make them optional
+    // Apply filters
     if (city) {
       query = query.filter((q) => q.eq(q.field("city"), city));
     }
@@ -240,31 +454,38 @@ export const getProMusicians = query({
       query = query.filter((q) => q.eq(q.field("tier"), tier));
     }
 
-    // Only apply availability filter if explicitly requested
     if (availableOnly) {
       query = query.filter((q) =>
         q.neq(q.field("availability"), "notavailable")
       );
     }
 
-    // Only apply rating filter if minRating is provided
     if (minRating) {
       query = query.filter((q) => q.gte(q.field("avgRating"), minRating));
     }
 
     let musicians = await query.collect();
 
-    // Only filter out banned users
+    // Filter out banned users
     musicians = musicians.filter((musician) => !musician.isBanned);
 
-    // If no musicians found, try a broader search
-    if (musicians.length === 0) {
-      console.log("No musicians found with filters, trying broader search...");
-      musicians = await ctx.db
+    // In your getProMusicians query, update the compatibility check:
+    if (gigType && enforceCompatibility) {
+      musicians = musicians.filter(
+        (musician) => isMusicianCompatibleWithGigType(musician, gigType) // Use enhanced function
+      );
+    }
+
+    // If no musicians found, try a broader search (without compatibility filter)
+    if (musicians.length === 0 && enforceCompatibility) {
+      console.log("No compatible musicians found, trying broader search...");
+      const fallbackMusicians = await ctx.db
         .query("users")
         .withIndex("by_is_musician", (q) => q.eq("isMusician", true))
         .filter((q) => q.eq(q.field("isBanned"), false))
         .collect();
+
+      musicians = fallbackMusicians;
     }
 
     // Apply gig type compatibility scoring and sorting
@@ -279,12 +500,18 @@ export const getProMusicians = query({
             ),
             displayRate: getMusicianRateForGigType(musician, gigType),
             isOptimalForGigType: calculateOptimalForGigType(musician, gigType),
+            isCompatible: isMusicianCompatibleWithGigType(musician, gigType),
           };
           return enhancedMusician;
         })
-        .sort((a, b) => b.gigTypeCompatibility - a.gigTypeCompatibility);
+        .sort((a, b) => {
+          // Sort compatible musicians first, then by compatibility score
+          if (a.isCompatible !== b.isCompatible) {
+            return a.isCompatible ? -1 : 1;
+          }
+          return b.gigTypeCompatibility - a.gigTypeCompatibility;
+        });
     } else {
-      // Default sorting - be more flexible
       musicians = musicians
         .map((musician) => {
           const enhancedMusician = {
@@ -292,11 +519,11 @@ export const getProMusicians = query({
             gigTypeCompatibility: 50,
             displayRate: musician.rate?.regular || "Contact for rate",
             isOptimalForGigType: false,
+            isCompatible: true, // No gig type specified, all are compatible
           };
           return enhancedMusician;
         })
         .sort((a, b) => {
-          // Sort by rating if available, otherwise by creation time
           const scoreA = (a.avgRating || 0) * 20 + (a.reliabilityScore || 0);
           const scoreB = (b.avgRating || 0) * 20 + (b.reliabilityScore || 0);
           return scoreB - scoreA;

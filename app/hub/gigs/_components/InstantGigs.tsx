@@ -220,8 +220,6 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     "create" | "templates" | "musicians"
   >("create");
 
-  //
-
   // Fixed scroll function
   const scrollToMusicians = useCallback(() => {
     // Switch to create tab first (where the templates are)
@@ -293,6 +291,14 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
 
   // Memoize templates data
   const memoizedTemplates = useMemo(() => templates, [templates?.length]);
+
+  const { musicians: proMusicians } = useProMusicians({
+    limit: 50, // Increase limit for booking modal
+    availableOnly: true,
+  });
+
+  // Memoize musicians data for booking modal
+  const memoizedMusicians = useMemo(() => proMusicians || [], [proMusicians]);
 
   // In your InstantGigs component, add this useEffect for debugging:
   useEffect(() => {
@@ -632,6 +638,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         templates={memoizedTemplates}
         onSubmitBooking={handleSubmitBooking}
         isLoading={isLoading}
+        musicians={memoizedMusicians} // ADD THIS LINE
       />
       {/* Help Section */}
       {memoizedTemplates.length === 0 &&

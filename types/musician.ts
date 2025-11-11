@@ -21,7 +21,7 @@ export interface EnhancedMusician {
   avgRating?: number;
   reliabilityScore?: number;
   completedGigsCount?: number;
-
+  isCompatible?: boolean;
   // Rates
   rate?: {
     regular?: string;

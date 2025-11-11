@@ -16,6 +16,7 @@ import {
   Target,
   Filter,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -57,34 +58,195 @@ const TIER_CONFIG = {
     color: "bg-purple-500 text-purple-900",
     icon: Zap,
   },
-  pro: { label: "Pro", color: "bg-blue-500 text-blue-900", icon: Star },
-  free: { label: "Free", color: "bg-gray-500 text-gray-900", icon: null },
+  pro: { label: "Pro", color: "bg-blue-500 text-white", icon: Star },
+  free: { label: "Free", color: "bg-gray-300 text-gray-900", icon: null },
 };
 
 const CITIES = ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret"];
 const INSTRUMENTS = [
-  "guitar",
-  "piano",
-  "drums",
+  // Strings
   "violin",
-  "saxophone",
-  "vocalist",
-  "dj",
-  "mc",
+  "viola",
+  "cello",
+  "double bass",
+  "harp",
+  "guitar",
   "bass",
-];
+  "electric guitar",
+  "acoustic guitar",
+  "ukulele",
+  "mandolin",
+  "banjo",
 
+  // Woodwinds
+  "flute",
+  "clarinet",
+  "saxophone",
+  "oboe",
+  "bassoon",
+  "recorder",
+
+  // Brass
+  "trumpet",
+  "trombone",
+  "french horn",
+  "tuba",
+  "cornet",
+  "flugelhorn",
+
+  // Percussion
+  "drums",
+  "percussion",
+  "djembe",
+  "congas",
+  "bongos",
+  "marimba",
+  "xylophone",
+  "timpani",
+  "cymbals",
+  "triangle",
+  "tambourine",
+
+  // Keyboards
+  "piano",
+  "keyboard",
+  "organ",
+  "synthesizer",
+  "accordion",
+  "harpsichord",
+
+  // Vocals
+  "vocalist",
+  "soprano",
+  "alto",
+  "tenor",
+  "backing vocals",
+  "choir",
+
+  // Electronic
+  "dj",
+  "producer",
+  "electronic",
+  "drum machine",
+  "sampler",
+  "controller",
+
+  // World Instruments
+  "sitar",
+  "tabla",
+  "kora",
+  "didgeridoo",
+  "steel drums",
+  "kalimba",
+  "erhu",
+  "shakuhachi",
+  "bagpipes",
+
+  // Ensembles & Roles
+  "string quartet",
+  "jazz trio",
+  "band",
+  "orchestra",
+  "mc",
+  "conductor",
+  "composer",
+  "music director",
+  "session musician",
+  "entertainer",
+];
 const INSTRUMENT_ICONS: Record<string, string> = {
-  guitar: "🎸",
-  piano: "🎹",
-  drums: "🥁",
+  // Strings
   violin: "🎻",
-  saxophone: "🎷",
-  trumpet: "🎺",
+  viola: "🎻",
+  cello: "🎻",
+  "double bass": "🎻",
+  harp: "🎵",
+  guitar: "🎸",
   bass: "🎸",
+  "electric guitar": "🎸",
+  "acoustic guitar": "🎸",
+  ukulele: "🎵",
+  mandolin: "🎵",
+  banjo: "🎵",
+
+  // Woodwinds
+  flute: "🎵",
+  clarinet: "🎷",
+  saxophone: "🎷",
+  oboe: "🎵",
+  bassoon: "🎵",
+  recorder: "🎵",
+
+  // Brass
+  trumpet: "🎺",
+  trombone: "🎺",
+  "french horn": "🎺",
+  tuba: "🎺",
+  cornet: "🎺",
+  flugelhorn: "🎺",
+
+  // Percussion
+  drums: "🥁",
+  percussion: "🥁",
+  djembe: "🥁",
+  congas: "🥁",
+  bongos: "🥁",
+  marimba: "🎵",
+  xylophone: "🎵",
+  timpani: "🥁",
+  cymbals: "🥁",
+  triangle: "🎵",
+  tambourine: "🥁",
+
+  // Keyboards
+  piano: "🎹",
+  keyboard: "🎹",
+  organ: "🎹",
+  synthesizer: "🎹",
+  accordion: "🎵",
+  harpsichord: "🎹",
+
+  // Vocals
   vocalist: "🎤",
+  soprano: "🎤",
+  alto: "🎤",
+  tenor: "🎤",
+  "backing vocals": "🎤",
+  choir: "👥",
+
+  // Electronic
   dj: "🎧",
+  producer: "🎧",
+  electronic: "🎧",
+  "drum machine": "🎧",
+  sampler: "🎧",
+  controller: "🎧",
+
+  // World Instruments
+  sitar: "🎵",
+  tabla: "🥁",
+  kora: "🎵",
+  didgeridoo: "🎵",
+  "steel drums": "🥁",
+  kalimba: "🎵",
+  erhu: "🎻",
+  shakuhachi: "🎵",
+  bagpipes: "🎵",
+
+  // Ensembles & Roles
+  "string quartet": "🎻",
+  "jazz trio": "🎷",
+  band: "🎸",
+  orchestra: "🎵",
   mc: "🎤",
+  conductor: "🎼",
+  composer: "🎼",
+  "music director": "🎼",
+  "session musician": "🎵",
+  entertainer: "🎭",
+
+  // Default fallback
+  default: "🎵",
 };
 
 // Skeleton Loader Component
@@ -92,18 +254,18 @@ const MusicianCardSkeleton = memo(() => (
   <div className="rounded-2xl p-6 border border-gray-200 dark:border-gray-700 animate-pulse">
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+        <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-full"></div>
         <div className="space-y-2">
-          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24"></div>
+          <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-16"></div>
         </div>
       </div>
-      <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+      <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
     </div>
     <div className="space-y-3">
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-      <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded"></div>
+      <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-3/4"></div>
+      <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-1/2"></div>
+      <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded"></div>
     </div>
   </div>
 ));
@@ -140,16 +302,32 @@ const MusicianCard = memo(
       [musician.musiciangenres, musician.musiciangenres]
     );
 
+    // Enhanced tags with gigType context and compatibility
     const tags = useMemo(() => {
       const tagList = [];
+
+      // Show compatibility warning first if incompatible
+      if (selectedGigType && musician.isCompatible === false) {
+        tagList.push("Not Typical");
+      }
+
+      // Priority tags based on gigType matching
+      if (musician.isOptimalForGigType) tagList.push("Optimal Match");
       if (musician.verified) tagList.push("Verified");
+
+      // Experience tags
       if (musician.completedGigsCount && musician.completedGigsCount > 10)
         tagList.push("Experienced");
+      if (musician.completedGigsCount && musician.completedGigsCount > 50)
+        tagList.push("Veteran");
+
+      // Performance tags
       if (musician.reliabilityScore && musician.reliabilityScore > 90)
         tagList.push("Highly Reliable");
       if (musician.avgRating && musician.avgRating > 4.5)
         tagList.push("Top Rated");
-      if (musician.isOptimalForGigType) tagList.push("Optimal Match");
+      if (musician.avgRating && musician.avgRating > 4.8) tagList.push("Elite");
+
       return tagList.slice(0, 3);
     }, [
       musician.verified,
@@ -157,11 +335,37 @@ const MusicianCard = memo(
       musician.reliabilityScore,
       musician.avgRating,
       musician.isOptimalForGigType,
+      musician.isCompatible,
+      selectedGigType,
     ]);
 
     const instrumentIcon = musician.instrument
       ? INSTRUMENT_ICONS[musician.instrument.toLowerCase()] || "🎵"
       : "🎵";
+
+    // Get instrument-gigType compatibility display
+    const compatibilityDisplay = useMemo(() => {
+      if (!selectedGigType) return null;
+
+      const compatibility = musician.gigTypeCompatibility;
+      if (!compatibility) return null;
+
+      return {
+        score: compatibility,
+        label:
+          compatibility >= 80
+            ? "Perfect Fit"
+            : compatibility >= 60
+              ? "Good Fit"
+              : "Available",
+        color:
+          compatibility >= 80
+            ? "green"
+            : compatibility >= 60
+              ? "blue"
+              : "amber",
+      };
+    }, [selectedGigType, musician.gigTypeCompatibility]);
 
     return (
       <div
@@ -169,32 +373,61 @@ const MusicianCard = memo(
           "rounded-2xl p-6 border transition-all duration-200 hover:shadow-lg relative group cursor-pointer",
           colors.card,
           colors.border,
-          "hover:scale-[1.02] hover:border-amber-400",
-          musician.isOptimalForGigType && "ring-2 ring-green-500"
+          "hover:scale-[1.02] transform-gpu",
+          colors.hoverBg,
+          musician.isOptimalForGigType &&
+            "ring-2 ring-green-500 dark:ring-green-400",
+          // Dim incompatible musicians
+          selectedGigType &&
+            musician.isCompatible === false &&
+            "opacity-60 grayscale-[20%]"
         )}
       >
+        {/* Compatibility Warning */}
+        {selectedGigType && musician.isCompatible === false && (
+          <div className="absolute -top-2 -right-2">
+            <div
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold",
+                "bg-amber-500 text-white shadow-sm"
+              )}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Atypical
+            </div>
+          </div>
+        )}
         {/* Optimal Match Badge */}
         {musician.isOptimalForGigType && (
           <div className="absolute -top-2 -right-2">
-            <Badge className="bg-green-500 text-white text-xs">
-              <Target className="w-3 h-3 mr-1" />
-              Optimal
-            </Badge>
-          </div>
-        )}
-
-        {/* Compatibility Score */}
-        {selectedGigType && musician.gigTypeCompatibility && (
-          <div className="absolute -top-2 -left-2">
-            <Badge
-              variant="outline"
-              className="text-xs bg-blue-50 dark:bg-blue-900/30"
+            <div
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold",
+                "bg-green-500 text-white shadow-sm"
+              )}
             >
-              {musician.gigTypeCompatibility}% Match
-            </Badge>
+              <Target className="w-3 h-3" />
+              Optimal
+            </div>
           </div>
         )}
-
+        {/* Compatibility Score */}
+        {compatibilityDisplay && (
+          <div className="absolute -top-2 -left-2">
+            <div
+              className={cn(
+                "px-2 py-1 rounded-full text-xs font-semibold border shadow-sm",
+                compatibilityDisplay.color === "green"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800"
+                  : compatibilityDisplay.color === "blue"
+                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                    : cn(colors.warningBg, colors.warningBorder, colors.text)
+              )}
+            >
+              {compatibilityDisplay.score}% {compatibilityDisplay.label}
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -204,7 +437,12 @@ const MusicianCard = memo(
                 {musician.lastname?.[0] || musician.username?.[0] || "M"}
               </div>
               {musician.verified && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+                <div
+                  className={cn(
+                    "absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md border",
+                    colors.border
+                  )}
+                >
                   <Check className="w-3 h-3 text-white" />
                 </div>
               )}
@@ -218,9 +456,11 @@ const MusicianCard = memo(
               </div>
               <div className="flex items-center gap-2 mt-1">
                 {getTierBadge(musician.tier)}
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                  {musician.avgRating?.toFixed(1) || "New"}
+                <div className="flex items-center gap-1 text-sm">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <span className={colors.textMuted}>
+                    {musician.avgRating?.toFixed(1) || "New"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -232,26 +472,50 @@ const MusicianCard = memo(
             <div className={cn("text-xs", colors.textMuted)}>
               {selectedGigType ? `for ${selectedGigType}` : "per gig"}
             </div>
+            {/* Show compatibility warning in rate display */}
+            {selectedGigType && musician.isCompatible === false && (
+              <div className={cn("text-xs mt-1", colors.warningText)}>
+                Not typical for {selectedGigType}
+              </div>
+            )}
+            {/* Instrument-GigType Match Indicator */}
+            {selectedGigType &&
+              musician.instrument &&
+              musician.isCompatible !== false && (
+                <div className={cn("text-xs mt-1", colors.successText)}>
+                  {musician.instrument} • {selectedGigType}
+                </div>
+              )}
           </div>
         </div>
-
-        {/* Instrument and Role */}
+        {/* Instrument and Role with gigType context */}
         <div className="flex items-center gap-2 text-sm mb-3">
           <span className="text-lg">{instrumentIcon}</span>
           <span className={colors.text}>
-            {musician.instrument || musician.roleType || "Musician"}
+            {musician.instrument
+              ? musician.instrument
+              : musician.roleType === "dj"
+                ? "Deejay"
+                : musician.roleType === "mc"
+                  ? "EMCee"
+                  : musician.roleType === "vocalist"
+                    ? "Vocalist"
+                    : "Various Instruments"}
+            {selectedGigType && musician.isCompatible === false && (
+              <span className={cn("text-xs ml-2", colors.warningText)}>
+                • Unconventional
+              </span>
+            )}
           </span>
         </div>
-
         {/* Location */}
         {musician.city && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <MapPin className="w-3 h-3" />
-            {musician.city}
+          <div className="flex items-center gap-2 text-sm mb-4">
+            <MapPin className={cn("w-3 h-3", colors.primary)} />
+            <span className={colors.textMuted}>{musician.city}</span>
           </div>
         )}
-
-        {/* Genres */}
+        {/* Genres - Show genres relevant to the selected gigType */}
         <div className="flex flex-wrap gap-1 mb-3">
           {displayGenres.slice(0, 3).map((genre: string, index: number) => (
             <span
@@ -259,7 +523,11 @@ const MusicianCard = memo(
               className={cn(
                 "px-2 py-1 text-xs rounded-full border",
                 colors.border,
-                colors.textMuted
+                colors.textMuted,
+                // Highlight genres that match the gigType context
+                selectedGigType &&
+                  genre.toLowerCase().includes(selectedGigType.toLowerCase()) &&
+                  cn(colors.warningBg, colors.text)
               )}
             >
               {genre}
@@ -277,35 +545,77 @@ const MusicianCard = memo(
             </span>
           )}
         </div>
-
-        {/* Tags */}
+        {/* Enhanced Tags with gigType context */}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-4">
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-1 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded-full"
+                className={cn(
+                  "px-2 py-1 text-xs rounded-full font-medium border",
+                  tag === "Optimal Match"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800"
+                    : tag === "Not Typical"
+                      ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                      : tag === "Elite" || tag === "Top Rated"
+                        ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                        : cn(
+                            colors.warningBg,
+                            colors.warningBorder,
+                            colors.text
+                          )
+                )}
               >
                 {tag}
               </span>
             ))}
           </div>
         )}
-
-        {/* Stats */}
-        <div className="flex justify-between text-xs text-muted-foreground mb-4">
-          <span>{musician.completedGigsCount || 0} gigs</span>
-          <span>{musician.followers?.length || 0} followers</span>
-          <span>{musician.reliabilityScore || 0}% reliable</span>
+        {/* Stats with gigType context */}
+        <div
+          className={cn("flex justify-between text-xs mb-4", colors.textMuted)}
+        >
+          <div className="flex flex-col items-center">
+            <span className="font-semibold">
+              {musician.completedGigsCount || 0}
+            </span>
+            <span className="text-xs">gigs</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="font-semibold">
+              {musician.followers?.length || 0}
+            </span>
+            <span className="text-xs">followers</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="font-semibold">
+              {musician.reliabilityScore || 0}%
+            </span>
+            <span className="text-xs">reliable</span>
+          </div>
         </div>
-
-        {/* Action Button */}
+        {/* // Action Button with gigType context */}
         <Button
           onClick={() => onRequestToBook(musician)}
-          className="w-full bg-amber-500 hover:bg-amber-600 group-hover:scale-105 transition-transform"
+          className={cn(
+            "w-full group-hover:scale-105 transition-transform font-semibold",
+            colors.primaryBg,
+            colors.primaryBgHover,
+            colors.textInverted,
+            musician.isOptimalForGigType && "ring-2 ring-green-300",
+            // Style differently for incompatible musicians
+            selectedGigType &&
+              musician.isCompatible === false &&
+              "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700"
+          )}
+          disabled={selectedGigType ? musician.isCompatible === false : false} // FIXED: Explicit boolean
         >
           <Award className="w-4 h-4 mr-2" />
-          Request to Book
+          {selectedGigType && musician.isCompatible === false
+            ? "Not Typical Choice"
+            : selectedGigType
+              ? `Book for ${selectedGigType}`
+              : "Request to Book"}
         </Button>
       </div>
     );
@@ -585,10 +895,10 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
         <div
           className={cn(
             "p-4 rounded-2xl transition-all duration-200",
-            colors.card,
+            colors.backgroundMuted,
             colors.border,
             "border",
-            showFilters ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
+            showFilters ? colors.secondaryBackground : ""
           )}
         >
           <div className="flex flex-col sm:flex-row gap-4">
@@ -723,7 +1033,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
               <h3 className={cn("text-lg font-semibold mb-4", colors.text)}>
                 🏆 Featured Musicians
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 p-4">
                 {featuredMusicians.map((musician) => (
                   <MusicianCard
                     key={musician._id}
