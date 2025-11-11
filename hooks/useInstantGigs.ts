@@ -43,6 +43,7 @@ export const useInstantGigs = (userId: Id<"users">) => {
   // Memoize mutation wrappers
   const createGigWrapper = useCallback(
     async (gigData: any) => {
+      console.log("Creating gig with data:", gigData);
       return await createGig(gigData);
     },
     [createGig]

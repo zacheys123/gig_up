@@ -372,7 +372,7 @@ const INCOMPATIBLE_ROLE_COMBINATIONS: Record<string, string[]> = {
   concert: [], // All roles possible in concerts
   "private-party": [], // All roles welcome in private parties
   recording: ["mc", "dj"], // All roles possible in recording
-  individual: ["dj", "mc"], // All roles possible
+  individual: [], // All roles possible
   other: [], // All roles possible
 };
 

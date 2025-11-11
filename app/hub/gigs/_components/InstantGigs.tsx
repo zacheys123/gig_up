@@ -25,6 +25,8 @@ import { MyTemplatesTab } from "./tabs/MyTemplateTab";
 import { ProMusiciansTab } from "./ProMusicianTab";
 import { BookingModal } from "./tabs/BookingModal";
 import { useProMusicians } from "@/hooks/useProMusicians";
+import { EnhancedMusician } from "@/types/musician";
+import ConfirmPrompt from "@/components/ConfirmPrompt";
 
 // Memoize tab configuration
 const TAB_CONFIG = [
@@ -220,6 +222,12 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     "create" | "templates" | "musicians"
   >("create");
 
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdGigData, setCreatedGigData] = useState<{
+    musicianName: string;
+    templateTitle: string;
+    gigType: string;
+  } | null>(null);
   // Fixed scroll function
   const scrollToMusicians = useCallback(() => {
     // Switch to create tab first (where the templates are)
@@ -392,18 +400,53 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   );
 
   const handleRequestToBook = useCallback((musician: any) => {
-    setSelectedMusician(musician);
+    console.log("🎵 handleRequestToBook called with:", musician);
+
+    // It's okay if musician is null - that means we're opening the modal
+    // without a pre-selected musician
+    if (musician === null) {
+      console.log("✅ Opening booking modal without pre-selected musician");
+    } else if (musician && musician._id) {
+      console.log(
+        "✅ Opening booking modal with pre-selected musician:",
+        musician.firstname
+      );
+    } else {
+      console.error("❌ Invalid data passed to handleRequestToBook:", musician);
+      return;
+    }
+
+    setSelectedMusician(musician); // This can be null
     setShowBookingModal(true);
   }, []);
 
+  // Also update the BookingModal props to log what's being passed:
+  console.log("📦 Passing to BookingModal:", {
+    musician: selectedMusician,
+    musicianId: selectedMusician?._id,
+    hasTemplates: memoizedTemplates.length > 0,
+  });
+
   const handleSubmitBooking = useCallback(
-    async (templateId: string) => {
+    async (templateId: string, selectedMusician: EnhancedMusician) => {
       setIsLoading(true);
       try {
         const template = memoizedTemplates.find((t) => t.id === templateId);
-        if (!template || !selectedMusician) return;
+        if (!template || !selectedMusician) {
+          console.error("❌ Missing template or musician data");
+          return;
+        }
 
-        await createGig({
+        const musicianName =
+          `${selectedMusician.firstname || ""} ${selectedMusician.lastname || ""}`.trim() ||
+          selectedMusician.username ||
+          "Musician";
+        const clientName =
+          `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
+          user.username ||
+          "Client";
+
+        const bookingData = {
           title: template.title,
           description: template.description,
           date: template.date,
@@ -411,13 +454,26 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           budget: template.budget,
           gigType: template.gigType,
           duration: template.duration,
-          setlist: template.setlist,
+          setlist: template.setlist || "",
           clientId: userId,
-          clientName: user.name,
-          invitedMusicianId: selectedMusician.id,
-          musicianName: selectedMusician.name,
-        });
+          clientName: clientName,
+          invitedMusicianId: selectedMusician._id,
+          musicianName: musicianName,
+        };
 
+        console.log("🚀 Sending booking data to backend:", bookingData);
+
+        await createGig(bookingData);
+
+        // SUCCESS: Show success modal
+        setCreatedGigData({
+          musicianName: musicianName,
+          templateTitle: template.title,
+          gigType: template.gigType,
+        });
+        setShowSuccessModal(true);
+
+        // Close booking modal
         setShowBookingModal(false);
         setSelectedMusician(null);
       } catch (error) {
@@ -426,7 +482,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         setIsLoading(false);
       }
     },
-    [memoizedTemplates, selectedMusician, createGig, userId, user.name]
+    [memoizedTemplates, createGig, userId, user]
   );
 
   const handleTabChange = useCallback(
@@ -686,6 +742,35 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             </div>
           </div>
         )}
+
+      <ConfirmPrompt
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        onConfirm={() => {
+          // Navigate to invites tab
+          router.push("/hub/gigs?tab=invites"); // Adjust path as needed
+          setShowSuccessModal(false);
+        }}
+        onCancel={() => {
+          // Stay in instant gigs
+          setShowSuccessModal(false);
+        }}
+        title="🎉 Booking Request Sent!"
+        question={`Your booking request for "${createdGigData?.templateTitle}" has been sent to ${createdGigData?.musicianName}. They'll respond shortly.`}
+        userInfo={{
+          id: selectedMusician?._id || "",
+          name: createdGigData?.musicianName || "Musician",
+          username: selectedMusician?.username,
+          image: selectedMusician?.picture,
+          type: "musician",
+          instrument: selectedMusician?.instrument,
+          city: selectedMusician?.city,
+        }}
+        confirmText="View My Invites"
+        cancelText="Create Another Booking"
+        variant="success"
+        size="md"
+      />
     </div>
   );
 });

@@ -225,6 +225,7 @@ export const createInstantGig = mutation({
     fromTime: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    console.log(args);
     const gigId = await ctx.db.insert("instantgigs", {
       ...args,
       status: "pending",

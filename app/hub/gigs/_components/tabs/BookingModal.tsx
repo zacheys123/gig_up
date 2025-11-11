@@ -30,7 +30,10 @@ interface BookingModalProps {
   onClose: () => void;
   musician: EnhancedMusician | null;
   templates: GigTemplate[];
-  onSubmitBooking: (templateId: string) => void;
+  onSubmitBooking: (
+    templateId: string,
+    selectedMusician: EnhancedMusician
+  ) => void;
   isLoading: boolean;
   musicians?: EnhancedMusician[];
 }
@@ -640,19 +643,20 @@ const TemplatePreview = memo(
 );
 
 TemplatePreview.displayName = "TemplatePreview";
-
-// ActionButtons Component
+// Update ActionButtons to pass the musician:
 const ActionButtons = memo(
   ({
     onClose,
     selectedTemplate,
+    selectedMusician,
     onSubmitBooking,
     isLoading,
     colors,
   }: {
     onClose: () => void;
     selectedTemplate: string | null;
-    onSubmitBooking: (templateId: string) => void;
+    selectedMusician: EnhancedMusician | null;
+    onSubmitBooking: (templateId: string, musician: EnhancedMusician) => void; // UPDATE
     isLoading: boolean;
     colors: any;
   }) => (
@@ -667,11 +671,15 @@ const ActionButtons = memo(
         Cancel
       </Button>
       <Button
-        onClick={() => selectedTemplate && onSubmitBooking(selectedTemplate)}
-        disabled={!selectedTemplate || isLoading}
+        onClick={() =>
+          selectedTemplate &&
+          selectedMusician &&
+          onSubmitBooking(selectedTemplate, selectedMusician)
+        } // UPDATE
+        disabled={!selectedTemplate || !selectedMusician || isLoading}
         className={cn(
           "flex-1 text-sm transition-all duration-200",
-          selectedTemplate && !isLoading
+          selectedTemplate && selectedMusician && !isLoading
             ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
             : "bg-gray-400 cursor-not-allowed"
         )}
@@ -718,28 +726,49 @@ export const BookingModal: React.FC<BookingModalProps> = memo(
       () => templates.find((t) => t.id === selectedTemplate),
       [templates, selectedTemplate]
     );
-
+    // In your BookingModal component, update the handleSubmit function:
     const handleSubmit = useCallback(() => {
-      if (selectedTemplate && selectedMusician) {
-        onSubmitBooking(selectedTemplate);
+      console.log("🚀 Submitting booking with:", {
+        templateId: selectedTemplate,
+        musician: selectedMusician,
+        musicianId: selectedMusician?._id,
+      });
+
+      if (selectedTemplate && selectedMusician && selectedMusician._id) {
+        // Pass both templateId AND selectedMusician to the parent
+        onSubmitBooking(selectedTemplate, selectedMusician);
+      } else {
+        console.error("❌ Missing data for booking:", {
+          hasTemplate: !!selectedTemplate,
+          hasMusician: !!selectedMusician,
+          hasMusicianId: !!selectedMusician?._id,
+        });
+
+        if (!selectedMusician?._id) {
+          alert("Please select a musician before booking");
+        }
       }
     }, [selectedTemplate, selectedMusician, onSubmitBooking]);
-
     const handleClose = useCallback(() => {
       setSelectedTemplate(null);
       setSelectedMusician(null);
       setShowMusicianList(false);
       onClose();
     }, [onClose]);
-
-    // Clean reset - no pre-selection
+    // In your BookingModal component, update the useEffect:
     React.useEffect(() => {
       if (isOpen) {
+        // If musician is null, that's fine - user will select one in the modal
+        if (musician) {
+          setSelectedMusician(musician);
+        } else {
+          setSelectedMusician(null); // No pre-selected musician
+        }
+
         setSelectedTemplate(null);
-        setSelectedMusician(null);
         setShowMusicianList(false);
       }
-    }, [isOpen]);
+    }, [isOpen, musician]);
 
     if (!isOpen) return null;
 
@@ -842,6 +871,11 @@ export const BookingModal: React.FC<BookingModalProps> = memo(
                               musician={m}
                               isSelected={selectedMusician?._id === m._id}
                               onSelect={() => {
+                                console.log("🎵 Musician selected in modal:", {
+                                  id: m._id,
+                                  name: m.firstname,
+                                  instrument: m.instrument,
+                                });
                                 setSelectedMusician(m);
                                 setShowMusicianList(false);
                               }}
@@ -949,6 +983,7 @@ export const BookingModal: React.FC<BookingModalProps> = memo(
                     <ActionButtons
                       onClose={handleClose}
                       selectedTemplate={selectedTemplate}
+                      selectedMusician={selectedMusician} // ADD THIS
                       onSubmitBooking={handleSubmit}
                       isLoading={isLoading}
                       colors={colors}

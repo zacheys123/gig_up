@@ -194,9 +194,7 @@ const EmptyState = memo(
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button
-          onClick={() =>
-            onRequestToBook({ id: "browse", name: "Browse Musicians" })
-          }
+          onClick={() => onRequestToBook(null)} // Pass null instead of fake data
           disabled={isRefetching || isLoading}
         >
           <Users className="w-4 h-4 mr-2" />
@@ -284,9 +282,13 @@ export const MyTemplatesTab: React.FC<MyTemplatesTabProps> = memo(
 
     const handleUse = useCallback(() => {
       if (isRefetching) return;
-      onRequestToBook({ id: "template", name: "Select Musician" });
-    }, [onRequestToBook, isRefetching]);
 
+      console.log("📋 Opening booking modal with template selection");
+
+      // Pass null for musician since we don't have one selected yet
+      // The BookingModal will handle musician selection
+      onRequestToBook(null);
+    }, [onRequestToBook, isRefetching]);
     const handleRetry = useCallback(async () => {
       await refetchTemplates();
     }, [refetchTemplates]);

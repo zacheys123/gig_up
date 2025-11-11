@@ -557,7 +557,13 @@ const ActionPage = () => {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {(
-                    ["instrumentalist", "dj", "mc", "vocalist"] as RoleType[]
+                    [
+                      "instrumentalist",
+                      "dj",
+                      "mc",
+                      "vocalist",
+                      "teacher",
+                    ] as RoleType[]
                   ).map((role) => (
                     <button
                       key={role}
