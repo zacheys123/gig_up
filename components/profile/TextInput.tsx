@@ -7,7 +7,7 @@ import { ReactNode } from "react";
 import { useThemeColors } from "@/hooks/useTheme";
 
 interface TextInputProps {
-  label: string;
+  label?: string;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;

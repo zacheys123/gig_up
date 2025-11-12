@@ -956,10 +956,11 @@ const CurrentUserProfile = () => {
   };
 
   // Enhanced validation function with proper role separation
+  // Enhanced validation function - NO REQUIRED FIELDS
   const validateProfile = (): ValidationError[] => {
     const errors: ValidationError[] = [];
 
-    // Phone validation
+    // Phone validation (only if provided)
     if (phone && phone.trim() !== "") {
       const phoneValidation = validateKenyanPhone(phone);
       if (!phoneValidation.isValid) {
@@ -972,61 +973,59 @@ const CurrentUserProfile = () => {
       }
     }
 
-    // Make phone required for musicians and bookers
-    if ((isMusician || isBooker) && (!phone || phone.trim() === "")) {
-      errors.push({
-        field: "phone",
-        message: "Phone number is required for professional accounts",
-        importance: "high",
-      });
-    }
-
-    // MUSICIAN-SPECIFIC VALIDATIONS
+    // MUSICIAN-SPECIFIC RECOMMENDATIONS (not requirements)
     if (isMusician && !isBooker) {
+      // Role type recommendation
       if (!roleType) {
         errors.push({
           field: "roleType",
-          message: "Please select your role type",
-          importance: "high",
+          message: "Selecting a role type helps clients find you more easily",
+          importance: "medium",
+          type: "recommendation",
         });
       }
 
-      // Instrument validation only for instrumentalists and teachers
+      // Instrument recommendation for instrumentalists and teachers
       if (
         (roleType === "instrumentalist" || roleType === "teacher") &&
         !instrument
       ) {
         errors.push({
           field: "instrument",
-          message: "Instrument is required",
-          importance: "high",
+          message:
+            "Adding your primary instrument helps clients understand your skills",
+          importance: "medium",
+          type: "recommendation",
         });
       }
 
-      // DJ-specific validations
+      // Genre-specific recommendations
       if (roleType === "dj" && !djGenre) {
         errors.push({
           field: "djGenre",
-          message: "DJ genre is required",
-          importance: "high",
+          message: "Specifying your DJ genre helps attract the right clients",
+          importance: "medium",
+          type: "recommendation",
         });
       }
 
-      // MC-specific validations
       if (roleType === "mc" && !mcType) {
         errors.push({
           field: "mcType",
-          message: "MC type is required",
-          importance: "high",
+          message:
+            "Specifying your MC type helps clients understand your hosting style",
+          importance: "medium",
+          type: "recommendation",
         });
       }
 
-      // Vocalist-specific validations
       if (roleType === "vocalist" && !vocalistGenre) {
         errors.push({
           field: "vocalistGenre",
-          message: "Vocal genre is required",
-          importance: "high",
+          message:
+            "Specifying your vocal genre helps attract the right clients",
+          importance: "medium",
+          type: "recommendation",
         });
       }
 
@@ -1062,6 +1061,7 @@ const CurrentUserProfile = () => {
         }
       }
 
+      // Rate recommendation (not requirement)
       const hasBaseRate = rate.baseRate && rate.baseRate.trim() !== "";
       const hasCategoryRates = rate.categories.some(
         (cat) => cat.rate && cat.rate.trim() !== ""
@@ -1073,7 +1073,6 @@ const CurrentUserProfile = () => {
         corporate: rate.corporate,
       }).some((value) => value && value.trim() !== "");
 
-      // Check if ANY rate is set (not required, but recommended)
       const hasAnyRates = hasBaseRate || hasCategoryRates || hasLegacyRates;
 
       if (!hasAnyRates) {
@@ -1082,11 +1081,11 @@ const CurrentUserProfile = () => {
           message:
             "Adding rates significantly increases your booking chances. Consider setting your rates to attract more clients.",
           importance: "medium",
-          type: "recommendation", // Now this will work with the updated type
+          type: "recommendation",
         });
       }
 
-      // Videos validation (recommended for musicians)
+      // Videos recommendation
       if (videos.length === 0) {
         errors.push({
           field: "videos",
@@ -1097,45 +1096,29 @@ const CurrentUserProfile = () => {
       }
     }
 
-    // BOOKER-SPECIFIC VALIDATIONS
+    // BOOKER-SPECIFIC RECOMMENDATIONS
     if (isBooker) {
       if (!organization) {
         errors.push({
           field: "organization",
-          message: "Company/Organization name is required for bookers",
-          importance: "high",
+          message:
+            "Adding your company/organization name builds credibility with artists",
+          importance: "medium",
+          type: "recommendation",
         });
       }
       if (bookerSkills.length === 0) {
         errors.push({
           field: "bookerSkills",
-          message: "At least one booker skill is required",
-          importance: "high",
+          message:
+            "Adding your booking skills helps artists understand your expertise",
+          importance: "medium",
+          type: "recommendation",
         });
       }
     }
 
-    // Date of Birth validation (for musicians and bookers)
-    if ((isMusician || isBooker) && (!age || !month || !year)) {
-      errors.push({
-        field: "dateOfBirth",
-        message: VALIDATION_MESSAGES.dateOfBirth.required,
-        importance: "high",
-      });
-    } else if (
-      (isMusician || isBooker) &&
-      (isNaN(Number(year)) ||
-        Number(year) < 1900 ||
-        Number(year) > new Date().getFullYear())
-    ) {
-      errors.push({
-        field: "dateOfBirth",
-        message: VALIDATION_MESSAGES.dateOfBirth.invalid,
-        importance: "high",
-      });
-    }
-
-    // Essential profile fields validation (all roles)
+    // Profile completeness recommendations
     const essentialFields = [
       { value: firstname, field: "firstname", name: "First Name" },
       { value: lastname, field: "lastname", name: "Last Name" },
@@ -1153,56 +1136,38 @@ const CurrentUserProfile = () => {
     if (missingEssential.length > 0) {
       errors.push({
         field: "profile",
-        message: `Complete your ${missingEssential.map((f) => f.name).join(", ")} to make your profile stand out. ${VALIDATION_MESSAGES.profile.incomplete}`,
-        importance: "high",
+        message: `Complete your ${missingEssential.map((f) => f.name).join(", ")} to make your profile stand out.`,
+        importance: "medium",
+        type: "recommendation",
       });
     }
 
     return errors;
   };
-
   const handleUpdate = async () => {
     if (!user) return;
 
-    // Run validation
+    // Run validation (only recommendations, no requirements)
     const validationErrors = validateProfile();
-    const blockingErrors = validationErrors.filter(
-      (error) => error.importance === "high"
-    );
 
-    // Handle validation errors
+    // Handle validation errors (only show recommendations)
     if (validationErrors.length > 0) {
       setValidationErrors(validationErrors);
 
-      if (blockingErrors.length > 0) {
-        toast.error(
-          `Complete ${blockingErrors.length} required field(s) to save`,
-          {
-            description: "Scroll up to see what's missing",
-            action: {
-              label: "View Issues",
-              onClick: () => scrollToValidationSummary(),
-            },
-          }
-        );
-        scrollToValidationSummary();
-        return;
-      } else {
-        toast.warning(
-          `Profile can be saved, but ${validationErrors.length} recommendation(s) found`,
-          {
-            description: "Consider completing these for better results",
-            action: {
-              label: "View Tips",
-              onClick: () => scrollToValidationSummary(),
-            },
-          }
-        );
-        scrollToValidationSummary();
-      }
+      toast.warning(
+        `Profile saved with ${validationErrors.length} recommendation(s)`,
+        {
+          description: "Consider these tips to improve your profile",
+          action: {
+            label: "View Tips",
+            onClick: () => scrollToValidationSummary(),
+          },
+        }
+      );
+      scrollToValidationSummary();
     }
 
-    // Proceed with saving
+    // Proceed with saving (ALWAYS allow saving)
     try {
       setLoading(true);
 
@@ -1229,29 +1194,43 @@ const CurrentUserProfile = () => {
         experience,
       };
 
-      // Role-specific data
+      // Role-specific data with legacy field restrictions
       const roleSpecificData = isBooker
         ? {
-            // Booker-specific fields
+            // Booker-specific fields (no legacy rates)
             bookerSkills,
             bookerBio,
-            musiciangenres: [], // Bookers don't need genres
-            instrument: "", // Bookers don't need instruments
-            roleType: "", // Bookers don't need roleType
+            musiciangenres: [],
+            instrument: "",
+            roleType: "",
             djGenre: "",
             djEquipment: "",
             mcType: "",
             mcLanguages: "",
             vocalistGenre: "",
-            teacherSpecialization: "", // Bookers don't need teacher fields
+            teacherSpecialization: "",
             teachingStyle: "",
             lessonFormat: "",
             studentAgeGroup: "",
-            rate: { regular: "", function: "", concert: "", corporate: "" }, // Bookers don't need rates
+            rate: {
+              baseRate: rate.baseRate,
+              rateType: rate.rateType,
+              currency: rate.currency,
+              categories: rate.categories,
+              negotiable: rate.negotiable,
+              depositRequired: rate.depositRequired,
+              travelIncluded: rate.travelIncluded,
+              travelFee: rate.travelFee,
+              // Bookers cannot set legacy fields
+              regular: "",
+              function: "",
+              concert: "",
+              corporate: "",
+            },
           }
         : isMusician
           ? {
-              // Musician-specific fields (INCLUDES TEACHER)
+              // Musician-specific fields
               musiciangenres: genre,
               instrument:
                 roleType === "instrumentalist" || roleType === "teacher"
@@ -1278,17 +1257,33 @@ const CurrentUserProfile = () => {
                 depositRequired: rate.depositRequired,
                 travelIncluded: rate.travelIncluded,
                 travelFee: rate.travelFee,
-                // Keep legacy fields for backward compatibility
-                regular: rate.regular,
-                function: rate.function,
-                concert: rate.concert,
-                corporate: rate.corporate,
+                // Only allow legacy fields for specific roles
+                regular: ["instrumentalist", "vocalist", "dj"].includes(
+                  roleType
+                )
+                  ? rate.regular
+                  : "",
+                function: ["instrumentalist", "vocalist", "dj"].includes(
+                  roleType
+                )
+                  ? rate.function
+                  : "",
+                concert: ["instrumentalist", "vocalist", "dj"].includes(
+                  roleType
+                )
+                  ? rate.concert
+                  : "",
+                corporate: ["instrumentalist", "vocalist", "dj"].includes(
+                  roleType
+                )
+                  ? rate.corporate
+                  : "",
               },
               bookerSkills: [],
               bookerBio: "",
             }
           : {
-              // Client-specific fields
+              // Client-specific fields (no legacy rates)
               musiciangenres: [],
               instrument: "",
               roleType: "",
@@ -1301,7 +1296,20 @@ const CurrentUserProfile = () => {
               teachingStyle: "",
               lessonFormat: "",
               studentAgeGroup: "",
-              rate: { regular: "", function: "", concert: "", corporate: "" },
+              rate: {
+                baseRate: "",
+                rateType: "hourly",
+                currency: "KES",
+                categories: [],
+                negotiable: false,
+                depositRequired: false,
+                travelIncluded: false,
+                travelFee: "",
+                regular: "",
+                function: "",
+                concert: "",
+                corporate: "",
+              },
               bookerSkills: [],
               bookerBio: "",
             };
@@ -1311,11 +1319,16 @@ const CurrentUserProfile = () => {
         ...roleSpecificData,
       };
 
+      // Remove undefined values to avoid type conflicts
+      const cleanUpdateData = Object.fromEntries(
+        Object.entries(updateData).filter(([_, value]) => value !== undefined)
+      );
+
       await updateUser({
         userId: user._id as Id<"users">,
         clerkId: user.clerkId,
         onboardingComplete: true,
-        updates: updateData,
+        updates: cleanUpdateData,
       });
 
       setValidationErrors([]);
