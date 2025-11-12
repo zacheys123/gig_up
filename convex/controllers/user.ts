@@ -165,11 +165,44 @@ export const updateUserProfile = mutation({
       // Role flags
       isMusician: v.optional(v.boolean()),
       isClient: v.optional(v.boolean()),
-      isBooker: v.optional(v.boolean()), // NEW: Booker flag
+      isBooker: v.optional(v.boolean()),
 
-      // Rates
+      // UPDATED: New Rate Structure
       rate: v.optional(
         v.object({
+          // Basic rate info
+          baseRate: v.optional(v.string()),
+          rateType: v.optional(
+            v.union(
+              v.literal("hourly"),
+              v.literal("daily"),
+              v.literal("per_session"),
+              v.literal("per_gig"),
+              v.literal("monthly"),
+              v.literal("custom")
+            )
+          ),
+          currency: v.optional(v.string()),
+
+          // Categories
+          categories: v.optional(
+            v.array(
+              v.object({
+                name: v.string(),
+                rate: v.string(),
+                rateType: v.optional(v.string()),
+                description: v.optional(v.string()),
+              })
+            )
+          ),
+
+          // Modifiers
+          negotiable: v.optional(v.boolean()),
+          depositRequired: v.optional(v.boolean()),
+          travelIncluded: v.optional(v.boolean()),
+          travelFee: v.optional(v.string()),
+
+          // Legacy fields for backward compatibility
           regular: v.optional(v.string()),
           function: v.optional(v.string()),
           concert: v.optional(v.string()),
@@ -185,7 +218,13 @@ export const updateUserProfile = mutation({
       mcLanguages: v.optional(v.string()),
       vocalistGenre: v.optional(v.string()),
 
-      // NEW: Booker-specific fields
+      // Teacher-specific fields
+      teacherSpecialization: v.optional(v.string()),
+      teachingStyle: v.optional(v.string()),
+      lessonFormat: v.optional(v.string()),
+      studentAgeGroup: v.optional(v.string()),
+
+      // Booker-specific fields
       bookerSkills: v.optional(v.array(v.string())),
       bookerBio: v.optional(v.string()),
       managedBands: v.optional(v.array(v.string())),
@@ -344,16 +383,17 @@ export const getBookers = query({
   },
 });
 // convex/controllers/user.ts
+// convex/user.ts
 export const updateUserAsMusician = mutation({
   args: {
     clerkId: v.string(),
     updates: v.object({
       isMusician: v.boolean(),
       isClient: v.boolean(),
-      isBooker: v.optional(v.boolean()), // NEW
-      bookerSkills: v.optional(v.array(v.string())), // NEW
-      bookerBio: v.optional(v.string()), // NEW
-      managedBands: v.optional(v.array(v.string())), // NEW
+      isBooker: v.optional(v.boolean()),
+      bookerSkills: v.optional(v.array(v.string())),
+      bookerBio: v.optional(v.string()),
+      managedBands: v.optional(v.array(v.string())),
       city: v.string(),
       instrument: v.optional(v.string()),
       experience: v.string(),
@@ -365,6 +405,11 @@ export const updateUserAsMusician = mutation({
       talentbio: v.string(),
       vocalistGenre: v.optional(v.string()),
       organization: v.optional(v.string()),
+      // NEW: Teacher specific fields
+      teacherSpecialization: v.optional(v.string()),
+      teachingStyle: v.optional(v.string()),
+      lessonFormat: v.optional(v.string()),
+      studentAgeGroup: v.optional(v.string()),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
       monthlyGigsPosted: v.optional(v.number()),

@@ -2,7 +2,7 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { VALIDATION_MESSAGES, ValidationError } from "@/types/validation";
 import { motion } from "framer-motion";
-import { Briefcase, ChevronRight, X } from "lucide-react";
+import { Briefcase, ChevronRight, X, Star, TrendingUp } from "lucide-react";
 
 export const ValidationSummary = ({
   errors,
@@ -22,6 +22,14 @@ export const ValidationSummary = ({
     (error) => error.importance === "medium"
   );
 
+  // Separate recommendations from other medium priority warnings
+  const recommendations = errors.filter(
+    (error) => error.type === "recommendation"
+  );
+  const otherWarnings = mediumPriorityWarnings.filter(
+    (error) => error.type !== "recommendation"
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -38,11 +46,15 @@ export const ValidationSummary = ({
             "p-2 rounded-full",
             highPriorityErrors.length > 0
               ? colors.destructive
-              : colors.warningText
+              : recommendations.length > 0
+                ? "bg-amber-500 text-white"
+                : colors.warningText
           )}
         >
           {highPriorityErrors.length > 0 ? (
             <X size={20} />
+          ) : recommendations.length > 0 ? (
+            <TrendingUp size={20} />
           ) : (
             <Briefcase size={20} />
           )}
@@ -51,12 +63,16 @@ export const ValidationSummary = ({
           <h3 className={cn("font-semibold text-lg mb-1", colors.text)}>
             {highPriorityErrors.length > 0
               ? "Complete Your Profile to Continue"
-              : "Profile Recommendations"}
+              : recommendations.length > 0
+                ? "Boost Your Profile"
+                : "Profile Recommendations"}
           </h3>
           <p className={cn("text-sm", colors.textMuted)}>
             {highPriorityErrors.length > 0
               ? "Please address these required fields to unlock all platform features"
-              : "Improve your profile to get more bookings and visibility"}
+              : recommendations.length > 0
+                ? "Small improvements can significantly increase your booking chances"
+                : "Improve your profile to get more bookings and visibility"}
           </p>
         </div>
       </div>
@@ -109,13 +125,94 @@ export const ValidationSummary = ({
         </div>
       )}
 
-      {/* Medium Priority Warnings */}
-      {mediumPriorityWarnings.length > 0 && (
+      {/* Recommendations (Special styling for rates and other recommendations) */}
+      {recommendations.length > 0 && (
+        <div className="space-y-3 mb-4">
+          <h4
+            className={cn(
+              "font-medium text-sm mb-2 flex items-center gap-2",
+              colors.text
+            )}
+          >
+            <Star className="h-4 w-4 text-amber-500" />
+            Boost Your Bookings
+          </h4>
+          {recommendations.map((recommendation, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              onClick={() => onFieldClick(recommendation.field)}
+              className={cn(
+                "flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
+                "hover:shadow-md hover:scale-[1.02]",
+                "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20",
+                colors.text
+              )}
+            >
+              <div className="flex-shrink-0 w-2 h-2 rounded-full mt-2 bg-amber-500" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p
+                    className={cn(
+                      "text-sm font-medium",
+                      "text-amber-800 dark:text-amber-300"
+                    )}
+                  >
+                    {getFieldDisplayName(recommendation.field)}
+                  </p>
+                  {recommendation.field === "rates" && (
+                    <span className="px-2 py-1 text-xs bg-amber-500 text-white rounded-full font-medium">
+                      +3x Bookings
+                    </span>
+                  )}
+                </div>
+                <p
+                  className={cn(
+                    "text-sm leading-relaxed",
+                    "text-amber-700 dark:text-amber-400"
+                  )}
+                >
+                  {recommendation.message}
+                </p>
+                {/* Additional benefits for rates */}
+                {recommendation.field === "rates" && (
+                  <div className="mt-2 grid grid-cols-1 gap-1 text-xs">
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                      <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                      <span>Get 3x more booking requests</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                      <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                      <span>Faster client decisions</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                      <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                      <span>Professional appearance</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <ChevronRight
+                size={16}
+                className={cn(
+                  "flex-shrink-0 mt-1",
+                  "text-amber-600 dark:text-amber-400"
+                )}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Other Medium Priority Warnings */}
+      {otherWarnings.length > 0 && (
         <div className="space-y-3">
           <h4 className={cn("font-medium text-sm mb-2", colors.text)}>
             Recommendations
           </h4>
-          {mediumPriorityWarnings.map((warning, index) => (
+          {otherWarnings.map((warning, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -10 }}
@@ -174,11 +271,25 @@ export const ValidationSummary = ({
           <div
             className={cn(
               "h-2 rounded-full transition-all duration-500",
-              highPriorityErrors.length > 0 ? colors.warning : "bg-green-500"
+              highPriorityErrors.length > 0
+                ? colors.warning
+                : recommendations.length > 0
+                  ? "bg-amber-500"
+                  : "bg-green-500"
             )}
             style={{ width: `${calculateCompletionPercentage(errors)}%` }}
           />
         </div>
+        {recommendations.length > 0 && highPriorityErrors.length === 0 && (
+          <p
+            className={cn(
+              "text-xs mt-2 text-center",
+              "text-amber-600 dark:text-amber-400"
+            )}
+          >
+            Great start! Adding rates could boost your bookings significantly.
+          </p>
+        )}
       </div>
     </motion.div>
   );
@@ -202,15 +313,19 @@ export const getFieldDisplayName = (field: string): string => {
     djGenre: "DJ Genre",
     mcType: "MC Type",
     vocalistGenre: "Vocal Genre",
-    bookerSkills: "Booker Skills", // NEW
-    organization: "Company/Organization", // UPDATED
+    bookerSkills: "Booker Skills",
+    organization: "Company/Organization",
+    teacherSpecialization: "Teaching Specialization",
+    teachingStyle: "Teaching Style",
+    lessonFormat: "Lesson Format",
+    studentAgeGroup: "Student Age Group",
   };
   return displayNames[field] || field;
 };
 
 // Helper function to calculate completion percentage
 const calculateCompletionPercentage = (errors: ValidationError[]): number => {
-  const totalFields = 10; // Adjust based on your actual required fields
+  const totalFields = 12; // Adjust based on your actual required fields
   const highPriorityErrors = errors.filter(
     (error) => error.importance === "high"
   ).length;

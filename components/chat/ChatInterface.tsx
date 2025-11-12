@@ -589,7 +589,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
             <Avatar className="w-8 h-8">
               <AvatarImage src={otherParticipant?.picture} />
               <AvatarFallback className={cn("text-xs", colors.text)}>
-                {otherParticipant?.firstname?.[0]}
+                {currentUser?.firstname?.[0]}
                 {otherParticipant?.lastname?.[0]}
               </AvatarFallback>
             </Avatar>

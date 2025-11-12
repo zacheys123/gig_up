@@ -3,6 +3,7 @@ export interface ValidationError {
   field: string;
   message: string;
   importance: "high" | "medium" | "low";
+  type?: "error" | "warning" | "recommendation"; // ADD THIS OPTIONAL PROPERTY
 }
 
 export const VALIDATION_MESSAGES = {
@@ -24,10 +25,10 @@ export const VALIDATION_MESSAGES = {
 
   // Rates
   rates: {
-    required:
-      "Performance rates help clients understand your pricing and book you confidently.",
-    invalid:
-      "Please set realistic rates to attract the right clients and opportunities.",
+    recommended:
+      "Adding rates makes you 3x more likely to get booked. Clients prefer artists with clear pricing.",
+    incomplete:
+      "Consider adding rates to showcase your value and attract more bookings.",
   },
 
   // Videos

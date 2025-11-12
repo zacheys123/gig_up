@@ -31,6 +31,7 @@ import {
   Shield,
   Bell,
   Briefcase,
+  GraduationCap,
 } from "lucide-react";
 import LoadingSpinner from "./loading";
 import { cn } from "@/lib/utils";
@@ -61,7 +62,7 @@ export default function Home() {
     setIsClientSide(true);
   }, []);
 
-  // ✅ UPDATED: Profile completion logic for all roles
+  // ✅ UPDATED: Profile completion logic for all roles including teacher
   const isProfileComplete =
     isAuthenticated &&
     user &&
@@ -72,6 +73,8 @@ export default function Home() {
       user.month &&
       user.year &&
       user.roleType) ||
+      // For teachers: require date of birth + role type
+      (user.date && user.month && user.year && user.roleType) ||
       // For clients: only require basic profile completion
       (user.isClient && user.firstname) ||
       // For bookers: require basic profile completion
@@ -97,41 +100,40 @@ export default function Home() {
     }
   }, [isAuthenticated, user, shouldShowProfileModal]);
 
-  const completionPercentage = user?.isMusician
-    ? Math.round(
-        (((user?.firstname ? 1 : 0) +
-          (user?.date ? 1 : 0) +
-          (user?.month ? 1 : 0) +
-          (user?.year ? 1 : 0) +
-          (user?.isMusician ? 1 : 0) +
-          (user?.firstTimeInProfile === false ? 1 : 0)) /
-          6) *
-          100
-      )
-    : Math.round(
-        (((user?.firstname ? 1 : 0) +
-          (user?.isClient || user?.isBooker ? 1 : 0) +
-          (user?.firstTimeInProfile === false ? 1 : 0)) /
-          3) *
-          100
-      );
+  const completionPercentage =
+    user?.isMusician || user?.roleType === "teacher"
+      ? Math.round(
+          (((user?.firstname ? 1 : 0) +
+            (user?.date ? 1 : 0) +
+            (user?.month ? 1 : 0) +
+            (user?.year ? 1 : 0) +
+            (user?.isMusician || user?.roleType === "teacher" ? 1 : 0) +
+            (user?.firstTimeInProfile === false ? 1 : 0)) /
+            6) *
+            100
+        )
+      : Math.round(
+          (((user?.firstname ? 1 : 0) +
+            (user?.isClient || user?.isBooker ? 1 : 0) +
+            (user?.firstTimeInProfile === false ? 1 : 0)) /
+            3) *
+            100
+        );
 
   const getDynamicHref = () => {
     if (!userId || !user?.firstname) return `/profile`;
     if (!user?.isClient && !user?.isMusician && !user?.isBooker)
       return `/roles/${userId}`;
 
-    // All roles go to gigs hub with role-specific default tabs
+    // All roles go to appropriate hubs with role-specific default tabs
     if (user?.isClient) {
-      return !user?.onboardingComplete
-        ? `/dashboard`
-        : `/hub/gigs?tab=create_gigs`; // Changed from 'create' to 'my-gigs'
+      return !user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=my_gigs`; // Changed to my_gigs for clients
     }
 
     if (user?.isBooker) {
       return !user?.onboardingComplete
         ? `/dashboard`
-        : `/hub/gigs?tab=applications`;
+        : `/hub/gigs?tab=applications`; // Changed to managed_gigs for bookers
     }
 
     if (user?.isMusician) {
@@ -199,6 +201,29 @@ export default function Home() {
     },
   ];
 
+  const teacherFeatures = [
+    {
+      icon: <GraduationCap className="w-12 h-12 text-indigo-500" />,
+      title: "Teach Students",
+      description: "Offer music lessons and share your expertise.",
+    },
+    {
+      icon: <Calendar className="w-12 h-12 text-blue-500" />,
+      title: "Schedule Lessons",
+      description: "Manage your teaching schedule and availability.",
+    },
+    {
+      icon: <Users className="w-12 h-12 text-purple-500" />,
+      title: "Build Student Base",
+      description: "Grow your roster of dedicated music students.",
+    },
+    {
+      icon: <Star className="w-12 h-12 text-amber-500" />,
+      title: "Share Knowledge",
+      description: "Create educational content and teaching materials.",
+    },
+  ];
+
   const clientFeatures = [
     {
       icon: <Music className="w-12 h-12 text-green-500" />,
@@ -248,15 +273,18 @@ export default function Home() {
   const currentFeatures = isAuthenticated
     ? user?.isMusician
       ? musicianFeatures
-      : user?.isClient
-        ? clientFeatures
-        : user?.isBooker
-          ? bookerFeatures
-          : guestFeatures
+      : user?.roleType === "teacher"
+        ? teacherFeatures
+        : user?.isClient
+          ? clientFeatures
+          : user?.isBooker
+            ? bookerFeatures
+            : guestFeatures
     : guestFeatures;
 
   const getUserRoleDisplay = () => {
     if (user?.isMusician) return "Musician";
+    if (user?.roleType === "teacher") return "Teacher";
     if (user?.isClient) return "Client";
     if (user?.isBooker) return "Booker";
     return "User";
@@ -264,6 +292,7 @@ export default function Home() {
 
   const getWelcomeMessage = () => {
     if (user?.isMusician) return "Ready to Perform?";
+    if (user?.roleType === "teacher") return "Ready to Teach?";
     if (user?.isClient) return "Ready to Hire?";
     if (user?.isBooker) return "Ready to Book?";
     return "Ready to Create?";
@@ -349,13 +378,15 @@ export default function Home() {
             >
               {isAuthenticated
                 ? isProfileComplete
-                  ? user?.isBooker
-                    ? "Manage talent and book amazing performances for your events."
-                    : "Continue your music journey and discover new opportunities."
+                  ? user?.roleType === "teacher"
+                    ? "Share your musical knowledge and inspire the next generation."
+                    : user?.isBooker
+                      ? "Manage talent and book amazing performances for your events."
+                      : "Continue your music journey and discover new opportunities."
                   : needsRoleSelection
                     ? "Tell us about yourself to unlock all features."
                     : "Let's set up your profile to get started."
-                : "Join the ultimate platform connecting musicians, venues, and music lovers worldwide."}
+                : "Join the ultimate platform connecting musicians, teachers, venues, and music lovers worldwide."}
             </motion.p>
 
             <motion.div
@@ -372,18 +403,22 @@ export default function Home() {
                   >
                     {isAuthenticated
                       ? isProfileComplete
-                        ? user?.isClient
-                          ? "Find Talent" // CHANGED
-                          : user?.isBooker
-                            ? "Manage Gigs" // CHANGED
-                            : "Find Gigs" // CHANGED
+                        ? user?.roleType === "teacher"
+                          ? "Find Students"
+                          : user?.isClient
+                            ? "Manage My Gigs" // Updated for clients
+                            : user?.isBooker
+                              ? "Manage Events" // Updated for bookers
+                              : "Find Gigs"
                         : needsRoleSelection
                           ? "Choose Your Role"
-                          : user?.isClient
-                            ? "Post Gigs" // CHANGED
-                            : user?.isBooker
-                              ? "Set Up Profile"
-                              : "Complete Profile"
+                          : user?.roleType === "teacher"
+                            ? "Set Up Teaching Profile"
+                            : user?.isClient
+                              ? "Set Up Client Profile" // Updated for clients
+                              : user?.isBooker
+                                ? "Set Up Booker Profile" // Updated for bookers
+                                : "Complete Profile"
                       : "Get Started"}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -392,17 +427,21 @@ export default function Home() {
                       href={
                         user?.isMusician
                           ? "/discover"
-                          : user?.isBooker
-                            ? "/auth/search"
-                            : "/browse"
+                          : user?.roleType === "teacher"
+                            ? "/teaching"
+                            : user?.isBooker
+                              ? "/auth/search"
+                              : "/browse"
                       }
                       className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
                     >
                       {user?.isMusician
-                        ? "Browse Gigs" // CHANGED
-                        : user?.isBooker
-                          ? "Browse Talent"
-                          : "Find Artists"}
+                        ? "Browse Gigs"
+                        : user?.roleType === "teacher"
+                          ? "Browse Students"
+                          : user?.isBooker
+                            ? "Browse Talent"
+                            : "Find Artists"}
                     </Link>
                   )}
                 </div>
@@ -439,17 +478,36 @@ export default function Home() {
                   [
                     {
                       number: user?.completedGigsCount?.toString() || "0",
-                      label: user?.isBooker
-                        ? "Events Managed"
-                        : "Gigs Completed",
+                      label:
+                        user?.roleType === "teacher"
+                          ? "Lessons Given"
+                          : user?.isBooker
+                            ? "Events Managed"
+                            : user?.isClient
+                              ? "Gigs Posted" // Updated for clients
+                              : "Gigs Completed",
                     },
                     {
                       number: user?.followers?.length.toString() || "0",
-                      label: user?.isBooker ? "Artists Managed" : "Followers",
+                      label:
+                        user?.roleType === "teacher"
+                          ? "Students"
+                          : user?.isBooker
+                            ? "Artists Managed"
+                            : user?.isClient
+                              ? "Artists Hired" // Updated for clients
+                              : "Followers",
                     },
                     {
                       number: user?.monthlyGigsBooked?.toString() || "0",
-                      label: user?.isBooker ? "This Month" : "This Month",
+                      label:
+                        user?.roleType === "teacher"
+                          ? "This Month"
+                          : user?.isBooker
+                            ? "Active Events"
+                            : user?.isClient
+                              ? "Active Gigs" // Updated for clients
+                              : "This Month",
                     },
                   ].map((stat, index) => (
                     <div key={index} className="text-center">
@@ -464,8 +522,8 @@ export default function Home() {
                 : // General stats for guests and incomplete profiles
                   [
                     { number: "10K+", label: "Active Musicians" },
-                    { number: "5K+", label: "Gigs Posted" },
-                    { number: "50K+", label: "Music Lovers" },
+                    { number: "2K+", label: "Music Teachers" },
+                    { number: "5K+", label: "Clients & Bookers" }, // Updated to include both
                   ].map((stat, index) => (
                     <div key={index} className="text-center">
                       <div className="text-2xl md:text-3xl font-bold text-amber-400">
@@ -507,12 +565,16 @@ export default function Home() {
               )}
             >
               {isAuthenticated && isProfileComplete
-                ? user?.isBooker
-                  ? "Everything you need to manage talent and book amazing events"
-                  : user?.isMusician
-                    ? "Everything you need to grow your music career"
-                    : "Everything you need to find amazing talent"
-                : "Everything you need to grow your music career in one place"}
+                ? user?.isMusician && user?.roleType === "teacher"
+                  ? "Everything you need to teach music and grow your student base"
+                  : user?.isBooker
+                    ? "Professional tools for talent booking and event management"
+                    : user?.isClient
+                      ? "Find and hire the perfect musical talent for your events"
+                      : user?.isMusician
+                        ? "Everything you need to grow your music career"
+                        : "Everything you need to find amazing talent"
+                : "Connect musicians, teachers, clients, and bookers in one platform"}
             </p>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -622,29 +684,44 @@ export default function Home() {
                     {
                       step: "01",
                       title: "Explore",
-                      description: user?.isMusician
-                        ? "Browse available gigs in your area"
-                        : user?.isBooker
-                          ? "Discover talented musicians for your events"
-                          : "Discover talented musicians",
+                      description:
+                        user?.roleType === "teacher"
+                          ? "Browse students looking for lessons"
+                          : user?.isMusician
+                            ? "Browse available gigs in your area"
+                            : user?.isBooker
+                              ? "Discover talented musicians for your events"
+                              : user?.isClient
+                                ? "Browse talented musicians for your events"
+                                : "Discover opportunities",
                     },
                     {
                       step: "02",
                       title: "Connect",
-                      description: user?.isMusician
-                        ? "Apply for gigs and message clients"
-                        : user?.isBooker
-                          ? "Build your artist roster and manage events"
-                          : "Post gigs and review applications",
+                      description:
+                        user?.roleType === "teacher"
+                          ? "Schedule lessons and share your expertise"
+                          : user?.isMusician
+                            ? "Apply for gigs and message clients"
+                            : user?.isBooker
+                              ? "Build your artist roster and manage events"
+                              : user?.isClient
+                                ? "Post gigs and review applications"
+                                : "Connect with professionals",
                     },
                     {
                       step: "03",
                       title: "Grow",
-                      description: user?.isMusician
-                        ? "Build your portfolio and reputation"
-                        : user?.isBooker
-                          ? "Expand your network and event portfolio"
-                          : "Build your network of reliable talent",
+                      description:
+                        user?.roleType === "teacher"
+                          ? "Build your teaching reputation and student base"
+                          : user?.isMusician
+                            ? "Build your portfolio and reputation"
+                            : user?.isBooker
+                              ? "Expand your network and event portfolio"
+                              : user?.isClient
+                                ? "Build your network of reliable talent"
+                                : "Grow your presence",
                     },
                   ].map((item, index) => (
                     <motion.div
@@ -663,25 +740,25 @@ export default function Home() {
                       <p className={cn(colors.textMuted)}>{item.description}</p>
                     </motion.div>
                   ))
-                : // Steps for guests and incomplete profiles
+                : // Steps for guests and incomplete profiles (unchanged)
                   [
                     {
                       step: "01",
                       title: "Create Profile",
                       description:
-                        "Sign up and set up your musician, client, or booker profile",
+                        "Sign up and set up your musician, teacher, client, or booker profile",
                     },
                     {
                       step: "02",
                       title: "Connect",
                       description:
-                        "Find musicians, gigs, or talent that match your needs",
+                        "Find musicians, students, gigs, or talent that match your needs",
                     },
                     {
                       step: "03",
                       title: "Perform",
                       description:
-                        "Book gigs, share music, manage events, and grow",
+                        "Book gigs, teach lessons, share music, manage events, and grow",
                     },
                   ].map((item, index) => (
                     <motion.div
@@ -754,7 +831,7 @@ export default function Home() {
                 ? isProfileComplete
                   ? `Continue your journey as a ${getUserRoleDisplay().toLowerCase()}`
                   : "Complete your setup to unlock all features"
-                : "Join thousands of musicians, clients, and bookers already on GigUp"}
+                : "Join thousands of musicians, teachers, clients, and bookers already on GigUp"}
             </p>
 
             {!isAuthenticated ? (
@@ -786,19 +863,23 @@ export default function Home() {
                 {isProfileComplete && (
                   <Link
                     href={
-                      user?.isMusician
-                        ? "/profile"
-                        : user?.isBooker
-                          ? "/my-events"
-                          : "/my-gigs"
+                      user?.roleType === "teacher"
+                        ? "/teaching"
+                        : user?.isMusician
+                          ? "/profile"
+                          : user?.isBooker
+                            ? "/my-events"
+                            : "/my-gigs"
                     }
                     className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
                   >
-                    {user?.isMusician
-                      ? "My Profile"
-                      : user?.isBooker
-                        ? "My Events"
-                        : "My Gigs"}
+                    {user?.roleType === "teacher"
+                      ? "My Teaching"
+                      : user?.isMusician
+                        ? "My Profile"
+                        : user?.isBooker
+                          ? "My Events"
+                          : "My Gigs"}
                   </Link>
                 )}
               </div>
@@ -818,7 +899,7 @@ export default function Home() {
             © {new Date().getFullYear()} GigUp. All rights reserved.
             <br />
             <span className={cn("text-sm mt-2 block", colors.textSecondary)}>
-              Connecting musicians, clients, and bookers through music
+              Connecting musicians, teachers, clients, and bookers through music
             </span>
           </p>
           {isAuthenticated && (
@@ -918,47 +999,50 @@ export default function Home() {
                     </h4>
 
                     <div className="space-y-2">
-                      {user?.isMusician && !user?.date && (
-                        <div
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border",
-                            colors.danger
-                          )}
-                        >
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className={cn("text-sm", colors.warningText)}>
-                            Birth Date (Day)
-                          </span>
-                        </div>
-                      )}
+                      {(user?.isMusician || user?.roleType === "teacher") &&
+                        !user?.date && (
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border",
+                              colors.danger
+                            )}
+                          >
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span className={cn("text-sm", colors.warningText)}>
+                              Birth Date (Day)
+                            </span>
+                          </div>
+                        )}
 
-                      {user?.isMusician && !user?.month && (
-                        <div
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border",
-                            colors.danger
-                          )}
-                        >
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className={cn("text-sm", colors.warningText)}>
-                            Birth Date (Month)
-                          </span>
-                        </div>
-                      )}
+                      {(user?.isMusician || user?.roleType === "teacher") &&
+                        !user?.month && (
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border",
+                              colors.danger
+                            )}
+                          >
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span className={cn("text-sm", colors.warningText)}>
+                              Birth Date (Month)
+                            </span>
+                          </div>
+                        )}
 
-                      {user?.isMusician && !user?.year && (
-                        <div
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border",
-                            colors.danger
-                          )}
-                        >
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className={cn("text-sm", colors.warningText)}>
-                            Birth Date (Year)
-                          </span>
-                        </div>
-                      )}
+                      {(user?.isMusician || user?.roleType === "teacher") &&
+                        !user?.year && (
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border",
+                              colors.danger
+                            )}
+                          >
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span className={cn("text-sm", colors.warningText)}>
+                              Birth Date (Year)
+                            </span>
+                          </div>
+                        )}
 
                       {!user?.isMusician &&
                         !user?.isClient &&
@@ -993,13 +1077,17 @@ export default function Home() {
                     <div className="space-y-2">
                       {[
                         "Full platform access",
-                        user?.isBooker
-                          ? "Manage talent and events"
-                          : user?.isMusician
-                            ? "Find gigs"
-                            : "Find talent",
+                        user?.roleType === "teacher"
+                          ? "Find students and teach lessons"
+                          : user?.isBooker
+                            ? "Manage talent and book events"
+                            : user?.isClient
+                              ? "Find and hire musical talent"
+                              : user?.isMusician
+                                ? "Find gigs and performance opportunities"
+                                : "Access all platform features",
                         "Connect with community",
-                        "Build your profile",
+                        "Build your professional network",
                       ].map((benefit, index) => (
                         <div
                           key={index}
@@ -1050,6 +1138,7 @@ export default function Home() {
                             (user?.month ? 1 : 0) +
                             (user?.year ? 1 : 0) +
                             (user?.isMusician ||
+                            user?.roleType === "teacher" ||
                             user?.isClient ||
                             user?.isBooker
                               ? 1

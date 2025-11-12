@@ -34,10 +34,11 @@ export const userModel = defineTable({
   adminNotes: v.optional(v.string()),
 
   isBooker: v.optional(v.boolean()),
-  bookerSkills: v.optional(v.array(v.string())), // ["band_management", "event_coordination"]
-  managedBands: v.optional(v.array(v.string())), // References to band/crew IDs
+  bookerSkills: v.optional(v.array(v.string())),
+  managedBands: v.optional(v.array(v.string())),
   artistsManaged: v.optional(v.array(v.string())),
   bookerBio: v.optional(v.string()),
+
   // Musician specific fields
   instrument: v.optional(v.string()),
   experience: v.optional(v.string()),
@@ -49,6 +50,14 @@ export const userModel = defineTable({
   vocalistGenre: v.optional(v.string()),
   talentbio: v.optional(v.string()),
   verified: v.optional(v.boolean()),
+
+  // NEW: Teacher specific fields
+  teacherSpecialization: v.optional(v.string()),
+  teachingStyle: v.optional(v.string()),
+  lessonFormat: v.optional(v.string()),
+  yearsTeaching: v.optional(v.string()),
+  studentAgeGroup: v.optional(v.string()),
+
   // Client specific fields
   organization: v.optional(v.string()),
 
@@ -148,10 +157,43 @@ export const userModel = defineTable({
       })
     )
   ),
-
-  // Rates
+  // Replace the current rate field with this more flexible structure:
+  // In your user schema, update the rate field:
   rate: v.optional(
     v.object({
+      // Basic rate structure
+      baseRate: v.optional(v.string()),
+      rateType: v.optional(
+        v.union(
+          v.literal("hourly"),
+          v.literal("daily"),
+          v.literal("per_session"),
+          v.literal("per_gig"),
+          v.literal("monthly"),
+          v.literal("custom")
+        )
+      ),
+      currency: v.optional(v.string()),
+
+      // Role-specific rate categories
+      categories: v.optional(
+        v.array(
+          v.object({
+            name: v.string(),
+            rate: v.string(),
+            rateType: v.optional(v.string()),
+            description: v.optional(v.string()),
+          })
+        )
+      ),
+
+      // Rate modifiers
+      negotiable: v.optional(v.boolean()),
+      depositRequired: v.optional(v.boolean()),
+      travelIncluded: v.optional(v.boolean()),
+      travelFee: v.optional(v.string()),
+
+      // Legacy fields for backward compatibility
       regular: v.optional(v.string()),
       function: v.optional(v.string()),
       concert: v.optional(v.string()),
@@ -162,9 +204,8 @@ export const userModel = defineTable({
   // Saved content
   savedGigs: v.optional(v.array(v.string())),
   favoriteGigs: v.optional(v.array(v.string())),
-  likedVideos: v.optional(v.array(v.string())), // References video IDs
-
-  viewedVideos: v.optional(v.array(v.string())), // References video IDs
+  likedVideos: v.optional(v.array(v.string())),
+  viewedVideos: v.optional(v.array(v.string())),
 
   // User status and activity
   firstLogin: v.boolean(),
@@ -246,7 +287,7 @@ export const userModel = defineTable({
           v.literal("rejected")
         ),
         canBeBooked: v.boolean(),
-        utoBookable: v.optional(v.boolean()), // Auto-available when you're unavailable
+        utoBookable: v.optional(v.boolean()),
         dateAdded: v.number(),
       })
     )
@@ -270,29 +311,10 @@ export const userModel = defineTable({
   backUpCount: v.optional(v.number()),
 
   confirmedReferredGigs: v.optional(v.number()),
-  // cachedRating: v.optional(
-  //   v.object({
-  //     overall: v.number(),
-  //     score: v.number(),
-  //     breakdown: v.object({
-  //       gigExperience: v.number(),
-  //       activityRecency: v.number(),
-  //       platformUsage: v.number(),
-  //       reviewQuality: v.number(),
-  //       reliability: v.number(),
-  //       tierStatus: v.number(),
-  //       socialProof: v.number(),
-  //       deputyEngagement: v.number(),
-  //     }),
-  //     reviewCount: v.number(),
-  //     lastCalculated: v.number(),
-  //   })
-  // ),
   availability: v.optional(
     v.union(v.literal("available"), v.literal("notavailable"))
   ),
 })
-  // ... keep your existing indexes
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])
   .index("by_username", ["username"])
@@ -307,15 +329,15 @@ export const userModel = defineTable({
   .index("by_last_active", ["lastActive"])
   .index("by_city_and_role", ["city", "isMusician"])
   .index("by_admin_role", ["isAdmin", "adminRole"])
-  .index("by_badges", ["badges"]) // For finding users with specific badges
-  .index("by_reliability_score", ["reliabilityScore"]) // For sorting by reliability
-  .index("by_avg_rating", ["avgRating"]) // For sorting by rating
-  .index("by_completed_gigs", ["completedGigsCount"]) // You already have this field
-  .index("by_reliability_and_role", ["reliabilityScore", "isMusician"]) // For finding reliable musicians
-  .index("by_rating_and_city", ["avgRating", "city", "isMusician"]) // For local top-rated musicians
-  .index("by_badges_and_city", ["badges", "city", "isMusician"]) // For finding badge holders in specific cities
+  .index("by_badges", ["badges"])
+  .index("by_reliability_score", ["reliabilityScore"])
+  .index("by_avg_rating", ["avgRating"])
+  .index("by_completed_gigs", ["completedGigsCount"])
+  .index("by_reliability_and_role", ["reliabilityScore", "isMusician"])
+  .index("by_rating_and_city", ["avgRating", "city", "isMusician"])
+  .index("by_badges_and_city", ["badges", "city", "isMusician"])
   .index("by_performance_stats", [
     "performanceStats.totalGigsCompleted",
     "reliabilityScore",
-  ]) // Compound performance index
-  .index("by_tier_and_reliability", ["tier", "reliabilityScore"]); // For premium reliable users
+  ])
+  .index("by_tier_and_reliability", ["tier", "reliabilityScore"]);

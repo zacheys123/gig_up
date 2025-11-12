@@ -1,5 +1,3 @@
-// In CurrentUserProfile component - replace the entire file with:
-
 "use client";
 
 import { CircularProgress } from "@mui/material";
@@ -33,6 +31,8 @@ import {
   Trash2,
   Users,
   Star,
+  GraduationCap,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,8 +60,37 @@ import { VALIDATION_MESSAGES, ValidationError } from "@/types/validation";
 import { KenyanPhoneInput } from "./kenyanPhoneInput";
 import CurrentUserProfileSkeleton from "../skeletons/ProfileSkeletons";
 import { CurrentUserProfileMobileSkeleton } from "../skeletons/ProfileMobileSkeleton";
+import { RateSection } from "./RateSection";
+// Replace the current RateProps interface
+interface RateCategory {
+  name: string;
+  rate: string;
+  rateType?: string; // Make optional or use string
+  description?: string;
+}
 
 interface RateProps {
+  // Basic rate info
+  baseRate: string;
+  rateType:
+    | "hourly"
+    | "daily"
+    | "per_session"
+    | "per_gig"
+    | "monthly"
+    | "custom";
+  currency: string;
+
+  // Categories
+  categories: RateCategory[];
+
+  // Modifiers
+  negotiable: boolean;
+  depositRequired: boolean;
+  travelIncluded: boolean;
+  travelFee: string;
+
+  // Legacy fields
   regular: string;
   function: string;
   concert: string;
@@ -83,6 +112,49 @@ const bookerSkillsList = [
   "Venue Management",
   "Tour Management",
   "Contract Negotiation",
+];
+
+// Teacher-specific constants
+const teacherSpecializations = [
+  "Beginner Lessons",
+  "Advanced Techniques",
+  "Music Theory",
+  "Ear Training",
+  "Sight Reading",
+  "Improvisation",
+  "Performance Skills",
+  "Exam Preparation",
+  "Online Lessons",
+  "Group Classes",
+];
+
+const teachingStyles = [
+  "Structured Curriculum",
+  "Student-Led",
+  "Performance Focused",
+  "Theory Intensive",
+  "Casual/Recreational",
+  "Exam Preparation",
+  "Jazz/Improvisation",
+  "Classical Training",
+];
+
+const lessonFormats = [
+  "One-on-One Private",
+  "Group Classes",
+  "Online Lessons",
+  "In-Person Only",
+  "Hybrid (Online & In-Person)",
+  "Workshops",
+  "Masterclasses",
+];
+
+const studentAgeGroups = [
+  "Children (5-12)",
+  "Teenagers (13-17)",
+  "Adults (18+)",
+  "All Ages",
+  "Seniors (65+)",
 ];
 
 const CurrentUserProfile = () => {
@@ -108,7 +180,18 @@ const CurrentUserProfile = () => {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
+  // Replace the current rate state initialization
+
   const [rate, setRate] = useState<RateProps>({
+    baseRate: "",
+    rateType: "hourly",
+    currency: "KES",
+    categories: [],
+    negotiable: false,
+    depositRequired: false,
+    travelIncluded: false,
+    travelFee: "",
+    // Legacy fields for backward compatibility
     regular: "",
     function: "",
     concert: "",
@@ -152,9 +235,6 @@ const CurrentUserProfile = () => {
 
   // Video Profile State
   const [videos, setVideos] = useState<VideoProfileProps[]>([]);
-  const [showVideoModal, setShowVideoModal] = useState(false);
-  const [newVideoTitle, setNewVideoTitle] = useState("");
-  const [newVideoUrl, setNewVideoUrl] = useState("");
 
   // Role Type State (for musicians only)
   const [roleType, setRoleType] = useState("");
@@ -163,6 +243,12 @@ const CurrentUserProfile = () => {
   const [mcType, setMcType] = useState("");
   const [mcLanguages, setMcLanguages] = useState("");
   const [vocalistGenre, setVocalistGenre] = useState("");
+
+  // Teacher Specific State
+  const [teacherSpecialization, setTeacherSpecialization] = useState("");
+  const [teachingStyle, setTeachingStyle] = useState("");
+  const [lessonFormat, setLessonFormat] = useState("");
+  const [studentAgeGroup, setStudentAgeGroup] = useState("");
 
   // Booker Specific State
   const [bookerSkills, setBookerSkills] = useState<string[]>([]);
@@ -194,75 +280,13 @@ const CurrentUserProfile = () => {
   const daysOfMonth = Array.from({ length: 31 }, (_, i) => i + 1);
   const hasLoadedInitialData = React.useRef(false);
 
-  // Sync videos from database
-  useEffect(() => {
-    if (userVideos) {
-      setVideos(userVideos);
-    }
-  }, [userVideos]);
-
-  useEffect(() => {
-    if (user && !userLoading && !hasLoadedInitialData.current) {
-      console.log("🔄 Loading initial user data into form");
-
-      setFirstname(user.firstname || "");
-      setLastname(user.lastname || "");
-      setUsername(user.username || "");
-      setEmail(user.email || "");
-      setCity(user.city || "");
-      setExperience(user.experience || "");
-      setInstrument(user.instrument || "");
-      setYear(user.year || "");
-      setMonth(user.month || "");
-      setAge(user.date || "");
-      setAddress(user.address || "");
-      setPhone(user.phone || "");
-      setOrganization(user.organization || "");
-      setHandles(user.musicianhandles || []);
-      setGenre(user.musiciangenres || []);
-      setTalentbio(user.talentbio || "");
-      setIsMusician(user.isMusician || false);
-      setIsClient(user.isClient || false);
-      setIsBooker(user.isBooker || false);
-      setClientHandles(user.handles || "");
-
-      // Load role-specific data (musicians only)
-      if (user.isMusician && !user.isBooker) {
-        setRoleType(user.roleType || "");
-        setDjGenre(user.djGenre || "");
-        setDjEquipment(user.djEquipment || "");
-        setMcType(user.mcType || "");
-        setMcLanguages(user.mcLanguages || "");
-        setVocalistGenre(user.vocalistGenre || "");
-      }
-
-      // Booker specific data
-      if (user.isBooker) {
-        setBookerSkills(user.bookerSkills || []);
-        setBookerBio(user.bookerBio || "");
-      }
-
-      // Fix for rate object (musicians only)
-      if (user.isMusician && !user.isBooker) {
-        const userRate = user.rate || {};
-        setRate({
-          regular: userRate.regular || "",
-          function: userRate.function || "",
-          concert: userRate.concert || "",
-          corporate: userRate.corporate || "",
-        });
-      }
-
-      hasLoadedInitialData.current = true;
-    }
-  }, [user, userLoading]);
-
   // Role Type Constants (for musicians only)
   const roleTypes = [
     { value: "instrumentalist", label: "Instrumentalist" },
     { value: "dj", label: "DJ" },
     { value: "mc", label: "MC" },
     { value: "vocalist", label: "Vocalist" },
+    { value: "teacher", label: "Music Teacher" },
   ];
 
   const djGenres = [
@@ -308,6 +332,131 @@ const CurrentUserProfile = () => {
     label: ins.val,
   }));
 
+  // Sync videos from database
+  useEffect(() => {
+    if (userVideos) {
+      setVideos(userVideos);
+    }
+  }, [userVideos]);
+
+  // Add this type guard function
+  const isNewRateStructure = (rate: any): rate is RateProps => {
+    return (
+      rate &&
+      (rate.baseRate !== undefined ||
+        rate.categories !== undefined ||
+        rate.rateType !== undefined)
+    );
+  };
+
+  useEffect(() => {
+    if (user && !userLoading && !hasLoadedInitialData.current) {
+      console.log("🔄 Loading initial user data into form");
+
+      setFirstname(user.firstname || "");
+      setLastname(user.lastname || "");
+      setUsername(user.username || "");
+      setEmail(user.email || "");
+      setCity(user.city || "");
+      setExperience(user.experience || "");
+      setInstrument(user.instrument || "");
+      setYear(user.year || "");
+      setMonth(user.month || "");
+      setAge(user.date || "");
+      setAddress(user.address || "");
+      setPhone(user.phone || "");
+      setOrganization(user.organization || "");
+      setHandles(user.musicianhandles || []);
+      setGenre(user.musiciangenres || []);
+      setTalentbio(user.talentbio || "");
+      setIsMusician(user.isMusician || false);
+      setIsClient(user.isClient || false);
+      setIsBooker(user.isBooker || false);
+      setClientHandles(user.handles || "");
+
+      // Load role-specific data (musicians only)
+      if (user.isMusician && !user.isBooker) {
+        setRoleType(user.roleType || "");
+        setDjGenre(user.djGenre || "");
+        setDjEquipment(user.djEquipment || "");
+        setMcType(user.mcType || "");
+        setMcLanguages(user.mcLanguages || "");
+        setVocalistGenre(user.vocalistGenre || "");
+
+        // Load teacher-specific data
+        if (user.roleType === "teacher") {
+          setTeacherSpecialization(user.teacherSpecialization || "");
+          setTeachingStyle(user.teachingStyle || "");
+          setLessonFormat(user.lessonFormat || "");
+          setStudentAgeGroup(user.studentAgeGroup || "");
+        }
+      }
+
+      // Booker specific data
+      if (user.isBooker) {
+        setBookerSkills(user.bookerSkills || []);
+        setBookerBio(user.bookerBio || "");
+      }
+
+      // In your useEffect, replace this part:
+      const userRate = user.rate || {
+        baseRate: "",
+        rateType: "hourly",
+        currency: "KES",
+        categories: [],
+        negotiable: false,
+        depositRequired: false,
+        travelIncluded: false,
+        travelFee: "",
+        regular: "",
+        function: "",
+        concert: "",
+        corporate: "",
+      };
+      // Fix for rate object (musicians only) - UPDATED FOR NEW STRUCTURE
+      if (user.isMusician && !user.isBooker) {
+        const userRate = user.rate || {};
+
+        if (isNewRateStructure(userRate)) {
+          // New structure exists
+          setRate({
+            baseRate: userRate.baseRate || "",
+            rateType: userRate.rateType || "hourly",
+            currency: userRate.currency || "KES",
+            categories: userRate.categories || [],
+            negotiable: userRate.negotiable || false,
+            depositRequired: userRate.depositRequired || false,
+            travelIncluded: userRate.travelIncluded || false,
+            travelFee: userRate.travelFee || "",
+            // Legacy fields for backward compatibility
+            regular: userRate.regular || "",
+            function: userRate.function || "",
+            concert: userRate.concert || "",
+            corporate: userRate.corporate || "",
+          });
+        } else {
+          // Only old structure exists - migrate to new structure
+          setRate({
+            baseRate: userRate.regular || "",
+            rateType: "per_gig",
+            currency: "KES",
+            categories: [],
+            negotiable: false,
+            depositRequired: false,
+            travelIncluded: false,
+            travelFee: "",
+            // Legacy fields preserved
+            regular: userRate.regular || "",
+            function: userRate.function || "",
+            concert: userRate.concert || "",
+            corporate: userRate.corporate || "",
+          });
+        }
+      }
+
+      hasLoadedInitialData.current = true;
+    }
+  }, [user, userLoading]);
   // Role-specific form sections
   const InstrumentalistSection = () => (
     <>
@@ -536,6 +685,103 @@ const CurrentUserProfile = () => {
     </>
   );
 
+  const TeacherSection = () => (
+    <>
+      <SelectInput
+        label="Instrument You Teach"
+        value={instrument}
+        onChange={setInstrument}
+        options={instrumentsList}
+      />
+
+      <SelectInput
+        label="Teaching Specialization"
+        value={teacherSpecialization}
+        onChange={setTeacherSpecialization}
+        options={teacherSpecializations.map((spec) => ({
+          value: spec.toLowerCase().replace(/\s+/g, ""),
+          label: spec,
+        }))}
+      />
+
+      <SelectInput
+        label="Teaching Style"
+        value={teachingStyle}
+        onChange={setTeachingStyle}
+        options={teachingStyles.map((style) => ({
+          value: style.toLowerCase().replace(/\s+/g, ""),
+          label: style,
+        }))}
+      />
+
+      <SelectInput
+        label="Lesson Format"
+        value={lessonFormat}
+        onChange={setLessonFormat}
+        options={lessonFormats.map((format) => ({
+          value: format.toLowerCase().replace(/\s+/g, ""),
+          label: format,
+        }))}
+      />
+
+      <SelectInput
+        label="Student Age Group"
+        value={studentAgeGroup}
+        onChange={setStudentAgeGroup}
+        options={studentAgeGroups.map((age) => ({
+          value: age.toLowerCase().replace(/\s+/g, ""),
+          label: age,
+        }))}
+      />
+
+      <SelectInput
+        label="Teaching Experience"
+        value={experience}
+        onChange={setExperience}
+        options={experiences().map((ex) => ({
+          value: ex.name,
+          label: ex.val,
+        }))}
+      />
+
+      <div className="md:col-span-2">
+        <Label className={cn("text-sm font-medium", colors.text)}>
+          Music Genres/Styles
+        </Label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {genre.map((g) => (
+            <Badge
+              key={g}
+              variant="outline"
+              className={cn(
+                "flex items-center gap-1",
+                colors.border,
+                colors.text
+              )}
+            >
+              {g}
+              <button
+                onClick={() => removeGenre(g)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+          <button
+            onClick={() => setShowGenreModal(true)}
+            className={cn(
+              "text-amber-500 hover:text-amber-600 text-sm flex items-center",
+              colors.text
+            )}
+          >
+            <Plus size={14} className="mr-1" /> Add Genre
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
   const BookerSection = () => (
     <>
       <TextInput
@@ -612,6 +858,8 @@ const CurrentUserProfile = () => {
           return <MCSection />;
         case "vocalist":
           return <VocalistSection />;
+        case "teacher":
+          return <TeacherSection />;
         default:
           return null;
       }
@@ -644,6 +892,10 @@ const CurrentUserProfile = () => {
       profile: '[data-field="personalInfo"]',
       bookerSkills: '[data-field="bookerSkills"]',
       organization: '[data-field="organization"]',
+      teacherSpecialization: '[data-field="experience"]',
+      teachingStyle: '[data-field="experience"]',
+      lessonFormat: '[data-field="experience"]',
+      studentAgeGroup: '[data-field="experience"]',
     };
 
     const selector = fieldSelectors[field];
@@ -657,25 +909,50 @@ const CurrentUserProfile = () => {
     }
   };
 
-  // Enhanced rate validation function
   const isValidRateValue = (value: string): boolean => {
     if (!value || value.trim() === "") return false;
-    let numericValue = value.replace(/[$,£€¥\s]/g, "").toLowerCase();
+
+    // Remove all currency symbols and spaces
+    let numericValue = value.replace(/[$,£€¥\s,]/g, "").toLowerCase();
+
+    // Handle k (thousands) and m (millions) notation
+    let multiplier = 1;
+    if (numericValue.includes("k")) {
+      numericValue = numericValue.replace("k", "");
+      multiplier = 1000;
+    } else if (numericValue.includes("m")) {
+      numericValue = numericValue.replace("m", "");
+      multiplier = 1000000;
+    }
+
+    // Parse the number
+    const num = Number(numericValue);
+
+    // Check if it's a valid positive number
+    return !isNaN(num) && num > 0 && num * multiplier > 0;
+  };
+
+  const formatRateDisplay = (
+    value: string,
+    currency: string = "KES"
+  ): string => {
+    if (!value || !isValidRateValue(value)) return "Rate not set";
+
+    let numericValue = value.replace(/[$,£€¥\s,]/g, "").toLowerCase();
+    let multiplier = 1;
 
     if (numericValue.includes("k")) {
       numericValue = numericValue.replace("k", "");
-      const num = Number(numericValue);
-      return !isNaN(num) && num > 0 && num * 1000 > 0;
-    }
-
-    if (numericValue.includes("m")) {
+      multiplier = 1000;
+    } else if (numericValue.includes("m")) {
       numericValue = numericValue.replace("m", "");
-      const num = Number(numericValue);
-      return !isNaN(num) && num > 0 && num * 1000000 > 0;
+      multiplier = 1000000;
     }
 
-    const num = Number(numericValue);
-    return !isNaN(num) && num > 0;
+    const num = Number(numericValue) * multiplier;
+
+    // Format with commas for thousands
+    return `${currency} ${num.toLocaleString()}`;
   };
 
   // Enhanced validation function with proper role separation
@@ -714,11 +991,14 @@ const CurrentUserProfile = () => {
         });
       }
 
-      // Instrument validation only for instrumentalists
-      if (roleType === "instrumentalist" && !instrument) {
+      // Instrument validation only for instrumentalists and teachers
+      if (
+        (roleType === "instrumentalist" || roleType === "teacher") &&
+        !instrument
+      ) {
         errors.push({
           field: "instrument",
-          message: "Instrument is required for instrumentalists",
+          message: "Instrument is required",
           importance: "high",
         });
       }
@@ -750,13 +1030,59 @@ const CurrentUserProfile = () => {
         });
       }
 
-      // Rates validation (for musicians only)
-      const hasValidRates = Object.values(rate).some(isValidRateValue);
-      if (!hasValidRates) {
+      // TEACHER-SPECIFIC VALIDATIONS
+      if (roleType === "teacher") {
+        if (!teacherSpecialization) {
+          errors.push({
+            field: "teacherSpecialization",
+            message: "Teaching specialization is required",
+            importance: "high",
+          });
+        }
+        if (!teachingStyle) {
+          errors.push({
+            field: "teachingStyle",
+            message: "Teaching style is required",
+            importance: "high",
+          });
+        }
+        if (!lessonFormat) {
+          errors.push({
+            field: "lessonFormat",
+            message: "Lesson format is required",
+            importance: "high",
+          });
+        }
+        if (!studentAgeGroup) {
+          errors.push({
+            field: "studentAgeGroup",
+            message: "Student age group is required",
+            importance: "high",
+          });
+        }
+      }
+
+      const hasBaseRate = rate.baseRate && rate.baseRate.trim() !== "";
+      const hasCategoryRates = rate.categories.some(
+        (cat) => cat.rate && cat.rate.trim() !== ""
+      );
+      const hasLegacyRates = Object.values({
+        regular: rate.regular,
+        function: rate.function,
+        concert: rate.concert,
+        corporate: rate.corporate,
+      }).some((value) => value && value.trim() !== "");
+
+      // Check if ANY rate is set (not required, but recommended)
+      const hasAnyRates = hasBaseRate || hasCategoryRates || hasLegacyRates;
+
+      if (!hasAnyRates) {
         errors.push({
           field: "rates",
-          message: VALIDATION_MESSAGES.rates.required,
-          importance: "high",
+          message:
+            "Adding rates significantly increases your booking chances. Consider setting your rates to attract more clients.",
+          importance: "medium",
+          type: "recommendation", // Now this will work with the updated type
         });
       }
 
@@ -766,6 +1092,7 @@ const CurrentUserProfile = () => {
           field: "videos",
           message: VALIDATION_MESSAGES.videos.recommended,
           importance: "medium",
+          type: "recommendation",
         });
       }
     }
@@ -916,22 +1243,49 @@ const CurrentUserProfile = () => {
             mcType: "",
             mcLanguages: "",
             vocalistGenre: "",
+            teacherSpecialization: "", // Bookers don't need teacher fields
+            teachingStyle: "",
+            lessonFormat: "",
+            studentAgeGroup: "",
             rate: { regular: "", function: "", concert: "", corporate: "" }, // Bookers don't need rates
           }
         : isMusician
           ? {
-              // Musician-specific fields
+              // Musician-specific fields (INCLUDES TEACHER)
               musiciangenres: genre,
-              instrument: roleType === "instrumentalist" ? instrument : "",
+              instrument:
+                roleType === "instrumentalist" || roleType === "teacher"
+                  ? instrument
+                  : "",
               roleType,
               djGenre: roleType === "dj" ? djGenre : "",
               djEquipment: roleType === "dj" ? djEquipment : "",
               mcType: roleType === "mc" ? mcType : "",
               mcLanguages: roleType === "mc" ? mcLanguages : "",
               vocalistGenre: roleType === "vocalist" ? vocalistGenre : "",
-              rate,
-              bookerSkills: [], // Musicians don't need booker skills
-              bookerBio: "", // Musicians don't need booker bio
+              // Teacher-specific fields
+              teacherSpecialization:
+                roleType === "teacher" ? teacherSpecialization : "",
+              teachingStyle: roleType === "teacher" ? teachingStyle : "",
+              lessonFormat: roleType === "teacher" ? lessonFormat : "",
+              studentAgeGroup: roleType === "teacher" ? studentAgeGroup : "",
+              rate: {
+                baseRate: rate.baseRate,
+                rateType: rate.rateType,
+                currency: rate.currency,
+                categories: rate.categories,
+                negotiable: rate.negotiable,
+                depositRequired: rate.depositRequired,
+                travelIncluded: rate.travelIncluded,
+                travelFee: rate.travelFee,
+                // Keep legacy fields for backward compatibility
+                regular: rate.regular,
+                function: rate.function,
+                concert: rate.concert,
+                corporate: rate.corporate,
+              },
+              bookerSkills: [],
+              bookerBio: "",
             }
           : {
               // Client-specific fields
@@ -943,6 +1297,10 @@ const CurrentUserProfile = () => {
               mcType: "",
               mcLanguages: "",
               vocalistGenre: "",
+              teacherSpecialization: "",
+              teachingStyle: "",
+              lessonFormat: "",
+              studentAgeGroup: "",
               rate: { regular: "", function: "", concert: "", corporate: "" },
               bookerSkills: [],
               bookerBio: "",
@@ -1112,18 +1470,24 @@ const CurrentUserProfile = () => {
                     className={cn(
                       isBooker
                         ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                        : isMusician
-                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
-                          : "bg-gradient-to-r from-green-500 to-green-600 text-white"
+                        : isMusician && roleType === "teacher"
+                          ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
+                          : isMusician
+                            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                            : isClient
+                              ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white"
+                              : "bg-gradient-to-r from-gray-500 to-gray-600 text-white"
                     )}
                   >
                     {isBooker
                       ? "Booker/Manager"
-                      : isMusician
-                        ? "Musician"
-                        : isClient
-                          ? "Client"
-                          : "Member"}
+                      : isMusician && roleType === "teacher"
+                        ? "Music Teacher"
+                        : isMusician
+                          ? "Musician"
+                          : isClient
+                            ? "Client"
+                            : "Member"}
                   </Badge>
                   {user.tier === "pro" && (
                     <Badge
@@ -1265,7 +1629,9 @@ const CurrentUserProfile = () => {
                 placeholder={
                   isBooker
                     ? "Describe your booking services, experience, and the types of events you specialize in..."
-                    : "Tell us about yourself, your skills, and your experience..."
+                    : roleType === "teacher"
+                      ? "Describe your teaching philosophy, experience, and approach to music education..."
+                      : "Tell us about yourself, your skills, and your experience..."
                 }
                 className={cn(
                   "min-h-[120px] resize-none",
@@ -1280,7 +1646,14 @@ const CurrentUserProfile = () => {
             {/* Experience Section */}
             <SectionContainer
               icon={<Briefcase size={18} />}
-              title={isBooker ? "Management Services" : "Experience & Skills"}
+              title={
+                isBooker
+                  ? "Management Services"
+                  : roleType === "teacher"
+                    ? "Teaching Services"
+                    : "Experience & Skills"
+              }
+              data-field="experience"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(isMusician || isBooker) && (
@@ -1312,6 +1685,19 @@ const CurrentUserProfile = () => {
                   </div>
                 )}
               </div>
+              {/* RATES SECTION - ADD THIS FOR MUSICIANS ONLY */}
+              {isMusician && !isBooker && (
+                <div className="md:col-span-2 my-10">
+                  <RateSection
+                    rate={rate}
+                    setRate={setRate}
+                    roleType={roleType}
+                    colors={colors}
+                    showRates={showRates}
+                    setShowRates={setShowRates}
+                  />
+                </div>
+              )}
             </SectionContainer>
           </div>
 
@@ -1411,78 +1797,6 @@ const CurrentUserProfile = () => {
                 />
               </div>
             </SectionContainer>
-
-            {/* Rates Section (Musicians only, not bookers) */}
-            {isMusician && !isBooker && (
-              <SectionContainer
-                icon={<DollarSign size={18} />}
-                title="Performance Rates"
-                data-field="rates"
-                action={
-                  <button onClick={() => setShowRates(!showRates)}>
-                    {showRates ? (
-                      <ChevronUp size={18} />
-                    ) : (
-                      <ChevronDown size={18} />
-                    )}
-                  </button>
-                }
-                onClickHeader={() => setShowRates(!showRates)}
-              >
-                {showRates && (
-                  <div className="space-y-4">
-                    <TextInput
-                      label="Regular Gigs"
-                      value={rate.regular}
-                      onChange={(value) =>
-                        setRate((prev) => ({
-                          ...prev,
-                          regular: value ?? "",
-                        }))
-                      }
-                      Icon={<Music size={16} />}
-                      placeholder="Rate for regular performances"
-                    />
-                    <TextInput
-                      label="Corporate Events"
-                      value={rate.corporate}
-                      onChange={(value) =>
-                        setRate((prev) => ({
-                          ...prev,
-                          corporate: value ?? "",
-                        }))
-                      }
-                      Icon={<Building size={16} />}
-                      placeholder="Rate for corporate events"
-                    />
-                    <TextInput
-                      label="Concerts"
-                      value={rate.concert}
-                      onChange={(value) =>
-                        setRate((prev) => ({
-                          ...prev,
-                          concert: value ?? "",
-                        }))
-                      }
-                      Icon={<Calendar size={16} />}
-                      placeholder="Rate for concerts"
-                    />
-                    <TextInput
-                      label="Special Functions"
-                      value={rate.function}
-                      onChange={(value) =>
-                        setRate((prev) => ({
-                          ...prev,
-                          function: value ?? "",
-                        }))
-                      }
-                      Icon={<Briefcase size={16} />}
-                      placeholder="Rate for special functions"
-                    />
-                  </div>
-                )}
-              </SectionContainer>
-            )}
 
             {/* Location Information */}
             <SectionContainer

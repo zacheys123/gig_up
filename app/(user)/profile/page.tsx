@@ -81,7 +81,32 @@ const ProfilePage = () => {
 
   const totalConnections =
     (user?.followers?.length || 0) + (user?.followings?.length || 0);
-  console.log(user?.isClient, user?.isMusician);
+
+  // Get user role display with teacher
+  const getUserRoleDisplay = () => {
+    if (user?.roleType === "teacher") return "Music Teacher";
+    if (user?.isMusician) return "Musician";
+    if (user?.isClient) return "Client";
+    if (user?.isBooker) return "Booker/Manager";
+    return "Member";
+  };
+
+  // Get appropriate gig count title based on role
+  const getGigCountTitle = () => {
+    if (user?.roleType === "teacher") return "Lessons Given";
+    if (user?.isClient) return "Gigs Posted";
+    if (user?.isBooker) return "Events Managed";
+    return "Gigs Booked";
+  };
+
+  // Get appropriate earnings title based on role
+  const getEarningsTitle = () => {
+    if (user?.roleType === "teacher") return "Teaching Income";
+    if (user?.isBooker) return "Commission";
+    return "Earnings";
+  };
+
+  console.log(user?.roleType, user?.isMusician, user?.isClient, user?.isBooker);
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -101,14 +126,7 @@ const ProfilePage = () => {
               Welcome Back, {user?.firstname}!
             </h1>
             <p className={cn("text-lg", colors.textMuted)}>
-              {user?.isMusician
-                ? "Musician"
-                : user?.isClient
-                  ? "Client"
-                  : user?.isClient
-                    ? "Booker/Manger"
-                    : "Member"}
-              • Joined{" "}
+              {getUserRoleDisplay()} • Joined{" "}
               {user?._creationTime
                 ? new Date(user._creationTime).toLocaleDateString()
                 : "Recently"}
@@ -127,13 +145,13 @@ const ProfilePage = () => {
             {[
               {
                 icon: <Icons.gig className="h-5 w-5" />,
-                title: user?.isClient ? "Gigs Posted" : "Gigs Booked",
+                title: getGigCountTitle(),
                 value: userGigsCount,
                 color: "from-blue-500/10 to-blue-500/20",
               },
               {
                 icon: <Icons.earnings className="h-5 w-5" />,
-                title: "Earnings",
+                title: getEarningsTitle(),
                 value: `KES ${user?.earnings?.toFixed(0) || "0"}`,
                 color: "from-green-500/10 to-green-500/20",
               },
@@ -146,13 +164,7 @@ const ProfilePage = () => {
               {
                 icon: <Icons.user className="h-5 w-5" />,
                 title: "Account Type",
-                value: user?.isMusician
-                  ? "Musician"
-                  : user?.isClient
-                    ? "Client"
-                    : user?.isBooker
-                      ? "Booker/Manager"
-                      : "Not Set",
+                value: getUserRoleDisplay(),
                 color: "from-amber-500/10 to-amber-500/20",
               },
             ].map((stat, index) => (
@@ -219,7 +231,7 @@ const ProfilePage = () => {
             {/* Show missing fields if profile is incomplete */}
             {missingFields.length > 0 &&
               profileCompletion < 100 &&
-              user?.isMusician && (
+              (user?.isMusician || user?.roleType === "teacher") && (
                 <div className="mt-2">
                   <p className={cn("text-xs font-medium mb-1", colors.text)}>
                     Missing:
@@ -282,6 +294,46 @@ const ProfilePage = () => {
                   Update your information
                 </p>
               </div>
+
+              {/* Additional action for teachers */}
+              {user?.roleType === "teacher" && (
+                <div
+                  onClick={() => router.push("/teaching")}
+                  className={cn(
+                    "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105",
+                    colors.secondaryBackground,
+                    colors.border,
+                    "hover:border-green-400/30"
+                  )}
+                >
+                  <Icons.teaching className="h-6 w-6 mx-auto mb-2 text-green-400" />
+                  <h3 className={cn("font-medium", colors.text)}>
+                    Teaching Hub
+                  </h3>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Manage lessons & students
+                  </p>
+                </div>
+              )}
+
+              {/* Additional action for musicians */}
+              {user?.isMusician && user?.roleType !== "teacher" && (
+                <div
+                  onClick={() => router.push("/discover")}
+                  className={cn(
+                    "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105",
+                    colors.secondaryBackground,
+                    colors.border,
+                    "hover:border-blue-400/30"
+                  )}
+                >
+                  <Icons.music className="h-6 w-6 mx-auto mb-2 text-blue-400" />
+                  <h3 className={cn("font-medium", colors.text)}>Find Gigs</h3>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Discover opportunities
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </motion.section>
@@ -292,7 +344,7 @@ const ProfilePage = () => {
 
 export default ProfilePage;
 
-// Icons component (unchanged)
+// Icons component (updated with teaching icon)
 const Icons = {
   user: (props: SVGProps<SVGSVGElement>) => (
     <svg
@@ -377,6 +429,40 @@ const Icons = {
       <circle cx="5" cy="12" r="1" />
       <circle cx="12" cy="12" r="1" />
       <circle cx="19" cy="12" r="1" />
+    </svg>
+  ),
+  teaching: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+    </svg>
+  ),
+  music: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="8" cy="18" r="4" />
+      <path d="M12 18V2l7 4" />
     </svg>
   ),
 };

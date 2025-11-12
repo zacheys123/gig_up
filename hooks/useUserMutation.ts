@@ -13,10 +13,10 @@ export function useUserMutations() {
     api.controllers.user.updateUserAsClient
   );
   const updateUserAsAdmin = useMutation(api.controllers.user.updateUserAsAdmin);
-  // hooks/useUserMutations.ts
   const updateUserAsBooker = useMutation(
     api.controllers.user.updateUserAsBooker
   );
+
   const registerAsMusician = async (musicianData: {
     city: string;
     instrument?: string;
@@ -29,22 +29,18 @@ export function useUserMutations() {
     talentbio: string;
     vocalistGenre?: string;
     organization?: string;
-    bookerSkills?: string[]; // NEW
+    // Teacher specific fields (when roleType === 'teacher')
+    teacherSpecialization?: string;
+    teachingStyle?: string;
+    lessonFormat?: string;
+    studentAgeGroup?: string;
   }) => {
     if (!userId) throw new Error("No user ID available");
-
-    // Determine if this is a booker registration
-    const isBooker = musicianData.roleType === "booker";
-    const bookerSkills = isBooker
-      ? musicianData.bookerSkills || ["band_management"]
-      : [];
 
     const updates = {
       isMusician: true as const,
       isClient: false as const,
-      isBooker: isBooker,
-      bookerSkills: bookerSkills,
-      bookerBio: isBooker ? musicianData.talentbio : undefined,
+      isBooker: false as const,
       city: musicianData.city,
       instrument: musicianData.instrument,
       experience: musicianData.experience,
@@ -56,6 +52,23 @@ export function useUserMutations() {
       talentbio: musicianData.talentbio,
       vocalistGenre: musicianData.vocalistGenre,
       organization: musicianData.organization,
+      // Teacher fields - only store if roleType is teacher
+      teacherSpecialization:
+        musicianData.roleType === "teacher"
+          ? musicianData.teacherSpecialization
+          : undefined,
+      teachingStyle:
+        musicianData.roleType === "teacher"
+          ? musicianData.teachingStyle
+          : undefined,
+      lessonFormat:
+        musicianData.roleType === "teacher"
+          ? musicianData.lessonFormat
+          : undefined,
+      studentAgeGroup:
+        musicianData.roleType === "teacher"
+          ? musicianData.studentAgeGroup
+          : undefined,
       tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
@@ -78,7 +91,6 @@ export function useUserMutations() {
     return await updateUserAsMusician({ clerkId: userId, updates });
   };
 
-  // hooks/useUserMutations.ts
   const registerAsClient = async (clientData: {
     city: string;
     organization: string;
@@ -89,6 +101,7 @@ export function useUserMutations() {
     const updates = {
       isMusician: false as const,
       isClient: true as const,
+      isBooker: false as const,
       city: clientData.city,
       organization: clientData.organization,
       talentbio: clientData.talentbio,
@@ -109,29 +122,11 @@ export function useUserMutations() {
       bannedAt: undefined,
       lastAdminAction: Date.now(),
       theme: "light" as const,
-      // REMOVE array fields here too
     };
 
     return await updateUserAsClient({ clerkId: userId, updates });
   };
 
-  const registerAsAdmin = async (adminData: {
-    adminCity: string;
-    adminRole: "super" | "content" | "support" | "analytics";
-  }) => {
-    if (!userId) throw new Error("No user ID available");
-
-    const updates = {
-      isAdmin: true as const,
-      adminCity: adminData.adminCity,
-      adminRole: adminData.adminRole,
-      tier: "pro" as const,
-    };
-
-    return await updateUserAsAdmin({ clerkId: userId, updates });
-  };
-  // hooks/useUserMutations.ts
-  // hooks/useUserMutations.ts - ADD THIS FUNCTION
   const registerAsBooker = async (bookerData: {
     city: string;
     organization: string;
@@ -172,11 +167,26 @@ export function useUserMutations() {
     return await updateUserAsBooker({ clerkId: userId, updates });
   };
 
-  // Add to return statement
+  const registerAsAdmin = async (adminData: {
+    adminCity: string;
+    adminRole: "super" | "content" | "support" | "analytics";
+  }) => {
+    if (!userId) throw new Error("No user ID available");
+
+    const updates = {
+      isAdmin: true as const,
+      adminCity: adminData.adminCity,
+      adminRole: adminData.adminRole,
+      tier: "pro" as const,
+    };
+
+    return await updateUserAsAdmin({ clerkId: userId, updates });
+  };
+
   return {
     registerAsMusician,
     registerAsClient,
-    registerAsBooker, // NEW
+    registerAsBooker,
     registerAsAdmin,
   };
 }

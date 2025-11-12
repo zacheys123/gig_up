@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { MusicIcon, Settings, UsersIcon, Briefcase } from "lucide-react";
+import {
+  MusicIcon,
+  Settings,
+  UsersIcon,
+  Briefcase,
+  GraduationCap,
+} from "lucide-react";
 import { HiSwitchHorizontal } from "react-icons/hi";
 import { IoArrowBack } from "react-icons/io5";
 import { useUser } from "@clerk/nextjs";
@@ -53,6 +59,48 @@ const vocalistGenres = [
   "mix",
 ];
 
+const teacherSpecializations = [
+  "Beginner Lessons",
+  "Advanced Techniques",
+  "Music Theory",
+  "Ear Training",
+  "Sight Reading",
+  "Improvisation",
+  "Performance Skills",
+  "Exam Preparation",
+  "Online Lessons",
+  "Group Classes",
+];
+
+const teachingStyles = [
+  "Structured Curriculum",
+  "Student-Led",
+  "Performance Focused",
+  "Theory Intensive",
+  "Casual/Recreational",
+  "Exam Preparation",
+  "Jazz/Improvisation",
+  "Classical Training",
+];
+
+const lessonFormats = [
+  "One-on-One Private",
+  "Group Classes",
+  "Online Lessons",
+  "In-Person Only",
+  "Hybrid (Online & In-Person)",
+  "Workshops",
+  "Masterclasses",
+];
+
+const studentAgeGroups = [
+  "Children (5-12)",
+  "Teenagers (13-17)",
+  "Adults (18+)",
+  "All Ages",
+  "Seniors (65+)",
+];
+
 const bookerSkillsList = [
   "Band Management",
   "Event Coordination",
@@ -68,6 +116,7 @@ type RoleSteps = {
   dj: string[];
   mc: string[];
   vocalist: string[];
+  teacher: string[];
   booker: string[];
   client: string[];
   default: string[];
@@ -80,7 +129,7 @@ const ActionPage = () => {
   const router = useRouter();
   const [musicianload, setMusicianLoad] = useState(false);
   const [clientload, setClientLoad] = useState(false);
-  const [bookerload, setBookerLoad] = useState(false); // NEW: Booker loading state
+  const [bookerload, setBookerLoad] = useState(false);
   const [userload, setUserload] = useState(false);
   const { user: myuser } = useCurrentUser();
   const {
@@ -88,7 +137,7 @@ const ActionPage = () => {
     registerAsClient,
     registerAsBooker,
     registerAsAdmin,
-  } = useUserMutations(); // UPDATED: Added registerAsBooker
+  } = useUserMutations();
 
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [city, setCity] = useState("");
@@ -96,7 +145,6 @@ const ActionPage = () => {
   const [experience, setExperience] = useState("");
   const [error, setError] = useState<Error>([]);
 
-  // UPDATED: Three separate roles
   const [selectedRole, setSelectedRole] = useState<
     "musician" | "client" | "booker" | "both" | null
   >(null);
@@ -113,22 +161,45 @@ const ActionPage = () => {
     []
   );
 
-  // UPDATED: Separate validation for each role
+  // Teacher specific fields
+  const [teacherSpecialization, setTeacherSpecialization] = useState("");
+  const [teachingStyle, setTeachingStyle] = useState("");
+  const [lessonFormat, setLessonFormat] = useState("");
+  const [studentAgeGroup, setStudentAgeGroup] = useState("");
+
+  // Validation including teacher
   const validateMusicianFields = useCallback(() => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
+
     if (roleType === "instrumentalist" && !instrument)
       errors.push("Instrument is required");
+
+    if (roleType === "teacher" && !instrument)
+      errors.push("Instrument you teach is required");
+
     if (!experience) errors.push("Experience is required");
+
     if (roleType === "dj" && (!djGenre || !djEquipment))
       errors.push("DJ Genre and Equipment are required");
+
     if (roleType === "vocalist" && !vocalistGenre)
       errors.push("Vocal genre is required");
+
     if (roleType === "mc" && (!mcType || !mcLanguages))
       errors.push("MC type and languages are required");
+
+    if (
+      roleType === "teacher" &&
+      (!teacherSpecialization || !teachingStyle || !lessonFormat)
+    )
+      errors.push("Teaching specialization, style, and format are required");
+
     if (!talentbio) errors.push("Bio is required");
+
     if (talentbio.length > 200)
       errors.push("Bio is too long (max 200 characters)");
+
     return errors;
   }, [
     city,
@@ -139,6 +210,9 @@ const ActionPage = () => {
     djEquipment,
     mcType,
     mcLanguages,
+    teacherSpecialization,
+    teachingStyle,
+    lessonFormat,
     talentbio,
     vocalistGenre,
   ]);
@@ -151,7 +225,6 @@ const ActionPage = () => {
     return errors;
   }, [city, organization, talentbio]);
 
-  // NEW: Booker validation
   const validateBookerFields = useCallback(() => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
@@ -165,7 +238,7 @@ const ActionPage = () => {
     return errors;
   }, [city, organization, experience, selectedBookerSkills, talentbio]);
 
-  // UPDATED: Registration function for all three roles
+  // Registration function including teacher
   const registerUser = useCallback(
     async (role: "musician" | "client" | "booker") => {
       if (!isSignedIn) {
@@ -199,6 +272,11 @@ const ActionPage = () => {
             talentbio,
             vocalistGenre,
             organization: organization || "",
+            // Teacher fields
+            teacherSpecialization,
+            teachingStyle,
+            lessonFormat,
+            studentAgeGroup,
           });
         } else if (role === "client") {
           await registerAsClient({
@@ -207,7 +285,6 @@ const ActionPage = () => {
             talentbio,
           });
         } else if (role === "booker") {
-          // NEW: Booker registration
           await registerAsBooker({
             city,
             organization,
@@ -241,9 +318,14 @@ const ActionPage = () => {
       vocalistGenre,
       organization,
       selectedBookerSkills,
+      teacherSpecialization,
+      teachingStyle,
+      lessonFormat,
+
+      studentAgeGroup,
       registerAsMusician,
       registerAsClient,
-      registerAsBooker, // NEW
+      registerAsBooker,
     ]
   );
 
@@ -282,7 +364,7 @@ const ActionPage = () => {
     }
   }, [router, adminCity, adminRole, registerAsAdmin]);
 
-  // UPDATED: Separate connection functions for each role
+  // Connection function including teacher success message
   const connectAsMusician = useCallback(async () => {
     setMusicianLoad(true);
     try {
@@ -299,7 +381,9 @@ const ActionPage = () => {
                   ? "Successfully Registered as an MC"
                   : roleType === "vocalist"
                     ? "Successfully Registered as a Vocalist"
-                    : ""
+                    : roleType === "teacher"
+                      ? "Successfully Registered as a Music Teacher"
+                      : ""
           }`
         );
         router.push("/dashboard");
@@ -322,7 +406,6 @@ const ActionPage = () => {
     }
   }, [registerUser, router]);
 
-  // NEW: Booker connection function
   const connectAsBooker = useCallback(async () => {
     setBookerLoad(true);
     try {
@@ -348,7 +431,6 @@ const ActionPage = () => {
     }
   }, [error]);
 
-  // UPDATED: Role selection handler for three roles
   const handleRoleSelection = useCallback(
     (role: "musician" | "client" | "booker" | "both") => {
       if (
@@ -384,6 +466,7 @@ const ActionPage = () => {
     orange: "hover:border-orange-500/30 hover:shadow-orange-500/10",
     cyan: "hover:border-blue-500/30 hover:shadow-blue-500/10",
     emerald: "hover:border-emerald-500/30 hover:shadow-emerald-500/10",
+    purple: "hover:border-purple-500/30 hover:shadow-purple-500/10",
     default: "hover:border-gray-500/30",
   };
 
@@ -454,13 +537,22 @@ const ActionPage = () => {
     );
   };
 
-  // UPDATED: More Information Modal with three role flows
+  // More Information Modal with teacher flow
   const renderMoreInfoModal = () => {
     const roleSteps: RoleSteps = {
       instrumentalist: ["city", "instrument", "experience", "talentbio"],
       dj: ["city", "genre", "equipment", "experience", "talentbio"],
       mc: ["city", "type", "languages", "experience", "talentbio"],
       vocalist: ["city", "vocalistgenre", "experience", "talentbio"],
+      teacher: [
+        "city",
+        "instrument",
+        "specialization",
+        "teaching",
+        "studentAge",
+        "experience",
+        "talentbio",
+      ],
       booker: [
         "city",
         "organization",
@@ -579,6 +671,7 @@ const ActionPage = () => {
                       {role === "dj" && "DJ"}
                       {role === "mc" && "MC/Host"}
                       {role === "vocalist" && "Vocalist"}
+                      {role === "teacher" && "Music Teacher"}
                     </button>
                   ))}
                 </div>
@@ -591,7 +684,11 @@ const ActionPage = () => {
                 onChange={(e) => setInstrument(e.target.value)}
                 className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
               >
-                <option value="">Select Instrument</option>
+                <option value="">
+                  {roleType === "teacher"
+                    ? "Select Instrument You Teach"
+                    : "Select Instrument"}
+                </option>
                 {instruments().map((inst) => (
                   <option key={inst.id} value={inst.name}>
                     {inst.val}
@@ -668,6 +765,93 @@ const ActionPage = () => {
               />
             )}
 
+            {/* TEACHER SPECIFIC FIELDS */}
+            {steps[currentStep] === "specialization" && (
+              <select
+                value={teacherSpecialization}
+                onChange={(e) => setTeacherSpecialization(e.target.value)}
+                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
+              >
+                <option value="">Select Teaching Specialization</option>
+                {teacherSpecializations.map((specialization) => (
+                  <option
+                    key={specialization}
+                    value={specialization.toLowerCase().replace(/\s+/g, "")}
+                  >
+                    {specialization}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {steps[currentStep] === "teaching" && (
+              <div className="space-y-3">
+                <select
+                  value={teachingStyle}
+                  onChange={(e) => setTeachingStyle(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
+                >
+                  <option value="">Select Teaching Style</option>
+                  {teachingStyles.map((style) => (
+                    <option
+                      key={style}
+                      value={style.toLowerCase().replace(/\s+/g, "")}
+                    >
+                      {style}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={lessonFormat}
+                  onChange={(e) => setLessonFormat(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
+                >
+                  <option value="">Select Lesson Format</option>
+                  {lessonFormats.map((format) => (
+                    <option
+                      key={format}
+                      value={format.toLowerCase().replace(/\s+/g, "")}
+                    >
+                      {format}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Use the main experience field for teachers too */}
+                <select
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
+                >
+                  <option value="">Select Experience Level</option>
+                  {experiences().map((exp) => (
+                    <option key={exp.id} value={exp.name}>
+                      {exp.val}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {steps[currentStep] === "studentAge" && (
+              <select
+                value={studentAgeGroup}
+                onChange={(e) => setStudentAgeGroup(e.target.value)}
+                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
+              >
+                <option value="">Select Student Age Group</option>
+                {studentAgeGroups.map((ageGroup) => (
+                  <option
+                    key={ageGroup}
+                    value={ageGroup.toLowerCase().replace(/\s+/g, "")}
+                  >
+                    {ageGroup}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {steps[currentStep] === "bookerSkills" && (
               <div className="space-y-3">
                 <label className="block text-sm text-neutral-300 mb-2">
@@ -720,7 +904,9 @@ const ActionPage = () => {
                       ? "Describe your booking services and experience..."
                       : selectedRole === "client"
                         ? "Tell us about your organization and what you're looking for..."
-                        : "Brief description of your style/skills"
+                        : roleType === "teacher"
+                          ? "Describe your teaching philosophy, experience, and approach..."
+                          : "Brief description of your style/skills"
                   }
                   value={talentbio}
                   onChange={(e) => setTalentbio(e.target.value)}
@@ -826,7 +1012,7 @@ const ActionPage = () => {
           </motion.p>
         </div>
 
-        {/* UPDATED: Role cards with three distinct roles */}
+        {/* Role cards with teacher included */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {[
             {
@@ -842,7 +1028,7 @@ const ActionPage = () => {
             {
               role: "musician",
               title: "Find Gigs",
-              accent: "blue",
+              accent: "cyan",
               description:
                 "Showcase your talent and connect with premium opportunities",
               buttonText: "Join as Talent",
@@ -850,7 +1036,7 @@ const ActionPage = () => {
               onClick: () => handleRoleSelection("musician"),
             },
             {
-              role: "booker", // NEW: Separate booker card
+              role: "booker",
               title: "Manage Talent",
               accent: "emerald",
               description:
@@ -860,11 +1046,11 @@ const ActionPage = () => {
               onClick: () => handleRoleSelection("booker"),
             },
             {
-              role: "both", // NEW: Separate booker card
-              title: "Be a Client and Talent(Coming Soon)",
-              accent: "emerald",
+              role: "both",
+              title: "Be a Client and Talent (Coming Soon)",
+              accent: "purple",
               description:
-                "Book and manage bands, coordinate events, build your roster",
+                "Switch between hiring talent and being hired for gigs",
               buttonText: "Join as Dual User",
               disabled: true,
               onClick: () => handleRoleSelection("both"),
@@ -902,11 +1088,13 @@ const ActionPage = () => {
         ${
           card.accent === "orange"
             ? "from-orange-500/20 to-amber-600/10"
-            : card.accent === "blue"
+            : card.accent === "cyan"
               ? "from-blue-500/20 to-cyan-600/10"
               : card.accent === "emerald"
                 ? "from-emerald-500/20 to-emerald-600/10"
-                : "from-gray-700/20 to-gray-800/10"
+                : card.accent === "purple"
+                  ? "from-purple-500/20 to-purple-600/10"
+                  : "from-gray-700/20 to-gray-800/10"
         }
       `}
               ></div>
@@ -920,11 +1108,13 @@ const ActionPage = () => {
           ${
             card.accent === "orange"
               ? "bg-orange-500"
-              : card.accent === "blue"
+              : card.accent === "cyan"
                 ? "bg-blue-500"
                 : card.accent === "emerald"
                   ? "bg-emerald-500"
-                  : "bg-gray-600"
+                  : card.accent === "purple"
+                    ? "bg-purple-500"
+                    : "bg-gray-600"
           }
         `}
                 ></div>
@@ -940,22 +1130,26 @@ const ActionPage = () => {
             ${
               card.accent === "orange"
                 ? "bg-orange-500/10 text-orange-400"
-                : card.accent === "blue"
+                : card.accent === "cyan"
                   ? "bg-blue-500/10 text-blue-400"
                   : card.accent === "emerald"
                     ? "bg-emerald-500/10 text-emerald-400"
-                    : "bg-gray-600/10 text-gray-400"
+                    : card.accent === "purple"
+                      ? "bg-purple-500/10 text-purple-400"
+                      : "bg-gray-600/10 text-gray-400"
             }
           `}
                   >
                     {card.accent === "orange" ? (
                       <UsersIcon className="h-5 w-5" />
-                    ) : card.accent === "blue" ? (
+                    ) : card.accent === "cyan" ? (
                       <MusicIcon className="h-5 w-5" />
                     ) : card.accent === "emerald" ? (
                       <Briefcase className="h-5 w-5" />
-                    ) : (
+                    ) : card.accent === "purple" ? (
                       <HiSwitchHorizontal className="h-5 w-5" />
+                    ) : (
+                      <GraduationCap className="h-5 w-5" />
                     )}
                   </div>
                 </div>
@@ -980,11 +1174,13 @@ const ActionPage = () => {
                 ? "cursor-not-allowed bg-neutral-800 text-neutral-500"
                 : card.accent === "orange"
                   ? "bg-orange-600 text-white hover:bg-orange-700"
-                  : card.accent === "blue"
+                  : card.accent === "cyan"
                     ? "bg-blue-600 text-white hover:bg-blue-700"
                     : card.accent === "emerald"
                       ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-neutral-800 text-neutral-400"
+                      : card.accent === "purple"
+                        ? "bg-purple-600 text-white hover:bg-purple-700"
+                        : "bg-neutral-800 text-neutral-400"
             }
           `}
                   >

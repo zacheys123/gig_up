@@ -44,7 +44,6 @@ export default function AboutPage() {
   const updateFirstLogin = useMutation(api.controllers.user.updateFirstLogin);
   const { colors, isDarkMode, mounted } = useThemeColors();
 
-  console.log(user);
   useEffect(() => {
     const markFirstLoginComplete = async () => {
       if (!userId) {
@@ -126,12 +125,20 @@ export default function AboutPage() {
           >
             {user ? (
               <Link
-                href={user?.onboardingComplete ? "/" : "/authenticate"}
+                href={
+                  !user?.firstLogin
+                    ? user?.isMusician || user?.isClient || user?.isBooker
+                      ? "/"
+                      : `/roles/${user?.clerkId}`
+                    : "/authenticate"
+                }
                 className="bg-amber-400 hover:bg-amber-300 text-gray-500 font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 inline-flex items-center justify-center"
               >
-                {user?.onboardingComplete
-                  ? "Go to Dashboard"
-                  : "Hurry Home!!!!"}
+                {!user?.firstLogin
+                  ? user?.isMusician || user?.isClient || user?.isBooker
+                    ? "Hurry Home!!!!"
+                    : "Choose Role!!!!"
+                  : "Proceed to Authenticate"}
               </Link>
             ) : (
               <>
