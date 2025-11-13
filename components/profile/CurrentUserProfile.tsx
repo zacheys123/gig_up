@@ -1146,14 +1146,19 @@ const CurrentUserProfile = () => {
   };
   const handleUpdate = async () => {
     if (!user) return;
-
+    console.log("📊 Rate data being saved:", {
+      baseRate: rate.baseRate,
+      categories: rate.categories,
+      categoriesCount: rate.categories.length,
+      categoriesWithRates: rate.categories.filter((cat) => cat.rate?.trim())
+        .length,
+    });
     // Run validation (only recommendations, no requirements)
     const validationErrors = validateProfile();
 
     // Handle validation errors (only show recommendations)
     if (validationErrors.length > 0) {
       setValidationErrors(validationErrors);
-
       toast.warning(
         `Profile saved with ${validationErrors.length} recommendation(s)`,
         {
@@ -1194,10 +1199,17 @@ const CurrentUserProfile = () => {
         experience,
       };
 
-      // Role-specific data with legacy field restrictions
+      // Determine which roles can edit legacy fields
+      const canEditLegacyFields = [
+        "instrumentalist",
+        "vocalist",
+        "dj",
+      ].includes(roleType);
+
+      // Role-specific data
       const roleSpecificData = isBooker
         ? {
-            // Booker-specific fields (no legacy rates)
+            // Booker-specific fields
             bookerSkills,
             bookerBio,
             musiciangenres: [],
@@ -1258,32 +1270,16 @@ const CurrentUserProfile = () => {
                 travelIncluded: rate.travelIncluded,
                 travelFee: rate.travelFee,
                 // Only allow legacy fields for specific roles
-                regular: ["instrumentalist", "vocalist", "dj"].includes(
-                  roleType
-                )
-                  ? rate.regular
-                  : "",
-                function: ["instrumentalist", "vocalist", "dj"].includes(
-                  roleType
-                )
-                  ? rate.function
-                  : "",
-                concert: ["instrumentalist", "vocalist", "dj"].includes(
-                  roleType
-                )
-                  ? rate.concert
-                  : "",
-                corporate: ["instrumentalist", "vocalist", "dj"].includes(
-                  roleType
-                )
-                  ? rate.corporate
-                  : "",
+                regular: canEditLegacyFields ? rate.regular : "",
+                function: canEditLegacyFields ? rate.function : "",
+                concert: canEditLegacyFields ? rate.concert : "",
+                corporate: canEditLegacyFields ? rate.corporate : "",
               },
               bookerSkills: [],
               bookerBio: "",
             }
           : {
-              // Client-specific fields (no legacy rates)
+              // Client-specific fields
               musiciangenres: [],
               instrument: "",
               roleType: "",

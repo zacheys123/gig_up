@@ -28,6 +28,7 @@ interface FilterState {
   discoveryType: string[];
   clientOnly: boolean;
   musicianOnly: boolean;
+  bookerOnly: boolean;
 }
 
 interface SearchFiltersProps {
@@ -146,12 +147,13 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
     discoveryType: [],
     clientOnly: false,
     musicianOnly: false,
+    bookerOnly: false,
   });
 
   const { colors } = useThemeColors();
 
   // Available filter options - only objective criteria
-  const roleTypes = ["instrumentalist", "vocalist", "dj", "mc"];
+  const roleTypes = ["instrumentalist", "vocalist", "dj", "mc", "teacher"];
   const instruments = [
     "guitar",
     "piano",
@@ -180,7 +182,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
   };
 
   const toggleBooleanFilter = (
-    category: "clientOnly" | "musicianOnly",
+    category: "clientOnly" | "musicianOnly" | "bookerOnly",
     value: boolean
   ) => {
     const newFilters = {
@@ -189,6 +191,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
       // Ensure only one of clientOnly/musicianOnly can be true at a time
       ...(category === "clientOnly" && value ? { musicianOnly: false } : {}),
       ...(category === "musicianOnly" && value ? { clientOnly: false } : {}),
+      ...(category === "bookerOnly" && value ? { bookerOnly: false } : {}),
     };
 
     setActiveFilters(newFilters);
@@ -202,6 +205,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
       discoveryType: [],
       clientOnly: false,
       musicianOnly: false,
+      bookerOnly: false,
     };
     setActiveFilters(clearedFilters);
     onFilterChange(clearedFilters);
@@ -320,7 +324,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
 
           <div className="max-h-96 overflow-y-auto">
             {/* Account Type Toggles */}
-            <div style={sectionStyle} className="p-4 border-b">
+            <div style={sectionStyle} className="p-4 border-b ">
               <label className="flex items-center justify-between cursor-pointer mb-3">
                 <div className="flex items-center gap-2">
                   <FiMusic style={{ color: colors.textMuted }} />
@@ -339,7 +343,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
                 />
               </label>
 
-              <label className="flex items-center justify-between cursor-pointer">
+              <label className="flex items-center justify-between cursor-pointer mb-3">
                 <div className="flex items-center gap-2">
                   <FiUserCheck style={{ color: colors.textMuted }} />
                   <span className="text-sm font-medium" style={textStyle}>
@@ -353,6 +357,23 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
                   checked={activeFilters.clientOnly}
                   onCheckedChange={(checked) =>
                     toggleBooleanFilter("clientOnly", checked)
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer ">
+                <div className="flex items-center gap-2">
+                  <FiMusic style={{ color: colors.textMuted }} />
+                  <span className="text-sm font-medium" style={textStyle}>
+                    Bookers/Managers Only
+                  </span>
+                  {activeFilters.bookerOnly && (
+                    <FiCheck size={14} style={{ color: colors.primary }} />
+                  )}
+                </div>
+                <CustomSwitch
+                  checked={activeFilters.bookerOnly}
+                  onCheckedChange={(checked) =>
+                    toggleBooleanFilter("bookerOnly", checked)
                   }
                 />
               </label>

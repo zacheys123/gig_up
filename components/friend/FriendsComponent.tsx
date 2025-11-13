@@ -31,6 +31,7 @@ import { api } from "@/convex/_generated/api";
 import FollowButton from "../pages/FollowButton";
 import ReportButton from "../report/ReportButton";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
+import { Badge } from "../ui/badge";
 
 const FriendsComponent = () => {
   const { userId } = useAuth();
@@ -51,10 +52,9 @@ const FriendsComponent = () => {
   // UPDATED: Using the correct path now that videos are moved from controllers folder
   const profileVideos = useQuery(
     api.controllers.videos.getUserProfileVideos, // CHANGED: Removed .controllers
-    friend?.clerkId && currentUser?.clerkId
+    friend?.clerkId
       ? {
           userId: friend.clerkId,
-          currentUserId: currentUser._id,
         }
       : friend?.clerkId
         ? {
@@ -378,16 +378,20 @@ const FriendsComponent = () => {
       });
     }
 
-    // Professional Details
+    // Professional Details (Updated to include teacher info)
     if (
       friend.roleType === "instrumentalist" ||
       friend.roleType === "dj" ||
       friend.roleType === "mc" ||
-      friend.roleType === "vocalist"
+      friend.roleType === "vocalist" ||
+      friend.roleType === "teacher"
     ) {
       sections.push({
         type: "professional",
-        title: "Professional Details",
+        title:
+          friend.roleType === "teacher"
+            ? "Teaching Profile"
+            : "Professional Details",
         content: (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {friend.roleType === "instrumentalist" && (
@@ -410,6 +414,28 @@ const FriendsComponent = () => {
                 </p>
               </div>
             )}
+
+            {friend.roleType === "teacher" && (
+              <div
+                className={cn(
+                  "p-3 sm:p-4 rounded-lg",
+                  themeStyles.secondaryBackground
+                )}
+              >
+                <p className={cn("text-xs sm:text-sm", colors.textMuted)}>
+                  Role
+                </p>
+                <p
+                  className={cn(
+                    "font-medium text-sm sm:text-base",
+                    colors.text
+                  )}
+                >
+                  Music Teacher
+                </p>
+              </div>
+            )}
+
             {friend.roleType === "dj" && (
               <div
                 className={cn(
@@ -427,6 +453,7 @@ const FriendsComponent = () => {
                 </p>
               </div>
             )}
+
             {friend.roleType === "vocalist" && (
               <div
                 className={cn(
@@ -444,6 +471,7 @@ const FriendsComponent = () => {
                 </p>
               </div>
             )}
+
             {friend.roleType === "mc" && (
               <div
                 className={cn(
@@ -461,6 +489,7 @@ const FriendsComponent = () => {
                 </p>
               </div>
             )}
+
             {friend.experience && (
               <div
                 className={cn(
@@ -469,7 +498,9 @@ const FriendsComponent = () => {
                 )}
               >
                 <p className={cn("text-xs sm:text-sm", colors.textMuted)}>
-                  Experience
+                  {friend.roleType === "teacher"
+                    ? "Teaching Experience"
+                    : "Experience"}
                 </p>
                 <p
                   className={cn(
@@ -481,90 +512,325 @@ const FriendsComponent = () => {
                 </p>
               </div>
             )}
+
+            {/* Teacher Instrument */}
+            {friend.roleType === "teacher" && friend.instrument && (
+              <div
+                className={cn(
+                  "p-3 sm:p-4 rounded-lg",
+                  themeStyles.secondaryBackground
+                )}
+              >
+                <p className={cn("text-xs sm:text-sm", colors.textMuted)}>
+                  Instrument Taught
+                </p>
+                <p
+                  className={cn(
+                    "font-medium text-sm sm:text-base",
+                    colors.text
+                  )}
+                >
+                  {friend.instrument}
+                </p>
+              </div>
+            )}
           </div>
         ),
       });
     }
+    // Modern Rates Section (New Structure)
+    if (friend.isMusician && friend.rate) {
+      const hasNewRates =
+        friend.rate.categories && friend.rate.categories.length > 0;
+      const hasLegacyRates =
+        friend.rate.regular ||
+        friend.rate.function ||
+        friend.rate.concert ||
+        friend.rate.corporate;
+      const hasBaseRate = friend.rate.baseRate;
 
-    // Pricing & Rates
-    if (
-      friend.rate?.regular ||
-      friend.rate?.function ||
-      friend.rate?.concert ||
-      friend.rate?.corporate
-    ) {
-      sections.push({
-        type: "pricing",
-        title: "Pricing & Rates",
-        gradient: isDarkMode
-          ? "bg-gradient-to-r from-amber-900/30 to-orange-900/30"
-          : "bg-gradient-to-r from-amber-100 to-orange-100",
-        titleColor: isDarkMode ? "text-amber-300" : "text-amber-700",
-        content: (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {friend.rate?.regular && (
-              <div
-                className={cn(
-                  "p-3 rounded-lg",
-                  themeStyles.secondaryBackground
-                )}
-              >
-                <p className={cn("text-sm font-medium", colors.text)}>
-                  Regular Gig
-                </p>
-                <p className="text-lg font-bold text-green-600">
-                  KSh {friend.rate.regular}
-                </p>
-              </div>
-            )}
-            {friend.rate?.function && (
-              <div
-                className={cn(
-                  "p-3 rounded-lg",
-                  themeStyles.secondaryBackground
-                )}
-              >
-                <p className={cn("text-sm font-medium", colors.text)}>
-                  Private Function
-                </p>
-                <p className="text-lg font-bold text-blue-600">
-                  KSh {friend.rate.function}
-                </p>
-              </div>
-            )}
-            {friend.rate?.concert && (
-              <div
-                className={cn(
-                  "p-3 rounded-lg",
-                  themeStyles.secondaryBackground
-                )}
-              >
-                <p className={cn("text-sm font-medium", colors.text)}>
-                  Concert
-                </p>
-                <p className="text-lg font-bold text-purple-600">
-                  KSh {friend.rate.concert}
-                </p>
-              </div>
-            )}
-            {friend.rate?.corporate && (
-              <div
-                className={cn(
-                  "p-3 rounded-lg",
-                  themeStyles.secondaryBackground
-                )}
-              >
-                <p className={cn("text-sm font-medium", colors.text)}>
-                  Corporate Event
-                </p>
-                <p className="text-lg font-bold text-indigo-600">
-                  KSh {friend.rate.corporate}
-                </p>
-              </div>
-            )}
-          </div>
-        ),
-      });
+      if (hasNewRates || hasLegacyRates || hasBaseRate) {
+        sections.push({
+          type: "rates",
+          title: "Performance Rates",
+          gradient: isDarkMode
+            ? "bg-gradient-to-r from-amber-900/30 to-orange-900/30"
+            : "bg-gradient-to-r from-amber-100 to-orange-100",
+          titleColor: isDarkMode ? "text-amber-300" : "text-amber-700",
+          content: (
+            <div className="space-y-6">
+              {/* Base Rate */}
+              {hasBaseRate && (
+                <div
+                  className={cn(
+                    "p-4 rounded-xl border-2",
+                    isDarkMode
+                      ? "bg-amber-900/20 border-amber-800"
+                      : "bg-amber-50 border-amber-200"
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className={cn(
+                        "p-2 rounded-lg",
+                        isDarkMode ? "bg-amber-800" : "bg-amber-100"
+                      )}
+                    >
+                      <DollarSign
+                        className={cn(
+                          "w-4 h-4",
+                          isDarkMode ? "text-amber-300" : "text-amber-600"
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <p className={cn("font-semibold", colors.text)}>
+                        Base Rate
+                      </p>
+                      <p className={cn("text-sm", colors.textMuted)}>
+                        {friend.rate.rateType
+                          ? `Per ${friend.rate.rateType.replace("per_", "")}`
+                          : "Standard rate"}
+                      </p>
+                    </div>
+                  </div>
+                  <p
+                    className={cn(
+                      "text-2xl font-bold",
+                      isDarkMode ? "text-amber-300" : "text-amber-600"
+                    )}
+                  >
+                    {friend.rate.currency} {friend.rate.baseRate}
+                  </p>
+                  {friend.rate.negotiable && (
+                    <p className={cn("text-sm mt-1", colors.textMuted)}>
+                      Negotiable •{" "}
+                      {friend.rate.depositRequired
+                        ? "Deposit required"
+                        : "No deposit required"}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Rate Categories */}
+              {hasNewRates && (
+                <div>
+                  <h4 className={cn("font-semibold text-sm mb-4", colors.text)}>
+                    Service Categories
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {friend?.rate?.categories?.map((category, index) => (
+                      <motion.div
+                        key={index}
+                        whileHover={{ scale: 1.02 }}
+                        className={cn(
+                          "p-4 rounded-xl border transition-all duration-200",
+                          category.rate
+                            ? isDarkMode
+                              ? "bg-green-900/20 border-green-800"
+                              : "bg-green-50 border-green-200"
+                            : isDarkMode
+                              ? "bg-amber-900/20 border-amber-800"
+                              : "bg-amber-50 border-amber-200"
+                        )}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p
+                              className={cn("font-medium text-sm", colors.text)}
+                            >
+                              {category.name}
+                            </p>
+                            {category.description && (
+                              <p
+                                className={cn("text-xs mt-1", colors.textMuted)}
+                              >
+                                {category.description}
+                              </p>
+                            )}
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs font-medium shrink-0 ml-2",
+                              category.rate
+                                ? isDarkMode
+                                  ? "bg-green-900/50 text-green-300 border-green-700"
+                                  : "bg-green-100 text-green-700 border-green-200"
+                                : isDarkMode
+                                  ? "bg-amber-900/50 text-amber-300 border-amber-700"
+                                  : "bg-amber-100 text-amber-700 border-amber-200"
+                            )}
+                          >
+                            {category.rateType ||
+                              friend.rate?.rateType ||
+                              "per_gig"}
+                          </Badge>
+                        </div>
+                        <p
+                          className={cn(
+                            "text-lg font-semibold",
+                            category.rate
+                              ? isDarkMode
+                                ? "text-green-300"
+                                : "text-green-600"
+                              : isDarkMode
+                                ? "text-amber-300"
+                                : "text-amber-600"
+                          )}
+                        >
+                          {category.rate
+                            ? `${friend.rate?.currency || "KES"} ${category.rate}`
+                            : "Rate not set"}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy Rates (Fallback) */}
+              {!hasNewRates && hasLegacyRates && (
+                <div>
+                  <h4 className={cn("font-semibold text-sm mb-4", colors.text)}>
+                    Event-Specific Rates
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {friend.rate.regular && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg text-center",
+                          themeStyles.secondaryBackground
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Regular Events
+                        </p>
+                        <p className="text-lg font-bold text-green-600">
+                          KSh {friend.rate.regular}
+                        </p>
+                      </div>
+                    )}
+                    {friend.rate.function && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg text-center",
+                          themeStyles.secondaryBackground
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Private Functions
+                        </p>
+                        <p className="text-lg font-bold text-blue-600">
+                          KSh {friend.rate.function}
+                        </p>
+                      </div>
+                    )}
+                    {friend.rate.concert && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg text-center",
+                          themeStyles.secondaryBackground
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Concerts
+                        </p>
+                        <p className="text-lg font-bold text-purple-600">
+                          KSh {friend.rate.concert}
+                        </p>
+                      </div>
+                    )}
+                    {friend.rate.corporate && (
+                      <div
+                        className={cn(
+                          "p-3 rounded-lg text-center",
+                          themeStyles.secondaryBackground
+                        )}
+                      >
+                        <p className={cn("text-sm font-medium", colors.text)}>
+                          Corporate Events
+                        </p>
+                        <p className="text-lg font-bold text-indigo-600">
+                          KSh {friend.rate.corporate}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Rate Settings */}
+              {(friend.rate.negotiable ||
+                friend.rate.depositRequired ||
+                friend.rate.travelIncluded) && (
+                <div
+                  className={cn(
+                    "p-3 rounded-lg border",
+                    isDarkMode
+                      ? "bg-gray-700/50 border-gray-600"
+                      : "bg-gray-100 border-gray-200"
+                  )}
+                >
+                  <h4 className={cn("font-semibold text-sm mb-2", colors.text)}>
+                    Rate Settings
+                  </h4>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    {friend.rate.negotiable && (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            isDarkMode ? "bg-green-400" : "bg-green-500"
+                          )}
+                        />
+                        <span className={colors.text}>Negotiable Rates</span>
+                      </div>
+                    )}
+                    {friend.rate.depositRequired && (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            isDarkMode ? "bg-blue-400" : "bg-blue-500"
+                          )}
+                        />
+                        <span className={colors.text}>Deposit Required</span>
+                      </div>
+                    )}
+                    {friend.rate.travelIncluded && (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            isDarkMode ? "bg-purple-400" : "bg-purple-500"
+                          )}
+                        />
+                        <span className={colors.text}>Travel Included</span>
+                      </div>
+                    )}
+                    {!friend.rate.travelIncluded && friend.rate.travelFee && (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            isDarkMode ? "bg-amber-400" : "bg-amber-500"
+                          )}
+                        />
+                        <span className={colors.text}>
+                          Travel Fee: {friend.rate.currency}{" "}
+                          {friend.rate.travelFee}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ),
+        });
+      }
     }
 
     // Availability & Booking
@@ -629,31 +895,171 @@ const FriendsComponent = () => {
         ),
       });
 
-      // Genres & Specialties
-      if (friend.genres || friend.musiciangenres) {
+      // Genres & Specialties (Updated to include teacher info)
+      if (
+        friend.genres ||
+        friend.musiciangenres ||
+        friend.roleType === "teacher"
+      ) {
         sections.push({
           type: "genres",
-          title: "Genres & Specialties",
+          title:
+            friend.roleType === "teacher"
+              ? "Teaching Specialties"
+              : "Genres & Specialties",
           gradient: isDarkMode
             ? "bg-gradient-to-r from-pink-900/30 to-rose-900/30"
             : "bg-gradient-to-r from-pink-100 to-rose-100",
           titleColor: isDarkMode ? "text-pink-300" : "text-pink-700",
           content: (
-            <div className="flex flex-wrap gap-2">
-              {(friend.musiciangenres || friend.genres?.split(",") || []).map(
-                (genre, index) => (
-                  <span
-                    key={index}
+            <div className="space-y-4">
+              {/* Teacher Specific Information */}
+              {friend.roleType === "teacher" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {friend.teacherSpecialization && (
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg border",
+                        isDarkMode
+                          ? "bg-gray-700/50 border-gray-600"
+                          : "bg-gray-100 border-gray-200"
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "text-xs font-medium mb-1",
+                          colors.textMuted
+                        )}
+                      >
+                        Specialization
+                      </p>
+                      <p className={cn("font-medium", colors.text)}>
+                        {friend.teacherSpecialization}
+                      </p>
+                    </div>
+                  )}
+                  {friend.teachingStyle && (
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg border",
+                        isDarkMode
+                          ? "bg-gray-700/50 border-gray-600"
+                          : "bg-gray-100 border-gray-200"
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "text-xs font-medium mb-1",
+                          colors.textMuted
+                        )}
+                      >
+                        Teaching Style
+                      </p>
+                      <p className={cn("font-medium", colors.text)}>
+                        {friend.teachingStyle}
+                      </p>
+                    </div>
+                  )}
+                  {friend.lessonFormat && (
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg border",
+                        isDarkMode
+                          ? "bg-gray-700/50 border-gray-600"
+                          : "bg-gray-100 border-gray-200"
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "text-xs font-medium mb-1",
+                          colors.textMuted
+                        )}
+                      >
+                        Lesson Format
+                      </p>
+                      <p className={cn("font-medium", colors.text)}>
+                        {friend.lessonFormat}
+                      </p>
+                    </div>
+                  )}
+                  {friend.studentAgeGroup && (
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg border",
+                        isDarkMode
+                          ? "bg-gray-700/50 border-gray-600"
+                          : "bg-gray-100 border-gray-200"
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "text-xs font-medium mb-1",
+                          colors.textMuted
+                        )}
+                      >
+                        Student Age Group
+                      </p>
+                      <p className={cn("font-medium", colors.text)}>
+                        {friend.studentAgeGroup}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Music Genres */}
+              {(friend.musiciangenres || friend.genres?.split(",") || [])
+                .length > 0 && (
+                <div>
+                  <p className={cn("text-sm font-medium mb-2", colors.text)}>
+                    {friend.roleType === "teacher"
+                      ? "Music Styles Taught"
+                      : "Music Genres"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      friend.musiciangenres ||
+                      friend.genres?.split(",") ||
+                      []
+                    ).map((genre, index) => (
+                      <span
+                        key={index}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-sm font-medium border",
+                          isDarkMode
+                            ? "bg-gray-700/50 text-gray-300 border-gray-600"
+                            : "bg-white text-gray-700 border-gray-300"
+                        )}
+                      >
+                        {genre.trim()}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Teaching Experience */}
+              {friend.roleType === "teacher" && friend.experience && (
+                <div
+                  className={cn(
+                    "p-3 rounded-lg border",
+                    isDarkMode
+                      ? "bg-amber-900/20 border-amber-800"
+                      : "bg-amber-50 border-amber-200"
+                  )}
+                >
+                  <p className={cn("text-sm font-medium", colors.text)}>
+                    Teaching Experience
+                  </p>
+                  <p
                     className={cn(
-                      "px-3 py-1.5 rounded-full text-sm font-medium border",
-                      isDarkMode
-                        ? "bg-gray-700/50 text-gray-300 border-gray-600"
-                        : "bg-white text-gray-700 border-gray-300"
+                      "text-lg font-bold mt-1",
+                      isDarkMode ? "text-amber-300" : "text-amber-600"
                     )}
                   >
-                    {genre.trim()}
-                  </span>
-                )
+                    {friend.experience} years
+                  </p>
+                </div>
               )}
             </div>
           ),
@@ -990,7 +1396,15 @@ const FriendsComponent = () => {
                 </span>{" "}
                 years of experience as a{" "}
                 <span className="font-semibold text-purple-400">
-                  {friend.instrument} player
+                  {friend?.roleType === "teacher" && "Music Teacher"}
+                  {friend?.roleType === "instrumentalist" && "Instrumentalist"}
+                  {friend?.roleType === "dj" && "Deejay"}
+                  {friend?.roleType === "mc" && "EMcee"}
+                  {friend?.roleType === "vocalist" && "Vocalist"}
+                </span>{" "}
+                specializing in{" "}
+                <span className={cn("font-semibold", colors.text)}>
+                  {friend.instrument}
                 </span>
               </p>
             )}

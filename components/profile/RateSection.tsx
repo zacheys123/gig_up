@@ -86,6 +86,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
     const canEditLegacyFields = ["instrumentalist", "vocalist", "dj"].includes(
       roleType
     );
+    const [editingCategory, setEditingCategory] = useState<number | null>(null);
 
     // Check if any rates are set
     const hasAnyRates =
@@ -103,12 +104,26 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
       setRate((prev) => ({ ...prev, [field]: cleanedValue }));
     };
 
-    const addCategory = () => {
+    const saveCategory = () => {
       if (newCategory.name && newCategory.rate) {
-        setRate((prev) => ({
-          ...prev,
-          categories: [...prev.categories, { ...newCategory }],
-        }));
+        if (editingCategory !== null) {
+          // Update existing category
+          setRate((prev) => ({
+            ...prev,
+            categories: prev.categories.map((cat, index) =>
+              index === editingCategory ? { ...newCategory } : cat
+            ),
+          }));
+          setEditingCategory(null);
+        } else {
+          // Add new category (this replaces addCategory)
+          setRate((prev) => ({
+            ...prev,
+            categories: [...prev.categories, { ...newCategory }],
+          }));
+        }
+
+        // Reset form
         setNewCategory({
           name: "",
           rate: "",
@@ -117,6 +132,39 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
         });
         setShowCategoryModal(false);
       }
+    };
+    const editCategory = (index: number) => {
+      const category = rate.categories[index];
+      setNewCategory({
+        name: category.name,
+        rate: category.rate,
+        rateType: category.rateType || rate.rateType,
+        description: category.description || "",
+      });
+      setEditingCategory(index);
+      setShowCategoryModal(true);
+    };
+    const handleAddCategory = () => {
+      setEditingCategory(null); // Ensure we're in "add" mode
+      setNewCategory({
+        name: "",
+        rate: "",
+        rateType: rate.rateType,
+        description: "",
+      });
+      setShowCategoryModal(true);
+    };
+
+    // Update the "Create Custom" button in empty state to use the same function
+    const handleCreateCustom = () => {
+      setEditingCategory(null);
+      setNewCategory({
+        name: "",
+        rate: "",
+        rateType: rate.rateType,
+        description: "",
+      });
+      setShowCategoryModal(true);
     };
 
     const removeCategory = (index: number) => {
@@ -127,6 +175,34 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
     };
 
     const getDefaultCategories = () => {
+      // Common categories for all performance roles
+      const commonPerformanceCategories = [
+        {
+          name: "💒 Wedding",
+          rate: "",
+          rateType: "per_gig",
+          description: "Wedding ceremony and reception performance",
+        },
+        {
+          name: "🏢 Corporate Event",
+          rate: "",
+          rateType: "per_gig",
+          description: "Corporate function, team building, or office party",
+        },
+        {
+          name: "🎉 Private Party",
+          rate: "",
+          rateType: "per_gig",
+          description: "Birthday, anniversary, or private celebration",
+        },
+        {
+          name: "🎤 Concert/Show",
+          rate: "",
+          rateType: "per_gig",
+          description: "Live concert or showcase performance",
+        },
+      ];
+
       if (roleType === "teacher") {
         return [
           {
@@ -139,7 +215,13 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
             name: "Group Class",
             rate: "",
             rateType: "per_session",
-            description: "Group music lesson",
+            description: "Group music lesson with multiple students",
+          },
+          {
+            name: "Online Lesson",
+            rate: "",
+            rateType: "per_session",
+            description: "Virtual music lesson via video call",
           },
           {
             name: "Workshop",
@@ -148,119 +230,163 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
             description: "Music workshop or masterclass",
           },
           {
-            name: "Online Lesson",
+            name: "Exam Preparation",
             rate: "",
             rateType: "per_session",
-            description: "Virtual music lesson",
+            description: "Music exam or audition preparation",
           },
         ];
       } else if (roleType === "dj") {
         return [
+          ...commonPerformanceCategories,
           {
-            name: "Club Night",
+            name: "🎭 Club Night",
             rate: "",
             rateType: "hourly",
-            description: "Nightclub or bar performance",
+            description: "Nightclub, bar, or lounge DJ set",
           },
           {
-            name: "Wedding",
+            name: "🎪 Festival",
             rate: "",
             rateType: "per_gig",
-            description: "Wedding reception DJ",
+            description: "Music festival or large outdoor event",
           },
           {
-            name: "Corporate Event",
+            name: "🍽️ Restaurant/Lounge",
             rate: "",
-            rateType: "per_gig",
-            description: "Corporate function or party",
+            rateType: "hourly",
+            description: "Background music for dining establishments",
           },
           {
-            name: "Festival",
+            name: "✨ Private Event",
             rate: "",
             rateType: "per_gig",
-            description: "Music festival performance",
+            description: "Exclusive private party or VIP event",
           },
         ];
       } else if (roleType === "mc") {
         return [
+          ...commonPerformanceCategories,
           {
-            name: "Wedding MC",
+            name: "🎤 Award Show",
             rate: "",
             rateType: "per_gig",
-            description: "Wedding ceremony and reception",
+            description: "Award ceremony or recognition event hosting",
           },
           {
-            name: "Corporate MC",
+            name: "🚀 Product Launch",
             rate: "",
             rateType: "per_gig",
-            description: "Corporate event hosting",
+            description: "New product or service launch event",
           },
           {
-            name: "Award Show",
+            name: "⛪ Church Service",
             rate: "",
             rateType: "per_gig",
-            description: "Award ceremony hosting",
+            description: "Church event or religious ceremony hosting",
           },
           {
-            name: "Product Launch",
+            name: "🎓 Graduation",
             rate: "",
             rateType: "per_gig",
-            description: "Product launch event",
+            description: "Graduation ceremony or academic event",
           },
         ];
       } else if (roleType === "vocalist") {
         return [
+          ...commonPerformanceCategories,
           {
-            name: "Wedding Performance",
+            name: "🎹 Recording Session",
             rate: "",
-            rateType: "per_gig",
-            description: "Wedding ceremony vocals",
+            rateType: "hourly",
+            description: "Studio recording session work",
           },
           {
-            name: "Background Vocals",
+            name: "🎤 Background Vocals",
             rate: "",
             rateType: "hourly",
             description: "Studio or live background vocals",
           },
           {
-            name: "Lead Vocals",
+            name: "✨ Solo Performance",
             rate: "",
             rateType: "per_gig",
-            description: "Band lead vocal performance",
+            description: "Featured solo vocal performance",
           },
           {
-            name: "Session Singer",
+            name: "⛪ Church Service",
+            rate: "",
+            rateType: "per_gig",
+            description: "Worship leading or church performance",
+          },
+          {
+            name: "💍 Ceremony Music",
+            rate: "",
+            rateType: "per_gig",
+            description: "Wedding ceremony vocals specifically",
+          },
+        ];
+      } else if (roleType === "instrumentalist") {
+        return [
+          ...commonPerformanceCategories,
+          {
+            name: "🍽️ Restaurant/Lounge",
             rate: "",
             rateType: "hourly",
-            description: "Recording session work",
+            description: "Background music for dining venues",
+          },
+          {
+            name: "🎹 Recording Session",
+            rate: "",
+            rateType: "hourly",
+            description: "Studio recording session work",
+          },
+          {
+            name: "⛪ Church Service",
+            rate: "",
+            rateType: "per_gig",
+            description: "Church worship team or special music",
+          },
+          {
+            name: "🎭 Club Performance",
+            rate: "",
+            rateType: "hourly",
+            description: "Live instrumental performance at venues",
+          },
+          {
+            name: "🚀 Session Musician",
+            rate: "",
+            rateType: "hourly",
+            description: "Live or recording session work",
+          },
+          {
+            name: "🎼 Orchestral Gig",
+            rate: "",
+            rateType: "per_gig",
+            description: "Orchestra or ensemble performance",
           },
         ];
       } else {
-        // Instrumentalist default
+        // Default for other roles
         return [
+          ...commonPerformanceCategories,
           {
-            name: "Wedding Ceremony",
-            rate: "",
-            rateType: "per_gig",
-            description: "Wedding ceremony performance",
-          },
-          {
-            name: "Restaurant Gig",
+            name: "🍽️ Restaurant/Lounge",
             rate: "",
             rateType: "hourly",
-            description: "Restaurant or cafe performance",
+            description: "Venue performance",
           },
           {
-            name: "Corporate Event",
-            rate: "",
-            rateType: "per_gig",
-            description: "Corporate function performance",
-          },
-          {
-            name: "Session Musician",
+            name: "🎹 Recording Session",
             rate: "",
             rateType: "hourly",
-            description: "Recording session work",
+            description: "Studio work",
+          },
+          {
+            name: "✨ Other Event",
+            rate: "",
+            rateType: "per_gig",
+            description: "Custom or special event type",
           },
         ];
       }
@@ -529,8 +655,68 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
           )}
         </AnimatePresence>
 
+        {/* Toggle Trigger - Shows when no categories exist */}
+        {rate.categories.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "mt-4 p-4 rounded-xl border-2 border-dashed text-center cursor-pointer",
+              colors.border,
+              colors.hoverBg,
+              "transition-all duration-200 hover:shadow-md"
+            )}
+            onClick={() => setShowRates(!showRates)} // Toggle instead of just open
+          >
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className={cn("p-2 rounded-full", colors.warningBg)}>
+                {showRates ? (
+                  <ChevronUp className={cn("h-5 w-5", colors.warningText)} />
+                ) : (
+                  <Plus className={cn("h-5 w-5", colors.warningText)} />
+                )}
+              </div>
+              <div className="text-left">
+                <h4 className={cn("font-semibold text-sm", colors.text)}>
+                  {showRates
+                    ? "Hide Rate Categories"
+                    : "Create Rate Categories"}
+                </h4>
+                <p className={cn("text-xs", colors.textMuted)}>
+                  {showRates
+                    ? "Collapse the rate categories section"
+                    : "Add different rates for weddings, corporate events, concerts, and more"}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowRates(!showRates); // Toggle on button click too
+              }}
+              className={cn(
+                "mt-2 bg-amber-500 hover:bg-amber-600 text-white",
+                "transition-all duration-200"
+              )}
+            >
+              {showRates ? (
+                <>
+                  <ChevronUp size={14} className="mr-1" />
+                  Hide Categories
+                </>
+              ) : (
+                <>
+                  <Plus size={14} className="mr-1" />
+                  Setup Rate Categories
+                </>
+              )}
+            </Button>
+          </motion.div>
+        )}
         {/* Rate Importance Banner */}
-        {!hasAnyRates && (
+        {!hasAnyRates && !showRates && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -566,21 +752,34 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
             </div>
           </motion.div>
         )}
-
         <AnimatePresence>
           {showRates && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, height: 0, scale: 0.95 }}
+              animate={{
+                opacity: 1,
+                height: "auto",
+                scale: 1,
+              }}
+              exit={{
+                opacity: 0,
+                height: "auto",
+                scale: 0.95,
+              }}
+              transition={{
+                duration: 0.4,
+                ease: [0.4, 0, 0.2, 1],
+                height: { duration: 0.3 },
+                opacity: { duration: 0.2 },
+              }}
               className="overflow-hidden space-y-6"
             >
               {/* Success State when rates are added */}
               {hasAnyRates && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: -10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.1, duration: 0.3 }}
                   className={cn(
                     "p-3 rounded-xl border-2",
                     colors.successBg,
@@ -600,8 +799,11 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                 </motion.div>
               )}
 
-              {/* Rate Categories */}
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.3 }}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <Label className={cn("text-sm font-medium", colors.text)}>
@@ -611,52 +813,66 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                       Different rates for different types of gigs
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={loadDefaultCategories}
-                      className="text-xs"
+
+                  {/* Conditional Header Buttons */}
+                  {rate.categories.length > 0 && (
+                    <motion.div
+                      className="flex gap-2"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2, duration: 0.3 }}
                     >
-                      Load Defaults
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setShowCategoryModal(true)}
-                      className={cn(
-                        "text-xs bg-amber-500 hover:bg-amber-600 text-white",
-                        "transition-all duration-200"
-                      )}
-                    >
-                      <Plus size={14} className="mr-1" /> Add Category
-                    </Button>
-                  </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={loadDefaultCategories}
+                        className={cn(
+                          "text-xs transition-all duration-200",
+                          colors.border,
+                          colors.text,
+                          colors.hoverBg
+                        )}
+                      >
+                        Load Defaults
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddCategory}
+                        className={cn(
+                          "text-xs bg-amber-500 hover:bg-amber-600 text-white",
+                          "transition-all duration-200"
+                        )}
+                      >
+                        <Plus size={14} className="mr-1" /> Add Category
+                      </Button>
+                    </motion.div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
                   {rate.categories.map((category, index) => (
                     <motion.div
                       key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{
+                        delay: 0.1 + index * 0.05,
+                        duration: 0.3,
+                        ease: "easeOut",
+                      }}
                       className={cn(
-                        "p-4 rounded-xl border flex items-center justify-between group",
+                        "p-4 rounded-xl border flex items-center justify-between group transition-all duration-200 cursor-pointer",
                         colors.card,
                         colors.border,
-                        "transition-all duration-200 hover:shadow-md",
+                        "hover:shadow-md hover:scale-[1.02]",
                         category.rate
-                          ? cn(
-                              "border-green-200 dark:border-green-800",
-                              colors.successBorder
-                            )
-                          : cn(
-                              "border-amber-200 dark:border-amber-800",
-                              colors.warningBorder
-                            )
+                          ? cn(colors.successBorder)
+                          : cn(colors.warningBorder)
                       )}
+                      onClick={() => editCategory(index)}
+                      whileHover={{ y: -2 }}
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -669,14 +885,14 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                               "text-xs font-medium",
                               category.rate
                                 ? cn(
-                                    "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300",
                                     colors.successBg,
-                                    colors.successText
+                                    colors.successText,
+                                    colors.successBorder
                                   )
                                 : cn(
-                                    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300",
                                     colors.warningBg,
-                                    colors.warningText
+                                    colors.warningText,
+                                    colors.warningBorder
                                   )
                             )}
                           >
@@ -692,82 +908,115 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                           className={cn(
                             "text-sm font-semibold",
                             category.rate
-                              ? cn(
-                                  "text-green-600 dark:text-green-400",
-                                  colors.successText
-                                )
-                              : cn(
-                                  "text-amber-600 dark:text-amber-400",
-                                  colors.warningText
-                                )
+                              ? cn(colors.successText)
+                              : cn(colors.warningText)
                           )}
                         >
                           {category.rate
                             ? `${rate.currency} ${category.rate}`
-                            : "Rate not set"}
+                            : "Click to set rate"}
                         </p>
                       </div>
-                      <button
-                        onClick={() => removeCategory(index)}
+                      <motion.button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeCategory(index);
+                        }}
                         className={cn(
                           "p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200",
                           colors.hoverBg,
-                          "text-red-500 hover:text-red-600"
+                          colors.destructive,
+                          colors.destructiveHover
                         )}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                       >
                         <X size={14} />
-                      </button>
+                      </motion.button>
                     </motion.div>
                   ))}
 
                   {rate.categories.length === 0 && (
-                    <div
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1, duration: 0.3 }}
                       className={cn(
                         "p-8 text-center rounded-xl border-2 border-dashed",
                         colors.border,
-                        "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800"
+                        colors.card
                       )}
                     >
-                      <DollarSign
-                        className={cn(
-                          "h-12 w-12 mx-auto mb-3",
-                          colors.textMuted
-                        )}
-                      />
-                      <p
+                      <motion.div
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.4 }}
+                      >
+                        <DollarSign
+                          className={cn(
+                            "h-12 w-12 mx-auto mb-3",
+                            colors.textMuted
+                          )}
+                        />
+                      </motion.div>
+                      <motion.p
                         className={cn("text-sm font-medium mb-2", colors.text)}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.25, duration: 0.3 }}
                       >
                         No rate categories yet
-                      </p>
-                      <p className={cn("text-xs mb-4", colors.textMuted)}>
+                      </motion.p>
+                      <motion.p
+                        className={cn("text-xs mb-4", colors.textMuted)}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.3, duration: 0.3 }}
+                      >
                         Add different rates for different types of gigs to
                         attract more clients
-                      </p>
-                      <div className="flex gap-2 justify-center">
+                      </motion.p>
+                      <motion.div
+                        className="flex gap-2 justify-center"
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.35, duration: 0.3 }}
+                      >
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={loadDefaultCategories}
+                          className={cn(
+                            "transition-all duration-200",
+                            colors.border,
+                            colors.text,
+                            colors.hoverBg
+                          )}
                         >
                           Load Default Categories
                         </Button>
                         <Button
                           type="button"
                           size="sm"
-                          onClick={() => setShowCategoryModal(true)}
-                          className="bg-amber-500 hover:bg-amber-600 text-white"
+                          onClick={handleCreateCustom}
+                          className={cn(
+                            "bg-amber-500 hover:bg-amber-600 text-white transition-all duration-200"
+                          )}
                         >
                           <Plus size={14} className="mr-1" /> Create Custom
                         </Button>
-                      </div>
-                    </div>
+                      </motion.div>
+                    </motion.div>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
               {/* Stats Section */}
-              <div
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.3 }}
                 className={cn(
                   "p-4 rounded-xl border",
                   colors.card,
@@ -782,56 +1031,77 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                   </h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-lg", colors.successBg)}>
-                      <Users className={cn("h-4 w-4", colors.successText)} />
-                    </div>
-                    <div>
-                      <p className={cn("font-medium", colors.text)}>
-                        3x More Bookings
-                      </p>
-                      <p className={colors.textMuted}>
-                        Artists with rates get more requests
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-lg", colors.infoBg)}>
-                      <Clock className={cn("h-4 w-4", colors.infoText)} />
-                    </div>
-                    <div>
-                      <p className={cn("font-medium", colors.text)}>
-                        Faster Decisions
-                      </p>
-                      <p className={colors.textMuted}>
-                        Clients book faster with clear pricing
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-lg", colors.warningBg)}>
-                      <Star className={cn("h-4 w-4", colors.warningText)} />
-                    </div>
-                    <div>
-                      <p className={cn("font-medium", colors.text)}>
-                        Professional
-                      </p>
-                      <p className={colors.textMuted}>
-                        Builds trust and credibility
-                      </p>
-                    </div>
-                  </div>
+                  {[
+                    {
+                      icon: Users,
+                      text: "3x More Bookings",
+                      desc: "Artists with rates get more requests",
+                    },
+                    {
+                      icon: Clock,
+                      text: "Faster Decisions",
+                      desc: "Clients book faster with clear pricing",
+                    },
+                    {
+                      icon: Star,
+                      text: "Professional",
+                      desc: "Builds trust and credibility",
+                    },
+                  ].map((item, index) => (
+                    <motion.div
+                      key={index}
+                      className="flex items-center gap-3"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + index * 0.1, duration: 0.3 }}
+                    >
+                      <div
+                        className={cn(
+                          "p-2 rounded-lg",
+                          index === 0
+                            ? colors.successBg
+                            : index === 1
+                              ? colors.infoBg
+                              : colors.warningBg
+                        )}
+                      >
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4",
+                            index === 0
+                              ? colors.successText
+                              : index === 1
+                                ? colors.infoText
+                                : colors.warningText
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <p className={cn("font-medium", colors.text)}>
+                          {item.text}
+                        </p>
+                        <p className={colors.textMuted}>{item.desc}</p>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Add Category Modal */}
         <Modal
           isOpen={showCategoryModal}
-          onClose={() => setShowCategoryModal(false)}
-          title="Add Rate Category"
+          onClose={() => {
+            setShowCategoryModal(false);
+            setEditingCategory(null);
+            setNewCategory({
+              name: "",
+              rate: "",
+              rateType: rate.rateType,
+              description: "",
+            });
+          }}
+          title={editingCategory !== null ? "Edit Rate" : "Add Rate Category"}
         >
           <div className="space-y-4">
             <TextInput
@@ -840,36 +1110,47 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
               onChange={(value) =>
                 setNewCategory((prev) => ({ ...prev, name: value ?? "" }))
               }
-              placeholder="e.g., Private Lesson, Wedding Performance"
+              placeholder="e.g., Wedding, Corporate Event, Private Party"
+              disabled={editingCategory !== null} // Don't allow editing name for existing categories
             />
 
-            <TextInput
-              label="Rate Amount"
-              value={newCategory.rate}
-              onChange={(value) =>
-                setNewCategory((prev) => ({ ...prev, rate: value ?? "" }))
-              }
-              placeholder="e.g., 5000"
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className={cn("text-sm font-medium", colors.text)}>
+                  Rate Amount
+                </Label>
+                <TextInput
+                  value={newCategory.rate}
+                  onChange={(value) =>
+                    setNewCategory((prev) => ({ ...prev, rate: value ?? "" }))
+                  }
+                  placeholder="5000"
+                />
+              </div>
 
-            <SelectInput
-              label="Rate Type"
-              value={newCategory.rateType}
-              onChange={(value) =>
-                setNewCategory((prev) => ({
-                  ...prev,
-                  rateType: value as typeof prev.rateType,
-                }))
-              }
-              options={[
-                { value: "hourly", label: "Per Hour" },
-                { value: "daily", label: "Per Day" },
-                { value: "per_session", label: "Per Session" },
-                { value: "per_gig", label: "Per Gig" },
-                { value: "monthly", label: "Per Month" },
-                { value: "custom", label: "Custom" },
-              ]}
-            />
+              <div className="space-y-2">
+                <Label className={cn("text-sm font-medium", colors.text)}>
+                  Rate Type
+                </Label>
+                <SelectInput
+                  value={newCategory.rateType}
+                  onChange={(value) =>
+                    setNewCategory((prev) => ({
+                      ...prev,
+                      rateType: value as typeof prev.rateType,
+                    }))
+                  }
+                  options={[
+                    { value: "hourly", label: "Per Hour" },
+                    { value: "daily", label: "Per Day" },
+                    { value: "per_session", label: "Per Session" },
+                    { value: "per_gig", label: "Per Gig" },
+                    { value: "monthly", label: "Per Month" },
+                    { value: "custom", label: "Custom" },
+                  ]}
+                />
+              </div>
+            </div>
 
             <TextInput
               label="Description (Optional)"
@@ -880,13 +1161,24 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                   description: value ?? "",
                 }))
               }
-              placeholder="Brief description of this service"
+              placeholder="Brief description of this service or event type"
             />
           </div>
           <ModalActions
-            onCancel={() => setShowCategoryModal(false)}
-            onConfirm={addCategory}
-            confirmText="Add Category"
+            onCancel={() => {
+              setShowCategoryModal(false);
+              setEditingCategory(null);
+              setNewCategory({
+                name: "",
+                rate: "",
+                rateType: rate.rateType,
+                description: "",
+              });
+            }}
+            onConfirm={saveCategory} // Use saveCategory instead of addCategory
+            confirmText={
+              editingCategory !== null ? "Update Rate" : "Add Category"
+            }
           />
         </Modal>
       </SectionContainer>

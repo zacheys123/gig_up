@@ -241,29 +241,7 @@ export const updateUserProfile = mutation({
     const cleanUpdates = Object.fromEntries(
       Object.entries(args.updates).filter(([_, value]) => value !== undefined)
     );
-    // Handle legacy field permissions based on role - FIXED TYPE ISSUE
-    if (
-      cleanUpdates.rate &&
-      typeof cleanUpdates.rate === "object" &&
-      !Array.isArray(cleanUpdates.rate)
-    ) {
-      const userRole = cleanUpdates.roleType || user.roleType;
-      const isAllowedRole = ["instrumentalist", "vocalist", "dj"].includes(
-        userRole as string
-      );
 
-      if (!isAllowedRole && "regular" in cleanUpdates.rate) {
-        // Remove legacy fields if user doesn't have permission
-        const {
-          regular,
-          function: func,
-          concert,
-          corporate,
-          ...allowedRateFields
-        } = cleanUpdates.rate;
-        cleanUpdates.rate = allowedRateFields;
-      }
-    }
     console.log("Clean updates:", cleanUpdates);
 
     await ctx.db.patch(args.userId, {
