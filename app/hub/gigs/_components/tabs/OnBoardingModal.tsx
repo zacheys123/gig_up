@@ -36,6 +36,7 @@ interface OnboardingModalProps {
   onCustomCreation: () => void;
   onScratchCreation?: () => void; // ADD THIS
   scrollToTemplates?: () => void; // NEW PROP
+  onAICreation?: () => void; // NEW: AI creation handler
 }
 
 // Memoize feature cards data - updated with theme colors
@@ -90,7 +91,41 @@ const STAT_ITEMS = [
 ];
 
 // Memoize creation options - updated with theme colors
-// In your OnboardingModal.tsx - UPDATED TIER SYSTEM
+
+const getTierAccess = (userTier: string, isInGracePeriod: boolean) => {
+  const baseTier = userTier || "free";
+
+  return {
+    // Free tier access
+    canAccessTemplates: true, // Always available
+
+    // Pro tier features
+    canAccessCustomCreation:
+      baseTier === "pro" || baseTier === "premium" || baseTier === "elite",
+
+    // Premium tier features
+    canAccessScratchCreation: baseTier === "premium" || baseTier === "elite",
+
+    // Elite tier features
+    canAccessAICreation: baseTier === "elite",
+
+    // Trial period overrides
+    canAccessEverything: isInGracePeriod,
+
+    // Current effective access
+    effectiveAccess: {
+      templates: true,
+      custom:
+        isInGracePeriod ||
+        baseTier === "pro" ||
+        baseTier === "premium" ||
+        baseTier === "elite",
+      scratch:
+        isInGracePeriod || baseTier === "premium" || baseTier === "elite",
+      ai: baseTier === "elite",
+    },
+  };
+};
 const getCreationOptions = (
   colors: any,
   user: any,
@@ -98,11 +133,12 @@ const getCreationOptions = (
   trialRemainingDays: number | null
 ) => {
   const userTier = user?.tier || "free";
+  const access = getTierAccess(userTier, isInGracePeriod);
 
   return [
     {
       id: "guided",
-      title: "Use Templates",
+      title: "Browse Templates",
       description: "Start with professionally designed templates",
       icon: BookOpen,
       features: [
@@ -114,14 +150,15 @@ const getCreationOptions = (
       color: "from-blue-500 to-purple-500",
       buttonText: "Browse Templates",
       tier: "free",
-      available: true, // Always available
+      available: access.effectiveAccess.templates,
+      alwaysAvailable: true,
       iconBg: colors.infoBg,
       iconColor: colors.infoText,
     },
     {
       id: "custom",
       title: "Custom Creation",
-      description: "Advanced customization with template foundation",
+      description: "Modify templates to fit your exact needs",
       icon: Settings,
       features: [
         "Modify any template extensively",
@@ -130,17 +167,19 @@ const getCreationOptions = (
         "Priority template access",
       ],
       color: "from-green-500 to-emerald-500",
-      buttonText:
-        userTier === "free" ? "Upgrade to Pro" : "Start Custom Creation",
+      buttonText: access.effectiveAccess.custom
+        ? "Customize Templates"
+        : "Upgrade to Pro",
       tier: "pro",
-      available: userTier === "pro" || userTier === "premium",
+      available: access.effectiveAccess.custom,
+      upgradeTarget: "pro",
       iconBg: colors.successBg,
       iconColor: colors.successText,
     },
     {
       id: "scratch",
       title: "Start from Scratch",
-      description: "Complete creative freedom",
+      description: "Complete creative freedom for unique events",
       icon: Sparkles,
       features: [
         "Blank canvas experience",
@@ -149,12 +188,35 @@ const getCreationOptions = (
         "White-glove support",
       ],
       color: "from-amber-500 to-orange-500",
-      buttonText:
-        userTier === "premium" ? "Start Creating" : "Upgrade to Premium",
+      buttonText: access.effectiveAccess.scratch
+        ? "Start Creating"
+        : "Upgrade to Premium",
       tier: "premium",
-      available: userTier === "premium",
+      available: access.effectiveAccess.scratch,
+      upgradeTarget: "premium",
       iconBg: colors.warningBg,
       iconColor: colors.warningText,
+    },
+    {
+      id: "ai",
+      title: "AI Gig Creator",
+      description: "AI-powered gig creation with smart suggestions",
+      icon: Wand2, // Using Wand2 for AI/magic
+      features: [
+        "AI-powered template generation",
+        "Smart field suggestions",
+        "Auto-optimization for engagement",
+        "Predictive musician matching",
+      ],
+      color: "from-purple-500 to-pink-500",
+      buttonText: access.effectiveAccess.ai
+        ? "Create with AI"
+        : "Upgrade to Elite",
+      tier: "elite",
+      available: access.effectiveAccess.ai,
+      upgradeTarget: "elite",
+      iconBg: "bg-purple-50 dark:bg-purple-950/20",
+      iconColor: "text-purple-600 dark:text-purple-400",
     },
   ];
 };
@@ -231,60 +293,93 @@ const StatItem = memo(({ stat, colors }: any) => {
 StatItem.displayName = "StatItem";
 
 const CreationOption = memo(
-  ({ option, onSelect, colors, user, isInGracePeriod, daysLeft }: any) => {
+  ({
+    option,
+    onSelect,
+    colors,
+    user,
+    isInGracePeriod,
+    daysLeft,
+    onUpgrade,
+  }: any) => {
     const Icon = option.icon;
 
     const handleClick = useCallback(() => {
       if (!option.available) {
-        if (option.tier === "pro") {
-          alert("Upgrade to Pro to access Custom Creation features");
-        } else if (option.tier === "premium") {
-          alert("Upgrade to Premium to start from scratch");
+        // Show upgrade modal or redirect to pricing
+        if (onUpgrade && option.upgradeTarget) {
+          onUpgrade(option.upgradeTarget);
         }
         return;
       }
       onSelect(option.id);
-    }, [option, onSelect]);
+    }, [option, onSelect, onUpgrade]);
+
+    const getTierBadgeConfig = (
+      tier: string,
+      isTrial: boolean,
+      daysLeft: number | null
+    ) => {
+      const config = {
+        free: { bg: "bg-blue-500", text: "FREE" },
+        pro: { bg: "bg-green-500", text: "PRO" },
+        premium: { bg: "bg-amber-500", text: "PREMIUM" },
+        elite: {
+          bg: "bg-gradient-to-r from-purple-500 to-pink-500",
+          text: "ELITE",
+        },
+      };
+
+      if (isTrial) {
+        return {
+          bg: "bg-gradient-to-r from-purple-500 to-blue-500",
+          text: `TRIAL${daysLeft ? ` (${daysLeft}d)` : ""}`,
+        };
+      }
+
+      return config[tier] || config.free;
+    };
+
+    const badgeConfig = getTierBadgeConfig(
+      option.tier,
+      isInGracePeriod && option.tier === "free",
+      daysLeft
+    );
 
     return (
       <div
         className={cn(
-          "rounded-2xl p-6 border-2 transition-all duration-300 group cursor-pointer relative",
+          "rounded-2xl p-6 border-2 transition-all duration-300 group relative",
           colors.border,
           colors.card,
           option.available
-            ? "hover:scale-105 hover:shadow-xl hover:border-blue-300"
+            ? "hover:scale-105 hover:shadow-xl hover:border-blue-300 cursor-pointer"
             : "opacity-70 cursor-not-allowed"
         )}
       >
-        {/* CORRECTED Tier Badge */}
+        {/* Tier Badge */}
         <div
           className={cn(
-            "absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold",
-            option.tier === "free" && "bg-blue-500 text-white",
-            option.tier === "pro" && "bg-green-500 text-white",
-            option.tier === "premium" && "bg-amber-500 text-white"
+            "absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold text-white",
+            badgeConfig.bg
           )}
         >
-          {option.tier === "free" && isInGracePeriod
-            ? `Trial (${daysLeft} days)`
-            : option.tier === "free"
-              ? "FREE"
-              : option.tier.toUpperCase()}
+          {badgeConfig.text}
         </div>
 
-        {/* Lock for unavailable options */}
+        {/* Lock Icon for unavailable options */}
         {!option.available && (
           <div className="absolute top-4 left-4">
             <Lock className={cn("w-5 h-5", colors.textMuted)} />
           </div>
         )}
 
+        {/* Option Content */}
         <div className="text-center mb-6">
           <div
             className={cn(
               "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-300",
-              option.available ? "group-hover:scale-110" : "",
+              option.available ? "group-hover:scale-110" : "opacity-60",
               option.iconBg
             )}
           >
@@ -307,22 +402,22 @@ const CreationOption = memo(
                   "w-2 h-2 rounded-full flex-shrink-0",
                   option.available ? "bg-blue-500" : "bg-gray-400"
                 )}
-              ></div>
+              />
               <span className={cn("text-xs", colors.textMuted)}>{feature}</span>
             </div>
           ))}
         </div>
 
+        {/* Action Button */}
         <Button
           onClick={handleClick}
           className={cn(
-            "w-full bg-gradient-to-r transition-all duration-300",
+            "w-full transition-all duration-300 font-semibold",
             option.available
-              ? "hover:scale-105 " + option.color
+              ? `bg-gradient-to-r hover:scale-105 ${option.color} text-white`
               : "bg-gray-400 text-gray-800 cursor-not-allowed"
           )}
           size="lg"
-          disabled={!option.available}
         >
           {option.buttonText}
           {option.available && (
@@ -330,17 +425,22 @@ const CreationOption = memo(
           )}
         </Button>
 
-        {/* Upgrade Prompt */}
-        {!option.available && option.tier !== "free" && (
+        {/* Upgrade Prompt for unavailable options */}
+        {!option.available && option.upgradeTarget && (
           <div className="text-center mt-3">
+            <p className={cn("text-xs mb-2", colors.textMuted)}>
+              Available in{" "}
+              {option.upgradeTarget.charAt(0).toUpperCase() +
+                option.upgradeTarget.slice(1)}
+            </p>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => alert(`Redirecting to ${option.tier} upgrade...`)}
+              onClick={() => onUpgrade?.(option.upgradeTarget)}
               className="text-xs"
             >
               <Crown className="w-3 h-3 mr-1" />
-              Upgrade to {option.tier}
+              Upgrade Now
             </Button>
           </div>
         )}
@@ -359,12 +459,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     onCustomCreation,
     onScratchCreation,
     scrollToTemplates,
+    onAICreation,
   }) => {
     const { colors } = useThemeColors();
     const { user } = useCurrentUser(); // ADD THIS TO GET USER INFO
     const { isInGracePeriod, daysLeft: trialRemainingDays } = useCheckTrial();
 
     console.log(isInGracePeriod);
+
+    const handleUpgrade = useCallback(() => {
+      // Redirect to pricing or show upgrade modal
+      window.location.href = `/dashboard/billing`;
+    }, []);
     // Memoize dynamic data based on theme
     const featureCards = useMemo(() => getFeatureCards(colors), [colors]);
     const creationOptions = useMemo(
@@ -400,16 +506,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
         }
       }
     }, [onScratchCreation]);
-
-    // UPDATE: Fix the creation select handler to include scratch
+    const handleAICreation = useCallback(() => {
+      if (onAICreation) {
+        onAICreation();
+      }
+    }, [onAICreation]);
     const handleCreationSelect = useCallback(
-      (type: "guided" | "custom" | "scratch") => {
+      (type: "guided" | "custom" | "scratch" | "ai") => {
         if (type === "guided") {
           handleGuidedCreation();
         } else if (type === "custom") {
           handleCustomCreation();
         } else if (type === "scratch" && onScratchCreation) {
           handleScratchCreation();
+        } else if (type === "ai" && onAICreation) {
+          // Add AI creation handler
+          handleAICreation();
         }
       },
       [
@@ -417,6 +529,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
         handleCustomCreation,
         handleScratchCreation,
         onScratchCreation,
+        onAICreation,
       ]
     );
 
@@ -535,6 +648,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                         isInGracePeriod={isInGracePeriod}
                         user={user}
                         daysLeft={trialRemainingDays}
+                        onUpgrade={handleUpgrade}
                       />
                     ))}
                   </div>
