@@ -80,8 +80,8 @@ export const userModel = defineTable({
     v.array(
       v.object({
         _id: v.string(),
-        postedBy: v.string(),
-        postedTo: v.string(),
+        clientId: v.string(),
+        musicianId: v.string(),
         rating: v.optional(v.number()),
         comment: v.optional(v.string()),
         gigId: v.optional(v.string()),
@@ -95,8 +95,8 @@ export const userModel = defineTable({
     v.array(
       v.object({
         _id: v.string(),
-        postedBy: v.string(),
-        postedTo: v.string(),
+        clientId: v.string(),
+        musicianId: v.string(),
         rating: v.optional(v.number()),
         comment: v.optional(v.string()),
         gigId: v.optional(v.string()),

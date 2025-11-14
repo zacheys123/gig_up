@@ -17,7 +17,7 @@ export default defineSchema({
   notificationSettings: notificationSettingsModel,
   instantgigs: instantGigs,
   instantGigsTemplate: instantGigsTemplate,
-  // Other tables...
+
   aiSuggestions: defineTable({
     questions: v.object({
       musician: v.array(v.string()),

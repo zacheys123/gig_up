@@ -269,8 +269,8 @@ export const updateInstantGigStatus = mutation({
       // ONLY use statuses that exist in your schema
       v.literal("accepted"),
       v.literal("declined"),
-      v.literal("deputy-suggested")
-      // REMOVED: v.literal("cancelled") - not in your schema
+      v.literal("deputy-suggested"),
+      v.literal("cancelled")
     ),
     musicianId: v.id("users"),
   },

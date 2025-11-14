@@ -102,7 +102,7 @@ const calculateAverageRating = (
   user: any,
   allGigs: any[] = []
 ): CalculateRatingResult => {
-  const directReviews = user.allreviews ? user?.allreviews : [];
+  const directReviews = user?.allreviews ? user?.allreviews : [];
   const directRating =
     directReviews.length > 0
       ? directReviews.reduce(

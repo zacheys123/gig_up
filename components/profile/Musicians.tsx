@@ -54,12 +54,12 @@ const Musicians = () => {
 
   // Helper functions to calculate data from your schema
   const calculateAverageRating = (musician: UserProps): number => {
-    if (!musician.allreviews || musician.allreviews.length === 0) return 4.5;
-    const total = musician.allreviews.reduce(
+    if (!musician.allreviews || musician?.allreviews?.length === 0) return 4.5;
+    const total = musician?.allreviews.reduce(
       (sum, review) => sum + (review.rating || 0),
       0
     );
-    return Number((total / musician.allreviews.length).toFixed(1));
+    return Number((total / musician?.allreviews?.length).toFixed(1));
   };
 
   const calculateResponseRate = (musician: UserProps): number => {
@@ -496,7 +496,7 @@ const InstagramStyleCard = ({
   };
 
   const genres = getGenres();
-  const hasVideos = musician.videosProfile && musician.videosProfile.length > 0;
+
   const tier = musician.tier;
 
   return (
@@ -604,12 +604,6 @@ const InstagramStyleCard = ({
             <div className="bg-green-500 text-white text-xs px-3 py-1.5 rounded-full font-medium flex items-center space-x-1">
               <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
               <span>Available</span>
-            </div>
-          )}
-          {hasVideos && (
-            <div className="bg-blue-500 text-white text-xs px-3 py-1.5 rounded-full font-medium flex items-center space-x-1">
-              <Video className="w-3 h-3" />
-              <span>{musician.videosProfile?.length} Videos</span>
             </div>
           )}
         </div>

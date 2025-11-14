@@ -1,6 +1,7 @@
 import { Id } from "@/convex/_generated/dataModel";
 import { UserProps } from "./types/userTypes";
 import { Notification, NotificationType } from "./convex/notificationsTypes";
+import { GigType } from "./convex/gigTypes";
 
 export const toUserId = (id: string): Id<"users"> => {
   return id as Id<"users">;
@@ -869,4 +870,262 @@ export const formatTimeAgo = (timestamp: string | number | Date): string => {
   }
 
   return "just now";
+};
+
+// utils/rateUtils.ts - Rate calculation utilities
+
+export interface RateInfo {
+  amount: string;
+  currency: string;
+  rateType: string;
+  displayRate: string;
+  category?: string;
+  negotiable?: boolean;
+  depositRequired?: boolean;
+  travelIncluded?: boolean;
+  travelFee?: string;
+}
+
+export interface MusicianRate {
+  baseRate?: string;
+  rateType?:
+    | "hourly"
+    | "daily"
+    | "per_session"
+    | "per_gig"
+    | "monthly"
+    | "custom";
+  currency?: string;
+  categories?: Array<{
+    name: string;
+    rate: string;
+    rateType?: string;
+    description?: string;
+  }>;
+  negotiable?: boolean;
+  depositRequired?: boolean;
+  travelIncluded?: boolean;
+  travelFee?: string;
+}
+
+// Gig type to category mapping
+const GIG_TYPE_CATEGORY_MAPPING: Record<GigType, string> = {
+  wedding: "wedding",
+  corporate: "corporate",
+  "private-party": "private-party",
+  concert: "concert",
+  restaurant: "restaurant",
+  church: "church",
+  festival: "festival",
+  club: "club",
+  recording: "recording",
+  "music-lessons": "music-lessons",
+  individual: "individual",
+  other: "other",
+};
+
+// Helper to format rate type for display
+export const formatRateType = (rateType?: string): string => {
+  if (!rateType) return "gig";
+
+  const typeMap: Record<string, string> = {
+    hourly: "hour",
+    daily: "day",
+    per_session: "session",
+    per_gig: "gig",
+    monthly: "month",
+    custom: "custom",
+  };
+
+  return typeMap[rateType] || rateType.replace("per_", "");
+};
+
+// Main function to get rate for specific gig type
+export const getRateForGigType = (
+  rate: MusicianRate | null | undefined,
+  gigType: GigType,
+  musicianRole?: string
+): RateInfo | null => {
+  if (!rate) {
+    return null;
+  }
+
+  const category = GIG_TYPE_CATEGORY_MAPPING[gigType] || "other";
+
+  // Try to find rate in categories first
+  if (rate.categories && rate.categories.length > 0) {
+    // Look for exact category match
+    let categoryRate = rate.categories.find(
+      (cat) => cat.name.toLowerCase() === category.toLowerCase()
+    );
+
+    // If no exact match, try role-based matching for some gig types
+    if (!categoryRate && musicianRole) {
+      categoryRate = rate.categories.find(
+        (cat) => cat.name.toLowerCase() === musicianRole.toLowerCase()
+      );
+    }
+
+    // If still no match, use the first available category
+    if (!categoryRate) {
+      categoryRate = rate.categories.find((cat) => cat.rate?.trim());
+    }
+
+    if (categoryRate && categoryRate.rate?.trim()) {
+      const effectiveRateType = categoryRate.rateType || rate.rateType;
+      const formattedType = formatRateType(effectiveRateType);
+
+      return {
+        amount: categoryRate.rate,
+        currency: rate.currency || "KES",
+        rateType: effectiveRateType || "per_gig",
+        displayRate: `${rate.currency || "KES"} ${categoryRate.rate} per ${formattedType}`,
+        category: categoryRate.name,
+        negotiable: rate.negotiable,
+        depositRequired: rate.depositRequired,
+        travelIncluded: rate.travelIncluded,
+        travelFee: rate.travelFee,
+      };
+    }
+  }
+
+  // Fallback to base rate
+  if (rate.baseRate?.trim()) {
+    const formattedType = formatRateType(rate.rateType);
+
+    return {
+      amount: rate.baseRate,
+      currency: rate.currency || "KES",
+      rateType: rate.rateType || "per_gig",
+      displayRate: `${rate.currency || "KES"} ${rate.baseRate} per ${formattedType}`,
+      negotiable: rate.negotiable,
+      depositRequired: rate.depositRequired,
+      travelIncluded: rate.travelIncluded,
+      travelFee: rate.travelFee,
+    };
+  }
+
+  return null;
+};
+
+// Helper function to get display rate from categories (for general display)
+export const getDisplayRate = (
+  rate: MusicianRate | null | undefined,
+  musicianRole?: string
+): string => {
+  if (!rate) return "Contact for rates";
+
+  // Try to get a rate for a common gig type based on role
+  let suggestedGigType: GigType = "other";
+
+  if (musicianRole) {
+    const roleGigMapping: Record<string, GigType> = {
+      dj: "club",
+      mc: "private-party",
+      vocalist: "concert",
+      teacher: "music-lessons",
+      instrumentalist: "concert",
+    };
+    suggestedGigType = roleGigMapping[musicianRole.toLowerCase()] || "other";
+  }
+
+  const rateInfo = getRateForGigType(rate, suggestedGigType, musicianRole);
+
+  if (rateInfo) {
+    return rateInfo.displayRate;
+  }
+
+  // Fallback: use categories or base rate
+  if (rate.categories && rate.categories.length > 0) {
+    const categoryWithRate = rate.categories.find((cat) => cat.rate?.trim());
+    if (categoryWithRate) {
+      const rateType = categoryWithRate.rateType || rate.rateType;
+      const formattedType = formatRateType(rateType);
+      return `${rate.currency || "KES"} ${categoryWithRate.rate} per ${formattedType}`;
+    }
+  }
+
+  if (rate.baseRate?.trim()) {
+    const formattedType = formatRateType(rate.rateType);
+    return `${rate.currency || "KES"} ${rate.baseRate} per ${formattedType}`;
+  }
+
+  return "Contact for rates";
+};
+
+// Function to get all available rates for a musician
+export const getAllRates = (
+  rate: MusicianRate | null | undefined
+): RateInfo[] => {
+  if (!rate) return [];
+
+  const rates: RateInfo[] = [];
+
+  // Add rates from categories
+  if (rate.categories) {
+    rate.categories.forEach((category) => {
+      if (category.rate?.trim()) {
+        const rateType = category.rateType || rate.rateType;
+        const formattedType = formatRateType(rateType);
+
+        rates.push({
+          amount: category.rate,
+          currency: rate.currency || "KES",
+          rateType: rateType || "per_gig",
+          displayRate: `${rate.currency || "KES"} ${category.rate} per ${formattedType}`,
+          category: category.name,
+          negotiable: rate.negotiable,
+          depositRequired: rate.depositRequired,
+          travelIncluded: rate.travelIncluded,
+          travelFee: rate.travelFee,
+        });
+      }
+    });
+  }
+
+  // Add base rate if no categories or as fallback
+  if (rates.length === 0 && rate.baseRate?.trim()) {
+    const formattedType = formatRateType(rate.rateType);
+
+    rates.push({
+      amount: rate.baseRate,
+      currency: rate.currency || "KES",
+      rateType: rate.rateType || "per_gig",
+      displayRate: `${rate.currency || "KES"} ${rate.baseRate} per ${formattedType}`,
+      negotiable: rate.negotiable,
+      depositRequired: rate.depositRequired,
+      travelIncluded: rate.travelIncluded,
+      travelFee: rate.travelFee,
+    });
+  }
+
+  return rates;
+};
+
+// Function to check if musician has rate for specific gig type
+export const hasRateForGigType = (
+  rate: MusicianRate | null | undefined,
+  gigType: GigType
+): boolean => {
+  return getRateForGigType(rate, gigType) !== null;
+};
+
+// Function to get the best matching rate (for search/filtering)
+export const getBestMatchingRate = (
+  rate: MusicianRate | null | undefined,
+  preferredGigTypes: GigType[] = []
+): RateInfo | null => {
+  if (!rate) return null;
+
+  // Try preferred gig types in order
+  for (const gigType of preferredGigTypes) {
+    const rateInfo = getRateForGigType(rate, gigType);
+    if (rateInfo) {
+      return rateInfo;
+    }
+  }
+
+  // Fallback to any available rate
+  const allRates = getAllRates(rate);
+  return allRates.length > 0 ? allRates[0] : null;
 };

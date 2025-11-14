@@ -85,13 +85,19 @@ export default function MobileNav() {
     },
     {
       name: "Gigs",
-      href: "/hub/gigs?tab=invites",
+      href: "/hub/gigs?tab=all",
       icon: <MusicIcon className="w-5 h-5" />,
       exact: false,
     },
     {
+      name: "Favorites",
+      href: "/hub/gigs?tab=favorites",
+      icon: <HeartIcon className="w-5 h-5" />,
+      exact: false,
+    },
+    {
       name: "Bookings",
-      href: "/dashboard/bookings",
+      href: "/hub/gigs?tab=booked",
       icon: <CalendarIcon className="w-5 h-5" />,
       exact: false,
     },
@@ -123,14 +129,20 @@ export default function MobileNav() {
       exact: true,
     },
     {
-      name: "Post Gig",
-      href: "/dashboard/create",
+      name: "My Gigs",
+      href: "/hub/gigs?tab=my-gigs",
+      icon: <MusicIcon className="w-5 h-5" />,
+      exact: false,
+    },
+    {
+      name: "Instant Gigs",
+      href: "/hub/gigs?tab=urgent-gigs",
       icon: <PlusIcon className="w-5 h-5" />,
       exact: false,
     },
     {
-      name: "Events",
-      href: "/dashboard/events",
+      name: "Bookings",
+      href: "/hub/gigs?tab=booked",
       icon: <CalendarIcon className="w-5 h-5" />,
       exact: false,
     },
@@ -142,14 +154,8 @@ export default function MobileNav() {
     },
     {
       name: "Favorites",
-      href: "/dashboard/favorites",
+      href: "/hub/gigs?tab=favorites",
       icon: <HeartIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Bookings",
-      href: "/dashboard/bookings",
-      icon: <CalendarIcon className="w-5 h-5" />,
       exact: false,
     },
   ];
@@ -163,7 +169,7 @@ export default function MobileNav() {
     },
     {
       name: "Find Gigs",
-      href: "/dashboard/gigs",
+      href: "/hub/gigs?tab=available-gigs",
       icon: <BriefcaseIcon className="w-5 h-5" />,
       exact: false,
       description: "Browse available gigs",
@@ -177,7 +183,7 @@ export default function MobileNav() {
     },
     {
       name: "Bookings",
-      href: "/dashboard/bookings",
+      href: "/hub/gigs?tab=booked",
       icon: <CalendarIcon className="w-5 h-5" />,
       exact: false,
       description: "Manage bookings",

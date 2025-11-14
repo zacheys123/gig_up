@@ -1547,11 +1547,11 @@ const CurrentUserProfile = () => {
               value: user.followings?.length || 0,
               icon: <User size={16} />,
             },
-            {
-              label: "Reviews",
-              value: user.allreviews?.length || 0,
-              icon: <Briefcase size={16} />,
-            },
+            // {
+            //   label: "Reviews",
+            //   value: user.allreviews?.length || 0,
+            //   icon: <Briefcase size={16} />,
+            // },
             {
               label: isBooker ? "Managed" : isMusician ? "Videos" : "Gigs",
               value: isBooker

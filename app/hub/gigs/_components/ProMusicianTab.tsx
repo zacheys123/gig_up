@@ -25,27 +25,13 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { useProMusicians, useMusicianSearch } from "@/hooks/useProMusicians";
 import { EnhancedMusician } from "@/types/musician";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GIG_TYPES } from "@/convex/gigTypes";
 
 interface ProMusiciansTabProps {
   onRequestToBook: (musician: EnhancedMusician) => void;
   user: any;
   hasTemplates: boolean;
 }
-
-// Gig types configuration
-const GIG_TYPES = [
-  { value: "wedding", label: "💒 Wedding" },
-  { value: "corporate", label: "🏢 Corporate Event" },
-  { value: "private-party", label: "🎉 Private Party" },
-  { value: "concert", label: "🎤 Concert/Show" },
-  { value: "restaurant", label: "🍽️ Restaurant/Lounge" },
-  { value: "church", label: "⛪ Church Service" },
-  { value: "festival", label: "🎪 Festival" },
-  { value: "club", label: "🎭 Club Night" },
-  { value: "recording", label: "🎹 Recording Session" },
-  { value: "individual", label: "✨ Individual" },
-  { value: "other", label: "✨ Other" },
-];
 
 const TIER_CONFIG = {
   elite: {
@@ -272,6 +258,359 @@ const MusicianCardSkeleton = memo(() => (
 
 MusicianCardSkeleton.displayName = "MusicianCardSkeleton";
 
+const RateDisplay = memo(
+  ({
+    musician,
+    selectedGigType,
+    roleType,
+  }: {
+    musician: EnhancedMusician;
+    selectedGigType?: string;
+    roleType?: string;
+  }) => {
+    const { colors } = useThemeColors();
+
+    // Helper function to get rate based on gig type and role
+    const getRateForGigType = useCallback(
+      (rate: any, gigType?: string, roleType?: string) => {
+        if (!rate) return null;
+
+        // Only use categories - no legacy rates
+        if (rate.categories && rate.categories.length > 0) {
+          // Try to find a category that matches the gig type
+          if (gigType) {
+            const gigTypeMappings: Record<string, string[]> = {
+              wedding: ["wedding", "marriage", "ceremony", "reception", "💒"],
+              corporate: ["corporate", "business", "office", "company", "🏢"],
+              "private-party": [
+                "private",
+                "party",
+                "celebration",
+                "birthday",
+                "anniversary",
+                "🎉",
+              ],
+              concert: ["concert", "show", "performance", "live", "🎤"],
+              restaurant: [
+                "restaurant",
+                "lounge",
+                "dining",
+                "cafe",
+                "bar",
+                "🍽️",
+              ],
+              church: ["church", "worship", "religious", "service", "⛪"],
+              festival: ["festival", "outdoor", "large event", "🎪"],
+              club: ["club", "nightclub", "dj set", "nightlife", "🎭"],
+              recording: ["recording", "studio", "session", "🎹"],
+              individual: [
+                "individual",
+                "personal",
+                "one-on-one",
+                "private lesson",
+                "✨",
+              ],
+              other: ["other", "custom", "special", "✨"],
+            };
+
+            const searchTerms = gigTypeMappings[gigType] || [gigType];
+
+            const matchingCategory = rate.categories.find((category: any) =>
+              searchTerms.some(
+                (term) =>
+                  category.name.toLowerCase().includes(term.toLowerCase()) ||
+                  category.description
+                    ?.toLowerCase()
+                    .includes(term.toLowerCase())
+              )
+            );
+
+            if (matchingCategory && matchingCategory.rate?.trim()) {
+              return {
+                amount: matchingCategory.rate,
+                type: matchingCategory.rateType || rate.rateType,
+                currency: rate.currency,
+                source: "category_match",
+              };
+            }
+          }
+
+          // Fallback: Try role-specific priority categories
+          if (roleType) {
+            const rolePriorityCategories: Record<string, string[]> = {
+              teacher: [
+                "private lesson",
+                "group class",
+                "online lesson",
+                "workshop",
+                "teaching",
+                "lesson",
+              ],
+              dj: [
+                "club night",
+                "festival",
+                "wedding",
+                "corporate",
+                "dj",
+                "set",
+              ],
+              mc: [
+                "award show",
+                "product launch",
+                "corporate",
+                "wedding",
+                "hosting",
+                "mc",
+              ],
+              vocalist: [
+                "recording session",
+                "solo performance",
+                "wedding",
+                "background vocals",
+                "vocal",
+                "singing",
+              ],
+              instrumentalist: [
+                "recording session",
+                "restaurant",
+                "orchestral",
+                "session musician",
+                "performance",
+                "live",
+              ],
+            };
+
+            const priorityTerms = rolePriorityCategories[roleType] || [];
+            const priorityCategory = rate.categories.find((category: any) =>
+              priorityTerms.some(
+                (term) =>
+                  category.name.toLowerCase().includes(term.toLowerCase()) &&
+                  category.rate?.trim()
+              )
+            );
+
+            if (priorityCategory) {
+              return {
+                amount: priorityCategory.rate,
+                type: priorityCategory.rateType || rate.rateType,
+                currency: rate.currency,
+                source: "category_priority",
+              };
+            }
+          }
+
+          // Fallback: Most popular/common categories first
+          const popularCategories = [
+            "wedding",
+            "corporate",
+            "private",
+            "concert",
+            "lesson",
+            "session",
+          ];
+          const popularCategory = rate.categories.find((category: any) =>
+            popularCategories.some(
+              (term) =>
+                category.name.toLowerCase().includes(term.toLowerCase()) &&
+                category.rate?.trim()
+            )
+          );
+
+          if (popularCategory) {
+            return {
+              amount: popularCategory.rate,
+              type: popularCategory.rateType || rate.rateType,
+              currency: rate.currency,
+              source: "category_popular",
+            };
+          }
+
+          // Final fallback to first category with a rate
+          const firstCategoryWithRate = rate.categories.find((cat: any) =>
+            cat.rate?.trim()
+          );
+          if (firstCategoryWithRate) {
+            return {
+              amount: firstCategoryWithRate.rate,
+              type: firstCategoryWithRate.rateType || rate.rateType,
+              currency: rate.currency,
+              source: "category_first",
+            };
+          }
+
+          // If we have categories but no rates set
+          const firstCategory = rate.categories[0];
+          if (firstCategory) {
+            return {
+              amount: "", // Empty to indicate no rate set
+              type: firstCategory.rateType || rate.rateType,
+              currency: rate.currency,
+              source: "category_no_rate",
+            };
+          }
+        }
+
+        // Base rate fallback (only if no categories exist)
+        if (rate.baseRate?.trim()) {
+          return {
+            amount: rate.baseRate,
+            type: rate.rateType,
+            currency: rate.currency,
+            source: "base_rate",
+          };
+        }
+
+        // No rates available
+        return null;
+      },
+      []
+    );
+
+    // Helper function to get rate modifiers
+    const getRateModifiers = useCallback((rate: any) => {
+      const modifiers = [];
+      if (rate?.negotiable) modifiers.push("Negotiable");
+      if (rate?.depositRequired) modifiers.push("Deposit");
+      if (rate?.travelIncluded) modifiers.push("Travel Included");
+      if (rate?.travelFee) modifiers.push(`+${rate.travelFee} travel`);
+      return modifiers;
+    }, []);
+
+    const rateInfo = musician.rate
+      ? getRateForGigType(musician.rate, selectedGigType, roleType)
+      : null;
+    const rateModifiers = musician.rate ? getRateModifiers(musician.rate) : [];
+
+    // Role-specific rate context
+    const getRoleRateContext = useCallback(() => {
+      if (!roleType) return null;
+
+      const contextMap: Record<string, { icon: string; description: string }> =
+        {
+          teacher: { icon: "📚", description: "Teaching rate" },
+          dj: { icon: "🎧", description: "DJ performance" },
+          mc: { icon: "🎤", description: "Hosting rate" },
+          vocalist: { icon: "🎵", description: "Vocal performance" },
+          instrumentalist: {
+            icon: "🎸",
+            description: "Instrumental performance",
+          },
+        };
+
+      return contextMap[roleType] || null;
+    }, [roleType]);
+
+    const roleContext = getRoleRateContext();
+
+    // Format rate type for display
+    const formatRateType = useCallback((rateType?: string) => {
+      if (!rateType) return "gig";
+
+      const typeMap: Record<string, string> = {
+        hourly: "hour",
+        daily: "day",
+        per_session: "session",
+        per_gig: "gig",
+        monthly: "month",
+        custom: "custom",
+      };
+
+      return typeMap[rateType] || rateType.replace("per_", "");
+    }, []);
+
+    // No rates available
+    if (!rateInfo || rateInfo.source === "category_no_rate") {
+      return (
+        <div className="text-right">
+          <div className={cn("font-bold text-lg", colors.text)}>
+            Contact for rates
+          </div>
+          <div className={cn("text-xs", colors.textMuted)}>
+            {selectedGigType
+              ? `for ${selectedGigType}`
+              : "Set your rates in profile"}
+            {roleContext && ` • ${roleContext.description}`}
+          </div>
+        </div>
+      );
+    }
+
+    // Rate found in categories
+    return (
+      <div className="text-right">
+        {/* Main Rate Display */}
+        <div className={cn("font-bold text-lg", colors.text)}>
+          Base Rate {rateInfo.currency || "KES"} {rateInfo.amount}
+          <span
+            className={cn("ml-1 text-xs", {
+              "text-green-600": rateInfo.source.includes("match"),
+              "text-blue-600": rateInfo.source.includes("priority"),
+              "text-amber-600":
+                rateInfo.source.includes("popular") ||
+                rateInfo.source.includes("first"),
+              "text-gray-600": rateInfo.source === "base_rate",
+            })}
+          >
+            {rateInfo.source.includes("category") ? "★" : "•"}
+          </span>
+        </div>
+
+        {/* Rate Type and Context */}
+        <div className={cn("text-xs", colors.textMuted)}>
+          {selectedGigType ? (
+            <>
+              per {formatRateType(rateInfo.type)} • {selectedGigType}
+              {roleContext && ` • ${roleContext.icon}`}
+            </>
+          ) : (
+            <>
+              per {formatRateType(rateInfo.type)}
+              {roleContext && ` • ${roleContext.description}`}
+            </>
+          )}
+        </div>
+
+        {/* Rate Source Indicator */}
+        <div
+          className={cn("text-[10px] mt-1", {
+            "text-green-600": rateInfo.source.includes("match"),
+            "text-blue-600": rateInfo.source.includes("priority"),
+            "text-amber-600":
+              rateInfo.source.includes("popular") ||
+              rateInfo.source.includes("first"),
+            "text-gray-600": rateInfo.source === "base_rate",
+            [colors.textMuted]: true,
+          })}
+        >
+          {rateInfo.source.replace(/_/g, " ")}
+        </div>
+
+        {/* Rate Modifiers */}
+        {rateModifiers.length > 0 && (
+          <div className="flex flex-wrap gap-1 justify-end mt-1">
+            {rateModifiers.map((modifier, index) => (
+              <span
+                key={index}
+                className={cn(
+                  "px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                  modifier === "Negotiable"
+                    ? "bg-green-500/10 text-green-600 border-green-500/20"
+                    : modifier === "Deposit"
+                      ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                      : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                )}
+              >
+                {modifier}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+RateDisplay.displayName = "RateDisplay";
 // Memoize MusicianCard component with proper typing
 const MusicianCard = memo(
   ({
@@ -428,6 +767,7 @@ const MusicianCard = memo(
             </div>
           </div>
         )}
+
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -465,28 +805,12 @@ const MusicianCard = memo(
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className={cn("font-bold text-lg", colors.text)}>
-              {musician.displayRate}
-            </div>
-            <div className={cn("text-xs", colors.textMuted)}>
-              {selectedGigType ? `for ${selectedGigType}` : "per gig"}
-            </div>
-            {/* Show compatibility warning in rate display */}
-            {selectedGigType && musician.isCompatible === false && (
-              <div className={cn("text-xs mt-1", colors.warningText)}>
-                Not typical for {selectedGigType}
-              </div>
-            )}
-            {/* Instrument-GigType Match Indicator */}
-            {selectedGigType &&
-              musician.instrument &&
-              musician.isCompatible !== false && (
-                <div className={cn("text-xs mt-1", colors.successText)}>
-                  {musician.instrument} • {selectedGigType}
-                </div>
-              )}
-          </div>
+
+          <RateDisplay
+            musician={musician}
+            selectedGigType={selectedGigType}
+            roleType={musician.roleType}
+          />
         </div>
         {/* Instrument and Role with gigType context */}
         <div className="flex items-center gap-2 text-sm mb-3">

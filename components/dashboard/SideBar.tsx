@@ -26,6 +26,7 @@ import {
   BriefcaseIcon,
   Users2Icon,
   BuildingIcon,
+  HomeIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,10 +50,8 @@ interface NavLink {
   pro?: boolean;
   description?: string;
   badge?: number;
-  onClick?: (e: React.MouseEvent) => void; // Add onClick for custom actions
+  onClick?: (e: React.MouseEvent) => void;
 }
-
-// ... existing imports ...
 
 export function Sidebar() {
   const { user } = useCurrentUser();
@@ -92,12 +91,17 @@ export function Sidebar() {
     },
     {
       name: "Gigs",
-      href: "/dashboard/gigs",
+      href: "/hub/gigs?tab=all",
       icon: <MusicIcon className="w-5 h-5" />,
     },
     {
+      name: "Favorites",
+      href: "/hub/gigs?tab=favorites",
+      icon: <HeartIcon className="w-5 h-5" />,
+    },
+    {
       name: "Bookings",
-      href: "/dashboard/bookings",
+      href: "/hub/gigs?tab=booked",
       icon: <CalendarIcon className="w-5 h-5" />,
     },
     {
@@ -115,11 +119,6 @@ export function Sidebar() {
       href: "/dashboard/analytics",
       icon: <BarChartIcon className="w-5 h-5" />,
     },
-    {
-      name: "Billing",
-      href: "/dashboard/billing",
-      icon: <CreditCardIcon className="w-5 h-5" />,
-    },
   ];
 
   const clientLinks: NavLink[] = [
@@ -130,13 +129,18 @@ export function Sidebar() {
       exact: true,
     },
     {
-      name: "Post Gig",
-      href: "/dashboard/create",
+      name: "My Gigs",
+      href: "/hub/gigs?tab=my-gigs",
+      icon: <MusicIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Instant Gigs",
+      href: "/hub/gigs?tab=urgent-gigs",
       icon: <PlusIcon className="w-5 h-5" />,
     },
     {
-      name: "Events",
-      href: "/dashboard/events",
+      name: "Bookings",
+      href: "/hub/gigs?tab=booked",
       icon: <CalendarIcon className="w-5 h-5" />,
     },
     {
@@ -146,18 +150,8 @@ export function Sidebar() {
     },
     {
       name: "Favorites",
-      href: "/dashboard/favorites",
+      href: "/hub/gigs?tab=favorites",
       icon: <HeartIcon className="w-5 h-5" />,
-    },
-    {
-      name: "Bookings",
-      href: "/dashboard/bookings",
-      icon: <CalendarIcon className="w-5 h-5" />,
-    },
-    {
-      name: "Billing",
-      href: "/dashboard/billing",
-      icon: <CreditCardIcon className="w-5 h-5" />,
     },
   ];
 
@@ -170,7 +164,7 @@ export function Sidebar() {
     },
     {
       name: "Find Gigs",
-      href: "/dashboard/gigs",
+      href: "/hub/gigs?tab=available-gigs",
       icon: <BriefcaseIcon className="w-5 h-5" />,
       description: "Browse available gigs",
     },
@@ -182,7 +176,7 @@ export function Sidebar() {
     },
     {
       name: "Bookings",
-      href: "/dashboard/bookings",
+      href: "/hub/gigs?tab=booked",
       icon: <CalendarIcon className="w-5 h-5" />,
       description: "Manage bookings",
     },
@@ -199,22 +193,37 @@ export function Sidebar() {
       icon: <DollarSignIcon className="w-5 h-5" />,
       description: "Booking commissions",
     },
-    {
-      name: "Billing",
-      href: "/dashboard/billing",
-      icon: <CreditCardIcon className="w-5 h-5" />,
-    },
   ];
 
   // Common links for all roles
   const commonLinks: NavLink[] = [
     {
       href: "/messages",
-      icon: <MessageCircle size={20} />,
+      icon: (
+        <div className="relative">
+          <MessageCircle className="w-5 h-5" />
+          {unReadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+              {unReadCount > 9 ? "9+" : unReadCount}
+            </span>
+          )}
+        </div>
+      ),
       name: "Messages",
       description: "Chat conversations",
       badge: unReadCount,
       onClick: handleOpenMessages,
+    },
+    {
+      name: "Community",
+      href: "/community",
+      icon: <UsersIcon className="w-5 h-5" />,
+      description: "Connect with others",
+    },
+    {
+      name: "Profile",
+      href: "/profile",
+      icon: <MessageSquareIcon className="w-5 h-5" />,
     },
     {
       name: "Settings",
@@ -238,8 +247,13 @@ export function Sidebar() {
     {
       name: "Home",
       href: "/",
-      icon: <BellIcon className="w-5 h-5" />,
+      icon: <HomeIcon className="w-5 h-5" />,
       exact: true,
+    },
+    {
+      name: "Billing",
+      href: "/dashboard/billing",
+      icon: <CreditCardIcon className="w-5 h-5" />,
     },
   ];
 
@@ -261,6 +275,7 @@ export function Sidebar() {
       exact: true,
       pro: isInGracePeriod,
       description: "Notifications with priority alerts",
+      badge: notCount,
     },
     {
       name: "Documents",

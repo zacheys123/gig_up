@@ -212,30 +212,6 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                   )}
                 </div>
 
-                {/* Ultra Compact Reviews */}
-                {musician?.allreviews && musician?.allreviews?.length > 0 && (
-                  <div className="border-t border-gray-200/60 pt-1.5">
-                    <div className="flex items-center gap-2 text-xs">
-                      {/* <div className="flex items-center gap-0.5">
-        <Star className="w-3 h-3 text-amber-500 fill-current" />
-        <span className="font-medium text-gray-700">{musician.rating}</span>
-      </div> */}
-                      <span className="text-gray-500">•</span>
-                      <span className="text-gray-600">
-                        {musician?.allreviews?.length} reviews
-                      </span>
-                      {musician?.allreviews[0] && (
-                        <>
-                          <span className="text-gray-500">•</span>
-                          <span className="text-gray-600 line-clamp-1 flex-1">
-                            "{musician?.allreviews[0].comment}"
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Actions - Compact */}
                 <div className="flex gap-1.5 pt-2">
                   <button className="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:shadow-xs text-center">

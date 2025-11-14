@@ -1,5 +1,6 @@
 // types/musician.ts
 import { Id } from "@/convex/_generated/dataModel";
+import { RateInfo } from "@/utils";
 
 export interface EnhancedMusician {
   _id: Id<"users">;
@@ -24,6 +25,26 @@ export interface EnhancedMusician {
   isCompatible?: boolean;
   // Rates
   rate?: {
+    baseRate?: string;
+    rateType?:
+      | "hourly"
+      | "daily"
+      | "per_session"
+      | "per_gig"
+      | "monthly"
+      | "custom";
+    currency?: string;
+    categories?: Array<{
+      name: string;
+      rate: string;
+      rateType?: string;
+      description?: string;
+    }>;
+    negotiable?: boolean;
+    depositRequired?: boolean;
+    travelIncluded?: boolean;
+    travelFee?: string;
+    // Legacy fields
     regular?: string;
     function?: string;
     concert?: string;
@@ -48,8 +69,11 @@ export interface EnhancedMusician {
   tier: "free" | "pro" | "premium" | "elite";
   isMusician: boolean;
 
-  // Enhanced fields (added in queries)
   displayRate: string;
+  gigTypeRate?: RateInfo | null;
+  hasRateForGigType?: boolean;
+
+  // Compatibility fields
   gigTypeCompatibility?: number;
   isOptimalForGigType?: boolean;
 }

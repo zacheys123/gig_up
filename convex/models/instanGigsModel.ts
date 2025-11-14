@@ -23,7 +23,8 @@ export const instantGigs = defineTable({
     v.literal("pending"),
     v.literal("accepted"),
     v.literal("declined"),
-    v.literal("deputy-suggested")
+    v.literal("deputy-suggested"),
+    v.literal("cancelled")
   ),
 
   // Timestamps

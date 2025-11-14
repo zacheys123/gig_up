@@ -108,12 +108,6 @@ const ClientSearchComponent = () => {
               cancelgigCount: 0,
               likedVideos: [],
               mpesaPhoneNumber: "",
-              rate: {
-                regular: "",
-                function: "",
-                concert: "",
-                corporate: "",
-              },
             },
           });
         }
