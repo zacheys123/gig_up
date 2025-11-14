@@ -35,6 +35,7 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { ChatIcon } from "@/components/chat/ChatIcon";
 
 interface InvitesPageProps {
   params: {
@@ -287,10 +288,34 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Message
-              </Button>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">
+                  {gig.status === "deputy-suggested"
+                    ? "Original Musician"
+                    : "Invited Musician"}
+                </h4>
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <User className="w-8 h-8 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{gig.musicianName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {gig.status === "deputy-suggested"
+                          ? "Suggested deputies instead"
+                          : "Waiting for response..."}
+                      </p>
+                    </div>
+                  </div>
+                  <ChatIcon
+                    userId={gig.invitedMusicianId}
+                    size="md"
+                    showText={true}
+                    text="Message"
+                    variant="outline"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -347,6 +372,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               )}
                             </div>
                           </div>
+
                           <div className="flex gap-2">
                             <Button
                               size="sm"
@@ -365,11 +391,18 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                (window.location.href = `/profile/${deputy?._id}`)
+                                (window.location.href = `/profile`)
                               }
                             >
                               View Profile
                             </Button>
+                            <ChatIcon
+                              userId={deputy._id as Id<"users">}
+                              size="sm"
+                              showText={false}
+                              variant="ghost"
+                              className="h-8 w-8"
+                            />
                           </div>
                         </div>
                       </CardContent>
