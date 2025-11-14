@@ -465,7 +465,9 @@ function MusicianInvitesOverview() {
               colors.border,
               "hover:border-blue-300"
             )}
-            onClick={() => (window.location.href = `/invites/${gig._id}`)}
+            onClick={() =>
+              (window.location.href = `/hub/gigs/invites/${gig._id}`)
+            }
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between mb-2">
