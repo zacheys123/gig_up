@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,8 @@ import { SelectInput } from "./SelectInput";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { ModalActions } from "./ModalActions";
 import { Modal } from "./Modal";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface RateCategory {
   name: string;
@@ -82,6 +84,28 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
       description: "",
     });
 
+    // Track if we have database categories
+    const [hasDatabaseCategories, setHasDatabaseCategories] = useState(false);
+    const [hasInitialized, setHasInitialized] = useState(false);
+
+    useEffect(() => {
+      // Only run once when component mounts
+      if (!hasInitialized) {
+        console.log("🔄 RateSection initialization:", {
+          categoriesCount: rate.categories.length,
+          categories: rate.categories,
+          hasRates: rate.categories.some((cat) => cat.rate?.trim()),
+        });
+
+        // If rate has categories from database, show the rates section
+        if (rate.categories.length > 0) {
+          setShowRates(true);
+          setHasDatabaseCategories(true);
+        }
+        setHasInitialized(true);
+      }
+    }, [rate.categories.length, hasInitialized, setShowRates]);
+
     // Check if user can edit legacy fields
     const canEditLegacyFields = ["instrumentalist", "vocalist", "dj"].includes(
       roleType
@@ -98,6 +122,9 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
         concert: rate.concert,
         corporate: rate.corporate,
       }).some((value) => value?.trim());
+
+    // Check if we have database categories with rates
+    const hasDatabaseRates = rate.categories.some((cat) => cat.rate?.trim());
 
     const handleRateInput = (value: string, field: string) => {
       const cleanedValue = value.replace(/[^0-9km,.\s]/gi, "");
@@ -116,7 +143,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
           }));
           setEditingCategory(null);
         } else {
-          // Add new category (this replaces addCategory)
+          // Add new category
           setRate((prev) => ({
             ...prev,
             categories: [...prev.categories, { ...newCategory }],
@@ -133,6 +160,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
         setShowCategoryModal(false);
       }
     };
+
     const editCategory = (index: number) => {
       const category = rate.categories[index];
       setNewCategory({
@@ -144,8 +172,9 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
       setEditingCategory(index);
       setShowCategoryModal(true);
     };
+
     const handleAddCategory = () => {
-      setEditingCategory(null); // Ensure we're in "add" mode
+      setEditingCategory(null);
       setNewCategory({
         name: "",
         rate: "",
@@ -155,7 +184,6 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
       setShowCategoryModal(true);
     };
 
-    // Update the "Create Custom" button in empty state to use the same function
     const handleCreateCustom = () => {
       setEditingCategory(null);
       setNewCategory({
@@ -398,6 +426,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
         ...prev,
         categories: defaultCategories,
       }));
+      setHasDatabaseCategories(false); // User is now using defaults
     };
 
     return (
@@ -655,8 +684,8 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
           )}
         </AnimatePresence>
 
-        {/* Toggle Trigger - Shows when no categories exist */}
-        {rate.categories.length === 0 && (
+        {/* Empty State when no categories */}
+        {rate.categories.length === 0 && !showRates && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -666,7 +695,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
               colors.hoverBg,
               "transition-all duration-200 hover:shadow-md"
             )}
-            onClick={() => setShowRates(!showRates)} // Toggle instead of just open
+            onClick={() => setShowRates(!showRates)}
           >
             <div className="flex items-center justify-center gap-3 mb-2">
               <div className={cn("p-2 rounded-full", colors.warningBg)}>
@@ -694,7 +723,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                setShowRates(!showRates); // Toggle on button click too
+                setShowRates(!showRates);
               }}
               className={cn(
                 "mt-2 bg-amber-500 hover:bg-amber-600 text-white",
@@ -715,6 +744,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
             </Button>
           </motion.div>
         )}
+
         {/* Rate Importance Banner */}
         {!hasAnyRates && !showRates && (
           <motion.div
@@ -752,6 +782,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
             </div>
           </motion.div>
         )}
+
         <AnimatePresence>
           {showRates && (
             <motion.div
@@ -793,7 +824,9 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                     <span
                       className={cn("text-sm font-medium", colors.successText)}
                     >
-                      Great! Your rates will help attract more clients.
+                      {hasDatabaseCategories
+                        ? "Your rates are loaded from your profile"
+                        : "Great! Your rates will help attract more clients."}
                     </span>
                   </div>
                 </motion.div>
@@ -810,7 +843,9 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                       Rate Categories
                     </Label>
                     <p className={cn("text-xs", colors.textMuted)}>
-                      Different rates for different types of gigs
+                      {hasDatabaseCategories
+                        ? "Your existing rate categories from your profile"
+                        : "Different rates for different types of gigs"}
                     </p>
                   </div>
 
@@ -822,20 +857,23 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.2, duration: 0.3 }}
                     >
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={loadDefaultCategories}
-                        className={cn(
-                          "text-xs transition-all duration-200",
-                          colors.border,
-                          colors.text,
-                          colors.hoverBg
-                        )}
-                      >
-                        Load Defaults
-                      </Button>
+                      {/* Only show Load Defaults if we don't have database categories */}
+                      {!hasDatabaseCategories && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={loadDefaultCategories}
+                          className={cn(
+                            "text-xs transition-all duration-200",
+                            colors.border,
+                            colors.text,
+                            colors.hoverBg
+                          )}
+                        >
+                          Load Defaults
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         size="sm"
@@ -1089,6 +1127,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
             </motion.div>
           )}
         </AnimatePresence>
+
         <Modal
           isOpen={showCategoryModal}
           onClose={() => {
@@ -1111,7 +1150,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                 setNewCategory((prev) => ({ ...prev, name: value ?? "" }))
               }
               placeholder="e.g., Wedding, Corporate Event, Private Party"
-              disabled={editingCategory !== null} // Don't allow editing name for existing categories
+              disabled={editingCategory !== null}
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -1175,7 +1214,7 @@ export const RateSection: React.FC<RateSectionProps> = React.memo(
                 description: "",
               });
             }}
-            onConfirm={saveCategory} // Use saveCategory instead of addCategory
+            onConfirm={saveCategory}
             confirmText={
               editingCategory !== null ? "Update Rate" : "Add Category"
             }

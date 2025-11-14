@@ -450,11 +450,10 @@ export const incrementVideoViews = mutationGeneric({
     return { success: true, action: "view_count_incremented" };
   },
 });
-
-// Update getUserProfileVideos to use clerkId only
 export const getUserProfileVideos = queryGeneric({
   args: {
-    userId: v.string(), // This is clerkId
+    userId: v.string(), // This is clerkId of the video owner
+    currentUserId: v.optional(v.string()), // This is clerkId of the viewer
   },
   handler: async (ctx, args): Promise<VideoDocument[]> => {
     const targetUser = await ctx.db
@@ -466,9 +465,15 @@ export const getUserProfileVideos = queryGeneric({
       throw new Error("User not found");
     }
 
-    // Get current user from context if available
-    // This would need to be passed differently in your implementation
-    // For now, we'll assume public access unless you implement proper auth context
+    let currentUser = null;
+    if (args.currentUserId) {
+      currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q: any) =>
+          q.eq("clerkId", args.currentUserId)
+        )
+        .first();
+    }
 
     const profileVideos = await ctx.db
       .query("videos")
@@ -477,10 +482,48 @@ export const getUserProfileVideos = queryGeneric({
       )
       .collect();
 
-    // Filter based on privacy settings
-    // You might want to implement proper following logic here
+    // Enhanced privacy filtering - FIXED: Use user _id for follow checks
     const filteredVideos = profileVideos.filter((video: VideoDocument) => {
-      return video.isPublic; // Simplified for now
+      // Always show public videos to everyone
+      if (video.isPublic) {
+        return true;
+      }
+
+      // Show private videos if:
+      // 1. The current user is the video owner (viewing own profile)
+      if (args.currentUserId && video.userId === args.currentUserId) {
+        return true;
+      }
+
+      // 2. There's mutual follow between current user and video owner
+      if (currentUser && args.currentUserId) {
+        // CORRECTED: Use user _id for follow checks since that's what's stored in arrays
+        const currentUserFollowsTarget =
+          currentUser.followings?.includes(targetUser._id) || false;
+        const targetUserFollowsCurrent =
+          targetUser.followings?.includes(currentUser._id) || false;
+
+        console.log("🔍 Mutual Follow Check (FIXED):", {
+          currentUserId: args.currentUserId,
+          currentUser_Id: currentUser._id,
+          targetUserId: args.userId,
+          targetUser_Id: targetUser._id,
+          currentUserFollowsTarget,
+          targetUserFollowsCurrent,
+          isMutual: currentUserFollowsTarget && targetUserFollowsCurrent,
+        });
+
+        return currentUserFollowsTarget && targetUserFollowsCurrent;
+      }
+
+      return false;
+    });
+
+    console.log("🎬 Video Filtering Results (FIXED):", {
+      totalVideos: profileVideos.length,
+      filteredVideos: filteredVideos.length,
+      publicVideos: profileVideos.filter((v) => v.isPublic).length,
+      privateVideos: profileVideos.filter((v) => !v.isPublic).length,
     });
 
     // Get comment counts for each video
@@ -750,5 +793,104 @@ export const getTrendingVideos = queryGeneric({
     }
 
     return sortedVideos;
+  },
+});
+// convex/videos.ts - Add this query
+export const getUserVideos = queryGeneric({
+  args: {
+    userId: v.string(), // clerkId of the user
+    currentUserId: v.optional(v.string()), // clerkId of the viewer (for privacy)
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<(VideoDocument & { user?: any; commentCount: number })[]> => {
+    // Get the target user
+    const targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!targetUser) {
+      throw new Error("User not found");
+    }
+
+    // Get current user if provided
+    let currentUser = null;
+    if (args.currentUserId) {
+      currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.currentUserId))
+        .first();
+    }
+
+    // Get all videos for this user
+    const videos = await ctx.db
+      .query("videos")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Filter videos based on privacy
+    const filteredVideos = videos.filter((video) => {
+      // Always show public videos
+      if (video.isPublic) return true;
+
+      // Show private videos if:
+      // 1. Current user is the video owner
+      if (args.currentUserId && video.userId === args.currentUserId)
+        return true;
+
+      // 2. There's mutual follow
+      if (currentUser) {
+        const currentUserFollowsTarget =
+          currentUser.followings?.includes(targetUser._id) || false;
+        const targetUserFollowsCurrent =
+          targetUser.followings?.includes(currentUser._id) || false;
+        return currentUserFollowsTarget && targetUserFollowsCurrent;
+      }
+
+      return false;
+    });
+
+    // Sort by creation date (newest first)
+    const sortedVideos = filteredVideos.sort(
+      (a, b) => b.createdAt - a.createdAt
+    );
+
+    // Get comment counts and user data
+    const videosWithDetails = await Promise.all(
+      sortedVideos.map(async (video) => {
+        const comments = await ctx.db
+          .query("comments")
+          .withIndex("by_videoId", (q) => q.eq("videoId", video._id))
+          .collect();
+
+        const videoUser = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", video.userId))
+          .first();
+
+        return {
+          ...video,
+          user: videoUser
+            ? {
+                _id: videoUser._id,
+                clerkId: videoUser.clerkId,
+                username: videoUser.username,
+                firstname: videoUser.firstname,
+                lastname: videoUser.lastname,
+                picture: videoUser.picture,
+                instrument: videoUser.instrument,
+                city: videoUser.city,
+                isVerified: videoUser.isVerified,
+                tier: videoUser.tier,
+              }
+            : null,
+          commentCount: comments.length,
+        };
+      })
+    );
+
+    return videosWithDetails;
   },
 });

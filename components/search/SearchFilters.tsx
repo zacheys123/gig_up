@@ -36,6 +36,7 @@ interface SearchFiltersProps {
 }
 
 // Custom switch component
+
 const CustomSwitch = ({
   checked,
   onCheckedChange,
@@ -43,19 +44,21 @@ const CustomSwitch = ({
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }) => {
+  const { colors } = useThemeColors();
+
   return (
     <button
       onClick={() => onCheckedChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-        checked
-          ? "bg-yellow-500 focus:ring-yellow-500"
-          : "bg-red-500 focus:ring-red-500"
-      }`}
+      className={cn(
+        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
+        checked ? colors.primaryBg : "bg-gray-300"
+      )}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+        className={cn(
+          "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
           checked ? "translate-x-6" : "translate-x-1"
-        }`}
+        )}
       />
     </button>
   );
@@ -188,10 +191,25 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
     const newFilters = {
       ...activeFilters,
       [category]: value,
-      // Ensure only one of clientOnly/musicianOnly can be true at a time
-      ...(category === "clientOnly" && value ? { musicianOnly: false } : {}),
-      ...(category === "musicianOnly" && value ? { clientOnly: false } : {}),
-      ...(category === "bookerOnly" && value ? { bookerOnly: false } : {}),
+      // Ensure only one account type can be true at a time
+      ...(category === "clientOnly" && value
+        ? {
+            musicianOnly: false,
+            bookerOnly: false,
+          }
+        : {}),
+      ...(category === "musicianOnly" && value
+        ? {
+            clientOnly: false,
+            bookerOnly: false,
+          }
+        : {}),
+      ...(category === "bookerOnly" && value
+        ? {
+            clientOnly: false,
+            musicianOnly: false,
+          }
+        : {}),
     };
 
     setActiveFilters(newFilters);

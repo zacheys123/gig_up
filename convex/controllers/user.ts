@@ -302,7 +302,6 @@ export const getAllUsers = query({
     return await ctx.db.query("users").collect();
   },
 });
-// convex/controllers/user.ts
 export const getCurrentUser = query({
   args: {
     clerkId: v.string(),
@@ -315,20 +314,22 @@ export const getCurrentUser = query({
 
     if (!user) return null;
 
-    // Ensure rate has all properties with safe defaults
-    const safeRate = user.rate
-      ? {
-          regular: user.rate.regular || "",
-          function: user.rate.function || "",
-          concert: user.rate.concert || "",
-          corporate: user.rate.corporate || "",
-        }
-      : {
-          regular: "",
-          function: "",
-          concert: "",
-          corporate: "",
-        };
+    // Map the database rate structure to the component's expected format
+    const safeRate = {
+      baseRate: user.rate?.baseRate || "",
+      rateType: (user.rate?.rateType as any) || "hourly",
+      currency: user.rate?.currency || "KES",
+      categories: user.rate?.categories || [],
+      negotiable: user.rate?.negotiable || false,
+      depositRequired: user.rate?.depositRequired || false,
+      travelIncluded: user.rate?.travelIncluded || false,
+      travelFee: user.rate?.travelFee || "",
+      // Map the legacy fields from your database structure
+      regular: user.rate?.regular || "",
+      function: user.rate?.function || "",
+      concert: user.rate?.concert || "",
+      corporate: user.rate?.corporate || "",
+    };
 
     return {
       ...user,
@@ -338,12 +339,12 @@ export const getCurrentUser = query({
       followings: user.followings || [],
       allreviews: user.allreviews || [],
       myreviews: user.myreviews || [],
-      bookerSkills: user.bookerSkills || [], // NEW
+      bookerSkills: user.bookerSkills || [],
       firstLogin: user.firstLogin ?? true,
       onboardingComplete: user.onboardingComplete ?? false,
       isMusician: user.isMusician ?? false,
       isClient: user.isClient ?? false,
-      isBooker: user.isBooker ?? false, // NEW
+      isBooker: user.isBooker ?? false,
       tier: user.tier ?? "free",
     };
   },

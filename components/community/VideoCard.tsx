@@ -22,12 +22,24 @@ import {
   Eye,
   MoreHorizontal,
   X,
+  Zap,
+  TrendingUp,
+  Calendar,
+  Star,
+  Users,
+  Music2,
+  MapPin,
+  Award,
+  Crown,
+  Verified,
 } from "lucide-react";
 
 import { useVideoComments } from "@/hooks/useVideoComments.ts";
 import { ViewTracker } from "@/lib/viewTracking";
 import { VideoComments } from "./VideoComment";
 import { formatTimeAgo } from "@/utils";
+import { useRouter } from "next/navigation";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface VideoCardProps {
   video: any;
@@ -39,6 +51,17 @@ interface VideoCardProps {
   isSelected?: boolean;
   isLoading?: boolean;
   className?: string;
+}
+interface UserStats {
+  followerCount?: number;
+  gigsCompleted?: number;
+  rating?: number;
+  isPro?: boolean;
+  isVerified?: boolean;
+  tier?: "free" | "pro" | "elite";
+  instrument?: string;
+  location?: string;
+  memberSince?: number;
 }
 export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
   (
@@ -60,7 +83,8 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
     const [hasViewed, setHasViewed] = useState(false);
     const [showComments, setShowComments] = useState(false); // Add comments state
     const { colors, isDarkMode } = useThemeColors();
-
+    const router = useRouter();
+    const { user: currentUser } = useCurrentUser();
     // Use the comments hook
     const { comments, addComment, deleteComment, totalComments } =
       useVideoComments(video._id, currentUserId, showComments);
@@ -126,9 +150,32 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
       if (count >= 1_000) return (count / 1_000).toFixed(1) + "K";
       return count.toString();
     };
-
     const [timeAgo, setTimeAgo] = useState(formatTimeAgo(video._creationTime));
 
+    const handleUserClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        if (!video.user) return;
+
+        const { clerkId, firstname, lastname } = video.user;
+        const isOwnProfile = clerkId === currentUser?.clerkId;
+
+        // Smart routing based on context
+        if (isOwnProfile) {
+          // Current user: Go to videos with upload CTA prominent
+          router.push(
+            `/search/allvideos/${clerkId}/*${firstname}${lastname}?view=manage`
+          );
+        } else {
+          // Other users: Go to videos with discovery focus
+          router.push(
+            `/search/allvideos/${clerkId}/*${firstname}${lastname}?view=browse`
+          );
+        }
+      },
+      [router, video.user, currentUser?.clerkId]
+    );
     useEffect(() => {
       const interval = setInterval(() => {
         setTimeAgo(formatTimeAgo(video._creationTime));
@@ -161,6 +208,25 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
         setIsPlaying(false);
       }
     }, [isHovered]);
+
+    function getVideoTypeStyle(videoType: string, isDarkMode: boolean) {
+      const styles = {
+        profile: isDarkMode
+          ? "bg-blue-900/30 text-blue-300"
+          : "bg-blue-100 text-blue-700",
+        gig: isDarkMode
+          ? "bg-purple-900/30 text-purple-300"
+          : "bg-purple-100 text-purple-700",
+        promo: isDarkMode
+          ? "bg-amber-900/30 text-amber-300"
+          : "bg-amber-100 text-amber-700",
+        other: isDarkMode
+          ? "bg-gray-900/30 text-gray-300"
+          : "bg-gray-100 text-gray-700",
+      };
+
+      return styles[videoType as keyof typeof styles] || styles.other;
+    }
     return (
       <>
         <motion.div
@@ -183,42 +249,198 @@ export const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* HEADER */}
           <div
             className={cn(
               "flex items-center justify-between px-4 py-3",
-              "border-b",
-              colors.border
+              "border-b cursor-pointer transition-all duration-200",
+              colors.border,
+              "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.98]"
             )}
+            onClick={handleUserClick}
           >
-            <div className="flex items-center gap-3">
-              <img
-                src={video.user?.picture || "/default-avatar.png"}
-                alt={video.user?.username}
-                className="w-10 h-10 rounded-full object-cover border"
-              />
-              <div>
-                <p className={cn("font-semibold text-sm", colors.text)}>
-                  {video.user?.username}
-                </p>
-                <p className={cn("text-xs", colors.textMuted)}>{timeAgo}</p>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {/* Avatar with status indicator */}
+              <div className="relative flex-shrink-0">
+                <img
+                  src={video.user?.picture || "/default-avatar.png"}
+                  alt={video.user?.username}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm transition-transform duration-200 group-hover:scale-105"
+                />
+                {/* Online status indicator */}
+                {video.user?.isOnline && (
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+                )}
+              </div>
+
+              {/* User info with stats */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p
+                    className={cn(
+                      "font-bold text-sm truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors",
+                      colors.text
+                    )}
+                  >
+                    {video.user?.username}
+                  </p>
+
+                  {/* Verification & Badges */}
+                  <div className="flex items-center gap-1">
+                    {video.user?.isVerified && (
+                      <Verified className="w-4 h-4 text-blue-500 fill-current" />
+                    )}
+                    {video.user?.tier === "pro" && (
+                      <Crown className="w-4 h-4 text-amber-500 fill-current" />
+                    )}
+                    {video.user?.tier === "elite" && (
+                      <Award className="w-4 h-4 text-purple-500 fill-current" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Secondary info row */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Location */}
+                  {video.user?.location && (
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-gray-500" />
+                      <span className={cn("text-xs", colors.textMuted)}>
+                        {video.user.location}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Instrument */}
+                  {video.user?.instrument && (
+                    <div className="flex items-center gap-1">
+                      <Music2 className="w-3 h-3 text-gray-500" />
+                      <span className={cn("text-xs", colors.textMuted)}>
+                        {video.user.instrument}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Time ago */}
+                  <span className={cn("text-xs", colors.textMuted)}>
+                    {timeAgo}
+                  </span>
+
+                  {/* Video type badge */}
+                  {video.videoType && video.videoType !== "casual" && (
+                    <span
+                      className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-medium capitalize",
+                        getVideoTypeStyle(video.videoType, isDarkMode)
+                      )}
+                    >
+                      {video.videoType}
+                    </span>
+                  )}
+                </div>
+
+                {/* Stats row - only show on hover or for prominent users */}
+                {(isHovered || video.user?.followerCount > 1000) && (
+                  <div className="flex items-center gap-3 mt-1">
+                    {/* Followers */}
+                    {video.user?.followerCount !== undefined && (
+                      <div className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-gray-500" />
+                        <span
+                          className={cn("text-xs font-medium", colors.text)}
+                        >
+                          {formatCount(video.user.followerCount)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Rating */}
+                    {video.user?.rating && (
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-500 fill-current" />
+                        <span
+                          className={cn("text-xs font-medium", colors.text)}
+                        >
+                          {video.user.rating.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Gigs completed */}
+                    {video.user?.gigsCompleted &&
+                      video.user.gigsCompleted > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-gray-500" />
+                          <span
+                            className={cn("text-xs font-medium", colors.text)}
+                          >
+                            {video.user.gigsCompleted} gigs
+                          </span>
+                        </div>
+                      )}
+                  </div>
+                )}
               </div>
             </div>
 
-            {hasViewed && (
-              <div
-                className={cn(
-                  "px-2 py-1 rounded-full text-[11px] font-medium",
-                  isDarkMode
-                    ? "bg-green-900/30 text-green-300"
-                    : "bg-green-100 text-green-700"
+            {/* Right side - Action buttons and status */}
+            <div
+              className="flex items-center gap-2 flex-shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Performance metrics */}
+              <div className="flex items-center gap-3 mr-2">
+                {/* Engagement rate indicator */}
+                {video.engagementRate > 10 && (
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    <span className={cn("text-xs font-medium", colors.text)}>
+                      Hot
+                    </span>
+                  </div>
                 )}
-              >
-                Viewed
-              </div>
-            )}
-          </div>
 
+                {/* Quick actions */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={cn(
+                    "p-2 rounded-full transition-colors",
+                    colors.hoverBg,
+                    colors.text
+                  )}
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </motion.button>
+              </div>
+
+              {/* View status badge */}
+              {hasViewed ? (
+                <div
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1",
+                    isDarkMode
+                      ? "bg-green-900/30 text-green-300 border border-green-800/50"
+                      : "bg-green-100 text-green-700 border border-green-200"
+                  )}
+                >
+                  <Eye className="w-3 h-3" />
+                  Viewed
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1",
+                    isDarkMode
+                      ? "bg-blue-900/30 text-blue-300 border border-blue-800/50"
+                      : "bg-blue-100 text-blue-700 border border-blue-200"
+                  )}
+                >
+                  <Zap className="w-3 h-3" />
+                  New
+                </div>
+              )}
+            </div>
+          </div>
           {/* VIDEO AREA */}
           <div
             className={cn(

@@ -44,6 +44,16 @@ export interface TrendingMusician {
   availability?: "available" | "notavailable";
   experience?: string;
   genre?: string;
+  allreviews: {
+    _id: string;
+    postedBy: string;
+    postedTo: string;
+    rating?: number;
+    comment?: string;
+    gigId?: string;
+    updatedAt?: number;
+    createdAt?: number;
+  }[];
 }
 
 // For the component props

@@ -1,32 +1,23 @@
-// components/search/SearchUserCard.tsx (UPDATED)
+// components/search/SearchUserCard.tsx (MODERN - THEME ONLY)
 "use client";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  FiMapPin,
-  FiUsers,
-  FiBriefcase,
-  FiMoreVertical,
-  FiEye,
-} from "react-icons/fi";
-import { Mic, Sparkles } from "lucide-react";
+import { MapPin, Users, Briefcase, Mic, Sparkles, Eye } from "lucide-react";
 import { UserProps } from "@/types/userTypes";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuth } from "@clerk/nextjs";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
-import { ChatIcon } from "../chat/ChatIcon";
 import FollowButton from "../pages/FollowButton";
 import { OnlineBadge } from "../chat/OnlineBadge";
-
 import ConfirmPrompt from "../ConfirmPrompt";
 import { UserModal } from "./MainUserModal";
 import { GiDjembe } from "react-icons/gi";
 import { SearchUserCardSkeleton } from "../skeletons/SearchUserSkeleton";
+import { Badge } from "@/components/ui/badge";
 
 interface SearchUserCardProps {
   user: UserProps;
@@ -40,27 +31,22 @@ export function SearchUserCard({
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
-  const { isDarkMode } = useThemeColors();
+  const { colors, isDarkMode } = useThemeColors();
   const { user: currentUser, isLoading } = useCurrentUser();
   const { isInGracePeriod } = useCheckTrial();
   const [isDataReady, setIsDataReady] = useState(false);
 
-  // Wait for user data to be fully loaded
   useEffect(() => {
     if (user?._id && currentUser?._id && !isLoading) {
       setIsDataReady(true);
     }
   }, [user, currentUser, isLoading]);
 
-  // KEEP YOUR CONVEX TRACKING
-
   const trackProfileView = useMutation(
     api.controllers.notifications.trackProfileView
   );
 
-  // In SearchUserCard.tsx - fix the handleProfileClick function
   const handleProfileClick = async () => {
-    // FIXED: Use currentUser from props/store instead of useAuth
     if (currentUser?._id && user._id && currentUser._id !== user._id) {
       try {
         const result = await trackProfileView({
@@ -83,30 +69,23 @@ export function SearchUserCard({
     }
   };
 
-  const handleModalOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowModal(true);
-  };
-
   const getRoleDisplay = () => {
-    if (user.isClient)
-      return { text: "Client", icon: <FiBriefcase size={12} /> };
+    if (user.isClient) return { text: "Client", icon: <Briefcase size={14} /> };
     if (user.roleType && user.instrument) {
       return {
-        text: `${user.instrument} ${user.roleType}`,
-        icon: <FiUsers size={12} />,
+        text: `${user.roleType}`,
+        icon: <Users size={14} />,
       };
     }
     if (user.instrument)
-      return { text: user.instrument, icon: <FiUsers size={12} /> };
+      return { text: user.instrument, icon: <Users size={14} /> };
     if (user.roleType === "vocalist")
-      return { text: "Vocalist", icon: <Mic size={12} /> };
+      return { text: "Vocalist", icon: <Mic size={14} /> };
     if (user.roleType === "dj")
-      return { text: "Deejay", icon: <GiDjembe size={12} /> };
-    if (user.roleType === "mc")
-      return { text: "Emcee", icon: <Mic size={12} /> };
+      return { text: "DJ", icon: <GiDjembe size={14} /> };
+    if (user.roleType === "mc") return { text: "MC", icon: <Mic size={14} /> };
 
-    return { text: "Client", icon: <FiUsers size={12} /> };
+    return { text: "Member", icon: <Users size={14} /> };
   };
 
   const userRole = getRoleDisplay();
@@ -114,218 +93,194 @@ export function SearchUserCard({
   if (isLoading || !isDataReady) {
     return <SearchUserCardSkeleton isDarkMode={isDarkMode} />;
   }
+
   return (
     <>
       <motion.div
-        whileHover={{ y: -4, scale: 1.02 }}
+        whileHover={{ y: -6, scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className={cn(
-          "group relative rounded-2xl p-5 cursor-pointer border backdrop-blur-sm transition-all duration-300",
-          isDarkMode
-            ? "bg-gray-800/50 border-gray-700 hover:border-gray-600 hover:bg-gray-700/50"
-            : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50",
-          isFeatured && "ring-1 ring-purple-500/30"
+          "group relative rounded-3xl p-6 cursor-pointer border transition-all duration-500",
+          "flex flex-col h-full", // ← Add these
+          "min-h-[320px]", // ← Set a minimum height
+          colors.card,
+          colors.border,
+          colors.hoverBg,
+          "hover:shadow-2xl",
+          isFeatured && "ring-2 ring-purple-500/30 shadow-lg"
         )}
         onClick={handleProfileClick}
       >
         {/* Featured Badge */}
         {isFeatured && (
-          <div className="absolute -top-2 -right-2 z-10">
+          <div className="absolute -top-3 -right-3 z-10">
             <div
               className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold",
-                "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold",
+                "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+                "shadow-lg"
               )}
             >
-              <Sparkles size={10} />
+              <Sparkles size={12} />
               <span>Featured</span>
             </div>
           </div>
         )}
 
-        {/* Avatar Section */}
-        <div className="flex items-start gap-4 mb-4">
-          <div className="relative">
-            {user.picture ? (
-              <img
-                src={user.picture}
-                alt={`${user.firstname} ${user.lastname}`}
-                className="w-14 h-14 rounded-2xl object-cover border shadow-sm"
-              />
-            ) : (
-              <div
-                className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg",
-                  user.isClient
-                    ? "bg-gradient-to-br from-blue-500 to-blue-600"
-                    : "bg-gradient-to-br from-amber-500 to-amber-600"
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            {/* Avatar with Online Status */}
+            <div className="relative">
+              <div className="relative">
+                {user.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={`${user.firstname} ${user.lastname}`}
+                    className={cn(
+                      "w-12 h-12 rounded-2xl object-cover border-2 shadow-lg",
+                      colors.border
+                    )}
+                  />
+                ) : (
+                  <div
+                    className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg",
+                      user.isClient
+                        ? "bg-gradient-to-br from-blue-500 to-blue-600"
+                        : "bg-gradient-to-br from-amber-500 to-orange-500"
+                    )}
+                  >
+                    {user.firstname?.[0]}
+                    {user.lastname?.[0]}
+                  </div>
                 )}
-              >
-                {user.firstname?.[0]}
-                {user.lastname?.[0]}
-              </div>
-            )}
-            <OnlineBadge
-              userId={user._id}
-              size="sm"
-              className="absolute -bottom-1 -right-1"
-            />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                <p
-                  className={cn(
-                    "text-sm sm:text-base font-medium truncate",
-                    isDarkMode ? "text-gray-400" : "text-gray-600"
-                  )}
-                >
-                  @{user.username}
-                </p>
                 <OnlineBadge
                   userId={user._id}
-                  size="xs"
-                  showText={true}
-                  showLastActive={true} // 👈 Add this to see last active time
+                  size="sm"
+                  className="absolute -bottom-1 -right-1"
                 />
               </div>
-              <button
-                onClick={handleModalOpen}
-                className={cn(
-                  "p-2 rounded-xl transition-all hover:scale-110",
-                  isDarkMode
-                    ? "hover:bg-gray-700 text-gray-400"
-                    : "hover:bg-gray-200 text-gray-600"
-                )}
-              >
-                <FiMoreVertical size={16} />
-              </button>
             </div>
 
-            {/* Role Badge */}
+            {/* Name and Username */}
+            <div className="min-w-0">
+              <h3 className={cn("font-bold text-base truncate", colors.text)}>
+                {user.firstname} {user.lastname}
+              </h3>
+              <p className={cn("text-sm truncate", colors.textMuted)}>
+                @{user.username}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Role Badge and Location */}
+        <div className="flex items-center justify-between mb-4">
+          <Badge
+            variant="secondary"
+            className={cn(
+              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold",
+              user.isClient ? colors.infoBg : colors.warningBg,
+              user.isClient ? colors.infoText : colors.warningText
+            )}
+          >
+            {userRole.icon}
+            {userRole.text}
+          </Badge>
+
+          {user.city && (
             <div
               className={cn(
-                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium",
-                user.isClient
-                  ? isDarkMode
-                    ? "bg-blue-500/20 text-blue-300"
-                    : "bg-blue-100 text-blue-700"
-                  : isDarkMode
-                    ? "bg-amber-500/20 text-amber-300"
-                    : "bg-amber-100 text-amber-700"
+                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg",
+                colors.secondaryBackground,
+                colors.textMuted
               )}
             >
-              {userRole.icon}
-              {userRole.text}
+              <MapPin size={12} />
+              {user.city}
             </div>
-          </div>
+          )}
         </div>
-
-        {/* Location */}
-        {user.city && (
-          <div
-            className={cn(
-              "flex items-center gap-2 text-sm mb-4",
-              isDarkMode ? "text-gray-400" : "text-gray-600"
-            )}
-          >
-            <FiMapPin size={14} />
-            {user.city}
-          </div>
-        )}
 
         {/* Bio */}
-        {user.bio && (
-          <p
+        {user.talentbio ||
+          (user?.bookerBio && (
+            <div className="mb-4">
+              <p
+                className={cn(
+                  "text-[9px] leading-relaxed line-clamp-2",
+                  colors.textMuted
+                )}
+              >
+                {user.talentbio ? user.talentbio : user?.bookerBio}
+              </p>
+            </div>
+          ))}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div
             className={cn(
-              "text-sm leading-relaxed mb-4 line-clamp-2",
-              isDarkMode ? "text-gray-400" : "text-gray-600"
+              "text-center p-2 rounded-xl",
+              colors.backgroundSecondary,
+              colors.borderSecondary
             )}
           >
-            {user.bio}
-          </p>
-        )}
-
-        {/* Stats & Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <div
-                className={cn(
-                  "font-bold text-lg",
-                  isDarkMode ? "text-white" : "text-gray-900"
-                )}
-              >
-                {user.followers?.length || 0}
-              </div>
-              <div
-                className={cn(
-                  "text-xs",
-                  isDarkMode ? "text-gray-400" : "text-gray-600"
-                )}
-              >
-                Followers
-              </div>
+            <div className={cn("font-bold text-sm", colors.text)}>
+              {user.followers?.length || 0}
             </div>
-            <div className="text-center">
-              <div
-                className={cn(
-                  "font-bold text-lg",
-                  isDarkMode ? "text-white" : "text-gray-900"
-                )}
-              >
-                {user.completedGigsCount || 0}
-              </div>
-              <div
-                className={cn(
-                  "text-xs",
-                  isDarkMode ? "text-gray-400" : "text-gray-600"
-                )}
-              >
-                Gigs
-              </div>
-            </div>
-
-            {user?.profileViews && user?.profileViews?.totalCount > 0 && (
-              <div className="text-center">
-                <div
-                  className={cn(
-                    "font-bold text-lg flex items-center gap-1",
-                    isDarkMode ? "text-white" : "text-gray-900"
-                  )}
-                >
-                  <FiEye size={12} />
-                  {user?.profileViews && user?.profileViews.totalCount}
-                </div>
-                <div
-                  className={cn(
-                    "text-xs",
-                    isDarkMode ? "text-gray-400" : "text-gray-600"
-                  )}
-                >
-                  Views
-                </div>
-              </div>
-            )}
+            <div className={cn("text-xs", colors.textMuted)}>Followers</div>
           </div>
 
           <div
-            className="flex items-center gap-2"
-            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              "text-center p-2 rounded-xl",
+              colors.backgroundSecondary,
+              colors.borderSecondary
+            )}
           >
-            {/* <ChatIcon userId={user._id} size="sm" variant="ghost" /> */}
-            <FollowButton
-              _id={user._id}
-              pendingFollowRequests={user.pendingFollowRequests}
-              targetUserFollowings={user.followings}
-              className="rounded-xl px-4 py-2 text-sm"
-              variant="outline"
-            />
+            <div className={cn("font-bold text-sm", colors.text)}>
+              {user.completedGigsCount || 0}
+            </div>
+            <div className={cn("text-xs", colors.textMuted)}>Gigs</div>
+          </div>
+
+          <div
+            className={cn(
+              "text-center p-2 rounded-xl",
+              colors.backgroundSecondary,
+              colors.borderSecondary
+            )}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <Eye size={12} className={colors.textMuted} />
+              <div className={cn("font-bold text-sm", colors.text)}>
+                {user?.profileViews?.totalCount || 0}
+              </div>
+            </div>
+            <div className={cn("text-xs", colors.textMuted)}>Views</div>
           </div>
         </div>
-      </motion.div>
 
+        {/* Follow Button - Always at bottom */}
+        <div
+          className="mt-auto" // ← This pushes the button to the bottom
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FollowButton
+            _id={user._id}
+            pendingFollowRequests={user.pendingFollowRequests}
+            targetUserFollowings={user.followings}
+            className={cn(
+              "w-full rounded-xl py-2.5 text-sm font-semibold transition-all duration-300",
+
+              "text-white shadow-lg hover:shadow-xl hover:scale-105"
+            )}
+            variant="default"
+          />
+        </div>
+      </motion.div>
       {/* Modal */}
       {showModal && (
         <UserModal
@@ -350,7 +305,6 @@ export function SearchUserCard({
           onProfileClick={handleProfileClick}
         />
       )}
-
       {/* Confirm Prompt */}
       <ConfirmPrompt
         isOpen={showPrompt}

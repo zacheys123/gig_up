@@ -225,7 +225,6 @@ const FollowButton = ({
     );
   }
 
-  // If we're following the target user (regardless of whether they follow us back)
   if (currentUserFollowingTarget) {
     return (
       <motion.div
@@ -236,18 +235,15 @@ const FollowButton = ({
         <Button
           onClick={handleToggleFollow}
           disabled={isProcessing}
-          className={
+          className={cn(
+            "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl",
+            "border transition-all duration-200",
+            "bg-red-500 hover:bg-red-600 text-white", // Red for unfollow
+            "hover:shadow-lg hover:shadow-red-500/25",
+            "backdrop-blur-sm",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
             className
-              ? className
-              : cn(
-                  "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl bg-amber-500 hover:bg-red-500/10 border-red-400",
-                  "border transition-all duration-200",
-
-                  "text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300",
-
-                  "backdrop-blur-sm"
-                )
-          }
+          )}
           variant={variant}
           size={size}
         >
@@ -263,38 +259,35 @@ const FollowButton = ({
   }
 
   // If target user is following us but we're not following them back
-  if (targetUserFollowingCurrent && !currentUserFollowingTarget) {
+  if (currentUserFollowingTarget) {
     return (
       <motion.div
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
       >
-        <button
+        <Button
           onClick={handleToggleFollow}
           disabled={isProcessing}
           className={cn(
-            "flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl",
-            "transition-all duration-200 shadow-sm",
-            "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600",
-            "text-white hover:shadow-lg",
-            isDarkMode
-              ? "hover:shadow-green-500/25"
-              : "hover:shadow-green-500/40",
+            "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl",
+            "border transition-all duration-200",
+            "bg-red-500 hover:bg-red-600 text-white", // Red for unfollow
+            "hover:shadow-lg hover:shadow-red-500/25",
             "backdrop-blur-sm",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             className
           )}
+          variant={variant}
+          size={size}
         >
           {isProcessing ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <>
-              <span>Follow Back</span>
-              <IoMdAdd className="text-base" />
-            </>
+            <UserX className="w-4 h-4" />
           )}
-        </button>
+          <span>Unfollow</span>
+        </Button>
       </motion.div>
     );
   }
@@ -312,7 +305,7 @@ const FollowButton = ({
         className={cn(
           "flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl",
           "transition-all duration-200 shadow-sm",
-          "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600",
+          "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600", // Blue for follow
           "text-white hover:shadow-lg",
           isDarkMode ? "hover:shadow-blue-500/25" : "hover:shadow-blue-500/40",
           "backdrop-blur-sm",

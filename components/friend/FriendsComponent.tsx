@@ -15,6 +15,7 @@ import {
   Calendar,
   Clock,
   DollarSign,
+  Lock,
   MenuIcon,
   Music,
   Video,
@@ -49,25 +50,32 @@ const FriendsComponent = () => {
 
   const { isInGracePeriod } = useCheckTrial();
   // Get profile videos for the friend with privacy filtering
-  // UPDATED: Using the correct path now that videos are moved from controllers folder
+
   const profileVideos = useQuery(
-    api.controllers.videos.getUserProfileVideos, // CHANGED: Removed .controllers
-    friend?.clerkId
+    api.controllers.videos.getUserProfileVideos,
+    friend?.clerkId && currentUser?.clerkId
       ? {
           userId: friend.clerkId,
+          currentUserId: currentUser.clerkId, // Add current user ID
         }
       : friend?.clerkId
         ? {
             userId: friend.clerkId,
+            // No currentUserId for non-logged in users
           }
         : "skip"
-  );
+  ); // Memoized expensive calculations
 
-  // Memoized expensive calculations
   const isFollowingFriend = useMemo(() => {
     if (!currentUser || !friend) return false;
-    return friend.followers?.includes(currentUser.clerkId) || false;
+    return friend.followers?.includes(currentUser._id) || false;
   }, [currentUser, friend]);
+
+  const hasPrivateVideos =
+    profileVideos?.some((video) => !video.isPublic) &&
+    !isFollowingFriend &&
+    friend?.isPrivate;
+  const hasAnyVideos = profileVideos && profileVideos.length > 0;
 
   // Memoized theme styles
   const themeStyles = useMemo(
@@ -93,10 +101,14 @@ const FriendsComponent = () => {
         router.push(
           currentUser?.isClient ? `/create/${userId}` : `/av_gigs/${userId}`
         ),
-      goToVideos: () =>
-        router.push(
-          `/search/allvideos/${friend?._id}/*${friend?.firstname}/${friend?.lastname}`
-        ),
+      // In your UserProfile component, update the navigation:
+      goToVideos: () => {
+        if (friend?.clerkId) {
+          router.push(
+            `/search/allvideos/${friend.clerkId}/*${friend.firstname}${friend.lastname}`
+          );
+        }
+      },
       goToReviews: () =>
         router.push(
           `/search/reviews/${friend?._id}/*${friend?.firstname}${friend?.lastname}`
@@ -263,9 +275,15 @@ const FriendsComponent = () => {
                 whileHover={{ scale: 1.02 }}
                 className={cn(
                   "rounded-lg overflow-hidden border cursor-pointer",
-                  themeStyles.secondaryBackground
+                  themeStyles.secondaryBackground,
+                  !video.isPublic && !isFollowingFriend && "opacity-60" // Dim private videos for non-followers
                 )}
-                onClick={() => router.push(`/video/${video._id}`)}
+                onClick={() => {
+                  // Only allow clicking if user can view the video
+                  if (video.isPublic || isFollowingFriend) {
+                    router.push(`/video/${video._id}`);
+                  }
+                }}
               >
                 <div className="aspect-video bg-gray-300 dark:bg-gray-600 relative">
                   {video.thumbnail ? (
@@ -280,7 +298,8 @@ const FriendsComponent = () => {
                     </div>
                   )}
                   {!video.isPublic && (
-                    <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                    <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
                       Private
                     </div>
                   )}
@@ -304,30 +323,14 @@ const FriendsComponent = () => {
                       {video.description}
                     </p>
                   )}
-                  {video.tags && video.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {video.tags.slice(0, 2).map((tag, index) => (
-                        <span
-                          key={index}
-                          className={cn(
-                            "text-xs px-1.5 py-0.5 rounded",
-                            colors.secondaryBackground,
-                            colors.textMuted
-                          )}
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   {!video.isPublic && !isFollowingFriend && (
-                    <p
+                    <div
                       className={cn(
-                        "text-xs mt-1 text-amber-600 dark:text-amber-400"
+                        "text-xs mt-2 p-2 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
                       )}
                     >
-                      Follow to view private content
-                    </p>
+                      🔒 Follow each other to view private content
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -336,9 +339,6 @@ const FriendsComponent = () => {
         ),
       });
     } else {
-      // No videos or empty array
-      const hasPrivateVideos = friend?.isPrivate && !isFollowingFriend;
-
       sections.push({
         type: "videos",
         title: "Profile Videos",
@@ -347,31 +347,108 @@ const FriendsComponent = () => {
           : "bg-gradient-to-r from-green-100 to-emerald-100",
         titleColor: isDarkMode ? "text-green-300" : "text-green-700",
         content: (
-          <div
-            className={cn(
-              "text-center py-8 rounded-lg",
-              themeStyles.secondaryBackground
-            )}
-          >
-            <Video className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            {hasPrivateVideos ? (
-              <>
-                <p className={cn("font-medium", colors.text)}>
-                  Follow to view videos
-                </p>
-                <p className={cn("text-sm mt-1", colors.textMuted)}>
-                  This user has private videos - follow them to see all content
-                </p>
-              </>
+          <div>
+            {!hasAnyVideos ? (
+              <div
+                className={cn(
+                  "text-center py-8 rounded-lg",
+                  themeStyles.secondaryBackground
+                )}
+              >
+                <Video className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                {hasPrivateVideos ? (
+                  <>
+                    <p className={cn("font-medium", colors.text)}>
+                      Follow to view videos
+                    </p>
+                    <p className={cn("text-sm mt-1", colors.textMuted)}>
+                      This user has private videos - follow each other to see
+                      all content
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className={cn("font-medium", colors.text)}>
+                      No profile videos yet
+                    </p>
+                    <p className={cn("text-sm mt-1", colors.textMuted)}>
+                      Check back later for new content
+                    </p>
+                  </>
+                )}
+              </div>
             ) : (
-              <>
-                <p className={cn("font-medium", colors.text)}>
-                  No profile videos yet
-                </p>
-                <p className={cn("text-sm mt-1", colors.textMuted)}>
-                  Check back later for new content
-                </p>
-              </>
+              // Video grid goes here when there are videos
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {profileVideos.map((video) => (
+                  <motion.div
+                    key={video._id}
+                    whileHover={{ scale: 1.02 }}
+                    className={cn(
+                      "rounded-lg overflow-hidden border cursor-pointer",
+                      themeStyles.secondaryBackground,
+                      !video.isPublic && !isFollowingFriend && "opacity-60"
+                    )}
+                    onClick={() => {
+                      if (video.isPublic || isFollowingFriend) {
+                        router.push(`/video/${video._id}`);
+                      }
+                    }}
+                  >
+                    <div className="aspect-video bg-gray-300 dark:bg-gray-600 relative">
+                      {video.thumbnail ? (
+                        <img
+                          src={video.thumbnail}
+                          alt={video.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Video className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
+                      {!video.isPublic && (
+                        <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          Private
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p
+                        className={cn(
+                          "font-medium text-sm truncate",
+                          colors.text
+                        )}
+                      >
+                        {video.title}
+                      </p>
+                      <p className={cn("text-xs mt-1", colors.textMuted)}>
+                        {video.views || 0} views • {video.likes || 0} likes
+                      </p>
+                      {video.description && (
+                        <p
+                          className={cn(
+                            "text-xs mt-1 line-clamp-2",
+                            colors.textMuted
+                          )}
+                        >
+                          {video.description}
+                        </p>
+                      )}
+                      {!video.isPublic && !isFollowingFriend && (
+                        <div
+                          className={cn(
+                            "text-xs mt-2 p-2 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+                          )}
+                        >
+                          🔒 Follow each other to view private content
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             )}
           </div>
         ),
@@ -887,7 +964,13 @@ const FriendsComponent = () => {
                 >
                   {friend.tier === "free" && isInGracePeriod
                     ? "Trial Month"
-                    : friend.tier}
+                    : friend.tier === "pro"
+                      ? "Pro"
+                      : friend.tier === "premium"
+                        ? "Premium"
+                        : friend.tier === "elite"
+                          ? "Elite"
+                          : "Free"}
                 </span>
               </div>
             </div>
@@ -934,7 +1017,9 @@ const FriendsComponent = () => {
                         Specialization
                       </p>
                       <p className={cn("font-medium", colors.text)}>
-                        {friend.teacherSpecialization}
+                        {friend.teacherSpecialization.includes("advanced")
+                          ? "Advanced Techniques"
+                          : ""}
                       </p>
                     </div>
                   )}
@@ -956,7 +1041,9 @@ const FriendsComponent = () => {
                         Teaching Style
                       </p>
                       <p className={cn("font-medium", colors.text)}>
-                        {friend.teachingStyle}
+                        {friend.teachingStyle.includes("structured")
+                          ? "Structured Curriculum"
+                          : ""}
                       </p>
                     </div>
                   )}
@@ -978,7 +1065,11 @@ const FriendsComponent = () => {
                         Lesson Format
                       </p>
                       <p className={cn("font-medium", colors.text)}>
-                        {friend.lessonFormat}
+                        {friend.lessonFormat.includes("one")
+                          ? "One-on-One"
+                          : friend.lessonFormat.includes("group")
+                            ? "Group Lessons"
+                            : "N/A"}
                       </p>
                     </div>
                   )}

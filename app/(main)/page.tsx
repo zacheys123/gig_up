@@ -137,7 +137,7 @@ export default function Home() {
     }
 
     if (user?.isMusician) {
-      return !user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=all`;
+      return user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=all`;
     }
 
     return `/roles/${userId}`;

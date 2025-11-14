@@ -361,154 +361,161 @@ export default function FollowingPage() {
           </motion.div>
         </div>
 
-        {/* Users List */}
+        {/* Users Grid */}
         {filteredUsers.length > 0 ? (
-          <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
             <AnimatePresence>
               {filteredUsers.map((user, index) => (
                 <motion.div
                   key={user._id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
                   className={cn(
-                    "rounded-xl border p-6 transition-all duration-300",
+                    "rounded-xl border p-6 transition-all duration-300 hover:shadow-lg",
                     colors.card,
-                    colors.border
+                    colors.border,
+                    "flex flex-col h-full"
                   )}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      {/* Avatar */}
-                      <div className="relative">
-                        {user.picture ? (
-                          <img
-                            src={user.picture}
-                            alt={user.firstname || user.username}
-                            className="rounded-2xl object-cover w-[64px] h-[64px]"
-                          />
-                        ) : (
-                          <div
-                            className={cn(
-                              "w-16 h-16 rounded-2xl flex items-center justify-center",
-                              colors.secondaryBackground
-                            )}
-                          >
-                            <Users className="w-6 h-6 text-gray-400" />
-                          </div>
-                        )}
-                        {user.tier === "pro" && (
-                          <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-1">
-                            <Crown className="w-3 h-3 text-white" />
-                          </div>
-                        )}
-                      </div>
+                  {/* Header with Avatar and Basic Info */}
+                  <div className="flex items-start gap-4 mb-4">
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                      {user.picture ? (
+                        <img
+                          src={user.picture}
+                          alt={user.firstname || user.username}
+                          className="rounded-2xl object-cover w-16 h-16"
+                        />
+                      ) : (
+                        <div
+                          className={cn(
+                            "w-16 h-16 rounded-2xl flex items-center justify-center",
+                            colors.secondaryBackground
+                          )}
+                        >
+                          <Users className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                      {user.tier === "pro" && (
+                        <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-1">
+                          <Crown className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
 
-                      {/* User Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    {/* User Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="min-w-0">
                           <h3
-                            className={cn("font-semibold text-lg", colors.text)}
+                            className={cn(
+                              "font-semibold text-lg truncate",
+                              colors.text
+                            )}
                           >
                             {user.firstname} {user.lastname}
                           </h3>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge
-                              variant={
-                                user.isMusician
-                                  ? "default"
-                                  : user.isClient
-                                    ? "secondary"
-                                    : "destructive"
-                              }
-                              className={cn(
-                                "text-xs",
-                                user.isMusician
-                                  ? "bg-purple-500 text-white"
-                                  : user.isClient
-                                    ? "bg-green-500 text-white"
-                                    : "bg-purple-500 text-white"
-                              )}
-                            >
-                              {user.isMusician
-                                ? "Musician"
-                                : user.isClient
-                                  ? "Client"
-                                  : "Booker/Manager"}
-                            </Badge>
-                            {user.tier === "pro" && (
-                              <Badge
-                                variant="outline"
-                                className="bg-amber-500/20 text-amber-600 border-amber-500/30 text-xs"
-                              >
-                                PRO
-                              </Badge>
-                            )}
-                            {user.mutualFollowers &&
-                              user.mutualFollowers > 0 && (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"
-                                ></Badge>
-                              )}
-                          </div>
+                          <p
+                            className={cn("text-sm truncate", colors.textMuted)}
+                          >
+                            @{user.username}
+                          </p>
                         </div>
+                      </div>
 
-                        <p className={cn("text-sm mb-2", colors.textMuted)}>
-                          @{user.username}
-                        </p>
+                      {/* Badges */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        <Badge
+                          variant={
+                            user.isMusician
+                              ? "default"
+                              : user.isClient
+                                ? "secondary"
+                                : "destructive"
+                          }
+                          className={cn(
+                            "text-xs",
+                            user.isMusician
+                              ? "bg-purple-500 text-white"
+                              : user.isClient
+                                ? "bg-green-500 text-white"
+                                : "bg-blue-500 text-white"
+                          )}
+                        >
+                          {user.isMusician && user?.roleType !== "teacher"
+                            ? "Musician"
+                            : user?.roleType === "teacher"
+                              ? "Teacher"
+                              : user.isClient
+                                ? "Client"
+                                : "Booker"}
+                        </Badge>
+                        {user.tier === "pro" && (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-500/20 text-amber-600 border-amber-500/30 text-xs"
+                          >
+                            PRO
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                        {/* Additional Info */}
-                        <div className="flex items-center gap-4 text-sm">
-                          {user.city && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-gray-400" />
-                              <span className={colors.textMuted}>
-                                {user.city}
-                              </span>
-                            </div>
-                          )}
-                          {user.instrument && (
-                            <div className="flex items-center gap-1">
-                              <Music className="w-3 h-3 text-purple-500" />
-                              <span className={colors.textMuted}>
-                                {user.instrument}
-                              </span>
-                            </div>
-                          )}
+                  {/* Location and Instrument */}
+                  <div className="flex flex-col gap-2 mb-4">
+                    {user.city && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        <span className={cn("truncate", colors.textMuted)}>
+                          {user.city}
+                        </span>
+                      </div>
+                    )}
+                    {user.instrument && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Music className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                        <span className={cn("truncate", colors.textMuted)}>
+                          {user.instrument}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center justify-between text-sm mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <div className={cn("font-semibold", colors.text)}>
+                          {user.followers}
                         </div>
-
-                        {/* Stats */}
-                        <div className="flex items-center gap-4 text-xs mt-2">
-                          <span className={colors.textMuted}>
-                            {user.followers} followers
-                          </span>
-                          <span className={colors.textMuted}>
-                            {user.followings} following
-                          </span>
+                        <div className={cn("text-xs", colors.textMuted)}>
+                          Followers
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className={cn("font-semibold", colors.text)}>
+                          {user.followings}
+                        </div>
+                        <div className={cn("text-xs", colors.textMuted)}>
+                          Following
                         </div>
                       </div>
                     </div>
-                    <FollowButton
-                      _id={user?._id}
-                      variant="default"
-                      size="sm"
-                      className={cn(
-                        "flex-1 rounded-lg transition-all duration-300",
-                        colors.primaryBg,
-                        colors.primaryBgHover,
-                        "text-white font-semibold shadow-lg hover:shadow-xl",
-                        "border-0 hover:scale-105"
-                      )}
-                    />
                   </div>
 
-                  {/* Bio */}
+                  {/* Bio (Truncated) */}
                   {user.talentbio && (
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="mb-4 flex-1">
                       <p
                         className={cn(
-                          "text-sm leading-relaxed",
+                          "text-sm leading-relaxed line-clamp-3",
                           colors.textMuted
                         )}
                       >
@@ -516,10 +523,26 @@ export default function FollowingPage() {
                       </p>
                     </div>
                   )}
+
+                  {/* Follow Button */}
+                  <div className="mt-auto">
+                    <FollowButton
+                      _id={user?._id}
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "w-full rounded-lg transition-all duration-300",
+                        colors.border,
+                        colors.text,
+                        colors.hoverBg,
+                        "font-semibold hover:scale-105"
+                      )}
+                    />
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
-          </div>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

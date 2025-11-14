@@ -60,6 +60,7 @@ interface Follower {
   verified?: boolean;
   rating?: number;
   gigsCompleted?: number;
+  roleType?: string;
 }
 
 interface FollowerCardProps {
@@ -372,10 +373,12 @@ const ModernFollowerCard = ({
                   )
             )}
           >
-            {follower.isMusician ? (
+            {follower.isMusician && follower?.roleType !== "teacher" ? (
               <>
                 <Mic2 className="w-3 h-3 mr-1" /> Musician
               </>
+            ) : follower?.roleType === "teacher" ? (
+              "Music Teacher"
             ) : (
               <>
                 <Video className="w-3 h-3 mr-1" /> Client

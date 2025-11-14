@@ -325,6 +325,7 @@ export const userModel = defineTable({
   .index("by_is_both", ["isBoth"])
   .index("by_is_admin", ["isAdmin"])
   .index("by_tier", ["tier"])
+  .index("by_role_type", ["roleType"])
   .index("by_is_banned", ["isBanned"])
   .index("by_last_active", ["lastActive"])
   .index("by_city_and_role", ["city", "isMusician"])

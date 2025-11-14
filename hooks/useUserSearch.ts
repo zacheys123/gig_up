@@ -20,6 +20,7 @@ export function useUserSearch({
     discoveryType: [] as string[],
     clientOnly: false,
     musicianOnly: false,
+    bookerOnly: false,
   });
 
   // YOUR FEATURED USER ALGORITHM - useCallback to memoize it
@@ -85,6 +86,7 @@ export function useUserSearch({
         // Client/Musician filter
         if (activeFilters.clientOnly && !user.isClient) return false;
         if (activeFilters.musicianOnly && !user.isMusician) return false;
+        if (activeFilters.bookerOnly && !user.isBooker) return false;
 
         // Role type filter
         if (
@@ -161,6 +163,7 @@ export function useUserSearch({
       discoveryType: [],
       clientOnly: false,
       musicianOnly: false,
+      bookerOnly: false,
     });
   };
 

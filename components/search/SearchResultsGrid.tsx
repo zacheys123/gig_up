@@ -24,10 +24,10 @@ export function SearchResultsGrid() {
     activeFilterCount,
     processedUsers,
     handleFilterChange,
-    isFeaturedUser, // Get the function from the hook
+    isFeaturedUser,
   } = useUserSearch({
     users: users || [],
-    currentUser: currentUser, // Pass the current user
+    currentUser: currentUser,
     searchQuery,
   });
 
@@ -43,7 +43,7 @@ export function SearchResultsGrid() {
   const showLoading = isLoading || usersLoading || !users;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Filters */}
       <div className="flex justify-end my-3">
         <SearchFilters onFilterChange={handleFilterChange} />
@@ -92,9 +92,9 @@ export function SearchResultsGrid() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6"
           >
-            {[...Array(8)].map((_, i) => (
+            {[...Array(10)].map((_, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -106,11 +106,12 @@ export function SearchResultsGrid() {
             ))}
           </motion.div>
         ) : filteredUsers.length > 0 ? (
+          // In your SearchResultsGrid, update the grid container:
           <motion.div
             key="results"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6"
           >
             {filteredUsers.map((user, index) => (
               <motion.div
@@ -118,6 +119,7 @@ export function SearchResultsGrid() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
+                className="h-full" // ← Add this to ensure grid items take full height
               >
                 <SearchUserCard
                   user={user}

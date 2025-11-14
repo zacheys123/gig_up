@@ -167,9 +167,15 @@ const CurrentUserProfile = () => {
   const updateUser = useMutation(api.controllers.user.updateUserProfile);
 
   // Video queries
+  // In your CurrentUserProfile component, update the userVideos query:
   const userVideos = useQuery(
     api.controllers.videos.getUserProfileVideos,
-    user ? { userId: user.clerkId } : "skip"
+    user
+      ? {
+          userId: user.clerkId,
+          currentUserId: user.clerkId, // Add this to show owner all videos
+        }
+      : "skip"
   );
 
   const [loading, setLoading] = useState(false);
@@ -352,7 +358,7 @@ const CurrentUserProfile = () => {
   useEffect(() => {
     if (user && !userLoading && !hasLoadedInitialData.current) {
       console.log("🔄 Loading initial user data into form");
-
+      console.log(user);
       setFirstname(user.firstname || "");
       setLastname(user.lastname || "");
       setUsername(user.username || "");
