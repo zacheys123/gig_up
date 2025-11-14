@@ -397,7 +397,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               View Profile
                             </Button>
                             <ChatIcon
-                              userId={deputy._id as Id<"users">}
+                              userId={deputy?._id as Id<"users">}
                               size="sm"
                               showText={false}
                               variant="ghost"
