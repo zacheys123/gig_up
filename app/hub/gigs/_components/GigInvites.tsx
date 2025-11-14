@@ -367,7 +367,9 @@ function ClientInvitesOverview() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
-                onClick={() => (window.location.href = "/instant-gigs/create")}
+                onClick={() =>
+                  (window.location.href = "/hub/gigs?tab=urgent-gigs")
+                }
                 className={cn(
                   "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
                   colors.textInverted

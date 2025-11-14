@@ -388,15 +388,3 @@ export const getMusicianById = query({
     return enhancedMusician;
   },
 });
-
-export const updateAvailability = mutation({
-  args: {
-    musicianId: v.id("users"),
-    available: v.union(v.literal("available"), v.literal("notavailable")),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.musicianId, {
-      availability: args.available,
-    });
-  },
-});

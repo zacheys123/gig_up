@@ -223,13 +223,35 @@ export const createInstantGig = mutation({
     invitedMusicianId: v.id("users"),
     musicianName: v.string(),
     fromTime: v.optional(v.string()),
+    bookingHistory: v.array(
+      v.object({
+        musicianId: v.id("users"),
+        musicianName: v.string(),
+        status: v.union(
+          v.literal("invited"),
+          v.literal("accepted"),
+          v.literal("declined"),
+          v.literal("deputy-suggested")
+        ),
+        timestamp: v.number(),
+        actionBy: v.union(
+          v.literal("musician"),
+          v.literal("client"),
+          v.literal("system")
+        ),
+        notes: v.optional(v.string()), // e.g., "Suggested deputy instead", "Not available"
+        deputySuggestedId: v.optional(v.id("users")), // If deputy was suggested
+      })
+    ),
   },
   handler: async (ctx, args) => {
     console.log(args);
     const gigId = await ctx.db.insert("instantgigs", {
       ...args,
       status: "pending",
+      musicianAvailability: "available",
       createdAt: Date.now(),
+      bookingHistory: args.bookingHistory || [],
     });
 
     return gigId;
@@ -261,39 +283,6 @@ export const getClientInstantGigsStats = query({
   },
 });
 
-// Update instant gig status - ONLY use allowed statuses
-export const updateInstantGigStatus = mutation({
-  args: {
-    gigId: v.id("instantgigs"),
-    status: v.union(
-      // ONLY use statuses that exist in your schema
-      v.literal("accepted"),
-      v.literal("declined"),
-      v.literal("deputy-suggested"),
-      v.literal("cancelled")
-    ),
-    musicianId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const gig = await ctx.db.get(args.gigId);
-
-    if (!gig) {
-      throw new Error("Gig not found");
-    }
-
-    // Verify the musician is the one invited
-    if (gig.invitedMusicianId !== args.musicianId) {
-      throw new Error("Unauthorized to update this gig");
-    }
-
-    await ctx.db.patch(args.gigId, {
-      status: args.status,
-    });
-
-    return args.gigId;
-  },
-});
-
 // Archive a template
 export const archiveTemplate = mutation({
   args: {
@@ -316,5 +305,95 @@ export const archiveTemplate = mutation({
     });
 
     return true;
+  },
+});
+// In your convex/instantGigs.ts
+export const updateInstantGigStatus = mutation({
+  args: {
+    gigId: v.id("instantgigs"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("declined"),
+      v.literal("deputy-suggested"),
+      v.literal("cancelled")
+    ),
+    musicianId: v.id("users"),
+    actionBy: v.union(
+      v.literal("musician"),
+      v.literal("client"),
+      v.literal("system")
+    ),
+    notes: v.optional(v.string()),
+    deputySuggestedId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    const musician = await ctx.db.get(args.musicianId);
+    if (!musician) throw new Error("Musician not found");
+
+    const updates: any = {
+      status: args.status,
+    };
+
+    // Update current musician based on status
+    if (args.status === "accepted") {
+      updates.invitedMusicianId = args.musicianId;
+    } else if (
+      args.status === "declined" ||
+      args.status === "deputy-suggested"
+    ) {
+      // Keep the original musician for record keeping, but they're not the current one
+      // The invitedMusicianId remains for tracking who was originally invited
+    }
+
+    // Add to booking history
+    const historyEntry = {
+      musicianId: args.musicianId,
+      musicianName: `${musician.firstname} ${musician.lastname}`,
+      status: args.status,
+      timestamp: Date.now(),
+      actionBy: args.actionBy,
+      notes: args.notes,
+      deputySuggestedId: args.deputySuggestedId,
+    };
+
+    updates.bookingHistory = [...(gig.bookingHistory || []), historyEntry];
+
+    await ctx.db.patch(args.gigId, updates);
+  },
+});
+
+export const updateGigAvailability = mutation({
+  args: {
+    gigId: v.id("instantgigs"),
+    musicianAvailability: v.union(
+      v.literal("available"),
+      v.literal("notavailable")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Verify current user is the invited musician
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) throw new Error("User not found");
+    if (gig.invitedMusicianId !== user._id) {
+      throw new Error("Not authorized to update this gig");
+    }
+
+    await ctx.db.patch(args.gigId, {
+      musicianAvailability: args.musicianAvailability,
+    });
   },
 });

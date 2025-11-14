@@ -27,11 +27,44 @@ export const instantGigs = defineTable({
     v.literal("cancelled")
   ),
 
+  musicianAvailability: v.optional(
+    v.union(
+      v.literal("available"),
+      v.literal("notavailable"),
+      v.literal("pending") // if they haven't responded yet
+    )
+  ),
+  bookingHistory: v.array(
+    v.object({
+      musicianId: v.id("users"),
+      musicianName: v.string(),
+      status: v.union(
+        v.literal("invited"),
+        v.literal("accepted"),
+        v.literal("declined"),
+        v.literal("deputy-suggested")
+      ),
+      timestamp: v.number(),
+      actionBy: v.union(
+        v.literal("musician"),
+        v.literal("client"),
+        v.literal("system")
+      ),
+      notes: v.optional(v.string()), // e.g., "Suggested deputy instead", "Not available"
+      deputySuggestedId: v.optional(v.id("users")), // If deputy was suggested
+    })
+  ),
   // Timestamps
   createdAt: v.number(),
 })
   .index("by_client", ["clientId"])
-  .index("by_musician", ["invitedMusicianId"]);
+  .index("by_musician", ["invitedMusicianId"])
+  .index("by_status", ["status"])
+  .index("by_musician_and_status", ["invitedMusicianId", "status"])
+  .index("by_musician_and_availability", [
+    "invitedMusicianId",
+    "musicianAvailability",
+  ]);
 // convex/instantgigs.ts - SIMPLIFIED SCHEMA
 export const instantGigsTemplate = defineTable({
   // Template details

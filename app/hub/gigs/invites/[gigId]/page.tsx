@@ -35,18 +35,18 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
-import { ChatIcon } from "@/components/chat/ChatIcon";
+// import { ChatIcon } from "@/components/chat/ChatIcon";
 
 interface InvitesPageProps {
-  params: {
-    gigId: string;
-  };
+  params: Promise<{ gigId: string }>; // Change this line
 }
 
 export default function InvitesPage({ params }: InvitesPageProps) {
   const { user, isLoading: userLoading } = useCurrentUser();
   const router = useRouter();
   const { colors } = useThemeColors();
+  const unwrappedParams = React.use(params);
+  const gigId = unwrappedParams.gigId;
 
   if (userLoading) {
     return (
@@ -113,9 +113,9 @@ export default function InvitesPage({ params }: InvitesPageProps) {
 
         {/* Main Content */}
         {user.isClient ? (
-          <ClientGigView gigId={params.gigId} />
+          <ClientGigView gigId={gigId} />
         ) : user.isMusician ? (
-          <MusicianGigView gigId={params.gigId} />
+          <MusicianGigView gigId={gigId} />
         ) : (
           <Card className={cn("border", colors.card, colors.border)}>
             <CardContent className="p-6 text-center">
@@ -184,7 +184,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
 
   // Use the useDeputies hook to get musician's deputies
   const { myDeputies } = useDeputies(gig?.invitedMusicianId);
-
+  const router = useRouter();
   const handleAcceptDeputy = async (deputyId: string, deputyName: string) => {
     try {
       // Update gig with new musician and status
@@ -192,6 +192,8 @@ function ClientGigView({ gigId }: { gigId: string }) {
         gigId: gigId as any,
         status: "accepted",
         musicianId: deputyId as any,
+        actionBy: "client",
+        notes: `Accepted deputy: ${deputyName}`,
       });
 
       toast.success(`${deputyName} accepted as deputy for this gig`);
@@ -207,6 +209,8 @@ function ClientGigView({ gigId }: { gigId: string }) {
         gigId: gigId as any,
         status: "cancelled",
         musicianId: gig?.invitedMusicianId as any,
+        actionBy: "client",
+        notes: "Declined all deputy suggestions",
       });
       toast.success("Deputy suggestions declined");
     } catch (error) {
@@ -217,9 +221,23 @@ function ClientGigView({ gigId }: { gigId: string }) {
   if (!gig) {
     return (
       <Card className={cn("w-full", colors.card)}>
-        <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">
-            Loading gig details...
+        <CardContent className="p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Gig Not Found</h3>
+          <p className="text-muted-foreground mb-4">
+            We couldn't find the gig you're looking for. It may have been
+            cancelled or removed.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => router.back()} variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back
+            </Button>
+            <Button onClick={() => router.push("/hub/gigs")}>
+              Browse Available Gigs
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -230,6 +248,9 @@ function ClientGigView({ gigId }: { gigId: string }) {
   const availableDeputies = myDeputies.filter(
     (deputy) => deputy?.relationship?.canBeBooked !== false
   );
+
+  // Get booking history for display
+  const bookingHistory = gig.bookingHistory || [];
 
   return (
     <div className="space-y-6">
@@ -269,12 +290,14 @@ function ClientGigView({ gigId }: { gigId: string }) {
             </div>
           </div>
 
-          {/* Original Musician */}
+          {/* Current Musician Status */}
           <div className="border-t pt-4">
             <h4 className="font-semibold mb-2">
               {gig.status === "deputy-suggested"
                 ? "Original Musician"
-                : "Invited Musician"}
+                : gig.status === "accepted"
+                  ? "Confirmed Musician"
+                  : "Invited Musician"}
             </h4>
             <div className="flex items-center justify-evenly p-3 bg-muted rounded-lg">
               <div className="flex items-center space-x-3">
@@ -284,12 +307,17 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   <p className="text-sm text-muted-foreground">
                     {gig.status === "deputy-suggested"
                       ? "Suggested deputies instead"
-                      : "Waiting for response..."}
+                      : gig.status === "accepted"
+                        ? "Confirmed for this gig"
+                        : gig.status === "declined"
+                          ? "Declined the invitation"
+                          : "Waiting for response..."}
                   </p>
                 </div>
               </div>
 
-              <ChatIcon
+              {/* Uncomment if you want chat functionality */}
+              {/* <ChatIcon
                 userId={gig.invitedMusicianId as Id<"users">}
                 size="sm"
                 showText={true}
@@ -297,7 +325,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                 text={"Message"}
                 showPulse={true}
                 className="h-10 w-10 bg-green-100 text-green-600 hover:bg-green-200 w-full justify-center"
-              />
+              /> */}
             </div>
           </div>
 
@@ -373,18 +401,11 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                (window.location.href = `/profile`)
+                                (window.location.href = `/profile/${deputy?._id}`)
                               }
                             >
                               View Profile
                             </Button>
-                            <ChatIcon
-                              userId={deputy?._id as Id<"users">}
-                              size="sm"
-                              showText={false}
-                              variant="ghost"
-                              className="h-8 w-8"
-                            />
                           </div>
                         </div>
                       </CardContent>
@@ -404,17 +425,86 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   </div>
                 </div>
               ) : (
-                <div
-                  className={cn(
-                    "p-4 rounded-lg border text-center",
-                    colors.border
-                  )}
-                >
-                  <p className="text-muted-foreground">
-                    No deputies available for this gig
+                <div className="text-center p-6 border-2 border-dashed rounded-lg bg-muted/20">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-50 flex items-center justify-center">
+                    <Users2 className="w-8 h-8 text-amber-500" />
+                  </div>
+                  <h4 className="font-semibold text-lg mb-2">
+                    No Deputies Available
+                  </h4>
+                  <p className="text-muted-foreground mb-4">
+                    You don't have any deputies set up who can cover this gig
+                    for you.
                   </p>
+                  <div className="space-y-3 text-sm text-muted-foreground">
+                    <p>
+                      🎵 <strong>Build your deputy network:</strong>
+                    </p>
+                    <div className="space-y-1 text-left max-w-md mx-auto">
+                      <p>• Connect with other musicians in your area</p>
+                      <p>
+                        • Add trusted colleagues as deputies in your profile
+                      </p>
+                      <p>• Specify which gig types they can cover for you</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      (window.location.href = "/profile?tab=deputies")
+                    }
+                    variant="outline"
+                    className="mt-4"
+                  >
+                    <Users2 className="w-4 h-4 mr-2" />
+                    Manage Deputies
+                  </Button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Booking History Section */}
+          {bookingHistory.length > 0 && (
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3">Booking History</h4>
+              <div className="space-y-2">
+                {bookingHistory.map((entry, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          entry.status === "accepted"
+                            ? "bg-green-500"
+                            : entry.status === "declined"
+                              ? "bg-red-500"
+                              : entry.status === "deputy-suggested"
+                                ? "bg-blue-500"
+                                : "bg-yellow-500"
+                        )}
+                      />
+                      <div>
+                        <p className="font-medium text-sm">
+                          {entry.musicianName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {entry.status} •{" "}
+                          {new Date(entry.timestamp).toLocaleString()} • By{" "}
+                          {entry.actionBy}
+                        </p>
+                        {entry.notes && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {entry.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -432,7 +522,6 @@ function ClientGigView({ gigId }: { gigId: string }) {
     </div>
   );
 }
-
 // Musician View Component
 function MusicianGigView({ gigId }: { gigId: string }) {
   const { user } = useCurrentUser();
@@ -441,11 +530,14 @@ function MusicianGigView({ gigId }: { gigId: string }) {
   const gig = useQuery(api.controllers.instantGigs.getInstantGigById, {
     gigId: gigId as Id<"instantgigs">,
   });
+
   const updateGigStatus = useMutation(
     api.controllers.instantGigs.updateInstantGigStatus
   );
-  const updateAvailability = useMutation(
-    api.controllers.musicians.updateAvailability
+
+  // Check if this mutation exists in your API
+  const updateGigAvailability = useMutation(
+    api.controllers.instantGigs.updateGigAvailability
   );
 
   // Use the useDeputies hook
@@ -453,74 +545,91 @@ function MusicianGigView({ gigId }: { gigId: string }) {
     user?._id
   );
 
-  const [isAvailable, setIsAvailable] = useState(
-    user?.availability === "available"
-  );
-
-  const handleAvailabilityToggle = async (available: boolean) => {
-    if (!user) return;
-
-    try {
-      await updateAvailability({
-        musicianId: user._id,
-        available: available ? "available" : "notavailable",
-      });
-
-      setIsAvailable(available);
-
-      if (!available && gig?.status === "pending") {
-        // Auto-decline gig if musician becomes unavailable
-        await updateGigStatus({
-          gigId: gigId as any,
-          status: "declined",
-          musicianId: user._id,
-        });
-        toast.success("Gig declined due to unavailability");
-      }
-    } catch (error) {
-      toast.error("Failed to update availability");
-    }
-  };
-
+  // In your MusicianGigView component
   const handleStatusUpdate = async (
-    status: "accepted" | "declined" | "deputy-suggested"
+    status: "accepted" | "declined" | "deputy-suggested",
+    notes?: string,
+    deputySuggestedId?: string
   ) => {
-    if (!user) return;
+    if (!user) {
+      toast.error("You must be logged in to update gig status");
+      return;
+    }
 
     try {
       await updateGigStatus({
-        gigId: gigId as any,
+        gigId: gigId as Id<"instantgigs">,
         status,
         musicianId: user._id,
+        actionBy: "musician",
+        notes,
+        deputySuggestedId: deputySuggestedId as Id<"users">,
       });
 
       if (status === "accepted") {
-        toast.success("Gig accepted successfully");
+        toast.success("Gig accepted successfully! 🎉");
       } else if (status === "declined") {
         toast.success("Gig declined");
       } else if (status === "deputy-suggested") {
-        toast.success("Deputy suggestion sent to client");
+        toast.success("Deputy suggestions sent to client");
       }
     } catch (error) {
+      console.error("Error updating gig status:", error);
       toast.error("Failed to update gig status");
     }
   };
 
-  const handleSuggestSpecificDeputy = async (deputyId: string) => {
-    if (!user) return;
+  const handleSuggestSpecificDeputy = async (
+    deputyId: string,
+    deputyName: string
+  ) => {
+    if (!user) {
+      toast.error("You must be logged in to suggest deputies");
+      return;
+    }
 
     try {
-      // First update gig status to deputy-suggested
       await updateGigStatus({
-        gigId: gigId as any,
+        gigId: gigId as Id<"instantgigs">,
         status: "deputy-suggested",
         musicianId: user._id,
+        actionBy: "musician",
+        notes: `Suggested deputy: ${deputyName}`,
+        deputySuggestedId: deputyId as Id<"users">,
       });
 
-      // You might want to create a separate mutation to link specific deputy to gig
       toast.success("Deputy suggested to client");
     } catch (error) {
+      console.error("Error suggesting deputy:", error);
       toast.error("Failed to suggest deputy");
+    }
+  };
+
+  const handleAvailabilityToggle = async (available: boolean) => {
+    try {
+      await updateGigAvailability({
+        gigId: gigId as Id<"instantgigs">,
+        musicianAvailability: available ? "available" : "notavailable",
+      });
+
+      // Auto-decline if marking as unavailable and gig is still pending
+      if (!available && gig?.status === "pending") {
+        await updateGigStatus({
+          gigId: gigId as Id<"instantgigs">,
+          status: "declined",
+          musicianId: user?._id as Id<"users">,
+          actionBy: "system",
+          notes: "Auto-declined due to unavailability",
+        });
+        toast.success("Gig declined due to unavailability");
+      } else if (available) {
+        toast.success("Marked as available for this gig");
+      } else {
+        toast.success("Marked as unavailable for this gig");
+      }
+    } catch (error) {
+      console.error("Error updating availability:", error);
+      toast.error("Failed to update availability");
     }
   };
 
@@ -541,14 +650,39 @@ function MusicianGigView({ gigId }: { gigId: string }) {
   if (!gig) {
     return (
       <Card className={cn("w-full", colors.card)}>
-        <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">
-            Loading gig details...
+        <CardContent className="p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center">
+            <Music className="w-8 h-8 text-blue-600 animate-pulse" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Loading Gig Details</h3>
+          <p className="text-muted-foreground">
+            Fetching the latest information about this gig invitation...
+          </p>
+          <div className="mt-4 flex justify-center">
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+              <div
+                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+            </div>
           </div>
         </CardContent>
       </Card>
     );
   }
+
+  // Handle cases where musicianAvailability might not be set yet
+  const isAvailable = gig?.musicianAvailability === "available";
+  const showDeputies = gig?.musicianAvailability === "notavailable";
+
+  // If musicianAvailability is undefined, default to available for pending gigs
+  const defaultAvailability =
+    gig?.musicianAvailability === undefined && gig?.status === "pending";
 
   const availableDeputies = myDeputies.filter(
     (deputy) => deputy?.relationship?.canBeBooked !== false
@@ -568,41 +702,62 @@ function MusicianGigView({ gigId }: { gigId: string }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Availability Toggle */}
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div
-                className={cn(
-                  "w-3 h-3 rounded-full",
-                  isAvailable ? "bg-green-500" : "bg-red-500"
+          {/* Availability Toggle - ALWAYS SHOW FOR MUSICIANS */}
+
+          <div className="flex items-center justify-between p-4 border-2 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-lg border">
+                {isAvailable || defaultAvailability ? (
+                  <Check className="w-6 h-6 text-green-600" strokeWidth={3} />
+                ) : (
+                  <X className="w-6 h-6 text-red-600" strokeWidth={3} />
                 )}
-              />
+              </div>
               <div>
-                <p className="font-medium">Availability Status</p>
+                <p className="font-semibold text-lg">Gig Availability</p>
                 <p className="text-sm text-muted-foreground">
-                  {isAvailable
-                    ? "You're available for this gig"
-                    : "You're not available"}
+                  {isAvailable || defaultAvailability
+                    ? "You can accept this gig invitation"
+                    : "You're not available - suggest deputies instead"}
                 </p>
               </div>
             </div>
-            <Switch
-              checked={isAvailable}
+
+            <GigAvailabilitySwitchWithStatus
+              checked={isAvailable || defaultAvailability}
               onCheckedChange={handleAvailabilityToggle}
+              status={
+                gig?.musicianAvailability as
+                  | "available"
+                  | "notavailable"
+                  | "pending"
+              }
+              size="lg"
+              showStatusText={false}
             />
           </div>
 
           {/* Client Information */}
           <div className="border-t pt-4">
             <h4 className="font-semibold mb-2">From Client</h4>
-            <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
-              <User className="w-8 h-8 text-muted-foreground" />
-              <div>
-                <p className="font-medium">{gig.clientName}</p>
-                <p className="text-sm text-muted-foreground">
-                  Looking for musician
-                </p>
+            <div className="flex items-center justify-evenly p-3 bg-muted rounded-lg">
+              <div className="flex items-center space-x-3">
+                <User className="w-8 h-8 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{gig.clientName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Looking for musician
+                  </p>
+                </div>
               </div>
+              {/* <ChatIcon
+                userId={gig.clientId}
+                size="sm"
+                showText={true}
+                variant="ghost"
+                className="h-8 w-8 bg-blue-400 text-blue-900 hover:bg-blue-200 w-full justify-center"
+                text={"Chat with Client"}
+              /> */}
             </div>
           </div>
 
@@ -648,8 +803,8 @@ function MusicianGigView({ gigId }: { gigId: string }) {
             </div>
           )}
 
-          {/* Action Buttons */}
-          {gig.status === "pending" && isAvailable && (
+          {/* Action Buttons - Only show if available AND gig is pending */}
+          {gig.status === "pending" && (isAvailable || defaultAvailability) && (
             <div className="flex flex-col gap-3 pt-4">
               <div className="flex gap-3">
                 <Button
@@ -669,7 +824,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                 </Button>
               </div>
 
-              {/* Deputy Suggestion Section */}
+              {/* Deputy Suggestion Section - Show if musician has deputies */}
               {myDeputies.length > 0 && (
                 <div className="border-t pt-4">
                   <div className="flex items-center gap-2 mb-3">
@@ -704,7 +859,8 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                             size="sm"
                             onClick={() =>
                               handleSuggestSpecificDeputy(
-                                deputy?._id as Id<"users">
+                                deputy?._id as Id<"users">,
+                                `${deputy?.firstname} ${deputy?.lastname}`
                               )
                             }
                             variant="outline"
@@ -739,6 +895,100 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                     <Users2 className="w-4 h-4 mr-2" />
                     Suggest Any Available Deputy
                   </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show deputies section when marked as unavailable */}
+          {showDeputies && gig.status === "pending" && (
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users2 className="w-5 h-5 text-blue-500" />
+                <h4 className="font-semibold">Available Deputies</h4>
+                <Badge variant="outline">
+                  {availableDeputies.length} available
+                </Badge>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-3">
+                Since you're not available, you can suggest deputies to the
+                client.
+              </p>
+
+              {availableDeputies.length > 0 ? (
+                <div className="space-y-3">
+                  {availableDeputies.slice(0, 3).map((deputy) => (
+                    <div
+                      key={deputy?._id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <User className="w-8 h-8 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium text-sm">
+                            {deputy?.firstname} {deputy?.lastname}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {deputy?.relationship?.forMySkill}
+                            {deputy?.avgRating && ` • ${deputy?.avgRating} ⭐`}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleSuggestSpecificDeputy(
+                            deputy?._id as Id<"users">,
+                            `${deputy?.firstname} ${deputy?.lastname}`
+                          )
+                        }
+                        variant="outline"
+                      >
+                        Suggest
+                      </Button>
+                    </div>
+                  ))}
+
+                  <Button
+                    onClick={() => handleStatusUpdate("deputy-suggested")}
+                    className="w-full"
+                  >
+                    <Users2 className="w-4 h-4 mr-2" />
+                    Suggest All Available Deputies
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "p-6 rounded-lg border text-center",
+                    colors.border,
+                    colors.card
+                  )}
+                >
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Users2 className="w-8 h-8 text-blue-500" />
+                  </div>
+                  <h4 className="font-semibold text-lg mb-2">
+                    No Deputies Available
+                  </h4>
+                  <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                    The musician you invited doesn't have any deputies set up
+                    for this type of gig, or their deputies are currently
+                    unavailable.
+                  </p>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>
+                      💡 <strong>What you can do:</strong>
+                    </p>
+                    <ul className="space-y-1 text-left max-w-xs mx-auto">
+                      <li>• Wait for the musician to suggest other options</li>
+                      <li>
+                        • Contact the musician directly to discuss alternatives
+                      </li>
+                      <li>• Consider inviting another musician for this gig</li>
+                    </ul>
+                  </div>
                 </div>
               )}
             </div>
@@ -779,8 +1029,188 @@ function MusicianGigView({ gigId }: { gigId: string }) {
               </div>
             </div>
           )}
+
+          {gig.status === "accepted" && (
+            <div
+              className={cn(
+                "p-3 rounded-lg border",
+                "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                <p className="text-sm text-green-800 dark:text-green-300">
+                  You've accepted this gig! Get ready to perform.
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+export const GigAvailabilitySwitch: React.FC<GigAvailabilitySwitchProps> = ({
+  checked,
+  onCheckedChange,
+  disabled = false,
+  size = "md",
+  showLabels = true,
+}) => {
+  const sizeClasses = {
+    sm: "w-16 h-8",
+    md: "w-20 h-10",
+    lg: "w-24 h-12",
+  };
+
+  const knobSize = {
+    sm: "w-6 h-6",
+    md: "w-8 h-8",
+    lg: "w-10 h-10",
+  };
+
+  const iconSize = {
+    sm: 12,
+    md: 16,
+    lg: 20,
+  };
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onCheckedChange(!checked)}
+      className={cn(
+        "relative inline-flex items-center rounded-full border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2",
+        sizeClasses[size],
+        checked
+          ? "border-green-500 bg-green-500 focus:ring-green-200"
+          : "border-red-500 bg-red-500 focus:ring-red-200",
+        disabled
+          ? "cursor-not-allowed opacity-50"
+          : "cursor-pointer hover:shadow-md",
+        "group"
+      )}
+    >
+      {/* Knob */}
+      <div
+        className={cn(
+          "absolute flex items-center justify-center rounded-full bg-white shadow-lg transition-all duration-300",
+          knobSize[size],
+          checked
+            ? `translate-x-full ${size === "sm" ? "-translate-x-7" : size === "md" ? "-translate-x-9" : "-translate-x-11"}`
+            : "translate-x-0.5",
+          "group-hover:scale-105"
+        )}
+      >
+        {checked ? (
+          <Check
+            className="text-green-600"
+            size={iconSize[size]}
+            strokeWidth={3}
+          />
+        ) : (
+          <X className="text-red-600" size={iconSize[size]} strokeWidth={3} />
+        )}
+      </div>
+
+      {/* Labels */}
+      {showLabels && (
+        <>
+          <span
+            className={cn(
+              "absolute left-2 text-xs font-medium transition-opacity duration-200",
+              checked ? "opacity-0" : "opacity-100 text-white"
+            )}
+          >
+            No
+          </span>
+          <span
+            className={cn(
+              "absolute right-2 text-xs font-medium transition-opacity duration-200",
+              checked ? "opacity-100 text-white" : "opacity-0"
+            )}
+          >
+            Yes
+          </span>
+        </>
+      )}
+    </button>
+  );
+};
+
+interface GigAvailabilitySwitchProps {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  size?: "sm" | "md" | "lg";
+  showLabels?: boolean;
+} // Enhanced version with status indicators
+interface GigAvailabilitySwitchWithStatusProps
+  extends GigAvailabilitySwitchProps {
+  status?: "available" | "notavailable" | "pending";
+  showStatusText?: boolean;
+}
+export const GigAvailabilitySwitchWithStatus: React.FC<
+  GigAvailabilitySwitchWithStatusProps
+> = ({
+  checked,
+  onCheckedChange,
+  disabled = false,
+  size = "md",
+  showLabels = true,
+  status,
+  showStatusText = true,
+}) => {
+  const statusConfig = {
+    available: {
+      text: "Available",
+      color: "text-green-600",
+      bg: "bg-green-50",
+      border: "border-green-200",
+    },
+    notavailable: {
+      text: "Not Available",
+      color: "text-red-600",
+      bg: "bg-red-50",
+      border: "border-red-200",
+    },
+    pending: {
+      text: "Pending Response",
+      color: "text-yellow-600",
+      bg: "bg-yellow-50",
+      border: "border-yellow-200",
+    },
+  };
+
+  const currentStatus = status || (checked ? "available" : "notavailable");
+  const config = statusConfig[currentStatus];
+
+  return (
+    <div className="flex items-center gap-3">
+      <GigAvailabilitySwitch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        size={size}
+        showLabels={showLabels}
+      />
+
+      {showStatusText && (
+        <div
+          className={cn(
+            "px-3 py-1 rounded-full text-sm font-medium border",
+            config.bg,
+            config.color,
+            config.border
+          )}
+        >
+          {config.text}
+        </div>
+      )}
+    </div>
+  );
+};
