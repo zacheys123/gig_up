@@ -338,6 +338,7 @@ export const updateInstantGigStatus = mutation({
 
     const updates: any = {
       status: args.status,
+      musicianAvailability: "available",
     };
 
     // Update current musician based on status

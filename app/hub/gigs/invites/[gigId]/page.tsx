@@ -603,7 +603,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
       toast.error("Failed to suggest deputy");
     }
   };
-
+  console.log(gig);
   const handleAvailabilityToggle = async (available: boolean) => {
     try {
       await updateGigAvailability({
@@ -611,12 +611,12 @@ function MusicianGigView({ gigId }: { gigId: string }) {
         musicianAvailability: available ? "available" : "notavailable",
         clerkId: user?.clerkId as string,
       });
-      console.log(user?._id === gig?.invitedMusicianId);
+
       // Auto-decline if marking as unavailable and gig is still pending
       if (!available && gig?.status === "pending") {
         await updateGigStatus({
           gigId: gigId as Id<"instantgigs">,
-          status: "declined",
+          status: "pending",
           musicianId: user?._id as Id<"users">,
           actionBy: "system",
           notes: "Auto-declined due to unavailability",

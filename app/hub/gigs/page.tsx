@@ -33,10 +33,12 @@ import {
   Users,
   Briefcase,
   UserCheck,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { UpgradeBanner } from "./_components/UpgradeBlock";
+import Link from "next/link";
 
 // Enhanced version with tier info
 const getUserSubtitle = (user: any) => {
@@ -554,10 +556,24 @@ export default function GigsHub() {
         <div className={cn("border-b mb-8", colors.border)}>
           <nav
             className={cn(
-              "-mb-px flex space-x-8 overflow-x-auto scrollbar-hide",
+              "-mb-px flex space-x-8 overflow-x-auto scrollbar-hide flex items-center",
               colors.background
             )}
           >
+            <Link
+              href="/community?tab=videos"
+              className={cn(
+                "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0",
+
+                "border-transparent text-gray-700 dark:text-gray-300  flex gap-1 items-center",
+
+                " hover:border-gray-300 hover:shadow-md hover:scale-105 transition-all duration-200 hover:opacity-80",
+                colors.warningHover,
+                colors.hoverBg
+              )}
+            >
+              <Video /> Community
+            </Link>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
