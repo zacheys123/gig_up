@@ -1391,13 +1391,13 @@ const GuidedInterface = memo(
     user,
     showUpgradePrompt,
     isInGracePeriod,
-    existingTemplates = [], // Default to empty array
-    templateLimitInfo = { current: 0, max: 3, reached: false }, // Default values
+    existingTemplates = [],
+    templateLimitInfo = { current: 0, max: 3, reached: false },
   }: any) => {
     const userTier = user?.tier || "free";
     const canUseCustom = canAccessTier(userTier, "pro");
     const canUseScratch = canAccessTier(userTier, "premium");
-    // In your GuidedInterface component, update the templateLimitInfo usage:
+
     const effectiveTemplateLimitInfo = templateLimitInfo || {
       current: existingTemplates.length,
       max: TIER_LIMITS[userTier as keyof typeof TIER_LIMITS]?.maxTemplates || 3,
@@ -1406,7 +1406,6 @@ const GuidedInterface = memo(
         (TIER_LIMITS[userTier as keyof typeof TIER_LIMITS]?.maxTemplates || 3),
     };
 
-    // Use templateLimitInfo directly instead of recalculating
     const currentCount = templateLimitInfo.current
       ? templateLimitInfo.current
       : effectiveTemplateLimitInfo.current;
@@ -1417,67 +1416,25 @@ const GuidedInterface = memo(
       ? templateLimitInfo.reached
       : effectiveTemplateLimitInfo.reached;
 
-    console.log("🔍 [GUIDED INTERFACE DEBUG]:", {
-      userTier,
-      currentCount,
-      currentLimit,
-      hasReachedLimit,
-      isInGracePeriod,
-      templateLimitInfo,
-    });
-
-    const templatesScrollRef = useRef<HTMLDivElement>(null);
-
-    const scrollTemplates = (direction: "left" | "right") => {
-      if (templatesScrollRef.current) {
-        const scrollAmount = 300;
-        templatesScrollRef.current.scrollBy({
-          left: direction === "right" ? scrollAmount : -scrollAmount,
-          behavior: "smooth",
-        });
-      }
-    };
-
     // Handle template usage with limit check
     const handleUseTemplate = useCallback(
       (template: any) => {
-        console.log("🔄 [USE TEMPLATE]:", {
-          template: template.title,
-          hasReachedLimit,
-          currentCount,
-          currentLimit,
-        });
-
         if (hasReachedLimit) {
-          console.log(
-            "🚫 [USE TEMPLATE]: Limit reached, showing upgrade prompt"
-          );
           showUpgradePrompt("pro");
           return;
         }
 
         const canUseTemplate = canAccessTier(userTier, template.tier || "free");
-
         if (!canUseTemplate) {
-          console.log(
-            "🚫 [USE TEMPLATE]: Tier restriction, showing upgrade prompt"
-          );
           showUpgradePrompt(template.tier as "pro" | "premium", template.title);
           return;
         }
 
-        console.log("✅ [USE TEMPLATE]: Proceeding with template usage");
         useExampleTemplate(template);
       },
-      [
-        hasReachedLimit,
-        userTier,
-        showUpgradePrompt,
-        useExampleTemplate,
-        currentCount,
-        currentLimit,
-      ]
+      [hasReachedLimit, userTier, showUpgradePrompt, useExampleTemplate]
     );
+
     if (!canAccessTier(userTier, "pro", isInGracePeriod)) {
       return (
         <div
@@ -1515,6 +1472,7 @@ const GuidedInterface = memo(
         </div>
       );
     }
+
     return (
       <div
         className={cn(
@@ -1525,7 +1483,7 @@ const GuidedInterface = memo(
           "shadow-lg"
         )}
       >
-        {/* Template Limit Alert - SHOW WHEN LIMIT REACHED */}
+        {/* Template Limit Alert */}
         {hasReachedLimit && (
           <MaxTemplatesAlert
             currentCount={currentCount}
@@ -1537,7 +1495,7 @@ const GuidedInterface = memo(
           />
         )}
 
-        {/* Template Usage Indicator - SHOW WHEN NEARING LIMIT */}
+        {/* Template Usage Indicator */}
         {!hasReachedLimit && currentCount > 0 && (
           <div
             className={cn(
@@ -1578,24 +1536,19 @@ const GuidedInterface = memo(
                 </div>
               </div>
 
-              {/* Progress Circle */}
               <div className="relative w-12 h-12">
                 <svg
                   className="w-12 h-12 transform -rotate-90"
                   viewBox="0 0 36 36"
                 >
                   <path
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
                     stroke={colors.border}
                     strokeWidth="3"
                   />
                   <path
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
                     stroke={
                       currentCount >= currentLimit * 0.8 ? "#f59e0b" : "#10b981"
@@ -1620,7 +1573,6 @@ const GuidedInterface = memo(
               </div>
             </div>
 
-            {/* Upgrade Prompt for users nearing limit */}
             {currentCount >= currentLimit * 0.8 && !hasReachedLimit && (
               <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
                 <div className="flex items-center justify-between">
@@ -1673,7 +1625,6 @@ const GuidedInterface = memo(
             Start with professional templates or unlock advanced creation tools
           </p>
 
-          {/* User Tier Badge with Template Count */}
           <div className="mt-6 flex justify-center items-center gap-4">
             <div
               className={cn(
@@ -1692,8 +1643,6 @@ const GuidedInterface = memo(
                   ? "⚡ Pro Plan"
                   : "✨ Free Plan"}
             </div>
-
-            {/* Template Count Badge */}
             <div
               className={cn(
                 "px-3 py-1.5 rounded-full text-xs font-medium",
@@ -1706,11 +1655,10 @@ const GuidedInterface = memo(
           </div>
         </div>
 
-        {/* Three Column Layout */}
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-12 mb-12 lg:mb-16">
-          {/* Free Tier - Templates Section */}
-          <div className="space-y-6 lg:space-y-8">
-            {/* Header */}
+          {/* Templates Section */}
+          <div className="xl:col-span-2 space-y-6 lg:space-y-8">
             <div className="flex items-center justify-between mb-6 lg:mb-8">
               <div className="flex items-center gap-4">
                 <div
@@ -1730,276 +1678,238 @@ const GuidedInterface = memo(
                   </p>
                 </div>
               </div>
-
-              {/* Scroll Indicators */}
-              <div className="flex items-center gap-2 lg:hidden">
-                <button
-                  onClick={() => scrollTemplates("left")}
-                  className={cn(
-                    "p-2 rounded-lg transition-all duration-200",
-                    colors.border,
-                    colors.hoverBg,
-                    "hover:scale-110"
-                  )}
-                >
-                  <ChevronLeft className={cn("w-5 h-5", colors.text)} />
-                </button>
-                <button
-                  onClick={() => scrollTemplates("right")}
-                  className={cn(
-                    "p-2 rounded-lg transition-all duration-200",
-                    colors.border,
-                    colors.hoverBg,
-                    "hover:scale-110"
-                  )}
-                >
-                  <ChevronRight className={cn("w-5 h-5", colors.text)} />
-                </button>
-              </div>
             </div>
 
-            {/* Template Cards Container with Internal Scroll */}
-            <div className="relative">
-              {/* Scrollable Container */}
-              <div
-                ref={templatesScrollRef}
-                className={cn(
-                  "flex lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-4",
-                  "overflow-x-auto lg:overflow-y-auto",
-                  "snap-x snap-mandatory lg:snap-none",
-                  "scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent",
-                  "max-h-[600px]", // Limit height for internal scrolling on desktop
-                  "pb-4 lg:pb-0", // Padding for scrollbar on mobile
-                  "min-h-0" // Prevent height issues
-                )}
-                style={{
-                  scrollbarWidth: "thin",
-                  scrollbarColor: "#d1d5db #f3f4f6",
-                }}
-              >
-                {EXAMPLE_TEMPLATES.map((template) => {
-                  const canUseTemplate = canAccessTier(
-                    userTier,
-                    template.tier || "free"
-                  );
+            {/* Template Grid - FIXED RESPONSIVE LAYOUT */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {EXAMPLE_TEMPLATES.map((template) => {
+                const canUseTemplate = canAccessTier(
+                  userTier,
+                  template.tier || "free"
+                );
 
-                  return (
-                    <div
-                      key={template.id}
-                      className={cn(
-                        "border rounded-xl p-5 cursor-pointer transition-all duration-300 group relative",
-                        "w-[270px] lg:w-[95%] lg:min-w-0", // Fixed width for mobile, flexible for desktop
-                        "snap-start flex-shrink-0 lg:flex-shrink", // Only shrink on mobile
-                        colors.border,
-                        colors.card,
-                        "shadow-md hover:shadow-lg",
-                        "hover:scale-[1.02] transform-gpu",
-                        canUseTemplate && !hasReachedLimit
-                          ? cn(
-                              colors.hoverBg,
-                              "hover:border-blue-300 dark:hover:border-blue-600"
-                            )
-                          : "opacity-60 cursor-not-allowed"
-                      )}
-                      onClick={() => handleUseTemplate(template)}
-                    >
-                      {/* Tier Badge */}
-                      {template.tier !== "free" && (
-                        <div
-                          className={cn(
-                            "absolute -top-2 -right-2 px-3 py-1.5 rounded-full text-xs font-bold",
-                            "shadow-md",
-                            template.tier === "pro" &&
-                              "bg-green-500 text-white",
-                            template.tier === "premium" &&
-                              "bg-amber-500 text-white"
-                          )}
-                        >
-                          {template.tier?.toUpperCase()}
+                return (
+                  <div
+                    key={template.id}
+                    className={cn(
+                      "border-2 rounded-2xl p-6 cursor-pointer transition-all duration-300 group relative",
+                      "bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800",
+                      "shadow-lg hover:shadow-2xl",
+                      "hover:scale-[1.02] transform-gpu",
+                      "border-gray-200 dark:border-gray-700",
+                      canUseTemplate && !hasReachedLimit
+                        ? cn(
+                            "hover:border-blue-400 dark:hover:border-blue-500",
+                            "hover:bg-gradient-to-br hover:from-blue-50 hover:to-white dark:hover:from-blue-950/20 dark:hover:to-gray-900"
+                          )
+                        : "opacity-70 cursor-not-allowed grayscale"
+                    )}
+                    onClick={() => handleUseTemplate(template)}
+                  >
+                    {/* Premium Tier Ribbon */}
+                    {template.tier !== "free" && (
+                      <div
+                        className={cn(
+                          "absolute -top-3 -right-3 px-4 py-2 rounded-full text-xs font-bold",
+                          "shadow-lg transform rotate-3",
+                          "backdrop-blur-sm bg-white/90 dark:bg-black/90",
+                          "border",
+                          template.tier === "pro"
+                            ? "text-green-600 border-green-200 dark:border-green-800"
+                            : "text-amber-600 border-amber-200 dark:border-amber-800"
+                        )}
+                      >
+                        <div className="flex items-center gap-1">
+                          <Crown className="w-3 h-3" />
+                          <span>{template.tier?.toUpperCase()}</span>
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {/* Lock Icon */}
-                      {(!canUseTemplate || hasReachedLimit) && (
-                        <div className="absolute top-3 left-3">
-                          <Lock className={cn("w-4 h-4", colors.textMuted)} />
-                        </div>
-                      )}
-
-                      {/* Limit Reached Overlay */}
-                      {hasReachedLimit && (
-                        <div className="absolute inset-0 bg-white/80 dark:bg-black/80 rounded-xl flex items-center justify-center z-10">
-                          <div className="text-center p-4">
-                            <Lock className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                            <p
+                    {/* Lock Overlay */}
+                    {(!canUseTemplate || hasReachedLimit) && (
+                      <div className="absolute inset-0 bg-white/90 dark:bg-black/90 rounded-2xl flex items-center justify-center z-10 backdrop-blur-sm">
+                        <div className="text-center p-6">
+                          <div
+                            className={cn(
+                              "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
+                              hasReachedLimit
+                                ? "bg-red-100 dark:bg-red-900/30"
+                                : "bg-amber-100 dark:bg-amber-900/30"
+                            )}
+                          >
+                            <Lock
                               className={cn(
-                                "text-sm font-semibold",
-                                colors.text
+                                "w-8 h-8",
+                                hasReachedLimit
+                                  ? "text-red-500"
+                                  : "text-amber-500"
                               )}
-                            >
-                              Template Limit Reached
-                            </p>
-                            <p className={cn("text-xs", colors.textMuted)}>
-                              Upgrade to create more
-                            </p>
+                            />
                           </div>
+                          <h4
+                            className={cn(
+                              "font-bold text-lg mb-2",
+                              colors.text
+                            )}
+                          >
+                            {hasReachedLimit
+                              ? "Template Limit Reached"
+                              : "Upgrade Required"}
+                          </h4>
+                          <p className={cn("text-sm mb-4", colors.textMuted)}>
+                            {hasReachedLimit
+                              ? "You've reached your template limit"
+                              : `Upgrade to ${template.tier} to use this template`}
+                          </p>
+                          <Button
+                            size="sm"
+                            className={cn(
+                              hasReachedLimit
+                                ? "bg-red-500 hover:bg-red-600 text-white"
+                                : "bg-amber-500 hover:bg-amber-600 text-white"
+                            )}
+                          >
+                            <Crown className="w-4 h-4 mr-2" />
+                            {hasReachedLimit
+                              ? "Upgrade Now"
+                              : `Upgrade to ${template.tier}`}
+                          </Button>
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {/* Template Content */}
-                      <div className="flex items-start gap-4 mb-4">
-                        <div
+                    {/* Template Content */}
+                    <div className="flex items-start gap-4 mb-5">
+                      <div
+                        className={cn(
+                          "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0",
+                          "bg-gradient-to-br from-blue-500 to-purple-600",
+                          "shadow-lg",
+                          canUseTemplate &&
+                            !hasReachedLimit &&
+                            "group-hover:scale-110 group-hover:rotate-6 transition-all duration-300"
+                        )}
+                      >
+                        <span className="text-2xl text-white">
+                          {template.icon}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3
                           className={cn(
-                            "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0",
-                            colors.backgroundMuted,
-                            colors.border,
+                            "font-bold text-xl mb-2",
+                            "bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent",
                             canUseTemplate &&
                               !hasReachedLimit &&
-                              "group-hover:scale-110 transition-transform duration-300"
+                              "group-hover:from-blue-600 group-hover:to-purple-600 transition-all duration-300"
                           )}
                         >
-                          <span className="text-xl">{template.icon}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3
-                            className={cn(
-                              "font-semibold text-lg mb-2 truncate",
-                              canUseTemplate && !hasReachedLimit
-                                ? cn(
-                                    colors.text,
-                                    "group-hover:text-blue-600 transition-colors"
-                                  )
-                                : colors.textMuted
-                            )}
-                          >
-                            {template.title}
-                          </h3>
-                          <p
-                            className={cn(
-                              "text-sm leading-relaxed line-clamp-2",
-                              colors.textMuted
-                            )}
-                          >
-                            {template.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex flex-wrap gap-3 text-sm mb-4">
-                        <div
+                          {template.title}
+                        </h3>
+                        <p
                           className={cn(
-                            "flex items-center gap-2 px-2.5 py-1.5 rounded-lg",
-                            colors.backgroundMuted
+                            "text-sm leading-relaxed line-clamp-2",
+                            "text-gray-600 dark:text-gray-400"
                           )}
                         >
-                          <Clock
-                            className={cn("w-3.5 h-3.5", colors.primary)}
-                          />
-                          <span
-                            className={cn("font-medium text-xs", colors.text)}
-                          >
-                            {template.duration}
-                          </span>
-                        </div>
-                        <div
-                          className={cn(
-                            "flex items-center gap-2 px-2.5 py-1.5 rounded-lg",
-                            colors.backgroundMuted
-                          )}
-                        >
-                          <DollarSign
-                            className={cn("w-3.5 h-3.5", colors.successText)}
-                          />
-                          <span
-                            className={cn("font-medium text-xs", colors.text)}
-                          >
-                            {template.budget.split(" - ")[0]}+
-                          </span>
-                        </div>
+                          {template.description}
+                        </p>
                       </div>
+                    </div>
 
-                      {/* Button */}
-                      <Button
+                    {/* Metadata Chips */}
+                    <div className="flex flex-wrap gap-2 mb-5">
+                      <div
                         className={cn(
-                          "w-full text-sm font-medium py-3 rounded-lg transition-all duration-300",
-                          canUseTemplate && !hasReachedLimit
-                            ? cn(
-                                colors.primaryBg,
-                                colors.primaryBgHover,
-                                colors.textInverted,
-                                "hover:scale-105"
-                              )
-                            : hasReachedLimit
-                              ? cn(
-                                  "bg-gradient-to-r from-red-500 to-orange-600 text-white",
-                                  "hover:scale-105"
-                                )
-                              : cn(
-                                  "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                                  "hover:scale-105"
-                                )
+                          "flex items-center gap-2 px-3 py-2 rounded-lg",
+                          "bg-blue-50 dark:bg-blue-950/30",
+                          "border border-blue-200 dark:border-blue-800"
                         )}
-                        disabled={!canUseTemplate || hasReachedLimit}
                       >
+                        <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span
+                          className={cn(
+                            "font-semibold text-sm",
+                            "text-blue-700 dark:text-blue-300"
+                          )}
+                        >
+                          {template.duration}
+                        </span>
+                      </div>
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 rounded-lg",
+                          "bg-green-50 dark:bg-green-950/30",
+                          "border border-green-200 dark:border-green-800"
+                        )}
+                      >
+                        <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <span
+                          className={cn(
+                            "font-semibold text-sm",
+                            "text-green-700 dark:text-green-300"
+                          )}
+                        >
+                          {template.budget.split(" - ")[0]}+
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* CTA Button */}
+                    <Button
+                      className={cn(
+                        "w-full text-base font-semibold py-4 rounded-xl transition-all duration-300",
+                        "relative overflow-hidden group/btn",
+                        canUseTemplate && !hasReachedLimit
+                          ? cn(
+                              "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700",
+                              "text-white shadow-lg hover:shadow-xl",
+                              "hover:scale-105"
+                            )
+                          : hasReachedLimit
+                            ? cn(
+                                "bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600",
+                                "text-white shadow-lg hover:shadow-xl"
+                              )
+                            : cn(
+                                "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                                "text-white shadow-lg hover:shadow-xl"
+                              )
+                      )}
+                      disabled={!canUseTemplate || hasReachedLimit}
+                    >
+                      <div
+                        className={cn(
+                          "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent",
+                          "translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000",
+                          canUseTemplate && !hasReachedLimit
+                            ? "block"
+                            : "hidden"
+                        )}
+                      />
+                      <span className="relative z-10 flex items-center justify-center">
                         {hasReachedLimit ? (
                           <>
-                            <Lock className="w-4 h-4 mr-2" />
+                            <Lock className="w-5 h-5 mr-2" />
                             Limit Reached
                           </>
                         ) : canUseTemplate ? (
                           <>
                             Use Template
-                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                           </>
                         ) : (
                           <>
-                            <Lock className="w-4 h-4 mr-2" />
+                            <Crown className="w-5 h-5 mr-2" />
                             Upgrade to {template.tier}
                           </>
                         )}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Mobile Scroll Indicators */}
-              <div className="lg:hidden flex items-center justify-center gap-4 mt-4">
-                <button
-                  onClick={() => scrollTemplates("left")}
-                  className={cn(
-                    "p-3 rounded-full transition-all duration-200",
-                    colors.border,
-                    colors.hoverBg,
-                    "hover:scale-110"
-                  )}
-                >
-                  <ChevronLeft className={cn("w-5 h-5", colors.text)} />
-                </button>
-
-                <div
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium",
-                    colors.backgroundMuted,
-                    colors.text
-                  )}
-                >
-                  Scroll for more templates
-                </div>
-
-                <button
-                  onClick={() => scrollTemplates("right")}
-                  className={cn(
-                    "p-3 rounded-full transition-all duration-200",
-                    colors.border,
-                    colors.hoverBg,
-                    "hover:scale-110"
-                  )}
-                >
-                  <ChevronRight className={cn("w-5 h-5", colors.text)} />
-                </button>
-              </div>
+                      </span>
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Free Tier Benefits */}
@@ -2042,8 +1952,104 @@ const GuidedInterface = memo(
             </div>
           </div>
 
-          {/* Rest of your Pro and Premium tier sections remain the same */}
-          {/* ... */}
+          {/* Sidebar - Pro & Premium Features */}
+          <div className="space-y-8">
+            {/* Pro Features */}
+            <div
+              className={cn(
+                "rounded-2xl p-6 border-2",
+                "border-green-200 dark:border-green-800",
+                colors.card
+              )}
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center">
+                  <Zap className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="px-3 py-1 rounded-full text-sm font-bold bg-green-500 text-white inline-block mb-3">
+                  PRO
+                </div>
+                <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                  Upgrade to Pro
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Unlock advanced template features
+                </p>
+              </div>
+              <div className="space-y-3 mb-6">
+                {[
+                  "50+ professional templates",
+                  "Custom template creation",
+                  "Advanced field customization",
+                  "Unlimited saved templates",
+                  "Priority template access",
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className={cn("text-sm", colors.text)}>
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <Button
+                onClick={() => showUpgradePrompt("pro")}
+                className="w-full bg-green-500 hover:bg-green-600 text-white"
+                size="lg"
+              >
+                <Crown className="w-5 h-5 mr-2" />
+                Upgrade to Pro
+              </Button>
+            </div>
+
+            {/* Premium Features */}
+            <div
+              className={cn(
+                "rounded-2xl p-6 border-2",
+                "border-amber-200 dark:border-amber-800",
+                colors.card
+              )}
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center">
+                  <Sparkles className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
+                  PREMIUM
+                </div>
+                <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                  Go Premium
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Complete creative freedom
+                </p>
+              </div>
+              <div className="space-y-3 mb-6">
+                {[
+                  "All Pro features included",
+                  "Start from scratch creation",
+                  "White-glove support",
+                  "Early feature access",
+                  "Dedicated account manager",
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    <span className={cn("text-sm", colors.text)}>
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <Button
+                onClick={() => showUpgradePrompt("premium")}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                size="lg"
+              >
+                <Crown className="w-5 h-5 mr-2" />
+                Go Premium
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
@@ -2085,7 +2091,6 @@ const GuidedInterface = memo(
               <HelpCircle className="w-5 h-5 mr-3" />
               {userTier === "premium" ? "Contact Support" : "View All Features"}
             </Button>
-
             {(userTier !== "premium" || hasReachedLimit) && (
               <Button
                 onClick={() => showUpgradePrompt("pro")}
@@ -2110,8 +2115,9 @@ const GuidedInterface = memo(
     );
   }
 );
+
 GuidedInterface.displayName = "GuidedInterface";
-// Default Interface Component
+nt;
 const DefaultInterface = memo(
   ({
     existingTemplates,
