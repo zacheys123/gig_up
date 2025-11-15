@@ -35,6 +35,7 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import GigLoader from "@/components/(main)/GigLoader";
 // import { ChatIcon } from "@/components/chat/ChatIcon";
 
 interface InvitesPageProps {
@@ -56,9 +57,7 @@ export default function InvitesPage({ params }: InvitesPageProps) {
           colors.background
         )}
       >
-        <div className={cn("animate-pulse text-lg", colors.text)}>
-          Loading...
-        </div>
+        <GigLoader color="border-purple-300" size="md" title="Loading..." />
       </div>
     );
   }
@@ -610,8 +609,9 @@ function MusicianGigView({ gigId }: { gigId: string }) {
       await updateGigAvailability({
         gigId: gigId as Id<"instantgigs">,
         musicianAvailability: available ? "available" : "notavailable",
+        clerkId: user?.clerkId as string,
       });
-
+      console.log(user?._id === gig?.invitedMusicianId);
       // Auto-decline if marking as unavailable and gig is still pending
       if (!available && gig?.status === "pending") {
         await updateGigStatus({

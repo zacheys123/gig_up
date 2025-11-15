@@ -1680,7 +1680,6 @@ const GuidedInterface = memo(
               </div>
             </div>
 
-            {/* Template Grid - FIXED RESPONSIVE LAYOUT */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {EXAMPLE_TEMPLATES.map((template) => {
                 const canUseTemplate = canAccessTier(
@@ -1693,14 +1692,13 @@ const GuidedInterface = memo(
                     key={template.id}
                     className={cn(
                       "border-2 rounded-2xl p-6 cursor-pointer transition-all duration-300 group relative",
-                      "bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800",
-                      "shadow-lg hover:shadow-2xl",
+                      "bg-gradient-to-br shadow-lg hover:shadow-2xl",
                       "hover:scale-[1.02] transform-gpu",
-                      "border-gray-200 dark:border-gray-700",
+                      colors.border,
                       canUseTemplate && !hasReachedLimit
                         ? cn(
-                            "hover:border-blue-400 dark:hover:border-blue-500",
-                            "hover:bg-gradient-to-br hover:from-blue-50 hover:to-white dark:hover:from-blue-950/20 dark:hover:to-gray-900"
+                            "hover:border-blue-400",
+                            "hover:bg-gradient-to-br hover:from-blue-50 hover:to-white"
                           )
                         : "opacity-70 cursor-not-allowed grayscale"
                     )}
@@ -1711,12 +1709,11 @@ const GuidedInterface = memo(
                       <div
                         className={cn(
                           "absolute -top-3 -right-3 px-4 py-2 rounded-full text-xs font-bold",
-                          "shadow-lg transform rotate-3",
-                          "backdrop-blur-sm bg-white/90 dark:bg-black/90",
-                          "border",
+                          "shadow-lg transform rotate-3 backdrop-blur-sm border",
+                          colors.overlay,
                           template.tier === "pro"
-                            ? "text-green-600 border-green-200 dark:border-green-800"
-                            : "text-amber-600 border-amber-200 dark:border-amber-800"
+                            ? "text-green-600 border-green-200"
+                            : "text-amber-600 border-amber-200"
                         )}
                       >
                         <div className="flex items-center gap-1">
@@ -1728,22 +1725,27 @@ const GuidedInterface = memo(
 
                     {/* Lock Overlay */}
                     {(!canUseTemplate || hasReachedLimit) && (
-                      <div className="absolute inset-0 bg-white/90 dark:bg-black/90 rounded-2xl flex items-center justify-center z-10 backdrop-blur-sm">
+                      <div
+                        className={cn(
+                          "absolute inset-0 rounded-2xl flex items-center justify-center z-10 backdrop-blur-sm",
+                          colors.overlay
+                        )}
+                      >
                         <div className="text-center p-6">
                           <div
                             className={cn(
                               "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
                               hasReachedLimit
-                                ? "bg-red-100 dark:bg-red-900/30"
-                                : "bg-amber-100 dark:bg-amber-900/30"
+                                ? colors.destructiveBg
+                                : colors.warningBg
                             )}
                           >
                             <Lock
                               className={cn(
                                 "w-8 h-8",
                                 hasReachedLimit
-                                  ? "text-red-500"
-                                  : "text-amber-500"
+                                  ? colors.destructive
+                                  : colors.warningText
                               )}
                             />
                           </div>
@@ -1784,8 +1786,7 @@ const GuidedInterface = memo(
                       <div
                         className={cn(
                           "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0",
-                          "bg-gradient-to-br from-blue-500 to-purple-600",
-                          "shadow-lg",
+                          "bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg",
                           canUseTemplate &&
                             !hasReachedLimit &&
                             "group-hover:scale-110 group-hover:rotate-6 transition-all duration-300"
@@ -1799,7 +1800,7 @@ const GuidedInterface = memo(
                         <h3
                           className={cn(
                             "font-bold text-xl mb-2",
-                            "bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent",
+                            "bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent",
                             canUseTemplate &&
                               !hasReachedLimit &&
                               "group-hover:from-blue-600 group-hover:to-purple-600 transition-all duration-300"
@@ -1810,7 +1811,7 @@ const GuidedInterface = memo(
                         <p
                           className={cn(
                             "text-sm leading-relaxed line-clamp-2",
-                            "text-gray-600 dark:text-gray-400"
+                            colors.textMuted
                           )}
                         >
                           {template.description}
@@ -1822,16 +1823,16 @@ const GuidedInterface = memo(
                     <div className="flex flex-wrap gap-2 mb-5">
                       <div
                         className={cn(
-                          "flex items-center gap-2 px-3 py-2 rounded-lg",
-                          "bg-blue-50 dark:bg-blue-950/30",
-                          "border border-blue-200 dark:border-blue-800"
+                          "flex items-center gap-2 px-3 py-2 rounded-lg border",
+                          colors.infoBg,
+                          colors.infoBorder
                         )}
                       >
-                        <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <Clock className={cn("w-4 h-4", colors.infoText)} />
                         <span
                           className={cn(
                             "font-semibold text-sm",
-                            "text-blue-700 dark:text-blue-300"
+                            colors.infoText
                           )}
                         >
                           {template.duration}
@@ -1839,16 +1840,18 @@ const GuidedInterface = memo(
                       </div>
                       <div
                         className={cn(
-                          "flex items-center gap-2 px-3 py-2 rounded-lg",
-                          "bg-green-50 dark:bg-green-950/30",
-                          "border border-green-200 dark:border-green-800"
+                          "flex items-center gap-2 px-3 py-2 rounded-lg border",
+                          colors.successBg,
+                          colors.successBorder
                         )}
                       >
-                        <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <DollarSign
+                          className={cn("w-4 h-4", colors.successText)}
+                        />
                         <span
                           className={cn(
                             "font-semibold text-sm",
-                            "text-green-700 dark:text-green-300"
+                            colors.successText
                           )}
                         >
                           {template.budget.split(" - ")[0]}+
@@ -1864,8 +1867,7 @@ const GuidedInterface = memo(
                         canUseTemplate && !hasReachedLimit
                           ? cn(
                               "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700",
-                              "text-white shadow-lg hover:shadow-xl",
-                              "hover:scale-105"
+                              "text-white shadow-lg hover:shadow-xl hover:scale-105"
                             )
                           : hasReachedLimit
                             ? cn(

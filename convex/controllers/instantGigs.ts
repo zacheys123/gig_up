@@ -207,7 +207,6 @@ export const deleteTemplate = mutation({
   },
 });
 
-// Create instant gig (simplified - no template relationship tracking)
 export const createInstantGig = mutation({
   args: {
     title: v.string(),
@@ -223,25 +222,28 @@ export const createInstantGig = mutation({
     invitedMusicianId: v.id("users"),
     musicianName: v.string(),
     fromTime: v.optional(v.string()),
-    bookingHistory: v.array(
-      v.object({
-        musicianId: v.id("users"),
-        musicianName: v.string(),
-        status: v.union(
-          v.literal("invited"),
-          v.literal("accepted"),
-          v.literal("declined"),
-          v.literal("deputy-suggested")
-        ),
-        timestamp: v.number(),
-        actionBy: v.union(
-          v.literal("musician"),
-          v.literal("client"),
-          v.literal("system")
-        ),
-        notes: v.optional(v.string()), // e.g., "Suggested deputy instead", "Not available"
-        deputySuggestedId: v.optional(v.id("users")), // If deputy was suggested
-      })
+    bookingHistory: v.optional(
+      // Make this optional
+      v.array(
+        v.object({
+          musicianId: v.id("users"),
+          musicianName: v.string(),
+          status: v.union(
+            v.literal("invited"),
+            v.literal("accepted"),
+            v.literal("declined"),
+            v.literal("deputy-suggested")
+          ),
+          timestamp: v.number(),
+          actionBy: v.union(
+            v.literal("musician"),
+            v.literal("client"),
+            v.literal("system")
+          ),
+          notes: v.optional(v.string()),
+          deputySuggestedId: v.optional(v.id("users")),
+        })
+      )
     ),
   },
   handler: async (ctx, args) => {
@@ -251,7 +253,7 @@ export const createInstantGig = mutation({
       status: "pending",
       musicianAvailability: "available",
       createdAt: Date.now(),
-      bookingHistory: args.bookingHistory || [],
+      bookingHistory: args.bookingHistory || [], // Provide default empty array
     });
 
     return gigId;
@@ -373,18 +375,15 @@ export const updateGigAvailability = mutation({
       v.literal("available"),
       v.literal("notavailable")
     ),
+    clerkId: v.string(),
   },
   handler: async (ctx, args) => {
     const gig = await ctx.db.get(args.gigId);
     if (!gig) throw new Error("Gig not found");
 
-    // Verify current user is the invited musician
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) throw new Error("User not found");
