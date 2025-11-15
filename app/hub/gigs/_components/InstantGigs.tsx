@@ -35,14 +35,22 @@ import { BookingModal } from "./tabs/BookingModal";
 import { useProMusicians } from "@/hooks/useProMusicians";
 import { EnhancedMusician } from "@/types/musician";
 import ConfirmPrompt from "@/components/ConfirmPrompt";
+import { NormalGigsTab } from "./gigs/NormalGigTab";
 
 // Memoize tab configuration
+
 const TAB_CONFIG = [
   {
     id: "create",
-    label: "🎵 Create Template",
+    label: "⚡ Instant Gigs",
+    icon: Zap,
+    description: "Template-based quick booking",
+  },
+  {
+    id: "normal",
+    label: "📝 Normal Gigs",
     icon: Plus,
-    description: "Design reusable gig templates",
+    description: "Traditional gig creation",
   },
   {
     id: "templates",
@@ -383,9 +391,9 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const createTemplatesRef = useRef<HTMLDivElement>(null);
   const musicianTemplatesRef = useRef<HTMLDivElement>(null);
 
-  // State management with guided/custom flows
+  // Update the activeTab state type
   const [activeTab, setActiveTab] = useState<
-    "create" | "templates" | "musicians"
+    "create" | "normal" | "templates" | "musicians"
   >("create");
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -720,10 +728,13 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
               onFormClose={handleCancelEdit}
               isLoading={templatesLoading}
               editingTemplate={editingTemplate}
-              templateLimitInfo={effectiveTemplateLimitInfo} // PASS THE EFFECTIVE LIMIT INFO
+              templateLimitInfo={effectiveTemplateLimitInfo}
             />
           </div>
         );
+
+      case "normal":
+        return <NormalGigsTab user={user} colors={colors} />;
 
       case "templates":
         return (
@@ -735,7 +746,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             isLoading={templatesLoading}
             refetchTemplates={refetchTemplates}
             isRefetching={isRefetching}
-            templateLimitInfo={effectiveTemplateLimitInfo} // PASS THIS TO TEMPLATES TAB TOO
+            templateLimitInfo={effectiveTemplateLimitInfo}
           />
         );
 
@@ -794,8 +805,8 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         )}
       >
         <GigSectionHeader
-          title="Instant Gigs"
-          description="Book premium musicians in minutes, not days"
+          title="Gig Creation Hub"
+          description="Choose between instant template-based booking or traditional gig creation"
           user={user}
           type="instant-gigs"
           stats={{
@@ -815,9 +826,21 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
                   colors.textInverted
                 )}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Template
+                <Zap className="w-4 h-4 mr-2" />
+                Create Instant Gig
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setActiveTab("normal")}
+                className={cn(
+                  "border-2 hover:border-green-300 transition-all duration-300",
+                  colors.border,
+                  colors.hoverBg
+                )}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Normal Gig
+              </Button>{" "}
               <Button
                 variant="outline"
                 onClick={scrollToMusicians}

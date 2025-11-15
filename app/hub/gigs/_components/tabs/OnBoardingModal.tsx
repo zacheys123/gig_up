@@ -33,11 +33,12 @@ import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onNormalCreation?: () => void; // ADD THIS
   onGuidedCreation: () => void;
   onCustomCreation: () => void;
-  onScratchCreation?: () => void; // ADD THIS
-  scrollToTemplates?: () => void; // NEW PROP
-  onAICreation?: () => void; // NEW: AI creation handler
+  onScratchCreation?: () => void;
+  scrollToTemplates?: () => void;
+  onAICreation?: () => void;
 }
 
 // Memoize feature cards data - updated with theme colors
@@ -211,6 +212,26 @@ const getCreationOptions = (
 
   // Paid/trial users see the normal options
   return [
+    {
+      id: "normal",
+      title: "Create Normal Gig",
+      description: "Traditional gig creation with full customization",
+      icon: Calendar, // Using Calendar icon for normal gigs
+      features: [
+        "Full gig customization",
+        "Manual musician selection",
+        "Flexible scheduling",
+        "Detailed requirements",
+        "Custom pricing negotiation",
+        "Direct messaging",
+      ],
+      color: "from-blue-500 to-cyan-500",
+      buttonText: "Create Gig",
+      tier: "free", // Available to all tiers including free
+      available: true, // Always available
+      iconBg: colors.infoBg,
+      iconColor: colors.infoText,
+    },
     {
       id: "guided",
       title: "Browse Templates",
@@ -587,6 +608,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     onScratchCreation,
     scrollToTemplates,
     onAICreation,
+    onNormalCreation, // ADD THIS
   }) => {
     const { colors } = useThemeColors();
     const { user } = useCurrentUser(); // ADD THIS TO GET USER INFO
@@ -638,15 +660,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
       }
     }, [onAICreation]);
     const handleCreationSelect = useCallback(
-      (type: "guided" | "custom" | "scratch" | "ai") => {
-        if (type === "guided") {
+      (type: "normal" | "guided" | "custom" | "scratch" | "ai") => {
+        if (type === "normal") {
+          // Redirect to normal gig creation page
+          window.location.href = "/create-gig"; // Or your normal gig creation route
+        } else if (type === "guided") {
           handleGuidedCreation();
         } else if (type === "custom") {
           handleCustomCreation();
         } else if (type === "scratch" && onScratchCreation) {
           handleScratchCreation();
         } else if (type === "ai" && onAICreation) {
-          // Add AI creation handler
           handleAICreation();
         }
       },

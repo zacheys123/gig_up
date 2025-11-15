@@ -207,7 +207,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
     // Responsive default actions
     const defaultActions = useMemo(() => {
       const baseActions = {
-        "urgent-gigs": (
+        "create-gigs": (
           <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 w-full xs:w-auto">
             <Button
               className={cn(
@@ -326,7 +326,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
     // Memoize sample data
     const defaultSampleData = useMemo(() => {
       switch (type) {
-        case "urgent-gigs":
+        case "create-gigs":
           return [
             {
               title: "Wedding Ceremony",
@@ -419,7 +419,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
     // Stats calculation
     const relevantStats = useMemo(() => {
       switch (type) {
-        case "urgent-gigs":
+        case "create-gigs":
         case "instant-gigs":
           return [
             {
@@ -727,7 +727,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     colors.infoText
                   )}
                 >
-                  {type === "urgent-gigs" ? (
+                  {type === "create-gigs" ? (
                     <HiTemplate className="w-full h-full" />
                   ) : type.includes("gigs") ? (
                     <CalendarIcon />
@@ -745,7 +745,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     colors.text
                   )}
                 >
-                  {type === "urgent-gigs"
+                  {type === "create-gigs"
                     ? "Ready to Create Your First Template?"
                     : `${title} Content`}
                 </h4>
@@ -755,7 +755,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     colors.textMuted
                   )}
                 >
-                  {type === "urgent-gigs"
+                  {type === "create-gigs"
                     ? "Create custom gig templates and book premium musicians in seconds. Start with examples or build from scratch."
                     : `This section will display ${description.toLowerCase()}. The actual content and functionality will be implemented here.`}
                 </p>

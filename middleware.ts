@@ -70,15 +70,15 @@ export default clerkMiddleware(async (auth, request) => {
       hasAccess: userTier !== "free" || isInGracePeriod,
     });
 
-    // Block free users who are NOT in grace period
-    if (userTier === "free" && !isInGracePeriod) {
-      console.log("Blocking free user from Instant Gigs:", userId);
+    // // Block free users who are NOT in grace period
+    // if (userTier === "free" && !isInGracePeriod) {
+    //   console.log("Blocking free user from Instant Gigs:", userId);
 
-      // Redirect to upgrade page or show unauthorized
-      return Response.redirect(
-        new URL("/pricing?feature=instant-gigs", request.url)
-      );
-    }
+    //   // Redirect to upgrade page or show unauthorized
+    //   return Response.redirect(
+    //     new URL("/pricing?feature=instant-gigs", request.url)
+    //   );
+    // }
   }
 
   return NextResponse.next();

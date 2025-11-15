@@ -135,7 +135,7 @@ export function Sidebar() {
     },
     {
       name: "Instant Gigs",
-      href: "/hub/gigs?tab=urgent-gigs",
+      href: "/hub/gigs?tab=create-gigs",
       icon: <PlusIcon className="w-5 h-5" />,
     },
     {

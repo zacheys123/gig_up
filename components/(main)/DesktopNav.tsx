@@ -166,7 +166,7 @@ export function DesktopNavigation() {
     ...(shouldShowUrgentGigs
       ? [
           {
-            href: "/hub/gigs?tab=urgent-gigs",
+            href: "/hub/gigs?tab=create-gigs",
             label: "Instant Gigs",
             icon: <Zap size={16} />,
             proBadge: true,

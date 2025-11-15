@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
+import { UpgradeBanner } from "./_components/UpgradeBlock";
 
 // Enhanced version with tier info
 const getUserSubtitle = (user: any) => {
@@ -84,158 +85,19 @@ const getUserSubtitle = (user: any) => {
     : `Manage your gigs and opportunities • ${tierDisplay} Plan`;
 };
 // Add this UpgradeBanner component
-const UpgradeBanner = React.memo(
-  ({
-    colors,
-    featureName,
-    userTier,
-  }: {
-    colors: any;
-    featureName: string;
-    userTier: string;
-  }) => {
-    const features = {
-      "instant-gigs": {
-        title: "Instant Gigs Locked",
-        description:
-          "Upgrade to Pro to access instant booking, professional templates, and premium features",
-        icon: Zap,
-        features: [
-          "50+ Professional Templates",
-          "Instant Musician Matching",
-          "Custom Template Creation",
-          "Priority Booking Access",
-        ],
-      },
-      "gig-invites": {
-        title: "Gig Invites Locked",
-        description: "Upgrade to Pro to send and receive gig invitations",
-        icon: UserCheck,
-        features: [
-          "Send Unlimited Invites",
-          "Receive Priority Invites",
-          "Advanced Invite Management",
-          "Invite Analytics",
-        ],
-      },
-      "crew-management": {
-        title: "Crew Management Locked",
-        description: "Upgrade to Pro to build and manage your crew",
-        icon: Users,
-        features: [
-          "Build Unlimited Crews",
-          "Advanced Crew Management",
-          "Crew Analytics",
-          "Priority Crew Matching",
-        ],
-      },
-      applications: {
-        title: "Applications Locked",
-        description:
-          "Upgrade to Pro to manage gig applications and track your submissions",
-        icon: Briefcase,
-        features: [
-          "Advanced Application Tracking",
-          "Application Analytics",
-          "Priority Application Review",
-          "Bulk Application Management",
-        ],
-      },
-      "active-projects": {
-        title: "Active Projects Locked",
-        description:
-          "Upgrade to Pro to manage your ongoing projects and collaborations",
-        icon: Briefcase,
-        features: [
-          "Project Management Tools",
-          "Team Collaboration Features",
-          "Project Analytics",
-          "Advanced Project Tracking",
-        ],
-      },
-    };
 
-    const feature =
-      features[featureName as keyof typeof features] ||
-      features["instant-gigs"];
-    const Icon = feature.icon;
-
-    return (
-      <div
-        className={cn(
-          "rounded-2xl p-8 mb-6 border-2 border-dashed text-center",
-          colors.border,
-          colors.backgroundMuted
-        )}
-      >
-        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center">
-          <Icon className="w-8 h-8 text-white" />
-        </div>
-
-        <div className="px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
-          PRO FEATURE
-        </div>
-
-        <h3 className={cn("text-2xl font-bold mb-3", colors.text)}>
-          {feature.title}
-        </h3>
-        <p className={cn("text-lg mb-6 max-w-md mx-auto", colors.textMuted)}>
-          {feature.description}
-        </p>
-
-        {/* Features List */}
-        <div className="grid grid-cols-1 gap-3 mb-6 max-w-md mx-auto">
-          {feature.features.map((item, index) => (
-            <div key={index} className="flex items-center gap-3 text-left">
-              <Crown className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              <span className={cn("text-sm", colors.text)}>{item}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            onClick={() => window.open("/pricing", "_blank")}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-            size="lg"
-          >
-            <Crown className="w-5 h-5 mr-2" />
-            Upgrade to Pro
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => window.open("/features", "_blank")}
-            className={cn("border-2", colors.border, colors.hoverBg)}
-          >
-            View All Features
-          </Button>
-        </div>
-
-        {/* Current Plan Info */}
-        <div className={cn("mt-4 pt-4 border-t text-sm", colors.border)}>
-          <span className={cn(colors.textMuted)}>Current plan: </span>
-          <span className={cn("font-semibold", colors.text)}>
-            {userTier === "free"
-              ? "Free"
-              : userTier.charAt(0).toUpperCase() + userTier.slice(1)}
-          </span>
-        </div>
-      </div>
-    );
-  }
-);
-
-UpgradeBanner.displayName = "UpgradeBanner";
-
-// Update the renderGigContent function to include upgrade checks
-const renderGigContent = (user: any, activeTab: string) => {
+const renderGigContent = (
+  user: any,
+  activeTab: string,
+  colors: any,
+  isInGracePeriod: boolean
+) => {
   const userTier = user?.tier || "free";
   const isFreeUser = userTier === "free";
-  const { colors } = useThemeColors();
 
-  // Check if feature requires upgrade
+  // Check if feature requires upgrade - FREE users NOT in grace period need upgrade
   const requiresUpgrade = (feature: string) => {
-    return isFreeUser && !user?.isInGracePeriod;
+    return isFreeUser && !isInGracePeriod;
   };
 
   // Multi-role users
@@ -249,9 +111,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("applications")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="applications"
               userTier={userTier}
+              userRole="booker"
             />
           );
         }
@@ -280,9 +142,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("gig-invites")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="gig-invites"
               userTier={userTier}
+              userRole="musician"
             />
           );
         }
@@ -307,9 +169,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("crew-management")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="crew-management"
               userTier={userTier}
+              userRole="client"
             />
           );
         }
@@ -318,20 +180,20 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("gig-invites")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="gig-invites"
               userTier={userTier}
+              userRole="client"
             />
           );
         }
         return <GigInvites user={user} />;
-      case "urgent-gigs":
+      case "create-gigs":
         if (requiresUpgrade("instant-gigs")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="instant-gigs"
               userTier={userTier}
+              userRole="client"
             />
           );
         }
@@ -348,9 +210,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("applications")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="applications"
               userTier={userTier}
+              userRole="booker"
             />
           );
         }
@@ -359,9 +221,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("active-projects")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="active-projects"
               userTier={userTier}
+              userRole="booker"
             />
           );
         }
@@ -370,9 +232,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("crew-management")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="crew-management"
               userTier={userTier}
+              userRole="booker"
             />
           );
         }
@@ -385,9 +247,9 @@ const renderGigContent = (user: any, activeTab: string) => {
         if (requiresUpgrade("applications")) {
           return (
             <UpgradeBanner
-              colors={colors}
               featureName="applications"
               userTier={userTier}
+              userRole="booker"
             />
           );
         }
@@ -441,10 +303,10 @@ const getUserGigTabs = (user: any) => {
             : "👥 Crew Management",
         },
         {
-          id: "urgent-gigs",
+          id: "create-gigs",
           label: showLockIcon("instant-gigs")
-            ? "🔒 Urgent Gigs"
-            : "⚡ Urgent Gigs",
+            ? "🔒 Create Gigs"
+            : "⚡ Create Gigs",
         },
       ],
       defaultTab: "my-gigs",
@@ -562,7 +424,7 @@ export default function GigsHub() {
   // Memoize tab content
   const tabContent = useMemo(() => {
     if (!memoizedUser) return null;
-    return renderGigContent(memoizedUser, activeTab);
+    return renderGigContent(memoizedUser, activeTab, colors, isInGracePeriod);
   }, [memoizedUser, activeTab]);
 
   if (isLoading || !memoizedUser) {

@@ -152,7 +152,7 @@ const getNavigationLinks = (
     coreLinks.splice(4, 0, {
       // Insert before Games
       label: "Urgent Gigs",
-      href: "/hub/gigs?tab=urgent-gigs",
+      href: "/hub/gigs?tab=create-gigs",
       icon: <Zap size={22} />,
       proBadge: true, // Add Pro badge to Urgent Gigs
     });
