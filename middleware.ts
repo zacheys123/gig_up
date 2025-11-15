@@ -1,4 +1,4 @@
-// middleware.ts
+// middleware.ts - UPDATED WITH INSTANT GIGS ACCESS CONTROL
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
@@ -9,17 +9,26 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/banned",
   "/unauthorized",
+  "/dashboard/billing", // Allow access to pricing page
+  "/api/webhooks/clerk", // Add webhook routes if needed
 ]);
 
-const isAdminRoute = createRouteMatcher(["/admin(.*)", "/api/admin(.*)"]);
+const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
+
+// 2. Define Instant Gigs protected routes
+const isInstantGigsRoute = createRouteMatcher([
+  "/hub/gigs(.*)", // All gigs hub routes
+]);
 
 export default clerkMiddleware(async (auth, request) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
   const path = request.nextUrl.pathname;
+
   console.log("Middleware running for:", request.nextUrl.pathname);
+
   // 2. Skip middleware for public routes
   if (isPublicRoute(request)) {
-    console.log("Protecting route:", request.nextUrl.pathname);
+    console.log("Public route:", request.nextUrl.pathname);
     // Redirect authenticated users away from auth pages
     if (
       userId &&
@@ -36,7 +45,8 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // 4. Additional checks
-  const { isBanned, role } = (sessionClaims?.metadata as any) || {};
+  const { isBanned, role, tier, isInGracePeriod } =
+    (sessionClaims?.metadata as any) || {};
 
   if (isBanned && path !== "/banned") {
     return Response.redirect(new URL("/banned", request.url));
@@ -46,6 +56,28 @@ export default clerkMiddleware(async (auth, request) => {
   if (isAdminRoute(request)) {
     if (role !== "admin") {
       return new NextResponse("Unauthorized", { status: 401 });
+    }
+  }
+
+  // 6. INSTANT GIGS ACCESS CONTROL - NEW SECTION
+  if (isInstantGigsRoute(request)) {
+    const userTier = tier || "free"; // Default to free if not set
+
+    console.log("Instant Gigs route access check:", {
+      path,
+      userTier,
+      isInGracePeriod,
+      hasAccess: userTier !== "free" || isInGracePeriod,
+    });
+
+    // Block free users who are NOT in grace period
+    if (userTier === "free" && !isInGracePeriod) {
+      console.log("Blocking free user from Instant Gigs:", userId);
+
+      // Redirect to upgrade page or show unauthorized
+      return Response.redirect(
+        new URL("/pricing?feature=instant-gigs", request.url)
+      );
     }
   }
 

@@ -6,7 +6,7 @@ import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useUserStore } from "@/app/stores";
 
 // Trial configuration - same as in useTemplates
-const TRIAL_DURATION_DAYS = 24; // 14-day trial
+const TRIAL_DURATION_DAYS = 14; // 14-day trial
 const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
 
 export const useCheckTrial = () => {

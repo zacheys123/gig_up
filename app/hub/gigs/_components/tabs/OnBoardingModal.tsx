@@ -22,6 +22,7 @@ import {
   Calendar,
   Sparkles,
   Lock,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -92,36 +93,47 @@ const STAT_ITEMS = [
 
 // Memoize creation options - updated with theme colors
 
-const getTierAccess = (userTier: string, isInGracePeriod: boolean) => {
+// utils/tierAccess.ts - RESTRICTIVE APPROACH
+export const getTierAccess = (userTier: string, isInGracePeriod: boolean) => {
   const baseTier = userTier || "free";
 
   return {
-    // Free tier access
-    canAccessTemplates: true, // Always available
+    // Free tier gets NO instant gigs access
+    canAccessInstantGigs: baseTier !== "free" || isInGracePeriod,
 
     // Pro tier features
+    canAccessTemplates:
+      baseTier === "pro" ||
+      baseTier === "premium" ||
+      baseTier === "elite" ||
+      isInGracePeriod,
     canAccessCustomCreation:
-      baseTier === "pro" || baseTier === "premium" || baseTier === "elite",
+      baseTier === "pro" ||
+      baseTier === "premium" ||
+      baseTier === "elite" ||
+      isInGracePeriod,
 
     // Premium tier features
-    canAccessScratchCreation: baseTier === "premium" || baseTier === "elite",
+    canAccessScratchCreation:
+      baseTier === "premium" || baseTier === "elite" || isInGracePeriod,
 
     // Elite tier features
-    canAccessAICreation: baseTier === "elite",
-
-    // Trial period overrides
-    canAccessEverything: isInGracePeriod,
+    canAccessAICreation: baseTier === "elite" || isInGracePeriod,
 
     // Current effective access
     effectiveAccess: {
-      templates: true,
-      custom:
-        isInGracePeriod ||
+      instantGigs: baseTier !== "free" || isInGracePeriod, // KEY CHANGE
+      templates:
         baseTier === "pro" ||
         baseTier === "premium" ||
-        baseTier === "elite",
-      scratch:
-        isInGracePeriod || baseTier === "premium" || baseTier === "elite",
+        baseTier === "elite" ||
+        isInGracePeriod,
+      custom:
+        baseTier === "pro" ||
+        baseTier === "premium" ||
+        baseTier === "elite" ||
+        isInGracePeriod,
+      scratch: baseTier === "premium" || baseTier === "elite",
       ai: baseTier === "elite",
     },
   };
@@ -129,12 +141,75 @@ const getTierAccess = (userTier: string, isInGracePeriod: boolean) => {
 const getCreationOptions = (
   colors: any,
   user: any,
-  isInGracePeriod: boolean,
-  trialRemainingDays: number | null
+  isInGracePeriod: boolean
 ) => {
   const userTier = user?.tier || "free";
   const access = getTierAccess(userTier, isInGracePeriod);
 
+  // If free user with no trial, show preview card + upgrade options
+  if (!access.effectiveAccess.instantGigs) {
+    return [
+      {
+        id: "preview",
+        title: "Instant Gigs Preview",
+        description: "See how instant booking works (upgrade to use)",
+        icon: Eye,
+        features: [
+          "Browse template gallery",
+          "See available musicians",
+          "Preview booking process",
+          "Upgrade to start booking",
+        ],
+        color: "from-gray-500 to-gray-700",
+        buttonText: "Preview Features",
+        tier: "free",
+        available: false, // NOT available - just a preview
+        isPreviewCard: true, // Mark as preview card
+        iconBg: "bg-gray-100 dark:bg-gray-800",
+        iconColor: "text-gray-500 dark:text-gray-400",
+      },
+      {
+        id: "upgrade-pro",
+        title: "Unlock Instant Gigs",
+        description: "Upgrade to start booking musicians instantly",
+        icon: Zap,
+        features: [
+          "50+ professional templates",
+          "Instant musician matching",
+          "Save 80% booking time",
+          "Priority access to top talent",
+        ],
+        color: "from-blue-500 to-purple-500",
+        buttonText: "View Plans & Pricing",
+        tier: "pro",
+        available: true,
+        isUpgradeCard: true,
+        iconBg: colors.infoBg,
+        iconColor: colors.infoText,
+      },
+      {
+        id: "upgrade-premium",
+        title: "Premium Creation Tools",
+        description: "Advanced features for professional event planners",
+        icon: Crown,
+        features: [
+          "Start from scratch",
+          "Advanced customization",
+          "White-glove support",
+          "Early access to new features",
+        ],
+        color: "from-amber-500 to-orange-500",
+        buttonText: "Explore Premium",
+        tier: "premium",
+        available: true,
+        isUpgradeCard: true,
+        iconBg: colors.warningBg,
+        iconColor: colors.warningText,
+      },
+    ];
+  }
+
+  // Paid/trial users see the normal options
   return [
     {
       id: "guided",
@@ -149,9 +224,8 @@ const getCreationOptions = (
       ],
       color: "from-blue-500 to-purple-500",
       buttonText: "Browse Templates",
-      tier: "free",
+      tier: "pro",
       available: access.effectiveAccess.templates,
-      alwaysAvailable: true,
       iconBg: colors.infoBg,
       iconColor: colors.infoText,
     },
@@ -167,12 +241,9 @@ const getCreationOptions = (
         "Priority template access",
       ],
       color: "from-green-500 to-emerald-500",
-      buttonText: access.effectiveAccess.custom
-        ? "Customize Templates"
-        : "Upgrade to Pro",
+      buttonText: "Customize Templates",
       tier: "pro",
       available: access.effectiveAccess.custom,
-      upgradeTarget: "pro",
       iconBg: colors.successBg,
       iconColor: colors.successText,
     },
@@ -188,12 +259,9 @@ const getCreationOptions = (
         "White-glove support",
       ],
       color: "from-amber-500 to-orange-500",
-      buttonText: access.effectiveAccess.scratch
-        ? "Start Creating"
-        : "Upgrade to Premium",
+      buttonText: "Start Creating",
       tier: "premium",
       available: access.effectiveAccess.scratch,
-      upgradeTarget: "premium",
       iconBg: colors.warningBg,
       iconColor: colors.warningText,
     },
@@ -201,7 +269,7 @@ const getCreationOptions = (
       id: "ai",
       title: "AI Gig Creator",
       description: "AI-powered gig creation with smart suggestions",
-      icon: Wand2, // Using Wand2 for AI/magic
+      icon: Wand2,
       features: [
         "AI-powered template generation",
         "Smart field suggestions",
@@ -209,12 +277,9 @@ const getCreationOptions = (
         "Predictive musician matching",
       ],
       color: "from-purple-500 to-pink-500",
-      buttonText: access.effectiveAccess.ai
-        ? "Create with AI"
-        : "Upgrade to Elite",
+      buttonText: "Create with AI",
       tier: "elite",
       available: access.effectiveAccess.ai,
-      upgradeTarget: "elite",
       iconBg: "bg-purple-50 dark:bg-purple-950/20",
       iconColor: "text-purple-600 dark:text-purple-400",
     },
@@ -305,30 +370,41 @@ const CreationOption = memo(
     const Icon = option.icon;
 
     const handleClick = useCallback(() => {
-      if (!option.available) {
-        // Show upgrade modal or redirect to pricing
-        if (onUpgrade && option.upgradeTarget) {
-          onUpgrade(option.upgradeTarget);
-        }
+      // PREVIEW CARD: Completely non-clickable
+      if (option.isPreviewCard) {
+        return; // Do nothing when clicked
+      }
+
+      if (option.isUpgradeCard) {
+        onUpgrade?.(option.tier);
         return;
       }
+
+      if (!option.available) {
+        onUpgrade?.(option.tier);
+        return;
+      }
+
       onSelect(option.id);
     }, [option, onSelect, onUpgrade]);
-
     const getTierBadgeConfig = (
       tier: string,
       isTrial: boolean,
+      isPreviewCard: boolean,
+      isUpgradeCard: boolean,
       daysLeft: number | null
     ) => {
-      const config = {
-        free: { bg: "bg-blue-500", text: "FREE" },
-        pro: { bg: "bg-green-500", text: "PRO" },
-        premium: { bg: "bg-amber-500", text: "PREMIUM" },
-        elite: {
-          bg: "bg-gradient-to-r from-purple-500 to-pink-500",
-          text: "ELITE",
-        },
-      };
+      // Handle special cases first
+      if (isPreviewCard) {
+        return { bg: "bg-gray-500", text: "PREVIEW" };
+      }
+
+      if (isUpgradeCard) {
+        return {
+          bg: "bg-gradient-to-r from-blue-500 to-purple-500",
+          text: "UPGRADE",
+        };
+      }
 
       if (isTrial) {
         return {
@@ -337,13 +413,29 @@ const CreationOption = memo(
         };
       }
 
-      return config[tier] || config.free;
+      // Use type-safe approach for tier config
+      const config = {
+        pro: { bg: "bg-green-500", text: "PRO" },
+        premium: { bg: "bg-amber-500", text: "PREMIUM" },
+        elite: {
+          bg: "bg-gradient-to-r from-purple-500 to-pink-500",
+          text: "ELITE",
+        },
+        free: { bg: "bg-blue-500", text: "FREE" }, // Added free tier for completeness
+      } as const;
+
+      // Type-safe access - default to pro if tier not found
+      const tierConfig = config[tier as keyof typeof config] || config.pro;
+
+      return tierConfig;
     };
 
     const badgeConfig = getTierBadgeConfig(
       option.tier,
-      isInGracePeriod && option.tier === "free",
-      daysLeft
+      isInGracePeriod,
+      option.isPreviewCard,
+      option.isUpgradeCard,
+      daysLeft // Make sure to pass daysLeft
     );
 
     return (
@@ -352,9 +444,14 @@ const CreationOption = memo(
           "rounded-2xl p-6 border-2 transition-all duration-300 group relative",
           colors.border,
           colors.card,
-          option.available
-            ? "hover:scale-105 hover:shadow-xl hover:border-blue-300 cursor-pointer"
-            : "opacity-70 cursor-not-allowed"
+          // PREVIEW CARD: Subtle styling, no hover effects, not clickable
+          option.isPreviewCard
+            ? "border-dashed opacity-80 cursor-default"
+            : option.isUpgradeCard
+              ? "border-dashed hover:border-solid hover:scale-105 cursor-pointer"
+              : option.available
+                ? "hover:scale-105 hover:shadow-xl hover:border-blue-300 cursor-pointer"
+                : "opacity-70 cursor-not-allowed"
         )}
       >
         {/* Tier Badge */}
@@ -367,19 +464,42 @@ const CreationOption = memo(
           {badgeConfig.text}
         </div>
 
-        {/* Lock Icon for unavailable options */}
-        {!option.available && (
-          <div className="absolute top-4 left-4">
-            <Lock className={cn("w-5 h-5", colors.textMuted)} />
+        {/* Special badge for upgrade cards */}
+        {option.isUpgradeCard && (
+          <div className="absolute -top-2 -left-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white">
+            NEW
+          </div>
+        )}
+
+        {/* Preview card overlay */}
+        {option.isPreviewCard && (
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-gray-900/80 dark:to-gray-800/80 rounded-2xl flex items-center justify-center">
+            <div className="text-center p-4">
+              <Lock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Upgrade to Unlock
+              </p>
+            </div>
           </div>
         )}
 
         {/* Option Content */}
-        <div className="text-center mb-6">
+        <div
+          className={cn(
+            "text-center mb-6",
+            option.isPreviewCard && "opacity-70" // Make content slightly faded for preview
+          )}
+        >
           <div
             className={cn(
               "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-300",
-              option.available ? "group-hover:scale-110" : "opacity-60",
+              option.isPreviewCard
+                ? "" // No hover for preview
+                : option.isUpgradeCard
+                  ? "group-hover:scale-110"
+                  : option.available
+                    ? "group-hover:scale-110"
+                    : "opacity-60",
               option.iconBg
             )}
           >
@@ -400,7 +520,13 @@ const CreationOption = memo(
               <div
                 className={cn(
                   "w-2 h-2 rounded-full flex-shrink-0",
-                  option.available ? "bg-blue-500" : "bg-gray-400"
+                  option.isPreviewCard
+                    ? "bg-gray-400"
+                    : option.isUpgradeCard
+                      ? "bg-blue-500"
+                      : option.available
+                        ? "bg-blue-500"
+                        : "bg-gray-400"
                 )}
               />
               <span className={cn("text-xs", colors.textMuted)}>{feature}</span>
@@ -413,34 +539,35 @@ const CreationOption = memo(
           onClick={handleClick}
           className={cn(
             "w-full transition-all duration-300 font-semibold",
-            option.available
-              ? `bg-gradient-to-r hover:scale-105 ${option.color} text-white`
-              : "bg-gray-400 text-gray-800 cursor-not-allowed"
+            option.isPreviewCard
+              ? "bg-gray-400 text-gray-700 cursor-default" // Grayed out, non-interactive
+              : option.isUpgradeCard
+                ? "bg-gradient-to-r from-blue-500 to-purple-500 hover:scale-105 text-white"
+                : option.available
+                  ? `bg-gradient-to-r hover:scale-105 ${option.color} text-white`
+                  : "bg-gray-400 text-gray-800 cursor-not-allowed"
           )}
           size="lg"
+          disabled={option.isPreviewCard} // Actually disable the button for preview
         >
           {option.buttonText}
-          {option.available && (
+          {(option.isUpgradeCard ||
+            (option.available && !option.isPreviewCard)) && (
             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
           )}
         </Button>
 
-        {/* Upgrade Prompt for unavailable options */}
-        {!option.available && option.upgradeTarget && (
+        {/* Additional upgrade prompt for preview card */}
+        {option.isPreviewCard && (
           <div className="text-center mt-3">
-            <p className={cn("text-xs mb-2", colors.textMuted)}>
-              Available in{" "}
-              {option.upgradeTarget.charAt(0).toUpperCase() +
-                option.upgradeTarget.slice(1)}
-            </p>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onUpgrade?.(option.upgradeTarget)}
-              className="text-xs"
+              onClick={() => onUpgrade?.("pro")}
+              className="text-xs border-blue-300 text-blue-600 hover:bg-blue-50"
             >
-              <Crown className="w-3 h-3 mr-1" />
-              Upgrade Now
+              <Zap className="w-3 h-3 mr-1" />
+              Upgrade to Unlock
             </Button>
           </div>
         )}
@@ -474,8 +601,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     // Memoize dynamic data based on theme
     const featureCards = useMemo(() => getFeatureCards(colors), [colors]);
     const creationOptions = useMemo(
-      () =>
-        getCreationOptions(colors, user, isInGracePeriod, trialRemainingDays),
+      () => getCreationOptions(colors, user, isInGracePeriod),
       [colors, user, isInGracePeriod, trialRemainingDays] // Add all dependencies
     );
 
@@ -638,7 +764,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                  {/* In the Creation Options section - Dynamic grid based on number of options */}
+                  <div
+                    className={`grid gap-8 max-w-6xl mx-auto ${
+                      creationOptions.length === 3
+                        ? "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
+                        : "grid-cols-1 lg:grid-cols-2"
+                    }`}
+                  >
                     {creationOptions.map((option) => (
                       <CreationOption
                         key={option.id}

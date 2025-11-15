@@ -29,6 +29,12 @@ interface MyTemplatesTabProps {
   onStartEdit: (template: GigTemplate) => void;
   refetchTemplates: () => Promise<void>;
   clearError?: () => void;
+  templateLimitInfo?: {
+    // This is defined as optional
+    current: number;
+    max: number | null;
+    reached: boolean;
+  };
 }
 
 const TemplateCard = memo(
@@ -256,6 +262,7 @@ export const MyTemplatesTab: React.FC<MyTemplatesTabProps> = memo(
     error,
     refetchTemplates,
     clearError,
+    templateLimitInfo,
   }) => {
     const { colors } = useThemeColors();
 

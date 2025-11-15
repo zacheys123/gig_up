@@ -1,4 +1,4 @@
-// app/hub/gigs/page.tsx - UPDATED WITH BACKGROUND COLORS
+// app/hub/gigs/page.tsx - UPDATED WITH ALL UPGRADE BANNERS
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -16,97 +16,228 @@ import {
   SavedGigs,
   InstantGigs,
   GigInvites,
+  GigsLoadingSkeleton,
 } from "./_components";
 import { Applications } from "./_components/Application";
 import { FavoriteGigs } from "./_components/FavouriteGigs";
 import { ThemeModal } from "@/components/modals/ThemeModal";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Moon, Sun } from "lucide-react";
+import {
+  ArrowLeft,
+  Moon,
+  Sun,
+  Crown,
+  Lock,
+  Zap,
+  Users,
+  Briefcase,
+  UserCheck,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
-// Memoize static data to prevent recreation on every render
-const GigsLoadingSkeleton = React.memo(() => (
-  <div className="animate-pulse">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-      <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-32 bg-gray-200 rounded"></div>
-        ))}
-      </div>
-    </div>
-  </div>
-));
-
-GigsLoadingSkeleton.displayName = "GigsLoadingSkeleton";
-
-// Memoize helper functions to prevent recreation
+// Enhanced version with tier info
 const getUserSubtitle = (user: any) => {
-  if (user.isMusician)
-    return "Find gigs, manage bookings, and grow your career";
-  if (user.isClient) return "Post gigs, find talent, and manage your events";
-  if (user.isBooker)
-    return "Manage projects, build crews, and find opportunities";
-  return "Manage your gigs and opportunities";
-};
+  if (!user) return "Manage your gigs and opportunities";
 
-const getUserGigTabs = (user: any) => {
+  const userTier = user?.tier || "free";
+  const isFreeUser = userTier === "free";
+  const isInGracePeriod = user?.isInGracePeriod || false;
+  const tierDisplay = userTier.charAt(0).toUpperCase() + userTier.slice(1);
+
+  // Base subtitles with tier info
   if (user.isMusician && !user.isClient && !user.isBooker) {
-    return {
-      tabs: [
-        { id: "pending", label: "⏳ Pending" },
-        { id: "booked", label: "✅ Booked" },
-        { id: "all", label: "🎵 All Gigs" },
-        { id: "favorites", label: "⭐ Favorites" },
-        { id: "saved", label: "💾 Saved" },
-        { id: "payments", label: "💰 Payments" },
-        { id: "invites", label: "💰 GigInvites" },
-      ],
-      defaultTab: "pending",
-    };
+    return isFreeUser && !isInGracePeriod
+      ? `Find gigs and manage bookings • ${tierDisplay} Plan • Upgrade for premium features`
+      : `Find gigs, manage bookings, and grow your career • ${tierDisplay} Plan`;
   }
 
   if (user.isClient && !user.isMusician && !user.isBooker) {
-    return {
-      tabs: [
-        { id: "my-gigs", label: "📋 My Gigs" },
-        { id: "pre-booking", label: "👥 Pre-Booking" },
-        { id: "booked", label: "✅ Booked" },
-        { id: "reviewed", label: "⭐ Reviewed" },
-        { id: "invites", label: "⭐ Invites" },
-        { id: "crew-management", label: "👥 Crew Management" },
-        { id: "urgent-gigs", label: "⭐ Urgent Gigs" },
-      ],
-      defaultTab: "my-gigs",
-    };
+    return isFreeUser && !isInGracePeriod
+      ? `Post gigs and find talent • ${tierDisplay} Plan • Upgrade for instant booking & crew management`
+      : `Post gigs, find talent, and manage your events • ${tierDisplay} Plan`;
   }
 
-  if (user.isBooker) {
-    return {
-      tabs: [
-        { id: "applications", label: "⏳ Applications" },
-        { id: "active-projects", label: "🚀 Active Projects" },
-        { id: "crew-management", label: "👥 Crew Management" },
-        { id: "available-gigs", label: "🎵 Available Gigs" },
-        { id: "payments", label: "💰 Payments" },
-      ],
-      defaultTab: "applications",
-    };
+  if (user.isBooker && !user.isMusician && !user.isClient) {
+    return isFreeUser && !isInGracePeriod
+      ? `Manage projects and find opportunities • ${tierDisplay} Plan • Upgrade for advanced features`
+      : `Manage projects, build crews, and find opportunities • ${tierDisplay} Plan`;
   }
 
   // Multi-role users
-  return {
-    tabs: [
-      { id: "musician", label: "🎵 As Musician" },
-      { id: "client", label: "🎯 As Client" },
-      { id: "booker", label: "📊 As Booker" },
-    ],
-    defaultTab: "musician",
-  };
-};
+  if (user.isMusician && user.isClient) {
+    return isFreeUser && !isInGracePeriod
+      ? `Switch between musician and client roles • ${tierDisplay} Plan • Upgrade for premium features`
+      : `Switch between musician and client roles with full access • ${tierDisplay} Plan`;
+  }
 
+  if (user.isBooker && (user.isMusician || user.isClient)) {
+    return isFreeUser && !isInGracePeriod
+      ? `Multi-role access • ${tierDisplay} Plan • Upgrade for advanced management tools`
+      : `Multi-role access with advanced management tools • ${tierDisplay} Plan`;
+  }
+
+  // Default fallback
+  return isFreeUser && !isInGracePeriod
+    ? `Manage your gigs and opportunities • ${tierDisplay} Plan • Upgrade for premium features`
+    : `Manage your gigs and opportunities • ${tierDisplay} Plan`;
+};
+// Add this UpgradeBanner component
+const UpgradeBanner = React.memo(
+  ({
+    colors,
+    featureName,
+    userTier,
+  }: {
+    colors: any;
+    featureName: string;
+    userTier: string;
+  }) => {
+    const features = {
+      "instant-gigs": {
+        title: "Instant Gigs Locked",
+        description:
+          "Upgrade to Pro to access instant booking, professional templates, and premium features",
+        icon: Zap,
+        features: [
+          "50+ Professional Templates",
+          "Instant Musician Matching",
+          "Custom Template Creation",
+          "Priority Booking Access",
+        ],
+      },
+      "gig-invites": {
+        title: "Gig Invites Locked",
+        description: "Upgrade to Pro to send and receive gig invitations",
+        icon: UserCheck,
+        features: [
+          "Send Unlimited Invites",
+          "Receive Priority Invites",
+          "Advanced Invite Management",
+          "Invite Analytics",
+        ],
+      },
+      "crew-management": {
+        title: "Crew Management Locked",
+        description: "Upgrade to Pro to build and manage your crew",
+        icon: Users,
+        features: [
+          "Build Unlimited Crews",
+          "Advanced Crew Management",
+          "Crew Analytics",
+          "Priority Crew Matching",
+        ],
+      },
+      applications: {
+        title: "Applications Locked",
+        description:
+          "Upgrade to Pro to manage gig applications and track your submissions",
+        icon: Briefcase,
+        features: [
+          "Advanced Application Tracking",
+          "Application Analytics",
+          "Priority Application Review",
+          "Bulk Application Management",
+        ],
+      },
+      "active-projects": {
+        title: "Active Projects Locked",
+        description:
+          "Upgrade to Pro to manage your ongoing projects and collaborations",
+        icon: Briefcase,
+        features: [
+          "Project Management Tools",
+          "Team Collaboration Features",
+          "Project Analytics",
+          "Advanced Project Tracking",
+        ],
+      },
+    };
+
+    const feature =
+      features[featureName as keyof typeof features] ||
+      features["instant-gigs"];
+    const Icon = feature.icon;
+
+    return (
+      <div
+        className={cn(
+          "rounded-2xl p-8 mb-6 border-2 border-dashed text-center",
+          colors.border,
+          colors.backgroundMuted
+        )}
+      >
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center">
+          <Icon className="w-8 h-8 text-white" />
+        </div>
+
+        <div className="px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
+          PRO FEATURE
+        </div>
+
+        <h3 className={cn("text-2xl font-bold mb-3", colors.text)}>
+          {feature.title}
+        </h3>
+        <p className={cn("text-lg mb-6 max-w-md mx-auto", colors.textMuted)}>
+          {feature.description}
+        </p>
+
+        {/* Features List */}
+        <div className="grid grid-cols-1 gap-3 mb-6 max-w-md mx-auto">
+          {feature.features.map((item, index) => (
+            <div key={index} className="flex items-center gap-3 text-left">
+              <Crown className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <span className={cn("text-sm", colors.text)}>{item}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button
+            onClick={() => window.open("/pricing", "_blank")}
+            className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+            size="lg"
+          >
+            <Crown className="w-5 h-5 mr-2" />
+            Upgrade to Pro
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.open("/features", "_blank")}
+            className={cn("border-2", colors.border, colors.hoverBg)}
+          >
+            View All Features
+          </Button>
+        </div>
+
+        {/* Current Plan Info */}
+        <div className={cn("mt-4 pt-4 border-t text-sm", colors.border)}>
+          <span className={cn(colors.textMuted)}>Current plan: </span>
+          <span className={cn("font-semibold", colors.text)}>
+            {userTier === "free"
+              ? "Free"
+              : userTier.charAt(0).toUpperCase() + userTier.slice(1)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+);
+
+UpgradeBanner.displayName = "UpgradeBanner";
+
+// Update the renderGigContent function to include upgrade checks
 const renderGigContent = (user: any, activeTab: string) => {
+  const userTier = user?.tier || "free";
+  const isFreeUser = userTier === "free";
+  const { colors } = useThemeColors();
+
+  // Check if feature requires upgrade
+  const requiresUpgrade = (feature: string) => {
+    return isFreeUser && !user?.isInGracePeriod;
+  };
+
   // Multi-role users
   if (user.isBoth) {
     switch (activeTab) {
@@ -115,6 +246,15 @@ const renderGigContent = (user: any, activeTab: string) => {
       case "client":
         return <MyGigs user={user} />;
       case "booker":
+        if (requiresUpgrade("applications")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="applications"
+              userTier={userTier}
+            />
+          );
+        }
         return <Applications user={user} />;
       default:
         return <AllGigs user={user} />;
@@ -137,6 +277,15 @@ const renderGigContent = (user: any, activeTab: string) => {
       case "payments":
         return <PaymentHistory user={user} />;
       case "invites":
+        if (requiresUpgrade("gig-invites")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="gig-invites"
+              userTier={userTier}
+            />
+          );
+        }
         return <GigInvites user={user} />;
       default:
         return <AllGigs user={user} />;
@@ -155,10 +304,37 @@ const renderGigContent = (user: any, activeTab: string) => {
       case "reviewed":
         return <ReviewedGigs user={user} />;
       case "crew-management":
+        if (requiresUpgrade("crew-management")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="crew-management"
+              userTier={userTier}
+            />
+          );
+        }
         return <CrewManagement user={user} />;
       case "invites":
+        if (requiresUpgrade("gig-invites")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="gig-invites"
+              userTier={userTier}
+            />
+          );
+        }
         return <GigInvites user={user} />;
       case "urgent-gigs":
+        if (requiresUpgrade("instant-gigs")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="instant-gigs"
+              userTier={userTier}
+            />
+          );
+        }
         return <InstantGigs user={user} />;
       default:
         return <MyGigs user={user} />;
@@ -169,21 +345,149 @@ const renderGigContent = (user: any, activeTab: string) => {
   if (user.isBooker) {
     switch (activeTab) {
       case "applications":
+        if (requiresUpgrade("applications")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="applications"
+              userTier={userTier}
+            />
+          );
+        }
         return <Applications user={user} />;
       case "active-projects":
+        if (requiresUpgrade("active-projects")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="active-projects"
+              userTier={userTier}
+            />
+          );
+        }
         return <ActiveProjects user={user} />;
       case "crew-management":
+        if (requiresUpgrade("crew-management")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="crew-management"
+              userTier={userTier}
+            />
+          );
+        }
         return <CrewManagement user={user} />;
       case "available-gigs":
         return <AllGigs user={user} />;
       case "payments":
         return <PaymentHistory user={user} />;
       default:
+        if (requiresUpgrade("applications")) {
+          return (
+            <UpgradeBanner
+              colors={colors}
+              featureName="applications"
+              userTier={userTier}
+            />
+          );
+        }
         return <Applications user={user} />;
     }
   }
 
   return <div>No gig content available</div>;
+};
+
+// Update the getUserGigTabs function to show lock icons for restricted tabs
+const getUserGigTabs = (user: any) => {
+  const userTier = user?.tier || "free";
+  const isFreeUser = userTier === "free";
+  const showLockIcon = (feature: string) =>
+    isFreeUser && !user?.isInGracePeriod;
+
+  if (user.isMusician && !user.isClient && !user.isBooker) {
+    return {
+      tabs: [
+        { id: "pending", label: "⏳ Pending" },
+        { id: "booked", label: "✅ Booked" },
+        { id: "all", label: "🎵 All Gigs" },
+        { id: "favorites", label: "⭐ Favorites" },
+        { id: "saved", label: "💾 Saved" },
+        { id: "payments", label: "💰 Payments" },
+        {
+          id: "invites",
+          label: showLockIcon("gig-invites") ? "🔒 Invites" : "📨 Invites",
+        },
+      ],
+      defaultTab: "pending",
+    };
+  }
+
+  if (user.isClient && !user.isMusician && !user.isBooker) {
+    return {
+      tabs: [
+        { id: "my-gigs", label: "📋 My Gigs" },
+        { id: "pre-booking", label: "👥 Pre-Booking" },
+        { id: "booked", label: "✅ Booked" },
+        { id: "reviewed", label: "⭐ Reviewed" },
+        {
+          id: "invites",
+          label: showLockIcon("gig-invites") ? "🔒 Invites" : "📨 Invites",
+        },
+        {
+          id: "crew-management",
+          label: showLockIcon("crew-management")
+            ? "🔒 Crew Management"
+            : "👥 Crew Management",
+        },
+        {
+          id: "urgent-gigs",
+          label: showLockIcon("instant-gigs")
+            ? "🔒 Urgent Gigs"
+            : "⚡ Urgent Gigs",
+        },
+      ],
+      defaultTab: "my-gigs",
+    };
+  }
+
+  if (user.isBooker) {
+    return {
+      tabs: [
+        {
+          id: "applications",
+          label: showLockIcon("applications")
+            ? "🔒 Applications"
+            : "⏳ Applications",
+        },
+        {
+          id: "active-projects",
+          label: showLockIcon("active-projects")
+            ? "🔒 Active Projects"
+            : "🚀 Active Projects",
+        },
+        {
+          id: "crew-management",
+          label: showLockIcon("crew-management")
+            ? "🔒 Crew Management"
+            : "👥 Crew Management",
+        },
+        { id: "available-gigs", label: "🎵 Available Gigs" },
+        { id: "payments", label: "💰 Payments" },
+      ],
+      defaultTab: "applications",
+    };
+  }
+
+  // Multi-role users
+  return {
+    tabs: [
+      { id: "musician", label: "🎵 As Musician" },
+      { id: "client", label: "🎯 As Client" },
+      { id: "booker", label: "📊 As Booker" },
+    ],
+    defaultTab: "musician",
+  };
 };
 
 export default function GigsHub() {
@@ -192,7 +496,7 @@ export default function GigsHub() {
   const { user, isLoading } = useCurrentUser();
   const [activeTab, setActiveTab] = useState("all");
   const [showThemeModal, setShowThemeModal] = useState(false);
-
+  const { isInGracePeriod } = useCheckTrial();
   // Use theme hooks
   const { colors } = useThemeColors();
   const { toggleDarkMode, isDarkMode } = useThemeToggle();
@@ -200,7 +504,14 @@ export default function GigsHub() {
   // Memoize user data to prevent unnecessary re-renders
   const memoizedUser = useMemo(
     () => user,
-    [user?._id, user?.isMusician, user?.isClient, user?.isBooker]
+    [
+      user?._id,
+      user?.isMusician,
+      user?.isClient,
+      user?.isBooker,
+      user?.tier,
+      isInGracePeriod,
+    ]
   );
 
   // Memoize tabs configuration

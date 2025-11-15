@@ -1,4 +1,4 @@
-// app/hub/gigs/_components/InstantGigs.tsx - UPDATED WITH PROPER THEME USAGE
+// app/hub/gigs/_components/InstantGigs.tsx - UPDATED WITH PROPER LIMITS INTEGRATION
 "use client";
 
 import React, {
@@ -11,7 +11,15 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Crown, Zap, Users, TrendingUp } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Crown,
+  Zap,
+  Users,
+  TrendingUp,
+  BookOpen,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 
@@ -56,6 +64,163 @@ const QUICK_STATS = [
   { icon: Users, label: "Pro Musicians", value: "50+" },
   { icon: TrendingUp, label: "Success Rate", value: "95%" },
 ];
+
+// Template limits configuration
+const TIER_LIMITS = {
+  free: {
+    templates: 3,
+    customTemplates: 0,
+    scratchTemplates: 0,
+    maxTemplates: 3,
+  },
+  pro: {
+    templates: 50,
+    customTemplates: 25,
+    scratchTemplates: 0,
+    maxTemplates: 50,
+  },
+  premium: {
+    templates: 100,
+    customTemplates: 50,
+    scratchTemplates: 25,
+    maxTemplates: 100,
+  },
+} as const;
+
+// Template Usage Indicator Component
+const TemplateUsageIndicator = memo(
+  ({
+    templateLimitInfo,
+    userTier,
+    colors,
+  }: {
+    templateLimitInfo: any;
+    userTier: string;
+    colors: any;
+  }) => {
+    if (!templateLimitInfo) return null;
+
+    const { current, max, reached } = templateLimitInfo;
+    const usagePercentage = (current / max) * 100;
+    const remaining = max - current;
+
+    return (
+      <div
+        className={cn(
+          "rounded-xl p-4 mb-4 border",
+          colors.border,
+          colors.backgroundMuted,
+          reached && "border-red-200 dark:border-red-800"
+        )}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "w-10 h-10 rounded-lg flex items-center justify-center",
+                reached
+                  ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                  : usagePercentage >= 80
+                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                    : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+              )}
+            >
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className={cn("font-semibold", colors.text)}>
+                {reached ? "Template Limit Reached" : "Template Usage"}
+              </h4>
+              <p className={cn("text-sm", colors.textMuted)}>
+                {current} of {max} templates used
+                {reached && " - Upgrade for more"}
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Circle */}
+          <div className="relative w-12 h-12">
+            <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                d="M18 2.0845
+                a 15.9155 15.9155 0 0 1 0 31.831
+                a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                stroke={colors.border}
+                strokeWidth="3"
+              />
+              <path
+                d="M18 2.0845
+                a 15.9155 15.9155 0 0 1 0 31.831
+                a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                stroke={
+                  reached
+                    ? "#ef4444"
+                    : usagePercentage >= 80
+                      ? "#f59e0b"
+                      : "#10b981"
+                }
+                strokeWidth="3"
+                strokeDasharray="100, 100"
+                strokeDashoffset={100 - usagePercentage}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span
+                className={cn(
+                  "text-xs font-bold",
+                  reached
+                    ? "text-red-600"
+                    : usagePercentage >= 80
+                      ? "text-amber-600"
+                      : "text-green-600"
+                )}
+              >
+                {Math.round(usagePercentage)}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Upgrade prompt for users nearing or at limit */}
+        {(reached || usagePercentage >= 80) && (
+          <div
+            className={cn(
+              "mt-3 pt-3 border-t",
+              reached
+                ? "border-red-200 dark:border-red-800"
+                : "border-amber-200 dark:border-amber-800"
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className={cn("text-sm", colors.textMuted)}>
+                {reached
+                  ? "No templates remaining"
+                  : `${remaining} template${remaining !== 1 ? "s" : ""} remaining`}
+              </span>
+              <Button
+                onClick={() => window.open("/pricing", "_blank")}
+                size="sm"
+                className={cn(
+                  reached
+                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    : "bg-amber-500 hover:bg-amber-600 text-white",
+                  "text-xs font-semibold"
+                )}
+              >
+                <Crown className="w-3 h-3 mr-1" />
+                {reached ? "Upgrade Now" : "Upgrade"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+TemplateUsageIndicator.displayName = "TemplateUsageIndicator";
 
 // Memoize QuickStat component
 const QuickStat = memo(({ stat, colors }: any) => {
@@ -211,6 +376,7 @@ const TabButton = memo(
 );
 
 TabButton.displayName = "TabButton";
+
 export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const router = useRouter();
   const { colors } = useThemeColors();
@@ -228,12 +394,10 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     templateTitle: string;
     gigType: string;
   } | null>(null);
+
   // Fixed scroll function
   const scrollToMusicians = useCallback(() => {
-    // Switch to create tab first (where the templates are)
     setActiveTab("musicians");
-
-    // Wait for tab switch and content to render, then scroll
     setTimeout(() => {
       if (musicianTemplatesRef.current) {
         musicianTemplatesRef.current.scrollIntoView({
@@ -241,20 +405,16 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           block: "start",
         });
       } else {
-        // Fallback: scroll to top of the component
         window.scrollTo({
           top: 0,
           behavior: "smooth",
         });
       }
-    }, 300); // Increased delay to ensure content is rendered
+    }, 300);
   }, []);
 
   const scrollToTemplates = useCallback(() => {
-    // Switch to create tab first (where the templates are)
     setActiveTab("create");
-
-    // Wait for tab switch and content to render, then scroll
     setTimeout(() => {
       if (createTemplatesRef.current) {
         createTemplatesRef.current.scrollIntoView({
@@ -262,14 +422,14 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           block: "start",
         });
       } else {
-        // Fallback: scroll to top of the component
         window.scrollTo({
           top: 0,
           behavior: "smooth",
         });
       }
-    }, 300); // Increased delay to ensure content is rendered
+    }, 300);
   }, []);
+
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedMusician, setSelectedMusician] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -283,6 +443,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
 
   // Memoize user ID to prevent hook re-runs
   const userId = useMemo(() => user?._id, [user?._id]);
+  const userTier = useMemo(() => user?.tier || "free", [user?.tier]);
 
   const {
     templates,
@@ -301,12 +462,45 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const memoizedTemplates = useMemo(() => templates, [templates?.length]);
 
   const { musicians: proMusicians } = useProMusicians({
-    limit: 50, // Increase limit for booking modal
+    limit: 50,
     availableOnly: true,
   });
 
   // Memoize musicians data for booking modal
   const memoizedMusicians = useMemo(() => proMusicians || [], [proMusicians]);
+
+  // Calculate effective template limit info
+  const effectiveTemplateLimitInfo = useMemo(() => {
+    if (templateLimitInfo) {
+      return templateLimitInfo;
+    }
+
+    const maxTemplates =
+      TIER_LIMITS[userTier as keyof typeof TIER_LIMITS]?.maxTemplates || 3;
+    const current = memoizedTemplates.length;
+
+    return {
+      current,
+      max: maxTemplates,
+      reached: current >= maxTemplates,
+    };
+  }, [templateLimitInfo, userTier, memoizedTemplates.length]);
+
+  // Debug template limits
+  useEffect(() => {
+    console.log("🔍 [TEMPLATE LIMITS DEBUG]:", {
+      userTier,
+      templateLimitInfo,
+      effectiveTemplateLimitInfo,
+      templatesCount: memoizedTemplates.length,
+      tierLimits: TIER_LIMITS[userTier as keyof typeof TIER_LIMITS],
+    });
+  }, [
+    userTier,
+    templateLimitInfo,
+    effectiveTemplateLimitInfo,
+    memoizedTemplates.length,
+  ]);
 
   // In your InstantGigs component, add this useEffect for debugging:
   useEffect(() => {
@@ -330,6 +524,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
       setShowOnboarding(true);
     }
   }, [memoizedTemplates.length, templatesLoading, showOnboarding]);
+
   // FIXED: Modal handlers with proper state updates
   const handleCloseOnboarding = useCallback(() => {
     setShowOnboarding(false);
@@ -402,8 +597,6 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const handleRequestToBook = useCallback((musician: any) => {
     console.log("🎵 handleRequestToBook called with:", musician);
 
-    // It's okay if musician is null - that means we're opening the modal
-    // without a pre-selected musician
     if (musician === null) {
       console.log("✅ Opening booking modal without pre-selected musician");
     } else if (musician && musician._id) {
@@ -416,16 +609,9 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
       return;
     }
 
-    setSelectedMusician(musician); // This can be null
+    setSelectedMusician(musician);
     setShowBookingModal(true);
   }, []);
-
-  // Also update the BookingModal props to log what's being passed:
-  console.log("📦 Passing to BookingModal:", {
-    musician: selectedMusician,
-    musicianId: selectedMusician?._id,
-    hasTemplates: memoizedTemplates.length > 0,
-  });
 
   const handleSubmitBooking = useCallback(
     async (templateId: string, selectedMusician: EnhancedMusician) => {
@@ -516,6 +702,13 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
       case "create":
         return (
           <div ref={createTemplatesRef}>
+            {/* Template Usage Indicator */}
+            <TemplateUsageIndicator
+              templateLimitInfo={effectiveTemplateLimitInfo}
+              userTier={userTier}
+              colors={colors}
+            />
+
             <CreateTemplateTab
               onCreateTemplate={handleCreateTemplate}
               onUpdateTemplate={
@@ -527,7 +720,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
               onFormClose={handleCancelEdit}
               isLoading={templatesLoading}
               editingTemplate={editingTemplate}
-              templateLimitInfo={templateLimitInfo} // PASS THIS PROP
+              templateLimitInfo={effectiveTemplateLimitInfo} // PASS THE EFFECTIVE LIMIT INFO
             />
           </div>
         );
@@ -541,7 +734,8 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             onRequestToBook={handleRequestToBook}
             isLoading={templatesLoading}
             refetchTemplates={refetchTemplates}
-            isRefetching={isRefetching} // ADD THIS
+            isRefetching={isRefetching}
+            templateLimitInfo={effectiveTemplateLimitInfo} // PASS THIS TO TEMPLATES TAB TOO
           />
         );
 
@@ -573,6 +767,9 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     handleDeleteTemplate,
     handleRequestToBook,
     user,
+    effectiveTemplateLimitInfo,
+    userTier,
+    colors,
   ]);
 
   return (
@@ -582,9 +779,10 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         onClose={handleCloseOnboarding}
         onGuidedCreation={handleGuidedCreation}
         onCustomCreation={handleCustomCreation}
-        onScratchCreation={handleScratchCreation} // This should work now
+        onScratchCreation={handleScratchCreation}
         scrollToTemplates={scrollToTemplates}
       />
+
       {/* Enhanced Header Section */}
       <div
         className={cn(
@@ -607,12 +805,11 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             deputySuggested: stats?.deputySuggested || 0,
             templates: memoizedTemplates?.length || 0,
           }}
-          onScrollToTemplates={scrollToTemplates} // Add this prop
-          // In your InstantGigs component, update the actions prop:
+          onScrollToTemplates={scrollToTemplates}
           actions={
             <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end">
               <Button
-                onClick={scrollToTemplates} // Use the scroll function directly
+                onClick={scrollToTemplates}
                 className={cn(
                   "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300",
                   colors.textInverted
@@ -623,7 +820,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
               </Button>
               <Button
                 variant="outline"
-                onClick={scrollToMusicians} // Use the scroll function directly
+                onClick={scrollToMusicians}
                 className={cn(
                   "border-2 hover:border-blue-300 transition-all duration-300",
                   colors.border,
@@ -662,6 +859,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           </div>
         </GigSectionHeader>
       </div>
+
       {/* Enhanced Tab Navigation */}
       <div
         className={cn(
@@ -684,8 +882,10 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
           ))}
         </div>
       </div>
+
       {/* Tab Content */}
       <div className="min-h-[500px]">{tabContent}</div>
+
       {/* Booking Modal */}
       <BookingModal
         isOpen={showBookingModal}
@@ -694,8 +894,9 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         templates={memoizedTemplates}
         onSubmitBooking={handleSubmitBooking}
         isLoading={isLoading}
-        musicians={memoizedMusicians} // ADD THIS LINE
+        musicians={memoizedMusicians}
       />
+
       {/* Help Section */}
       {memoizedTemplates.length === 0 &&
         activeTab === "create" &&
@@ -747,12 +948,10 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         onConfirm={() => {
-          // Navigate to invites tab
-          router.push("/hub/gigs?tab=invites"); // Adjust path as needed
+          router.push("/hub/gigs?tab=invites");
           setShowSuccessModal(false);
         }}
         onCancel={() => {
-          // Stay in instant gigs
           setShowSuccessModal(false);
         }}
         title="🎉 Booking Request Sent!"
