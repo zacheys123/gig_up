@@ -22,6 +22,11 @@ import {
   Mail,
   Crown,
   Lock,
+  Sparkles,
+  Gem,
+  Rocket,
+  Award,
+  Diamond,
 } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -42,161 +47,219 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 
 interface NavigationItem {
   href: string;
   label: string;
   icon: React.ReactElement;
-  condition?: boolean;
-  proOnly?: boolean;
-  proBadge?: boolean;
+  availableForTiers?: string[];
   requiresCompleteProfile?: boolean;
-  availableAfterTrial?: boolean;
+  featured?: boolean;
 }
 
-const getBaseLinks = (): NavigationItem[] => [
+// Tier configuration (same as MobileSheet)
+const tierConfig = {
+  free: {
+    label: "Free",
+    icon: User,
+    gradient: "from-gray-500 to-gray-700",
+    bg: "bg-gradient-to-r from-gray-500 to-gray-700",
+    text: "text-gray-100",
+    badge: "bg-gray-100 text-gray-800 border-gray-300",
+    color: "gray",
+    level: 0,
+  },
+  pro: {
+    label: "Pro",
+    icon: Zap,
+    gradient: "from-orange-500 to-red-600",
+    bg: "bg-gradient-to-r from-orange-500 to-red-600",
+    text: "text-orange-100",
+    badge: "bg-orange-100 text-orange-800 border-orange-300",
+    color: "orange",
+    level: 1,
+  },
+  premium: {
+    label: "Premium",
+    icon: Gem,
+    gradient: "from-purple-500 to-pink-600",
+    bg: "bg-gradient-to-r from-purple-500 to-pink-600",
+    text: "text-purple-100",
+    badge: "bg-purple-100 text-purple-800 border-purple-300",
+    color: "purple",
+    level: 2,
+  },
+  elite: {
+    label: "Elite",
+    icon: Crown,
+    gradient: "from-yellow-500 to-red-600",
+    bg: "bg-gradient-to-r from-yellow-500 to-red-600",
+    text: "text-yellow-100",
+    badge: "bg-yellow-100 text-yellow-800 border-yellow-300",
+    color: "yellow",
+    level: 3,
+  },
+};
+
+const getTierInfo = (tier?: string) => {
+  const userTier = tier || "free";
+  return tierConfig[userTier as keyof typeof tierConfig];
+};
+
+// Core links available to all tiers
+const getCoreLinks = (): NavigationItem[] => [
   {
     href: "/",
     label: "Home",
     icon: <Home size={18} />,
-    availableAfterTrial: true,
+    availableForTiers: ["free", "pro", "premium", "elite"],
   },
   {
-    href: "/profile",
-    label: "Profile",
-    icon: <User size={16} />,
-    availableAfterTrial: true,
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: <MdDashboard size={18} />,
+    availableForTiers: ["free", "pro", "premium", "elite"],
   },
   {
-    href: "/settings",
-    label: "Settings",
-    icon: <Settings size={16} />,
-    availableAfterTrial: true,
-  },
-  {
-    href: "/contact",
-    label: "Contact",
-    icon: <Mail size={16} />,
-    availableAfterTrial: true,
+    href: "/auth/search",
+    label: "Discover",
+    icon: <Search size={18} />,
+    availableForTiers: ["free", "pro", "premium", "elite"],
+    requiresCompleteProfile: true,
   },
 ];
 
-const getFullNavigationLinks = (
-  user: any,
-  isInGracePeriod?: boolean,
-  isProUser?: boolean
-): NavigationItem[] => {
-  const hasRole = user?.isClient || user?.isMusician || user?.isBooker;
-  const isMusician = user?.isMusician;
-  const isBooker = user?.isBooker;
-  const isClient = user?.isClient;
-
-  // Condition for showing Urgent Gigs
-  const shouldShowUrgentGigs =
-    !isMusician && isClient && (user?.tier === "pro" || isInGracePeriod);
-
-  const baseNavigationItems: NavigationItem[] = [
-    {
-      href: "/",
-      label: "Home",
-      icon: <Home size={18} />,
-      availableAfterTrial: true,
-    },
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: <MdDashboard size={18} />,
-      condition: hasRole,
-    },
-    {
-      href: "/auth/search",
-      label: "Discover",
-      icon: <Search size={18} />,
-      condition: hasRole,
-      requiresCompleteProfile: true,
-    },
+// Pro tier features
+const getProTierLinks = (user: any): NavigationItem[] => {
+  const proLinks: NavigationItem[] = [
     {
       href: "/community",
       label: "Community",
       icon: <Users size={18} />,
-      condition: true,
+      availableForTiers: ["pro", "premium", "elite"],
       requiresCompleteProfile: true,
     },
     {
-      href: "/settings",
-      label: "Settings",
-      icon: <Settings size={16} />,
-      availableAfterTrial: true,
-    },
-  ];
-
-  const dropdownItems: NavigationItem[] = [
-    {
-      href: "/profile",
-      label: "Profile",
-      icon: <User size={16} />,
-      availableAfterTrial: true,
-    },
-    {
-      href: "/game",
-      label: "Games",
-      icon: <Gamepad size={16} />,
-      proBadge: true,
+      href: user?.isClient ? `/hub/gigs?tab=my-gigs` : `/hub/gigs?tab=all`,
+      label: "Gigs",
+      icon: <BriefcaseIcon size={18} />,
+      availableForTiers: ["pro", "premium", "elite"],
       requiresCompleteProfile: true,
     },
-    ...(shouldShowUrgentGigs
-      ? [
-          {
-            href: "/hub/gigs?tab=create-gigs",
-            label: "Instant Gigs",
-            icon: <Zap size={16} />,
-            proBadge: true,
-            requiresCompleteProfile: true,
-          },
-        ]
-      : []),
   ];
 
-  // Add Reviews and Gigs if user has ID
+  // Add role-specific features
   if (user?._id) {
-    baseNavigationItems.splice(
-      2,
-      0,
+    proLinks.push(
       {
         href: `/allreviews/${user._id}/*${user.firstname}${user.lastname}`,
         label: "Reviews",
         icon: <Search size={18} />,
+        availableForTiers: ["pro", "premium", "elite"],
         requiresCompleteProfile: true,
       },
       {
         href: `/reviews/${user._id}/*${user.firstname}${user.lastname}`,
         label: "Personal Reviews",
         icon: <Search size={18} />,
+        availableForTiers: ["pro", "premium", "elite"],
         requiresCompleteProfile: true,
       }
     );
 
-    // Add My Videos for musicians
-    if (isMusician && !isClient) {
-      baseNavigationItems.splice(5, 0, {
+    if (user?.isMusician && !user?.isClient) {
+      proLinks.push({
         href: `/search/allvideos/${user._id}/*${user.firstname}/${user.lastname}`,
         label: "My Videos",
         icon: <Search size={18} />,
+        availableForTiers: ["pro", "premium", "elite"],
         requiresCompleteProfile: true,
       });
     }
 
-    // Add Gigs
-    baseNavigationItems.splice(6, 0, {
-      href: isClient ? `/hub/gigs?tab=my-gigs` : `/hub/gigs?tab=all`,
-      label: "Gigs",
-      icon: <BriefcaseIcon size={18} />,
-      requiresCompleteProfile: true,
-    });
+    // Urgent Gigs for pro clients
+    if (!user?.isMusician && user?.isClient) {
+      proLinks.push({
+        href: "/hub/gigs?tab=create-gigs",
+        label: "Instant Gigs",
+        icon: <Zap size={16} />,
+        availableForTiers: ["pro", "premium", "elite"],
+        requiresCompleteProfile: true,
+        featured: true,
+      });
+    }
   }
 
-  return [...baseNavigationItems, ...dropdownItems];
+  return proLinks;
+};
+
+// Premium tier features
+const getPremiumTierLinks = (): NavigationItem[] => [
+  {
+    href: "/analytics",
+    label: "Analytics",
+    icon: <Sparkles size={16} />,
+    availableForTiers: ["premium", "elite"],
+    featured: true,
+  },
+  {
+    href: "/game",
+    label: "Games",
+    icon: <Gamepad size={16} />,
+    availableForTiers: ["premium", "elite"],
+    featured: true,
+  },
+];
+
+// Elite tier features
+const getEliteTierLinks = (): NavigationItem[] => [
+  {
+    href: "/concierge",
+    label: "VIP Concierge",
+    icon: <Diamond size={16} />,
+    availableForTiers: ["elite"],
+    featured: true,
+  },
+  {
+    href: "/account-manager",
+    label: "Dedicated Manager",
+    icon: <Rocket size={16} />,
+    availableForTiers: ["elite"],
+    featured: true,
+  },
+];
+
+const getNavigationLinks = (
+  userTier: string,
+  user: any,
+  isInGracePeriod?: boolean
+): NavigationItem[] => {
+  const coreLinks = getCoreLinks();
+  const proLinks = getProTierLinks(user);
+  const premiumLinks = getPremiumTierLinks();
+  const eliteLinks = getEliteTierLinks();
+
+  // Combine links based on user tier
+  let allLinks = [...coreLinks];
+
+  if (
+    userTier === "pro" ||
+    userTier === "premium" ||
+    userTier === "elite" ||
+    isInGracePeriod
+  ) {
+    allLinks = [...allLinks, ...proLinks];
+  }
+
+  if (userTier === "premium" || userTier === "elite") {
+    allLinks = [...allLinks, ...premiumLinks];
+  }
+
+  if (userTier === "elite") {
+    allLinks = [...allLinks, ...eliteLinks];
+  }
+
+  return allLinks;
 };
 
 export function DesktopNavigation() {
@@ -205,70 +268,60 @@ export function DesktopNavigation() {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
 
-  const { isInGracePeriod, isFirstMonthEnd } = useCheckTrial();
-  const hasRole =
-    currentUser?.isClient || currentUser?.isMusician || currentUser?.isBooker;
-
-  const { total: unreadCount, byChat: unreadCounts } = useUnreadCount();
+  const { isInGracePeriod } = useCheckTrial();
+  const { total: unreadCount } = useUnreadCount();
   const [showChatListModal, setShowChatListModal] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Enhanced trial experience
-  const showTrialEnded = isFirstMonthEnd;
-  const showGracePeriod = isInGracePeriod;
-  const showUpgradePrompt =
-    showTrialEnded || showGracePeriod || currentUser?.tier === "free";
+  const userTier = currentUser?.tier || "free";
+  const currentTier = getTierInfo(userTier);
+  const canAccessProFeature =
+    userTier === "pro" ||
+    userTier === "premium" ||
+    userTier === "elite" ||
+    isInGracePeriod;
 
-  // Determine which links to show based on trial status
-  const shouldShowLimitedLinks =
-    showTrialEnded && currentUser?.tier !== "pro" && !isInGracePeriod;
-  const canAccessProFeature = currentUser?.tier === "pro" || isInGracePeriod;
-
-  // Get navigation links based on trial status
-  const navigationLinks: NavigationItem[] = shouldShowLimitedLinks
-    ? getBaseLinks() // Show only base links after trial ends
-    : getFullNavigationLinks(
-        currentUser,
-        isInGracePeriod,
-        currentUser?.tier === "pro"
-      );
+  // Get navigation links based on user tier
+  const navigationLinks = getNavigationLinks(
+    userTier,
+    currentUser,
+    isInGracePeriod
+  );
 
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
     setShowChatListModal(true);
   };
 
+  // Check if user can access a link based on their tier
+  const canAccessLink = (link: NavigationItem) => {
+    if (!link.availableForTiers) return true;
+    return link.availableForTiers.includes(userTier) || isInGracePeriod;
+  };
+
+  // Get next tier info for upgrade prompts
+  const getNextTierInfo = () => {
+    switch (userTier) {
+      case "free":
+        return { tier: "pro", label: "Pro", icon: Zap, color: "orange" };
+      case "pro":
+        return {
+          tier: "premium",
+          label: "Premium",
+          icon: Gem,
+          color: "purple",
+        };
+      case "premium":
+        return { tier: "elite", label: "Elite", icon: Crown, color: "yellow" };
+      default:
+        return null;
+    }
+  };
+
+  const nextTier = getNextTierInfo();
+
   if (!clerkLoaded || (isSignedIn && currentUserLoading) || !mounted) {
-    return (
-      <nav
-        className={cn(
-          "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
-          "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700",
-          "hidden lg:block"
-        )}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <div className="flex items-center space-x-2">
-                <Skeleton className="w-8 h-8 rounded-lg" />
-                <Skeleton className="w-16 h-6 rounded" />
-              </div>
-              <div className="hidden lg:flex items-center space-x-6">
-                {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="w-16 h-4 rounded" />
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Skeleton className="w-20 h-9 rounded-md" />
-              <Skeleton className="w-8 h-8 rounded-md" />
-              <Skeleton className="w-8 h-8 rounded-full" />
-            </div>
-          </div>
-        </div>
-      </nav>
-    );
+    return <NavigationSkeleton />;
   }
 
   const getActionButton = () => {
@@ -283,20 +336,10 @@ export function DesktopNavigation() {
   };
 
   const actionButton = getActionButton();
-
   const getGreetingName = () => {
     if (currentUser?.isBooker) return "Booker";
     return clerkUser?.firstName || clerkUser?.username || "User";
   };
-
-  // Filter and process navigation links
-  const baseNavigationItems = navigationLinks.filter(
-    (item) => !item.proBadge && !item.proOnly && item.condition !== false
-  );
-
-  const dropdownItems = navigationLinks.filter(
-    (item) => item.proBadge || item.proOnly || item.href === "/profile"
-  );
 
   return (
     <>
@@ -312,7 +355,6 @@ export function DesktopNavigation() {
           <div className="flex justify-between items-center h-16">
             {/* Left Section - Logo & Navigation */}
             <div className="flex items-center space-x-8">
-              {/* Logo */}
               <Link
                 href="/"
                 className="flex items-center space-x-2 flex-shrink-0"
@@ -331,36 +373,37 @@ export function DesktopNavigation() {
                       colors.text
                     )}
                   >
-                    {shouldShowLimitedLinks ? "GigUp Basic" : "GigUp"}
+                    GigUp
                   </span>
                 </motion.div>
               </Link>
 
               {/* Primary Navigation Items */}
               <div className="hidden lg:flex items-center space-x-6">
-                {baseNavigationItems.map((item) => {
-                  if (item.condition === false) return null;
-
-                  const isBlockedByTrial =
-                    shouldShowLimitedLinks && !item.availableAfterTrial;
+                {navigationLinks.map((item) => {
+                  const canAccess = canAccessLink(item);
+                  const isFeatured = item.featured;
 
                   return (
                     <Link
                       key={item.href}
-                      href={isBlockedByTrial ? "/dashboard/billing" : item.href}
+                      href={canAccess ? item.href : "/dashboard/billing"}
                     >
                       <div
                         className={cn(
                           "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative whitespace-nowrap",
                           colors.textMuted,
                           "hover:text-amber-600 dark:hover:text-amber-400",
-                          isBlockedByTrial && "opacity-60 cursor-not-allowed"
+                          !canAccess && "opacity-60 cursor-not-allowed",
+                          isFeatured &&
+                            "ring-1 ring-purple-200 dark:ring-purple-800"
                         )}
                       >
                         <div
                           className={cn(
                             "transition-colors duration-200",
-                            isBlockedByTrial && "text-gray-400"
+                            !canAccess && "text-gray-400",
+                            isFeatured && "text-purple-600"
                           )}
                         >
                           {item.icon}
@@ -368,15 +411,20 @@ export function DesktopNavigation() {
                         <span
                           className={cn(
                             "transition-colors duration-200",
-                            isBlockedByTrial && "text-gray-500"
+                            !canAccess && "text-gray-500"
                           )}
                         >
                           {item.label}
                         </span>
 
-                        {/* Crown icon for trial-blocked features */}
-                        {isBlockedByTrial && (
-                          <Crown className="w-3 h-3 text-amber-500 ml-1" />
+                        {/* Lock for inaccessible features */}
+                        {!canAccess && (
+                          <Lock className="w-3 h-3 text-amber-500 ml-1" />
+                        )}
+
+                        {/* Featured badge */}
+                        {isFeatured && canAccess && (
+                          <Sparkles className="w-3 h-3 text-purple-500 ml-1" />
                         )}
 
                         <div
@@ -394,42 +442,28 @@ export function DesktopNavigation() {
 
             {/* Right Section - Actions & User */}
             <div className="flex items-center space-x-3">
-              {/* Trial Ended Banner */}
-              {shouldShowLimitedLinks && (
+              {/* Upgrade Prompt for non-elite users */}
+              {nextTier && (
                 <Link href="/dashboard/billing" className="flex-shrink-0">
                   <Button
                     className={cn(
-                      "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                      "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200",
-                      "text-sm h-9 px-3 whitespace-nowrap"
+                      "bg-gradient-to-r text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200 text-sm h-9 px-3 whitespace-nowrap",
+                      nextTier.color === "orange" &&
+                        "from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
+                      nextTier.color === "purple" &&
+                        "from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700",
+                      nextTier.color === "yellow" &&
+                        "from-yellow-500 to-red-600 hover:from-yellow-600 hover:to-red-700"
                     )}
                   >
-                    <Crown className="w-4 h-4" />
-                    <span>Upgrade to Pro</span>
+                    <nextTier.icon className="w-4 h-4" />
+                    <span>Upgrade to {nextTier.label}</span>
                   </Button>
                 </Link>
               )}
 
-              {/* Action Button (only show if not in trial-ended state) */}
-              {isSignedIn && actionButton && !shouldShowLimitedLinks && (
-                <Link href={actionButton.href} className="flex-shrink-0">
-                  <Button
-                    className={cn(
-                      "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                      "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200",
-                      "text-sm h-9 px-3 whitespace-nowrap"
-                    )}
-                  >
-                    {actionButton.icon}
-                    <span className="hidden sm:inline">
-                      {actionButton.label}
-                    </span>
-                  </Button>
-                </Link>
-              )}
-
-              {/* Messages (only show if not in trial-ended state) */}
-              {isSignedIn && !shouldShowLimitedLinks && (
+              {/* Messages */}
+              {isSignedIn && canAccessProFeature && (
                 <button
                   onClick={handleOpenMessages}
                   className="relative group flex-shrink-0"
@@ -452,12 +486,30 @@ export function DesktopNavigation() {
                 </button>
               )}
 
-              {/* Notifications (only show if not in trial-ended state) */}
-              {isSignedIn && canAccessProFeature && !shouldShowLimitedLinks ? (
+              {/* Action Button */}
+              {isSignedIn && actionButton && canAccessProFeature && (
+                <Link href={actionButton.href} className="flex-shrink-0">
+                  <Button
+                    className={cn(
+                      "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                      "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200",
+                      "text-sm h-9 px-3 whitespace-nowrap"
+                    )}
+                  >
+                    {actionButton.icon}
+                    <span className="hidden sm:inline">
+                      {actionButton.label}
+                    </span>
+                  </Button>
+                </Link>
+              )}
+
+              {/* Notifications */}
+              {isSignedIn && canAccessProFeature && (
                 <div className="hover:scale-105 transition-transform duration-200 flex-shrink-0">
                   <NotificationBell variant="desktop" />
                 </div>
-              ) : null}
+              )}
 
               {/* Theme Toggle */}
               <button
@@ -467,14 +519,11 @@ export function DesktopNavigation() {
                   colors.text,
                   "hover:text-amber-600 dark:hover:text-amber-400"
                 )}
-                aria-label={
-                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
-                }
               >
                 {isDarkMode ? (
-                  <Sun className="w-5 h-5 transition-colors duration-200" />
+                  <Sun className="w-5 h-5" />
                 ) : (
-                  <Moon className="w-5 h-5 transition-colors duration-200" />
+                  <Moon className="w-5 h-5" />
                 )}
               </button>
 
@@ -488,12 +537,8 @@ export function DesktopNavigation() {
                     )}
                   >
                     Hi, {getGreetingName()}
-                    {shouldShowLimitedLinks && (
-                      <span className="text-amber-600 ml-1">• Trial Ended</span>
-                    )}
                   </span>
 
-                  {/* Dropdown Menu */}
                   <DropdownMenu
                     open={isDropdownOpen}
                     onOpenChange={setIsDropdownOpen}
@@ -524,81 +569,35 @@ export function DesktopNavigation() {
                         colors.backgroundMuted
                       )}
                     >
-                      {dropdownItems
-                        .filter((item) => item.condition !== false)
-                        .map((item, index) => {
-                          const hasProBadge = item.proBadge;
-                          const shouldShowProBadge =
-                            hasProBadge && canAccessProFeature;
-                          const shouldBlockAccess =
-                            hasProBadge && !canAccessProFeature;
-                          const isBlockedByTrial =
-                            shouldShowLimitedLinks && !item.availableAfterTrial;
-
-                          return (
-                            <DropdownMenuItem key={item.href} asChild>
-                              <Link
-                                href={
-                                  isBlockedByTrial
-                                    ? "/dashboard/billing"
-                                    : shouldBlockAccess
-                                      ? "/dashboard/billing"
-                                      : item.href
-                                }
-                                onClick={() => setIsDropdownOpen(false)}
-                                className={cn(
-                                  "flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition-colors duration-200",
-                                  colors.hoverBg,
-                                  colors.textMuted,
-                                  (shouldBlockAccess || isBlockedByTrial) &&
-                                    "opacity-60 cursor-not-allowed"
-                                )}
-                              >
-                                <div
-                                  className={cn(
-                                    "transition-colors duration-200",
-                                    shouldBlockAccess || isBlockedByTrial
-                                      ? "text-gray-400"
-                                      : "text-amber-600"
-                                  )}
-                                >
-                                  {item.icon}
-                                </div>
-                                <span
-                                  className={cn(
-                                    "flex-1",
-                                    (shouldBlockAccess || isBlockedByTrial) &&
-                                      "text-gray-500"
-                                  )}
-                                >
-                                  {item.label}
-                                </span>
-
-                                {/* Pro Badge */}
-                                {shouldShowProBadge && !isBlockedByTrial && (
-                                  <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs px-1.5 py-0.5 border-0 font-semibold">
-                                    PRO
-                                  </Badge>
-                                )}
-
-                                {/* Crown for trial-blocked features */}
-                                {isBlockedByTrial && (
-                                  <Crown className="w-3 h-3 text-amber-500" />
-                                )}
-
-                                {/* Lock for pro features without access */}
-                                {hasProBadge &&
-                                  !canAccessProFeature &&
-                                  !isBlockedByTrial && (
-                                    <Lock className="w-3 h-3 text-amber-500" />
-                                  )}
-                              </Link>
-                            </DropdownMenuItem>
-                          );
-                        })}
-
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href="/profile"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition-colors duration-200",
+                            colors.hoverBg,
+                            colors.textMuted
+                          )}
+                        >
+                          <User className="w-4 h-4 text-amber-600" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href="/settings"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition-colors duration-200",
+                            colors.hoverBg,
+                            colors.textMuted
+                          )}
+                        >
+                          <Settings className="w-4 h-4 text-amber-600" />
+                          <span>Settings</span>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
-
                       <DropdownMenuItem asChild>
                         <div className="flex items-center justify-between px-3 py-2.5">
                           <div className="flex items-center gap-3">
@@ -612,7 +611,7 @@ export function DesktopNavigation() {
                                 {currentUser?.firstname} {currentUser?.lastname}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
-                                @{currentUser?.username}
+                                @{currentUser?.username} • {currentTier.label}
                               </p>
                             </div>
                           </div>
@@ -655,5 +654,39 @@ export function DesktopNavigation() {
         onClose={() => setShowChatListModal(false)}
       />
     </>
+  );
+}
+
+// Skeleton component
+function NavigationSkeleton() {
+  return (
+    <nav
+      className={cn(
+        "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
+        "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700",
+        "hidden lg:block"
+      )}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-2">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <Skeleton className="w-16 h-6 rounded" />
+            </div>
+            <div className="hidden lg:flex items-center space-x-6">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="w-16 h-4 rounded" />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Skeleton className="w-20 h-9 rounded-md" />
+            <Skeleton className="w-8 h-8 rounded-md" />
+            <Skeleton className="w-8 h-8 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }

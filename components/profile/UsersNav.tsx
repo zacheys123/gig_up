@@ -3,42 +3,54 @@
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { FaHome, FaUser, FaChartBar, FaHistory, FaMusic } from "react-icons/fa";
+import { FaHome, FaUser } from "react-icons/fa";
 import {
   User,
-  BarChart3,
-  History,
   Music,
-  Bell,
   Video,
-  DollarSign,
+  Settings,
   Calendar,
   Star,
-  Settings,
-  BellIcon,
   BriefcaseIcon,
   Users2Icon,
+  DollarSign,
   BuildingIcon,
+  Lock,
 } from "lucide-react";
 import { IoHomeOutline } from "react-icons/io5";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useCheckTrial } from "@/hooks/useCheckTrial";
-import { useNotificationSystem } from "@/hooks/useNotifications";
+import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
+
+// Define the interface for navigation items
+interface NavItem {
+  href: string;
+  icon: {
+    active: React.ReactElement;
+    inactive: React.ReactElement;
+  };
+  label: string;
+  availableForTiers: string[];
+  requiresCompleteProfile?: boolean;
+  featured?: boolean;
+}
 
 const UserNav = () => {
   const { userId } = useAuth();
   const pathname = usePathname();
   const { colors } = useThemeColors();
   const { user } = useCurrentUser();
-  const { unreadCount } = useNotificationSystem();
+
+  const userTier = user?.tier || "free";
+  const currentTier = getTierInfo(userTier);
+  const isProfileComplete = hasMinimumData(user);
   const isMusician = user?.isMusician;
   const isBooker = user?.isBooker;
   const isClient = user?.isClient;
-  const isProTier = user?.tier === "pro";
 
-  const navItems = [
+  // Free tier - basic profile links only
+  const freeTierLinks: NavItem[] = [
     {
       href: `/profile`,
       icon: {
@@ -46,6 +58,7 @@ const UserNav = () => {
         inactive: <IoHomeOutline size={24} />,
       },
       label: "Profile",
+      availableForTiers: ["free", "pro", "premium", "elite"],
     },
     {
       href: `/profile/${userId}/user`,
@@ -54,103 +67,158 @@ const UserNav = () => {
         inactive: <User size={22} />,
       },
       label: "Account",
+      availableForTiers: ["free", "pro", "premium", "elite"],
     },
-    ...(isMusician
-      ? [
-          {
-            href: `/profile/musician`,
-            icon: {
-              active: <FaMusic size={22} />,
-              inactive: <Music size={22} />,
-            },
-            label: "Musician",
-          },
-          {
-            href: `/profile/videos`,
-            icon: {
-              active: <Video size={22} className="fill-current" />,
-              inactive: <Video size={22} />,
-            },
-            label: "Videos",
-          },
-          {
-            href: `/settings`,
-            icon: {
-              active: <Settings size={22} className="fill-current" />,
-              inactive: <Settings size={22} />,
-            },
-            label: "Settings",
-          },
-          {
-            href: `/profile/availability`,
-            icon: {
-              active: <Calendar size={22} className="fill-current" />,
-              inactive: <Calendar size={22} />,
-            },
-            label: "Schedule",
-            pro: true,
-          },
-        ]
-      : []),
-    ...(isClient
-      ? [
-          {
-            href: `/profile/bookings`,
-            icon: {
-              active: <Calendar size={22} className="fill-current" />,
-              inactive: <Calendar size={22} />,
-            },
-            label: "Bookings",
-          },
-          {
-            href: `/profile/favorites`,
-            icon: {
-              active: <Star size={22} className="fill-current" />,
-              inactive: <Star size={22} />,
-            },
-            label: "Favorites",
-            pro: true,
-          },
-        ]
-      : []),
-    ...(isBooker
-      ? [
-          {
-            href: `/profile/booker`,
-            icon: {
-              active: <BriefcaseIcon size={22} className="fill-current" />,
-              inactive: <BriefcaseIcon size={22} />,
-            },
-            label: "Booker",
-          },
-          {
-            href: `/profile/artists`,
-            icon: {
-              active: <Users2Icon size={22} className="fill-current" />,
-              inactive: <Users2Icon size={22} />,
-            },
-            label: "Artists",
-          },
-          {
-            href: `/profile/commissions`,
-            icon: {
-              active: <DollarSign size={22} className="fill-current" />,
-              inactive: <DollarSign size={22} />,
-            },
-            label: "Earnings",
-          },
-          {
-            href: `/profile/coordination`,
-            icon: {
-              active: <BuildingIcon size={22} className="fill-current" />,
-              inactive: <BuildingIcon size={22} />,
-            },
-            label: "Coordination",
-            pro: true,
-          },
-        ]
-      : []),
   ];
+
+  // Pro tier - musician features
+  const musicianProLinks: NavItem[] = [
+    {
+      href: `/profile/musician`,
+      icon: {
+        active: <Music size={22} className="fill-current" />,
+        inactive: <Music size={22} />,
+      },
+      label: "Musician",
+      availableForTiers: ["pro", "premium", "elite"],
+      requiresCompleteProfile: true,
+    },
+    {
+      href: `/profile/videos`,
+      icon: {
+        active: <Video size={22} className="fill-current" />,
+        inactive: <Video size={22} />,
+      },
+      label: "Videos",
+      availableForTiers: ["pro", "premium", "elite"],
+      requiresCompleteProfile: true,
+    },
+  ];
+
+  // Pro tier - client features
+  const clientProLinks: NavItem[] = [
+    {
+      href: `/profile/bookings`,
+      icon: {
+        active: <Calendar size={22} className="fill-current" />,
+        inactive: <Calendar size={22} />,
+      },
+      label: "Bookings",
+      availableForTiers: ["pro", "premium", "elite"],
+      requiresCompleteProfile: true,
+    },
+  ];
+
+  // Premium tier - advanced features
+  const clientPremiumLinks: NavItem[] = [
+    {
+      href: `/profile/favorites`,
+      icon: {
+        active: <Star size={22} className="fill-current" />,
+        inactive: <Star size={22} />,
+      },
+      label: "Favorites",
+      availableForTiers: ["premium", "elite"],
+      featured: true,
+    },
+  ];
+
+  // Pro tier - booker features
+  const bookerProLinks: NavItem[] = [
+    {
+      href: `/profile/musician`,
+      icon: {
+        active: <Music size={22} className="fill-current" />,
+        inactive: <Music size={22} />,
+      },
+      label: "Musician",
+      availableForTiers: ["pro", "premium", "elite"],
+      requiresCompleteProfile: true,
+    },
+  ];
+
+  // Premium tier - booker advanced features
+  const bookerPremiumLinks: NavItem[] = [
+    {
+      href: `/profile/coordination`,
+      icon: {
+        active: <BuildingIcon size={22} className="fill-current" />,
+        inactive: <BuildingIcon size={22} />,
+      },
+      label: "Coordination",
+      availableForTiers: ["premium", "elite"],
+      featured: true,
+    },
+  ];
+
+  // Premium tier - musician advanced features
+  const musicianPremiumLinks: NavItem[] = [
+    {
+      href: `/profile/availability`,
+      icon: {
+        active: <Calendar size={22} className="fill-current" />,
+        inactive: <Calendar size={22} />,
+      },
+      label: "Schedule",
+      availableForTiers: ["premium", "elite"],
+      featured: true,
+    },
+  ];
+
+  // Settings link for all tiers
+  const settingsLink: NavItem = {
+    href: `/settings`,
+    icon: {
+      active: <Settings size={22} className="fill-current" />,
+      inactive: <Settings size={22} />,
+    },
+    label: "Settings",
+    availableForTiers: ["free", "pro", "premium", "elite"],
+  };
+
+  // Combine links based on user tier and role
+  const getNavItems = (): NavItem[] => {
+    let items = [...freeTierLinks];
+
+    // Add pro features for pro and above tiers
+    if (userTier === "pro" || userTier === "premium" || userTier === "elite") {
+      if (isMusician) {
+        items = [...items, ...musicianProLinks];
+      }
+      if (isClient) {
+        items = [...items, ...clientProLinks];
+      }
+      if (isBooker) {
+        items = [...items, ...bookerProLinks];
+      }
+    }
+
+    // Add premium features for premium and elite tiers
+    if (userTier === "premium" || userTier === "elite") {
+      if (isMusician) {
+        items = [...items, ...musicianPremiumLinks];
+      }
+      if (isClient) {
+        items = [...items, ...clientPremiumLinks];
+      }
+      if (isBooker) {
+        items = [...items, ...bookerPremiumLinks];
+      }
+    }
+
+    // Add settings link at the end
+    items.push(settingsLink);
+
+    return items;
+  };
+
+  const navItems = getNavItems();
+
+  // Check if user can access a link
+  const canAccessLink = (link: NavItem) => {
+    if (!link.availableForTiers) return true;
+    return link.availableForTiers.includes(userTier);
+  };
 
   const isActive = (href: string) => {
     if (href === "/profile") {
@@ -180,46 +248,50 @@ const UserNav = () => {
       <div className="flex justify-around items-center w-full h-[70px] px-2 mx-auto overflow-x-auto">
         {navItems.map((item) => {
           const active = isActive(item.href);
-          const isProFeature = item.pro && !isProTier;
+          const canAccess = canAccessLink(item);
+          const requiresCompleteProfile = item.requiresCompleteProfile;
+          const isBlockedByProfile =
+            requiresCompleteProfile && !isProfileComplete;
+          const isFeatured = item.featured;
 
           return (
             <div
               key={item.href}
               className={cn(
                 "flex-1 flex justify-center min-w-[60px]",
-                isProFeature && "opacity-60"
+                (!canAccess || isBlockedByProfile) && "opacity-60"
               )}
             >
-              {isProFeature ? (
-                // Pro feature - visible but not clickable
+              {!canAccess || isBlockedByProfile ? (
+                // Inaccessible feature
                 <div
                   className="flex flex-col items-center justify-center w-full py-2 relative cursor-not-allowed"
-                  title="Upgrade to Pro to access this feature"
+                  title={
+                    !canAccess
+                      ? `Upgrade to ${userTier === "free" ? "Pro" : "Premium"} to access this feature`
+                      : "Complete your profile to access this feature"
+                  }
                 >
                   <div className="relative">
                     <div className="scale-100 opacity-60">
                       {item.icon.inactive}
                     </div>
-
-                    {/* Pro badge */}
-                    <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center text-[8px]">
-                      P
-                    </span>
+                    <Lock className="absolute -top-1 -right-1 w-3 h-3 text-amber-500" />
                   </div>
-
                   <span className="text-xs mt-1 text-gray-400 text-center leading-tight max-w-[60px] truncate opacity-60">
                     {item.label}
                   </span>
                 </div>
               ) : (
-                // Regular link - clickable
+                // Accessible link
                 <Link href={item.href} className="w-full flex justify-center">
                   <div
                     className={cn(
                       "flex flex-col items-center justify-center w-full py-2 transition-all duration-200 relative",
                       active
                         ? "text-yellow-400"
-                        : "text-gray-400 hover:text-yellow-400"
+                        : "text-gray-400 hover:text-yellow-400",
+                      isFeatured && "text-purple-400"
                     )}
                   >
                     <div className="relative">
@@ -231,11 +303,8 @@ const UserNav = () => {
                       >
                         {active ? item.icon.active : item.icon.inactive}
                       </div>
-
-                      {item.pro && isProTier && (
-                        <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center text-[8px]">
-                          P
-                        </span>
+                      {isFeatured && (
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full" />
                       )}
                     </div>
 
@@ -244,7 +313,9 @@ const UserNav = () => {
                         "text-xs mt-1 transition-colors duration-200 text-center leading-tight",
                         active
                           ? "text-yellow-400 font-medium"
-                          : "text-gray-400",
+                          : isFeatured
+                            ? "text-purple-400"
+                            : "text-gray-400",
                         "max-w-[60px] truncate"
                       )}
                     >
@@ -253,7 +324,12 @@ const UserNav = () => {
 
                     {/* Active indicator dot */}
                     {active && (
-                      <div className="w-1 h-1 bg-yellow-400 rounded-full mt-1" />
+                      <div
+                        className={cn(
+                          "w-1 h-1 rounded-full mt-1",
+                          isFeatured ? "bg-purple-400" : "bg-yellow-400"
+                        )}
+                      />
                     )}
                   </div>
                 </Link>

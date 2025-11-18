@@ -2,32 +2,34 @@
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import {
-  CalendarIcon,
-  CreditCardIcon,
-  DollarSignIcon,
-  HomeIcon,
-  MusicIcon,
-  PlusIcon,
-  UsersIcon,
   Sun,
   Moon,
   BellIcon,
   MessageSquareIcon,
   SettingsIcon,
   HelpCircleIcon,
-  StarIcon,
-  HeartIcon,
-  BarChartIcon,
-  FileTextIcon,
-  ShieldIcon,
   XIcon,
   ChevronRightIcon,
   User,
-  BriefcaseIcon,
-  Users2Icon,
-  BuildingIcon,
   Crown,
   Lock,
+  Sparkles,
+  Zap,
+  Gem,
+  Star,
+  Rocket,
+  Award,
+  Diamond,
+  CreditCardIcon,
+  BarChartIcon,
+  FileTextIcon,
+  ShieldIcon,
+  CalendarIcon,
+  DollarSignIcon,
+  HeartIcon,
+  UsersIcon,
+  BriefcaseIcon,
+  BuildingIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,27 +37,25 @@ import { MdDashboard } from "react-icons/md";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
-
 import { cn } from "@/lib/utils";
-import { MobileNavSkeleton } from "../skeletons/MobileNavSkeleton";
 import { useRouter } from "next/navigation";
 import { useNotificationSystem } from "@/hooks/useNotifications";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useChat } from "@/app/context/ChatContext";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { ChatListModal } from "../chat/ChatListModal";
-import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
+import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
 
 interface NavLink {
   name: string;
   href: string;
   icon: React.ReactElement;
   exact: boolean;
-  pro?: boolean;
-  description?: string;
+  availableForTiers?: string[];
+  requiresCompleteProfile?: boolean;
+  featured?: boolean;
   badge?: number;
   onClick?: (e: React.MouseEvent) => void;
-  availableAfterTrial?: boolean;
 }
 
 export default function MobileNav() {
@@ -74,6 +74,11 @@ export default function MobileNav() {
   const [showChatListModal, setShowChatListModal] = useState(false);
   const { total: unReadCount, byChat: unreadCounts } = useUnreadCount();
 
+  const userTier = user?.tier || "free";
+  const currentTier = getTierInfo(userTier);
+  const TierIcon = currentTier.icon;
+  const isProfileComplete = hasMinimumData(user);
+
   // Enhanced trial experience
   const showTrialEnded = isFirstMonthEnd;
   const showGracePeriod = isInGracePeriod;
@@ -91,197 +96,41 @@ export default function MobileNav() {
     setShowChatListModal(true);
   };
 
-  // Base links that are always available (even after trial)
-  const baseLinks: NavLink[] = [
-    {
-      name: "Home",
-      href: "/",
-      icon: <HomeIcon className="w-5 h-5" />,
-      exact: true,
-      availableAfterTrial: true,
-    },
+  // Dashboard-specific core links (not in MobileSheet)
+  const dashboardCoreLinks: NavLink[] = [
     {
       name: "Dashboard",
       href: "/dashboard",
       icon: <MdDashboard className="w-5 h-5" />,
       exact: true,
-      availableAfterTrial: true,
+      availableForTiers: ["free", "pro", "premium", "elite"],
     },
     {
-      name: "Billing",
+      name: "Billing & Plans",
       href: "/dashboard/billing",
       icon: <CreditCardIcon className="w-5 h-5" />,
       exact: false,
-      availableAfterTrial: true,
+      availableForTiers: ["free", "pro", "premium", "elite"],
     },
   ];
 
-  const musicianLinks: NavLink[] = [
-    {
-      name: "Gigs",
-      href: "/hub/gigs?tab=all",
-      icon: <MusicIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Favorites",
-      href: "/hub/gigs?tab=favorites",
-      icon: <HeartIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Bookings",
-      href: "/hub/gigs?tab=booked",
-      icon: <CalendarIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Earnings",
-      href: "/dashboard/earnings",
-      icon: <DollarSignIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Reviews",
-      href: "/dashboard/reviews",
-      icon: <StarIcon className="w-5 h-5" />,
-      exact: false,
-    },
+  // Dashboard analytics and tools (not in MobileSheet)
+  const dashboardToolsLinks: NavLink[] = [
     {
       name: "Analytics",
       href: "/dashboard/analytics",
       icon: <BarChartIcon className="w-5 h-5" />,
       exact: false,
-    },
-  ];
-
-  const clientLinks: NavLink[] = [
-    {
-      name: "My Gigs",
-      href: "/hub/gigs?tab=my-gigs",
-      icon: <MusicIcon className="w-5 h-5" />,
-      exact: false,
+      availableForTiers: ["pro", "premium", "elite"],
+      featured: true,
     },
     {
-      name: "Instant Gigs",
-      href: "/hub/gigs?tab=create-gigs",
-      icon: <PlusIcon className="w-5 h-5" />,
+      name: "Documents",
+      href: "/dashboard/documents",
+      icon: <FileTextIcon className="w-5 h-5" />,
       exact: false,
+      availableForTiers: ["pro", "premium", "elite"],
     },
-    {
-      name: "Bookings",
-      href: "/hub/gigs?tab=booked",
-      icon: <CalendarIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Artists",
-      href: "/dashboard/artists",
-      icon: <UsersIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Favorites",
-      href: "/hub/gigs?tab=favorites",
-      icon: <HeartIcon className="w-5 h-5" />,
-      exact: false,
-    },
-  ];
-
-  const bookerLinks: NavLink[] = [
-    {
-      name: "Find Gigs",
-      href: "/hub/gigs?tab=available-gigs",
-      icon: <BriefcaseIcon className="w-5 h-5" />,
-      exact: false,
-      description: "Browse available gigs",
-    },
-    {
-      name: "My Artists",
-      href: "/dashboard/artists",
-      icon: <Users2Icon className="w-5 h-5" />,
-      exact: false,
-      description: "Manage your artists",
-    },
-    {
-      name: "Bookings",
-      href: "/hub/gigs?tab=booked",
-      icon: <CalendarIcon className="w-5 h-5" />,
-      exact: false,
-      description: "Manage bookings",
-    },
-    {
-      name: "Coordination",
-      href: "/dashboard/coordination",
-      icon: <BuildingIcon className="w-5 h-5" />,
-      exact: false,
-      description: "Event coordination",
-      pro: true,
-    },
-    {
-      name: "Earnings",
-      href: "/dashboard/earnings",
-      icon: <DollarSignIcon className="w-5 h-5" />,
-      exact: false,
-      description: "Booking commissions",
-    },
-  ];
-
-  // Common links with badges and chat functionality
-  const commonLinks: NavLink[] = [
-    {
-      name: "Messages",
-      href: "/messages",
-      icon: (
-        <div className="relative">
-          <MessageSquareIcon className="w-5 h-5" />
-          {unReadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-              {unReadCount > 9 ? "9+" : unReadCount}
-            </span>
-          )}
-        </div>
-      ),
-      exact: false,
-      description: "Chat conversations",
-      badge: unReadCount,
-      onClick: handleOpenMessages,
-    },
-    {
-      name: "Community",
-      href: "/community",
-      icon: <UsersIcon className="w-5 h-5" />,
-      exact: false,
-      description: "Connect with others",
-    },
-    {
-      name: "Profile",
-      href: "/profile",
-      icon: <User className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Settings",
-      href: "/dashboard/settings",
-      icon: <SettingsIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Help & Support",
-      href: "/dashboard/support",
-      icon: <HelpCircleIcon className="w-5 h-5" />,
-      exact: false,
-    },
-    {
-      name: "Privacy & Security",
-      href: "/dashboard/privacy",
-      icon: <ShieldIcon className="w-5 h-5" />,
-      exact: false,
-    },
-  ];
-
-  // Pro links with notification badge
-  const proLinks: NavLink[] = [
     {
       name: "Notifications",
       href: "/notifications",
@@ -296,57 +145,275 @@ export default function MobileNav() {
         </div>
       ),
       exact: true,
-      pro: true,
-      description: "Notifications with priority alerts",
+      availableForTiers: ["pro", "premium", "elite"],
       badge: notCount,
     },
-    {
-      name: "Documents",
-      href: "/dashboard/documents",
-      icon: <FileTextIcon className="w-5 h-5" />,
-      exact: false,
-      pro: true,
-      description: "Professional gig templates",
-    },
+  ];
+
+  // Role-specific dashboard links (not in MobileSheet)
+  const getRoleDashboardLinks = (): NavLink[] => {
+    if (user?.isBooker) {
+      return [
+        {
+          name: "Coordination",
+          href: "/dashboard/coordination",
+          icon: <BuildingIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["premium", "elite"],
+          featured: true,
+        },
+        {
+          name: "Earnings",
+          href: "/dashboard/earnings",
+          icon: <DollarSignIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+        },
+        {
+          name: "Bookings",
+          href: "/hub/gigs?tab=booked",
+          icon: <CalendarIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+          requiresCompleteProfile: true,
+        },
+
+        {
+          name: "Managed Talent",
+          href: "/community?tab=managed-talent",
+          icon: <Star className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+          requiresCompleteProfile: true,
+        },
+      ];
+    }
+
+    if (user?.isMusician) {
+      return [
+        {
+          name: "Bookings",
+          href: "/hub/gigs?tab=booked",
+          icon: <CalendarIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+          requiresCompleteProfile: true,
+        },
+        {
+          name: "Earnings",
+          href: "/dashboard/earnings",
+          icon: <DollarSignIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+        },
+        {
+          name: "Reviews",
+          href: "/dashboard/reviews",
+          icon: <Star className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+          requiresCompleteProfile: true,
+        },
+        {
+          name: "Favorites",
+          href: "/hub/gigs?tab=favorites",
+          icon: <HeartIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+        },
+      ];
+    }
+
+    if (user?.isClient) {
+      return [
+        {
+          name: "My Artists",
+          href: "/dashboard/artists",
+          icon: <UsersIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+          requiresCompleteProfile: true,
+        },
+        {
+          name: "Bookings",
+          href: "/hub/gigs?tab=booked",
+          icon: <CalendarIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+        },
+        {
+          name: "Favorites",
+          href: "/hub/gigs?tab=favorites",
+          icon: <HeartIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+        },
+      ];
+    }
+
+    return [];
+  };
+
+  // Premium/Elite exclusive dashboard features
+  const premiumDashboardLinks: NavLink[] = [
     {
       name: "Priority Support",
       href: "/dashboard/priority-support",
       icon: <ShieldIcon className="w-5 h-5" />,
       exact: false,
-      pro: true,
-      description: "24/7 dedicated support",
+      availableForTiers: ["premium", "elite"],
+      featured: true,
+    },
+    {
+      name: "Advanced Reports",
+      href: "/dashboard/advanced-reports",
+      icon: <BarChartIcon className="w-5 h-5" />,
+      exact: false,
+      availableForTiers: ["premium", "elite"],
+      featured: true,
     },
   ];
 
-  // Determine role-specific links
-  const getRoleLinks = () => {
-    if (user?.isBooker) return bookerLinks;
-    if (user?.isMusician) return musicianLinks;
-    if (user?.isClient) return clientLinks;
-    return [];
-  };
+  // Elite exclusive dashboard features
+  const eliteDashboardLinks: NavLink[] = [
+    {
+      name: "Dedicated Manager",
+      href: "/dashboard/account-manager",
+      icon: <Rocket className="w-5 h-5" />,
+      exact: false,
+      availableForTiers: ["elite"],
+      featured: true,
+    },
+    {
+      name: "VIP Dashboard",
+      href: "/dashboard/vip",
+      icon: <Crown className="w-5 h-5" />,
+      exact: false,
+      availableForTiers: ["elite"],
+      featured: true,
+    },
+  ];
 
-  const roleLinks = getRoleLinks();
+  // Common dashboard links
+  const commonDashboardLinks: NavLink[] = [
+    {
+      name: "Messages",
+      href: "/messages",
+      icon: (
+        <div className="relative">
+          <MessageSquareIcon className="w-5 h-5" />
+          {unReadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+              {unReadCount > 9 ? "9+" : unReadCount}
+            </span>
+          )}
+        </div>
+      ),
+      exact: false,
+      availableForTiers: ["pro", "premium", "elite"],
+      requiresCompleteProfile: true,
+      badge: unReadCount,
+      onClick: handleOpenMessages,
+    },
+    {
+      name: "Profile Settings",
+      href: "/profile",
+      icon: <SettingsIcon className="w-5 h-5" />,
+      exact: false,
+      availableForTiers: ["free", "pro", "premium", "elite"],
+    },
+    {
+      name: "Help & Support",
+      href: "/dashboard/support",
+      icon: <HelpCircleIcon className="w-5 h-5" />,
+      exact: false,
+      availableForTiers: ["free", "pro", "premium", "elite"],
+    },
+    {
+      name: "Privacy & Security",
+      href: "/dashboard/privacy",
+      icon: <ShieldIcon className="w-5 h-5" />,
+      exact: false,
+      availableForTiers: ["free", "pro", "premium", "elite"],
+    },
+  ];
 
-  // Combine all links based on trial status
-  const getAllLinks = () => {
+  // Combine dashboard-specific links based on user tier
+  const getAllLinks = (): NavLink[] => {
     if (shouldShowLimitedLinks) {
-      // After trial ended: only show base links
-      return baseLinks;
-    } else {
-      // During trial or pro: show all links
-      return [...baseLinks, ...roleLinks, ...commonLinks, ...proLinks];
+      // After trial ended: only show core dashboard links
+      return [
+        ...dashboardCoreLinks,
+        ...commonDashboardLinks.filter((link) =>
+          link.availableForTiers?.includes("free")
+        ),
+      ];
     }
+
+    let allLinks = [...dashboardCoreLinks, ...commonDashboardLinks];
+
+    // Add role-specific dashboard links for pro and above
+    if (
+      userTier === "pro" ||
+      userTier === "premium" ||
+      userTier === "elite" ||
+      isInGracePeriod
+    ) {
+      allLinks = [
+        ...allLinks,
+        ...getRoleDashboardLinks(),
+        ...dashboardToolsLinks,
+      ];
+    }
+
+    // Add premium dashboard features
+    if (userTier === "premium" || userTier === "elite") {
+      allLinks = [...allLinks, ...premiumDashboardLinks];
+    }
+
+    // Add elite dashboard features
+    if (userTier === "elite") {
+      allLinks = [...allLinks, ...eliteDashboardLinks];
+    }
+
+    return allLinks;
   };
 
   const allLinks = getAllLinks();
 
-  const isActive = (href: string, exact: boolean = false, pro?: boolean) => {
+  // Check if user can access a link based on their tier
+  const canAccessLink = (link: NavLink) => {
+    if (!link.availableForTiers) return true;
+    return link.availableForTiers.includes(userTier) || isInGracePeriod;
+  };
+
+  const isActive = (href: string, exact: boolean = false) => {
     if (exact) {
       return pathname === href;
     }
     return pathname.startsWith(href);
   };
+
+  // Get next tier info for upgrade prompts
+  const getNextTierInfo = () => {
+    switch (userTier) {
+      case "free":
+        return { tier: "pro", label: "Pro", icon: Zap, color: "orange" };
+      case "pro":
+        return {
+          tier: "premium",
+          label: "Premium",
+          icon: Gem,
+          color: "purple",
+        };
+      case "premium":
+        return { tier: "elite", label: "Elite", icon: Crown, color: "yellow" };
+      default:
+        return null;
+    }
+  };
+
+  const nextTier = getNextTierInfo();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -390,27 +457,29 @@ export default function MobileNav() {
     return "User";
   };
 
-  const getUserStatsLabel = () => {
-    if (user?.isBooker) return "Artists Managed";
-    if (user?.isMusician) return "Gigs Booked";
-    if (user?.isClient) return "Posts Created";
-    return "Activity";
-  };
-
-  const getUserStatsValue = () => {
-    if (user?.isBooker) return user.artistsManaged?.length || 0;
-    if (user?.isMusician) return user.gigsBooked || 0;
-    if (user?.isClient) return user.gigsPosted || 0;
-    return 0;
-  };
-
-  // Handle link click with trial restrictions
+  // Handle link click with profile and tier restrictions
   const handleLinkClick = (link: NavLink, e: React.MouseEvent) => {
-    // Block access if trial ended and link is not available after trial
-    if (shouldShowLimitedLinks && !link.availableAfterTrial) {
+    // Block access if profile incomplete
+    if (link.requiresCompleteProfile && !isProfileComplete) {
       e.preventDefault();
       setIsOpen(false);
-      router.push("/upgrade");
+      router.push("/profile");
+      return;
+    }
+
+    // Block access if trial ended and link is not available
+    if (shouldShowLimitedLinks && !link.availableForTiers?.includes("free")) {
+      e.preventDefault();
+      setIsOpen(false);
+      router.push("/dashboard/billing");
+      return;
+    }
+
+    // Block access if not in correct tier
+    if (!canAccessLink(link)) {
+      e.preventDefault();
+      setIsOpen(false);
+      router.push("/dashboard/billing");
       return;
     }
 
@@ -462,18 +531,23 @@ export default function MobileNav() {
                     <div>
                       <h2 className={cn("text-xl font-bold", colors.text)}>
                         {shouldShowLimitedLinks
-                          ? "Basic Navigation"
-                          : "Navigation"}
+                          ? "Dashboard Basic"
+                          : "Dashboard"}
                       </h2>
-                      <p className={cn("text-sm mt-1", colors.textMuted)}>
-                        {getUserRoleLabel()} • {getUserStatsValue()}{" "}
-                        {getUserStatsLabel()}
-                        {shouldShowLimitedLinks && (
-                          <span className="text-amber-600 ml-1">
-                            • Trial Ended
-                          </span>
-                        )}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className={cn("text-sm", colors.textMuted)}>
+                          {getUserRoleLabel()} • {currentTier.label}
+                        </div>
+                        <div
+                          className={cn(
+                            "px-2 py-1 text-xs rounded-full font-semibold",
+                            currentTier.badge
+                          )}
+                        >
+                          <TierIcon className="w-3 h-3 inline mr-1" />
+                          {currentTier.label}
+                        </div>
+                      </div>
                     </div>
                     <button
                       onClick={() => setIsOpen(false)}
@@ -487,24 +561,57 @@ export default function MobileNav() {
                     </button>
                   </div>
 
-                  {/* Trial Ended Banner */}
-                  {shouldShowLimitedLinks && (
-                    <div className="mt-3 p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                  {/* Upgrade Prompt */}
+                  {nextTier && (
+                    <div
+                      className={cn(
+                        "mt-3 p-3 rounded-xl bg-gradient-to-r text-white",
+                        nextTier.color === "orange" &&
+                          "from-orange-500 to-red-500",
+                        nextTier.color === "purple" &&
+                          "from-purple-500 to-pink-600",
+                        nextTier.color === "yellow" &&
+                          "from-yellow-500 to-red-600"
+                      )}
+                    >
                       <div className="flex items-center gap-2 mb-1">
-                        <Crown className="w-4 h-4" />
+                        <nextTier.icon className="w-4 h-4" />
                         <h4 className="font-bold text-sm">
-                          Trial Period Ended
+                          Upgrade to {nextTier.label}
                         </h4>
                       </div>
-                      <p className="text-xs text-amber-100">
-                        Upgrade to Pro to regain access to all features.
+                      <p className="text-xs text-white/90 mb-2">
+                        Unlock exclusive {nextTier.label.toLowerCase()}{" "}
+                        dashboard features.
                       </p>
                       <Link
-                        href="/upgrade"
+                        href="/dashboard/billing"
                         onClick={() => setIsOpen(false)}
-                        className="block w-full text-center bg-white text-amber-600 py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-amber-50 transition-colors mt-2"
+                        className="block w-full text-center bg-white text-gray-800 py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors"
                       >
-                        Upgrade to Pro
+                        Upgrade to {nextTier.label}
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Profile Incomplete Banner */}
+                  {!isProfileComplete && (
+                    <div className="mt-3 p-3 rounded-xl bg-orange-50 border border-orange-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <HelpCircleIcon className="w-4 h-4 text-orange-600" />
+                        <h4 className="font-bold text-sm text-orange-800">
+                          Profile Incomplete
+                        </h4>
+                      </div>
+                      <p className="text-xs text-orange-700 mb-2">
+                        Complete your profile to access all dashboard features.
+                      </p>
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsOpen(false)}
+                        className="block w-full text-center bg-orange-600 text-white py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-orange-700 transition-colors"
+                      >
+                        Complete Profile
                       </Link>
                     </div>
                   )}
@@ -512,19 +619,22 @@ export default function MobileNav() {
 
                 {/* Navigation Links - Vertical List */}
                 <div className="h-[calc(100%-120px)] overflow-y-auto">
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-2 pb-20">
                     {allLinks.map((link, index) => {
-                      const active = isActive(link.href, link.exact, link.pro);
-                      const isProFeature = link.pro && !canAccessProFeature;
-                      const isBlockedByTrial =
-                        shouldShowLimitedLinks && !link.availableAfterTrial;
+                      const active = isActive(link.href, link.exact);
+                      const canAccess = canAccessLink(link);
+                      const requiresCompleteProfile =
+                        link.requiresCompleteProfile;
+                      const isBlockedByProfile =
+                        requiresCompleteProfile && !isProfileComplete;
+                      const isFeatured = link.featured;
 
                       const linkContent = (
                         <div
                           className={cn(
                             "group flex items-center gap-3 w-full p-4 rounded-xl transition-all duration-200 border-l-4",
                             colors.hoverBg,
-                            (isProFeature || isBlockedByTrial) &&
+                            (!canAccess || isBlockedByProfile) &&
                               "cursor-not-allowed opacity-60",
                             active
                               ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500 text-amber-100"
@@ -532,7 +642,9 @@ export default function MobileNav() {
                                   colors.text,
                                   "border-transparent",
                                   colors.hoverBg
-                                )
+                                ),
+                            isFeatured &&
+                              "ring-2 ring-purple-200 dark:ring-purple-800"
                           )}
                         >
                           <div
@@ -540,12 +652,13 @@ export default function MobileNav() {
                               "transition-transform duration-200",
                               active
                                 ? "text-amber-400"
-                                : isProFeature || isBlockedByTrial
+                                : !canAccess || isBlockedByProfile
                                   ? "text-gray-400 dark:text-gray-500"
                                   : cn(
                                       "group-hover:text-amber-400",
                                       colors.textMuted
-                                    )
+                                    ),
+                              isFeatured && "text-purple-600"
                             )}
                           >
                             {link.icon}
@@ -557,59 +670,47 @@ export default function MobileNav() {
                                 className={cn(
                                   "font-medium text-sm",
                                   active ? "text-amber-600" : colors.text,
-                                  (isProFeature || isBlockedByTrial) &&
-                                    "text-gray-500 dark:text-gray-400"
+                                  (!canAccess || isBlockedByProfile) &&
+                                    "text-gray-500 dark:text-gray-400",
+                                  isFeatured &&
+                                    "text-purple-700 dark:text-purple-300"
                                 )}
                               >
                                 {link.name}
                               </span>
-                              {link.pro &&
-                                canAccessProFeature &&
-                                !isBlockedByTrial && (
-                                  <span className="text-xs rounded-full px-2 py-1 bg-green-500 text-white">
-                                    PRO
-                                  </span>
-                                )}
+
+                              {/* Show Lock for inaccessible features */}
+                              {!canAccess && (
+                                <Lock className="w-3 h-3 text-amber-500" />
+                              )}
+
+                              {/* Show Profile Alert for incomplete profile */}
+                              {isBlockedByProfile && (
+                                <HelpCircleIcon className="w-3 h-3 text-orange-500" />
+                              )}
+
+                              {/* Show Featured badge */}
+                              {isFeatured && canAccess && (
+                                <Sparkles className="w-3 h-3 text-purple-500" />
+                              )}
+
                               {link.badge &&
                                 link.badge > 0 &&
-                                !isBlockedByTrial && (
+                                canAccess &&
+                                !isBlockedByProfile && (
                                   <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
                                     {link.badge > 9 ? "9+" : link.badge}
                                   </span>
                                 )}
                             </div>
-                            {link.description && (
-                              <p
-                                className={cn(
-                                  "text-xs truncate",
-                                  active
-                                    ? "text-amber-500/80"
-                                    : colors.textMuted,
-                                  (isProFeature || isBlockedByTrial) &&
-                                    "text-gray-400 dark:text-gray-500"
-                                )}
-                              >
-                                {link.description}
-                              </p>
-                            )}
                           </div>
-
-                          {/* Show Crown for trial-blocked features */}
-                          {isBlockedByTrial && (
-                            <Crown className="w-4 h-4 text-amber-500" />
-                          )}
-
-                          {/* Show Lock for pro features without access */}
-                          {isProFeature && !isBlockedByTrial && (
-                            <Lock className="w-4 h-4 text-amber-500" />
-                          )}
 
                           <ChevronRightIcon
                             className={cn(
                               "w-4 h-4 transition-all duration-200",
                               active
                                 ? "text-amber-400 opacity-100"
-                                : isProFeature || isBlockedByTrial
+                                : !canAccess || isBlockedByProfile
                                   ? "text-gray-400 dark:text-gray-500 opacity-50"
                                   : cn(
                                       "opacity-0 group-hover:opacity-100",
@@ -635,13 +736,19 @@ export default function MobileNav() {
                             <button
                               onClick={(e) => handleLinkClick(link, e)}
                               className="w-full text-left"
-                              disabled={isBlockedByTrial}
+                              disabled={!canAccess || isBlockedByProfile}
                             >
                               {linkContent}
                             </button>
                           ) : (
                             <Link
-                              href={isBlockedByTrial ? "/upgrade" : link.href}
+                              href={
+                                !canAccess
+                                  ? "/dashboard/billing"
+                                  : isBlockedByProfile
+                                    ? "/profile"
+                                    : link.href
+                              }
                               onClick={(e) => handleLinkClick(link, e)}
                             >
                               {linkContent}
@@ -733,7 +840,7 @@ export default function MobileNav() {
                   }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <PlusIcon className="w-7 h-7 text-white" />
+                  <MdDashboard className="w-7 h-7 text-white" />
                 </motion.div>
               </motion.button>
             </div>

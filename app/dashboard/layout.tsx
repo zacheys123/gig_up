@@ -1,7 +1,6 @@
 import MobileNav from "@/components/dashboard/MobileNav";
 import { Sidebar } from "@/components/dashboard/SideBar";
 import { SubscriptionUpdateManager } from "@/components/dashboard/SubscriptionUpdateManger";
-// import NotificationHandler from "@/components/NotificationHandler";
 
 export default function DashboardLayout({
   children,
@@ -9,21 +8,21 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col md:flex-row h-screen  ">
-      {/* Sidebar */}
+    <div className="flex h-screen">
+      {/* Sidebar - Fixed on desktop */}
       <SubscriptionUpdateManager />
-      <div className="hidden md:block">
+      <div className="hidden md:flex md:w-64 md:flex-shrink-0">
         <Sidebar />
       </div>
 
-      <main className="flex-1 overflow-y-auto  md:pb-0">
-        {" "}
-        {/* <NotificationHandler /> */}
-        {children}
-      </main>
-      {/* Mobile navigation */}
-      <div className="md:hidden">
-        <MobileNav />
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 overflow-y-auto">{children}</main>
+
+        {/* Mobile navigation */}
+        <div className="md:hidden">
+          <MobileNav />
+        </div>
       </div>
     </div>
   );
