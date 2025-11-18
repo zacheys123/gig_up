@@ -19,6 +19,9 @@ import {
   Menu,
   ChevronDown,
   User,
+  Mail,
+  Crown,
+  Lock,
 } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -39,6 +42,162 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
+
+interface NavigationItem {
+  href: string;
+  label: string;
+  icon: React.ReactElement;
+  condition?: boolean;
+  proOnly?: boolean;
+  proBadge?: boolean;
+  requiresCompleteProfile?: boolean;
+  availableAfterTrial?: boolean;
+}
+
+const getBaseLinks = (): NavigationItem[] => [
+  {
+    href: "/",
+    label: "Home",
+    icon: <Home size={18} />,
+    availableAfterTrial: true,
+  },
+  {
+    href: "/profile",
+    label: "Profile",
+    icon: <User size={16} />,
+    availableAfterTrial: true,
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: <Settings size={16} />,
+    availableAfterTrial: true,
+  },
+  {
+    href: "/contact",
+    label: "Contact",
+    icon: <Mail size={16} />,
+    availableAfterTrial: true,
+  },
+];
+
+const getFullNavigationLinks = (
+  user: any,
+  isInGracePeriod?: boolean,
+  isProUser?: boolean
+): NavigationItem[] => {
+  const hasRole = user?.isClient || user?.isMusician || user?.isBooker;
+  const isMusician = user?.isMusician;
+  const isBooker = user?.isBooker;
+  const isClient = user?.isClient;
+
+  // Condition for showing Urgent Gigs
+  const shouldShowUrgentGigs =
+    !isMusician && isClient && (user?.tier === "pro" || isInGracePeriod);
+
+  const baseNavigationItems: NavigationItem[] = [
+    {
+      href: "/",
+      label: "Home",
+      icon: <Home size={18} />,
+      availableAfterTrial: true,
+    },
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: <MdDashboard size={18} />,
+      condition: hasRole,
+    },
+    {
+      href: "/auth/search",
+      label: "Discover",
+      icon: <Search size={18} />,
+      condition: hasRole,
+      requiresCompleteProfile: true,
+    },
+    {
+      href: "/community",
+      label: "Community",
+      icon: <Users size={18} />,
+      condition: true,
+      requiresCompleteProfile: true,
+    },
+    {
+      href: "/settings",
+      label: "Settings",
+      icon: <Settings size={16} />,
+      availableAfterTrial: true,
+    },
+  ];
+
+  const dropdownItems: NavigationItem[] = [
+    {
+      href: "/profile",
+      label: "Profile",
+      icon: <User size={16} />,
+      availableAfterTrial: true,
+    },
+    {
+      href: "/game",
+      label: "Games",
+      icon: <Gamepad size={16} />,
+      proBadge: true,
+      requiresCompleteProfile: true,
+    },
+    ...(shouldShowUrgentGigs
+      ? [
+          {
+            href: "/hub/gigs?tab=create-gigs",
+            label: "Instant Gigs",
+            icon: <Zap size={16} />,
+            proBadge: true,
+            requiresCompleteProfile: true,
+          },
+        ]
+      : []),
+  ];
+
+  // Add Reviews and Gigs if user has ID
+  if (user?._id) {
+    baseNavigationItems.splice(
+      2,
+      0,
+      {
+        href: `/allreviews/${user._id}/*${user.firstname}${user.lastname}`,
+        label: "Reviews",
+        icon: <Search size={18} />,
+        requiresCompleteProfile: true,
+      },
+      {
+        href: `/reviews/${user._id}/*${user.firstname}${user.lastname}`,
+        label: "Personal Reviews",
+        icon: <Search size={18} />,
+        requiresCompleteProfile: true,
+      }
+    );
+
+    // Add My Videos for musicians
+    if (isMusician && !isClient) {
+      baseNavigationItems.splice(5, 0, {
+        href: `/search/allvideos/${user._id}/*${user.firstname}/${user.lastname}`,
+        label: "My Videos",
+        icon: <Search size={18} />,
+        requiresCompleteProfile: true,
+      });
+    }
+
+    // Add Gigs
+    baseNavigationItems.splice(6, 0, {
+      href: isClient ? `/hub/gigs?tab=my-gigs` : `/hub/gigs?tab=all`,
+      label: "Gigs",
+      icon: <BriefcaseIcon size={18} />,
+      requiresCompleteProfile: true,
+    });
+  }
+
+  return [...baseNavigationItems, ...dropdownItems];
+};
 
 export function DesktopNavigation() {
   const { isSignedIn, user: clerkUser, isLoaded: clerkLoaded } = useUser();
@@ -46,16 +205,33 @@ export function DesktopNavigation() {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
 
-  const { isInGracePeriod } = useCheckTrial();
+  const { isInGracePeriod, isFirstMonthEnd } = useCheckTrial();
   const hasRole =
     currentUser?.isClient || currentUser?.isMusician || currentUser?.isBooker;
-  const isMusician = currentUser?.isMusician;
-  const isBooker = currentUser?.isBooker;
-  const isClient = currentUser?.isClient;
 
   const { total: unreadCount, byChat: unreadCounts } = useUnreadCount();
   const [showChatListModal, setShowChatListModal] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Enhanced trial experience
+  const showTrialEnded = isFirstMonthEnd;
+  const showGracePeriod = isInGracePeriod;
+  const showUpgradePrompt =
+    showTrialEnded || showGracePeriod || currentUser?.tier === "free";
+
+  // Determine which links to show based on trial status
+  const shouldShowLimitedLinks =
+    showTrialEnded && currentUser?.tier !== "pro" && !isInGracePeriod;
+  const canAccessProFeature = currentUser?.tier === "pro" || isInGracePeriod;
+
+  // Get navigation links based on trial status
+  const navigationLinks: NavigationItem[] = shouldShowLimitedLinks
+    ? getBaseLinks() // Show only base links after trial ends
+    : getFullNavigationLinks(
+        currentUser,
+        isInGracePeriod,
+        currentUser?.tier === "pro"
+      );
 
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -96,90 +272,31 @@ export function DesktopNavigation() {
   }
 
   const getActionButton = () => {
-    if (isBooker) {
+    if (currentUser?.isBooker) {
       return {
         href: "/dashboard/gigs",
         label: "Find Gigs",
         icon: <BriefcaseIcon size={18} />,
       };
     }
-
     return null;
   };
 
   const actionButton = getActionButton();
 
-  // Condition for showing Urgent Gigs
-  const shouldShowUrgentGigs =
-    !isMusician && isClient && (currentUser?.tier === "pro" || isInGracePeriod);
-
-  const canAccessProFeature = currentUser?.tier === "pro" || isInGracePeriod;
-
-  // Base navigation items
-  const baseNavigationItems = [
-    {
-      href: "/",
-      label: "Home",
-      icon: <Home size={18} />,
-    },
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: <MdDashboard size={18} />,
-      condition: hasRole,
-    },
-    {
-      href: "/auth/search",
-      label: "Discover",
-      icon: <Search size={18} />,
-      condition: isSignedIn && hasRole,
-    },
-    {
-      href: "/community",
-      label: "Community",
-      icon: <Users size={18} />,
-      condition: isSignedIn,
-    },
-    {
-      href: "/settings",
-      label: "Settings",
-      icon: <Settings size={16} />,
-      condition: hasRole,
-    },
-  ];
-
-  // Dropdown menu items
-  const dropdownItems = [
-    {
-      href: "/profile",
-      label: "Profile",
-      icon: <User size={16} />,
-      condition: isSignedIn,
-    },
-    {
-      href: "/game",
-      label: "Games",
-      icon: <Gamepad size={16} />,
-      proBadge: true,
-      condition: true,
-    },
-    ...(shouldShowUrgentGigs
-      ? [
-          {
-            href: "/hub/gigs?tab=create-gigs",
-            label: "Instant Gigs",
-            icon: <Zap size={16} />,
-            proBadge: true,
-            condition: true,
-          },
-        ]
-      : []),
-  ];
-
   const getGreetingName = () => {
-    if (isBooker) return "Booker";
+    if (currentUser?.isBooker) return "Booker";
     return clerkUser?.firstName || clerkUser?.username || "User";
   };
+
+  // Filter and process navigation links
+  const baseNavigationItems = navigationLinks.filter(
+    (item) => !item.proBadge && !item.proOnly && item.condition !== false
+  );
+
+  const dropdownItems = navigationLinks.filter(
+    (item) => item.proBadge || item.proOnly || item.href === "/profile"
+  );
 
   return (
     <>
@@ -214,7 +331,7 @@ export function DesktopNavigation() {
                       colors.text
                     )}
                   >
-                    GigUp
+                    {shouldShowLimitedLinks ? "GigUp Basic" : "GigUp"}
                   </span>
                 </motion.div>
               </Link>
@@ -224,21 +341,44 @@ export function DesktopNavigation() {
                 {baseNavigationItems.map((item) => {
                   if (item.condition === false) return null;
 
+                  const isBlockedByTrial =
+                    shouldShowLimitedLinks && !item.availableAfterTrial;
+
                   return (
-                    <Link key={item.href} href={item.href}>
+                    <Link
+                      key={item.href}
+                      href={isBlockedByTrial ? "/dashboard/billing" : item.href}
+                    >
                       <div
                         className={cn(
                           "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative whitespace-nowrap",
                           colors.textMuted,
-                          "hover:text-amber-600 dark:hover:text-amber-400"
+                          "hover:text-amber-600 dark:hover:text-amber-400",
+                          isBlockedByTrial && "opacity-60 cursor-not-allowed"
                         )}
                       >
-                        <div className="transition-colors duration-200">
+                        <div
+                          className={cn(
+                            "transition-colors duration-200",
+                            isBlockedByTrial && "text-gray-400"
+                          )}
+                        >
                           {item.icon}
                         </div>
-                        <span className="transition-colors duration-200">
+                        <span
+                          className={cn(
+                            "transition-colors duration-200",
+                            isBlockedByTrial && "text-gray-500"
+                          )}
+                        >
                           {item.label}
                         </span>
+
+                        {/* Crown icon for trial-blocked features */}
+                        {isBlockedByTrial && (
+                          <Crown className="w-3 h-3 text-amber-500 ml-1" />
+                        )}
+
                         <div
                           className={cn(
                             "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
@@ -254,8 +394,24 @@ export function DesktopNavigation() {
 
             {/* Right Section - Actions & User */}
             <div className="flex items-center space-x-3">
-              {/* Action Button */}
-              {isSignedIn && actionButton && (
+              {/* Trial Ended Banner */}
+              {shouldShowLimitedLinks && (
+                <Link href="/dashboard/billing" className="flex-shrink-0">
+                  <Button
+                    className={cn(
+                      "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                      "text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200",
+                      "text-sm h-9 px-3 whitespace-nowrap"
+                    )}
+                  >
+                    <Crown className="w-4 h-4" />
+                    <span>Upgrade to Pro</span>
+                  </Button>
+                </Link>
+              )}
+
+              {/* Action Button (only show if not in trial-ended state) */}
+              {isSignedIn && actionButton && !shouldShowLimitedLinks && (
                 <Link href={actionButton.href} className="flex-shrink-0">
                   <Button
                     className={cn(
@@ -272,8 +428,8 @@ export function DesktopNavigation() {
                 </Link>
               )}
 
-              {/* Messages */}
-              {isSignedIn && (
+              {/* Messages (only show if not in trial-ended state) */}
+              {isSignedIn && !shouldShowLimitedLinks && (
                 <button
                   onClick={handleOpenMessages}
                   className="relative group flex-shrink-0"
@@ -296,9 +452,8 @@ export function DesktopNavigation() {
                 </button>
               )}
 
-              {/* Notifications */}
-              {(isSignedIn && currentUser?.tier === "pro") ||
-              isInGracePeriod ? (
+              {/* Notifications (only show if not in trial-ended state) */}
+              {isSignedIn && canAccessProFeature && !shouldShowLimitedLinks ? (
                 <div className="hover:scale-105 transition-transform duration-200 flex-shrink-0">
                   <NotificationBell variant="desktop" />
                 </div>
@@ -333,6 +488,9 @@ export function DesktopNavigation() {
                     )}
                   >
                     Hi, {getGreetingName()}
+                    {shouldShowLimitedLinks && (
+                      <span className="text-amber-600 ml-1">• Trial Ended</span>
+                    )}
                   </span>
 
                   {/* Dropdown Menu */}
@@ -374,28 +532,32 @@ export function DesktopNavigation() {
                             hasProBadge && canAccessProFeature;
                           const shouldBlockAccess =
                             hasProBadge && !canAccessProFeature;
+                          const isBlockedByTrial =
+                            shouldShowLimitedLinks && !item.availableAfterTrial;
 
                           return (
                             <DropdownMenuItem key={item.href} asChild>
                               <Link
                                 href={
-                                  shouldBlockAccess
+                                  isBlockedByTrial
                                     ? "/dashboard/billing"
-                                    : item.href
+                                    : shouldBlockAccess
+                                      ? "/dashboard/billing"
+                                      : item.href
                                 }
                                 onClick={() => setIsDropdownOpen(false)}
                                 className={cn(
                                   "flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition-colors duration-200",
                                   colors.hoverBg,
                                   colors.textMuted,
-                                  shouldBlockAccess &&
+                                  (shouldBlockAccess || isBlockedByTrial) &&
                                     "opacity-60 cursor-not-allowed"
                                 )}
                               >
                                 <div
                                   className={cn(
                                     "transition-colors duration-200",
-                                    shouldBlockAccess
+                                    shouldBlockAccess || isBlockedByTrial
                                       ? "text-gray-400"
                                       : "text-amber-600"
                                   )}
@@ -405,35 +567,31 @@ export function DesktopNavigation() {
                                 <span
                                   className={cn(
                                     "flex-1",
-                                    shouldBlockAccess && "text-gray-500"
+                                    (shouldBlockAccess || isBlockedByTrial) &&
+                                      "text-gray-500"
                                   )}
                                 >
                                   {item.label}
                                 </span>
 
                                 {/* Pro Badge */}
-                                {shouldShowProBadge && (
+                                {shouldShowProBadge && !isBlockedByTrial && (
                                   <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs px-1.5 py-0.5 border-0 font-semibold">
                                     PRO
                                   </Badge>
                                 )}
 
-                                {/* Lock for pro features without access */}
-                                {hasProBadge && !canAccessProFeature && (
-                                  <span className="text-amber-500">
-                                    <svg
-                                      className="w-3 h-3"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path
-                                        fillRule="evenodd"
-                                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                                        clipRule="evenodd"
-                                      />
-                                    </svg>
-                                  </span>
+                                {/* Crown for trial-blocked features */}
+                                {isBlockedByTrial && (
+                                  <Crown className="w-3 h-3 text-amber-500" />
                                 )}
+
+                                {/* Lock for pro features without access */}
+                                {hasProBadge &&
+                                  !canAccessProFeature &&
+                                  !isBlockedByTrial && (
+                                    <Lock className="w-3 h-3 text-amber-500" />
+                                  )}
                               </Link>
                             </DropdownMenuItem>
                           );

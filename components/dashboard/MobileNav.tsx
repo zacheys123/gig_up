@@ -26,6 +26,8 @@ import {
   BriefcaseIcon,
   Users2Icon,
   BuildingIcon,
+  Crown,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,6 +44,7 @@ import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useChat } from "@/app/context/ChatContext";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { ChatListModal } from "../chat/ChatListModal";
+import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 
 interface NavLink {
   name: string;
@@ -52,6 +55,7 @@ interface NavLink {
   description?: string;
   badge?: number;
   onClick?: (e: React.MouseEvent) => void;
+  availableAfterTrial?: boolean;
 }
 
 export default function MobileNav() {
@@ -63,12 +67,23 @@ export default function MobileNav() {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
   const { unreadCount: notCount } = useNotificationSystem();
-  const { isInGracePeriod: canSeeNotification } = useCheckTrial();
+  const { isInGracePeriod, isFirstMonthEnd } = useCheckTrial();
   const router = useRouter();
 
   const { openChat } = useChat();
   const [showChatListModal, setShowChatListModal] = useState(false);
   const { total: unReadCount, byChat: unreadCounts } = useUnreadCount();
+
+  // Enhanced trial experience
+  const showTrialEnded = isFirstMonthEnd;
+  const showGracePeriod = isInGracePeriod;
+  const showUpgradePrompt =
+    showTrialEnded || showGracePeriod || user?.tier === "free";
+
+  // Determine which links to show based on trial status
+  const shouldShowLimitedLinks =
+    showTrialEnded && user?.tier !== "pro" && !isInGracePeriod;
+  const canAccessProFeature = user?.tier === "pro" || isInGracePeriod;
 
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -76,13 +91,32 @@ export default function MobileNav() {
     setShowChatListModal(true);
   };
 
-  const musicianLinks: NavLink[] = [
+  // Base links that are always available (even after trial)
+  const baseLinks: NavLink[] = [
+    {
+      name: "Home",
+      href: "/",
+      icon: <HomeIcon className="w-5 h-5" />,
+      exact: true,
+      availableAfterTrial: true,
+    },
     {
       name: "Dashboard",
       href: "/dashboard",
       icon: <MdDashboard className="w-5 h-5" />,
       exact: true,
+      availableAfterTrial: true,
     },
+    {
+      name: "Billing",
+      href: "/dashboard/billing",
+      icon: <CreditCardIcon className="w-5 h-5" />,
+      exact: false,
+      availableAfterTrial: true,
+    },
+  ];
+
+  const musicianLinks: NavLink[] = [
     {
       name: "Gigs",
       href: "/hub/gigs?tab=all",
@@ -123,12 +157,6 @@ export default function MobileNav() {
 
   const clientLinks: NavLink[] = [
     {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: <MdDashboard className="w-5 h-5" />,
-      exact: true,
-    },
-    {
       name: "My Gigs",
       href: "/hub/gigs?tab=my-gigs",
       icon: <MusicIcon className="w-5 h-5" />,
@@ -161,12 +189,6 @@ export default function MobileNav() {
   ];
 
   const bookerLinks: NavLink[] = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: <MdDashboard className="w-5 h-5" />,
-      exact: true,
-    },
     {
       name: "Find Gigs",
       href: "/hub/gigs?tab=available-gigs",
@@ -258,23 +280,6 @@ export default function MobileNav() {
     },
   ];
 
-  const baseLinks: NavLink[] = [
-    {
-      name: "Home",
-      href: "/",
-      icon: <HomeIcon className="w-5 h-5" />,
-      exact: true,
-    },
-    {
-      name: "Billing",
-      href: "/dashboard/billing",
-      icon: <CreditCardIcon className="w-5 h-5" />,
-      exact: false,
-    },
-  ];
-
-  const isProTier = user?.tier === "pro";
-
   // Pro links with notification badge
   const proLinks: NavLink[] = [
     {
@@ -291,7 +296,7 @@ export default function MobileNav() {
         </div>
       ),
       exact: true,
-      pro: canSeeNotification,
+      pro: true,
       description: "Notifications with priority alerts",
       badge: notCount,
     },
@@ -323,8 +328,18 @@ export default function MobileNav() {
 
   const roleLinks = getRoleLinks();
 
-  // Combine all links
-  const allLinks = [...baseLinks, ...roleLinks, ...commonLinks, ...proLinks];
+  // Combine all links based on trial status
+  const getAllLinks = () => {
+    if (shouldShowLimitedLinks) {
+      // After trial ended: only show base links
+      return baseLinks;
+    } else {
+      // During trial or pro: show all links
+      return [...baseLinks, ...roleLinks, ...commonLinks, ...proLinks];
+    }
+  };
+
+  const allLinks = getAllLinks();
 
   const isActive = (href: string, exact: boolean = false, pro?: boolean) => {
     if (exact) {
@@ -389,6 +404,23 @@ export default function MobileNav() {
     return 0;
   };
 
+  // Handle link click with trial restrictions
+  const handleLinkClick = (link: NavLink, e: React.MouseEvent) => {
+    // Block access if trial ended and link is not available after trial
+    if (shouldShowLimitedLinks && !link.availableAfterTrial) {
+      e.preventDefault();
+      setIsOpen(false);
+      router.push("/upgrade");
+      return;
+    }
+
+    if (link.onClick) {
+      link.onClick(e);
+    } else {
+      setIsOpen(false);
+    }
+  };
+
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-9999 md:hidden" ref={navRef}>
@@ -429,11 +461,18 @@ export default function MobileNav() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className={cn("text-xl font-bold", colors.text)}>
-                        Navigation
+                        {shouldShowLimitedLinks
+                          ? "Basic Navigation"
+                          : "Navigation"}
                       </h2>
                       <p className={cn("text-sm mt-1", colors.textMuted)}>
                         {getUserRoleLabel()} • {getUserStatsValue()}{" "}
                         {getUserStatsLabel()}
+                        {shouldShowLimitedLinks && (
+                          <span className="text-amber-600 ml-1">
+                            • Trial Ended
+                          </span>
+                        )}
                       </p>
                     </div>
                     <button
@@ -447,6 +486,28 @@ export default function MobileNav() {
                       <XIcon className="w-6 h-6" />
                     </button>
                   </div>
+
+                  {/* Trial Ended Banner */}
+                  {shouldShowLimitedLinks && (
+                    <div className="mt-3 p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Crown className="w-4 h-4" />
+                        <h4 className="font-bold text-sm">
+                          Trial Period Ended
+                        </h4>
+                      </div>
+                      <p className="text-xs text-amber-100">
+                        Upgrade to Pro to regain access to all features.
+                      </p>
+                      <Link
+                        href="/upgrade"
+                        onClick={() => setIsOpen(false)}
+                        className="block w-full text-center bg-white text-amber-600 py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-amber-50 transition-colors mt-2"
+                      >
+                        Upgrade to Pro
+                      </Link>
+                    </div>
+                  )}
                 </div>
 
                 {/* Navigation Links - Vertical List */}
@@ -454,14 +515,17 @@ export default function MobileNav() {
                   <div className="p-4 space-y-2">
                     {allLinks.map((link, index) => {
                       const active = isActive(link.href, link.exact, link.pro);
-                      const isProFeature = link.pro && !isProTier;
+                      const isProFeature = link.pro && !canAccessProFeature;
+                      const isBlockedByTrial =
+                        shouldShowLimitedLinks && !link.availableAfterTrial;
 
                       const linkContent = (
                         <div
                           className={cn(
                             "group flex items-center gap-3 w-full p-4 rounded-xl transition-all duration-200 border-l-4",
                             colors.hoverBg,
-                            isProFeature && "cursor-not-allowed opacity-60",
+                            (isProFeature || isBlockedByTrial) &&
+                              "cursor-not-allowed opacity-60",
                             active
                               ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500 text-amber-100"
                               : cn(
@@ -476,7 +540,7 @@ export default function MobileNav() {
                               "transition-transform duration-200",
                               active
                                 ? "text-amber-400"
-                                : isProFeature
+                                : isProFeature || isBlockedByTrial
                                   ? "text-gray-400 dark:text-gray-500"
                                   : cn(
                                       "group-hover:text-amber-400",
@@ -493,29 +557,26 @@ export default function MobileNav() {
                                 className={cn(
                                   "font-medium text-sm",
                                   active ? "text-amber-600" : colors.text,
-                                  isProFeature &&
+                                  (isProFeature || isBlockedByTrial) &&
                                     "text-gray-500 dark:text-gray-400"
                                 )}
                               >
                                 {link.name}
                               </span>
-                              {link.pro && (
-                                <span
-                                  className={cn(
-                                    "text-xs rounded-full px-2 py-1",
-                                    isProFeature
-                                      ? "bg-gray-400 text-white"
-                                      : "bg-green-500 text-white"
-                                  )}
-                                >
-                                  PRO
-                                </span>
-                              )}
-                              {link.badge && link.badge > 0 && (
-                                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                                  {link.badge > 9 ? "9+" : link.badge}
-                                </span>
-                              )}
+                              {link.pro &&
+                                canAccessProFeature &&
+                                !isBlockedByTrial && (
+                                  <span className="text-xs rounded-full px-2 py-1 bg-green-500 text-white">
+                                    PRO
+                                  </span>
+                                )}
+                              {link.badge &&
+                                link.badge > 0 &&
+                                !isBlockedByTrial && (
+                                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                                    {link.badge > 9 ? "9+" : link.badge}
+                                  </span>
+                                )}
                             </div>
                             {link.description && (
                               <p
@@ -524,7 +585,7 @@ export default function MobileNav() {
                                   active
                                     ? "text-amber-500/80"
                                     : colors.textMuted,
-                                  isProFeature &&
+                                  (isProFeature || isBlockedByTrial) &&
                                     "text-gray-400 dark:text-gray-500"
                                 )}
                               >
@@ -533,12 +594,22 @@ export default function MobileNav() {
                             )}
                           </div>
 
+                          {/* Show Crown for trial-blocked features */}
+                          {isBlockedByTrial && (
+                            <Crown className="w-4 h-4 text-amber-500" />
+                          )}
+
+                          {/* Show Lock for pro features without access */}
+                          {isProFeature && !isBlockedByTrial && (
+                            <Lock className="w-4 h-4 text-amber-500" />
+                          )}
+
                           <ChevronRightIcon
                             className={cn(
                               "w-4 h-4 transition-all duration-200",
                               active
                                 ? "text-amber-400 opacity-100"
-                                : isProFeature
+                                : isProFeature || isBlockedByTrial
                                   ? "text-gray-400 dark:text-gray-500 opacity-50"
                                   : cn(
                                       "opacity-0 group-hover:opacity-100",
@@ -560,24 +631,18 @@ export default function MobileNav() {
                             stiffness: 300,
                           }}
                         >
-                          {isProFeature ? (
-                            <div
-                              className="relative"
-                              title="Upgrade to Pro to access this feature"
-                            >
-                              {linkContent}
-                            </div>
-                          ) : link.onClick ? (
+                          {link.onClick ? (
                             <button
-                              onClick={link.onClick}
+                              onClick={(e) => handleLinkClick(link, e)}
                               className="w-full text-left"
+                              disabled={isBlockedByTrial}
                             >
                               {linkContent}
                             </button>
                           ) : (
                             <Link
-                              href={link.href}
-                              onClick={() => setIsOpen(false)}
+                              href={isBlockedByTrial ? "/upgrade" : link.href}
+                              onClick={(e) => handleLinkClick(link, e)}
                             >
                               {linkContent}
                             </Link>

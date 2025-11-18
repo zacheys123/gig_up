@@ -127,13 +127,7 @@ export function MobileNavigation() {
                   <UserButton />
 
                   {/* Mobile Sheet - Only if user has role (now includes booker) */}
-                  {hasRole && (
-                    <MobileSheet
-                      isTrialEnded={
-                        isFirstMonthEnd && currentUser?.tier !== "pro"
-                      }
-                    />
-                  )}
+                  {hasRole && <MobileSheet />}
                 </>
               ) : (
                 <>
