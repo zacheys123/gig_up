@@ -1,19 +1,28 @@
 // hooks/useAllUsers.ts
+"use client";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { useMemo } from "react";
 import { useCurrentUser } from "./useCurrentUser";
 import { Doc } from "@/convex/_generated/dataModel";
+import { useCheckTrial } from "./useCheckTrial";
+import { useUserTrialStatus } from "./useUserTrialStatus";
 
 type User = Doc<"users">;
 
 export function useAllUsers() {
   const users = useQuery(api.controllers.user.getAllUsers);
   const { user: currentUser } = useCurrentUser();
+  const { isUserActive } = useUserTrialStatus(); // ← Use the new hook here
+
+  // Filter function to exclude banned users and only include pro/grace period users
+  const isValidUser = (user: User) => {
+    return isUserActive(user);
+  };
 
   const musicians = useMemo(
-    () => users?.filter((user) => user.isMusician) || [],
-    [users]
+    () => users?.filter((user) => user.isMusician && isValidUser(user)) || [],
+    [users, isValidUser]
   );
 
   // Filter musicians by role type
@@ -22,7 +31,7 @@ export function useAllUsers() {
 
     return users.reduce(
       (acc, user) => {
-        if (user.isMusician && user.roleType) {
+        if (user.isMusician && user.roleType && isValidUser(user)) {
           const role = user.roleType;
           if (!acc[role]) acc[role] = [];
           acc[role].push(user);
@@ -31,7 +40,7 @@ export function useAllUsers() {
       },
       {} as Record<string, User[]>
     );
-  }, [users]);
+  }, [users, isValidUser]);
 
   // Get all musicians (without filtering out those without instruments)
   const allMusicians = useMemo(() => {
@@ -39,10 +48,11 @@ export function useAllUsers() {
     return users.filter(
       (user) =>
         user.isMusician &&
+        isValidUser(user) &&
         user._id !== currentUser?._id && // Exclude current user
         !user.isClient
     );
-  }, [users, currentUser]);
+  }, [users, currentUser, isValidUser]);
 
   // Nearby musicians based on location only
   const nearbyMusicians = useMemo(() => {
@@ -58,8 +68,12 @@ export function useAllUsers() {
     const currentCity = normalizeString(currentUser.city);
 
     return users.filter((myuser: User) => {
-      // Only show other musicians in the same city
-      if (!myuser.isMusician || myuser._id === currentUser._id) {
+      // Only show other musicians in the same city who are valid
+      if (
+        !myuser.isMusician ||
+        myuser._id === currentUser._id ||
+        !isValidUser(myuser)
+      ) {
         return false;
       }
 
@@ -72,7 +86,7 @@ export function useAllUsers() {
 
       return false;
     });
-  }, [users, currentUser]);
+  }, [users, currentUser, isValidUser]);
 
   // Get musicians by specific role
   const getMusiciansByRole = (roleType: string) => {
@@ -80,24 +94,28 @@ export function useAllUsers() {
     return users.filter(
       (user) =>
         user.isMusician &&
+        isValidUser(user) &&
         user.roleType === roleType &&
         user._id !== currentUser?._id
     );
   };
 
   return {
-    // All users
-    users: users || [],
+    // All users (filtered)
+    users: users?.filter(isValidUser) || [],
 
     // Filtered users
-    filteredMusicians: allMusicians, // Now includes all musicians
+    filteredMusicians: allMusicians, // Now includes all valid musicians
     nearbyMusicians,
     musicians: allMusicians,
     musiciansByRole,
-    clients: users?.filter((user) => user.isClient) || [],
+    clients: users?.filter((user) => user.isClient && isValidUser(user)) || [],
     proUsers:
       users?.filter(
-        (user) => user.tier === "pro" && user.tierStatus === "active"
+        (user) =>
+          user.tier === "pro" &&
+          user.tierStatus === "active" &&
+          isValidUser(user)
       ) || [],
 
     // Helper functions
@@ -108,12 +126,16 @@ export function useAllUsers() {
     isEmpty: users?.length === 0,
 
     // Counts
-    totalCount: users?.length || 0,
+    totalCount: users?.filter(isValidUser).length || 0,
     musiciansCount: allMusicians.length,
-    clientsCount: users?.filter((user) => user.isClient).length || 0,
+    clientsCount:
+      users?.filter((user) => user.isClient && isValidUser(user)).length || 0,
     proUsersCount:
       users?.filter(
-        (user) => user.tier === "pro" && user.tierStatus === "active"
+        (user) =>
+          user.tier === "pro" &&
+          user.tierStatus === "active" &&
+          isValidUser(user)
       ).length || 0,
     nearbyMusiciansCount: nearbyMusicians.length,
   };
@@ -122,6 +144,7 @@ export function useAllUsers() {
 export function useAllUsersWithPresence() {
   const { user: currentUser } = useCurrentUser();
   const users = useQuery(api.presence.getAllUsersWithPresence);
+  const { isUserActive } = useUserTrialStatus(); // ← Use the new hook
 
-  return users?.filter((u) => u?._id !== currentUser?._id);
+  return users?.filter((u) => u?._id !== currentUser?._id && isUserActive(u));
 }

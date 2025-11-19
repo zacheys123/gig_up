@@ -165,6 +165,14 @@ const DesktopUserNav = () => {
       requiresCompleteProfile: true,
     },
     {
+      href: `/profile/musician`,
+      icon: <Music size={20} />,
+      label: "Musician Profile",
+      description: "Performance settings",
+      availableForTiers: ["pro", "premium", "elite"],
+      requiresCompleteProfile: true,
+    },
+    {
       href: `/profile/commissions`,
       icon: <DollarSign size={20} />,
       label: "Commissions",

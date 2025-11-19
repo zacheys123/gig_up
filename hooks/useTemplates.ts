@@ -12,7 +12,7 @@ const CACHE_TIMESTAMP_KEY = "instant_gig_templates_timestamp";
 const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 
 // Trial configuration
-const TRIAL_DURATION_DAYS = 20; // 14-day trial
+const TRIAL_DURATION_DAYS = 14; // 14-day trial
 const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
 
 // Types for better organization

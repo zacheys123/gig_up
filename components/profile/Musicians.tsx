@@ -4,7 +4,6 @@ import { useAllUsers } from "@/hooks/useAllUsers";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useThemeColors } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import UserListModal from "../modals/UserList";
@@ -16,18 +15,140 @@ import {
   Calendar,
   Users,
   TrendingUp,
-  Eye,
-  Video,
   CheckCircle,
   Zap,
   Award,
-  Heart,
-  MessageCircle,
-  Share2,
-  Bookmark,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 
 type UserProps = Doc<"users">;
+
+// Simple Card Component
+const MusicianCard = React.memo(
+  ({
+    musician,
+    onClick,
+    colors,
+  }: {
+    musician: UserProps;
+    onClick: () => void;
+    colors: any;
+  }) => {
+    const calculateAverageRating = (musician: UserProps): number => {
+      if (!musician.allreviews || musician?.allreviews?.length === 0)
+        return 4.5;
+      const total = musician?.allreviews.reduce(
+        (sum, review) => sum + (review.rating || 0),
+        0
+      );
+      return Number((total / musician?.allreviews?.length).toFixed(1));
+    };
+
+    const rating = calculateAverageRating(musician);
+    const tier = musician.tier;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className={cn(
+          "rounded-2xl border overflow-hidden cursor-pointer group",
+          colors.card,
+          colors.border,
+          "hover:shadow-lg"
+        )}
+        onClick={onClick}
+      >
+        {/* Card Header */}
+        <div className={cn("p-4 border-b", colors.border)}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Avatar className="w-12 h-12 border-2 border-background">
+                <AvatarImage
+                  src={musician.picture}
+                  alt={musician.firstname || "Musician"}
+                />
+                <AvatarFallback className="bg-gradient-to-r from-amber-400 to-purple-400 text-white font-bold">
+                  {musician.firstname?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className={cn("font-semibold", colors.text)}>
+                    {musician.firstname} {musician.lastname}
+                  </h3>
+                  {tier === "pro" && (
+                    <span className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                      PRO
+                    </span>
+                  )}
+                </div>
+                {musician.instrument && (
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    {musician.instrument}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Star className="w-4 h-4 text-amber-400 fill-current" />
+              <span className={cn("text-sm font-semibold", colors.text)}>
+                {rating}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="p-4">
+          <div className="space-y-3">
+            {/* Location & Experience */}
+            <div className="flex items-center justify-between text-sm">
+              {musician.city && (
+                <div className="flex items-center space-x-1">
+                  <MapPin className="w-3 h-3" />
+                  <span className={cn(colors.textMuted)}>{musician.city}</span>
+                </div>
+              )}
+              {musician.experience && (
+                <span className={cn("font-medium", colors.text)}>
+                  {musician.experience}
+                </span>
+              )}
+            </div>
+
+            {/* Genres */}
+            {musician.genres && (
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs bg-gradient-to-r from-amber-500/10 to-purple-500/10 text-amber-600 px-2 py-1 rounded-full border border-amber-500/20">
+                  {musician.genres}
+                </span>
+              </div>
+            )}
+
+            {/* Action Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+              className={cn(
+                "w-full py-3 bg-gradient-to-r from-amber-500 to-purple-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all mt-2 active:scale-95"
+              )}
+            >
+              View Profile
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+);
+
+MusicianCard.displayName = "MusicianCard";
 
 const Musicians = () => {
   const { filteredMusicians, nearbyMusicians, isLoading } = useAllUsers();
@@ -38,16 +159,21 @@ const Musicians = () => {
   const [showNearby, setShowNearByModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<
     "all" | "nearby" | "popular" | "premium"
-  >("all");
+  >("nearby");
   const [modalData, setModalData] = useState<{
     title: string;
     users: UserProps[];
   }>({ title: "", users: [] });
 
   const handleShowNearby = () => {
+    // Fix for nearby musicians - ensure we're passing proper user objects
+    const validNearbyUsers = (nearbyMusicians || []).filter(
+      (user) => user && typeof user === "object" && user._id
+    ) as UserProps[];
+
     setModalData({
       title: "Musicians in Your Area",
-      users: nearbyMusicians as UserProps[],
+      users: validNearbyUsers,
     });
     setShowNearByModal(true);
   };
@@ -62,34 +188,10 @@ const Musicians = () => {
     return Number((total / musician?.allreviews?.length).toFixed(1));
   };
 
-  const calculateResponseRate = (musician: UserProps): number => {
-    // More realistic response rate calculation
-    const baseRate = 85;
-    const activityBonus =
-      musician.lastActive &&
-      Date.now() - musician.lastActive < 24 * 60 * 60 * 1000
-        ? 10
-        : 0;
-    return Math.min(95, baseRate + activityBonus);
-  };
-
-  const checkAvailability = (musician: UserProps): boolean => {
-    // Fixed: Proper boolean handling with explicit return
-    if (!musician.lastActive) return false;
-    const isActive = Date.now() - musician.lastActive < 3 * 24 * 60 * 60 * 1000; // Active in last 3 days
-    return isActive;
-  };
-
   // Enhanced musician data using your actual schema fields
   const enhancedMusicians = filteredMusicians.map((musician) => ({
     ...musician,
     rating: calculateAverageRating(musician),
-    gigsCompleted: musician.completedGigsCount || 0,
-    responseRate: calculateResponseRate(musician),
-    isAvailable: checkAvailability(musician),
-    profileViews: Math.floor(Math.random() * 5000) + 1000,
-    likes: Math.floor(Math.random() * 500) + 50,
-    isVerified: Math.random() > 0.7, // Mock verification status
   }));
 
   const popularMusicians = enhancedMusicians
@@ -100,20 +202,34 @@ const Musicians = () => {
     .filter((musician) => musician.tier === "pro")
     .slice(0, 12);
 
-  const displayedMusicians = {
-    all: enhancedMusicians,
-    nearby: nearbyMusicians as UserProps[],
-    popular: popularMusicians,
-    premium: premiumMusicians,
-  }[activeFilter];
+  // Fix for displayed musicians - ensure nearbyMusicians is properly handled
+  const getDisplayedMusicians = () => {
+    switch (activeFilter) {
+      case "all":
+        return enhancedMusicians;
+      case "nearby":
+        // Ensure nearbyMusicians is an array of proper user objects
+        return (nearbyMusicians || []).filter(
+          (user) => user && typeof user === "object" && user._id
+        ) as UserProps[];
+      case "popular":
+        return popularMusicians;
+      case "premium":
+        return premiumMusicians;
+      default:
+        return enhancedMusicians;
+    }
+  };
 
+  const displayedMusicians = getDisplayedMusicians();
+  const { isInGracePeriod } = useCheckTrial();
   if (isLoading) {
     return <MusiciansSkeleton colors={colors} />;
   }
 
   return (
     <div className={cn("min-h-screen w-full", colors.background)}>
-      {/* Instagram-style Stories Header */}
+      {/* Simple Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -125,58 +241,19 @@ const Musicians = () => {
       >
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-8 overflow-x-auto scrollbar-hide">
-              {enhancedMusicians.slice(0, 8).map((musician, index) => (
-                <motion.div
-                  key={musician._id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex flex-col items-center space-y-2 cursor-pointer flex-shrink-0"
-                  onClick={() => router.push(`/search/${musician.username}`)}
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-amber-400 to-purple-500 rounded-full p-0.5">
-                      <div
-                        className={cn(
-                          "w-16 h-16 rounded-full",
-                          colors.background
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "w-full h-full rounded-full border-2 flex items-center justify-center",
-                            colors.background
-                          )}
-                        >
-                          {musician.picture ? (
-                            <Image
-                              src={musician.picture}
-                              alt={musician.firstname || "Musician"}
-                              width={64}
-                              height={64}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
-                              {musician.firstname?.[0]}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <p
-                    className={cn(
-                      "text-xs font-medium truncate max-w-[80px]",
-                      colors.text
-                    )}
-                  >
-                    {musician.firstname}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
+            <h1 className={cn("text-2xl font-bold", colors.text)}>
+              Professional Musicians
+            </h1>
+            <button
+              onClick={handleShowNearby}
+              className={cn(
+                "px-4 py-2 text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:shadow-lg transition-all flex items-center gap-2",
+                colors.hoverBg
+              )}
+            >
+              <MapPin className="w-4 h-4" />
+              View Nearby
+            </button>
           </div>
         </div>
       </motion.div>
@@ -236,7 +313,7 @@ const Musicians = () => {
           </div>
         </motion.div>
 
-        {/* Stats Overview - Professional Layout */}
+        {/* Stats Overview */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -259,7 +336,7 @@ const Musicians = () => {
             {
               icon: CheckCircle,
               label: "Verified",
-              value: `${Math.round((enhancedMusicians.filter((m) => (m as any).isVerified).length / enhancedMusicians.length) * 100)}%`,
+              value: `${Math.round((enhancedMusicians.filter((m) => m.tier === "pro").length / enhancedMusicians.length) * 100)}%`,
               trend: "Quality",
             },
             {
@@ -316,7 +393,7 @@ const Musicians = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          {/* Filter Tabs - Instagram Style */}
+          {/* Filter Tabs */}
           <div className="flex items-center justify-between mb-8">
             <div
               className={cn(
@@ -324,40 +401,39 @@ const Musicians = () => {
                 colors.border
               )}
             >
-              {[
-                { key: "all", label: "All Artists" },
-                { key: "nearby", label: "Nearby" },
-                { key: "popular", label: "Top Rated" },
-                { key: "premium", label: "Premium" },
-              ].map((filter) => (
-                <button
-                  key={filter.key}
-                  onClick={() => setActiveFilter(filter.key as any)}
-                  className={cn(
-                    "px-6 py-3 rounded-xl text-sm font-semibold transition-all",
-                    activeFilter === filter.key
-                      ? "bg-gradient-to-r from-amber-500 to-purple-500 text-white shadow-lg"
-                      : cn(colors.text, colors.hoverBg)
-                  )}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
+              {(() => {
+                const filters =
+                  isInGracePeriod || currentUser?.tier === "pro"
+                    ? [
+                        { key: "all", label: "All Artists" },
+                        { key: "nearby", label: "Nearby" },
+                        { key: "popular", label: "Top Rated" },
+                        { key: "premium", label: "Premium" },
+                      ]
+                    : [
+                        { key: "nearby", label: "Nearby" },
+                        { key: "premium", label: "Premium" },
+                      ];
 
-            <button
-              onClick={handleShowNearby}
-              className={cn(
-                "px-6 py-3 text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:shadow-lg transition-all flex items-center gap-2",
-                colors.hoverBg
-              )}
-            >
-              <MapPin className="w-4 h-4" />
-              View Map
-            </button>
+                return filters.map((filter) => (
+                  <button
+                    key={filter.key}
+                    onClick={() => setActiveFilter(filter.key as any)}
+                    className={cn(
+                      "px-6 py-3 rounded-xl text-sm font-semibold transition-all",
+                      activeFilter === filter.key
+                        ? "bg-gradient-to-r from-amber-500 to-purple-500 text-white shadow-lg"
+                        : cn(colors.text, colors.hoverBg)
+                    )}
+                  >
+                    {filter.label}
+                  </button>
+                ));
+              })()}
+            </div>
           </div>
 
-          {/* Instagram-style Grid */}
+          {/* Musicians Grid */}
           {displayedMusicians.length === 0 ? (
             <div className="text-center py-16">
               <Music
@@ -366,30 +442,20 @@ const Musicians = () => {
               <h3 className={cn("text-2xl font-bold mb-3", colors.text)}>
                 No Artists Found
               </h3>
-              <p className={cn("text-lg max-w-md mx-auto", colors.textMuted)}>
+              {/* <p className={cn("text-lg max-w-md mx-auto", colors.textMuted)}>
                 {activeFilter === "nearby"
                   ? "No professional musicians found in your area. Try expanding your search radius."
                   : "No artists match your current criteria. Try different filters."}
-              </p>
+              </p> */}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {displayedMusicians.map((musician) => (
-                <InstagramStyleCard
+                <MusicianCard
                   key={musician._id}
-                  musician={musician as UserProps}
+                  musician={musician}
                   onClick={() => router.push(`/search/${musician.username}`)}
                   colors={colors}
-                  additionalData={{
-                    rating: (musician as any).rating,
-                    gigsCompleted: (musician as any).gigsCompleted,
-                    responseRate: (musician as any).responseRate,
-                    isAvailable: (musician as any).isAvailable,
-                    profileViews: (musician as any).profileViews,
-                    likes: (musician as any).likes,
-                    isVerified: (musician as any).isVerified,
-                  }}
-                  currentUserIsMusician={currentUser?.isMusician || false}
                 />
               ))}
             </div>
@@ -454,289 +520,7 @@ const Musicians = () => {
   );
 };
 
-// Instagram-style Card Component
-const InstagramStyleCard = ({
-  musician,
-  onClick,
-  colors,
-  additionalData,
-  currentUserIsMusician,
-}: {
-  musician: UserProps;
-  onClick: () => void;
-  colors: any;
-  additionalData: {
-    rating: number;
-    gigsCompleted: number;
-    responseRate: number;
-    isAvailable: boolean;
-    profileViews: number;
-    likes: number;
-    isVerified: boolean;
-  };
-  currentUserIsMusician: boolean;
-}) => {
-  const [isLiked, setIsLiked] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-
-  const getGenres = () => {
-    if (musician.musiciangenres && musician.musiciangenres.length > 0) {
-      return musician.musiciangenres;
-    }
-    if (musician.genres) {
-      return [musician.genres];
-    }
-    if (musician.djGenre) {
-      return [musician.djGenre];
-    }
-    if (musician.vocalistGenre) {
-      return [musician.vocalistGenre];
-    }
-    return [];
-  };
-
-  const genres = getGenres();
-
-  const tier = musician.tier;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      whileHover={{ y: -8 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className={cn(
-        "rounded-2xl border overflow-hidden cursor-pointer group",
-        colors.card,
-        colors.border,
-        "hover:shadow-2xl"
-      )}
-      onClick={onClick}
-    >
-      {/* Card Header - Instagram Style */}
-      <div className={cn("p-4 border-b", colors.border)}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              {additionalData.isVerified && (
-                <div className="absolute -top-1 -right-1 z-10">
-                  <CheckCircle className="w-4 h-4 text-blue-500 fill-blue-500" />
-                </div>
-              )}
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 to-purple-500 p-0.5">
-                <div
-                  className={cn(
-                    "w-full h-full rounded-full",
-                    colors.background
-                  )}
-                >
-                  {musician.picture ? (
-                    <Image
-                      src={musician.picture}
-                      alt={musician.firstname || "Musician"}
-                      width={48}
-                      height={48}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full rounded-full flex items-center justify-center">
-                      <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
-                        {musician.firstname?.[0]}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className={cn("font-semibold", colors.text)}>
-                  {musician.firstname} {musician.lastname}
-                </h3>
-                {tier === "pro" && (
-                  <span className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-                    PRO
-                  </span>
-                )}
-              </div>
-              {musician.instrument && (
-                <p className={cn("text-sm", colors.textMuted)}>
-                  {musician.instrument}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Star className="w-4 h-4 text-amber-400 fill-current" />
-            <span className={cn("text-sm font-semibold", colors.text)}>
-              {additionalData.rating}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Image/Content */}
-      <div className="relative aspect-square bg-gradient-to-br from-amber-500/20 to-purple-500/20">
-        {musician.picture ? (
-          <Image
-            src={musician.picture}
-            alt={`${musician.firstname}'s profile`}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <Music className="w-16 h-16 mx-auto mb-4 text-amber-400" />
-              <p className={cn("text-lg font-semibold", colors.text)}>
-                {musician.firstname} {musician.lastname}
-              </p>
-              <p className={cn("text-sm", colors.textMuted)}>
-                {musician.instrument}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Overlay Badges */}
-        <div className="absolute top-4 left-4 flex flex-col space-y-2">
-          {additionalData.isAvailable && (
-            <div className="bg-green-500 text-white text-xs px-3 py-1.5 rounded-full font-medium flex items-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-              <span>Available</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Engagement Bar - Instagram Style */}
-      <div className={cn("p-4 border-b", colors.border)}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsLiked(!isLiked);
-              }}
-              className="flex items-center space-x-1"
-            >
-              <Heart
-                className={`w-6 h-6 transition-colors ${
-                  isLiked
-                    ? "text-red-500 fill-red-500"
-                    : cn("text-gray-400", colors.textMuted)
-                }`}
-              />
-              <span className={cn("text-sm font-medium", colors.text)}>
-                {additionalData.likes + (isLiked ? 1 : 0)}
-              </span>
-            </button>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center space-x-1"
-            >
-              <MessageCircle className={cn("w-6 h-6", colors.textMuted)} />
-              <span className={cn("text-sm font-medium", colors.text)}>
-                {musician.allreviews?.length || 0}
-              </span>
-            </button>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center space-x-1"
-            >
-              <Share2 className={cn("w-6 h-6", colors.textMuted)} />
-            </button>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsSaved(!isSaved);
-            }}
-          >
-            <Bookmark
-              className={`w-6 h-6 transition-colors ${
-                isSaved
-                  ? "text-amber-500 fill-amber-500"
-                  : cn("text-gray-400", colors.textMuted)
-              }`}
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Card Footer */}
-      <div className="p-4">
-        <div className="space-y-3">
-          {/* Genres */}
-          {genres.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {genres.slice(0, 3).map((genre, index) => (
-                <span
-                  key={index}
-                  className="text-xs bg-gradient-to-r from-amber-500/10 to-purple-500/10 text-amber-600 px-2 py-1 rounded-full border border-amber-500/20"
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Location & Experience */}
-          <div className="flex items-center justify-between text-sm">
-            {musician.city && (
-              <div className="flex items-center space-x-1">
-                <MapPin className="w-3 h-3" />
-                <span className={cn(colors.textMuted)}>{musician.city}</span>
-              </div>
-            )}
-            {musician.experience && (
-              <span className={cn("font-medium", colors.text)}>
-                {musician.experience}
-              </span>
-            )}
-          </div>
-
-          {/* Professional Stats */}
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div className="text-center">
-              <p className={cn("text-xs font-semibold", colors.text)}>
-                {additionalData.gigsCompleted}
-              </p>
-              <p className={cn("text-xs", colors.textMuted)}>Gigs</p>
-            </div>
-            <div className="text-center">
-              <p className={cn("text-xs font-semibold", colors.text)}>
-                {additionalData.responseRate}%
-              </p>
-              <p className={cn("text-xs", colors.textMuted)}>Response</p>
-            </div>
-            <div className="text-center">
-              <p className={cn("text-xs font-semibold", colors.text)}>
-                {additionalData.profileViews}
-              </p>
-              <p className={cn("text-xs", colors.textMuted)}>Views</p>
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
-            className={cn(
-              "w-full py-3 bg-gradient-to-r from-amber-500 to-purple-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all mt-4"
-            )}
-          >
-            View Profile
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// Skeleton component with Instagram style
+// Skeleton component
 const MusiciansSkeleton = ({ colors }: { colors: any }) => (
   <div className={cn("min-h-screen w-full", colors.background)}>
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -777,8 +561,8 @@ const MusiciansSkeleton = ({ colors }: { colors: any }) => (
       </div>
 
       {/* Grid Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {[...Array(8)].map((_, i) => (
           <div
             key={i}
             className={cn("rounded-2xl border animate-pulse", colors.border)}
@@ -806,7 +590,6 @@ const MusiciansSkeleton = ({ colors }: { colors: any }) => (
                 />
               </div>
             </div>
-            <div className={cn("aspect-square", colors.backgroundMuted)} />
             <div className="p-4 space-y-3">
               <div
                 className={cn("h-4 w-full rounded", colors.backgroundMuted)}

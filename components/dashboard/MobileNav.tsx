@@ -320,7 +320,7 @@ export default function MobileNav() {
       href: "/profile",
       icon: <SettingsIcon className="w-5 h-5" />,
       exact: false,
-      availableForTiers: ["free", "pro", "premium", "elite"],
+      availableForTiers: ["pro", "premium", "elite"],
     },
     {
       name: "Help & Support",

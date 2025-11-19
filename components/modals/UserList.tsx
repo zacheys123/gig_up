@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+
 import { Modal } from "./Modal";
 import { User, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,7 @@ import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@clerk/nextjs";
 import CheckModal from "./CheckModal";
 import { toUserId } from "@/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 type UserProps = Doc<"users">;
 interface UserListModalProps {
@@ -222,13 +223,12 @@ const UserAvatar = ({ user }: { user: UserProps }) => {
   if (user.picture && user.firstname) {
     return (
       <div className="w-10 h-10 rounded-full bg-neutral-700 overflow-hidden">
-        <Image
-          src={user.picture}
-          alt={`${user.firstname}'s avatar`}
-          width={40}
-          height={40}
-          className="object-cover w-full h-full"
-        />
+        <Avatar className="w-12 h-12 border-2 border-background">
+          <AvatarImage src={user.picture} alt={user.firstname || "Musician"} />
+          <AvatarFallback className="bg-gradient-to-r from-amber-400 to-purple-400 text-white font-bold">
+            {user.firstname}
+          </AvatarFallback>
+        </Avatar>
       </div>
     );
   }

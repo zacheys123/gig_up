@@ -31,29 +31,6 @@ export default function Dashboard() {
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [refreshKey, setRefreshKey] = useState(0); // Force re-render key
 
-  // Debug logging
-  useEffect(() => {
-    console.log("=== DASHBOARD DEBUG ===");
-    console.log("isLoaded:", isLoaded);
-    console.log("userId:", userId);
-    console.log("isAuthenticated:", isAuthenticated);
-    console.log("isLoading:", isLoading);
-    console.log("user:", user);
-    console.log("isMusician:", isMusician);
-    console.log("isClient:", isClient);
-    console.log("isBooker:", isBooker); // Add booker logging
-    console.log("======================");
-  }, [
-    isLoaded,
-    userId,
-    isAuthenticated,
-    isLoading,
-    user,
-    isMusician,
-    isClient,
-    isBooker, // Add booker dependency
-  ]);
-
   // Manual refresh function - using key to force re-render
   const handleRefreshData = useCallback(async () => {
     if (isDataRefreshing) return;
@@ -190,16 +167,14 @@ export default function Dashboard() {
           )}
         </motion.button>
       </div>
-
-      {/* Last Refreshed Time */}
-      <div className="fixed top-4 left-4 z-10">
+      {/* Last Refreshed Time
+      <div className="fixed top-4 left-4 z-10 my-4">
         <p
           className={`text-xs ${colors.textMuted} bg-black/50 backdrop-blur-sm px-2 py-1 rounded`}
         >
           Last updated: {lastRefreshed.toLocaleTimeString()}
         </p>
-      </div>
-
+      </div> */}
       {/* Main Dashboard Content */}
       {isMusician ? (
         <MusicianDashboardWithLoading
@@ -260,7 +235,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
       {/* Pro upgrade banner */}
       {!isPro() && (
         <div
@@ -271,7 +245,6 @@ export default function Dashboard() {
           </p>
         </div>
       )}
-
       {user.firstLogin && !user.onboardingComplete && <OnboardingModal />}
     </main>
   );

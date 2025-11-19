@@ -177,29 +177,6 @@ const getCoreLinks = (): NavigationLink[] => [
     availableForTiers: ["free", "pro", "premium", "elite"],
   },
   {
-    label: "Profile",
-    href: "/profile",
-    icon: <User size={22} />,
-    availableForTiers: ["free", "pro", "premium", "elite"],
-  },
-  {
-    label: "Settings",
-    href: "/settings",
-    icon: <Settings size={22} />,
-    availableForTiers: ["free", "pro", "premium", "elite"],
-  },
-];
-
-// Free tier features
-const getFreeTierLinks = (): NavigationLink[] => [
-  {
-    label: "Search",
-    href: "/auth/search",
-    icon: <Search size={22} />,
-    availableForTiers: ["free", "pro", "premium", "elite"],
-    requiresCompleteProfile: true,
-  },
-  {
     label: "Contact",
     href: "/contact",
     icon: <Mail size={22} />,
@@ -227,6 +204,13 @@ const getProTierLinks = (
       availableForTiers: ["pro", "premium", "elite"],
       requiresCompleteProfile: true,
       featured: true,
+    },
+    {
+      label: "Discover",
+      href: "/auth/search",
+      icon: <Search size={22} />,
+      availableForTiers: ["free", "pro", "premium", "elite"],
+      requiresCompleteProfile: true,
     },
     {
       label: "Community",
@@ -356,7 +340,6 @@ const getNavigationLinks = (
   handleOpenMessages?: (e: React.MouseEvent) => void
 ): NavigationLink[] => {
   const coreLinks = getCoreLinks();
-  const freeLinks = getFreeTierLinks();
   const proLinks = getProTierLinks(user, isInGracePeriod);
   const premiumLinks = getPremiumTierLinks();
   const eliteLinks = getEliteTierLinks();
@@ -366,7 +349,7 @@ const getNavigationLinks = (
     : [];
 
   // Combine links based on user tier
-  let allLinks = [...coreLinks, ...freeLinks];
+  let allLinks = [...coreLinks];
 
   if (
     userTier === "pro" ||
@@ -384,14 +367,11 @@ const getNavigationLinks = (
   if (userTier === "elite") {
     allLinks = [...allLinks, ...eliteLinks];
   }
-
   return allLinks;
 };
-
 interface MobileSheetProps {
   children?: React.ReactNode;
 }
-
 export function MobileSheet({ children }: MobileSheetProps) {
   const { userId } = useAuth();
   const { isSignedIn } = useUser();

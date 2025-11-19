@@ -37,6 +37,7 @@ import {
   ChevronRight,
   Zap,
   User,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -139,7 +140,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 30,000 - 50,000",
     icon: "🎤",
     gigType: "concert",
-    tier: "pro",
+    tier: "premium",
   },
   {
     id: "restaurant-example",
@@ -186,6 +187,17 @@ const EXAMPLE_TEMPLATES = [
     tier: "pro",
   },
   {
+    id: "music-lesson",
+    title: "Music Classes",
+    description: "Music classes ",
+    duration: "4 hours",
+    fromTime: "8pm",
+    budget: "KES 5,000 - 20,000",
+    icon: "🎭",
+    gigType: "music-lesson",
+    tier: "premium",
+  },
+  {
     id: "recording-example",
     title: "Recording Session",
     description: "Professional musicians for studio recording projects",
@@ -194,7 +206,7 @@ const EXAMPLE_TEMPLATES = [
     budget: "KES 25,000 - 45,000",
     icon: "🎹",
     gigType: "recording",
-    tier: "pro",
+    tier: "premium",
   },
   {
     id: "individual-example",
@@ -238,6 +250,12 @@ const TIER_LIMITS = {
   },
   premium: {
     templates: 100,
+    customTemplates: 50,
+    scratchTemplates: 25,
+    maxTemplates: 100,
+  },
+  elite: {
+    templates: 10,
     customTemplates: 50,
     scratchTemplates: 25,
     maxTemplates: 100,
@@ -1700,7 +1718,7 @@ const GuidedInterface = memo(
                             "hover:border-blue-400",
                             "hover:bg-gradient-to-br hover:from-blue-50 hover:to-white"
                           )
-                        : "opacity-70 cursor-not-allowed grayscale"
+                        : "opacity-90 cursor-not-allowed grayscale"
                     )}
                     onClick={() => handleUseTemplate(template)}
                   >
@@ -1763,6 +1781,10 @@ const GuidedInterface = memo(
                             {hasReachedLimit
                               ? "You've reached your template limit"
                               : `Upgrade to ${template.tier} to use this template`}
+                            <span className="!text-yellow-300">
+                              {" "}
+                              ({template.gigType})
+                            </span>
                           </p>
                           <Button
                             size="sm"
@@ -1954,103 +1976,536 @@ const GuidedInterface = memo(
             </div>
           </div>
 
-          {/* Sidebar - Pro & Premium Features */}
+          {/* Sidebar - Tier Features */}
           <div className="space-y-8">
-            {/* Pro Features */}
-            <div
-              className={cn(
-                "rounded-2xl p-6 border-2",
-                "border-green-200 dark:border-green-800",
-                colors.card
-              )}
-            >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center">
-                  <Zap className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="px-3 py-1 rounded-full text-sm font-bold bg-green-500 text-white inline-block mb-3">
-                  PRO
-                </div>
-                <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
-                  Upgrade to Pro
-                </h3>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  Unlock advanced template features
-                </p>
-              </div>
-              <div className="space-y-3 mb-6">
-                {[
-                  "50+ professional templates",
-                  "Custom template creation",
-                  "Advanced field customization",
-                  "Unlimited saved templates",
-                  "Priority template access",
-                ].map((feature, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className={cn("text-sm", colors.text)}>
-                      {feature}
-                    </span>
+            {/* Show different banners based on user tier */}
+            {userTier === "free" && (
+              <>
+                {/* Pro Features for Free Users */}
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    colors.warningBorder,
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div
+                      className={cn(
+                        "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
+                        colors.warningBg
+                      )}
+                    >
+                      <Zap className={cn("w-8 h-8", colors.warningText)} />
+                    </div>
+                    <div
+                      className={cn(
+                        "px-3 py-1 rounded-full text-sm font-bold",
+                        colors.primaryBg,
+                        colors.textInverted,
+                        "inline-block mb-3"
+                      )}
+                    >
+                      PRO
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Upgrade to Pro
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Unlock advanced template features
+                    </p>
                   </div>
-                ))}
-              </div>
-              <Button
-                onClick={() => showUpgradePrompt("pro")}
-                className="w-full bg-green-500 hover:bg-green-600 text-white"
-                size="lg"
-              >
-                <Crown className="w-5 h-5 mr-2" />
-                Upgrade to Pro
-              </Button>
-            </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "50+ professional templates",
+                      "Custom template creation",
+                      "Advanced field customization",
+                      "Unlimited saved templates",
+                      "Priority template access",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle
+                          className={cn(
+                            "w-4 h-4 flex-shrink-0",
+                            colors.successText
+                          )}
+                        />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => showUpgradePrompt("pro")}
+                    className={cn(
+                      "w-full",
+                      colors.primaryBg,
+                      colors.textInverted,
+                      colors.primaryBgHover
+                    )}
+                    size="lg"
+                  >
+                    <Crown className="w-5 h-5 mr-2" />
+                    Upgrade to Pro
+                  </Button>
+                </div>
 
-            {/* Premium Features */}
-            <div
-              className={cn(
-                "rounded-2xl p-6 border-2",
-                "border-amber-200 dark:border-amber-800",
-                colors.card
-              )}
-            >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center">
-                  <Sparkles className="w-8 h-8 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
-                  PREMIUM
-                </div>
-                <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
-                  Go Premium
-                </h3>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  Complete creative freedom
-                </p>
-              </div>
-              <div className="space-y-3 mb-6">
-                {[
-                  "All Pro features included",
-                  "Start from scratch creation",
-                  "White-glove support",
-                  "Early feature access",
-                  "Dedicated account manager",
-                ].map((feature, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                    <span className={cn("text-sm", colors.text)}>
-                      {feature}
-                    </span>
+                {/* Premium Features for Free Users */}
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    colors.warningBorder,
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div
+                      className={cn(
+                        "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
+                        colors.warningBg
+                      )}
+                    >
+                      <Sparkles className={cn("w-8 h-8", colors.warningText)} />
+                    </div>
+                    <div
+                      className={cn(
+                        "px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3"
+                      )}
+                    >
+                      PREMIUM
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Go Premium
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Complete creative freedom
+                    </p>
                   </div>
-                ))}
-              </div>
-              <Button
-                onClick={() => showUpgradePrompt("premium")}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
-                size="lg"
-              >
-                <Crown className="w-5 h-5 mr-2" />
-                Go Premium
-              </Button>
-            </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "All Pro features included",
+                      "Start from scratch creation",
+                      "White-glove support",
+                      "Early feature access",
+                      "Dedicated account manager",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => showUpgradePrompt("premium")}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                    size="lg"
+                  >
+                    <Crown className="w-5 h-5 mr-2" />
+                    Go Premium
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {userTier === "pro" && (
+              <>
+                {/* Premium Upgrade for Pro Users */}
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    "border-amber-200 dark:border-amber-800",
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center">
+                      <Sparkles className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
+                      PREMIUM
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Upgrade to Premium
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Unlock complete creative freedom
+                    </p>
+                  </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "Start from scratch creation",
+                      "Advanced customization tools",
+                      "White-glove support",
+                      "Early feature access",
+                      "Dedicated account manager",
+                      "Priority template review",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => showUpgradePrompt("premium")}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                    size="lg"
+                  >
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Upgrade to Premium
+                  </Button>
+                </div>
+
+                {/* Elite Upgrade for Pro Users */}
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    "border-purple-200 dark:border-purple-800",
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center">
+                      <Crown className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-sm font-bold bg-purple-500 text-white inline-block mb-3">
+                      ELITE
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Go Elite
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Ultimate platform experience
+                    </p>
+                  </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "All Premium features included",
+                      "VIP concierge service",
+                      "Custom feature development",
+                      "24/7 priority support",
+                      "Personal success manager",
+                      "Exclusive event invitations",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => showUpgradePrompt("elite")}
+                    className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+                    size="lg"
+                  >
+                    <Crown className="w-5 h-5 mr-2" />
+                    Go Elite
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {userTier === "premium" && (
+              <>
+                {/* Downgrade to Pro for Premium Users */}
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    "border-green-200 dark:border-green-800",
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center">
+                      <Zap className="w-8 h-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-sm font-bold bg-green-500 text-white inline-block mb-3">
+                      PRO
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Downgrade to Pro
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Save costs with essential features
+                    </p>
+                  </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "50+ professional templates",
+                      "Custom template creation",
+                      "Advanced field customization",
+                      "Unlimited saved templates",
+                      "Priority template access",
+                      "Standard email support",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-3">
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg text-sm",
+                        colors.warningBg,
+                        colors.warningBorder
+                      )}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertCircle className="w-4 h-4 text-amber-500" />
+                        <span className={cn("font-medium", colors.warningText)}>
+                          You'll lose:
+                        </span>
+                      </div>
+                      <ul
+                        className={cn(
+                          "text-sm space-y-1 ml-6",
+                          colors.warningText
+                        )}
+                      >
+                        <li>• Start from scratch creation</li>
+                        <li>• White-glove support</li>
+                        <li>• Dedicated account manager</li>
+                        <li>• Early feature access</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      /* Add downgrade logic */
+                    }}
+                    variant="outline"
+                    className="w-full border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 mt-4"
+                    size="lg"
+                  >
+                    <Settings className="w-5 h-5 mr-2" />
+                    Downgrade to Pro
+                  </Button>
+                </div>
+
+                {/* Elite Upgrade for Premium Users */}
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    "border-purple-200 dark:border-purple-800",
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center">
+                      <Crown className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-sm font-bold bg-purple-500 text-white inline-block mb-3">
+                      ELITE
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Go Elite
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Ultimate platform experience
+                    </p>
+                  </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "All Premium features included",
+                      "VIP concierge service",
+                      "Custom feature development",
+                      "24/7 priority support",
+                      "Personal success manager",
+                      "Exclusive event invitations",
+                      "Advanced analytics dashboard",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => showUpgradePrompt("elite")}
+                    className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+                    size="lg"
+                  >
+                    <Crown className="w-5 h-5 mr-2" />
+                    Upgrade to Elite
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {userTier === "elite" && (
+              <>
+                {/* Downgrade Options for Elite Users */}
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    "border-amber-200 dark:border-amber-800",
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center">
+                      <Sparkles className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
+                      PREMIUM
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Downgrade to Premium
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Maintain premium features at lower cost
+                    </p>
+                  </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "Start from scratch creation",
+                      "Advanced customization tools",
+                      "White-glove support",
+                      "Early feature access",
+                      "Dedicated account manager",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-3">
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg text-sm",
+                        colors.warningBg,
+                        colors.warningBorder
+                      )}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertCircle className="w-4 h-4 text-amber-500" />
+                        <span className={cn("font-medium", colors.warningText)}>
+                          You'll lose:
+                        </span>
+                      </div>
+                      <ul
+                        className={cn(
+                          "text-sm space-y-1 ml-6",
+                          colors.warningText
+                        )}
+                      >
+                        <li>• VIP concierge service</li>
+                        <li>• Custom feature development</li>
+                        <li>• 24/7 priority support</li>
+                        <li>• Personal success manager</li>
+                        <li>• Exclusive event invitations</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      /* Add downgrade logic */
+                    }}
+                    variant="outline"
+                    className="w-full border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 mt-4"
+                    size="lg"
+                  >
+                    <Settings className="w-5 h-5 mr-2" />
+                    Downgrade to Premium
+                  </Button>
+                </div>
+
+                <div
+                  className={cn(
+                    "rounded-2xl p-6 border-2",
+                    "border-green-200 dark:border-green-800",
+                    colors.card
+                  )}
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center">
+                      <Zap className="w-8 h-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-sm font-bold bg-green-500 text-white inline-block mb-3">
+                      PRO
+                    </div>
+                    <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                      Downgrade to Pro
+                    </h3>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      Basic features for essential needs
+                    </p>
+                  </div>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      "50+ professional templates",
+                      "Custom template creation",
+                      "Advanced field customization",
+                      "Unlimited saved templates",
+                      "Priority template access",
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className={cn("text-sm", colors.text)}>
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-3">
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg text-sm",
+                        colors.warningBg,
+                        colors.warningBorder
+                      )}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertCircle className="w-4 h-4 text-amber-500" />
+                        <span className={cn("font-medium", colors.warningText)}>
+                          You'll lose:
+                        </span>
+                      </div>
+                      <ul
+                        className={cn(
+                          "text-sm space-y-1 ml-6",
+                          colors.warningText
+                        )}
+                      >
+                        <li>• Start from scratch creation</li>
+                        <li>• White-glove support</li>
+                        <li>• Dedicated account manager</li>
+                        <li>• Early feature access</li>
+                        <li>• VIP concierge service</li>
+                        <li>• Custom feature development</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      /* Add downgrade logic */
+                    }}
+                    variant="outline"
+                    className="w-full border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 mt-4"
+                    size="lg"
+                  >
+                    <Settings className="w-5 h-5 mr-2" />
+                    Downgrade to Pro
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

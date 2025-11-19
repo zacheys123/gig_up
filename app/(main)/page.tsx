@@ -32,11 +32,15 @@ import {
   Bell,
   Briefcase,
   GraduationCap,
+  Crown,
+  Zap,
+  Sparkles,
 } from "lucide-react";
 import LoadingSpinner from "./loading";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import GigLoader from "@/components/(main)/GigLoader";
+import { useCheckTrial } from "@/hooks/useCheckTrial"; // Import the trial hook
 
 export default function Home() {
   const { isLoaded, userId } = useAuth();
@@ -44,6 +48,9 @@ export default function Home() {
 
   // ✅ Use Zustand store instead of useCurrentUser
   const { user, isLoading, isAuthenticated } = useUserStore();
+
+  // ✅ Add trial check
+  const { isInGracePeriod, daysLeft } = useCheckTrial();
 
   const [showVideo, setShowVideo] = useState(false);
   const [isClientSide, setIsClientSide] = useState(false);
@@ -127,13 +134,13 @@ export default function Home() {
 
     // All roles go to appropriate hubs with role-specific default tabs
     if (user?.isClient) {
-      return !user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=my_gigs`; // Changed to my_gigs for clients
+      return !user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=my_gigs`;
     }
 
     if (user?.isBooker) {
       return !user?.onboardingComplete
         ? `/dashboard`
-        : `/hub/gigs?tab=applications`; // Changed to managed_gigs for bookers
+        : `/hub/gigs?tab=applications`;
     }
 
     if (user?.isMusician) {
@@ -142,6 +149,10 @@ export default function Home() {
 
     return `/roles/${userId}`;
   };
+
+  // ✅ Check if user needs to upgrade (not in grace period and not pro)
+  const needsUpgrade =
+    isAuthenticated && !isInGracePeriod && user?.tier !== "pro";
 
   // Show loading spinner while auth, user data, or theme is loading
   if (!isLoaded || !mounted) {
@@ -298,6 +309,41 @@ export default function Home() {
     return "Ready to Create?";
   };
 
+  // ✅ Upgrade Banner Component
+  const UpgradeBanner = ({ compact = false }: { compact?: boolean }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "w-full p-4 rounded-xl border bg-gradient-to-r from-amber-500/10 to-orange-500/10",
+        colors.cardBorder,
+        compact ? "mb-4" : "mb-6"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0">
+          <Crown className="w-6 h-6 text-amber-500" />
+        </div>
+        <div className="flex-1">
+          <h4 className={cn("font-bold text-sm", colors.text)}>
+            Upgrade to Pro
+          </h4>
+          <p className={cn("text-xs", colors.textMuted)}>
+            {!isInGracePeriod
+              ? "Your trial has ended. Upgrade to continue accessing all features."
+              : `Only ${daysLeft} days left in your trial. Upgrade now to keep your access.`}
+          </p>
+        </div>
+        <Link
+          href="/dashboard/billing"
+          className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-semibold rounded-lg hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
+        >
+          Upgrade
+        </Link>
+      </div>
+    </motion.div>
+  );
+
   return (
     <>
       <div
@@ -342,6 +388,9 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
           >
+            {/* Show upgrade banner at the top if user needs upgrade */}
+            {needsUpgrade && <UpgradeBanner />}
+
             <motion.h1
               className="text-6xl md:text-7xl font-black tracking-tight leading-tight text-transparent bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 bg-clip-text mb-6"
               initial={{ opacity: 0, y: 20 }}
@@ -397,32 +446,46 @@ export default function Home() {
             >
               {isAuthenticated ? (
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Link
-                    href={getDynamicHref()}
-                    className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
-                  >
-                    {isAuthenticated
-                      ? isProfileComplete
-                        ? user?.roleType === "teacher"
-                          ? "Find Students"
-                          : user?.isClient
-                            ? "Manage My Gigs" // Updated for clients
-                            : user?.isBooker
-                              ? "Manage Events" // Updated for bookers
-                              : "Find Gigs"
-                        : needsRoleSelection
-                          ? "Choose Your Role"
-                          : user?.roleType === "teacher"
-                            ? "Set Up Teaching Profile"
+                  {needsUpgrade ? (
+                    // Show upgrade button instead of main action when trial expired
+                    <Link
+                      href="/dashboard/billing"
+                      className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                    >
+                      <Crown className="w-5 h-5" />
+                      Upgrade to Pro
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  ) : (
+                    // Normal action buttons when in grace period or pro
+                    <Link
+                      href={getDynamicHref()}
+                      className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                    >
+                      {isAuthenticated
+                        ? isProfileComplete
+                          ? user?.roleType === "teacher"
+                            ? "Find Students"
                             : user?.isClient
-                              ? "Set Up Client Profile" // Updated for clients
+                              ? "Manage My Gigs"
                               : user?.isBooker
-                                ? "Set Up Booker Profile" // Updated for bookers
-                                : "Complete Profile"
-                      : "Get Started"}
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                  {isProfileComplete && (
+                                ? "Manage Events"
+                                : "Find Gigs"
+                          : needsRoleSelection
+                            ? "Choose Your Role"
+                            : user?.roleType === "teacher"
+                              ? "Set Up Teaching Profile"
+                              : user?.isClient
+                                ? "Set Up Client Profile"
+                                : user?.isBooker
+                                  ? "Set Up Booker Profile"
+                                  : "Complete Profile"
+                        : "Get Started"}
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  )}
+
+                  {isProfileComplete && !needsUpgrade && (
                     <Link
                       href={
                         user?.isMusician
@@ -473,8 +536,8 @@ export default function Home() {
                   : "rgba(229, 231, 235, 0.5)",
               }}
             >
-              {isAuthenticated && isProfileComplete
-                ? // User-specific stats for logged-in users with complete profiles
+              {isAuthenticated && isProfileComplete && !needsUpgrade
+                ? // User-specific stats for logged-in users with complete profiles and active access
                   [
                     {
                       number: user?.completedGigsCount?.toString() || "0",
@@ -484,7 +547,7 @@ export default function Home() {
                           : user?.isBooker
                             ? "Events Managed"
                             : user?.isClient
-                              ? "Gigs Posted" // Updated for clients
+                              ? "Gigs Posted"
                               : "Gigs Completed",
                     },
                     {
@@ -495,7 +558,7 @@ export default function Home() {
                           : user?.isBooker
                             ? "Artists Managed"
                             : user?.isClient
-                              ? "Artists Hired" // Updated for clients
+                              ? "Artists Hired"
                               : "Followers",
                     },
                     {
@@ -506,7 +569,7 @@ export default function Home() {
                           : user?.isBooker
                             ? "Active Events"
                             : user?.isClient
-                              ? "Active Gigs" // Updated for clients
+                              ? "Active Gigs"
                               : "This Month",
                     },
                   ].map((stat, index) => (
@@ -519,11 +582,11 @@ export default function Home() {
                       </div>
                     </div>
                   ))
-                : // General stats for guests and incomplete profiles
+                : // General stats for guests, incomplete profiles, or users needing upgrade
                   [
                     { number: "10K+", label: "Active Musicians" },
                     { number: "2K+", label: "Music Teachers" },
-                    { number: "5K+", label: "Clients & Bookers" }, // Updated to include both
+                    { number: "5K+", label: "Clients & Bookers" },
                   ].map((stat, index) => (
                     <div key={index} className="text-center">
                       <div className="text-2xl md:text-3xl font-bold text-amber-400">
@@ -551,6 +614,13 @@ export default function Home() {
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
+            {/* Show upgrade banner before features if user needs upgrade */}
+            {needsUpgrade && (
+              <div className="mb-8">
+                <UpgradeBanner compact />
+              </div>
+            )}
+
             <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-amber-400 to-pink-500 bg-clip-text">
               {isAuthenticated
                 ? isProfileComplete
@@ -585,20 +655,40 @@ export default function Home() {
                     "group backdrop-blur-sm p-8 rounded-2xl border transition-all duration-500 hover:scale-105",
                     colors.card,
                     colors.cardBorder,
+                    needsUpgrade ? "opacity-60" : "",
                     "hover:border-amber-500/30"
                   )}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.6 }}
-                  whileHover={{ y: -5 }}
+                  whileHover={{ y: needsUpgrade ? 0 : -5 }}
                 >
-                  <div className="flex justify-center mb-6">{feature.icon}</div>
+                  <div className="flex justify-center mb-6">
+                    {needsUpgrade ? (
+                      <div className="relative">
+                        {feature.icon}
+                        <Crown className="w-6 h-6 text-amber-500 absolute -top-2 -right-2" />
+                      </div>
+                    ) : (
+                      feature.icon
+                    )}
+                  </div>
                   <h3 className={cn("text-xl font-bold mb-3", colors.text)}>
                     {feature.title}
+                    {needsUpgrade && (
+                      <span className="ml-2 text-xs bg-amber-500 text-white px-2 py-1 rounded-full">
+                        PRO
+                      </span>
+                    )}
                   </h3>
                   <p className={cn("leading-relaxed", colors.textMuted)}>
                     {feature.description}
                   </p>
+                  {needsUpgrade && (
+                    <div className="mt-3 text-xs text-amber-500 font-semibold">
+                      Upgrade to access
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -630,7 +720,9 @@ export default function Home() {
               )}
             >
               {isAuthenticated && isProfileComplete
-                ? "Make the most of your GigUp experience"
+                ? needsUpgrade
+                  ? "Upgrade to continue using GigUp"
+                  : "Make the most of your GigUp experience"
                 : "Get started in just a few simple steps"}
             </p>
 
@@ -678,8 +770,8 @@ export default function Home() {
 
             {/* Dynamic steps based on user status */}
             <div className="grid md:grid-cols-3 gap-8 mt-12">
-              {isAuthenticated && isProfileComplete
-                ? // Steps for users with complete profiles
+              {isAuthenticated && isProfileComplete && !needsUpgrade
+                ? // Steps for users with complete profiles and active access
                   [
                     {
                       step: "01",
@@ -740,43 +832,88 @@ export default function Home() {
                       <p className={cn(colors.textMuted)}>{item.description}</p>
                     </motion.div>
                   ))
-                : // Steps for guests and incomplete profiles (unchanged)
-                  [
-                    {
-                      step: "01",
-                      title: "Create Profile",
-                      description:
-                        "Sign up and set up your musician, teacher, client, or booker profile",
-                    },
-                    {
-                      step: "02",
-                      title: "Connect",
-                      description:
-                        "Find musicians, students, gigs, or talent that match your needs",
-                    },
-                    {
-                      step: "03",
-                      title: "Perform",
-                      description:
-                        "Book gigs, teach lessons, share music, manage events, and grow",
-                    },
-                  ].map((item, index) => (
-                    <motion.div
-                      key={index}
-                      className="text-center p-6"
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.2, duration: 0.6 }}
-                    >
-                      <div className="text-4xl font-black text-amber-500 mb-4">
-                        {item.step}
-                      </div>
-                      <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
-                        {item.title}
-                      </h3>
-                      <p className={cn(colors.textMuted)}>{item.description}</p>
-                    </motion.div>
-                  ))}
+                : needsUpgrade
+                  ? // Upgrade-focused steps for users needing upgrade
+                    [
+                      {
+                        step: "01",
+                        title: "Upgrade",
+                        description: "Choose the Pro plan that fits your needs",
+                      },
+                      {
+                        step: "02",
+                        title: "Unlock",
+                        description:
+                          "Get immediate access to all platform features",
+                      },
+                      {
+                        step: "03",
+                        title: "Thrive",
+                        description:
+                          "Grow your music career with unlimited access",
+                      },
+                    ].map((item, index) => (
+                      <motion.div
+                        key={index}
+                        className="text-center p-6"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.2, duration: 0.6 }}
+                      >
+                        <div className="text-4xl font-black text-amber-500 mb-4">
+                          {item.step}
+                        </div>
+                        <h3
+                          className={cn("text-xl font-bold mb-2", colors.text)}
+                        >
+                          {item.title}
+                        </h3>
+                        <p className={cn(colors.textMuted)}>
+                          {item.description}
+                        </p>
+                      </motion.div>
+                    ))
+                  : // Steps for guests and incomplete profiles
+                    [
+                      {
+                        step: "01",
+                        title: "Create Profile",
+                        description:
+                          "Sign up and set up your musician, teacher, client, or booker profile",
+                      },
+                      {
+                        step: "02",
+                        title: "Connect",
+                        description:
+                          "Find musicians, students, gigs, or talent that match your needs",
+                      },
+                      {
+                        step: "03",
+                        title: "Perform",
+                        description:
+                          "Book gigs, teach lessons, share music, manage events, and grow",
+                      },
+                    ].map((item, index) => (
+                      <motion.div
+                        key={index}
+                        className="text-center p-6"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.2, duration: 0.6 }}
+                      >
+                        <div className="text-4xl font-black text-amber-500 mb-4">
+                          {item.step}
+                        </div>
+                        <h3
+                          className={cn("text-xl font-bold mb-2", colors.text)}
+                        >
+                          {item.title}
+                        </h3>
+                        <p className={cn(colors.textMuted)}>
+                          {item.description}
+                        </p>
+                      </motion.div>
+                    ))}
             </div>
           </motion.div>
 
@@ -788,18 +925,29 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <Link
-                href={getDynamicHref()}
-                className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
-              >
-                <SaveAll className="w-5 h-5" />
-                {isProfileComplete
-                  ? "Open Dashboard"
-                  : needsRoleSelection
-                    ? "Choose Your Role"
-                    : "Complete Profile"}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              {needsUpgrade ? (
+                <Link
+                  href="/dashboard/billing"
+                  className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
+                >
+                  <Crown className="w-5 h-5" />
+                  Upgrade to Pro
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              ) : (
+                <Link
+                  href={getDynamicHref()}
+                  className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
+                >
+                  <SaveAll className="w-5 h-5" />
+                  {isProfileComplete
+                    ? "Open Dashboard"
+                    : needsRoleSelection
+                      ? "Choose Your Role"
+                      : "Complete Profile"}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              )}
             </motion.div>
           )}
         </section>
@@ -820,7 +968,9 @@ export default function Home() {
             <h2 className="text-5xl md:text-6xl font-black mb-6 text-transparent bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text">
               {isAuthenticated
                 ? isProfileComplete
-                  ? getWelcomeMessage()
+                  ? needsUpgrade
+                    ? "Upgrade to Continue"
+                    : getWelcomeMessage()
                   : "Ready to Complete Your Profile?"
                 : "Ready to Start?"}
             </h2>
@@ -829,7 +979,9 @@ export default function Home() {
             >
               {isAuthenticated
                 ? isProfileComplete
-                  ? `Continue your journey as a ${getUserRoleDisplay().toLowerCase()}`
+                  ? needsUpgrade
+                    ? "Your trial has ended. Upgrade to Pro to continue using all features."
+                    : `Continue your journey as a ${getUserRoleDisplay().toLowerCase()}`
                   : "Complete your setup to unlock all features"
                 : "Join thousands of musicians, teachers, clients, and bookers already on GigUp"}
             </p>
@@ -849,38 +1001,51 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link
-                  href={getDynamicHref()}
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
-                >
-                  {isProfileComplete
-                    ? "Go to Dashboard"
-                    : needsRoleSelection
-                      ? "Choose Role"
-                      : "Complete Profile"}
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                {isProfileComplete && (
+                {needsUpgrade ? (
                   <Link
-                    href={
-                      user?.roleType === "teacher"
-                        ? "/teaching"
-                        : user?.isMusician
-                          ? "/profile"
-                          : user?.isBooker
-                            ? "/my-events"
-                            : "/my-gigs"
-                    }
-                    className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
+                    href="/dashboard/billing"
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
                   >
-                    {user?.roleType === "teacher"
-                      ? "My Teaching"
-                      : user?.isMusician
-                        ? "My Profile"
-                        : user?.isBooker
-                          ? "My Events"
-                          : "My Gigs"}
+                    <Crown className="w-5 h-5" />
+                    Upgrade to Pro
+                    <ArrowRight className="w-5 h-5" />
                   </Link>
+                ) : (
+                  <>
+                    <Link
+                      href={getDynamicHref()}
+                      className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
+                    >
+                      {isProfileComplete
+                        ? "Go to Dashboard"
+                        : needsRoleSelection
+                          ? "Choose Role"
+                          : "Complete Profile"}
+                      <ArrowRight className="w-5 h-5" />
+                    </Link>
+                    {isProfileComplete && (
+                      <Link
+                        href={
+                          user?.roleType === "teacher"
+                            ? "/teaching"
+                            : user?.isMusician
+                              ? "/profile"
+                              : user?.isBooker
+                                ? "/my-events"
+                                : "/my-gigs"
+                        }
+                        className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
+                      >
+                        {user?.roleType === "teacher"
+                          ? "My Teaching"
+                          : user?.isMusician
+                            ? "My Profile"
+                            : user?.isBooker
+                              ? "My Events"
+                              : "My Gigs"}
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -911,6 +1076,16 @@ export default function Home() {
                   className={cn("text-xs block mt-1", colors.textSecondary)}
                 >
                   Theme: {userTheme}
+                </span>
+              )}
+              {needsUpgrade && (
+                <span className={cn("text-xs block mt-1 text-amber-500")}>
+                  Trial expired - Upgrade required
+                </span>
+              )}
+              {isInGracePeriod && !needsUpgrade && (
+                <span className={cn("text-xs block mt-1 text-green-500")}>
+                  {daysLeft} days left in trial
                 </span>
               )}
             </p>
@@ -1176,7 +1351,6 @@ export default function Home() {
                     </button>
                   </SignOutButton>
                 </div>
-
                 <p className={cn("text-center text-xs mt-4", colors.textMuted)}>
                   Complete your profile for the best experience
                 </p>
