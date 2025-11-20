@@ -53,6 +53,7 @@ import { useChat } from "@/app/context/ChatContext";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import ConversationList from "../chat/ConversationDetails";
+import { getUserTrialStatus } from "@/hooks/useUserTrialStatus";
 
 interface NavigationLink {
   label: string;
@@ -123,34 +124,25 @@ export const getTierInfo = (tier?: string) => {
 
 export const hasMinimumData = (user: any): boolean => {
   if (!user) return false;
-  if (user.firstTimeInProfile !== false) return false;
 
   const isMusician = user.isMusician;
   const isTeacher = user.roleType === "teacher";
   const isClient = user.isClient;
   const isBooker = user.isBooker;
 
-  if (isMusician) {
-    if (isTeacher) {
-      return (
-        !!user.firstname?.trim() &&
-        !!user.lastname?.trim() &&
-        !!user.city?.trim() &&
-        !!user.phone?.trim() &&
-        !!(user.date?.trim() && user.month?.trim() && user.year?.trim()) &&
-        !!user.roleType
-      );
-    } else {
-      return (
-        !!user.firstname?.trim() &&
-        !!user.lastname?.trim() &&
-        !!user.city?.trim() &&
-        !!user.phone?.trim() &&
-        !!(user.date?.trim() && user.month?.trim() && user.year?.trim()) &&
-        !!user.roleType
-      );
-    }
-  } else if (isClient || isBooker) {
+  // For musicians and bookers, date of birth is required
+  if (isMusician || isBooker) {
+    return (
+      !!user.firstname?.trim() &&
+      !!user.lastname?.trim() &&
+      !!user.city?.trim() &&
+      !!user.phone?.trim() &&
+      !!(user.date?.trim() && user.month?.trim() && user.year?.trim()) &&
+      !!user.roleType
+    );
+  }
+  // For clients, date of birth is NOT required
+  else if (isClient) {
     return (
       !!user.firstname?.trim() &&
       !!user.lastname?.trim() &&
@@ -160,6 +152,25 @@ export const hasMinimumData = (user: any): boolean => {
   }
 
   return false;
+};
+
+export const canAccessFeature = (
+  user: any,
+  requiresCompleteProfile: boolean = false
+): boolean => {
+  if (!user) return false;
+
+  // If feature doesn't require complete profile, always allow access
+  if (!requiresCompleteProfile) return true;
+
+  // Check if user is in grace period
+  const trialStatus = getUserTrialStatus(user);
+  if (trialStatus.isInGracePeriod) {
+    return true; // Allow access during grace period
+  }
+
+  // Otherwise, check if profile meets minimum requirements
+  return hasMinimumData(user);
 };
 
 // Core links available to all tiers
@@ -380,7 +391,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useCurrentUser();
-  const { isInGracePeriod, isFirstMonthEnd } = useCheckTrial();
+  const { isInGracePeriod } = useCheckTrial();
 
   const { isPro } = useSubscriptionStore();
   const { total: totalUnread, byChat: unreadCounts } = useUnreadCount();

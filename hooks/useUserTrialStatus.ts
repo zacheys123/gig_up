@@ -5,13 +5,12 @@ import { useMemo } from "react";
 import { useCurrentUser } from "./useCurrentUser";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useCheckTrial } from "./useCheckTrial";
+import { getTrialDurationDays, getTrialDurationMs } from "@/lib/trial";
 
 type User = Doc<"users">;
 
-// Trial configuration - same as in useCheckTrial
-const TRIAL_DURATION_DAYS = 14; // 14-day trial
-const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
-
+const TRIAL_DURATION_DAYS = getTrialDurationDays();
+const TRIAL_DURATION_MS = getTrialDurationMs();
 export const useUserTrialStatus = () => {
   const isUserInGracePeriod = useMemo(
     () => (user: User | null | undefined) => {

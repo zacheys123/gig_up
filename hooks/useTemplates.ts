@@ -5,16 +5,15 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { GigTemplate } from "@/convex/instantGigsTypes";
 import { useCurrentUser } from "./useCurrentUser";
+import { getTrialDurationDays, getTrialDurationMs } from "@/lib/trial";
 
 // Cache keys
 const TEMPLATES_CACHE_KEY = "instant_gig_templates_cache";
 const CACHE_TIMESTAMP_KEY = "instant_gig_templates_timestamp";
 const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 
-// Trial configuration
-const TRIAL_DURATION_DAYS = 14; // 14-day trial
-const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
-
+const TRIAL_DURATION_DAYS = getTrialDurationDays();
+const TRIAL_DURATION_MS = getTrialDurationMs();
 // Types for better organization
 interface TemplateState {
   templates: GigTemplate[];

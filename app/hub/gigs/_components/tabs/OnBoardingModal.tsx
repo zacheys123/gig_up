@@ -33,11 +33,12 @@ import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNormalCreation?: () => void; // ADD THIS
+  onNormalCreation: () => void; // ADD THIS
   onGuidedCreation: () => void;
   onCustomCreation: () => void;
   onScratchCreation?: () => void;
   scrollToTemplates?: () => void;
+  scrollToNormal?: () => void;
   onAICreation?: () => void;
 }
 
@@ -130,10 +131,7 @@ export const getTierAccess = (userTier: string, isInGracePeriod: boolean) => {
         baseTier === "elite" ||
         isInGracePeriod,
       custom:
-        baseTier === "pro" ||
-        baseTier === "premium" ||
-        baseTier === "elite" ||
-        isInGracePeriod,
+        baseTier === "pro" || baseTier === "premium" || baseTier === "elite",
       scratch: baseTier === "premium" || baseTier === "elite",
       ai: baseTier === "elite",
     },
@@ -609,6 +607,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     scrollToTemplates,
     onAICreation,
     onNormalCreation, // ADD THIS
+    scrollToNormal,
   }) => {
     const { colors } = useThemeColors();
     const { user } = useCurrentUser(); // ADD THIS TO GET USER INFO
@@ -659,22 +658,40 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
         onAICreation();
       }
     }, [onAICreation]);
+    const handleNormalCreation = useCallback(() => {
+      if (onNormalCreation) {
+        onNormalCreation();
+        if (scrollToNormal) {
+          scrollToNormal();
+        }
+      }
+    }, [onNormalCreation]);
     const handleCreationSelect = useCallback(
       (type: "normal" | "guided" | "custom" | "scratch" | "ai") => {
-        if (type === "normal") {
-          // Redirect to normal gig creation page
-          window.location.href = "/create-gig"; // Or your normal gig creation route
-        } else if (type === "guided") {
-          handleGuidedCreation();
-        } else if (type === "custom") {
-          handleCustomCreation();
-        } else if (type === "scratch" && onScratchCreation) {
-          handleScratchCreation();
-        } else if (type === "ai" && onAICreation) {
-          handleAICreation();
-        }
+        console.log("🎯 Creation type selected:", type);
+
+        // Close the modal first
+        onClose();
+
+        // Use a small timeout to ensure modal is closed before tab change
+        setTimeout(() => {
+          if (type === "normal") {
+            console.log("🚀 Calling handleNormalCreation");
+            handleNormalCreation();
+          } else if (type === "guided") {
+            handleGuidedCreation();
+          } else if (type === "custom") {
+            handleCustomCreation();
+          } else if (type === "scratch" && onScratchCreation) {
+            handleScratchCreation();
+          } else if (type === "ai" && onAICreation) {
+            handleAICreation();
+          }
+        }, 100);
       },
       [
+        onClose,
+        handleNormalCreation,
         handleGuidedCreation,
         handleCustomCreation,
         handleScratchCreation,

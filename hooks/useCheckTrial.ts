@@ -4,11 +4,10 @@ import { UserProps } from "@/types/userTypes";
 import { useEffect, useState, useMemo } from "react";
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useUserStore } from "@/app/stores";
+import { getTrialDurationDays, getTrialDurationMs } from "@/lib/trial";
 
-// Trial configuration - same as in useTemplates
-const TRIAL_DURATION_DAYS = 14; // 14-day trial
-const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
-
+const TRIAL_DURATION_DAYS = getTrialDurationDays();
+const TRIAL_DURATION_MS = getTrialDurationMs();
 export const useCheckTrial = () => {
   const { setShowTrialModal, setTrialRemainingDays } = useSubscriptionStore();
   const [isFirstMonthEnd, setIsFirstMonthEnd] = useState<boolean>(false);

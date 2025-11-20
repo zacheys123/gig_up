@@ -200,16 +200,20 @@ export const calculateProfileCompletion = (
 
   const isMusician = user.isMusician;
   const isTeacher = user.roleType === "teacher";
+  const isDJ = user.roleType === "dj";
+  const isMC = user.roleType === "mc";
+  const isVocalist = user.roleType === "vocalist";
+  const isNonInstrumentMusician = isDJ || isMC || isVocalist;
 
   if (isMusician) {
     if (isTeacher) {
-      // TEACHER-SPECIFIC FIELDS
+      // TEACHER-SPECIFIC FIELDS - No videos
       const teacherFields = [
-        // Personal Info (25%)
-        { check: () => !!(user.firstname && user.firstname.trim()), weight: 5 },
-        { check: () => !!(user.lastname && user.lastname.trim()), weight: 5 },
-        { check: () => !!(user.city && user.city.trim()), weight: 5 },
-        { check: () => !!(user.phone && user.phone.trim()), weight: 5 },
+        // Personal Info (35%)
+        { check: () => !!(user.firstname && user.firstname.trim()), weight: 7 },
+        { check: () => !!(user.lastname && user.lastname.trim()), weight: 7 },
+        { check: () => !!(user.city && user.city.trim()), weight: 7 },
+        { check: () => !!(user.phone && user.phone.trim()), weight: 7 },
         {
           check: () =>
             !!(
@@ -220,21 +224,21 @@ export const calculateProfileCompletion = (
               user.month.trim() &&
               user.year.trim()
             ),
-          weight: 5,
+          weight: 7,
         },
 
-        // Teaching Professional Info (50%)
+        // Teaching Professional Info (65%)
         {
           check: () => !!(user.talentbio && user.talentbio.trim()),
-          weight: 10,
+          weight: 12,
         },
         {
           check: () => !!(user.instrument && user.instrument.trim()),
-          weight: 10,
+          weight: 12,
         },
         {
           check: () => !!(user.experience && user.experience.trim()),
-          weight: 10,
+          weight: 12,
         },
         {
           check: () =>
@@ -243,29 +247,20 @@ export const calculateProfileCompletion = (
         },
         {
           check: () => !!(user.teachingStyle && user.teachingStyle.trim()),
-          weight: 5,
+          weight: 8,
         },
         {
           check: () => !!(user.lessonFormat && user.lessonFormat.trim()),
-          weight: 5,
+          weight: 8,
         },
         {
           check: () => !!(user.studentAgeGroup && user.studentAgeGroup.trim()),
-          weight: 5,
-        },
-
-        // Media & Social (25%)
-        {
-          check: () => {
-            // Check for teaching materials OR performance videos
-            return !!(user.videosProfile && user.videosProfile.length > 0);
-          },
-          weight: 15,
+          weight: 6,
         },
         {
           check: () =>
             !!(user.musicianhandles && user.musicianhandles.length > 0),
-          weight: 10,
+          weight: 7,
         },
       ];
 
@@ -278,14 +273,17 @@ export const calculateProfileCompletion = (
       }, 0);
 
       return Math.round((completedWeight / totalWeight) * 100);
-    } else {
-      // REGULAR MUSICIAN FIELDS (unchanged)
-      const musicianFields = [
-        // Personal Info (30%)
-        { check: () => !!(user.firstname && user.firstname.trim()), weight: 5 },
-        { check: () => !!(user.lastname && user.lastname.trim()), weight: 5 },
-        { check: () => !!(user.city && user.city.trim()), weight: 5 },
-        { check: () => !!(user.phone && user.phone.trim()), weight: 5 },
+    } else if (isNonInstrumentMusician) {
+      // DJ, MC, VOCALIST - No videos
+      const nonInstrumentFields = [
+        // Personal Info (40%)
+        {
+          check: () => !!(user.firstname && user.firstname.trim()),
+          weight: 10,
+        },
+        { check: () => !!(user.lastname && user.lastname.trim()), weight: 10 },
+        { check: () => !!(user.city && user.city.trim()), weight: 7 },
+        { check: () => !!(user.phone && user.phone.trim()), weight: 7 },
         {
           check: () =>
             !!(
@@ -296,21 +294,17 @@ export const calculateProfileCompletion = (
               user.month.trim() &&
               user.year.trim()
             ),
-          weight: 10,
+          weight: 6,
         },
 
-        // Professional Info (40%)
+        // Professional Info (60%) - No instrument, more weight on bio and experience
         {
           check: () => !!(user.talentbio && user.talentbio.trim()),
-          weight: 10,
-        },
-        {
-          check: () => !!(user.instrument && user.instrument.trim()),
-          weight: 10,
+          weight: 20,
         },
         {
           check: () => !!(user.experience && user.experience.trim()),
-          weight: 10,
+          weight: 20,
         },
         {
           check: () => {
@@ -318,18 +312,60 @@ export const calculateProfileCompletion = (
             const rates = Object.values(user.rate);
             return rates.some((rate) => rate && rate.toString().trim() !== "");
           },
-          weight: 10,
-        },
-
-        // Media & Social (30%)
-        {
-          check: () => !!(user.videosProfile && user.videosProfile.length > 0),
           weight: 20,
         },
+      ];
+
+      const totalWeight = nonInstrumentFields.reduce(
+        (sum, field) => sum + field.weight,
+        0
+      );
+      const completedWeight = nonInstrumentFields.reduce((sum, field) => {
+        return sum + (field.check() ? field.weight : 0);
+      }, 0);
+
+      return Math.round((completedWeight / totalWeight) * 100);
+    } else {
+      // REGULAR INSTRUMENT MUSICIAN FIELDS - No videos
+      const musicianFields = [
+        // Personal Info (40%)
+        { check: () => !!(user.firstname && user.firstname.trim()), weight: 8 },
+        { check: () => !!(user.lastname && user.lastname.trim()), weight: 8 },
+        { check: () => !!(user.city && user.city.trim()), weight: 8 },
+        { check: () => !!(user.phone && user.phone.trim()), weight: 8 },
         {
           check: () =>
-            !!(user.musicianhandles && user.musicianhandles.length > 0),
-          weight: 10,
+            !!(
+              user.date &&
+              user.month &&
+              user.year &&
+              user.date.trim() &&
+              user.month.trim() &&
+              user.year.trim()
+            ),
+          weight: 8,
+        },
+
+        // Professional Info (60%)
+        {
+          check: () => !!(user.talentbio && user.talentbio.trim()),
+          weight: 15,
+        },
+        {
+          check: () => !!(user.instrument && user.instrument.trim()),
+          weight: 15,
+        },
+        {
+          check: () => !!(user.experience && user.experience.trim()),
+          weight: 15,
+        },
+        {
+          check: () => {
+            if (!user.rate) return false;
+            const rates = Object.values(user.rate);
+            return rates.some((rate) => rate && rate.toString().trim() !== "");
+          },
+          weight: 15,
         },
       ];
 
@@ -344,22 +380,22 @@ export const calculateProfileCompletion = (
       return Math.round((completedWeight / totalWeight) * 100);
     }
   } else {
-    // CLIENT-SPECIFIC FIELDS (unchanged)
+    // CLIENT-SPECIFIC FIELDS - No videos
     const clientFields = [
-      // Personal & Contact Info (50%)
-      { check: () => !!(user.firstname && user.firstname.trim()), weight: 15 },
-      { check: () => !!(user.lastname && user.lastname.trim()), weight: 15 },
+      // Personal & Contact Info (60%)
+      { check: () => !!(user.firstname && user.firstname.trim()), weight: 20 },
+      { check: () => !!(user.lastname && user.lastname.trim()), weight: 20 },
       { check: () => !!(user.city && user.city.trim()), weight: 10 },
       { check: () => !!(user.phone && user.phone.trim()), weight: 10 },
 
-      // Business Info (50%)
+      // Business Info (40%)
       {
         check: () => !!(user.organization && user.organization.trim()),
-        weight: 25,
+        weight: 20,
       },
       {
         check: () => !!(user.talentbio && user.talentbio.trim()),
-        weight: 25,
+        weight: 20,
       },
     ];
 
@@ -390,11 +426,16 @@ export const getMissingFields = (
 
   const isMusician = user.isMusician;
   const isTeacher = user.roleType === "teacher";
+  const isDJ = user.roleType === "dj";
+  const isMC = user.roleType === "mc";
+  const isVocalist = user.roleType === "vocalist";
+  const isNonInstrumentMusician = isDJ || isMC || isVocalist;
+
   const missing: string[] = [];
 
   if (isMusician) {
     if (isTeacher) {
-      // TEACHER MISSING FIELDS
+      // TEACHER MISSING FIELDS - No videos
       if (!user.firstname?.trim()) missing.push("First Name");
       if (!user.lastname?.trim()) missing.push("Last Name");
       if (!user.city?.trim()) missing.push("City");
@@ -412,16 +453,33 @@ export const getMissingFields = (
       if (!user.lessonFormat?.trim()) missing.push("Lesson Format");
       if (!user.studentAgeGroup?.trim()) missing.push("Student Age Group");
 
-      // Check if any rate is set (for teaching rates)
+      // Check if any rate is set
       const hasRates =
         user.rate &&
         Object.values(user.rate).some((rate) => rate && rate.toString().trim());
       if (!hasRates) missing.push("Teaching Rates");
 
-      if (!user.videosProfile?.length) missing.push("Teaching Videos/Demos");
+      if (!user.musicianhandles?.length) missing.push("Social Media");
+    } else if (isNonInstrumentMusician) {
+      // DJ, MC, VOCALIST MISSING FIELDS - No videos
+      if (!user.firstname?.trim()) missing.push("First Name");
+      if (!user.lastname?.trim()) missing.push("Last Name");
+      if (!user.city?.trim()) missing.push("City");
+      if (!user.phone?.trim()) missing.push("Phone");
+      if (!user.date?.trim() || !user.month?.trim() || !user.year?.trim())
+        missing.push("Date of Birth");
+      if (!user.talentbio?.trim()) missing.push("Bio");
+      if (!user.experience?.trim()) missing.push("Experience");
+
+      // Check if any rate is set
+      const hasRates =
+        user.rate &&
+        Object.values(user.rate).some((rate) => rate && rate.toString().trim());
+      if (!hasRates) missing.push("Performance Rates");
+
       if (!user.musicianhandles?.length) missing.push("Social Media");
     } else {
-      // REGULAR MUSICIAN MISSING FIELDS
+      // REGULAR INSTRUMENT MUSICIAN MISSING FIELDS - No videos
       if (!user.firstname?.trim()) missing.push("First Name");
       if (!user.lastname?.trim()) missing.push("Last Name");
       if (!user.city?.trim()) missing.push("City");
@@ -438,11 +496,10 @@ export const getMissingFields = (
         Object.values(user.rate).some((rate) => rate && rate.toString().trim());
       if (!hasRates) missing.push("Performance Rates");
 
-      if (!user.videosProfile?.length) missing.push("Performance Videos");
       if (!user.musicianhandles?.length) missing.push("Social Media");
     }
   } else {
-    // CLIENT MISSING FIELDS (unchanged)
+    // CLIENT MISSING FIELDS
     if (!user.firstname?.trim()) missing.push("First Name");
     if (!user.lastname?.trim()) missing.push("Last Name");
     if (!user.city?.trim()) missing.push("City");

@@ -29,6 +29,8 @@ import {
   getProfileCompletionMessage,
 } from "@/utils";
 import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
+import { useEffect, useMemo } from "react";
+import { getUserTrialStatus } from "@/lib/trial";
 
 // Define the interface for navigation items
 interface NavItem {
@@ -52,22 +54,52 @@ const DesktopUserNav = () => {
   const { colors, isDarkMode } = useThemeColors();
   const { user, isLoading } = useCurrentUser();
 
-  const profileCompletion = calculateProfileCompletion(user);
-  const completionMessage = getProfileCompletionMessage(profileCompletion);
-  const missingFields = getMissingFields(user);
-
-  // Show skeleton while loading
-  if (isLoading || !user) {
-    return <DesktopUserNavSkeleton colors={colors} isDarkMode={isDarkMode} />;
-  }
-
+  // Calculate all values unconditionally at the top
   const userTier = user?.tier || "free";
   const currentTier = getTierInfo(userTier);
   const TierIcon = currentTier.icon;
-  const isProfileComplete = hasMinimumData(user);
+  const isProfileComplete = useMemo(() => hasMinimumData(user), [user]);
   const isMusician = user?.isMusician;
   const isBooker = user?.isBooker;
   const isClient = user?.isClient;
+
+  // Calculate profile completion
+  const profileCompletion = useMemo(
+    () => calculateProfileCompletion(user),
+    [user]
+  );
+  const completionMessage = getProfileCompletionMessage(profileCompletion);
+  const missingFields = useMemo(() => getMissingFields(user), [user]);
+
+  // Check grace period status
+  const trialStatus = useMemo(() => getUserTrialStatus(user), [user]);
+  const isInGracePeriod = trialStatus.isInGracePeriod;
+
+  // Debug logging - moved inside useEffect to avoid conditional hook calls
+  useEffect(() => {
+    if (user) {
+      console.log("🔍 [DESKTOP NAV DEBUG]:", {
+        userTier,
+        isMusician,
+        isBooker,
+        isClient,
+        profileCompletion,
+        isProfileComplete,
+        isInGracePeriod,
+        trialStatus,
+      });
+    }
+  }, [
+    user,
+    userTier,
+    isMusician,
+    isBooker,
+    isClient,
+    profileCompletion,
+    isProfileComplete,
+    isInGracePeriod,
+    trialStatus,
+  ]);
 
   const getRoleLabel = () => {
     if (isBooker) return "Booker Account";
@@ -244,28 +276,47 @@ const DesktopUserNav = () => {
     ],
   };
 
-  // Combine sections based on user tier
-  const getNavSections = (): NavSection[] => {
+  // Combine sections based on user tier and grace period
+  const navSections = useMemo((): NavSection[] => {
+    if (!user) return [...freeTierSections, settingsSection];
+
+    console.log("🔄 Building nav sections:", {
+      userTier,
+      isInGracePeriod,
+      isMusician,
+      isBooker,
+      isClient,
+    });
+
     let sections = [...freeTierSections];
 
-    // Add pro features for pro and above tiers
-    if (userTier === "pro" || userTier === "premium" || userTier === "elite") {
+    // Add pro features for pro and above tiers OR grace period users
+    if (
+      userTier === "pro" ||
+      userTier === "premium" ||
+      userTier === "elite" ||
+      isInGracePeriod
+    ) {
+      console.log("✅ Adding pro features");
       sections = [...sections, ...proTierSections];
 
       // Add role-specific sections
       if (isMusician) {
+        console.log("✅ Adding musician tools");
         sections.push({
           title: "Musician Tools",
           items: musicianProLinks,
         });
       }
       if (isClient) {
+        console.log("✅ Adding client tools");
         sections.push({
           title: "Client Tools",
           items: clientProLinks,
         });
       }
       if (isBooker) {
+        console.log("✅ Adding booker tools");
         sections.push({
           title: "Booker Tools",
           items: bookerProLinks,
@@ -273,24 +324,57 @@ const DesktopUserNav = () => {
       }
     }
 
-    // Add premium features for premium and elite tiers
-    if (userTier === "premium" || userTier === "elite") {
+    // Add premium features for premium and elite tiers OR grace period users
+    if (userTier === "premium" || userTier === "elite" || isInGracePeriod) {
+      console.log("✅ Adding premium features");
       sections = [...sections, ...premiumTierSections];
     }
 
     // Add settings at the end
     sections.push(settingsSection);
 
+    console.log(
+      "📋 Final sections:",
+      sections.map((s) => s.title)
+    );
     return sections;
-  };
-
-  const navSections = getNavSections();
+  }, [user, userTier, isInGracePeriod, isMusician, isBooker, isClient]);
 
   // Check if user can access a link
-  const canAccessLink = (link: NavItem) => {
-    if (!link.availableForTiers) return true;
-    return link.availableForTiers.includes(userTier);
-  };
+  const canAccessLink = useMemo(
+    () => (link: NavItem) => {
+      if (!link.availableForTiers) return true;
+
+      console.log(`🔐 Checking access for ${link.label}:`, {
+        userTier,
+        availableForTiers: link.availableForTiers,
+        requiresCompleteProfile: link.requiresCompleteProfile,
+        isInGracePeriod,
+        hasTierAccess: link.availableForTiers.includes(userTier),
+        hasGracePeriodAccess:
+          isInGracePeriod && link.availableForTiers.includes("pro"),
+      });
+
+      // If user is in grace period, grant access to pro features
+      if (isInGracePeriod && link.availableForTiers.includes("pro")) {
+        return true;
+      }
+
+      // Otherwise, check normal tier access
+      const hasTierAccess = link.availableForTiers.includes(userTier);
+      if (!hasTierAccess) return false;
+
+      // Check profile completion if required
+      if (link.requiresCompleteProfile && !isProfileComplete) {
+        console.log(`❌ Blocked: ${link.label} - Profile not complete`);
+        return false;
+      }
+
+      console.log(`✅ Allowed: ${link.label}`);
+      return true;
+    },
+    [userTier, isInGracePeriod, isProfileComplete]
+  );
 
   const isActive = (href: string) => {
     if (href === "/profile") {
@@ -298,6 +382,11 @@ const DesktopUserNav = () => {
     }
     return pathname.startsWith(href);
   };
+
+  // Show skeleton while loading - this should be the only conditional return
+  if (isLoading || !user) {
+    return <DesktopUserNavSkeleton colors={colors} isDarkMode={isDarkMode} />;
+  }
 
   return (
     <div
@@ -335,6 +424,7 @@ const DesktopUserNav = () => {
                   )}
                 >
                   {currentTier.label}
+                  {isInGracePeriod && " (Trial)"}
                 </div>
               </div>
             </div>
@@ -359,6 +449,11 @@ const DesktopUserNav = () => {
             {!isProfileComplete && profileCompletion < 100 && (
               <p className={cn("text-xs", colors.textMuted)}>
                 Complete profile for full access
+              </p>
+            )}
+            {isInGracePeriod && (
+              <p className={cn("text-xs text-blue-600 dark:text-blue-400")}>
+                Trial period active - Full access granted
               </p>
             )}
           </div>

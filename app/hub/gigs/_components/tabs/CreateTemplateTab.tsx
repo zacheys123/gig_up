@@ -66,7 +66,7 @@ interface CreateTemplateTabProps {
   ) => void;
   user: any;
   existingTemplates: GigTemplate[];
-  mode: "default" | "guided" | "scratch" | "custom";
+  mode: "default" | "guided" | "scratch" | "custom" | "normal";
   onFormClose: () => void;
   isLoading: boolean;
   editingTemplate?: GigTemplate | null;
@@ -1781,7 +1781,7 @@ const GuidedInterface = memo(
                             {hasReachedLimit
                               ? "You've reached your template limit"
                               : `Upgrade to ${template.tier} to use this template`}
-                            <span className="!text-yellow-300">
+                            <span className="text-yellow-300">
                               {" "}
                               ({template.gigType})
                             </span>

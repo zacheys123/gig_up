@@ -391,6 +391,8 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   const createTemplatesRef = useRef<HTMLDivElement>(null);
   const musicianTemplatesRef = useRef<HTMLDivElement>(null);
 
+  const normalGigsRef = useRef<HTMLDivElement>(null);
+
   // Update the activeTab state type
   const [activeTab, setActiveTab] = useState<
     "create" | "normal" | "templates" | "musicians"
@@ -437,13 +439,29 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
       }
     }, 300);
   }, []);
+  const scrollToNormal = useCallback(() => {
+    setActiveTab("normal");
+    setTimeout(() => {
+      if (normalGigsRef.current) {
+        normalGigsRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      } else {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    }, 300);
+  }, []);
 
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedMusician, setSelectedMusician] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [createTabMode, setCreateTabMode] = useState<
-    "default" | "guided" | "custom" | "scratch"
+    "default" | "guided" | "custom" | "scratch" | "normal"
   >("default");
   const [editingTemplate, setEditingTemplate] = useState<GigTemplate | null>(
     null
@@ -471,7 +489,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
 
   const { musicians: proMusicians } = useProMusicians({
     limit: 50,
-    availableOnly: true,
+    availableOnly: false,
   });
 
   // Memoize musicians data for booking modal
@@ -523,10 +541,11 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     });
 
     if (
-      !hasSeenOnboarding &&
-      memoizedTemplates.length === 0 &&
-      !templatesLoading &&
-      !showOnboarding
+      !hasSeenOnboarding ||
+      (hasSeenOnboarding === null &&
+        memoizedTemplates.length === 0 &&
+        !templatesLoading &&
+        !showOnboarding)
     ) {
       console.log("SHOWING ONBOARDING MODAL");
       setShowOnboarding(true);
@@ -553,7 +572,32 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     setCreateTabMode("guided");
     localStorage.setItem("instant_gigs_onboarding_seen", "true");
   }, []);
+  const handleNormalCreation = useCallback(() => {
+    console.log("🔄 Switching to NORMAL gig creation tab");
 
+    // Close onboarding modal
+    setShowOnboarding(false);
+
+    // KEY FIX: Switch to the "normal" tab in the main navigation
+    setActiveTab("normal"); // This should change from "create" to "normal"
+
+    // Reset create tab mode since we're leaving the create tab
+    setCreateTabMode("default");
+
+    // Mark onboarding as seen
+    localStorage.setItem("instant_gigs_onboarding_seen", "true");
+
+    console.log(
+      "✅ Normal gig creation activated - main tab should be 'normal'"
+    );
+  }, []);
+  useEffect(() => {
+    console.log("🔍 [TAB DEBUG]:", {
+      activeTab,
+      showOnboarding,
+      createTabMode,
+    });
+  }, [activeTab, showOnboarding, createTabMode]);
   const handleCustomCreation = useCallback(() => {
     setShowOnboarding(false);
     setActiveTab("create");
@@ -680,8 +724,11 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   );
 
   const handleTabChange = useCallback(
-    (tabId: "create" | "templates" | "musicians") => {
+    (tabId: "create" | "normal" | "templates" | "musicians") => {
+      console.log("🔄 Switching main tab to:", tabId);
       setActiveTab(tabId);
+
+      // Only reset create tab stuff if we're switching to create tab
       if (tabId === "create") {
         setEditingTemplate(null);
         setCreateTabMode("default");
@@ -689,7 +736,6 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     },
     []
   );
-
   const handleBookingModalClose = useCallback(() => {
     setShowBookingModal(false);
     setSelectedMusician(null);
@@ -734,7 +780,13 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         );
 
       case "normal":
-        return <NormalGigsTab user={user} colors={colors} />;
+        return (
+          // ← ADD THIS RETURN
+          <div ref={normalGigsRef}>
+            <NormalGigsTab user={user} colors={colors} />{" "}
+            {/* ← REMOVE THE SEMICOLON */}
+          </div>
+        );
 
       case "templates":
         return (
@@ -791,7 +843,9 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         onGuidedCreation={handleGuidedCreation}
         onCustomCreation={handleCustomCreation}
         onScratchCreation={handleScratchCreation}
+        onNormalCreation={handleNormalCreation}
         scrollToTemplates={scrollToTemplates}
+        scrollToNormal={scrollToNormal}
       />
 
       {/* Enhanced Header Section */}
