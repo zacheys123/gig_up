@@ -3,6 +3,10 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 
+// Define proper types for client and booker types
+type ClientType = "individual" | "event_planner" | "venue" | "corporate";
+type BookerType = "talent_agent" | "booking_manager";
+
 export function useUserMutations() {
   const { userId } = useAuth();
 
@@ -95,8 +99,11 @@ export function useUserMutations() {
     city: string;
     organization: string;
     talentbio: string;
+    clientType: string; // Use the specific type
   }) => {
     if (!userId) throw new Error("No user ID available");
+    // Convert string to the specific type
+    const validClientType = clientData.clientType as ClientType;
 
     const updates = {
       isMusician: false as const,
@@ -105,6 +112,7 @@ export function useUserMutations() {
       city: clientData.city,
       organization: clientData.organization,
       talentbio: clientData.talentbio,
+      clientType: validClientType, // This now matches the expected type
       tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
@@ -133,8 +141,10 @@ export function useUserMutations() {
     experience: string;
     bookerSkills: string[];
     talentbio: string;
+    bookerType: string; // Use the specific type
   }) => {
     if (!userId) throw new Error("No user ID available");
+    const validBookerType = bookerData.bookerType as BookerType;
 
     const updates = {
       isMusician: false as const,
@@ -145,6 +155,7 @@ export function useUserMutations() {
       experience: bookerData.experience,
       bookerSkills: bookerData.bookerSkills,
       talentbio: bookerData.talentbio,
+      bookerType: validBookerType, // This now matches the expected type
       tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
@@ -168,16 +179,16 @@ export function useUserMutations() {
   };
 
   const registerAsAdmin = async (adminData: {
-    adminCity: string;
     adminRole: "super" | "content" | "support" | "analytics";
   }) => {
     if (!userId) throw new Error("No user ID available");
 
     const updates = {
       isAdmin: true as const,
-      adminCity: adminData.adminCity,
       adminRole: adminData.adminRole,
       tier: "pro" as const,
+      firstLogin: false as const,
+      lastActive: Date.now(),
     };
 
     return await updateUserAsAdmin({ clerkId: userId, updates });

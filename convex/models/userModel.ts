@@ -21,7 +21,7 @@ export const userModel = defineTable({
   isMusician: v.boolean(),
   isClient: v.boolean(),
   isBoth: v.optional(v.boolean()),
-  isAdmin: v.boolean(),
+  isAdmin: v.optional(v.boolean()),
   adminRole: v.optional(
     v.union(
       v.literal("super"),
@@ -31,8 +31,17 @@ export const userModel = defineTable({
     )
   ),
   adminPermissions: v.optional(v.array(v.string())),
+  adminAccessLevel: v.optional(
+    v.union(v.literal("full"), v.literal("limited"), v.literal("restricted"))
+  ),
+  canManageUsers: v.optional(v.boolean()),
+  canManageContent: v.optional(v.boolean()),
+  canManagePayments: v.optional(v.boolean()),
+  canViewAnalytics: v.optional(v.boolean()),
   adminNotes: v.optional(v.string()),
 
+  adminDashboardAccess: v.optional(v.boolean()),
+  lastAdminAction: v.optional(v.number()),
   isBooker: v.optional(v.boolean()),
   bookerSkills: v.optional(v.array(v.string())),
   managedBands: v.optional(v.array(v.string())),
@@ -61,6 +70,17 @@ export const userModel = defineTable({
   // Client specific fields
   organization: v.optional(v.string()),
 
+  clientType: v.optional(
+    v.union(
+      v.literal("individual"),
+      v.literal("event_planner"),
+      v.literal("venue"),
+      v.literal("corporate")
+    )
+  ),
+  bookerType: v.optional(
+    v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+  ),
   // Profile and social
   bio: v.optional(v.string()),
   handles: v.optional(v.string()),
@@ -232,7 +252,7 @@ export const userModel = defineTable({
   lastRenewalAttempt: v.optional(v.number()),
 
   // Timestamps
-  lastAdminAction: v.optional(v.number()),
+
   badges: v.optional(v.array(v.string())),
   reliabilityScore: v.optional(v.number()),
   avgRating: v.optional(v.number()),

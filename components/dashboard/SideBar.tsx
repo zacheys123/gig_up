@@ -43,6 +43,8 @@ import { useState } from "react";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { ChatListModal } from "../chat/ChatListModal";
 import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
+import { FeatureDiscovery } from "../features/FeatureDiscovery";
+import { getRoleFeatures } from "@/lib/registry";
 
 interface NavLink {
   name: string;
@@ -659,7 +661,14 @@ export function Sidebar() {
               </Link>
             );
           })}
-
+          <div className="mt-8">
+            <FeatureDiscovery
+              features={getRoleFeatures(user?.roleType || "all")}
+              variant="sidebar"
+              title="Your Tools"
+              showLocked={true} // Show coming soon features
+            />
+          </div>
           {/* Theme Toggle */}
           <button
             onClick={toggleDarkMode}
@@ -733,7 +742,7 @@ export function Sidebar() {
         {/* App Version */}
         <div className={cn("px-4 py-2 border-t", colors.border)}>
           <div className={cn("text-xs text-center", colors.textMuted)}>
-            GigUp v1.0.0
+            GigUp v2.0.0
             {shouldShowLimitedLinks && (
               <span className="text-amber-600 ml-1">• Trial Ended</span>
             )}

@@ -11,6 +11,7 @@ import {
   UsersIcon,
   Briefcase,
   GraduationCap,
+  Shield,
 } from "lucide-react";
 import { HiSwitchHorizontal } from "react-icons/hi";
 import { IoArrowBack } from "react-icons/io5";
@@ -19,6 +20,7 @@ import { experiences, instruments } from "@/data";
 
 import { useUserMutations } from "@/hooks/useUserMutation";
 import { Modal } from "../modals/Modal";
+import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 
 // Add the arrays at the top of the file
 const djGenres = [
@@ -110,6 +112,11 @@ const bookerSkillsList = [
   "Venue Management",
 ];
 
+// NEW: Client and Booker types
+const clientTypes = ["individual", "event_planner", "venue", "corporate"];
+
+const bookerTypes = ["talent_agent", "booking_manager"];
+
 type Error = string[];
 type RoleSteps = {
   instrumentalist: string[];
@@ -132,12 +139,16 @@ const ActionPage = () => {
   const [bookerload, setBookerLoad] = useState(false);
   const [userload, setUserload] = useState(false);
   const { user: myuser } = useCurrentUser();
-  const {
-    registerAsMusician,
-    registerAsClient,
-    registerAsBooker,
-    registerAsAdmin,
-  } = useUserMutations();
+  const { registerAsMusician, registerAsClient, registerAsBooker } =
+    useUserMutations();
+
+  const { isFeatureEnabled } = useFeatureFlags();
+
+  // Add feature flag checks
+  const isTeacherEnabled = isFeatureEnabled("teacher_role");
+  const isBookerEnabled = isFeatureEnabled("booker_role");
+
+  const isBothEnabled = isFeatureEnabled("both_role");
 
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [city, setCity] = useState("");
@@ -167,7 +178,11 @@ const ActionPage = () => {
   const [lessonFormat, setLessonFormat] = useState("");
   const [studentAgeGroup, setStudentAgeGroup] = useState("");
 
-  // Validation including teacher
+  // NEW: Client and Booker type fields
+  const [clientType, setClientType] = useState("");
+  const [bookerType, setBookerType] = useState("");
+
+  // Validation including teacher, client and booker types
   const validateMusicianFields = useCallback(() => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
@@ -221,14 +236,16 @@ const ActionPage = () => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
     if (!organization) errors.push("Organization is required");
+    if (!clientType) errors.push("Client type is required");
     if (!talentbio) errors.push("Bio is required");
     return errors;
-  }, [city, organization, talentbio]);
+  }, [city, organization, clientType, talentbio]);
 
   const validateBookerFields = useCallback(() => {
     const errors: string[] = [];
     if (!city) errors.push("City is required");
     if (!organization) errors.push("Company/Organization is required");
+    if (!bookerType) errors.push("Booker type is required");
     if (!experience) errors.push("Experience level is required");
     if (selectedBookerSkills.length === 0)
       errors.push("At least one booker skill is required");
@@ -236,9 +253,16 @@ const ActionPage = () => {
     if (talentbio.length > 200)
       errors.push("Bio is too long (max 200 characters)");
     return errors;
-  }, [city, organization, experience, selectedBookerSkills, talentbio]);
+  }, [
+    city,
+    organization,
+    bookerType,
+    experience,
+    selectedBookerSkills,
+    talentbio,
+  ]);
 
-  // Registration function including teacher
+  // Registration function including teacher, client and booker types
   const registerUser = useCallback(
     async (role: "musician" | "client" | "booker") => {
       if (!isSignedIn) {
@@ -283,6 +307,7 @@ const ActionPage = () => {
             city,
             organization,
             talentbio,
+            clientType, // NEW: Include client type
           });
         } else if (role === "booker") {
           await registerAsBooker({
@@ -291,6 +316,7 @@ const ActionPage = () => {
             experience,
             bookerSkills: selectedBookerSkills,
             talentbio,
+            bookerType, // NEW: Include booker type
           });
         }
 
@@ -321,8 +347,9 @@ const ActionPage = () => {
       teacherSpecialization,
       teachingStyle,
       lessonFormat,
-
       studentAgeGroup,
+      clientType, // NEW: Add clientType dependency
+      bookerType, // NEW: Add bookerType dependency
       registerAsMusician,
       registerAsClient,
       registerAsBooker,
@@ -330,39 +357,6 @@ const ActionPage = () => {
   );
 
   const [modal, setModal] = useState(false);
-  type AdminRole = "super" | "content" | "support" | "analytics";
-  const [adminRole, setAdminRoles] = useState<AdminRole | null>(null);
-  const [adminCity, setAdminCity] = useState("");
-  const [adminLoad, setAdminLoad] = useState(false);
-
-  const connectAsAdmin = useCallback(async () => {
-    setAdminLoad(true);
-    const errors: string[] = [];
-    if (!adminCity) errors.push("Your City is required");
-    if (!adminRole) errors.push("Admin Role is required");
-
-    if (errors.length > 0) {
-      setError(errors);
-      setAdminLoad(false);
-      return;
-    }
-
-    try {
-      await registerAsAdmin({
-        adminCity,
-        adminRole: adminRole!,
-      });
-
-      setModal(false);
-      toast.success("Successfully Registered you as Admin");
-      router.push("/admin/dashboard");
-    } catch (err) {
-      console.error(err);
-      toast.error("Registration failed");
-    } finally {
-      setAdminLoad(false);
-    }
-  }, [router, adminCity, adminRole, registerAsAdmin]);
 
   // Connection function including teacher success message
   const connectAsMusician = useCallback(async () => {
@@ -407,6 +401,12 @@ const ActionPage = () => {
   }, [registerUser, router]);
 
   const connectAsBooker = useCallback(async () => {
+    if (!isBookerEnabled) {
+      toast.error(
+        "Booker registration is currently unavailable. Please check back later."
+      );
+      return;
+    }
     setBookerLoad(true);
     try {
       const success = await registerUser("booker");
@@ -417,8 +417,7 @@ const ActionPage = () => {
     } finally {
       setBookerLoad(false);
     }
-  }, [registerUser, router]);
-
+  }, [registerUser, router, isBookerEnabled]);
   useEffect(() => {
     const timer = setTimeout(() => setUserload(true), 3000);
     return () => clearTimeout(timer);
@@ -475,69 +474,50 @@ const ActionPage = () => {
       prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
     );
   };
-
-  const renderAdminModal = () => {
-    return (
-      <Modal
-        isOpen={modal}
-        onClose={handleOnClose}
-        title="Welcome to Admin Portal"
-        description="Register as Admin"
-        dep="admin"
-      >
-        <div className="flex flex-col gap-4">
-          <input
-            type="text"
-            placeholder="Your City"
-            value={adminCity}
-            onChange={(e) => setAdminCity(e.target.value)}
-            className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-          />
-          <select
-            value={adminRole || ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (
-                value === "super" ||
-                value === "content" ||
-                value === "support" ||
-                value === "analytics"
-              ) {
-                setAdminRoles(value);
-              } else {
-                setAdminRoles(null);
-              }
-            }}
-            className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-          >
-            <option value="" className="text-neutral-300" disabled>
-              Select Admin Role
-            </option>
-            <option value="super">Super</option>
-            <option value="content">Content</option>
-            <option value="support">Support</option>
-            <option value="analytics">Analytics</option>
-          </select>
-          {error.length > 0 && (
-            <div className="mt-4 text-red-400 text-sm">
-              {error.map((err, index) => (
-                <div key={index}>{err}</div>
-              ))}
-            </div>
-          )}
-          <button
-            onClick={connectAsAdmin}
-            className="w-[80%] mx-auto py-2 bg-amber-700 rounded hover:bg-orange-600 text-white text-[13px]"
-            disabled={adminLoad || !adminRole || !adminCity}
-          >
-            {adminLoad ? "Processing..." : "Complete Registration"}
-          </button>
-        </div>
-      </Modal>
-    );
-  };
-
-  // More Information Modal with teacher flow
+  // Update your role cards array to include feature flag checks
+  const roleCards = [
+    {
+      role: "client",
+      title: "Hire Talent",
+      accent: "orange",
+      description:
+        "Create gigs and book top-tier musicians, DJs, and performers",
+      buttonText: "Join as Client",
+      disabled: !!myuser?.isClient,
+      onClick: () => handleRoleSelection("client"),
+    },
+    {
+      role: "musician",
+      title: "Find Gigs",
+      accent: "cyan",
+      description:
+        "Showcase your talent and connect with premium opportunities",
+      buttonText: "Join as Talent",
+      disabled: !!myuser?.isMusician,
+      onClick: () => handleRoleSelection("musician"),
+    },
+    {
+      role: "booker",
+      title: "Manage Talent",
+      accent: "emerald",
+      description:
+        "Book and manage bands, coordinate events, build your roster",
+      buttonText: "Join as Booker",
+      disabled: !!myuser?.isBooker || !isBookerEnabled, // ADD FEATURE FLAG CHECK
+      onClick: () => handleRoleSelection("booker"),
+      hidden: !isBookerEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
+    },
+    {
+      role: "both",
+      title: "Be a Client and Talent (Coming Soon)",
+      accent: "purple",
+      description: "Switch between hiring talent and being hired for gigs",
+      buttonText: "Join as Dual User",
+      disabled: true,
+      onClick: () => handleRoleSelection("both"),
+      hidden: !isBothEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
+    },
+  ].filter((card) => !card.hidden); // FILTER OUT HIDDEN CARDS
   const renderMoreInfoModal = () => {
     const roleSteps: RoleSteps = {
       instrumentalist: ["city", "instrument", "experience", "talentbio"],
@@ -556,11 +536,17 @@ const ActionPage = () => {
       booker: [
         "city",
         "organization",
+        "bookerType", // NEW: Add booker type step
         "bookerSkills",
         "experience",
         "talentbio",
       ],
-      client: ["city", "organization", "talentbio"],
+      client: [
+        "city",
+        "organization",
+        "clientType", // NEW: Add client type step
+        "talentbio",
+      ],
       default: ["city", "talentbio"],
     };
 
@@ -641,7 +627,77 @@ const ActionPage = () => {
                 />
               )}
 
+            {/* NEW: Client Type Selection */}
+            {steps[currentStep] === "clientType" && (
+              <div className="space-y-3">
+                <label className="block text-sm text-neutral-300 mb-2">
+                  What type of client are you?
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {clientTypes.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setClientType(type)}
+                      className={`p-3 rounded border text-left text-[12px] transition-colors ${
+                        clientType === type
+                          ? "border-orange-500 bg-orange-500/20 text-white"
+                          : "border-gray-600 text-neutral-300 hover:bg-gray-700"
+                      }`}
+                    >
+                      <div className="font-medium capitalize">
+                        {type.replace("_", " ")}
+                      </div>
+                      <div className="text-xs text-neutral-400 mt-1">
+                        {type === "individual" &&
+                          "Looking to hire talent for personal events"}
+                        {type === "event_planner" &&
+                          "Professional event planning company"}
+                        {type === "venue" && "Music venue, bar, or club"}
+                        {type === "corporate" &&
+                          "Corporate events and functions"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* NEW: Booker Type Selection */}
+            {steps[currentStep] === "bookerType" && (
+              <div className="space-y-3">
+                <label className="block text-sm text-neutral-300 mb-2">
+                  What type of booker are you?
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {bookerTypes.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setBookerType(type)}
+                      className={`p-3 rounded border text-left text-[12px] transition-colors ${
+                        bookerType === type
+                          ? "border-blue-500 bg-blue-500/20 text-white"
+                          : "border-gray-600 text-neutral-300 hover:bg-gray-700"
+                      }`}
+                    >
+                      <div className="font-medium capitalize">
+                        {type.replace("_", " ")}
+                      </div>
+                      <div className="text-xs text-neutral-400 mt-1">
+                        {type === "talent_agent" &&
+                          "Represent and manage artists"}
+                        {type === "booking_manager" &&
+                          "Book talent for venues or events"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Role Type Selection (Musicians only) */}
+
             {selectedRole === "musician" && steps[currentStep] === "city" && (
               <div className="mt-4">
                 <label className="block text-sm text-neutral-300 mb-2">
@@ -654,7 +710,7 @@ const ActionPage = () => {
                       "dj",
                       "mc",
                       "vocalist",
-                      "teacher",
+                      ...(isTeacherEnabled ? ["teacher"] : []), // CONDITIONALLY ADD TEACHER
                     ] as RoleType[]
                   ).map((role) => (
                     <button
@@ -971,18 +1027,7 @@ const ActionPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <AnimatePresence>
-        {modal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          >
-            {renderAdminModal()}
-          </motion.div>
-        )}
-      </AnimatePresence>
+
       <div className="relative z-10 w-full max-w-6xl mx-auto">
         {/* Header with animated underline */}
         <div className="mb-16 text-center">
@@ -1014,61 +1059,7 @@ const ActionPage = () => {
 
         {/* Role cards with teacher included */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {[
-            {
-              role: "client",
-              title: "Hire Talent",
-              accent: "orange",
-              description:
-                "Create gigs and book top-tier musicians, DJs, and performers",
-              buttonText: "Join as Client",
-              disabled: !!myuser?.isClient,
-              onClick: () => handleRoleSelection("client"),
-            },
-            {
-              role: "musician",
-              title: "Find Gigs",
-              accent: "cyan",
-              description:
-                "Showcase your talent and connect with premium opportunities",
-              buttonText: "Join as Talent",
-              disabled: !!myuser?.isMusician,
-              onClick: () => handleRoleSelection("musician"),
-            },
-            {
-              role: "booker",
-              title: "Manage Talent",
-              accent: "emerald",
-              description:
-                "Book and manage bands, coordinate events, build your roster",
-              buttonText: "Join as Booker",
-              disabled: !!myuser?.isBooker,
-              onClick: () => handleRoleSelection("booker"),
-            },
-            {
-              role: "both",
-              title: "Be a Client and Talent (Coming Soon)",
-              accent: "purple",
-              description:
-                "Switch between hiring talent and being hired for gigs",
-              buttonText: "Join as Dual User",
-              disabled: true,
-              onClick: () => handleRoleSelection("both"),
-            },
-            ...(isAdminEmail(user?.emailAddresses[0]?.emailAddress)
-              ? [
-                  {
-                    role: "admin",
-                    title: "Admin Role",
-                    accent: "emerald",
-                    description: "Register as Admin",
-                    buttonText: "Admin Registration",
-                    onClick: () => handleModal(),
-                    disabled: false,
-                  },
-                ]
-              : []),
-          ].map((card) => (
+          {roleCards.map((card) => (
             <div
               key={card.role}
               className={`
@@ -1208,27 +1199,3 @@ const ActionPage = () => {
 };
 
 export default ActionPage;
-
-function isAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-
-  // Get the whitelist from environment variables
-  const whitelist = process.env.ADMIN_EMAILS?.split(",") || [];
-
-  // In development, you might want to allow all emails or have a different behavior
-  if (process.env.NODE_ENV === "development") {
-    // Option 1: Allow any email in development
-    // return true;
-
-    // Option 2: Use a development-specific whitelist
-    const devWhitelist = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || [];
-    return devWhitelist.includes(email.trim().toLowerCase());
-
-    // Option 3: Fall back to production whitelist if no dev whitelist
-    // const effectiveWhitelist = devWhitelist.length > 0 ? devWhitelist : whitelist;
-    // return effectiveWhitelist.includes(email.trim().toLowerCase());
-  }
-
-  // In production, use the strict whitelist
-  return whitelist.includes(email.trim().toLowerCase());
-}

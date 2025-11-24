@@ -31,6 +31,26 @@ export default defineSchema({
   videos: videoModel,
   comments: commentsModel,
   pushSubscriptions: pushSubscriptions,
+  featureFlags: defineTable({
+    id: v.string(), // FeatureFlagKey like "teacher_dashboard"
+    name: v.string(),
+    description: v.optional(v.string()),
+    enabled: v.boolean(),
+    targetUsers: v.optional(
+      v.union(
+        v.literal("all"),
+        v.literal("free"),
+        v.literal("pro"),
+        v.literal("premium"),
+        v.literal("elite")
+      )
+    ),
+    targetRoles: v.optional(v.array(v.string())), // UserRole[]
+    rolloutPercentage: v.number(), // 0-100
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
+
   chats: defineTable({
     participantIds: v.array(v.id("users")),
     lastMessage: v.optional(v.string()),

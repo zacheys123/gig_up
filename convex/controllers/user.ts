@@ -381,8 +381,8 @@ export const getBookers = query({
     return bookers.slice(0, args.limit || 50);
   },
 });
-// convex/controllers/user.ts
-// convex/user.ts
+// convex/controllers/user.ts - Update the mutations
+
 export const updateUserAsMusician = mutation({
   args: {
     clerkId: v.string(),
@@ -404,11 +404,23 @@ export const updateUserAsMusician = mutation({
       talentbio: v.string(),
       vocalistGenre: v.optional(v.string()),
       organization: v.optional(v.string()),
-      // NEW: Teacher specific fields
+      // Teacher specific fields
       teacherSpecialization: v.optional(v.string()),
       teachingStyle: v.optional(v.string()),
       lessonFormat: v.optional(v.string()),
       studentAgeGroup: v.optional(v.string()),
+      // NEW: Client and Booker types
+      clientType: v.optional(
+        v.union(
+          v.literal("individual"),
+          v.literal("event_planner"),
+          v.literal("venue"),
+          v.literal("corporate")
+        )
+      ),
+      bookerType: v.optional(
+        v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+      ),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
       monthlyGigsPosted: v.optional(v.number()),
@@ -463,6 +475,7 @@ export const updateUserAsMusician = mutation({
     }
   },
 });
+
 export const updateUserAsClient = mutation({
   args: {
     clerkId: v.string(),
@@ -472,6 +485,15 @@ export const updateUserAsClient = mutation({
       city: v.string(),
       organization: v.string(),
       talentbio: v.string(),
+      // NEW: Client type
+      clientType: v.optional(
+        v.union(
+          v.literal("individual"),
+          v.literal("event_planner"),
+          v.literal("venue"),
+          v.literal("corporate")
+        )
+      ),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
       monthlyGigsPosted: v.optional(v.number()),
@@ -527,12 +549,82 @@ export const updateUserAsClient = mutation({
   },
 });
 
+export const updateUserAsBooker = mutation({
+  args: {
+    clerkId: v.string(),
+    updates: v.object({
+      isMusician: v.boolean(),
+      isClient: v.boolean(),
+      isBooker: v.boolean(),
+      city: v.string(),
+      organization: v.string(),
+      experience: v.string(),
+      bookerSkills: v.array(v.string()),
+      talentbio: v.string(),
+      // NEW: Booker type
+      bookerType: v.optional(
+        v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+      ),
+      tier: v.union(v.literal("free"), v.literal("pro")),
+      nextBillingDate: v.optional(v.number()),
+      monthlyGigsPosted: v.optional(v.number()),
+      monthlyMessages: v.optional(v.number()),
+      monthlyGigsBooked: v.optional(v.number()),
+      gigsBookedThisWeek: v.optional(
+        v.object({
+          count: v.number(),
+          weekStart: v.number(),
+        })
+      ),
+      lastBookingDate: v.optional(v.number()),
+      earnings: v.optional(v.number()),
+      totalSpent: v.optional(v.number()),
+      firstLogin: v.optional(v.boolean()),
+      onboardingComplete: v.optional(v.boolean()),
+      lastActive: v.optional(v.number()),
+      isBanned: v.optional(v.boolean()),
+      banReason: v.optional(v.string()),
+      bannedAt: v.optional(v.number()),
+      lastAdminAction: v.optional(v.number()),
+      theme: v.optional(
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
+      ),
+    }),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+        .first();
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+      );
+
+      await ctx.db.patch(user._id, {
+        ...cleanUpdates,
+        bookerBio: args.updates.talentbio, // Map talentbio to bookerBio
+        lastActive: Date.now(),
+      });
+
+      return { success: true, userId: user._id };
+    } catch (error) {
+      console.error("Error updating user as booker:", error);
+      throw error;
+    }
+  },
+});
+
 export const updateUserAsAdmin = mutation({
   args: {
     clerkId: v.string(),
     updates: v.object({
       isAdmin: v.optional(v.boolean()),
-      adminCity: v.optional(v.string()),
       adminRole: v.optional(
         v.union(
           v.literal("super"),
@@ -541,7 +633,31 @@ export const updateUserAsAdmin = mutation({
           v.literal("analytics")
         )
       ),
-      tier: v.optional(v.union(v.literal("free"), v.literal("pro"))),
+      tier: v.optional(
+        v.union(
+          v.literal("free"),
+          v.literal("pro"),
+          v.literal("premium"),
+          v.literal("elite")
+        )
+      ),
+      adminPermissions: v.optional(v.array(v.string())),
+      adminAccessLevel: v.optional(
+        v.union(
+          v.literal("full"),
+          v.literal("limited"),
+          v.literal("restricted")
+        )
+      ),
+      canManageUsers: v.optional(v.boolean()),
+      canManageContent: v.optional(v.boolean()),
+      canManagePayments: v.optional(v.boolean()),
+      canViewAnalytics: v.optional(v.boolean()),
+      adminNotes: v.optional(v.string()),
+      lastAdminAction: v.optional(v.number()),
+      adminDashboardAccess: v.optional(v.boolean()),
+      firstLogin: v.optional(v.boolean()),
+      lastActive: v.optional(v.number()),
       theme: v.optional(
         v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
       ),
@@ -1149,74 +1265,6 @@ export const updateLastActive = mutation({
       await ctx.db.patch(user._id, {
         lastActive: Date.now(),
       });
-    }
-  },
-});
-// convex/controllers/user.ts
-// convex/controllers/user.ts - ADD THIS MUTATION
-export const updateUserAsBooker = mutation({
-  args: {
-    clerkId: v.string(),
-    updates: v.object({
-      isMusician: v.boolean(),
-      isClient: v.boolean(),
-      isBooker: v.boolean(),
-      city: v.string(),
-      organization: v.string(),
-      experience: v.string(),
-      bookerSkills: v.array(v.string()),
-      talentbio: v.string(),
-      tier: v.union(v.literal("free"), v.literal("pro")),
-      nextBillingDate: v.optional(v.number()),
-      monthlyGigsPosted: v.optional(v.number()),
-      monthlyMessages: v.optional(v.number()),
-      monthlyGigsBooked: v.optional(v.number()),
-      gigsBookedThisWeek: v.optional(
-        v.object({
-          count: v.number(),
-          weekStart: v.number(),
-        })
-      ),
-      lastBookingDate: v.optional(v.number()),
-      earnings: v.optional(v.number()),
-      totalSpent: v.optional(v.number()),
-      firstLogin: v.optional(v.boolean()),
-      onboardingComplete: v.optional(v.boolean()),
-      lastActive: v.optional(v.number()),
-      isBanned: v.optional(v.boolean()),
-      banReason: v.optional(v.string()),
-      bannedAt: v.optional(v.number()),
-      lastAdminAction: v.optional(v.number()),
-      theme: v.optional(
-        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
-      ),
-    }),
-  },
-  handler: async (ctx, args) => {
-    try {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-        .first();
-
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      const cleanUpdates = Object.fromEntries(
-        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
-      );
-
-      await ctx.db.patch(user._id, {
-        ...cleanUpdates,
-        bookerBio: args.updates.talentbio, // Map talentbio to bookerBio
-        lastActive: Date.now(),
-      });
-
-      return { success: true, userId: user._id };
-    } catch (error) {
-      console.error("Error updating user as booker:", error);
-      throw error;
     }
   },
 });

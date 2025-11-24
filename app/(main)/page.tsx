@@ -41,6 +41,9 @@ import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import GigLoader from "@/components/(main)/GigLoader";
 import { useCheckTrial } from "@/hooks/useCheckTrial"; // Import the trial hook
+import { AdminRedirect } from "@/components/(admin)/AdminRedirect";
+import { FeatureDiscovery } from "@/components/features/FeatureDiscovery";
+import { ALL_FEATURES, getRoleFeatures } from "@/lib/registry";
 
 export default function Home() {
   const { isLoaded, userId } = useAuth();
@@ -346,6 +349,8 @@ export default function Home() {
 
   return (
     <>
+      {" "}
+      <AdminRedirect />
       <div
         className={cn(
           `font-sans min-h-screen overflow-y-scroll snap-mandatory snap-y scroll-smooth ${showProfileModal ? "overflow-hidden" : ""}`,
@@ -600,7 +605,7 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </section>
-
+        {/* Features Section - Dynamic based on user type */}
         {/* Features Section - Dynamic based on user type */}
         <section
           className={cn(
@@ -626,7 +631,7 @@ export default function Home() {
                 ? isProfileComplete
                   ? `Features for ${getUserRoleDisplay()}s`
                   : "Why Join GigUp?"
-                : "Why Choose GigUp?"}
+                : "Amazing Tools for Artists"}
             </h2>
             <p
               className={cn(
@@ -644,57 +649,18 @@ export default function Home() {
                       : user?.isMusician
                         ? "Everything you need to grow your music career"
                         : "Everything you need to find amazing talent"
-                : "Connect musicians, teachers, clients, and bookers in one platform"}
+                : "Discover powerful tools designed specifically for musicians, teachers, and industry professionals"}
             </p>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {currentFeatures.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  className={cn(
-                    "group backdrop-blur-sm p-8 rounded-2xl border transition-all duration-500 hover:scale-105",
-                    colors.card,
-                    colors.cardBorder,
-                    needsUpgrade ? "opacity-60" : "",
-                    "hover:border-amber-500/30"
-                  )}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.6 }}
-                  whileHover={{ y: needsUpgrade ? 0 : -5 }}
-                >
-                  <div className="flex justify-center mb-6">
-                    {needsUpgrade ? (
-                      <div className="relative">
-                        {feature.icon}
-                        <Crown className="w-6 h-6 text-amber-500 absolute -top-2 -right-2" />
-                      </div>
-                    ) : (
-                      feature.icon
-                    )}
-                  </div>
-                  <h3 className={cn("text-xl font-bold mb-3", colors.text)}>
-                    {feature.title}
-                    {needsUpgrade && (
-                      <span className="ml-2 text-xs bg-amber-500 text-white px-2 py-1 rounded-full">
-                        PRO
-                      </span>
-                    )}
-                  </h3>
-                  <p className={cn("leading-relaxed", colors.textMuted)}>
-                    {feature.description}
-                  </p>
-                  {needsUpgrade && (
-                    <div className="mt-3 text-xs text-amber-500 font-semibold">
-                      Upgrade to access
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
+            {/* REPLACE THE ENTIRE GRID WITH THIS: */}
+            <FeatureDiscovery
+              features={ALL_FEATURES}
+              variant="spotlight"
+              title={isAuthenticated ? "Your Tools" : "Featured Tools"}
+              showLocked={!isAuthenticated} // Show coming soon for guests
+            />
           </motion.div>
         </section>
-
         {/* How It Works Section */}
         <section
           className={cn(
@@ -951,7 +917,64 @@ export default function Home() {
             </motion.div>
           )}
         </section>
+        // Add this new section right before the Final CTA Section:
+        {/* Featured Tools Spotlight Section */}
+        <section
+          className={cn(
+            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
+            colors.background
+          )}
+        >
+          <motion.div
+            className="text-center max-w-6xl mx-auto w-full"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+          >
+            <h2 className="text-5xl md:text-6xl font-black mb-6 text-transparent bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text">
+              Professional Tools
+            </h2>
+            <p
+              className={cn(
+                "text-xl mb-12 max-w-2xl mx-auto",
+                colors.textMuted
+              )}
+            >
+              Advanced features to take your music career to the next level
+            </p>
 
+            <FeatureDiscovery
+              features={getRoleFeatures(user?.roleType || "all")}
+              variant="dashboard"
+              title={`Tools for ${getUserRoleDisplay()}s`}
+              showLocked={true}
+            />
+
+            {/* Upgrade prompt for free users */}
+            {user?.tier === "free" && isAuthenticated && (
+              <motion.div
+                className="mt-8 p-6 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+              >
+                <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                  Unlock All Professional Tools
+                </h3>
+                <p className={cn("text-sm mb-4", colors.textMuted)}>
+                  Upgrade to Premium to access vocal warmups, practice tools,
+                  and all professional features
+                </p>
+                <Link
+                  href="/dashboard/billing"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                >
+                  <Crown className="w-4 h-4" />
+                  Upgrade to Premium
+                </Link>
+              </motion.div>
+            )}
+          </motion.div>
+        </section>
         {/* Final CTA Section */}
         <section
           className={cn(
@@ -1051,7 +1074,6 @@ export default function Home() {
             )}
           </motion.div>
         </section>
-
         {/* Footer */}
         <footer
           className={cn(
@@ -1092,7 +1114,6 @@ export default function Home() {
           )}
         </footer>
       </div>
-
       {/* Professional Floating Profile Completion Modal */}
       <AnimatePresence>
         {showProfileModal && (
