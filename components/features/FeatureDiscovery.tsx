@@ -10,7 +10,7 @@ import { DiscoverableFeature } from "@/convex/featureFlagsTypes";
 import { useUserFeatureFlags } from "@/hooks/useUserFeatureFalgs";
 interface FeatureDiscoveryProps {
   features: DiscoverableFeature[];
-  variant?: "sidebar" | "dashboard" | "spotlight";
+  variant?: "sidebar" | "dashboard" | "spotlight" | "mobile";
   title?: string;
   showLocked?: boolean;
   maxFeatures?: number;
@@ -90,7 +90,8 @@ export function FeatureDiscovery({
       className={cn(
         variant === "sidebar" && "space-y-2",
         variant === "dashboard" && "grid grid-cols-1 md:grid-cols-2 gap-4",
-        variant === "spotlight" && "grid grid-cols-1 md:grid-cols-3 gap-6"
+        variant === "spotlight" && "grid grid-cols-1 md:grid-cols-3 gap-6",
+        variant === "mobile" && "space-y-3 p-4"
       )}
     >
       {/* Title */}
@@ -99,11 +100,19 @@ export function FeatureDiscovery({
           className={cn(
             "flex items-center gap-2 mb-4",
             variant === "dashboard" && "col-span-full",
-            variant === "spotlight" && "col-span-full text-center"
+            variant === "spotlight" && "col-span-full text-center",
+            variant === "mobile" && "col-span-full px-2"
           )}
         >
           <Sparkles className="w-5 h-5 text-purple-500" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3
+            className={cn(
+              "font-semibold",
+              variant === "mobile"
+                ? "text-base text-gray-900 dark:text-white"
+                : "text-lg text-gray-900 dark:text-white"
+            )}
+          >
             {title}
           </h3>
         </div>
@@ -165,14 +174,16 @@ function FeatureCard({
         // Variant sizes
         variant === "sidebar" && "p-3",
         variant === "dashboard" && "p-4",
-        variant === "spotlight" && "p-6 text-center"
+        variant === "spotlight" && "p-6 text-center",
+        variant === "mobile" && "p-4"
       )}
     >
       {/* Icon and Badge */}
       <div
         className={cn(
           "flex items-start justify-between mb-3",
-          variant === "spotlight" && "flex-col items-center"
+          variant === "spotlight" && "flex-col items-center",
+          variant === "mobile" && "items-center mb-4"
         )}
       >
         <div
@@ -180,7 +191,8 @@ function FeatureCard({
             "p-2 rounded-lg",
             canAccess
               ? "bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
+            variant === "mobile" && "p-3"
           )}
         >
           {feature.icon}
@@ -193,7 +205,8 @@ function FeatureCard({
               feature.badge === "NEW" && "bg-green-500 text-white",
               feature.badge === "COMING_SOON" && "bg-blue-500 text-white",
               feature.badge === "PRO" && "bg-amber-500 text-white",
-              feature.badge === "PREMIUM" && "bg-purple-500 text-white"
+              feature.badge === "PREMIUM" && "bg-purple-500 text-white",
+              variant === "mobile" && "text-[10px] px-1.5 py-0.5"
             )}
           >
             {feature.badge}
@@ -202,7 +215,12 @@ function FeatureCard({
       </div>
 
       {/* Content */}
-      <div className={variant === "spotlight" ? "space-y-2" : "space-y-1"}>
+      <div
+        className={cn(
+          variant === "spotlight" ? "space-y-2" : "space-y-1",
+          variant === "mobile" && "space-y-2"
+        )}
+      >
         <h4
           className={cn(
             "font-semibold",
@@ -211,7 +229,8 @@ function FeatureCard({
               : "text-gray-500 dark:text-gray-400",
             variant === "sidebar" && "text-sm",
             variant === "dashboard" && "text-base",
-            variant === "spotlight" && "text-lg"
+            variant === "spotlight" && "text-lg",
+            variant === "mobile" && "text-base"
           )}
         >
           {feature.name}
@@ -224,7 +243,8 @@ function FeatureCard({
               : "text-gray-400 dark:text-gray-500",
             variant === "sidebar" && "text-xs",
             variant === "dashboard" && "text-sm",
-            variant === "spotlight" && "text-base"
+            variant === "spotlight" && "text-base",
+            variant === "mobile" && "text-sm leading-relaxed"
           )}
         >
           {feature.description}
@@ -235,7 +255,8 @@ function FeatureCard({
       <div
         className={cn(
           "flex items-center justify-between mt-3",
-          variant === "spotlight" && "justify-center"
+          variant === "spotlight" && "justify-center",
+          variant === "mobile" && "mt-4"
         )}
       >
         {canAccess ? (
@@ -244,7 +265,8 @@ function FeatureCard({
               "flex items-center gap-1 text-purple-600 dark:text-purple-400 font-semibold",
               variant === "sidebar" && "text-xs",
               variant === "dashboard" && "text-sm",
-              variant === "spotlight" && "text-base"
+              variant === "spotlight" && "text-base",
+              variant === "mobile" && "text-sm"
             )}
           >
             Try Now
@@ -260,7 +282,8 @@ function FeatureCard({
               className={cn(
                 variant === "sidebar" && "text-xs",
                 variant === "dashboard" && "text-sm",
-                variant === "spotlight" && "text-sm"
+                variant === "spotlight" && "text-sm",
+                variant === "mobile" && "text-xs"
               )}
             >
               {!isEnabled && "Coming Soon"}

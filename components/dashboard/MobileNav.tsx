@@ -1,4 +1,5 @@
 "use client";
+
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import {
@@ -45,6 +46,8 @@ import { useChat } from "@/app/context/ChatContext";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { ChatListModal } from "../chat/ChatListModal";
 import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
+import { FeatureDiscovery } from "../features/FeatureDiscovery";
+import { getRoleFeatures } from "@/lib/registry";
 
 interface NavLink {
   name: string;
@@ -92,11 +95,11 @@ export default function MobileNav() {
 
   const handleOpenMessages = (e: React.MouseEvent) => {
     e.preventDefault();
-    setIsOpen(!isOpen);
+    setIsOpen(false);
     setShowChatListModal(true);
   };
 
-  // Dashboard-specific core links (not in MobileSheet)
+  // Dashboard-specific core links
   const dashboardCoreLinks: NavLink[] = [
     {
       name: "Dashboard",
@@ -114,7 +117,7 @@ export default function MobileNav() {
     },
   ];
 
-  // Dashboard analytics and tools (not in MobileSheet)
+  // Dashboard analytics and tools
   const dashboardToolsLinks: NavLink[] = [
     {
       name: "Analytics",
@@ -150,7 +153,7 @@ export default function MobileNav() {
     },
   ];
 
-  // Role-specific dashboard links (not in MobileSheet)
+  // Role-specific dashboard links
   const getRoleDashboardLinks = (): NavLink[] => {
     if (user?.isBooker) {
       return [
@@ -177,7 +180,6 @@ export default function MobileNav() {
           availableForTiers: ["pro", "premium", "elite"],
           requiresCompleteProfile: true,
         },
-
         {
           name: "Managed Talent",
           href: "/community?tab=managed-talent",
@@ -451,10 +453,24 @@ export default function MobileNav() {
   }, [isOpen]);
 
   const getUserRoleLabel = () => {
-    if (user?.isBooker) return "Booker";
-    if (user?.isMusician) return "Artist";
+    if (user?.isBooker) return "Booker/Talent Manager";
+    if (user?.isMusician) return "Artist/Musician";
     if (user?.isClient) return "Client";
     return "User";
+  };
+
+  const getUserStatsLabel = () => {
+    if (user?.isBooker) return "Artists Managed";
+    if (user?.isMusician) return "Gigs Booked";
+    if (user?.isClient) return "Posts Created";
+    return "Activity";
+  };
+
+  const getUserStatsValue = () => {
+    if (user?.isBooker) return user.artistsManaged?.length || 0;
+    if (user?.isMusician) return user.gigsBooked || 0;
+    if (user?.isClient) return user.gigsPosted || 0;
+    return 0;
   };
 
   // Handle link click with profile and tier restrictions
@@ -520,7 +536,7 @@ export default function MobileNav() {
                   damping: 30,
                 }}
                 className={cn(
-                  "fixed bottom-0 left-0 right-0 h-3/4 rounded-t-3xl border-b",
+                  "fixed bottom-0 left-0 right-0 h-[85vh] rounded-t-3xl border-b flex flex-col",
                   colors.background,
                   colors.border
                 )}
@@ -535,9 +551,6 @@ export default function MobileNav() {
                           : "Dashboard"}
                       </h2>
                       <div className="flex items-center gap-2 mt-1">
-                        <div className={cn("text-sm", colors.textMuted)}>
-                          {getUserRoleLabel()} • {currentTier.label}
-                        </div>
                         <div
                           className={cn(
                             "px-2 py-1 text-xs rounded-full font-semibold",
@@ -547,6 +560,9 @@ export default function MobileNav() {
                           <TierIcon className="w-3 h-3 inline mr-1" />
                           {currentTier.label}
                         </div>
+                        <span className={cn("text-xs", colors.textMuted)}>
+                          {getUserRoleLabel()}
+                        </span>
                       </div>
                     </div>
                     <button
@@ -618,8 +634,8 @@ export default function MobileNav() {
                 </div>
 
                 {/* Navigation Links - Vertical List */}
-                <div className="h-[calc(100%-120px)] overflow-y-auto">
-                  <div className="p-4 space-y-2 pb-20">
+                <div className="flex-1 overflow-y-auto">
+                  <div className="p-4 space-y-2">
                     {allLinks.map((link, index) => {
                       const active = isActive(link.href, link.exact);
                       const canAccess = canAccessLink(link);
@@ -632,7 +648,7 @@ export default function MobileNav() {
                       const linkContent = (
                         <div
                           className={cn(
-                            "group flex items-center gap-3 w-full p-4 rounded-xl transition-all duration-200 border-l-4",
+                            "group flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 border-l-4",
                             colors.hoverBg,
                             (!canAccess || isBlockedByProfile) &&
                               "cursor-not-allowed opacity-60",
@@ -758,7 +774,7 @@ export default function MobileNav() {
                       );
                     })}
 
-                    {/* Theme Toggle */}
+                    {/* Feature Discovery */}
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -767,11 +783,30 @@ export default function MobileNav() {
                         type: "spring",
                         stiffness: 300,
                       }}
+                      className="mt-6"
+                    >
+                      <FeatureDiscovery
+                        features={getRoleFeatures(user?.roleType || "all")}
+                        variant="mobile"
+                        title="Your Tools"
+                        showLocked={false}
+                      />
+                    </motion.div>
+
+                    {/* Theme Toggle */}
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{
+                        delay: (allLinks.length + 1) * 0.05,
+                        type: "spring",
+                        stiffness: 300,
+                      }}
                     >
                       <button
                         onClick={toggleDarkMode}
                         className={cn(
-                          "group flex items-center gap-3 w-full p-4 rounded-xl transition-all duration-200 border-l-4 border-transparent",
+                          "group flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 border-l-4 border-transparent",
                           colors.hoverBg,
                           colors.text
                         )}
@@ -805,6 +840,62 @@ export default function MobileNav() {
                     </motion.div>
                   </div>
                 </div>
+
+                {/* Quick Stats & Footer */}
+                {!shouldShowLimitedLinks && (
+                  <div className={cn("p-4 border-t", colors.border)}>
+                    <div
+                      className={cn(
+                        "rounded-lg p-3 border mb-3",
+                        colors.card,
+                        colors.border
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "text-xs mb-2 font-medium",
+                          colors.textMuted
+                        )}
+                      >
+                        Quick Stats
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <div className={cn(colors.text)}>
+                            {getUserStatsLabel()}
+                          </div>
+                          <div className="text-amber-400 font-medium">
+                            {getUserStatsValue()}
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <div className={cn(colors.text)}>Messages</div>
+                          <div className="text-blue-400 font-medium">
+                            {unReadCount}
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <div className={cn(colors.text)}>Notifications</div>
+                          <div className="text-green-400 font-medium">
+                            {notCount}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* App Version */}
+                    <div
+                      className={cn("text-xs text-center", colors.textMuted)}
+                    >
+                      GigUp v2.0.0
+                      {shouldShowLimitedLinks && (
+                        <span className="text-amber-600 ml-1">
+                          • Trial Ended
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

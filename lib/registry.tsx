@@ -30,7 +30,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     icon: <Volume2 className="w-5 h-5" />,
     badge: "NEW",
     category: "sidebar",
-    availableForTiers: ["premium", "pro", "elite"],
   },
   {
     id: "vocal_exercises_library",
@@ -39,7 +38,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/vocal-exercises",
     icon: <Mic2 className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
   },
   {
     id: "vocal_health_tips",
@@ -76,7 +74,14 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/students",
     icon: <Users className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
+  },
+  {
+    id: "curriculum_builder",
+    name: "Curriculum Builder Manager",
+    description: "Create the curriculum using AI generated ideas and more",
+    href: "/dashboard/students",
+    icon: <Users className="w-5 h-5" />,
+    category: "dashboard",
   },
 
   // ==================== INSTRUMENTALIST FEATURES ====================
@@ -87,7 +92,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/sheet-music",
     icon: <BookOpen className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
   },
   {
     id: "practice_tools",
@@ -114,7 +118,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/equipment",
     icon: <Headphones className="w-5 h-5" />,
     category: "spotlight",
-    availableForTiers: ["premium", "elite"],
   },
 
   // ==================== CLIENT FEATURES ====================
@@ -142,7 +145,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/pro-events",
     icon: <ClipboardList className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
   },
   {
     id: "vendor_management",
@@ -151,7 +153,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/vendors",
     icon: <Users className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
   },
   {
     id: "venue_management",
@@ -168,7 +169,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/venue-calendar",
     icon: <Calendar className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
   },
   {
     id: "corporate_tools",
@@ -177,7 +177,7 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/corporate",
     icon: <Crown className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
+
     badge: "PREMIUM",
   },
 
@@ -198,7 +198,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/contracts",
     icon: <FileText className="w-5 h-5" />,
     category: "dashboard",
-    availableForTiers: ["pro", "premium", "elite"],
   },
 
   // ==================== GENERAL FEATURES ====================
@@ -225,7 +224,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/messaging",
     icon: <Users className="w-5 h-5" />,
     category: "sidebar",
-    availableForTiers: ["pro", "premium", "elite"],
   },
   {
     id: "file_sharing",
@@ -242,7 +240,6 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     href: "/dashboard/calendar-sync",
     icon: <Calendar className="w-5 h-5" />,
     category: "sidebar",
-    availableForTiers: ["pro", "premium", "elite"],
   },
 ];
 
@@ -254,7 +251,12 @@ export const getRoleFeatures = (roleType: string) => {
   const roleFeatureMap: Record<string, string[]> = {
     // Musician Roles
     vocalist: ["vocal_warmups", "vocal_exercises_library", "vocal_health_tips"],
-    teacher: ["teacher_dashboard", "lesson_scheduling", "student_management"],
+    teacher: [
+      "teacher_dashboard",
+      "lesson_scheduling",
+      "student_management",
+      "curriculum_builder",
+    ],
     instrumentalist: ["sheet_music_library", "practice_tools"],
     dj: ["playlist_management", "dj_equipment_rental"],
     mc: ["playlist_management"],
