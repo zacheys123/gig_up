@@ -45,6 +45,7 @@ import { ChatListModal } from "../chat/ChatListModal";
 import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
 import { FeatureDiscovery } from "../features/FeatureDiscovery";
 import { getRoleFeatures } from "@/lib/registry";
+import { useUserFeatureFlags } from "@/hooks/useUserFeatureFalgs";
 
 interface NavLink {
   name: string;
@@ -666,8 +667,9 @@ export function Sidebar() {
               features={getRoleFeatures(user?.roleType || "all")}
               variant="sidebar"
               title="Your Tools"
-              showLocked={true} // Show coming soon features
+              showLocked={false} // Show coming soon features
             />
+            <FeatureFlagDebug />
           </div>
           {/* Theme Toggle */}
           <button
@@ -754,5 +756,22 @@ export function Sidebar() {
         onClose={() => setShowChatListModal(false)}
       />
     </>
+  );
+}
+// Add this temporary debug component
+export function FeatureFlagDebug() {
+  const { isFeatureEnabled } = useUserFeatureFlags();
+  const { user } = useCurrentUser();
+
+  return (
+    <div className="p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
+      <h3 className="font-bold">Feature Flag Debug</h3>
+      <p>User Tier: {user?.tier}</p>
+      <p>User Role: {user?.roleType}</p>
+      <p>
+        Vocal Warmups Enabled:{" "}
+        {isFeatureEnabled("vocal_warmups") ? "✅ Yes" : "❌ No"}
+      </p>
+    </div>
   );
 }

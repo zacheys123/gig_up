@@ -35,10 +35,10 @@ export const useFeatureFlags = (userId?: string) => {
       // For all other flags, use full targeting logic
       if (!flag || !flag.enabled) return false;
 
-      // 1. Check user tier targeting
+      // 1. Check user tier targeting ← THIS IS THE KEY PART!
       if (flag.targetUsers && flag.targetUsers !== "all") {
         if (flag.targetUsers !== userTier) {
-          return false;
+          return false; // User tier doesn't match requirement
         }
       }
 

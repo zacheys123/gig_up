@@ -1,26 +1,19 @@
 "use client";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Sparkles, Crown, Lock, ArrowRight } from "lucide-react";
+import { Sparkles, Crown, Lock, ArrowRight, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useThemeColors } from "@/hooks/useTheme";
+import { DiscoverableFeature } from "@/convex/featureFlagsTypes";
 
 import { useUserFeatureFlags } from "@/hooks/useUserFeatureFalgs";
-interface DiscoverableFeature {
-  id: string; // Must match your FeatureFlagKey
-  name: string;
-  description: string;
-  href: string;
-  icon: React.ReactNode;
-  badge?: "NEW" | "COMING_SOON";
-  category: "sidebar" | "dashboard" | "spotlight";
-}
-
 interface FeatureDiscoveryProps {
   features: DiscoverableFeature[];
   variant?: "sidebar" | "dashboard" | "spotlight";
   title?: string;
   showLocked?: boolean;
+  maxFeatures?: number;
 }
 
 export function FeatureDiscovery({
@@ -28,19 +21,67 @@ export function FeatureDiscovery({
   variant = "sidebar",
   title = "Featured Tools",
   showLocked = false,
+  maxFeatures,
 }: FeatureDiscoveryProps) {
   const { isFeatureEnabled } = useUserFeatureFlags();
   const { user } = useCurrentUser();
+  const { colors } = useThemeColors();
 
-  const userRole = (user?.roleType as string) || "all";
   const userTier = user?.tier || "free";
+  // ✅ Fix: Ensure this always returns a boolean
 
-  // Filter features based on feature flags and user role
-  const availableFeatures = features.filter((feature) => {
-    const isEnabled = isFeatureEnabled(feature.id);
-    if (!isEnabled && !showLocked) return false;
-    return true;
+  console.log("🔍 FeatureDiscovery Debug:", {
+    userTier,
+    userRole: user?.roleType,
+    totalFeatures: features.length,
+    features: features.map((f) => ({ id: f.id, name: f.name })),
   });
+  const isProfileComplete = Boolean(
+    user &&
+      user.firstTimeInProfile === false &&
+      // For musicians: require date of birth + role type
+      ((user.isMusician &&
+        user.date &&
+        user.month &&
+        user.year &&
+        user.roleType) ||
+        // For teachers: require date of birth + role type
+        (user.date && user.month && user.year && user.roleType) ||
+        // For clients: only require basic profile completion
+        (user.isClient && user.firstname) ||
+        // For bookers: require basic profile completion
+        (user.isBooker && user.firstname))
+  );
+  // Filter features based on feature flags and user context
+  const availableFeatures = features
+    .filter((feature) => {
+      const isEnabled = isFeatureEnabled(feature.id);
+      console.log(`🔍 Filtering ${feature.id}:`, {
+        isEnabled,
+        userTier,
+        availableForTiers: feature.availableForTiers,
+        tierMatch: feature.availableForTiers?.includes(userTier),
+        showLocked,
+      });
+      // If not enabled and we're not showing locked features, skip
+      if (!isEnabled && !showLocked) return false;
+
+      // Check user tier if specified
+      if (
+        feature.availableForTiers &&
+        !feature.availableForTiers.includes(userTier)
+      ) {
+        return false;
+      }
+
+      // Check profile completion if required
+      if (feature.requiresCompleteProfile && !isProfileComplete) {
+        return false;
+      }
+
+      return true;
+    })
+    .slice(0, maxFeatures);
 
   if (availableFeatures.length === 0) return null;
 
@@ -76,10 +117,19 @@ export function FeatureDiscovery({
           variant={variant}
           isEnabled={isFeatureEnabled(feature.id)}
           userTier={userTier}
+          isProfileComplete={isProfileComplete}
         />
       ))}
     </div>
   );
+}
+
+interface FeatureCardProps {
+  feature: DiscoverableFeature;
+  variant: string;
+  isEnabled: boolean;
+  userTier: string;
+  isProfileComplete: boolean;
 }
 
 function FeatureCard({
@@ -87,24 +137,28 @@ function FeatureCard({
   variant,
   isEnabled,
   userTier,
-}: {
-  feature: DiscoverableFeature;
-  variant: string;
-  isEnabled: boolean;
-  userTier: string;
-}) {
+  isProfileComplete,
+}: FeatureCardProps) {
+  const { colors } = useThemeColors();
+
+  const canAccessByTier =
+    !feature.availableForTiers || feature.availableForTiers.includes(userTier);
+  const canAccessByProfile =
+    !feature.requiresCompleteProfile || isProfileComplete;
+  const canAccess = isEnabled && canAccessByTier && canAccessByProfile;
+
   const cardContent = (
     <div
       className={cn(
         "group transition-all duration-200 border rounded-lg",
-        // Enabled state
-        isEnabled && [
+        // Enabled and accessible state
+        canAccess && [
           "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
           "hover:shadow-md hover:border-purple-300 dark:hover:border-purple-600",
           "cursor-pointer",
         ],
-        // Disabled state
-        !isEnabled && [
+        // Disabled or inaccessible state
+        !canAccess && [
           "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600",
           "cursor-not-allowed opacity-70",
         ],
@@ -124,7 +178,7 @@ function FeatureCard({
         <div
           className={cn(
             "p-2 rounded-lg",
-            isEnabled
+            canAccess
               ? "bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400"
               : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
           )}
@@ -137,7 +191,9 @@ function FeatureCard({
             className={cn(
               "text-xs px-2 py-1 rounded-full font-semibold",
               feature.badge === "NEW" && "bg-green-500 text-white",
-              feature.badge === "COMING_SOON" && "bg-blue-500 text-white"
+              feature.badge === "COMING_SOON" && "bg-blue-500 text-white",
+              feature.badge === "PRO" && "bg-amber-500 text-white",
+              feature.badge === "PREMIUM" && "bg-purple-500 text-white"
             )}
           >
             {feature.badge}
@@ -150,7 +206,7 @@ function FeatureCard({
         <h4
           className={cn(
             "font-semibold",
-            isEnabled
+            canAccess
               ? "text-gray-900 dark:text-white"
               : "text-gray-500 dark:text-gray-400",
             variant === "sidebar" && "text-sm",
@@ -163,7 +219,7 @@ function FeatureCard({
 
         <p
           className={cn(
-            isEnabled
+            canAccess
               ? "text-gray-600 dark:text-gray-300"
               : "text-gray-400 dark:text-gray-500",
             variant === "sidebar" && "text-xs",
@@ -175,14 +231,14 @@ function FeatureCard({
         </p>
       </div>
 
-      {/* Action */}
+      {/* Action & Status */}
       <div
         className={cn(
           "flex items-center justify-between mt-3",
           variant === "spotlight" && "justify-center"
         )}
       >
-        {isEnabled ? (
+        {canAccess ? (
           <div
             className={cn(
               "flex items-center gap-1 text-purple-600 dark:text-purple-400 font-semibold",
@@ -196,7 +252,10 @@ function FeatureCard({
           </div>
         ) : (
           <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-            <Lock className="w-3 h-3" />
+            {!isEnabled && <Lock className="w-3 h-3" />}
+            {!canAccessByTier && <Crown className="w-3 h-3" />}
+            {!canAccessByProfile && <UserCheck className="w-3 h-3" />}
+
             <span
               className={cn(
                 variant === "sidebar" && "text-xs",
@@ -204,7 +263,9 @@ function FeatureCard({
                 variant === "spotlight" && "text-sm"
               )}
             >
-              Coming Soon
+              {!isEnabled && "Coming Soon"}
+              {!canAccessByTier && "Upgrade Required"}
+              {!canAccessByProfile && "Complete Profile"}
             </span>
           </div>
         )}
@@ -212,8 +273,8 @@ function FeatureCard({
     </div>
   );
 
-  // Wrap in Link if enabled, otherwise just the card
-  return isEnabled ? (
+  // Wrap in Link if fully accessible, otherwise show as disabled card
+  return canAccess ? (
     <Link href={feature.href}>{cardContent}</Link>
   ) : (
     cardContent

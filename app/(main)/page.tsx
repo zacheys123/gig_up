@@ -944,10 +944,15 @@ export default function Home() {
             </p>
 
             <FeatureDiscovery
-              features={getRoleFeatures(user?.roleType || "all")}
-              variant="dashboard"
-              title={`Tools for ${getUserRoleDisplay()}s`}
-              showLocked={true}
+              features={
+                isAuthenticated && isProfileComplete
+                  ? getRoleFeatures(user?.roleType || "all")
+                  : ALL_FEATURES
+              }
+              variant={isAuthenticated ? "dashboard" : "spotlight"}
+              title={isAuthenticated ? "Your Tools" : "Featured Tools"}
+              showLocked={!isAuthenticated}
+              maxFeatures={isAuthenticated ? 6 : 8}
             />
 
             {/* Upgrade prompt for free users */}

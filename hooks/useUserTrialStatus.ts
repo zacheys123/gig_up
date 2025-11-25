@@ -26,16 +26,16 @@ export const useUserTrialStatus = () => {
       const currentTime = Date.now();
       const isInTrial = currentTime < trialEndTime;
 
-      console.log("🔍 [USER TRIAL CALCULATION]:", {
-        userId: user._id,
-        userCreationTime: new Date(userCreationTime).toISOString(),
-        trialEndTime: new Date(trialEndTime).toISOString(),
-        currentTime: new Date(currentTime).toISOString(),
-        daysRemaining: Math.ceil(
-          (trialEndTime - currentTime) / (1000 * 60 * 60 * 24)
-        ),
-        isInTrial,
-      });
+      // console.log("🔍 [USER TRIAL CALCULATION]:", {
+      //   userId: user._id,
+      //   userCreationTime: new Date(userCreationTime).toISOString(),
+      //   trialEndTime: new Date(trialEndTime).toISOString(),
+      //   currentTime: new Date(currentTime).toISOString(),
+      //   daysRemaining: Math.ceil(
+      //     (trialEndTime - currentTime) / (1000 * 60 * 60 * 24)
+      //   ),
+      //   isInTrial,
+      // });
 
       return isInTrial;
     },

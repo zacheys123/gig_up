@@ -1,25 +1,27 @@
+// components/features/FeatureGated.tsx
 "use client";
 
-import { useFeatureFlags } from "@/hooks/useFeatureFlag";
+import { useUserFeatureFlags } from "@/hooks/useUserFeatureFalgs";
 
 interface FeatureGatedProps {
   feature: string;
-  role?: string;
-  tier?: string;
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
 
 export const FeatureGated: React.FC<FeatureGatedProps> = ({
   feature,
-  role,
-  tier = "free", // default tier
   fallback = null,
   children,
 }) => {
-  const { isFeatureEnabled } = useFeatureFlags();
+  const { isFeatureEnabled, isLoading } = useUserFeatureFlags();
 
-  const canAccess = isFeatureEnabled(feature, role, tier);
+  // Show loading state
+  if (isLoading) {
+    return <div className="p-4 text-center">Checking access...</div>;
+  }
+
+  const canAccess = isFeatureEnabled(feature);
 
   if (!canAccess) {
     return <>{fallback}</>;
