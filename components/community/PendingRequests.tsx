@@ -98,9 +98,11 @@ const RequestCard: React.FC<{
 
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <span className="font-medium">Wants you as their:</span>
+              <span className="font-medium">
+                Wants you as their substitute for:
+              </span>
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {request.forTheirSkill}
+                {request.forTheirSkill} : {`(${principal.instrument})`}
               </span>
             </div>
 

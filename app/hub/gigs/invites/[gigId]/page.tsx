@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -29,6 +29,10 @@ import {
   Music,
   AlertCircle,
   Star,
+  Sparkles,
+  Crown,
+  Zap,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -36,10 +40,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import GigLoader from "@/components/(main)/GigLoader";
-// import { ChatIcon } from "@/components/chat/ChatIcon";
+import { ChatIcon } from "@/components/chat/ChatIcon";
 
 interface InvitesPageProps {
-  params: Promise<{ gigId: string }>; // Change this line
+  params: Promise<{ gigId: string }>;
 }
 
 export default function InvitesPage({ params }: InvitesPageProps) {
@@ -57,7 +61,11 @@ export default function InvitesPage({ params }: InvitesPageProps) {
           colors.background
         )}
       >
-        <GigLoader color="border-purple-300" size="md" title="Loading..." />
+        <GigLoader
+          color="border-orange-300"
+          size="md"
+          title="Loading Invitation..."
+        />
       </div>
     );
   }
@@ -79,34 +87,68 @@ export default function InvitesPage({ params }: InvitesPageProps) {
 
   return (
     <div className={cn("min-h-screen", colors.background)}>
-      <div className="container mx-auto px-4 sm:px-6 py-8 max-w-4xl">
+      {/* Background Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-50/20 via-red-50/10 to-pink-50/10" />
+
+      <div className="relative container mx-auto px-4 sm:px-6 py-8 max-w-4xl">
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-6">
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.back()}
               className={cn(
-                "flex items-center gap-2 border transition-all duration-200 hover:shadow-md",
+                "flex items-center gap-2 border-2 transition-all duration-300 hover:shadow-lg backdrop-blur-sm",
                 colors.border,
                 colors.hoverBg,
-                "hover:border-blue-400"
+                "hover:scale-105"
               )}
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              Back to Invites
             </Button>
-            <div>
-              <h1 className={cn("text-3xl font-bold", colors.text)}>
-                Gig Invitation
-              </h1>
-              <p className={cn("text-muted-foreground mt-2", colors.textMuted)}>
-                {user.isClient
-                  ? "Manage your gig invitation"
-                  : "Review and respond to gig invitation"}
-              </p>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  {user.isClient ? (
+                    <Crown className="w-6 h-6 text-white" />
+                  ) : (
+                    <Music className="w-6 h-6 text-white" />
+                  )}
+                </div>
+                <div>
+                  <h1
+                    className={cn(
+                      "text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent mb-2"
+                    )}
+                  >
+                    Gig Invitation
+                  </h1>
+                  <p className={cn("text-lg font-medium", colors.textMuted)}>
+                    {user.isClient
+                      ? "Manage your invitation details"
+                      : "Review and respond to this opportunity"}
+                  </p>
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* Role Badge */}
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={user.isMusician ? "success" : "default"}
+              className="text-sm px-4 py-2 font-semibold shadow-sm"
+            >
+              {user.isMusician ? "🎵 Professional Musician" : "🎯 Event Client"}
+            </Badge>
+            <div className={cn("h-4 w-px", colors.border)} />
+            <span className={cn("text-sm font-medium", colors.textMuted)}>
+              {user.isClient
+                ? "You sent this invitation"
+                : "You received this invitation"}
+            </span>
           </div>
         </div>
 
@@ -116,10 +158,53 @@ export default function InvitesPage({ params }: InvitesPageProps) {
         ) : user.isMusician ? (
           <MusicianGigView gigId={gigId} />
         ) : (
-          <Card className={cn("border", colors.card, colors.border)}>
-            <CardContent className="p-6 text-center">
-              <div className={cn("text-lg", colors.text)}>
-                You need to be a client or musician to view invitations.
+          <Card
+            className={cn(
+              "border-2 text-center backdrop-blur-sm",
+              colors.card,
+              colors.border,
+              colors.backgroundSecondary
+            )}
+          >
+            <CardContent className="p-12">
+              <div
+                className={cn(
+                  "w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl bg-gradient-to-br from-gray-500 to-slate-600"
+                )}
+              >
+                <Users className="w-10 h-10 text-white" />
+              </div>
+              <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+                Complete Your Profile
+              </h3>
+              <p
+                className={cn(
+                  "max-w-md mx-auto mb-8 text-lg leading-relaxed",
+                  colors.textMuted
+                )}
+              >
+                Set up your musician or client profile to start sending and
+                receiving gig invitations.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-xl transition-all duration-300"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Setup Profile
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className={cn(
+                    "border-2 hover:shadow-lg transition-all duration-300",
+                    colors.border,
+                    colors.hoverBg
+                  )}
+                >
+                  Learn More
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -129,47 +214,68 @@ export default function InvitesPage({ params }: InvitesPageProps) {
   );
 }
 
-// Status badge component
+// Enhanced Status Badge Component
 const StatusBadge = ({ status }: { status: string }) => {
+  const { colors } = useThemeColors();
+
   const statusConfig = {
     pending: {
-      label: "Pending",
-      color:
-        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800",
+      label: "Pending Response",
+      icon: Clock,
+      className: cn(
+        "bg-orange-500/10 text-orange-700 border-orange-300",
+        colors.border
+      ),
     },
     accepted: {
-      label: "Accepted",
-      color:
-        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800",
+      label: "Confirmed 🎉",
+      icon: Check,
+      className: cn(
+        "bg-green-500/10 text-green-700 border-green-300",
+        colors.border
+      ),
     },
     declined: {
       label: "Declined",
-      color:
-        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800",
+      icon: X,
+      className: cn("bg-red-500/10 text-red-700 border-red-300", colors.border),
     },
     "deputy-suggested": {
-      label: "Deputy Suggested",
-      color:
-        "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800",
+      label: "Deputy Available",
+      icon: Users2,
+      className: cn(
+        "bg-blue-500/10 text-blue-700 border-blue-300",
+        colors.border
+      ),
     },
     cancelled: {
       label: "Cancelled",
-      color:
-        "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800",
+      icon: X,
+      className: cn(
+        "bg-gray-500/10 text-gray-700 border-gray-300",
+        colors.border
+      ),
     },
   };
 
   const config =
     statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+  const Icon = config.icon;
 
   return (
-    <Badge className={cn("inline-flex items-center gap-1", config.color)}>
-      {config.label}
-    </Badge>
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-300",
+        config.className
+      )}
+    >
+      <Icon className="w-4 h-4" />
+      <span>{config.label}</span>
+    </div>
   );
 };
 
-// Client View Component
+// Enhanced Client View Component
 function ClientGigView({ gigId }: { gigId: string }) {
   const { user } = useCurrentUser();
   const { colors } = useThemeColors();
@@ -181,12 +287,11 @@ function ClientGigView({ gigId }: { gigId: string }) {
     api.controllers.instantGigs.updateInstantGigStatus
   );
 
-  // Use the useDeputies hook to get musician's deputies
   const { myDeputies } = useDeputies(gig?.invitedMusicianId);
   const router = useRouter();
+
   const handleAcceptDeputy = async (deputyId: string, deputyName: string) => {
     try {
-      // Update gig with new musician and status
       await updateGigStatus({
         gigId: gigId as any,
         status: "accepted",
@@ -194,7 +299,6 @@ function ClientGigView({ gigId }: { gigId: string }) {
         actionBy: "client",
         notes: `Accepted deputy: ${deputyName}`,
       });
-
       toast.success(`${deputyName} accepted as deputy for this gig`);
     } catch (error) {
       toast.error("Failed to accept deputy");
@@ -203,7 +307,6 @@ function ClientGigView({ gigId }: { gigId: string }) {
 
   const handleDeclineDeputy = async () => {
     try {
-      // Mark gig as cancelled when client declines deputies
       await updateGigStatus({
         gigId: gigId as any,
         status: "cancelled",
@@ -219,22 +322,47 @@ function ClientGigView({ gigId }: { gigId: string }) {
 
   if (!gig) {
     return (
-      <Card className={cn("w-full", colors.card)}>
-        <CardContent className="p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-red-500" />
+      <Card
+        className={cn(
+          "w-full border-2 text-center backdrop-blur-sm",
+          colors.card,
+          colors.border,
+          colors.backgroundSecondary
+        )}
+      >
+        <CardContent className="p-12">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl bg-gradient-to-br from-red-500 to-orange-600">
+            <AlertCircle className="w-10 h-10 text-white" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">Gig Not Found</h3>
-          <p className="text-muted-foreground mb-4">
+          <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+            Gig Not Found
+          </h3>
+          <p
+            className={cn(
+              "max-w-md mx-auto mb-8 text-lg leading-relaxed",
+              colors.textMuted
+            )}
+          >
             We couldn't find the gig you're looking for. It may have been
             cancelled or removed.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={() => router.back()} variant="outline">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              onClick={() => router.back()}
+              variant="outline"
+              className={cn(
+                "border-2 hover:shadow-lg transition-all duration-300",
+                colors.border,
+                colors.hoverBg
+              )}
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Go Back
             </Button>
-            <Button onClick={() => router.push("/hub/gigs")}>
+            <Button
+              onClick={() => router.push("/hub/gigs")}
+              className="bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-xl transition-all duration-300"
+            >
               Browse Available Gigs
             </Button>
           </div>
@@ -243,98 +371,227 @@ function ClientGigView({ gigId }: { gigId: string }) {
     );
   }
 
-  // Filter deputies that are bookable
   const availableDeputies = myDeputies.filter(
     (deputy) => deputy?.relationship?.canBeBooked !== false
   );
-
-  // Get booking history for display
   const bookingHistory = gig.bookingHistory || [];
 
   return (
     <div className="space-y-6">
-      {/* Gig Details */}
-      <Card className={cn("w-full", colors.card)}>
-        <CardHeader>
+      {/* Gig Details Card */}
+      <Card
+        className={cn(
+          "w-full border-0 transition-all duration-500 hover:shadow-2xl transform-gpu overflow-hidden backdrop-blur-sm",
+          colors.card,
+          "bg-gradient-to-br from-white to-gray-50/80"
+        )}
+      >
+        {/* Accent Border */}
+        <div className="w-full h-1 bg-gradient-to-r from-orange-500 to-red-500" />
+
+        <CardHeader className="pb-4 pt-6">
           <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-xl">{gig.title}</CardTitle>
-              <CardDescription>{gig.description}</CardDescription>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full" />
+                <span
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-wide",
+                    colors.primary
+                  )}
+                >
+                  {gig.gigType}
+                </span>
+              </div>
+              <CardTitle className={cn("text-2xl font-bold mb-2", colors.text)}>
+                {gig.title}
+              </CardTitle>
+              <CardDescription
+                className={cn("text-lg leading-relaxed", colors.textMuted)}
+              >
+                {gig.description}
+              </CardDescription>
             </div>
             <StatusBadge status={gig.status} />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+
+        <CardContent className="space-y-6">
           {/* Gig Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">{gig.date}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">{gig.duration}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">{gig.venue}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">{gig.budget}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Music className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">{gig.gigType}</span>
-            </div>
-          </div>
-
-          {/* Current Musician Status */}
-          <div className="border-t pt-4">
-            <h4 className="font-semibold mb-2">
-              {gig.status === "deputy-suggested"
-                ? "Original Musician"
-                : gig.status === "accepted"
-                  ? "Confirmed Musician"
-                  : "Invited Musician"}
-            </h4>
-            <div className="flex items-center justify-evenly p-3 bg-muted rounded-lg">
-              <div className="flex items-center space-x-3">
-                <User className="w-8 h-8 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{gig.musicianName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {gig.status === "deputy-suggested"
-                      ? "Suggested deputies instead"
-                      : gig.status === "accepted"
-                        ? "Confirmed for this gig"
-                        : gig.status === "declined"
-                          ? "Declined the invitation"
-                          : "Waiting for response..."}
-                  </p>
+            {[
+              { icon: Calendar, label: "Date", value: gig.date },
+              { icon: Clock, label: "Duration", value: gig.duration },
+              { icon: MapPin, label: "Venue", value: gig.venue },
+              { icon: DollarSign, label: "Budget", value: gig.budget },
+              { icon: Music, label: "Type", value: gig.gigType },
+            ].map((item, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
+                  colors.backgroundMuted,
+                  "group hover:bg-white/80 border border-transparent hover:border-orange-200"
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                    "bg-gradient-to-br from-orange-500 to-red-500"
+                  )}
+                >
+                  <item.icon className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className={cn(
+                      "text-xs font-medium uppercase tracking-wide",
+                      colors.textMuted
+                    )}
+                  >
+                    {item.label}
+                  </div>
+                  <div className={cn("text-sm font-semibold", colors.text)}>
+                    {item.value}
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+          {/* Current Musician Status */}
+          <div className="border-t border-gray-200 pt-6">
+            <h4
+              className={cn(
+                "font-bold text-lg mb-4 flex items-center gap-2",
+                colors.text
+              )}
+            >
+              <User className="w-5 h-5" />
+              {gig.status === "deputy-suggested"
+                ? "Musician & Deputy Status"
+                : gig.status === "accepted" && gig.originalMusicianId
+                  ? "Confirmed Deputy"
+                  : "Musician Status"}
+            </h4>
 
-              {/* Uncomment if you want chat functionality */}
-              {/* <ChatIcon
-                userId={gig.invitedMusicianId as Id<"users">}
-                size="sm"
-                showText={true}
-                variant="ghost"
-                text={"Message"}
-                showPulse={true}
-                className="h-10 w-10 bg-green-100 text-green-600 hover:bg-green-200 w-full justify-center"
-              /> */}
+            {/* Original Musician Card */}
+            {(gig.status === "deputy-suggested" || gig.originalMusicianId) && (
+              <div
+                className={cn(
+                  "mb-4 p-4 rounded-xl border-2",
+                  "bg-gradient-to-br from-gray-50 to-blue-50 border-blue-200"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        "bg-gradient-to-br from-gray-500 to-slate-500"
+                      )}
+                    >
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className={cn("font-semibold", colors.text)}>
+                        {gig.originalMusicianName || gig.musicianName}
+                      </p>
+                      <p className={cn("text-sm", colors.textMuted)}>
+                        Original Invited Musician •{" "}
+                        {gig.status === "deputy-suggested"
+                          ? "Suggested deputies"
+                          : "Replaced by deputy"}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-gray-100">
+                    Original
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Current Musician Card */}
+            <div
+              className={cn(
+                "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
+                colors.backgroundMuted,
+                "group hover:bg-white/80 border border-transparent hover:border-blue-200"
+              )}
+            >
+              <div className="flex items-center space-x-4">
+                <div
+                  className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center",
+                    gig.originalMusicianId
+                      ? "bg-gradient-to-br from-green-500 to-emerald-500"
+                      : "bg-gradient-to-br from-blue-500 to-cyan-500",
+                    "shadow-lg"
+                  )}
+                >
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className={cn("font-bold text-lg", colors.text)}>
+                    {gig.originalMusicianId
+                      ? gig.musicianName
+                      : gig.musicianName}
+                  </p>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    {gig.status === "deputy-suggested"
+                      ? "Reviewing deputy suggestions"
+                      : gig.originalMusicianId
+                        ? "Deputy confirmed for this gig"
+                        : gig.status === "accepted"
+                          ? "Confirmed for this gig"
+                          : gig.status === "declined"
+                            ? "Declined the invitation"
+                            : "Waiting for response..."}
+                  </p>
+                  {gig.originalMusicianId && (
+                    <p className={cn("text-xs mt-1", colors.textMuted)}>
+                      🎵 Covering for {gig.originalMusicianName}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {gig.originalMusicianId && (
+                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                    Deputy
+                  </Badge>
+                )}
+                <ChatIcon
+                  userId={gig.invitedMusicianId}
+                  size="md"
+                  variant="cozy"
+                  showText={true}
+                  text="Message"
+                />
+              </div>
             </div>
           </div>
-
           {/* Deputy Suggestions Section */}
           {gig.status === "deputy-suggested" && (
-            <div className="border-t pt-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Users2 className="w-5 h-5 text-blue-500" />
-                <h4 className="font-semibold">Deputy Suggestions</h4>
-                <Badge variant="outline" className="ml-2">
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                    "bg-gradient-to-br from-blue-500 to-cyan-500"
+                  )}
+                >
+                  <Users2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className={cn("font-bold text-lg", colors.text)}>
+                    Deputy Suggestions
+                  </h4>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    {availableDeputies.length} available deputies
+                  </p>
+                </div>
+                <Badge className="ml-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
                   {availableDeputies.length} available
                 </Badge>
               </div>
@@ -345,44 +602,67 @@ function ClientGigView({ gigId }: { gigId: string }) {
                     <Card
                       key={deputy?._id}
                       className={cn(
-                        "border-l-4 border-l-blue-500",
-                        colors.card
+                        "border-0 transition-all duration-500 hover:shadow-xl transform-gpu overflow-hidden",
+                        colors.card,
+                        "bg-gradient-to-br from-white to-blue-50/50",
+                        "border-l-4 border-l-blue-500"
                       )}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <User className="w-10 h-10 text-muted-foreground" />
+                          <div className="flex items-center space-x-4">
+                            <div
+                              className={cn(
+                                "w-12 h-12 rounded-xl flex items-center justify-center",
+                                "bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg"
+                              )}
+                            >
+                              <User className="w-6 h-6 text-white" />
+                            </div>
                             <div>
-                              <p className="font-medium">
+                              <p
+                                className={cn("font-bold text-lg", colors.text)}
+                              >
                                 {deputy?.firstname} {deputy?.lastname}
                               </p>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{deputy?.relationship?.forMySkill}</span>
-                                <span>•</span>
+                              <div className="flex items-center gap-3 text-sm">
+                                <span className={cn(colors.textMuted)}>
+                                  {deputy?.relationship?.forMySkill}
+                                </span>
                                 <div className="flex items-center gap-1">
-                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                  <span>{deputy?.avgRating || "New"}</span>
+                                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                                  <span
+                                    className={cn("font-semibold", colors.text)}
+                                  >
+                                    {deputy?.avgRating || "New"}
+                                  </span>
                                 </div>
                                 {deputy?.backupCount &&
                                   deputy?.backupCount > 0 && (
-                                    <>
-                                      <span>•</span>
-                                      <span>
-                                        {deputy?.backupCount} backup gigs
-                                      </span>
-                                    </>
+                                    <span
+                                      className={cn(
+                                        "text-sm",
+                                        colors.textMuted
+                                      )}
+                                    >
+                                      {deputy?.backupCount} backup gigs
+                                    </span>
                                   )}
                               </div>
                               {deputy?.relationship?.note && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Note: {deputy?.relationship.note}
+                                <p
+                                  className={cn(
+                                    "text-sm mt-2",
+                                    colors.textMuted
+                                  )}
+                                >
+                                  📝 {deputy?.relationship.note}
                                 </p>
                               )}
                             </div>
                           </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex gap-3">
                             <Button
                               size="sm"
                               onClick={() =>
@@ -391,9 +671,9 @@ function ClientGigView({ gigId }: { gigId: string }) {
                                   `${deputy?.firstname} ${deputy?.lastname}`
                                 )
                               }
-                              className="bg-green-600 hover:bg-green-700"
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-xl transition-all duration-300"
                             >
-                              <Check className="w-4 h-4 mr-1" />
+                              <Check className="w-4 h-4 mr-2" />
                               Accept
                             </Button>
                             <Button
@@ -402,6 +682,11 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               onClick={() =>
                                 (window.location.href = `/profile/${deputy?._id}`)
                               }
+                              className={cn(
+                                "border-2 transition-all duration-300",
+                                colors.border,
+                                colors.hoverBg
+                              )}
                             >
                               View Profile
                             </Button>
@@ -412,11 +697,14 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   ))}
 
                   {/* Decline All Button */}
-                  <div className="flex justify-center pt-2">
+                  <div className="flex justify-center pt-4">
                     <Button
                       variant="outline"
                       onClick={handleDeclineDeputy}
-                      className="text-red-600 border-red-300 hover:bg-red-50"
+                      className={cn(
+                        "border-2 text-red-600 border-red-300 hover:bg-red-50 transition-all duration-300",
+                        colors.hoverBg
+                      )}
                     >
                       <X className="w-4 h-4 mr-2" />
                       Decline All Suggestions
@@ -424,27 +712,46 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   </div>
                 </div>
               ) : (
-                <div className="text-center p-6 border-2 border-dashed rounded-lg bg-muted/20">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-50 flex items-center justify-center">
-                    <Users2 className="w-8 h-8 text-amber-500" />
+                <div
+                  className={cn(
+                    "text-center p-8 border-2 border-dashed rounded-2xl",
+                    colors.border,
+                    colors.backgroundSecondary
+                  )}
+                >
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-500 shadow-lg">
+                    <Users2 className="w-8 h-8 text-white" />
                   </div>
-                  <h4 className="font-semibold text-lg mb-2">
+                  <h4 className={cn("font-bold text-xl mb-3", colors.text)}>
                     No Deputies Available
                   </h4>
-                  <p className="text-muted-foreground mb-4">
+                  <p
+                    className={cn(
+                      "max-w-md mx-auto mb-6 text-lg leading-relaxed",
+                      colors.textMuted
+                    )}
+                  >
                     You don't have any deputies set up who can cover this gig
                     for you.
                   </p>
-                  <div className="space-y-3 text-sm text-muted-foreground">
-                    <p>
-                      🎵 <strong>Build your deputy network:</strong>
-                    </p>
-                    <div className="space-y-1 text-left max-w-md mx-auto">
-                      <p>• Connect with other musicians in your area</p>
-                      <p>
-                        • Add trusted colleagues as deputies in your profile
-                      </p>
-                      <p>• Specify which gig types they can cover for you</p>
+                  <div className="space-y-3 text-sm text-left max-w-md mx-auto mb-6">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-orange-500" />
+                      <span className={cn(colors.text)}>
+                        Connect with other musicians in your area
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                      <span className={cn(colors.text)}>
+                        Add trusted colleagues as deputies
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users2 className="w-4 h-4 text-blue-500" />
+                      <span className={cn(colors.text)}>
+                        Specify which gig types they can cover
+                      </span>
                     </div>
                   </div>
                   <Button
@@ -452,7 +759,11 @@ function ClientGigView({ gigId }: { gigId: string }) {
                       (window.location.href = "/profile?tab=deputies")
                     }
                     variant="outline"
-                    className="mt-4"
+                    className={cn(
+                      "border-2 hover:shadow-lg transition-all duration-300",
+                      colors.border,
+                      colors.hoverBg
+                    )}
                   >
                     <Users2 className="w-4 h-4 mr-2" />
                     Manage Deputies
@@ -461,21 +772,32 @@ function ClientGigView({ gigId }: { gigId: string }) {
               )}
             </div>
           )}
-
           {/* Booking History Section */}
           {bookingHistory.length > 0 && (
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3">Booking History</h4>
-              <div className="space-y-2">
+            <div className="border-t border-gray-200 pt-6">
+              <h4
+                className={cn(
+                  "font-bold text-lg mb-4 flex items-center gap-2",
+                  colors.text
+                )}
+              >
+                <Calendar className="w-5 h-5" />
+                Booking History
+              </h4>
+              <div className="space-y-3">
                 {bookingHistory.map((entry, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
+                      colors.backgroundMuted,
+                      "group hover:bg-white/80 border border-transparent hover:border-green-200"
+                    )}
                   >
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-4">
                       <div
                         className={cn(
-                          "w-2 h-2 rounded-full",
+                          "w-3 h-3 rounded-full",
                           entry.status === "accepted"
                             ? "bg-green-500"
                             : entry.status === "declined"
@@ -486,17 +808,17 @@ function ClientGigView({ gigId }: { gigId: string }) {
                         )}
                       />
                       <div>
-                        <p className="font-medium text-sm">
+                        <p className={cn("font-semibold", colors.text)}>
                           {entry.musicianName}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className={cn("text-sm", colors.textMuted)}>
                           {entry.status} •{" "}
                           {new Date(entry.timestamp).toLocaleString()} • By{" "}
                           {entry.actionBy}
                         </p>
                         {entry.notes && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {entry.notes}
+                          <p className={cn("text-sm mt-1", colors.textMuted)}>
+                            📝 {entry.notes}
                           </p>
                         )}
                       </div>
@@ -506,14 +828,29 @@ function ClientGigView({ gigId }: { gigId: string }) {
               </div>
             </div>
           )}
-
           {/* Setlist if available */}
           {gig.setlist && (
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-2">Setlist/Special Requests</h4>
-              <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-                {gig.setlist}
-              </p>
+            <div className="border-t border-gray-200 pt-6">
+              <h4
+                className={cn(
+                  "font-bold text-lg mb-4 flex items-center gap-2",
+                  colors.text
+                )}
+              >
+                <Music className="w-5 h-5" />
+                Setlist & Special Requests
+              </h4>
+              <div
+                className={cn(
+                  "p-4 rounded-xl border-2",
+                  colors.border,
+                  colors.backgroundMuted
+                )}
+              >
+                <p className={cn("text-sm leading-relaxed", colors.text)}>
+                  {gig.setlist}
+                </p>
+              </div>
             </div>
           )}
         </CardContent>
@@ -521,7 +858,8 @@ function ClientGigView({ gigId }: { gigId: string }) {
     </div>
   );
 }
-// Musician View Component
+
+// Enhanced Musician View Component
 function MusicianGigView({ gigId }: { gigId: string }) {
   const { user } = useCurrentUser();
   const { colors } = useThemeColors();
@@ -534,17 +872,19 @@ function MusicianGigView({ gigId }: { gigId: string }) {
     api.controllers.instantGigs.updateInstantGigStatus
   );
 
-  // Check if this mutation exists in your API
   const updateGigAvailability = useMutation(
     api.controllers.instantGigs.updateGigAvailability
   );
 
-  // Use the useDeputies hook
   const { myDeputies, updateDeputySettings, isLoading } = useDeputies(
     user?._id
   );
-
-  // In your MusicianGigView component
+  const router = useRouter();
+  useEffect(() => {
+    if (gig?.status === "deputy-suggested") {
+      router.back();
+    }
+  }, [gig?.status, router]); // Add proper dependencies
   const handleStatusUpdate = async (
     status: "accepted" | "declined" | "deputy-suggested",
     notes?: string,
@@ -603,7 +943,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
       toast.error("Failed to suggest deputy");
     }
   };
-  console.log(gig);
+
   const handleAvailabilityToggle = async (available: boolean) => {
     try {
       await updateGigAvailability({
@@ -612,7 +952,6 @@ function MusicianGigView({ gigId }: { gigId: string }) {
         clerkId: user?.clerkId as string,
       });
 
-      // Auto-decline if marking as unavailable and gig is still pending
       if (!available && gig?.status === "pending") {
         await updateGigStatus({
           gigId: gigId as Id<"instantgigs">,
@@ -649,38 +988,45 @@ function MusicianGigView({ gigId }: { gigId: string }) {
 
   if (!gig) {
     return (
-      <Card className={cn("w-full", colors.card)}>
-        <CardContent className="p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center">
-            <Music className="w-8 h-8 text-blue-600 animate-pulse" />
+      <Card
+        className={cn(
+          "w-full border-2 text-center backdrop-blur-sm",
+          colors.card,
+          colors.border,
+          colors.backgroundSecondary
+        )}
+      >
+        <CardContent className="p-12">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl bg-gradient-to-br from-orange-500 to-red-600">
+            <Music className="w-10 h-10 text-white animate-pulse" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">Loading Gig Details</h3>
-          <p className="text-muted-foreground">
+          <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+            Loading Gig Details
+          </h3>
+          <p
+            className={cn(
+              "max-w-md mx-auto mb-8 text-lg leading-relaxed",
+              colors.textMuted
+            )}
+          >
             Fetching the latest information about this gig invitation...
           </p>
-          <div className="mt-4 flex justify-center">
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+          <div className="flex justify-center space-x-2">
+            {[...Array(3)].map((_, i) => (
               <div
-                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
-                style={{ animationDelay: "0.1s" }}
-              ></div>
-              <div
-                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
-                style={{ animationDelay: "0.2s" }}
-              ></div>
-            </div>
+                key={i}
+                className="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-full animate-bounce"
+                style={{ animationDelay: `${i * 0.1}s` }}
+              />
+            ))}
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Handle cases where musicianAvailability might not be set yet
   const isAvailable = gig?.musicianAvailability === "available";
   const showDeputies = gig?.musicianAvailability === "notavailable";
-
-  // If musicianAvailability is undefined, default to available for pending gigs
   const defaultAvailability =
     gig?.musicianAvailability === undefined && gig?.status === "pending";
 
@@ -690,246 +1036,403 @@ function MusicianGigView({ gigId }: { gigId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Gig Details */}
-      <Card className={cn("w-full", colors.card)}>
-        <CardHeader>
+      {/* Gig Details Card */}
+      <Card
+        className={cn(
+          "w-full border-0 transition-all duration-500 hover:shadow-2xl transform-gpu overflow-hidden backdrop-blur-sm",
+          colors.card,
+          "bg-gradient-to-br from-white to-gray-50/80"
+        )}
+      >
+        {/* Accent Border */}
+        <div className="w-full h-1 bg-gradient-to-r from-orange-500 to-red-500" />
+
+        <CardHeader className="pb-4 pt-6">
           <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-xl">{gig.title}</CardTitle>
-              <CardDescription>{gig.description}</CardDescription>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full" />
+                <span
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-wide",
+                    colors.primary
+                  )}
+                >
+                  {gig.gigType}
+                </span>
+              </div>
+              <CardTitle className={cn("text-2xl font-bold mb-2", colors.text)}>
+                {gig.title}
+              </CardTitle>
+              <CardDescription
+                className={cn("text-lg leading-relaxed", colors.textMuted)}
+              >
+                {gig.description}
+              </CardDescription>
             </div>
             <StatusBadge status={gig.status} />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Availability Toggle - ALWAYS SHOW FOR MUSICIANS */}
 
-          <div className="flex items-center justify-between p-4 border-2 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+        <CardContent className="space-y-6">
+          {/* Availability Section */}
+          <div
+            className={cn(
+              "flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-300",
+              colors.border,
+              "bg-gradient-to-br from-blue-50 to-purple-50",
+              "hover:shadow-lg"
+            )}
+          >
             <div className="flex items-center space-x-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-lg border">
+              <div
+                className={cn(
+                  "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg",
+                  isAvailable || defaultAvailability
+                    ? "bg-gradient-to-br from-green-500 to-emerald-500"
+                    : "bg-gradient-to-br from-red-500 to-rose-500"
+                )}
+              >
                 {isAvailable || defaultAvailability ? (
-                  <Check className="w-6 h-6 text-green-600" strokeWidth={3} />
+                  <Check className="w-6 h-6 text-white" strokeWidth={3} />
                 ) : (
-                  <X className="w-6 h-6 text-red-600" strokeWidth={3} />
+                  <X className="w-6 h-6 text-white" strokeWidth={3} />
                 )}
               </div>
               <div>
-                <p className="font-semibold text-lg">Gig Availability</p>
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("font-bold text-xl", colors.text)}>
+                  Gig Availability
+                </p>
+                <p className={cn("text-sm", colors.textMuted)}>
                   {isAvailable || defaultAvailability
                     ? "You can accept this gig invitation"
                     : "You're not available - suggest deputies instead"}
                 </p>
               </div>
             </div>
-
-            <GigAvailabilitySwitchWithStatus
-              checked={isAvailable || defaultAvailability}
-              onCheckedChange={handleAvailabilityToggle}
-              status={
-                gig?.musicianAvailability as
-                  | "available"
-                  | "notavailable"
-                  | "pending"
-              }
-              size="lg"
-              showStatusText={false}
-            />
+            {gig.status !== "deputy-suggested" && (
+              <GigAvailabilitySwitchWithStatus
+                checked={isAvailable || defaultAvailability}
+                onCheckedChange={handleAvailabilityToggle}
+                status={
+                  gig?.musicianAvailability as
+                    | "available"
+                    | "notavailable"
+                    | "pending"
+                }
+                size="lg"
+                showStatusText={false}
+              />
+            )}
           </div>
 
           {/* Client Information */}
-          <div className="border-t pt-4">
-            <h4 className="font-semibold mb-2">From Client</h4>
-            <div className="flex items-center justify-evenly p-3 bg-muted rounded-lg">
-              <div className="flex items-center space-x-3">
-                <User className="w-8 h-8 text-muted-foreground" />
+          <div className="border-t border-gray-200 pt-6">
+            <h4
+              className={cn(
+                "font-bold text-lg mb-4 flex items-center gap-2",
+                colors.text
+              )}
+            >
+              <User className="w-5 h-5" />
+              From Client
+            </h4>
+            <div
+              className={cn(
+                "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
+                colors.backgroundMuted,
+                "group hover:bg-white/80 border border-transparent hover:border-blue-200"
+              )}
+            >
+              <div className="flex items-center space-x-4">
+                <div
+                  className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center",
+                    "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg"
+                  )}
+                >
+                  <User className="w-6 h-6 text-white" />
+                </div>
                 <div>
-                  <p className="font-medium">{gig.clientName}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className={cn("font-bold text-lg", colors.text)}>
+                    {gig.clientName}
+                  </p>
+                  <p className={cn("text-sm", colors.textMuted)}>
                     Looking for musician
                   </p>
                 </div>
               </div>
-              {/* <ChatIcon
+              <ChatIcon
                 userId={gig.clientId}
-                size="sm"
+                size="md"
+                variant="cozy"
                 showText={true}
-                variant="ghost"
-                className="h-8 w-8 bg-blue-400 text-blue-900 hover:bg-blue-200 w-full justify-center"
-                text={"Chat with Client"}
-              /> */}
+                text="Message"
+              />
             </div>
           </div>
 
           {/* Gig Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Date</p>
-                <p className="text-sm text-muted-foreground">{gig.date}</p>
+            {[
+              { icon: Calendar, label: "Date", value: gig.date },
+              { icon: Clock, label: "Duration", value: gig.duration },
+              { icon: MapPin, label: "Venue", value: gig.venue },
+              { icon: DollarSign, label: "Budget", value: gig.budget },
+            ].map((item, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
+                  colors.backgroundMuted,
+                  "group hover:bg-white/80 border border-transparent hover:border-orange-200"
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                    "bg-gradient-to-br from-orange-500 to-red-500"
+                  )}
+                >
+                  <item.icon className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className={cn(
+                      "text-xs font-medium uppercase tracking-wide",
+                      colors.textMuted
+                    )}
+                  >
+                    {item.label}
+                  </div>
+                  <div className={cn("text-sm font-semibold", colors.text)}>
+                    {item.value}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Duration</p>
-                <p className="text-sm text-muted-foreground">{gig.duration}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Venue</p>
-                <p className="text-sm text-muted-foreground">{gig.venue}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Budget</p>
-                <p className="text-sm text-muted-foreground">{gig.budget}</p>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Setlist if available */}
           {gig.setlist && (
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-2">Setlist/Special Requests</h4>
-              <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-                {gig.setlist}
-              </p>
+            <div className="border-t border-gray-200 pt-6">
+              <h4
+                className={cn(
+                  "font-bold text-lg mb-4 flex items-center gap-2",
+                  colors.text
+                )}
+              >
+                <Music className="w-5 h-5" />
+                Setlist & Special Requests
+              </h4>
+              <div
+                className={cn(
+                  "p-4 rounded-xl border-2",
+                  colors.border,
+                  colors.backgroundMuted
+                )}
+              >
+                <p className={cn("text-sm leading-relaxed", colors.text)}>
+                  {gig.setlist}
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Action Buttons - Only show if available AND gig is pending */}
+          {/* Action Buttons */}
           {gig.status === "pending" && (isAvailable || defaultAvailability) && (
-            <div className="flex flex-col gap-3 pt-4">
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => handleStatusUpdate("accepted")}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Accept Gig
-                </Button>
-                <Button
-                  onClick={() => handleStatusUpdate("declined")}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Decline
-                </Button>
-              </div>
-
-              {/* Deputy Suggestion Section - Show if musician has deputies */}
-              {myDeputies.length > 0 && (
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Users2 className="w-5 h-5 text-blue-500" />
-                    <h4 className="font-semibold">Suggest a Deputy</h4>
-                    <Badge variant="outline">
-                      {availableDeputies.length} available
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-2 mb-3">
-                    {myDeputies.slice(0, 3).map((deputy) => (
-                      <div
-                        key={deputy?._id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <User className="w-8 h-8 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium text-sm">
-                              {deputy?.firstname} {deputy?.lastname}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {deputy?.relationship?.forMySkill}
-                              {deputy?.avgRating &&
-                                ` • ${deputy?.avgRating} ⭐`}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              handleSuggestSpecificDeputy(
-                                deputy?._id as Id<"users">,
-                                `${deputy?.firstname} ${deputy?.lastname}`
-                              )
-                            }
-                            variant="outline"
-                            disabled={isLoading(`update-${deputy?._id}`)}
-                          >
-                            {isLoading(`update-${deputy?._id}`)
-                              ? "..."
-                              : "Suggest"}
-                          </Button>
-                          <Switch
-                            checked={
-                              deputy?.relationship?.canBeBooked !== false
-                            }
-                            onCheckedChange={(checked) =>
-                              handleUpdateDeputyBooking(
-                                deputy?._id as Id<"users">,
-                                checked
-                              )
-                            }
-                            disabled={isLoading(`update-${deputy?._id}`)}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex gap-3">
                   <Button
-                    onClick={() => handleStatusUpdate("deputy-suggested")}
-                    variant="outline"
-                    className="w-full"
+                    onClick={() => handleStatusUpdate("accepted")}
+                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    size="lg"
                   >
-                    <Users2 className="w-4 h-4 mr-2" />
-                    Suggest Any Available Deputy
+                    <Check className="w-5 h-5 mr-2" />
+                    Accept Gig
+                  </Button>
+                  <Button
+                    onClick={() => handleStatusUpdate("declined")}
+                    variant="outline"
+                    className={cn(
+                      "flex-1 border-2 hover:shadow-xl transition-all duration-300 transform hover:scale-105",
+                      colors.border,
+                      colors.hoverBg
+                    )}
+                    size="lg"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    Decline
                   </Button>
                 </div>
-              )}
+
+                {/* Deputy Suggestion Section */}
+                {myDeputies.length > 0 && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          "bg-gradient-to-br from-blue-500 to-cyan-500"
+                        )}
+                      >
+                        <Users2 className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className={cn("font-bold text-lg", colors.text)}>
+                          Suggest a Deputy
+                        </h4>
+                        <p className={cn("text-sm", colors.textMuted)}>
+                          {availableDeputies.length} available deputies
+                        </p>
+                      </div>
+                      <Badge className="ml-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                        {availableDeputies.length} available
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-3 mb-4">
+                      {myDeputies.slice(0, 3).map((deputy) => (
+                        <div
+                          key={deputy?._id}
+                          className={cn(
+                            "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
+                            colors.backgroundMuted,
+                            "group hover:bg-white/80 border border-transparent hover:border-purple-200"
+                          )}
+                        >
+                          <div className="flex items-center space-x-4">
+                            <div
+                              className={cn(
+                                "w-10 h-10 rounded-lg flex items-center justify-center",
+                                "bg-gradient-to-br from-purple-500 to-pink-500"
+                              )}
+                            >
+                              <User className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <p className={cn("font-semibold", colors.text)}>
+                                {deputy?.firstname} {deputy?.lastname}
+                              </p>
+                              <p className={cn("text-sm", colors.textMuted)}>
+                                {deputy?.relationship?.forMySkill}
+                                {deputy?.avgRating &&
+                                  ` • ${deputy?.avgRating} ⭐`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                handleSuggestSpecificDeputy(
+                                  deputy?._id as Id<"users">,
+                                  `${deputy?.firstname} ${deputy?.lastname}`
+                                )
+                              }
+                              variant="outline"
+                              disabled={isLoading(`update-${deputy?._id}`)}
+                              className={cn(
+                                "border-2 transition-all duration-300",
+                                colors.border,
+                                colors.hoverBg
+                              )}
+                            >
+                              {isLoading(`update-${deputy?._id}`)
+                                ? "..."
+                                : "Suggest"}
+                            </Button>
+                            <Switch
+                              checked={
+                                deputy?.relationship?.canBeBooked !== false
+                              }
+                              onCheckedChange={(checked) =>
+                                handleUpdateDeputyBooking(
+                                  deputy?._id as Id<"users">,
+                                  checked
+                                )
+                              }
+                              disabled={isLoading(`update-${deputy?._id}`)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button
+                      onClick={() => handleStatusUpdate("deputy-suggested")}
+                      variant="outline"
+                      className={cn(
+                        "w-full border-2 hover:shadow-lg transition-all duration-300",
+                        colors.border,
+                        colors.hoverBg
+                      )}
+                    >
+                      <Users2 className="w-4 h-4 mr-2" />
+                      Suggest Any Available Deputy
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* Show deputies section when marked as unavailable */}
           {showDeputies && gig.status === "pending" && (
-            <div className="border-t pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Users2 className="w-5 h-5 text-blue-500" />
-                <h4 className="font-semibold">Available Deputies</h4>
-                <Badge variant="outline">
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                    "bg-gradient-to-br from-blue-500 to-cyan-500"
+                  )}
+                >
+                  <Users2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className={cn("font-bold text-lg", colors.text)}>
+                    Available Deputies
+                  </h4>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    {availableDeputies.length} available for suggestion
+                  </p>
+                </div>
+                <Badge className="ml-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
                   {availableDeputies.length} available
                 </Badge>
               </div>
 
-              <p className="text-sm text-muted-foreground mb-3">
+              <p className={cn("text-sm mb-4", colors.textMuted)}>
                 Since you're not available, you can suggest deputies to the
                 client.
               </p>
 
               {availableDeputies.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {availableDeputies.slice(0, 3).map((deputy) => (
                     <div
                       key={deputy?._id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
+                        colors.backgroundMuted,
+                        "group hover:bg-white/80 border border-transparent hover:border-purple-200"
+                      )}
                     >
-                      <div className="flex items-center space-x-3">
-                        <User className="w-8 h-8 text-muted-foreground" />
+                      <div className="flex items-center space-x-4">
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center",
+                            "bg-gradient-to-br from-purple-500 to-pink-500"
+                          )}
+                        >
+                          <User className="w-5 h-5 text-white" />
+                        </div>
                         <div>
-                          <p className="font-medium text-sm">
+                          <p className={cn("font-semibold", colors.text)}>
                             {deputy?.firstname} {deputy?.lastname}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className={cn("text-sm", colors.textMuted)}>
                             {deputy?.relationship?.forMySkill}
                             {deputy?.avgRating && ` • ${deputy?.avgRating} ⭐`}
                           </p>
@@ -944,6 +1447,11 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                           )
                         }
                         variant="outline"
+                        className={cn(
+                          "border-2 transition-all duration-300",
+                          colors.border,
+                          colors.hoverBg
+                        )}
                       >
                         Suggest
                       </Button>
@@ -952,7 +1460,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
 
                   <Button
                     onClick={() => handleStatusUpdate("deputy-suggested")}
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:shadow-xl transition-all duration-300"
                   >
                     <Users2 className="w-4 h-4 mr-2" />
                     Suggest All Available Deputies
@@ -961,51 +1469,62 @@ function MusicianGigView({ gigId }: { gigId: string }) {
               ) : (
                 <div
                   className={cn(
-                    "p-6 rounded-lg border text-center",
+                    "p-6 rounded-xl border-2 text-center",
                     colors.border,
-                    colors.card
+                    colors.backgroundSecondary
                   )}
                 >
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 flex items-center justify-center">
-                    <Users2 className="w-8 h-8 text-blue-500" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
+                    <Users2 className="w-8 h-8 text-white" />
                   </div>
-                  <h4 className="font-semibold text-lg mb-2">
+                  <h4 className={cn("font-bold text-lg mb-2", colors.text)}>
                     No Deputies Available
                   </h4>
-                  <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                    The musician you invited doesn't have any deputies set up
-                    for this type of gig, or their deputies are currently
-                    unavailable.
+                  <p
+                    className={cn(
+                      "max-w-md mx-auto mb-4 text-sm",
+                      colors.textMuted
+                    )}
+                  >
+                    You don't have any deputies set up for this type of gig, or
+                    your deputies are currently unavailable.
                   </p>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>
-                      💡 <strong>What you can do:</strong>
-                    </p>
-                    <ul className="space-y-1 text-left max-w-xs mx-auto">
-                      <li>• Wait for the musician to suggest other options</li>
-                      <li>
-                        • Contact the musician directly to discuss alternatives
-                      </li>
-                      <li>• Consider inviting another musician for this gig</li>
-                    </ul>
+                  <div className="space-y-2 text-sm text-left max-w-xs mx-auto mb-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-orange-500" />
+                      <span className={cn(colors.text)}>
+                        Wait for other options
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-blue-500" />
+                      <span className={cn(colors.text)}>
+                        Contact the client directly
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-500" />
+                      <span className={cn(colors.text)}>
+                        Consider other opportunities
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Status-specific messages */}
+          {/* Status Messages */}
           {gig.status === "declined" && !isAvailable && (
             <div
               className={cn(
-                "p-3 rounded-lg border",
-                colors.warningBg,
-                colors.border
+                "p-4 rounded-xl border-2",
+                "bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200"
               )}
             >
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
-                <p className="text-sm">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <p className={cn("text-sm", colors.text)}>
                   You declined this gig because you're not available.
                 </p>
               </div>
@@ -1015,14 +1534,13 @@ function MusicianGigView({ gigId }: { gigId: string }) {
           {gig.status === "deputy-suggested" && (
             <div
               className={cn(
-                "p-3 rounded-lg border",
-                colors.infoBg,
-                colors.border
+                "p-4 rounded-xl border-2",
+                "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200"
               )}
             >
-              <div className="flex items-center gap-2">
-                <Users2 className="w-4 h-4 text-blue-600" />
-                <p className="text-sm">
+              <div className="flex items-center gap-3">
+                <Users2 className="w-5 h-5 text-blue-600" />
+                <p className={cn("text-sm", colors.text)}>
                   You've suggested deputies for this gig. Waiting for client
                   response.
                 </p>
@@ -1033,14 +1551,14 @@ function MusicianGigView({ gigId }: { gigId: string }) {
           {gig.status === "accepted" && (
             <div
               className={cn(
-                "p-3 rounded-lg border",
-                "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                "p-4 rounded-xl border-2",
+                "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
               )}
             >
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-green-600" />
-                <p className="text-sm text-green-800 dark:text-green-300">
-                  You've accepted this gig! Get ready to perform.
+              <div className="flex items-center gap-3">
+                <Check className="w-5 h-5 text-green-600" />
+                <p className={cn("text-sm", colors.text)}>
+                  You've accepted this gig! Get ready to perform. 🎉
                 </p>
               </div>
             </div>
@@ -1050,6 +1568,9 @@ function MusicianGigView({ gigId }: { gigId: string }) {
     </div>
   );
 }
+
+// Keep your existing GigAvailabilitySwitch and GigAvailabilitySwitchWithStatus components
+// They are already well-styled and don't need changes
 
 export const GigAvailabilitySwitch: React.FC<GigAvailabilitySwitchProps> = ({
   checked,
@@ -1148,12 +1669,14 @@ interface GigAvailabilitySwitchProps {
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
   showLabels?: boolean;
-} // Enhanced version with status indicators
+}
+
 interface GigAvailabilitySwitchWithStatusProps
   extends GigAvailabilitySwitchProps {
   status?: "available" | "notavailable" | "pending";
   showStatusText?: boolean;
 }
+
 export const GigAvailabilitySwitchWithStatus: React.FC<
   GigAvailabilitySwitchWithStatusProps
 > = ({
