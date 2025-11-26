@@ -6,7 +6,7 @@ export interface FeatureFlag {
   enabled: boolean;
   createdAt: Date;
   updatedAt: Date;
-  targetUsers?: "all" | "premium" | "pro" | "free";
+  targetUsers?: "all" | "premium" | "pro" | "free" | "elite";
   targetRoles?: UserRole[];
   rolloutPercentage?: number;
 }
@@ -30,49 +30,59 @@ export type UserRole =
   | "booking_manager";
 
 export type FeatureFlagKey =
-  // Teacher features
+  // ========== ROLE REGISTRATION FLAGS ==========
+  | "teacher_role"
+  | "booker_role"
+  | "both_role"
+
+  // ========== GIG CREATION FLAGS ==========
+  | "normal_gig_creation"
+  | "scratch_creation"
+  | "AI_creation"
+
+  // ========== TEACHER FEATURES ==========
   | "teacher_dashboard"
   | "lesson_scheduling"
   | "student_management"
 
-  // DJ/MC features
+  // ========== DJ/MC FEATURES ==========
   | "dj_equipment_rental"
   | "mc_event_hosting"
   | "playlist_management"
 
-  // Instrumentalist features
+  // ========== INSTRUMENTALIST FEATURES ==========
   | "sheet_music_library"
   | "practice_tools"
 
-  // Vocalist features
+  // ========== VOCALIST FEATURES ==========
   | "vocal_warmups"
-  | "vocal_exercises_library" // You might want both
+  | "vocal_exercises_library"
   | "vocal_health_tips"
 
-  // General musician features
+  // ========== GENERAL MUSICIAN FEATURES ==========
   | "musician_portfolio"
   | "gig_history"
 
-  // Individual Client features
+  // ========== INDIVIDUAL CLIENT FEATURES ==========
   | "personal_event_planner"
   | "quick_booking"
 
-  // Event Planner features
+  // ========== EVENT PLANNER FEATURES ==========
   | "client_event_planner"
   | "vendor_management"
 
-  // Venue features
+  // ========== VENUE FEATURES ==========
   | "venue_management"
   | "booking_calendar"
 
-  // Corporate features
+  // ========== CORPORATE FEATURES ==========
   | "corporate_tools"
 
-  // Booker features
+  // ========== BOOKER FEATURES ==========
   | "artist_roster"
   | "contract_templates"
 
-  // Cross-role features
+  // ========== CROSS-ROLE FEATURES ==========
   | "advanced_messaging"
   | "file_sharing"
   | "calendar_sync";
@@ -81,6 +91,79 @@ export const FEATURE_FLAGS_CONFIG: Record<
   FeatureFlagKey,
   Omit<FeatureFlag, "enabled" | "createdAt" | "updatedAt">
 > = {
+  // ==================== ROLE REGISTRATION FLAGS ====================
+  teacher_role: {
+    id: "teacher_role",
+    name: "Teacher Role Registration",
+    description: "Allow users to register as music teachers",
+    targetUsers: "all",
+    targetRoles: ["all"],
+    rolloutPercentage: 100,
+  },
+  booker_role: {
+    id: "booker_role",
+    name: "Booker Role Registration",
+    description: "Allow users to register as talent bookers/managers",
+    targetUsers: "all",
+    targetRoles: ["all"],
+    rolloutPercentage: 100,
+  },
+  both_role: {
+    id: "both_role",
+    name: "Dual Role Registration",
+    description: "Allow users to register as both client and talent",
+    targetUsers: "all",
+    targetRoles: ["all"],
+    rolloutPercentage: 0, // Start disabled
+  },
+
+  // ==================== GIG CREATION FLAGS ====================
+  normal_gig_creation: {
+    id: "normal_gig_creation",
+    name: "Normal Gig Creation",
+    description: "Traditional gig creation with full customization",
+    targetUsers: "pro", // Pro+ tier only
+    targetRoles: [
+      // Available to ALL client types
+      "individual_client",
+      "event_planner_client",
+      "venue_client",
+      "corporate_client",
+      "all", // Or just use "all" to include everyone
+    ],
+    rolloutPercentage: 100,
+  },
+  scratch_creation: {
+    id: "scratch_creation",
+    name: "Scratch Gig Creation",
+    description: "Create gigs from scratch with complete creative freedom",
+    targetUsers: "premium",
+    targetRoles: [
+      // Available to ALL client types
+      "individual_client",
+      "event_planner_client",
+      "venue_client",
+      "corporate_client",
+      "all", // Or just use "all" to include everyone
+    ],
+    rolloutPercentage: 100,
+  },
+  AI_creation: {
+    id: "AI_creation",
+    name: "AI Gig Creation",
+    description: "AI-powered gig creation with smart suggestions",
+    targetUsers: "elite",
+    targetRoles: [
+      // Available to ALL client types
+      "individual_client",
+      "event_planner_client",
+      "venue_client",
+      "corporate_client",
+      "all", // Or just use "all" to include everyone
+    ],
+    rolloutPercentage: 100,
+  },
+
   // ==================== TEACHER FEATURES ====================
   teacher_dashboard: {
     id: "teacher_dashboard",
@@ -158,9 +241,8 @@ export const FEATURE_FLAGS_CONFIG: Record<
     description: "Interactive vocal warmup exercises and routines",
     targetUsers: "premium",
     targetRoles: ["vocalist"],
-    rolloutPercentage: 0, // Start disabled
+    rolloutPercentage: 0,
   },
-
   vocal_exercises_library: {
     id: "vocal_exercises_library",
     name: "Vocal Exercises Library",
@@ -169,14 +251,13 @@ export const FEATURE_FLAGS_CONFIG: Record<
     targetRoles: ["vocalist"],
     rolloutPercentage: 0,
   },
-
   vocal_health_tips: {
     id: "vocal_health_tips",
     name: "Vocal Health Tips",
     description: "Tips for maintaining vocal health",
     targetUsers: "all",
     targetRoles: ["vocalist"],
-    rolloutPercentage: 0, // You can enable this immediately
+    rolloutPercentage: 0,
   },
 
   // ==================== GENERAL MUSICIAN FEATURES ====================

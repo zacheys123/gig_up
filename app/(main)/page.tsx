@@ -917,7 +917,7 @@ export default function Home() {
             </motion.div>
           )}
         </section>
-        // Add this new section right before the Final CTA Section:
+
         {/* Featured Tools Spotlight Section */}
         <section
           className={cn(

@@ -36,37 +36,44 @@ import { useProMusicians } from "@/hooks/useProMusicians";
 import { EnhancedMusician } from "@/types/musician";
 import ConfirmPrompt from "@/components/ConfirmPrompt";
 import { NormalGigsTab } from "./gigs/NormalGigTab";
+import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 
 // Memoize tab configuration
+// Outside component - create a function instead
+const getTabConfig = (isNormalEnabled: boolean) => {
+  const baseTabs = [
+    {
+      id: "create",
+      label: "⚡ Instant Gigs",
+      icon: Zap,
+      description: "Template-based quick booking",
+    },
+    {
+      id: "templates",
+      label: "📋 My Templates",
+      icon: Edit,
+      description: "Manage your saved templates",
+    },
+    {
+      id: "musicians",
+      label: "👑 Pro Musicians",
+      icon: Crown,
+      description: "Browse premium talent",
+    },
+  ];
 
-const TAB_CONFIG = [
-  {
-    id: "create",
-    label: "⚡ Instant Gigs",
-    icon: Zap,
-    description: "Template-based quick booking",
-  },
-  {
-    id: "normal",
-    label: "📝 Normal Gigs",
-    icon: Plus,
-    description: "Traditional gig creation",
-  },
-  {
-    id: "templates",
-    label: "📋 My Templates",
-    icon: Edit,
-    description: "Manage your saved templates",
-  },
-  {
-    id: "musicians",
-    label: "👑 Pro Musicians",
-    icon: Crown,
-    description: "Browse premium talent",
-  },
-];
+  if (isNormalEnabled) {
+    baseTabs.splice(1, 0, {
+      id: "normal",
+      label: "📝 Normal Gigs",
+      icon: Plus,
+      description: "Traditional gig creation",
+    });
+  }
 
-// Memoize quick stats data
+  return baseTabs;
+};
+
 const QUICK_STATS = [
   { icon: Zap, label: "Instant Booking", value: "Under 5 mins" },
   { icon: Users, label: "Pro Musicians", value: "50+" },
@@ -834,6 +841,16 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
     userTier,
     colors,
   ]);
+  const { isNormalGigCreationEnabled } = useFeatureFlags();
+  const isnormalcreation = isNormalGigCreationEnabled(
+    user?.clientType || "individual_client", // Fallback to basic client
+    user?.tier
+  );
+  // Memoize tab config
+  const TAB_CONFIG = useMemo(
+    () => getTabConfig(isnormalcreation),
+    [isnormalcreation]
+  );
 
   return (
     <div className="space-y-6">
@@ -883,18 +900,20 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
                 <Zap className="w-4 h-4 mr-2" />
                 Create Instant Gig
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setActiveTab("normal")}
-                className={cn(
-                  "border-2 hover:border-green-300 transition-all duration-300",
-                  colors.border,
-                  colors.hoverBg
-                )}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Normal Gig
-              </Button>{" "}
+              {isnormalcreation && (
+                <Button
+                  variant="outline"
+                  onClick={() => setActiveTab("normal")}
+                  className={cn(
+                    "border-2 hover:border-green-300 transition-all duration-300",
+                    colors.border,
+                    colors.hoverBg
+                  )}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Normal Gig
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={scrollToMusicians}

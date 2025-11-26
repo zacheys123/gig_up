@@ -1,8 +1,15 @@
+// hooks/useFeatureFlags.ts
 "use client";
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useMemo, useCallback } from "react";
+import { FeatureFlagKey } from "@/lib/featureFlags";
+import {
+  FEATURE_FLAGS,
+  FEATURE_GROUPS,
+  FeatureGroup,
+} from "@/lib/controlled_blocking_features";
 
 // Simple consistent hashing for rollout
 const getConsistentRollout = (featureKey: string, userId?: string): number => {
@@ -17,9 +24,10 @@ const getConsistentRollout = (featureKey: string, userId?: string): number => {
 
 export const useFeatureFlags = (userId?: string) => {
   const featureFlags = useQuery(api.controllers.featureFlags.getFeatureFlags);
+
   const isFeatureEnabled = useCallback(
     (
-      featureKey: string,
+      featureKey: FeatureFlagKey,
       userRole?: string,
       userTier: string = "free"
     ): boolean => {
@@ -28,14 +36,14 @@ export const useFeatureFlags = (userId?: string) => {
       const flag = featureFlags.find((f) => f.id === featureKey);
 
       // Special handling for role registration flags
-      if (["teacher_role", "booker_role", "both_role"].includes(featureKey)) {
+      if (FEATURE_GROUPS.ROLE_REGISTRATION.includes(featureKey)) {
         return flag ? flag.enabled && flag.rolloutPercentage > 0 : false;
       }
 
       // For all other flags, use full targeting logic
       if (!flag || !flag.enabled) return false;
 
-      // 1. Check user tier targeting ← THIS IS THE KEY PART!
+      // 1. Check user tier targeting
       if (flag.targetUsers && flag.targetUsers !== "all") {
         if (flag.targetUsers !== userTier) {
           return false; // User tier doesn't match requirement
@@ -64,13 +72,13 @@ export const useFeatureFlags = (userId?: string) => {
   );
 
   const getFeatureFlag = useCallback(
-    (featureKey: string) => {
+    (featureKey: FeatureFlagKey) => {
       return featureFlags?.find((f) => f.id === featureKey);
     },
     [featureFlags]
   );
 
-  // NEW: Get all available features for a user
+  // Get all available features for a user
   const getAvailableFeatures = useCallback(
     (userRole?: string, userTier?: string) => {
       if (!featureFlags) return [];
@@ -108,27 +116,25 @@ export const useFeatureFlags = (userId?: string) => {
     [featureFlags, userId]
   );
 
-  // NEW: Get features by category
-  const getFeaturesByCategory = useCallback(() => {
-    if (!featureFlags) return {};
+  // Get features by group
+  const getFeaturesByGroup = useCallback(
+    (group: FeatureGroup, userRole?: string, userTier?: string) => {
+      const groupFeatures = FEATURE_GROUPS[group];
+      return groupFeatures.filter((featureKey) =>
+        isFeatureEnabled(featureKey, userRole, userTier)
+      );
+    },
+    [isFeatureEnabled]
+  );
 
-    return featureFlags.reduce(
-      (acc, flag) => {
-        const category = flag.id.includes("teacher")
-          ? "teacher"
-          : flag.id.includes("booker")
-            ? "booker"
-            : flag.id.includes("file")
-              ? "file"
-              : "general";
-
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(flag);
-        return acc;
-      },
-      {} as Record<string, typeof featureFlags>
-    );
-  }, [featureFlags]);
+  // Check if entire feature group is available
+  const isFeatureGroupEnabled = useCallback(
+    (group: FeatureGroup, userRole?: string, userTier?: string) => {
+      const enabledFeatures = getFeaturesByGroup(group, userRole, userTier);
+      return enabledFeatures.length > 0;
+    },
+    [getFeaturesByGroup]
+  );
 
   // Memoized counts
   const enabledFlagsCount = useMemo(() => {
@@ -146,9 +152,10 @@ export const useFeatureFlags = (userId?: string) => {
     isFeatureEnabled,
     getFeatureFlag,
 
-    // NEW: Feature discovery functions
+    // Feature discovery functions
     getAvailableFeatures,
-    getFeaturesByCategory,
+    getFeaturesByGroup,
+    isFeatureGroupEnabled,
 
     // Derived data
     enabledFlagsCount,
@@ -158,5 +165,42 @@ export const useFeatureFlags = (userId?: string) => {
     getEnabledFlags: useCallback(() => {
       return featureFlags?.filter((f) => f.enabled) || [];
     }, [featureFlags]),
+
+    // Pre-defined flag checks (for convenience)
+    isTeacherEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.TEACHER_ROLE, userRole, userTier),
+      [isFeatureEnabled]
+    ),
+    isBookerEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.BOOKER_ROLE, userRole, userTier),
+      [isFeatureEnabled]
+    ),
+    isBothEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.BOTH_ROLE, userRole, userTier),
+      [isFeatureEnabled]
+    ),
+    isNormalGigCreationEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.NORMAL_GIG_CREATION, userRole, userTier),
+      [isFeatureEnabled]
+    ),
+    isScratchCreationEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.SCRATCH_CREATION, userRole, userTier),
+      [isFeatureEnabled]
+    ),
+    isAICreationEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.AI_CREATION, userRole, userTier),
+      [isFeatureEnabled]
+    ),
+    isVocalWarmupsEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.VOCAL_WARMUPS, userRole, userTier),
+      [isFeatureEnabled]
+    ),
   };
 };

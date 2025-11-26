@@ -29,6 +29,7 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
+import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -140,7 +141,10 @@ export const getTierAccess = (userTier: string, isInGracePeriod: boolean) => {
 const getCreationOptions = (
   colors: any,
   user: any,
-  isInGracePeriod: boolean
+  isInGracePeriod: boolean,
+  ishiddenormal: boolean,
+  ishiddenscratch: boolean,
+  ishiddenAI: boolean
 ) => {
   const userTier = user?.tier || "free";
   const access = getTierAccess(userTier, isInGracePeriod);
@@ -225,10 +229,10 @@ const getCreationOptions = (
       ],
       color: "from-blue-500 to-cyan-500",
       buttonText: "Create Gig",
-      tier: "free", // Available to all tiers including free
       available: true, // Always available
       iconBg: colors.infoBg,
       iconColor: colors.infoText,
+      hidden: !ishiddenormal,
     },
     {
       id: "guided",
@@ -283,6 +287,7 @@ const getCreationOptions = (
       available: access.effectiveAccess.scratch,
       iconBg: colors.warningBg,
       iconColor: colors.warningText,
+      hidden: !ishiddenscratch,
     },
     {
       id: "ai",
@@ -301,8 +306,9 @@ const getCreationOptions = (
       available: access.effectiveAccess.ai,
       iconBg: "bg-purple-50 dark:bg-purple-950/20",
       iconColor: "text-purple-600 dark:text-purple-400",
+      hidden: !ishiddenAI,
     },
-  ];
+  ].filter((t) => !t.hidden);
 };
 
 // Memoize FeatureCard component
@@ -612,9 +618,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     const { colors } = useThemeColors();
     const { user } = useCurrentUser(); // ADD THIS TO GET USER INFO
     const { isInGracePeriod, daysLeft: trialRemainingDays } = useCheckTrial();
+    const {
+      isNormalGigCreationEnabled,
+      isScratchCreationEnabled,
+      isAICreationEnabled,
+    } = useFeatureFlags();
 
-    console.log(isInGracePeriod);
-
+    // Use the centralized flags
+    const isnormalcreation = isNormalGigCreationEnabled();
+    const isscratchcreation = isScratchCreationEnabled();
+    const isAIcreation = isAICreationEnabled();
     const handleUpgrade = useCallback(() => {
       // Redirect to pricing or show upgrade modal
       window.location.href = `/dashboard/billing`;
@@ -622,8 +635,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     // Memoize dynamic data based on theme
     const featureCards = useMemo(() => getFeatureCards(colors), [colors]);
     const creationOptions = useMemo(
-      () => getCreationOptions(colors, user, isInGracePeriod),
-      [colors, user, isInGracePeriod, trialRemainingDays] // Add all dependencies
+      () =>
+        getCreationOptions(
+          colors,
+          user,
+          isInGracePeriod,
+          isnormalcreation,
+          isscratchcreation,
+          isAIcreation
+        ),
+      [
+        colors,
+        user,
+        isInGracePeriod,
+        trialRemainingDays,
+        isnormalcreation,
+        isscratchcreation,
+        isAIcreation,
+      ] // Add all dependencies
     );
 
     // Memoize event handlers

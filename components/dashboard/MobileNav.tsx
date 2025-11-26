@@ -188,6 +188,14 @@ export default function MobileNav() {
           availableForTiers: ["pro", "premium", "elite"],
           requiresCompleteProfile: true,
         },
+        {
+          name: "My Artists",
+          href: "/dashboard/artists",
+          icon: <UsersIcon className="w-5 h-5" />,
+          exact: false,
+          availableForTiers: ["pro", "premium", "elite"],
+          requiresCompleteProfile: true,
+        },
       ];
     }
 
@@ -228,14 +236,6 @@ export default function MobileNav() {
 
     if (user?.isClient) {
       return [
-        {
-          name: "My Artists",
-          href: "/dashboard/artists",
-          icon: <UsersIcon className="w-5 h-5" />,
-          exact: false,
-          availableForTiers: ["pro", "premium", "elite"],
-          requiresCompleteProfile: true,
-        },
         {
           name: "Bookings",
           href: "/hub/gigs?tab=booked",

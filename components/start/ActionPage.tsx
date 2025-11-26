@@ -142,13 +142,13 @@ const ActionPage = () => {
   const { registerAsMusician, registerAsClient, registerAsBooker } =
     useUserMutations();
 
-  const { isFeatureEnabled } = useFeatureFlags();
+  const { isTeacherEnabled, isBookerEnabled, isBothEnabled, isFeatureEnabled } =
+    useFeatureFlags();
 
-  // Add feature flag checks
-  const isTeacherEnabled = isFeatureEnabled("teacher_role");
-  const isBookerEnabled = isFeatureEnabled("booker_role");
-
-  const isBothEnabled = isFeatureEnabled("both_role");
+  // Simple usage
+  const teacherEnabled = isTeacherEnabled();
+  const bookerEnabled = isBookerEnabled();
+  const bothEnabled = isBothEnabled();
 
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [city, setCity] = useState("");
@@ -401,7 +401,7 @@ const ActionPage = () => {
   }, [registerUser, router]);
 
   const connectAsBooker = useCallback(async () => {
-    if (!isBookerEnabled) {
+    if (!bookerEnabled) {
       toast.error(
         "Booker registration is currently unavailable. Please check back later."
       );
@@ -417,7 +417,7 @@ const ActionPage = () => {
     } finally {
       setBookerLoad(false);
     }
-  }, [registerUser, router, isBookerEnabled]);
+  }, [registerUser, router, bookerEnabled]);
   useEffect(() => {
     const timer = setTimeout(() => setUserload(true), 3000);
     return () => clearTimeout(timer);
@@ -503,9 +503,9 @@ const ActionPage = () => {
       description:
         "Book and manage bands, coordinate events, build your roster",
       buttonText: "Join as Booker",
-      disabled: !!myuser?.isBooker || !isBookerEnabled, // ADD FEATURE FLAG CHECK
+      disabled: !!myuser?.isBooker || !bookerEnabled, // ADD FEATURE FLAG CHECK
       onClick: () => handleRoleSelection("booker"),
-      hidden: !isBookerEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
+      hidden: !bookerEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
     },
     {
       role: "both",
@@ -515,7 +515,7 @@ const ActionPage = () => {
       buttonText: "Join as Dual User",
       disabled: true,
       onClick: () => handleRoleSelection("both"),
-      hidden: !isBothEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
+      hidden: !bookerEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
     },
   ].filter((card) => !card.hidden); // FILTER OUT HIDDEN CARDS
   const renderMoreInfoModal = () => {
@@ -710,7 +710,7 @@ const ActionPage = () => {
                       "dj",
                       "mc",
                       "vocalist",
-                      ...(isTeacherEnabled ? ["teacher"] : []), // CONDITIONALLY ADD TEACHER
+                      ...(teacherEnabled ? ["teacher"] : []), // CONDITIONALLY ADD TEACHER
                     ] as RoleType[]
                   ).map((role) => (
                     <button
