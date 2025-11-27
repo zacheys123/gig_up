@@ -19,6 +19,9 @@ export const FEATURE_FLAGS = {
   LESSON_SCHEDULING: "lesson_scheduling" as FeatureFlagKey,
   STUDENT_MANAGEMENT: "student_management" as FeatureFlagKey,
 
+  // adding deputies
+  DEPUTY_CREATION: "deputy_creation" as FeatureFlagKey,
+
   // DJ/MC Features
   DJ_EQUIPMENT_RENTAL: "dj_equipment_rental" as FeatureFlagKey,
   MC_EVENT_HOSTING: "mc_event_hosting" as FeatureFlagKey,

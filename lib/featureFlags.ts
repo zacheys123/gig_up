@@ -39,6 +39,7 @@ export type FeatureFlagKey =
   | "normal_gig_creation"
   | "scratch_creation"
   | "AI_creation"
+  | "deputy_creation"
 
   // ========== TEACHER FEATURES ==========
   | "teacher_dashboard"
@@ -98,7 +99,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     description: "Allow users to register as music teachers",
     targetUsers: "all",
     targetRoles: ["all"],
-    rolloutPercentage: 100,
+    rolloutPercentage: 0,
   },
   booker_role: {
     id: "booker_role",
@@ -106,7 +107,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     description: "Allow users to register as talent bookers/managers",
     targetUsers: "all",
     targetRoles: ["all"],
-    rolloutPercentage: 100,
+    rolloutPercentage: 0,
   },
   both_role: {
     id: "both_role",
@@ -131,7 +132,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
       "corporate_client",
       "all", // Or just use "all" to include everyone
     ],
-    rolloutPercentage: 100,
+    rolloutPercentage: 0,
   },
   scratch_creation: {
     id: "scratch_creation",
@@ -146,7 +147,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
       "corporate_client",
       "all", // Or just use "all" to include everyone
     ],
-    rolloutPercentage: 100,
+    rolloutPercentage: 0,
   },
   AI_creation: {
     id: "AI_creation",
@@ -161,9 +162,24 @@ export const FEATURE_FLAGS_CONFIG: Record<
       "corporate_client",
       "all", // Or just use "all" to include everyone
     ],
-    rolloutPercentage: 100,
+    rolloutPercentage: 0,
   },
 
+  // other features
+  deputy_creation: {
+    id: "deputy_creation",
+    name: "Deputy Creation for Musicians",
+    description: "Adding deputies to take on your gigs",
+    targetUsers: "pro", // Pro+ tier only
+    targetRoles: [
+      // Available to ALL client types
+      "instrumentalist",
+      "vocalist",
+      "dj",
+      "mc",
+    ],
+    rolloutPercentage: 0,
+  },
   // ==================== TEACHER FEATURES ====================
   teacher_dashboard: {
     id: "teacher_dashboard",

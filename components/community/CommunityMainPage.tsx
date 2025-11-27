@@ -23,14 +23,26 @@ import {
   Search,
   Clock,
   TrendingUp,
-  UserCheck,
-  Star,
   Heart,
   Building,
   UserPlus,
   FolderOpen,
+  Bug,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useFeatureFlags } from "@/hooks/useFeatureFlag";
+import { useFeatureFlagDebug } from "@/hooks/useFeatureDebug";
+import { FeatureFlagDebugger } from "./FeatureFlagsDebug";
+
+// Define proper types for tabs
+interface Tab {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+  longDescription: string;
+  hasNotification?: boolean;
+}
 
 const CommunityMainPage = () => {
   const [activeTab, setActiveTab] = useState("videos");
@@ -38,9 +50,22 @@ const CommunityMainPage = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   const { user } = useCurrentUser();
+  const { isDeputyCreationEnabled } = useFeatureFlags();
+  useFeatureFlagDebug();
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
+  const [debugOpen, setDebugOpen] = useState(false);
 
+  // Add this debug button somewhere in your UI
+  const DebugButton = () => (
+    <button
+      onClick={() => setDebugOpen(true)}
+      className="fixed bottom-4 right-4 z-40 p-3 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
+      title="Debug Feature Flags"
+    >
+      <Bug className="w-6 h-6" />
+    </button>
+  );
   // Show loading state until theme is mounted
   if (!mounted) {
     return (
@@ -57,10 +82,10 @@ const CommunityMainPage = () => {
 
   const isClient = user?.isClient && !user?.isMusician;
   const isMusician = user?.isMusician;
-  const isBooker = user?.isBooker; // Assuming these fields exist
+  const isBooker = user?.isBooker;
 
   // Base tabs that everyone sees
-  const baseTabs = [
+  const baseTabs: Tab[] = [
     {
       id: "videos",
       label: "Videos",
@@ -80,37 +105,43 @@ const CommunityMainPage = () => {
     },
   ];
 
-  // Musician-only tabs
-  const musicianTabs = [
-    {
-      id: "deputies",
-      label: "Discover",
-      icon: "🔍",
-      description: "Find talented musicians to join your team as deputies",
-      longDescription:
-        "Search our network of skilled musicians ready to back you up. Filter by instrument, location, or specialty to find the perfect deputy for your needs.",
-    },
-    {
-      id: "my-deputies",
-      label: "My Team",
-      icon: "🤝",
-      description: "Manage your current deputies and team members",
-      longDescription:
-        "View and manage your existing deputy relationships. Coordinate schedules, communicate with your team, and track your musical collaborations.",
-    },
-    {
-      id: "requests",
-      label: "Pending Requests",
-      icon: "📥",
-      hasNotification: true,
-      description: "Review and manage incoming deputy requests",
-      longDescription:
-        "Handle all pending deputy requests in one place. Accept or decline collaboration opportunities and manage your incoming invitations.",
-    },
+  // Musician-only tabs - Fixed the array structure
+  const musicianTabs: Tab[] = [
+    ...(isDeputyCreationEnabled(user?.roleType, user?.tier)
+      ? [
+          {
+            id: "deputies",
+            label: "Discover",
+            icon: "🔍",
+            description:
+              "Find talented musicians to join your team as deputies",
+            longDescription:
+              "Search our network of skilled musicians ready to back you up. Filter by instrument, location, or specialty to find the perfect deputy for your needs.",
+          } as Tab,
+
+          {
+            id: "my-deputies",
+            label: "My Team",
+            icon: "🤝",
+            description: "Manage your current deputies and team members",
+            longDescription:
+              "View and manage your existing deputy relationships. Coordinate schedules, communicate with your team, and track your musical collaborations.",
+          },
+          {
+            id: "requests",
+            label: "Pending Requests",
+            icon: "📥",
+            hasNotification: true,
+            description: "Review and manage incoming deputy requests",
+            longDescription:
+              "Handle all pending deputy requests in one place. Accept or decline collaboration opportunities and manage your incoming invitations.",
+          },
+        ]
+      : []),
   ];
 
   // Client-only tabs (regular clients)
-  const clientTabs = [
+  const clientTabs: Tab[] = [
     {
       id: "favorites",
       label: "My Favorites",
@@ -122,7 +153,7 @@ const CommunityMainPage = () => {
   ];
 
   // Booker/Manager specific tabs
-  const bookerTabs = [
+  const bookerTabs: Tab[] = [
     {
       id: "talent-pool",
       label: "My Talent Pool",
@@ -149,22 +180,13 @@ const CommunityMainPage = () => {
     },
   ];
 
-  // Combine tabs based on user type
-  const tabs = [
+  // Combine tabs based on user type - Fixed type issues
+  const tabs: Tab[] = [
     ...baseTabs,
     ...(isMusician ? musicianTabs : []),
     ...(isClient && !isBooker ? clientTabs : []),
     ...(isBooker ? bookerTabs : []),
-  ];
-
-  const getTabDescription = (tabId: string) => {
-    const tab = tabs.find((t) => t.id === tabId);
-    return (
-      tab?.longDescription ||
-      tab?.description ||
-      "Explore our musical community"
-    );
-  };
+  ].filter(Boolean) as Tab[]; // Ensure we filter out any undefined values
 
   const getTabIcon = (tabId: string) => {
     switch (tabId) {
@@ -205,19 +227,35 @@ const CommunityMainPage = () => {
         return <TrendingMusiciansTab user={user} />;
       case "favorites":
         return isClient ? (
-          <div>Favorites Tab - Implement this component</div>
+          <div className="p-4 text-center">
+            <p className={cn("text-lg", colors.textMuted)}>
+              Favorites feature coming soon!
+            </p>
+          </div>
         ) : null;
       case "talent-pool":
         return isBooker ? (
-          <div>Talent Pool Tab - Implement this component</div>
+          <div className="p-4 text-center">
+            <p className={cn("text-lg", colors.textMuted)}>
+              Talent Pool feature coming soon!
+            </p>
+          </div>
         ) : null;
       case "band-profiles":
         return isBooker ? (
-          <div>Band Profiles Tab - Implement this component</div>
+          <div className="p-4 text-center">
+            <p className={cn("text-lg", colors.textMuted)}>
+              Band Profiles feature coming soon!
+            </p>
+          </div>
         ) : null;
       case "quick-assemble":
         return isBooker ? (
-          <div>Quick Assemble Tab - Implement this component</div>
+          <div className="p-4 text-center">
+            <p className={cn("text-lg", colors.textMuted)}>
+              Quick Assemble feature coming soon!
+            </p>
+          </div>
         ) : null;
       default:
         return <VideoFeed clerkId={user?.clerkId as string} />;
@@ -256,10 +294,14 @@ const CommunityMainPage = () => {
         setCollapsed={setCollapsed}
         isDarkMode={isDarkMode}
       />
-
+      <DebugButton />
+      <FeatureFlagDebugger
+        isOpen={debugOpen}
+        onClose={() => setDebugOpen(false)}
+      />
       {/* Main Content */}
       <main
-        className={cn("flex-1 px-4 sm:px-6 lg:px-8 py-8 ", colors.background)}
+        className={cn("flex-1 px-4 sm:px-6 lg:px-8 py-8", colors.background)}
       >
         <motion.div
           initial={{ opacity: 0, y: -20 }}

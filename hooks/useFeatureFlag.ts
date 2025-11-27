@@ -10,6 +10,7 @@ import {
   FEATURE_GROUPS,
   FeatureGroup,
 } from "@/lib/controlled_blocking_features";
+import { useCheckTrial } from "./useCheckTrial";
 
 // Simple consistent hashing for rollout
 const getConsistentRollout = (featureKey: string, userId?: string): number => {
@@ -24,6 +25,7 @@ const getConsistentRollout = (featureKey: string, userId?: string): number => {
 
 export const useFeatureFlags = (userId?: string) => {
   const featureFlags = useQuery(api.controllers.featureFlags.getFeatureFlags);
+  const { isInGracePeriod } = useCheckTrial();
 
   const isFeatureEnabled = useCallback(
     (
@@ -43,10 +45,13 @@ export const useFeatureFlags = (userId?: string) => {
       // For all other flags, use full targeting logic
       if (!flag || !flag.enabled) return false;
 
-      // 1. Check user tier targeting
+      // GRACE PERIOD OVERRIDE: If user is in grace period, treat them as premium for tier checks
+      const effectiveTier = isInGracePeriod ? "pro" : userTier;
+
+      // 1. Check user tier targeting (with grace period override)
       if (flag.targetUsers && flag.targetUsers !== "all") {
-        if (flag.targetUsers !== userTier) {
-          return false; // User tier doesn't match requirement
+        if (flag.targetUsers !== effectiveTier) {
+          return false;
         }
       }
 
@@ -68,7 +73,7 @@ export const useFeatureFlags = (userId?: string) => {
 
       return true;
     },
-    [featureFlags, userId]
+    [featureFlags, userId, isInGracePeriod]
   );
 
   const getFeatureFlag = useCallback(
@@ -87,9 +92,12 @@ export const useFeatureFlags = (userId?: string) => {
         // Check if feature is enabled globally
         if (!flag.enabled) return false;
 
+        // Apply grace period override for tier checks
+        const effectiveTier = isInGracePeriod ? "pro" : userTier;
+
         // Check user tier targeting
         if (flag.targetUsers && flag.targetUsers !== "all") {
-          if (flag.targetUsers !== userTier) {
+          if (flag.targetUsers !== effectiveTier) {
             return false;
           }
         }
@@ -113,7 +121,7 @@ export const useFeatureFlags = (userId?: string) => {
         return true;
       });
     },
-    [featureFlags, userId]
+    [featureFlags, userId, isInGracePeriod]
   );
 
   // Get features by group
@@ -147,6 +155,7 @@ export const useFeatureFlags = (userId?: string) => {
     // Data
     featureFlags: featureFlags || [],
     isLoading,
+    isInGracePeriod, // Expose grace period status
 
     // Core functions
     isFeatureEnabled,
@@ -200,6 +209,11 @@ export const useFeatureFlags = (userId?: string) => {
     isVocalWarmupsEnabled: useCallback(
       (userRole?: string, userTier?: string) =>
         isFeatureEnabled(FEATURE_FLAGS.VOCAL_WARMUPS, userRole, userTier),
+      [isFeatureEnabled]
+    ),
+    isDeputyCreationEnabled: useCallback(
+      (userRole?: string, userTier?: string) =>
+        isFeatureEnabled(FEATURE_FLAGS.DEPUTY_CREATION, userRole, userTier),
       [isFeatureEnabled]
     ),
   };
