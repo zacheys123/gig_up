@@ -32,7 +32,9 @@ export const getClientInstantGigs = query({
 });
 
 // Get instant gigs for a musician
-export const getMusicianInstantGigs = query({
+// In your convex/instantgigs.ts file
+// Get direct gigs (original query)
+export const getDirectMusicianGigs = query({
   args: {
     musicianId: v.id("users"),
     status: v.optional(
@@ -56,8 +58,23 @@ export const getMusicianInstantGigs = query({
       query = query.filter((q) => q.eq(q.field("status"), args.status));
     }
 
-    const gigs = await query.order("desc").collect();
-    return gigs;
+    return await query.order("desc").collect();
+  },
+});
+
+// Get deputy gigs specifically
+export const getDeputyGigsForMusician = query({
+  args: {
+    musicianId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const allGigs = await ctx.db.query("instantgigs").order("desc").collect();
+
+    return allGigs.filter((gig) =>
+      gig.bookingHistory?.some(
+        (entry: any) => entry.deputySuggestedId === args.musicianId
+      )
+    );
   },
 });
 
@@ -341,6 +358,7 @@ export const updateInstantGigStatus = mutation({
     const updates: any = {
       status: args.status,
       musicianAvailability: "available",
+      updatedAt: Date.now(),
     };
 
     // If client accepts a deputy, update the main musician fields
@@ -349,10 +367,17 @@ export const updateInstantGigStatus = mutation({
       args.actionBy === "client" &&
       args.deputySuggestedId
     ) {
+      // Update the ACTUAL performer (deputy becomes the main musician for this gig)
       updates.invitedMusicianId = args.deputySuggestedId;
       updates.musicianName = args.deputysuggestedName;
-      updates.originalMusicianId = gig.invitedMusicianId; // Store original
-      updates.originalMusicianName = gig.musicianName; // Store original name
+
+      // Store the ORIGINAL invited musician for reference
+      updates.originalMusicianId = gig.invitedMusicianId;
+      updates.originalMusicianName = gig.musicianName;
+
+      // You might also want to track that this was a deputy gig
+      updates.isDeputyGig = true;
+      updates.deputyAcceptedAt = Date.now();
     }
 
     // Add to booking history
@@ -368,7 +393,6 @@ export const updateInstantGigStatus = mutation({
     };
 
     updates.bookingHistory = [...(gig.bookingHistory || []), historyEntry];
-    updates.updatedAt = Date.now();
 
     await ctx.db.patch(args.gigId, updates);
   },

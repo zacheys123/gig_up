@@ -97,7 +97,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "teacher_role",
     name: "Teacher Role Registration",
     description: "Allow users to register as music teachers",
-    targetUsers: "all",
+
     targetRoles: ["all"],
     rolloutPercentage: 0,
   },
@@ -105,7 +105,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "booker_role",
     name: "Booker Role Registration",
     description: "Allow users to register as talent bookers/managers",
-    targetUsers: "all",
+
     targetRoles: ["all"],
     rolloutPercentage: 0,
   },
@@ -113,7 +113,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "both_role",
     name: "Dual Role Registration",
     description: "Allow users to register as both client and talent",
-    targetUsers: "all",
+
     targetRoles: ["all"],
     rolloutPercentage: 0, // Start disabled
   },
@@ -123,7 +123,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "normal_gig_creation",
     name: "Normal Gig Creation",
     description: "Traditional gig creation with full customization",
-    targetUsers: "pro", // Pro+ tier only
+
     targetRoles: [
       // Available to ALL client types
       "individual_client",
@@ -185,7 +185,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "teacher_dashboard",
     name: "Teacher Dashboard",
     description: "Dashboard for music teachers",
-    targetUsers: "all",
+
     targetRoles: ["teacher"],
     rolloutPercentage: 0,
   },
@@ -193,7 +193,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "lesson_scheduling",
     name: "Lesson Scheduling",
     description: "Schedule music lessons",
-    targetUsers: "all",
+
     targetRoles: ["teacher"],
     rolloutPercentage: 0,
   },
@@ -211,7 +211,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "dj_equipment_rental",
     name: "DJ Equipment Rental",
     description: "Rent DJ equipment",
-    targetUsers: "all",
+
     targetRoles: ["dj"],
     rolloutPercentage: 0,
   },
@@ -219,7 +219,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "mc_event_hosting",
     name: "MC Event Hosting",
     description: "Tools for MCs to host events",
-    targetUsers: "all",
+
     targetRoles: ["mc"],
     rolloutPercentage: 0,
   },
@@ -227,7 +227,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "playlist_management",
     name: "Playlist Management",
     description: "Create and manage playlists",
-    targetUsers: "all",
+
     targetRoles: ["dj", "mc"],
     rolloutPercentage: 0,
   },
@@ -245,7 +245,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "practice_tools",
     name: "Practice Tools",
     description: "Practice session management",
-    targetUsers: "all",
+
     targetRoles: ["instrumentalist", "vocalist"],
     rolloutPercentage: 0,
   },
@@ -271,7 +271,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "vocal_health_tips",
     name: "Vocal Health Tips",
     description: "Tips for maintaining vocal health",
-    targetUsers: "all",
+
     targetRoles: ["vocalist"],
     rolloutPercentage: 0,
   },
@@ -281,7 +281,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "musician_portfolio",
     name: "Musician Portfolio",
     description: "Showcase your work",
-    targetUsers: "all",
+
     targetRoles: ["teacher", "instrumentalist", "vocalist", "dj", "mc"],
     rolloutPercentage: 0,
   },
@@ -289,7 +289,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "gig_history",
     name: "Gig History",
     description: "Track performance history",
-    targetUsers: "all",
+
     targetRoles: ["instrumentalist", "vocalist", "dj", "mc"],
     rolloutPercentage: 0,
   },
@@ -299,7 +299,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "personal_event_planner",
     name: "Personal Event Planner",
     description: "Event planning for individuals",
-    targetUsers: "all",
+
     targetRoles: ["individual_client"],
     rolloutPercentage: 0,
   },
@@ -307,7 +307,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "quick_booking",
     name: "Quick Booking",
     description: "Streamlined booking process",
-    targetUsers: "all",
+
     targetRoles: ["individual_client"],
     rolloutPercentage: 0,
   },
@@ -317,7 +317,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "client_event_planner",
     name: "Event Planner Tools",
     description: "Professional event planning",
-    targetUsers: "all",
+
     targetRoles: ["event_planner_client"],
     rolloutPercentage: 0,
   },
@@ -335,7 +335,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "venue_management",
     name: "Venue Management",
     description: "Venue management tools",
-    targetUsers: "all",
+
     targetRoles: ["venue_client"],
     rolloutPercentage: 0,
   },
@@ -363,7 +363,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "artist_roster",
     name: "Artist Roster",
     description: "Manage artist roster",
-    targetUsers: "all",
+
     targetRoles: ["talent_agent", "booking_manager"],
     rolloutPercentage: 0,
   },
@@ -389,7 +389,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     id: "file_sharing",
     name: "File Sharing",
     description: "Share files securely",
-    targetUsers: "all",
+
     targetRoles: ["all"],
     rolloutPercentage: 0,
   },

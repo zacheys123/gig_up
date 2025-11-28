@@ -332,9 +332,21 @@ const StatusBadge = ({
   );
 };
 
-const GigCard = ({ gig, isClient, colors, onEdit, onDelete }: any) => {
+const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const isDeputyGig = useMemo(() => {
+    if (!user || !gig.bookingHistory) return false;
+
+    return gig.bookingHistory.some(
+      (entry: any) => entry.deputySuggestedId === user._id
+    );
+  }, [gig, user]);
+
+  // Check if user is the original musician
+  const isOriginalMusician = useMemo(() => {
+    return gig.originalMusicianId === user?._id;
+  }, [gig, user]);
 
   const status = useMemo(() => {
     if (gig.status === "pending") {
@@ -379,6 +391,28 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete }: any) => {
         onMouseLeave={() => setIsHovered(false)}
         onClick={() => (window.location.href = `/hub/gigs/invites/${gig._id}`)}
       >
+        {isDeputyGig && (
+          <div className="absolute top-4 left-4 z-20">
+            <Badge
+              variant="secondary"
+              className="bg-blue-100 text-blue-800 text-xs"
+            >
+              🎵 Deputy Role
+            </Badge>
+          </div>
+        )}
+
+        {/* Original musician badge */}
+        {isOriginalMusician && gig.originalMusicianId && (
+          <div className="absolute top-4 left-4 z-20">
+            <Badge
+              variant="secondary"
+              className="bg-purple-100 text-purple-800 text-xs"
+            >
+              👑 Original Musician
+            </Badge>
+          </div>
+        )}
         {/* Accent Border */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-red-500 transform origin-left transition-transform duration-500 group-hover:scale-x-100 scale-x-0" />
         {/* Status Ribbon */}
@@ -921,6 +955,7 @@ function ClientInvitesOverview() {
               setShowEditModal(true);
             }}
             onDelete={(gig: any) => setGigToDelete(gig)}
+            user={user}
           />
         ))}
       </div>
@@ -1331,26 +1366,47 @@ const EditGigModal = ({ gig, isOpen, onClose, onSave, colors }: any) => {
 function MusicianInvitesOverview() {
   const { user } = useCurrentUser();
   const { colors } = useThemeColors();
-  const musicianGigs = useQuery(
-    api.controllers.instantGigs.getMusicianInstantGigs,
+  // Get direct gigs
+  const directGigs = useQuery(
+    api.controllers.instantGigs.getDirectMusicianGigs,
     {
       musicianId: user?._id as any,
     }
   );
 
-  const stats = useMemo(() => {
-    if (!musicianGigs) return null;
-    return {
-      total: musicianGigs.length,
-      pending: musicianGigs.filter((g) => g.status === "pending").length,
-      accepted: musicianGigs.filter((g) => g.status === "accepted").length,
-      declined: musicianGigs.filter((g) => g.status === "declined").length,
-      deputy: musicianGigs.filter((g) => g.status === "deputy-suggested")
-        .length,
-    };
-  }, [musicianGigs]);
+  // Get deputy gigs
+  const deputyGigs = useQuery(
+    api.controllers.instantGigs.getDeputyGigsForMusician,
+    {
+      musicianId: user?._id as any,
+    }
+  );
+  const allGigs = useMemo(() => {
+    const direct = directGigs || [];
+    const deputy = deputyGigs || [];
 
-  if (musicianGigs === undefined) {
+    // Combine and remove duplicates
+    const combined = [...direct];
+    deputy.forEach((deputyGig) => {
+      if (!combined.find((g) => g._id === deputyGig._id)) {
+        combined.push(deputyGig);
+      }
+    });
+
+    return combined;
+  }, [directGigs, deputyGigs]);
+  const stats = useMemo(() => {
+    if (!allGigs) return null;
+    return {
+      total: allGigs.length,
+      pending: allGigs.filter((g) => g.status === "pending").length,
+      accepted: allGigs.filter((g) => g.status === "accepted").length,
+      declined: allGigs.filter((g) => g.status === "declined").length,
+      deputy: allGigs.filter((g) => g.status === "deputy-suggested").length,
+    };
+  }, [allGigs]);
+
+  if (allGigs === undefined) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
@@ -1412,15 +1468,13 @@ function MusicianInvitesOverview() {
 
       {/* Gig Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {musicianGigs.map((gig) => (
+        {allGigs.map((gig) => (
           <GigCard key={gig._id} gig={gig} isClient={false} colors={colors} />
         ))}
       </div>
 
       {/* Empty State */}
-      {musicianGigs.length === 0 && (
-        <EmptyState type="musician" colors={colors} />
-      )}
+      {allGigs.length === 0 && <EmptyState type="musician" colors={colors} />}
     </div>
   );
 }

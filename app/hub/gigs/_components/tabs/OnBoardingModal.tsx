@@ -625,7 +625,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
     } = useFeatureFlags();
 
     // Use the centralized flags
-    const isnormalcreation = isNormalGigCreationEnabled();
+    const isnormalcreation = isNormalGigCreationEnabled(
+      user?.clientType,
+      user?.tier
+    );
     const isscratchcreation = isScratchCreationEnabled();
     const isAIcreation = isAICreationEnabled();
     const handleUpgrade = useCallback(() => {
@@ -765,7 +768,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                     </p>
                   </div>
                 </div>
-                <Button
+                {/* <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClose}
@@ -776,7 +779,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = memo(
                   )}
                 >
                   <X className="w-6 h-6" />
-                </Button>
+                </Button> */}
               </div>
             </div>
 

@@ -15,6 +15,7 @@ import {
   Calendar,
   Clock,
   DollarSign,
+  Info,
   Lock,
   MenuIcon,
   Music,
@@ -615,7 +616,8 @@ const FriendsComponent = () => {
         ),
       });
     }
-    // Modern Rates Section (New Structure)
+    // In your profileSections memo, update the rates section:
+    // In your profileSections memo, update the rates section:
     if (friend.isMusician && friend.rate) {
       const hasNewRates =
         friend.rate.categories && friend.rate.categories.length > 0;
@@ -636,6 +638,35 @@ const FriendsComponent = () => {
           titleColor: isDarkMode ? "text-amber-300" : "text-amber-700",
           content: (
             <div className="space-y-6">
+              {/* Simple Disclaimer Banner */}
+              <div
+                className={cn(
+                  "p-3 rounded-lg border",
+                  isDarkMode
+                    ? "bg-blue-900/20 border-blue-700"
+                    : "bg-blue-50 border-blue-200"
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <Info
+                    className={cn(
+                      "w-4 h-4 mt-0.5 shrink-0",
+                      isDarkMode ? "text-blue-300" : "text-blue-600"
+                    )}
+                  />
+                  <div>
+                    <p className={cn("text-sm font-medium", colors.text)}>
+                      Individual Performance Rates
+                    </p>
+                    <p className={cn("text-xs mt-1", colors.textMuted)}>
+                      These rates are for my individual services as a{" "}
+                      {friend.roleType}. Full band packages with complete
+                      pricing are available on band profile pages.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Base Rate */}
               {hasBaseRate && (
                 <div
@@ -662,7 +693,7 @@ const FriendsComponent = () => {
                     </div>
                     <div>
                       <p className={cn("font-semibold", colors.text)}>
-                        Base Rate
+                        Individual Rate
                       </p>
                       <p className={cn("text-sm", colors.textMuted)}>
                         {friend.rate.rateType

@@ -532,11 +532,6 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   <User className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className={cn("font-bold text-lg", colors.text)}>
-                    {gig.originalMusicianId
-                      ? gig.musicianName
-                      : gig.musicianName}
-                  </p>
                   <p className={cn("text-sm", colors.textMuted)}>
                     {gig.status === "deputy-suggested"
                       ? "Reviewing deputy suggestions"
@@ -680,7 +675,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                (window.location.href = `/profile/${deputy?._id}`)
+                                (window.location.href = `/search/${deputy?.username}`)
                               }
                               className={cn(
                                 "border-2 transition-all duration-300",
