@@ -8,7 +8,98 @@ import {
   deleteFollowRequestNotification,
   isUserDocument,
 } from "../createNotificationInternal";
+// Helper function to create type-safe user data with admin defaults
+const createUserData = (args: any, now: number) => {
+  return {
+    ...args,
+    lastActive: now,
 
+    // Role fields with defaults
+    isMusician: false,
+    isClient: false,
+    isBooker: false,
+    isAdmin: false, // Default to false
+    isBoth: false,
+    isBanned: false,
+
+    // Admin fields with defaults
+    adminRole: undefined,
+    adminPermissions: [],
+    adminAccessLevel: undefined,
+    canManageUsers: false,
+    canManageContent: false,
+    canManagePayments: false,
+    canViewAnalytics: false,
+    adminNotes: undefined,
+    adminDashboardAccess: false,
+    lastAdminAction: undefined,
+
+    // Tier and theme with literal types
+    tier: "free" as const,
+    theme: "system" as const,
+
+    // Numeric fields
+    earnings: 0,
+    totalSpent: 0,
+    monthlyGigsPosted: 0,
+    monthlyMessages: 0,
+    monthlyGigsBooked: 0,
+    completedGigsCount: 0,
+    reportsCount: 0,
+    cancelgigCount: 0,
+    renewalAttempts: 0,
+
+    // Boolean flags
+    firstLogin: true,
+    onboardingComplete: false,
+    firstTimeInProfile: true,
+    mutualFollowers: 0,
+
+    // String fields
+    banReason: "",
+
+    // Date fields
+    bannedAt: 0,
+    isPrivate: false,
+    pendingFollowRequests: [],
+
+    // Booker fields
+    bookerSkills: [],
+    managedBands: [],
+    artistsManaged: [],
+
+    // Social fields
+    followers: [],
+    followings: [],
+    refferences: [],
+    allreviews: [],
+    myreviews: [],
+    savedGigs: [],
+    favoriteGigs: [],
+    bookingHistory: [],
+
+    // Performance fields
+    badges: [],
+    reliabilityScore: 100,
+    avgRating: 0,
+    performanceStats: {
+      totalGigsCompleted: 0,
+      onTimeRate: 100,
+      clientSatisfaction: 100,
+      lastUpdated: now,
+    },
+    badgeMilestones: {
+      consecutiveGigs: 0,
+      earlyCompletions: 0,
+      perfectRatings: 0,
+      cancellationFreeStreak: 0,
+    },
+    gigsBookedThisWeek: {
+      count: 0,
+      weekStart: now,
+    },
+  };
+};
 export const updateFirstLogin = mutation({
   args: {
     clerkId: v.string(),
@@ -39,7 +130,6 @@ export const updateFirstLogin = mutation({
   },
 });
 
-// convex/controllers/user.ts
 // For syncing only basic profile data
 export const syncUserProfile = mutation({
   args: {
@@ -210,6 +300,17 @@ export const updateUserProfile = mutation({
 
       // Role-specific fields
       roleType: v.optional(v.string()),
+      clientType: v.optional(
+        v.union(
+          v.literal("individual_client"),
+          v.literal("event_planner_client"),
+          v.literal("venue_client"),
+          v.literal("corporate_client")
+        )
+      ), // ADDED: For client accounts
+      bookerType: v.optional(
+        v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+      ), // ADDED: For booker accounts
       djGenre: v.optional(v.string()),
       djEquipment: v.optional(v.string()),
       mcType: v.optional(v.string()),
@@ -253,49 +354,7 @@ export const updateUserProfile = mutation({
     return { success: true };
   },
 });
-// Helper function to create type-safe user data
-// convex/controllers/user.ts - UPDATE createUserData
-const createUserData = (args: any, now: number) => {
-  return {
-    ...args,
-    lastActive: now,
-    // Boolean fields
-    isMusician: false,
-    isClient: false,
-    isBooker: false, // NEW: Add isBooker field
-    isAdmin: false,
-    isBoth: false,
-    isBanned: false,
 
-    // Tier and theme with literal types
-    tier: "free" as const,
-    theme: "system" as const,
-
-    // Numeric fields
-    earnings: 0,
-    totalSpent: 0,
-    monthlyGigsPosted: 0,
-    monthlyMessages: 0,
-    monthlyGigsBooked: 0,
-    completedGigsCount: 0,
-    reportsCount: 0,
-    cancelgigCount: 0,
-    renewalAttempts: 0,
-
-    // Boolean flags
-    firstLogin: true,
-    onboardingComplete: false,
-    firstTimeInProfile: true,
-    mutualFollowers: 0,
-    // String fields
-    banReason: "",
-
-    // Date fields
-    bannedAt: 0,
-    isPrivate: false,
-    pendingFollowRequests: [],
-  };
-};
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {
@@ -620,77 +679,6 @@ export const updateUserAsBooker = mutation({
   },
 });
 
-export const updateUserAsAdmin = mutation({
-  args: {
-    clerkId: v.string(),
-    updates: v.object({
-      isAdmin: v.optional(v.boolean()),
-      adminRole: v.optional(
-        v.union(
-          v.literal("super"),
-          v.literal("content"),
-          v.literal("support"),
-          v.literal("analytics")
-        )
-      ),
-      tier: v.optional(
-        v.union(
-          v.literal("free"),
-          v.literal("pro"),
-          v.literal("premium"),
-          v.literal("elite")
-        )
-      ),
-      adminPermissions: v.optional(v.array(v.string())),
-      adminAccessLevel: v.optional(
-        v.union(
-          v.literal("full"),
-          v.literal("limited"),
-          v.literal("restricted")
-        )
-      ),
-      canManageUsers: v.optional(v.boolean()),
-      canManageContent: v.optional(v.boolean()),
-      canManagePayments: v.optional(v.boolean()),
-      canViewAnalytics: v.optional(v.boolean()),
-      adminNotes: v.optional(v.string()),
-      lastAdminAction: v.optional(v.number()),
-      adminDashboardAccess: v.optional(v.boolean()),
-      firstLogin: v.optional(v.boolean()),
-      lastActive: v.optional(v.number()),
-      theme: v.optional(
-        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
-      ),
-    }),
-  },
-  handler: async (ctx, args) => {
-    try {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-        .first();
-
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      const cleanUpdates = Object.fromEntries(
-        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
-      );
-
-      await ctx.db.patch(user._id, {
-        ...cleanUpdates,
-        firstLogin: false,
-        lastActive: Date.now(),
-      });
-
-      return { success: true, userId: user._id };
-    } catch (error) {
-      console.error("Error updating user as admin:", error);
-      throw error;
-    }
-  },
-});
 // convex/controllers/user.ts
 export const searchUsers = query({
   args: {

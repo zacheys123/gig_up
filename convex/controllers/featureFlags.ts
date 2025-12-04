@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { canUserSendOrReceiveNotifications } from "../notHelpers";
+import { createNotificationInternal } from "../createNotificationInternal";
 
 export const getFeatureFlags = query({
   args: {},
@@ -55,6 +57,8 @@ export const getFeatureFlagsByUserType = query({
   },
 });
 
+// convex/featureFlags.ts
+// convex/featureFlags.ts - COMPLETE UPDATED VERSION
 export const setFeatureFlag = mutation({
   args: {
     flagId: v.string(),
@@ -64,45 +68,328 @@ export const setFeatureFlag = mutation({
         v.literal("all"),
         v.literal("free"),
         v.literal("pro"),
-        v.literal("premium")
+        v.literal("premium"),
+        v.literal("elite")
       )
     ),
     targetRoles: v.optional(v.array(v.string())),
     rolloutPercentage: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const { flagId, enabled, ...otherArgs } = args;
+
     const existing = await ctx.db
       .query("featureFlags")
-      .filter((q) => q.eq(q.field("id"), args.flagId))
+      .filter((q) => q.eq(q.field("id"), flagId))
       .first();
 
     const now = Date.now();
+    const previousEnabledState = existing?.enabled ?? false;
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        enabled: args.enabled ?? existing.enabled,
-        targetUsers: args.targetUsers ?? existing.targetUsers,
-        targetRoles: args.targetRoles ?? existing.targetRoles,
-        rolloutPercentage: args.rolloutPercentage ?? existing.rolloutPercentage,
+        enabled: enabled ?? existing.enabled,
+        targetUsers: otherArgs.targetUsers ?? existing.targetUsers,
+        targetRoles: otherArgs.targetRoles ?? existing.targetRoles,
+        rolloutPercentage:
+          otherArgs.rolloutPercentage ?? existing.rolloutPercentage,
         updatedAt: now,
       });
     } else {
       await ctx.db.insert("featureFlags", {
-        id: args.flagId,
-        name: args.flagId,
+        id: flagId,
+        name: flagId,
         description: "",
-        enabled: args.enabled ?? false,
-        targetUsers: args.targetUsers ?? "all",
-        targetRoles: args.targetRoles ?? [],
-        rolloutPercentage: args.rolloutPercentage ?? 0,
+        enabled: enabled ?? false,
+        targetUsers: otherArgs.targetUsers ?? "all",
+        targetRoles: otherArgs.targetRoles ?? [],
+        rolloutPercentage: otherArgs.rolloutPercentage ?? 0,
         createdAt: now,
         updatedAt: now,
       });
     }
 
+    // Send notification when feature is enabled (and it wasn't already enabled)
+    if (enabled === true && !previousEnabledState) {
+      console.log(`🎯 [FEATURE FLAG] Feature ${flagId} was just enabled`);
+
+      // Get all users
+      const allUsers = await ctx.db.query("users").collect();
+
+      // Get the targeting settings (use existing or new args)
+      const targetUsers =
+        otherArgs.targetUsers ?? existing?.targetUsers ?? "all";
+      const targetRoles = otherArgs.targetRoles ?? existing?.targetRoles ?? [];
+      const rolloutPercentage =
+        otherArgs.rolloutPercentage ?? existing?.rolloutPercentage ?? 100;
+
+      console.log(
+        `🎯 [FEATURE FLAG] Targeting: ${targetUsers} users, roles: ${targetRoles}, rollout: ${rolloutPercentage}%`
+      );
+
+      let notificationCount = 0;
+      let totalEligibleUsers = 0;
+
+      // Log all users and their eligibility
+      console.log(
+        `👥 [FEATURE FLAG] Total users in system: ${allUsers.length}`
+      );
+
+      // Create an array to log eligibility details
+      const eligibilityLog: Array<{
+        username: string;
+        tier: string;
+        isMusician: boolean;
+        isClient: boolean;
+        isBooker: boolean;
+        roleType?: string;
+        clientType?: string;
+        bookerType?: string;
+        roles: string[];
+        isProOrGracePeriod: boolean;
+        isEligibleForFeature: boolean;
+        notificationSent: boolean;
+        reason?: string;
+      }> = [];
+
+      // Send notification to each eligible user
+      for (const user of allUsers) {
+        try {
+          // Get user roles
+          const userRoles = getUserRoles(user);
+
+          // Check if user meets ALL criteria (WITH GRACE PERIOD BYPASS)
+          const isEligible = isUserEligibleForFeature(user, {
+            targetUsers,
+            targetRoles,
+            rolloutPercentage,
+          });
+
+          // Check if user can receive notifications (Pro/grace period)
+          const canReceiveNotifications =
+            canUserSendOrReceiveNotifications(user);
+
+          // Log user details
+          const userLog = {
+            username: user.username || user.clerkId,
+            tier: user.tier || "free",
+            isMusician: user.isMusician || false,
+            isClient: user.isClient || false,
+            isBooker: user.isBooker || false,
+            roleType: user.roleType || "none",
+            clientType: user.clientType || "none",
+            bookerType: user.bookerType || "none",
+            roles: userRoles,
+            isProOrGracePeriod: canReceiveNotifications,
+            isEligibleForFeature: isEligible,
+            notificationSent: false,
+            reason: "",
+          };
+
+          if (isEligible) {
+            totalEligibleUsers++;
+
+            if (canReceiveNotifications) {
+              // Use feature_announcement type which bypasses user settings
+              const notificationId = await createNotificationInternal(ctx, {
+                userDocumentId: user._id,
+                type: "feature_announcement", // CHANGED from system_updates
+                title: "New Feature Available! 🎉",
+                message: `${existing?.name || flagId} is now live!`,
+                image: "/images/feature-flags.png",
+                actionUrl: "/settings/notifications",
+                relatedUserDocumentId: undefined,
+                isViewerInGracePeriod: user.tier !== "pro",
+                metadata: {
+                  featureFlagId: flagId,
+                  featureName: existing?.name || flagId,
+                  featureDescription: existing?.description || "",
+                  targetUsers,
+                  targetRoles,
+                  rolloutPercentage,
+                  notificationType: "feature_enabled",
+                },
+              });
+
+              if (notificationId) {
+                notificationCount++;
+                userLog.notificationSent = true;
+              } else {
+                userLog.reason =
+                  "Notification creation failed (unexpected error)";
+              }
+            } else {
+              userLog.reason =
+                "User cannot receive notifications (not Pro/grace period)";
+            }
+          } else {
+            userLog.reason =
+              "User not eligible for feature (wrong tier/role/rollout)";
+          }
+
+          eligibilityLog.push(userLog);
+        } catch (error) {
+          console.error(
+            `❌ [FEATURE FLAG] Failed to process user ${user._id}:`,
+            error
+          );
+        }
+      }
+
+      // Log detailed eligibility summary
+      console.log(`📊 [FEATURE FLAG] ELIGIBILITY SUMMARY:`);
+      console.log(`📊 Total users: ${allUsers.length}`);
+      console.log(`📊 Eligible for feature: ${totalEligibleUsers}`);
+      console.log(`📊 Notifications sent: ${notificationCount}`);
+
+      // Log each user's eligibility details
+      console.log(`📊 [FEATURE FLAG] DETAILED USER ELIGIBILITY:`);
+      eligibilityLog.forEach((log) => {
+        const statusEmoji = log.notificationSent
+          ? "✅"
+          : log.isEligibleForFeature
+            ? "⚠️"
+            : "❌";
+        console.log(`${statusEmoji} ${log.username} (${log.tier}):`);
+        console.log(
+          `   Role: ${log.roleType}${log.clientType !== "none" ? `, Client: ${log.clientType}` : ""}${log.bookerType !== "none" ? `, Booker: ${log.bookerType}` : ""}`
+        );
+        console.log(`   User Roles: ${log.roles.join(", ")}`);
+        console.log(`   Pro/Grace: ${log.isProOrGracePeriod ? "Yes" : "No"}`);
+        console.log(
+          `   Feature Eligible: ${log.isEligibleForFeature ? "Yes" : "No"}`
+        );
+        console.log(
+          `   Notification: ${log.notificationSent ? "Sent" : "Not sent"}${log.reason ? ` (${log.reason})` : ""}`
+        );
+        console.log(`   ---`);
+      });
+
+      console.log(
+        `✅ [FEATURE FLAG] Sent ${notificationCount} notifications (${totalEligibleUsers} eligible users)`
+      );
+    }
+
     return { success: true };
   },
 });
+
+// Helper function to check if a user is eligible for a feature WITH GRACE PERIOD BYPASS
+function isUserEligibleForFeature(
+  user: any,
+  targeting: {
+    targetUsers: string;
+    targetRoles: string[];
+    rolloutPercentage: number;
+  }
+): boolean {
+  const { targetUsers, targetRoles, rolloutPercentage } = targeting;
+
+  console.log(
+    `🔍 [ELIGIBILITY] Checking user ${user.username || user.clerkId}:`
+  );
+
+  // Get user's tier and grace period status
+  const userTier = user.tier || "free";
+  const isInGracePeriod =
+    canUserSendOrReceiveNotifications(user) && userTier !== "pro";
+
+  console.log(`   User tier: ${userTier}, In grace period: ${isInGracePeriod}`);
+
+  // 1. Check tier targeting WITH GRACE PERIOD BYPASS
+  if (targetUsers !== "all") {
+    const isProPremiumElite = ["pro", "premium", "elite"].includes(userTier);
+    const isEligibleTier = targetUsers === userTier || isInGracePeriod;
+
+    console.log(
+      `   Tier check: Target=${targetUsers}, User=${userTier}, Pro/Premium/Elite=${isProPremiumElite}, GracePeriod=${isInGracePeriod}`
+    );
+
+    // User is eligible if:
+    // - They match the target tier exactly, OR
+    // - They are in grace period (bypass tier requirement)
+    if (!isEligibleTier) {
+      console.log(`   ❌ Tier mismatch and not in grace period`);
+      return false;
+    }
+    console.log(`   ✅ Tier/grace period match`);
+  }
+
+  // 2. Check role targeting
+  if (targetRoles && targetRoles.length > 0) {
+    const userRoles = getUserRoles(user);
+    const hasMatchingRole = targetRoles.some((role) =>
+      userRoles.includes(role)
+    );
+
+    console.log(
+      `   Role check: Target roles=${targetRoles.join(", ")}, User roles=${userRoles.join(", ")}`
+    );
+
+    // If no matching role AND targetRoles is not empty, user is not eligible
+    if (!hasMatchingRole) {
+      console.log(`   ❌ No matching role`);
+      return false;
+    }
+    console.log(`   ✅ Role match`);
+  }
+
+  // 3. Check rollout percentage
+  if (rolloutPercentage < 100) {
+    // Simple deterministic rollout based on user ID
+    const userHash = simpleHash(user._id);
+    const rolloutThreshold = rolloutPercentage / 100;
+    console.log(
+      `   Rollout: ${rolloutPercentage}%, User hash=${userHash.toFixed(3)}, Threshold=${rolloutThreshold}`
+    );
+
+    if (userHash > rolloutThreshold) {
+      console.log(`   ❌ Outside rollout percentage`);
+      return false;
+    }
+    console.log(`   ✅ Within rollout percentage`);
+  }
+
+  console.log(`   ✅ User is eligible for feature`);
+  return true;
+}
+
+// Helper to get user roles
+function getUserRoles(user: any): string[] {
+  const roles: string[] = ["all"];
+
+  if (user.isMusician) {
+    roles.push("musician");
+    if (user.roleType) roles.push(user.roleType);
+  }
+
+  if (user.isClient) {
+    roles.push("client");
+    if (user.clientType) {
+      // Client types already have "_client" suffix in database
+      roles.push(user.clientType);
+    }
+  }
+
+  if (user.isBooker) {
+    roles.push("booker");
+    if (user.bookerType) {
+      roles.push(user.bookerType);
+    }
+  }
+
+  return [...new Set(roles)];
+}
+
+// Simple hash function for deterministic rollout
+function simpleHash(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash % 100) / 100;
+}
 
 export const initializeFeatureFlags = mutation({
   args: {},

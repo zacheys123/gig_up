@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 
 // ==================== NOTIFICATION TYPES ====================
+// convex/types/notificationTypes.ts
 export const NOTIFICATION_TYPES = [
   "profile_view",
   "new_message",
@@ -20,12 +21,12 @@ export const NOTIFICATION_TYPES = [
   "video_comment",
   "review_received",
   "system_updates",
+  "feature_announcement", // ADD THIS
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 // ==================== NOTIFICATION SETTINGS SCHEMA ====================
-// Make all push notification fields optional since they're not being used yet
 // Remove all push notification fields
 export const notificationSettingsSchema = {
   userId: v.string(),
@@ -192,6 +193,8 @@ export const NOTIFICATION_TYPE_TO_SETTING_MAP: Record<
 
   // System
   system_updates: "systemUpdates",
+  //
+  feature_announcement: "featureAnnouncements", // This setting will be ignored
 };
 
 // ==================== HELPER TYPES ====================

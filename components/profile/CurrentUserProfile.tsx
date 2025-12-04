@@ -379,7 +379,8 @@ const CurrentUserProfile = () => {
       setIsClient(user.isClient || false);
       setIsBooker(user.isBooker || false);
       setClientHandles(user.handles || "");
-
+      setClientType(user.clientType || "");
+      setBookerType(user.bookerType || "");
       // Load role-specific data (musicians only)
       if (user.isMusician && !user.isBooker) {
         setRoleType(user.roleType || "");
@@ -421,7 +422,7 @@ const CurrentUserProfile = () => {
       };
       // Fix for rate object (musicians only) - UPDATED FOR NEW STRUCTURE
       if (user.isMusician && !user.isBooker) {
-        const userRate = user.rate || {};
+        // const userRate = user.rate || {};
 
         if (isNewRateStructure(userRate)) {
           // New structure exists
@@ -798,6 +799,17 @@ const CurrentUserProfile = () => {
         placeholder="Your booking agency or company name"
       />
 
+      {/* ADD THIS SELECT INPUT FOR BOOKER TYPE */}
+      <SelectInput
+        label="Booker Type"
+        value={bookerType}
+        onChange={setBookerType}
+        options={bookerTypes.map((type) => ({
+          value: type,
+          label: type.replace(/_/g, " ").toUpperCase(),
+        }))}
+      />
+
       <SelectInput
         label="Experience Level"
         value={experience}
@@ -1150,6 +1162,20 @@ const CurrentUserProfile = () => {
 
     return errors;
   };
+  // Add these with your other state variables
+  const [clientType, setClientType] = useState("");
+  const [bookerType, setBookerType] = useState("");
+
+  // Add client types constant
+  const clientTypes = [
+    "individual_client",
+    "event_planner_client",
+    "venue_client",
+    "corporate_client",
+  ] as const;
+
+  // Add booker types constant
+  const bookerTypes = ["talent_agent", "booking_manager"] as const;
   const handleUpdate = async () => {
     if (!user) return;
     console.log("📊 Rate data being saved:", {
@@ -1218,6 +1244,7 @@ const CurrentUserProfile = () => {
             // Booker-specific fields
             bookerSkills,
             bookerBio,
+            bookerType: bookerType || "", // ADD THIS
             musiciangenres: [],
             instrument: "",
             roleType: "",
@@ -1285,6 +1312,7 @@ const CurrentUserProfile = () => {
               bookerBio: "",
             }
           : {
+              clientType: clientType || "", // ADD THIS
               // Client-specific fields
               musiciangenres: [],
               instrument: "",
@@ -1696,6 +1724,16 @@ const CurrentUserProfile = () => {
                       onChange={setOrganization}
                       Icon={<Building size={16} />}
                       placeholder="Your company or organization name"
+                    />{" "}
+                    {/* ADD THIS SELECT INPUT FOR CLIENT TYPE */}
+                    <SelectInput
+                      label="Client Type"
+                      value={clientType}
+                      onChange={setClientType}
+                      options={clientTypes.map((type) => ({
+                        value: type,
+                        label: type.replace(/_/g, " ").toUpperCase(),
+                      }))}
                     />
                   </div>
                 )}

@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "convex/react";
 import { useState, useCallback } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { useCheckTrial } from "./useCheckTrial";
+import { useCurrentUser } from "./useCurrentUser";
 
 interface handles {
   platform: string;
@@ -87,8 +89,48 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
     {}
   );
-
+  const { isInGracePeriod } = useCheckTrial();
+  const { user: currentUser } = useCurrentUser();
   // Actions
+  // Add the cancel mutation
+  const cancelRequestMutation = useMutation(
+    api.controllers.deputies.cancelDeputyRequest
+  );
+
+  // ... existing state and other functions ...
+
+  // Add cancel function
+  const cancelDeputyRequest = useCallback(
+    async (deputyId: Id<"users">) => {
+      if (!currentUserId) throw new Error("No current user");
+
+      const key = `cancel-${deputyId}`;
+      setLoadingStates((prev) => ({ ...prev, [key]: true }));
+
+      try {
+        console.log("🎯 [HOOK] Cancelling deputy request:", {
+          currentUserId,
+          deputyId,
+        });
+
+        await cancelRequestMutation({
+          principalId: currentUserId,
+          deputyId,
+        });
+
+        console.log("✅ [HOOK] Deputy request cancelled successfully");
+        return { success: true };
+      } catch (error) {
+        console.error("❌ [HOOK] Deputy request cancellation failed:", error);
+        return { success: false, error: (error as Error).message };
+      } finally {
+        setLoadingStates((prev) => ({ ...prev, [key]: false }));
+      }
+    },
+    [currentUserId, cancelRequestMutation]
+  );
+
+  // hooks/useDeputies.ts - Add debug logging
   const sendDeputyRequest = useCallback(
     async (
       deputyId: Id<"users">,
@@ -98,25 +140,38 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
     ) => {
       if (!currentUserId) throw new Error("No current user");
 
+      console.log("🎯 [HOOK DEBUG] Sending deputy request:", {
+        currentUserId,
+        deputyId,
+        skill,
+        gigType,
+        isInGracePeriod, // Check this value
+        currentUserTier: currentUser?.tier, // Add this if available
+      });
+
       const key = `send-${deputyId}`;
       setLoadingStates((prev) => ({ ...prev, [key]: true }));
 
       try {
-        await sendRequestMutation({
+        const result = await sendRequestMutation({
           principalId: currentUserId,
           deputyId,
           forMySkill: skill,
           gigType,
           note,
+          isViewerInGracePeriod: isInGracePeriod,
         });
+
+        console.log("✅ [HOOK DEBUG] Deputy request completed:", result);
         return { success: true };
       } catch (error) {
+        console.error("❌ [HOOK DEBUG] Deputy request failed:", error);
         return { success: false, error: (error as Error).message };
       } finally {
         setLoadingStates((prev) => ({ ...prev, [key]: false }));
       }
     },
-    [currentUserId, sendRequestMutation]
+    [currentUserId, sendRequestMutation, isInGracePeriod, currentUser?.tier]
   );
 
   const respondToDeputyRequest = useCallback(
@@ -210,6 +265,7 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
     respondToDeputyRequest,
     removeDeputy,
     updateDeputySettings,
+    cancelDeputyRequest,
 
     // State
     isLoading,

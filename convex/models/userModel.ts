@@ -72,10 +72,10 @@ export const userModel = defineTable({
 
   clientType: v.optional(
     v.union(
-      v.literal("individual"),
-      v.literal("event_planner"),
-      v.literal("venue"),
-      v.literal("corporate")
+      v.literal("individual_client"),
+      v.literal("event_planner_client"),
+      v.literal("venue_client"),
+      v.literal("corporate_client")
     )
   ),
   bookerType: v.optional(

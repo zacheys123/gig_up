@@ -294,7 +294,7 @@ const CommunityMainPage = () => {
         setCollapsed={setCollapsed}
         isDarkMode={isDarkMode}
       />
-      <DebugButton />
+      {/* <DebugButton /> */}
       <FeatureFlagDebugger
         isOpen={debugOpen}
         onClose={() => setDebugOpen(false)}

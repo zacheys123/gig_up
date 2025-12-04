@@ -26,6 +26,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { BsInstagram, BsYoutube } from "react-icons/bs";
 import { ComprehensiveRating } from "../ui/ComprehensiveRating";
+import { TrialDebug } from "../debug";
+import { ChatIcon } from "../chat/ChatIcon";
 
 interface DeputySearchProps {
   user: any;
@@ -41,9 +43,10 @@ export const DeputySearch: React.FC<DeputySearchProps> = ({ user }) => {
   });
 
   const { colors } = useThemeColors();
-  const { deputies, sendDeputyRequest, isLoading } = useDeputies(
-    user._id as Id<"users">
-  );
+  const { deputies, sendDeputyRequest, isLoading, cancelDeputyRequest } =
+    useDeputies(user._id as Id<"users">);
+  const [cancelingDeputyId, setCancelingDeputyId] =
+    useState<Id<"users"> | null>(null);
 
   // Filter deputies based on search criteria
   const filteredDeputies = useMemo(() => {
@@ -114,7 +117,17 @@ export const DeputySearch: React.FC<DeputySearchProps> = ({ user }) => {
       alert(`Failed to send request: ${result.error}`);
     }
   };
-
+  const handleCancelRequest = async (deputyId: Id<"users">) => {
+    setCancelingDeputyId(deputyId);
+    try {
+      const result = await cancelDeputyRequest(deputyId);
+      if (result.success) {
+        // Request cancelled successfully
+      }
+    } finally {
+      setCancelingDeputyId(null);
+    }
+  };
   const updateFilter = (key: keyof typeof activeFilters, value: string) => {
     setActiveFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -300,7 +313,9 @@ export const DeputySearch: React.FC<DeputySearchProps> = ({ user }) => {
             key={deputy._id}
             deputy={deputy}
             onSendRequest={handleSendRequest}
+            onCancelRequest={handleCancelRequest}
             isLoading={isLoading(`send-${deputy._id}`)}
+            isCanceling={cancelingDeputyId === deputy._id}
           />
         ))}
       </div>
@@ -384,202 +399,237 @@ const DeputyCard: React.FC<{
   deputy: any;
   onSendRequest: (id: Id<"users">, skill: string) => void;
   isLoading: boolean;
-}> = React.memo(({ deputy, onSendRequest, isLoading }) => {
-  const { colors } = useThemeColors();
-  const skill = deputy.roleType || deputy.instrument || "Musician";
+  onCancelRequest: (id: Id<"users">) => void; // Add this prop
 
-  const socialLinks = [
-    {
-      icon: <Mail className="w-4 h-4" />,
-      url: deputy.email ? `mailto:${deputy.email}` : null,
-    },
-    {
-      icon: <BsInstagram className="w-4 h-4" />,
-      url:
-        deputy.musicianhandles.platform === "instagram" &&
-        deputy.musicianhandles.handle,
-    },
-    {
-      icon: <BsYoutube className="w-4 h-4" />,
-      url:
-        deputy.musicianhandles.platform === "youtube" &&
-        deputy.musicianhandles.handle,
-    },
-    { icon: <LinkIcon className="w-4 h-4" />, url: deputy.website },
-  ].filter((link) => link.url);
+  isCanceling?: boolean; // Add loading state for cancellation
+}> = React.memo(
+  ({ deputy, onSendRequest, isLoading, onCancelRequest, isCanceling }) => {
+    const { colors } = useThemeColors();
+    const skill =
+      deputy.roleType === "instrumentalist"
+        ? deputy.instrument
+        : deputy.roleType === "vocalist"
+          ? "vocalist"
+          : deputy.roleType === "mc"
+            ? "mc"
+            : deputy.roleType === "dj"
+              ? "dj"
+              : "Musician";
 
-  // Determine the relationship status
-  const hasPendingRequest = deputy.existingRelationship?.status === "pending";
-  const hasAcceptedRequest = deputy.existingRelationship?.status === "accepted";
-  const hasRejectedRequest = deputy.existingRelationship?.status === "rejected";
-  const noRelationship = !deputy.existingRelationship;
+    const socialLinks = [
+      {
+        icon: <Mail className="w-4 h-4" />,
+        url: deputy.email ? `mailto:${deputy.email}` : null,
+      },
+      {
+        icon: <BsInstagram className="w-4 h-4" />,
+        url:
+          deputy.musicianhandles.platform === "instagram" &&
+          deputy.musicianhandles.handle,
+      },
+      {
+        icon: <BsYoutube className="w-4 h-4" />,
+        url:
+          deputy.musicianhandles.platform === "youtube" &&
+          deputy.musicianhandles.handle,
+      },
+      { icon: <LinkIcon className="w-4 h-4" />, url: deputy.website },
+    ].filter((link) => link.url);
 
-  return (
-    <div
-      className={cn(
-        "group relative rounded-2xl border transition-all duration-300 hover:shadow-xl",
-        "hover:scale-[1.02] hover:-translate-y-1",
-        colors.border,
-        colors.card
-      )}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    // Determine the relationship status
+    const hasPendingRequest = deputy.existingRelationship?.status === "pending";
+    const hasAcceptedRequest =
+      deputy.existingRelationship?.status === "accepted";
+    const hasRejectedRequest =
+      deputy.existingRelationship?.status === "rejected";
+    const noRelationship = !deputy.existingRelationship;
+    return (
+      <div
+        className={cn(
+          "group relative rounded-2xl border transition-all duration-300 hover:shadow-xl",
+          "hover:scale-[1.02] hover:-translate-y-1",
+          colors.border,
+          colors.card
+        )}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      <div className="relative p-6 space-y-4">
-        <div className="flex jusstify-between items-center ">
-          <div className="flex items-start gap-4 ">
-            <div className="relative ">
-              <img
-                src={deputy.picture || "/default-avatar.png"}
-                alt={deputy.username}
-                className="w-16 h-16 rounded-2xl border-2 border-white shadow-lg"
-              />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                <div className="w-2 h-2 bg-white rounded-full" />
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <h3 className={cn("font-bold text-lg truncate", colors.text)}>
-                {deputy.firstname} {deputy.lastname}
-              </h3>
-              <p className={cn("text-sm truncate mb-2", colors.textMuted)}>
-                @{deputy.username}
-              </p>
-
-              {socialLinks.length > 0 && (
-                <div className="flex gap-2">
-                  {socialLinks.map((link, index) => (
-                    <a
-                      key={index}
-                      href={link.url || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        "p-1.5 rounded-lg transition-all duration-200",
-                        "hover:bg-amber-500 hover:text-white",
-                        colors.textMuted
-                      )}
-                    >
-                      {link.icon}
-                    </a>
-                  ))}
+        <div className="relative p-6 space-y-4">
+          <div className="flex jusstify-between items-center ">
+            <div className="flex items-start gap-4 ">
+              <div className="relative ">
+                <img
+                  src={deputy.picture || "/default-avatar.png"}
+                  alt={deputy.username}
+                  className="w-16 h-16 rounded-2xl border-2 border-white shadow-lg"
+                />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full" />
                 </div>
-              )}
-            </div>
-          </div>
-          <ComprehensiveRating
-            rating={deputy.rating}
-            size="sm"
-            className="mt-2"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {deputy.roleType && (
-            <Badge
-              variant="secondary"
-              className="bg-amber-500/10 text-amber-600 border-amber-500/20"
-            >
-              {deputy.roleType}
-            </Badge>
-          )}
-          {deputy.instrument && (
-            <Badge
-              variant="secondary"
-              className="bg-blue-500/10 text-blue-600 border-blue-500/20"
-            >
-              <Music className="w-3 h-3 mr-1" />
-              {deputy.instrument}
-            </Badge>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <InfoRow
-            icon={<MapPin className="w-4 h-4" />}
-            label="Location"
-            value={deputy.city}
-          />
-          <InfoRow
-            icon={<Users className="w-4 h-4" />}
-            label="Experience"
-            value={`Backs up ${deputy.backupCount || 0} Musicians`}
-          />
-          {deputy.bio && (
-            <div className="text-sm">
-              <p className={cn("line-clamp-2", colors.textMuted)}>
-                {deputy.bio}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="pt-2">
-          {hasPendingRequest ? (
-            <StatusBadge status="pending" />
-          ) : hasAcceptedRequest ? (
-            <StatusBadge status="accepted" />
-          ) : hasRejectedRequest ? (
-            // Option 1: Show "Ask Again" for rejected requests
-            <div className="space-y-2">
-              <div
-                className={cn(
-                  "text-xs text-center px-3 py-1 rounded-lg",
-                  "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                )}
-              >
-                Previous request was declined
               </div>
+
+              <div className="flex-1 min-w-0">
+                <h3 className={cn("font-bold text-lg truncate", colors.text)}>
+                  {deputy.firstname} {deputy.lastname}
+                </h3>
+                <p className={cn("text-sm truncate mb-2", colors.textMuted)}>
+                  @{deputy.username}
+                </p>
+
+                {socialLinks.length > 0 && (
+                  <div className="flex gap-2">
+                    {socialLinks.map((link, index) => (
+                      <a
+                        key={index}
+                        href={link.url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "p-1.5 rounded-lg transition-all duration-200",
+                          "hover:bg-amber-500 hover:text-white",
+                          colors.textMuted
+                        )}
+                      >
+                        {link.icon}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <ComprehensiveRating
+              rating={deputy.rating}
+              size="sm"
+              className="mt-2"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {deputy.roleType && (
+              <Badge
+                variant="secondary"
+                className="bg-amber-500/10 text-amber-600 border-amber-500/20"
+              >
+                {deputy.roleType}
+              </Badge>
+            )}
+            {deputy.instrument && (
+              <Badge
+                variant="secondary"
+                className="bg-blue-500/10 text-blue-600 border-blue-500/20"
+              >
+                <Music className="w-3 h-3 mr-1" />
+                {deputy.instrument}
+              </Badge>
+            )}      <ChatIcon variant="cozy" userId={deputy?._id} />
+          </div>
+     
+          <div className="space-y-3">
+            <InfoRow
+              icon={<MapPin className="w-4 h-4" />}
+              label="Location"
+              value={deputy.city}
+            />
+            <InfoRow
+              icon={<Users className="w-4 h-4" />}
+              label="Experience"
+              value={`Backs up ${deputy.backupCount || 0} Musicians`}
+            />
+            {deputy.talentbio && (
+              <div className="text-sm ">
+                <p className={cn("line-clamp-2", colors.textMuted)}>
+                  {deputy.talentbio}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-2">
+            {hasPendingRequest ? (
+              <div className="space-y-2">
+                <StatusBadge status="pending" />
+                <Button
+                  onClick={() => onCancelRequest(deputy._id)}
+                  disabled={isCanceling}
+                  variant="outline"
+                  className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  {isCanceling ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                      Cancelling...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <X className="w-4 h-4" />
+                      Cancel Request
+                    </div>
+                  )}
+                </Button>
+              </div>
+            ) : hasAcceptedRequest ? (
+              <StatusBadge status="accepted" />
+            ) : hasRejectedRequest ? (
+              // Option 1: Show "Ask Again" for rejected requests
+              <div className="space-y-2">
+                <div
+                  className={cn(
+                    "text-xs text-center px-3 py-1 rounded-lg",
+                    "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                  )}
+                >
+                  Previous request was declined
+                </div>
+                <Button
+                  onClick={() => onSendRequest(deputy._id, skill)}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      Sending...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4" />
+                      Ask Again
+                    </div>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              // No relationship - show regular "Ask to be Deputy" button
               <Button
                 onClick={() => onSendRequest(deputy._id, skill)}
                 disabled={isLoading}
-                variant="outline"
-                className="w-full"
+                className={cn(
+                  "w-full rounded-xl py-3 font-semibold transition-all duration-200",
+                  "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                  "text-white shadow-lg hover:shadow-xl",
+                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                )}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                    Sending...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sending Request...
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <UserCheck className="w-4 h-4" />
-                    Ask Again
+                    Ask to be Deputy
                   </div>
                 )}
               </Button>
-            </div>
-          ) : (
-            // No relationship - show regular "Ask to be Deputy" button
-            <Button
-              onClick={() => onSendRequest(deputy._id, skill)}
-              disabled={isLoading}
-              className={cn(
-                "w-full rounded-xl py-3 font-semibold transition-all duration-200",
-                "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                "text-white shadow-lg hover:shadow-xl",
-                "disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              )}
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Sending Request...
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <UserCheck className="w-4 h-4" />
-                  Ask to be Deputy
-                </div>
-              )}
-            </Button>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 // InfoRow Component (same as before)
 const InfoRow: React.FC<{
