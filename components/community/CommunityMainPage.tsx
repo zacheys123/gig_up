@@ -29,7 +29,7 @@ import {
   FolderOpen,
   Bug,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 import { useFeatureFlagDebug } from "@/hooks/useFeatureDebug";
 import { FeatureFlagDebugger } from "./FeatureFlagsDebug";
@@ -48,6 +48,7 @@ const CommunityMainPage = () => {
   const [activeTab, setActiveTab] = useState("videos");
   const [showThemeToggle, setShowThemeToggle] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const searchParams = useSearchParams();
 
   const { user } = useCurrentUser();
   const { isDeputyCreationEnabled } = useFeatureFlags();
@@ -56,16 +57,20 @@ const CommunityMainPage = () => {
   const { toggleDarkMode } = useThemeToggle();
   const [debugOpen, setDebugOpen] = useState(false);
 
-  // Add this debug button somewhere in your UI
-  const DebugButton = () => (
-    <button
-      onClick={() => setDebugOpen(true)}
-      className="fixed bottom-4 right-4 z-40 p-3 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
-      title="Debug Feature Flags"
-    >
-      <Bug className="w-6 h-6" />
-    </button>
-  );
+  const urlTab = searchParams.get("tab");
+
+  // Update URL when tab changes
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    // Update URL without reloading the page
+    router.push(`/community?tab=${tabId}`, { scroll: false });
+  };
+  // Also sync state when URL changes (optional but good for direct links)
+  React.useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab, activeTab]);
   // Show loading state until theme is mounted
   if (!mounted) {
     return (
@@ -287,7 +292,7 @@ const CommunityMainPage = () => {
       <CommunitySidebar
         tabs={tabs}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         handleThemeToggle={handleThemeToggle}
         colors={colors}
         collapsed={collapsed}
@@ -366,7 +371,7 @@ const CommunityMainPage = () => {
         <NavigationTabs
           tabs={tabs}
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleTabChange}
           showThemeToggle={showThemeToggle}
           setShowThemeToggle={setShowThemeToggle}
           themeIsDark={isDarkMode}

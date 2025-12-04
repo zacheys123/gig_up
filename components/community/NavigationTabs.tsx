@@ -3,6 +3,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Palette } from "lucide-react";
+import { useRouter } from "next/navigation"; // ADD THIS IMPORT
 
 interface Tab {
   id: string;
@@ -29,9 +30,17 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   showThemeToggle,
   setShowThemeToggle,
   themeIsDark,
-
   colors,
 }) => {
+  const router = useRouter(); // ADD THIS
+
+  // Update this function to handle URL updates
+  const handleTabClick = (tabId: string) => {
+    setActiveTab(tabId);
+    // Update URL without reloading the page
+    router.push(`/community?tab=${tabId}`, { scroll: false });
+  };
+
   return (
     <div
       className={cn("border-t backdrop-blur-lg", colors.border, colors.card)}
@@ -46,7 +55,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
         {tabs.map((tab) => (
           <motion.button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabClick(tab.id)} // CHANGED: Use handleTabClick
             className="flex flex-col items-center justify-center relative flex-1 py-1 rounded-xl transition-all duration-300 group"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

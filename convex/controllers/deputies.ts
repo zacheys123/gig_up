@@ -441,12 +441,11 @@ export const searchDeputies = query({
     // Filter out the current user
     users = users.filter((user) => user._id !== currentUserId);
 
-    // SIMPLE ROLE-BASED FILTERING ONLY
     users = users.filter((user) => {
       const currentUserRole = currentUser.roleType;
       const targetUserRole = user.roleType;
 
-      if (!currentUserRole) return true;
+      if (!currentUserRole || !targetUserRole) return false;
 
       // Simple role compatibility rules
       switch (currentUserRole) {
@@ -458,8 +457,8 @@ export const searchDeputies = query({
 
         case "vocalist":
           return (
-            targetUserRole === "vocalist" ||
-            targetUserRole === "instrumentalist"
+            targetUserRole === "instrumentalist" ||
+            targetUserRole === "vocalist"
           );
 
         case "dj":
@@ -472,10 +471,27 @@ export const searchDeputies = query({
           return targetUserRole === "teacher" || targetUserRole === "vocalist";
 
         default:
-          return true;
+          return false; // Don't show anyone for unknown current roles
       }
     });
 
+    // Add debug logging with proper typing
+    console.log("🎯 [ROLE FILTER RESULTS]", {
+      currentUserRole: currentUser.roleType,
+      currentUserInstrument: currentUser.instrument,
+      totalUsersAfterFilter: users.length,
+      filteredUsers: users.slice(0, 5).map((u) => ({
+        username: u.username,
+        role: u.roleType,
+        instrument: u.instrument,
+      })),
+      // Properly typed role distribution
+      roleDistribution: users.reduce((acc: Record<string, number>, user) => {
+        const role = user.roleType || "unknown";
+        acc[role] = (acc[role] || 0) + 1;
+        return acc;
+      }, {}),
+    });
     // Apply search filters
     if (searchQuery) {
       const query = searchQuery.toLowerCase();

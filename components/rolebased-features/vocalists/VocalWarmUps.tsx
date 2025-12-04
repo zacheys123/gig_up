@@ -117,10 +117,8 @@ export const VocalWarmups: React.FC = () => {
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { isFeatureEnabled } = useUserFeatureFlags();
   const { user } = useCurrentUser();
 
-  const canAccessWarmups = isFeatureEnabled("vocal_warmups");
   const isPremiumUser = user?.tier === "premium" || user?.tier === "pro";
 
   const startExercise = (exercise: WarmupExercise) => {
@@ -175,37 +173,6 @@ export const VocalWarmups: React.FC = () => {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
-
-  // Feature gate - show upgrade prompt if user can't access warmups
-  if (!canAccessWarmups) {
-    return (
-      <div className="bg-gray-800 rounded-xl p-8 text-center border border-purple-500/30">
-        <div className="text-6xl mb-4">🎤</div>
-        <h3 className="text-xl font-semibold text-white mb-2">
-          Premium Vocal Warmups
-        </h3>
-        <p className="text-gray-400 mb-4">
-          Unlock professional vocal exercises, warmup routines, and voice care
-          tips.
-        </p>
-
-        {!isPremiumUser ? (
-          <div>
-            <button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all mb-2">
-              Upgrade to Premium - $9.99/month
-            </button>
-            <p className="text-gray-500 text-sm">
-              Includes vocal warmups, exercise library, and health monitoring
-            </p>
-          </div>
-        ) : (
-          <p className="text-orange-400">
-            This feature is rolling out gradually. Check back soon!
-          </p>
-        )}
-      </div>
-    );
-  }
 
   if (currentExercise) {
     return (

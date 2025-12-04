@@ -1,4 +1,4 @@
-// components/features/FeatureGated.tsx
+// components/features/FeatureGated.tsx - YOUR CURRENT CODE
 "use client";
 
 import { useUserFeatureFlags } from "@/hooks/useUserFeatureFalgs";

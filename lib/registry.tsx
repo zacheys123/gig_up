@@ -97,9 +97,9 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     id: "practice_tools",
     name: "Practice Tools",
     description: "Smart practice sessions with tracking",
-    href: "/dashboard/practice",
+    href: "/dashboard/practice-tools",
     icon: <Guitar className="w-5 h-5" />,
-    category: "sidebar",
+    category: "spotlight",
   },
 
   // ==================== DJ/MC FEATURES ====================

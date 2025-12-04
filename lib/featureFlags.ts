@@ -246,7 +246,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
     name: "Practice Tools",
     description: "Practice session management",
 
-    targetRoles: ["instrumentalist", "vocalist"],
+    targetRoles: ["instrumentalist"],
     rolloutPercentage: 0,
   },
 

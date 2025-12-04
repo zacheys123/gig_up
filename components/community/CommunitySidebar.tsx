@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Palette, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { useRouter } from "next/navigation"; // ADD THIS IMPORT
 
 interface Tab {
   id: string;
@@ -34,6 +35,14 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
   isDarkMode,
 }) => {
   const [hoveredTab, setHoveredTab] = useState<string | null>(null);
+  const router = useRouter(); // ADD THIS
+
+  // Update this function to handle URL updates
+  const handleTabClick = (tabId: string) => {
+    setActiveTab(tabId);
+    // Update URL without reloading the page
+    router.push(`/community?tab=${tabId}`, { scroll: false });
+  };
 
   return (
     <motion.aside
@@ -78,20 +87,19 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
             <button
               onMouseEnter={() => setHoveredTab(tab.id)}
               onMouseLeave={() => setHoveredTab(null)}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabClick(tab.id)} // CHANGED: Use handleTabClick
               className={cn(
                 "relative flex items-center gap-3 px-3 py-3 rounded-lg w-full transition-all overflow-hidden group",
                 activeTab === tab.id
                   ? cn(
-                      "text-white font-semibold shadow-lg", // Force white text for active state
-                      // Use solid background for active state
+                      "text-white font-semibold shadow-lg",
                       isDarkMode
                         ? "bg-amber-600 border-amber-500"
                         : "bg-amber-500 border-amber-400"
                     )
                   : cn(
-                      colors.text, // Use main text color
-                      colors.hoverBg, // Use theme hover background
+                      colors.text,
+                      colors.hoverBg,
                       "border border-transparent",
                       "hover:border-amber-200 dark:hover:border-amber-800",
                       "hover:text-amber-600 dark:hover:text-amber-400"
@@ -114,9 +122,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
               <span
                 className={cn(
                   "relative z-10 text-lg transition-colors",
-                  activeTab === tab.id
-                    ? "text-white" // Force white for active state
-                    : colors.text // Use theme text for inactive
+                  activeTab === tab.id ? "text-white" : colors.text
                 )}
               >
                 {tab.icon}
@@ -128,9 +134,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                   <span
                     className={cn(
                       "block font-medium transition-colors",
-                      activeTab === tab.id
-                        ? "text-white" // Force white for active state
-                        : colors.text // Use theme text for inactive
+                      activeTab === tab.id ? "text-white" : colors.text
                     )}
                   >
                     {tab.label}
@@ -140,8 +144,8 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                       className={cn(
                         "text-xs mt-1 leading-tight transition-all duration-200",
                         activeTab === tab.id
-                          ? "text-amber-100" // Light amber for active description
-                          : colors.textMuted // Use theme muted text for inactive
+                          ? "text-amber-100"
+                          : colors.textMuted
                       )}
                     >
                       {tab.description}
