@@ -669,7 +669,7 @@ export function Sidebar() {
               title="Your Tools"
               showLocked={false} // Show coming soon features
             />
-            <FeatureFlagDebug />
+            {/* <FeatureFlagDebug /> */}
           </div>
           {/* Theme Toggle */}
           <button
@@ -759,19 +759,19 @@ export function Sidebar() {
   );
 }
 // Add this temporary debug component
-export function FeatureFlagDebug() {
-  const { isFeatureEnabled } = useUserFeatureFlags();
-  const { user } = useCurrentUser();
+// export function FeatureFlagDebug() {
+//   const { isFeatureEnabled } = useUserFeatureFlags();
+//   const { user } = useCurrentUser();
 
-  return (
-    <div className="p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
-      <h3 className="font-bold">Feature Flag Debug</h3>
-      <p>User Tier: {user?.tier}</p>
-      <p>User Role: {user?.roleType}</p>
-      <p>
-        Vocal Warmups Enabled:{" "}
-        {isFeatureEnabled("vocal_warmups") ? "✅ Yes" : "❌ No"}
-      </p>
-    </div>
-  );
-}
+//   return (
+//     <div className="p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
+//       <h3 className="font-bold">Feature Flag Debug</h3>
+//       <p>User Tier: {user?.tier}</p>
+//       <p>User Role: {user?.roleType}</p>
+//       <p>
+//         Vocal Warmups Enabled:{" "}
+//         {isFeatureEnabled("vocal_warmups") ? "✅ Yes" : "❌ No"}
+//       </p>
+//     </div>
+//   );
+// }
