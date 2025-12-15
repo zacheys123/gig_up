@@ -53,6 +53,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import Logo from "../Logo";
 
 interface NavigationItem {
   href: string;
@@ -505,30 +506,8 @@ export function DesktopNavigation() {
           <div className="flex justify-between items-center h-14">
             {/* Left Section - Logo & Navigation */}
             <div className="flex items-center space-x-6">
-              <Link
-                href="/"
-                className="flex items-center space-x-2 flex-shrink-0"
-              >
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center space-x-2"
-                >
-                  <div className="w-7 h-7 bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-xs">G</span>
-                  </div>
-                  <span
-                    className={cn(
-                      "text-lg font-bold whitespace-nowrap",
-                      colors.text
-                    )}
-                  >
-                    GigUp
-                  </span>
-                </motion.div>
-              </Link>
-
               {/* Primary Navigation Items */}
+              <Logo />
               <div className="hidden lg:flex items-center space-x-1">
                 {isSignedIn && navigationLinks.map(renderNavLink)}
               </div>

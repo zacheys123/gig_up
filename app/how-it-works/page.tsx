@@ -275,7 +275,7 @@ export default function HowItWorksPage() {
             transition={{ duration: 0.6 }}
           >
             <h1 className={cn("text-4xl md:text-6xl font-bold", colors.text)}>
-              How Gigup Works
+              How GigUppWorks
             </h1>
             <p
               className={cn("text-xl mt-4 max-w-2xl mx-auto", colors.textMuted)}

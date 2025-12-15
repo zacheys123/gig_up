@@ -153,4 +153,21 @@ export default defineSchema({
     .index("by_user1", ["user1Id"])
     .index("by_user2", ["user2Id"])
     .index("by_user_pair", ["user1Id", "user2Id"]),
+  testimonials: defineTable({
+    userId: v.string(),
+    userName: v.string(),
+    userRole: v.string(),
+    userCity: v.string(),
+    rating: v.number(),
+    content: v.string(),
+    featured: v.boolean(),
+    verified: v.boolean(),
+    stats: v.object({
+      bookings: v.number(),
+      earnings: v.string(),
+      joinedDate: v.string(),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
 });

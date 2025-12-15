@@ -93,7 +93,7 @@ const ExperienceGigupPage = () => {
         className="max-w-5xl mx-auto"
       >
         <h1 className="text-3xl md:text-5xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 via-purple-400 to-yellow-400 text-center md:text-left">
-          Welcome to GiGup Experience
+          Welcome to GigUppExperience
         </h1>
 
         {loading ? (
@@ -110,7 +110,7 @@ const ExperienceGigupPage = () => {
             <section className="mb-12">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <Video className="w-6 h-6" />
-                How GiGup Works
+                How GigUppWorks
               </h2>
               <div className="rounded-xl overflow-hidden shadow-xl border border-white/10">
                 <video
@@ -369,7 +369,7 @@ const ExperienceGigupPage = () => {
                   {
                     name: "Liam (Client)",
                     quote:
-                      "GiGup helped me organize 4 amazing private shows in a month — seamless!",
+                      "GigUpphelped me organize 4 amazing private shows in a month — seamless!",
                   },
                   {
                     name: "Ava (Musician)",

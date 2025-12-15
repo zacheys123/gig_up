@@ -29,6 +29,7 @@ import type * as controllers_ratings from "../controllers/ratings.js";
 import type * as controllers_reviews from "../controllers/reviews.js";
 import type * as controllers_socials from "../controllers/socials.js";
 import type * as controllers_subscription from "../controllers/subscription.js";
+import type * as controllers_testimonials from "../controllers/testimonials.js";
 import type * as controllers_theme from "../controllers/theme.js";
 import type * as controllers_user from "../controllers/user.js";
 import type * as controllers_videos from "../controllers/videos.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   "controllers/reviews": typeof controllers_reviews;
   "controllers/socials": typeof controllers_socials;
   "controllers/subscription": typeof controllers_subscription;
+  "controllers/testimonials": typeof controllers_testimonials;
   "controllers/theme": typeof controllers_theme;
   "controllers/user": typeof controllers_user;
   "controllers/videos": typeof controllers_videos;

@@ -26,9 +26,12 @@ const emailFormSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  subject: z.string().min(2, {
-    message: "Subject must be at least 2 characters.",
-  }).optional(),
+  subject: z
+    .string()
+    .min(2, {
+      message: "Subject must be at least 2 characters.",
+    })
+    .optional(),
   message: z.string().min(10, {
     message: "Message must be at least 10 characters.",
   }),
@@ -56,7 +59,7 @@ const EmailForm: React.FC<EmailFormProps> = ({ handleClose }) => {
   const onSubmit = async (data: EmailFormValues) => {
     try {
       const templateParams = {
-        your_name: "gigup Admin",
+        your_name: "GigUppAdmin",
         from_name: data.name,
         from_email: data.email,
         subject: data.subject || "New Contact Message",

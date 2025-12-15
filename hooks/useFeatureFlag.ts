@@ -206,11 +206,7 @@ export const useFeatureFlags = (userId?: string) => {
         isFeatureEnabled(FEATURE_FLAGS.AI_CREATION, userRole, userTier),
       [isFeatureEnabled]
     ),
-    isVocalWarmupsEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.VOCAL_WARMUPS, userRole, userTier),
-      [isFeatureEnabled]
-    ),
+
     isDeputyCreationEnabled: useCallback(
       (userRole?: string, userTier?: string) =>
         isFeatureEnabled(FEATURE_FLAGS.DEPUTY_CREATION, userRole, userTier),

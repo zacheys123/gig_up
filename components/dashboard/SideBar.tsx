@@ -744,7 +744,7 @@ export function Sidebar() {
         {/* App Version */}
         <div className={cn("px-4 py-2 border-t", colors.border)}>
           <div className={cn("text-xs text-center", colors.textMuted)}>
-            GigUp v2.0.0
+            GigUppv2.0.0
             {shouldShowLimitedLinks && (
               <span className="text-amber-600 ml-1">• Trial Ended</span>
             )}

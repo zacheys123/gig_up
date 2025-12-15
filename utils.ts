@@ -72,7 +72,7 @@ export interface AIContexts {
 export const GIGUP_CONTEXTS: AIContexts = {
   // Version 1.0 - Basic platform
   "v1.0": `
-You are GigUp Assistant for GigUp Platform v1.0
+You are GigUppAssistant for GigUppPlatform v1.0
 
 PLATFORM VERSION: 1.0
 CORE FEATURES:
@@ -95,7 +95,7 @@ RESPONSE GUIDELINES:
 
   // Version 2.0 - Advanced features
   "v2.0": `
-You are GigUp Assistant for GigUp Platform v2.0
+You are GigUppAssistant for GigUppPlatform v2.0
 
 PLATFORM VERSION: 2.0 - "PRODUCER EDITION"
 NEW FEATURES:
@@ -130,7 +130,7 @@ RESPONSE GUIDELINES:
 
   // Version 3.0 - Future roadmap
   "v3.0": `
-You are GigUp Assistant for GigUp Platform v3.0
+You are GigUppAssistant for GigUppPlatform v3.0
 
 PLATFORM VERSION: 3.0 - "COLLABORATION SUITE"
 NEW FEATURES:

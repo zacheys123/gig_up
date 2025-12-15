@@ -92,7 +92,7 @@ export const getAiSuggestions = query({
         "How to manage multiple gig bookings?",
       ],
       guest: [
-        "How does GigUp work for musicians?",
+        "How does GigUppwork for musicians?",
         "What are the benefits of the Pro tier?",
         "How do I get started as a client?",
         "What's included in the free trial?",

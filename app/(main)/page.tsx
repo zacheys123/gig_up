@@ -1,6 +1,4 @@
 "use client";
-import Image from "next/image";
-import { CircularProgress } from "@mui/material";
 import {
   useAuth,
   SignInButton,
@@ -9,1117 +7,1637 @@ import {
 } from "@clerk/nextjs";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
-import thumbnailImage from "../../public/assets/discover4.webp";
-import { useUserStore } from "@/app/stores"; // Import Zustand store
+import { useState, useEffect, useRef } from "react";
+import { useUserStore } from "@/app/stores";
 import {
-  SaveAll,
-  Play,
-  Music,
-  Users,
-  Star,
   ArrowRight,
-  Calendar,
-  TrendingUp,
+  Sparkles,
+  Crown,
+  Users,
+  Music,
+  Target,
+  Zap,
+  Star,
+  Check,
   X,
   AlertCircle,
   User,
-  Calendar as CalendarIcon,
-  Check,
   LogOut,
-  Settings,
+  LayoutDashboard,
+  Headphones,
+  Mic,
+  Calendar,
+  Wallet,
+  TrendingUp,
   Shield,
   Bell,
+  Settings,
+  Search,
+  Plus,
+  Music2,
+  Disc,
+  Radio,
+  Volume2,
+  Music4,
+  Album,
+  Mic2,
+  Podcast,
+  Heart,
+  Share2,
+  Bookmark,
+  MessageSquare,
+  ThumbsUp,
+  Cpu,
+  Cctv,
+  Terminal,
+  Database,
+  Network,
+  Server,
+  Code,
+  Cloud,
+  Wifi,
+  Satellite,
+  Globe,
+  RadioTower,
+  BarChart,
+  PieChart,
+  LineChart,
+  Activity,
+  Filter,
+  Menu,
+  XIcon,
+  CheckCircle,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Shuffle,
+  Repeat,
+  Volume,
+  Clock,
+  Grid,
+  List,
+  Map,
+  Navigation,
+  Award,
   Briefcase,
-  GraduationCap,
-  Crown,
-  Zap,
-  Sparkles,
+  Building,
+  DollarSign,
+  CreditCard,
+  FileText,
+  File,
+  Folder,
+  Upload,
+  Download,
+  Edit,
+  Trash,
+  Copy,
+  Link as LinkIcon,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock,
+  Key,
+  QrCode,
+  Smartphone,
+  Monitor,
+  Tablet,
+  Watch,
+  Headset,
+  Keyboard,
+  Mouse,
+  HardDrive,
+  Router,
+  Bluetooth,
+  Battery,
+  Power,
+  RefreshCw,
+  RotateCcw,
+  PowerOff,
+  Settings as SettingsIcon,
+  UserCheck,
+  Users as UsersIcon,
+  UserPlus,
+  UserMinus,
+  UserX,
+  Video,
+  Phone,
+  Mail,
+  MessageCircle,
+  MessageSquare as MessageSquareIcon,
+  Send,
+  Paperclip,
+  Image,
+  Video as VideoIcon,
+  Film,
+  Camera,
+  MicOff,
+  PhoneOff,
+  PhoneCall,
+  PhoneForwarded,
+  PhoneIncoming,
+  PhoneOutgoing,
+  PhoneMissed,
+  Voicemail,
+  Rss,
+  AtSign,
+  Hash,
+  Tag,
+  BellOff,
+  BellRing,
+  Megaphone,
+  Speaker,
+  Radio as RadioIcon,
+  Tv,
+  Film as FilmIcon,
+  Disc as DiscIcon,
+  Album as AlbumIcon,
+  Music as MusicIcon,
+  Headphones as HeadphonesIcon,
+  Volume1,
+  VolumeX,
+  Volume2 as Volume2Icon,
 } from "lucide-react";
-import LoadingSpinner from "./loading";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import GigLoader from "@/components/(main)/GigLoader";
-import { useCheckTrial } from "@/hooks/useCheckTrial"; // Import the trial hook
-import { AdminRedirect } from "@/components/(admin)/AdminRedirect";
+import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { FeatureDiscovery } from "@/components/features/FeatureDiscovery";
 import { ALL_FEATURES, getRoleFeatures } from "@/lib/registry";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+// Tech Gradient Palettes
+const TECH_PALETTES = {
+  neon: {
+    primary: "from-cyan-500 to-blue-500",
+    accent: "via-emerald-400",
+    light: "cyan-50",
+    dark: "blue-950",
+  },
+  synthwave: {
+    primary: "from-purple-500 to-pink-500",
+    accent: "via-rose-400",
+    light: "purple-50",
+    dark: "purple-950",
+  },
+  cyberpunk: {
+    primary: "from-green-500 to-teal-500",
+    accent: "via-lime-400",
+    light: "green-50",
+    dark: "green-950",
+  },
+  matrix: {
+    primary: "from-emerald-500 to-green-500",
+    accent: "via-teal-400",
+    light: "emerald-50",
+    dark: "emerald-950",
+  },
+  hollywood: {
+    primary: "from-red-500 to-orange-500",
+    accent: "via-amber-400",
+    light: "red-50",
+    dark: "red-950",
+  },
+  studio: {
+    primary: "from-violet-500 to-indigo-500",
+    accent: "via-purple-400",
+    light: "violet-50",
+    dark: "violet-950",
+  },
+};
 
 export default function Home() {
   const { isLoaded, userId } = useAuth();
-  const { colors, isDarkMode, mounted, userTheme } = useThemeColors();
-
-  // ✅ Use Zustand store instead of useCurrentUser
+  const { colors, isDarkMode, mounted } = useThemeColors();
   const { user, isLoading, isAuthenticated } = useUserStore();
-
-  // ✅ Add trial check
   const { isInGracePeriod, daysLeft } = useCheckTrial();
 
-  const [showVideo, setShowVideo] = useState(false);
-  const [isClientSide, setIsClientSide] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("hero");
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [activePalette, setActivePalette] = useState(TECH_PALETTES.neon);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const featuredTestimonials =
+    useQuery(api.controllers.testimonials.getFeaturedTestimonials) || [];
 
+  // Rotate through tech palettes
   useEffect(() => {
-    const isStandalone = window.matchMedia(
-      "(display-mode: standalone)"
-    ).matches;
-    if (isStandalone) {
-      console.log("Running as PWA");
+    const palettes = Object.values(TECH_PALETTES);
+    const interval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * palettes.length);
+      setActivePalette(palettes[randomIndex]);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Ambient studio sounds
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      audioRef.current = new Audio("/sounds/studio-ambient.mp3");
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.15;
     }
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
   }, []);
 
+  const toggleAudio = () => {
+    if (audioRef.current) {
+      if (audioPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(console.error);
+      }
+      setAudioPlaying(!audioPlaying);
+    }
+  };
+
+  // Scroll effect
   useEffect(() => {
-    setIsClientSide(true);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+      updateActiveSection();
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ✅ UPDATED: Profile completion logic for all roles including teacher
+  const updateActiveSection = () => {
+    const sections = ["hero", "platform", "features", "pro"];
+    const scrollPosition = window.scrollY + 100;
+
+    for (const section of sections) {
+      const element = document.getElementById(section);
+      if (element) {
+        const { offsetTop, offsetHeight } = element;
+        if (
+          scrollPosition >= offsetTop &&
+          scrollPosition < offsetTop + offsetHeight
+        ) {
+          setActiveSection(section);
+          break;
+        }
+      }
+    }
+  };
+
+  // Profile completion logic
   const isProfileComplete =
     isAuthenticated &&
     user &&
     user.firstTimeInProfile === false &&
-    // For musicians: require date of birth + role type
     ((user.isMusician &&
       user.date &&
       user.month &&
       user.year &&
       user.roleType) ||
-      // For teachers: require date of birth + role type
-      (user.date && user.month && user.year && user.roleType) ||
-      // For clients: only require basic profile completion
+      (user.roleType === "teacher" && user.date && user.month && user.year) ||
       (user.isClient && user.firstname) ||
-      // For bookers: require basic profile completion
       (user.isBooker && user.firstname));
 
-  const needsRoleSelection =
-    isAuthenticated &&
-    user?.firstname &&
-    !user?.isClient &&
-    !user?.isMusician &&
-    !user?.isBooker;
+  const needsUpgrade =
+    isAuthenticated && !isInGracePeriod && user?.tier !== "pro";
 
-  // ✅ UPDATED: Show modal for all roles with incomplete profiles
-  const shouldShowProfileModal = isAuthenticated && user && !isProfileComplete;
-
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      if (shouldShowProfileModal) {
-        setShowProfileModal(true);
-      } else {
-        setShowProfileModal(false);
-      }
-    }
-  }, [isAuthenticated, user, shouldShowProfileModal]);
-
-  const completionPercentage =
-    user?.isMusician || user?.roleType === "teacher"
-      ? Math.round(
-          (((user?.firstname ? 1 : 0) +
-            (user?.date ? 1 : 0) +
-            (user?.month ? 1 : 0) +
-            (user?.year ? 1 : 0) +
-            (user?.isMusician || user?.roleType === "teacher" ? 1 : 0) +
-            (user?.firstTimeInProfile === false ? 1 : 0)) /
-            6) *
-            100
-        )
-      : Math.round(
-          (((user?.firstname ? 1 : 0) +
-            (user?.isClient || user?.isBooker ? 1 : 0) +
-            (user?.firstTimeInProfile === false ? 1 : 0)) /
-            3) *
-            100
-        );
-
+  // Dynamic navigation
   const getDynamicHref = () => {
     if (!userId || !user?.firstname) return `/profile`;
     if (!user?.isClient && !user?.isMusician && !user?.isBooker)
       return `/roles/${userId}`;
-
-    // All roles go to appropriate hubs with role-specific default tabs
-    if (user?.isClient) {
+    if (user?.isClient)
       return !user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=my_gigs`;
-    }
-
-    if (user?.isBooker) {
+    if (user?.isBooker)
       return !user?.onboardingComplete
         ? `/dashboard`
         : `/hub/gigs?tab=applications`;
-    }
-
-    if (user?.isMusician) {
+    if (user?.isMusician)
       return user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=all`;
-    }
-
     return `/roles/${userId}`;
   };
 
-  // ✅ Check if user needs to upgrade (not in grace period and not pro)
-  const needsUpgrade =
-    isAuthenticated && !isInGracePeriod && user?.tier !== "pro";
-
-  // Show loading spinner while auth, user data, or theme is loading
-  if (!isLoaded || !mounted) {
-    return <GigLoader title="Loading GigUp..." size="md" fullScreen={true} />;
-  }
-
-  if (isLoading) {
-    return (
-      <GigLoader title="Loading your profile..." size="lg" fullScreen={true} />
-    );
-  }
-
-  // Features for different user types
-  const guestFeatures = [
-    {
-      icon: <Music className="w-12 h-12 text-amber-500" />,
-      title: "Share Your Music",
-      description: "Upload and showcase your jam sessions to the world.",
-    },
-    {
-      icon: <Users className="w-12 h-12 text-amber-500" />,
-      title: "Connect with Artists",
-      description: "Find and collaborate with musicians near you.",
-    },
-    {
-      icon: <Star className="w-12 h-12 text-amber-500" />,
-      title: "Book Gigs",
-      description: "Discover performance opportunities and get booked.",
-    },
-    {
-      icon: <Play className="w-12 h-12 text-amber-500" />,
-      title: "Live Sessions",
-      description: "Go live and connect with your audience in real-time.",
-    },
-  ];
-
-  const musicianFeatures = [
-    {
-      icon: <Calendar className="w-12 h-12 text-green-500" />,
-      title: "Find Gigs",
-      description: "Discover performance opportunities in your area.",
-    },
-    {
-      icon: <TrendingUp className="w-12 h-12 text-blue-500" />,
-      title: "Grow Your Audience",
-      description: "Connect with fans and build your following.",
-    },
-    {
-      icon: <Users className="w-12 h-12 text-purple-500" />,
-      title: "Collaborate",
-      description: "Find other musicians for your next project.",
-    },
-    {
-      icon: <Star className="w-12 h-12 text-amber-500" />,
-      title: "Get Discovered",
-      description: "Showcase your talent to venues and event organizers.",
-    },
-  ];
-
-  const teacherFeatures = [
-    {
-      icon: <GraduationCap className="w-12 h-12 text-indigo-500" />,
-      title: "Teach Students",
-      description: "Offer music lessons and share your expertise.",
-    },
-    {
-      icon: <Calendar className="w-12 h-12 text-blue-500" />,
-      title: "Schedule Lessons",
-      description: "Manage your teaching schedule and availability.",
-    },
-    {
-      icon: <Users className="w-12 h-12 text-purple-500" />,
-      title: "Build Student Base",
-      description: "Grow your roster of dedicated music students.",
-    },
-    {
-      icon: <Star className="w-12 h-12 text-amber-500" />,
-      title: "Share Knowledge",
-      description: "Create educational content and teaching materials.",
-    },
-  ];
-
-  const clientFeatures = [
-    {
-      icon: <Music className="w-12 h-12 text-green-500" />,
-      title: "Find Talent",
-      description: "Discover perfect musicians for your event.",
-    },
-    {
-      icon: <Calendar className="w-12 h-12 text-blue-500" />,
-      title: "Post Gigs",
-      description: "Create listings and find the right performers.",
-    },
-    {
-      icon: <Users className="w-12 h-12 text-purple-500" />,
-      title: "Manage Bookings",
-      description: "Easy scheduling and communication tools.",
-    },
-    {
-      icon: <Star className="w-12 h-12 text-amber-500" />,
-      title: "Quality Assurance",
-      description: "Read reviews and listen to artist portfolios.",
-    },
-  ];
-
-  const bookerFeatures = [
-    {
-      icon: <Briefcase className="w-12 h-12 text-indigo-500" />,
-      title: "Talent Management",
-      description: "Discover and manage talented musicians for events.",
-    },
-    {
-      icon: <Calendar className="w-12 h-12 text-blue-500" />,
-      title: "Event Planning",
-      description: "Organize and coordinate multiple gigs and events.",
-    },
-    {
-      icon: <Users className="w-12 h-12 text-purple-500" />,
-      title: "Build Teams",
-      description: "Create the perfect lineup for any occasion.",
-    },
-    {
-      icon: <TrendingUp className="w-12 h-12 text-green-500" />,
-      title: "Grow Your Roster",
-      description: "Expand your network of reliable musicians.",
-    },
-  ];
-
-  const currentFeatures = isAuthenticated
-    ? user?.isMusician
-      ? musicianFeatures
-      : user?.roleType === "teacher"
-        ? teacherFeatures
-        : user?.isClient
-          ? clientFeatures
-          : user?.isBooker
-            ? bookerFeatures
-            : guestFeatures
-    : guestFeatures;
-
+  // User role display
   const getUserRoleDisplay = () => {
-    if (user?.isMusician) return "Musician";
-    if (user?.roleType === "teacher") return "Teacher";
-    if (user?.isClient) return "Client";
-    if (user?.isBooker) return "Booker";
-    return "User";
+    if (user?.isMusician) return "Performer";
+    if (user?.roleType === "teacher") return "Instructor";
+    if (user?.isClient) return "Event Manager";
+    if (user?.isBooker) return "Talent Booker";
+    return "New User";
   };
 
-  const getWelcomeMessage = () => {
-    if (user?.isMusician) return "Ready to Perform?";
-    if (user?.roleType === "teacher") return "Ready to Teach?";
-    if (user?.isClient) return "Ready to Hire?";
-    if (user?.isBooker) return "Ready to Book?";
-    return "Ready to Create?";
-  };
+  if (!isLoaded || !mounted || isLoading) {
+    return <GigLoader title="Initializing..." size="lg" fullScreen={true} />;
+  }
 
-  // ✅ Upgrade Banner Component
-  const UpgradeBanner = ({ compact = false }: { compact?: boolean }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "w-full p-4 rounded-xl border bg-gradient-to-r from-amber-500/10 to-orange-500/10",
-        colors.cardBorder,
-        compact ? "mb-4" : "mb-6"
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex-shrink-0">
-          <Crown className="w-6 h-6 text-amber-500" />
-        </div>
-        <div className="flex-1">
-          <h4 className={cn("font-bold text-sm", colors.text)}>
-            Upgrade to Pro
-          </h4>
-          <p className={cn("text-xs", colors.textMuted)}>
-            {!isInGracePeriod
-              ? "Your trial has ended. Upgrade to continue accessing all features."
-              : `Only ${daysLeft} days left in your trial. Upgrade now to keep your access.`}
-          </p>
-        </div>
-        <Link
-          href="/dashboard/billing"
-          className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-semibold rounded-lg hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
-        >
-          Upgrade
-        </Link>
-      </div>
-    </motion.div>
-  );
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
     <>
-      {" "}
-      <AdminRedirect />
-      <div
+      {/* Studio Audio Toggle */}
+      <button
+        onClick={toggleAudio}
+        className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 backdrop-blur-lg border border-cyan-500/30 hover:scale-110 transition-all"
+        title={audioPlaying ? "Pause studio ambience" : "Play studio ambience"}
+      >
+        {audioPlaying ? (
+          <Volume1 className="w-5 h-5 text-cyan-400" />
+        ) : (
+          <VolumeX className="w-5 h-5 text-cyan-400" />
+        )}
+      </button>
+
+      {/* Tech Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Digital Grid */}
+        <div className="absolute inset-0 opacity-5">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, ${activePalette.light} 1px, transparent 1px),
+                linear-gradient(to bottom, ${activePalette.light} 1px, transparent 1px)
+              `,
+              backgroundSize: "50px 50px",
+            }}
+          />
+        </div>
+
+        {/* Floating Tech Icons */}
+        {[
+          <Cpu key="cpu" />,
+          <Terminal key="terminal" />,
+          <Database key="db" />,
+          <Server key="server" />,
+          <Code key="code" />,
+          <Network key="network" />,
+        ].map((Icon, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              x: [0, Math.sin(i) * 100],
+              y: [0, Math.cos(i) * 80, 0],
+              rotate: [0, 180, 360],
+            }}
+            transition={{
+              duration: 15 + i * 2,
+              repeat: Infinity,
+              delay: i * 0.3,
+            }}
+          >
+            {Icon}
+          </motion.div>
+        ))}
+
+        {/* Digital Particles */}
+        {[...Array(50)].map((_, i) => (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute w-1 h-1 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              background: `radial-gradient(circle, ${activePalette.light.split("-")[0]}-400/30, transparent)`,
+            }}
+            animate={{
+              y: [0, -20, 0],
+              opacity: [0.2, 0.8, 0.2],
+            }}
+            transition={{
+              duration: 2 + Math.random() * 2,
+              repeat: Infinity,
+              delay: i * 0.1,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Navigation */}
+      <motion.nav
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
         className={cn(
-          `font-sans min-h-screen overflow-y-scroll snap-mandatory snap-y scroll-smooth ${showProfileModal ? "overflow-hidden" : ""}`,
-          colors.background,
-          colors.text
+          "fixed top-0 left-0 right-0 z-40 transition-all duration-500",
+          isScrolled
+            ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b"
+            : "bg-transparent",
+          `border-${activePalette.light.split("-")[0]}-500/20`
         )}
       >
-        {/* Hero Section */}
-        <section
-          className={cn(
-            "relative flex flex-col items-center justify-center min-h-screen text-center snap-start px-4",
-            colors.background
-          )}
-        >
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-40"
-          >
-            <source
-              src="https://res.cloudinary.com/dsziq73cb/video/upload/v1741577722/gigmeUpload/gww2kwzvdtkx4qxln6qu.mp4"
-              type="video/mp4"
-            />
-          </video>
-          <div
-            className={cn(
-              "absolute inset-0 bg-gradient-to-b from-black/60 to-gray-950/90"
-            )}
-          ></div>
-
-          <motion.div
-            className={cn(
-              "relative z-10 px-6 py-12 backdrop-blur-xl rounded-2xl shadow-2xl border max-w-4xl w-full",
-              colors.card,
-              colors.cardBorder
-            )}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-          >
-            {/* Show upgrade banner at the top if user needs upgrade */}
-            {needsUpgrade && <UpgradeBanner />}
-
-            <motion.h1
-              className="text-6xl md:text-7xl font-black tracking-tight leading-tight text-transparent bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 bg-clip-text mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.8 }}
-            >
-              {isAuthenticated ? (
-                <>
-                  Welcome{user?.firstname ? `, ${user.firstname}` : " Back"}!
-                  <br />
-                  {isProfileComplete
-                    ? getWelcomeMessage()
-                    : "Complete Your Profile"}
-                </>
-              ) : (
-                <>
-                  Discover.
-                  <br />
-                  Create.
-                  <br />
-                  Perform.
-                </>
-              )}
-            </motion.h1>
-
-            <motion.p
-              className={cn(
-                "text-xl md:text-2xl mb-8 max-w-2xl mx-auto leading-relaxed",
-                colors.textMuted
-              )}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-            >
-              {isAuthenticated
-                ? isProfileComplete
-                  ? user?.roleType === "teacher"
-                    ? "Share your musical knowledge and inspire the next generation."
-                    : user?.isBooker
-                      ? "Manage talent and book amazing performances for your events."
-                      : "Continue your music journey and discover new opportunities."
-                  : needsRoleSelection
-                    ? "Tell us about yourself to unlock all features."
-                    : "Let's set up your profile to get started."
-                : "Join the ultimate platform connecting musicians, teachers, venues, and music lovers worldwide."}
-            </motion.p>
-
-            <motion.div
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.8 }}
-            >
-              {isAuthenticated ? (
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {needsUpgrade ? (
-                    // Show upgrade button instead of main action when trial expired
-                    <Link
-                      href="/dashboard/billing"
-                      className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
-                    >
-                      <Crown className="w-5 h-5" />
-                      Upgrade to Pro
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  ) : (
-                    // Normal action buttons when in grace period or pro
-                    <Link
-                      href={getDynamicHref()}
-                      className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2"
-                    >
-                      {isAuthenticated
-                        ? isProfileComplete
-                          ? user?.roleType === "teacher"
-                            ? "Find Students"
-                            : user?.isClient
-                              ? "Manage My Gigs"
-                              : user?.isBooker
-                                ? "Manage Events"
-                                : "Find Gigs"
-                          : needsRoleSelection
-                            ? "Choose Your Role"
-                            : user?.roleType === "teacher"
-                              ? "Set Up Teaching Profile"
-                              : user?.isClient
-                                ? "Set Up Client Profile"
-                                : user?.isBooker
-                                  ? "Set Up Booker Profile"
-                                  : "Complete Profile"
-                        : "Get Started"}
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </Link>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 group">
+              <motion.div
+                className="relative"
+                animate={{
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center",
+                    `bg-gradient-to-br ${activePalette.primary}`
                   )}
-
-                  {isProfileComplete && !needsUpgrade && (
-                    <Link
-                      href={
-                        user?.isMusician
-                          ? "/discover"
-                          : user?.roleType === "teacher"
-                            ? "/teaching"
-                            : user?.isBooker
-                              ? "/auth/search"
-                              : "/browse"
-                      }
-                      className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
-                    >
-                      {user?.isMusician
-                        ? "Browse Gigs"
-                        : user?.roleType === "teacher"
-                          ? "Browse Students"
-                          : user?.isBooker
-                            ? "Browse Talent"
-                            : "Find Artists"}
-                    </Link>
-                  )}
+                >
+                  <Headphones className="w-6 h-6 text-white" />
                 </div>
+              </motion.div>
+              <div>
+                <h1
+                  className={cn(
+                    "text-2xl font-black bg-clip-text text-transparent",
+                    `bg-gradient-to-r ${activePalette.primary}`
+                  )}
+                >
+                  GigUpp
+                </h1>
+                <p
+                  className={`text-xs ${activePalette.light.split("-")[0]}-600/60 dark:${activePalette.light.split("-")[0]}-400/60`}
+                >
+                  Professional Music Platform
+                </p>
+              </div>
+            </Link>
+
+            {/* Navigation */}
+            <div className="hidden md:flex items-center gap-6">
+              {["platform", "features", "pro"].map((section) => (
+                <button
+                  key={section}
+                  onClick={() => scrollToSection(section)}
+                  className={cn(
+                    "text-sm font-medium transition-all duration-300 relative group",
+                    activeSection === section
+                      ? `${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`
+                      : "text-gray-600 dark:text-gray-300 hover:text-cyan-500"
+                  )}
+                >
+                  <span className="capitalize">
+                    {section === "platform"
+                      ? "Platform"
+                      : section === "features"
+                        ? "Features"
+                        : "Pro Tools"}
+                  </span>
+                  <div
+                    className={cn(
+                      "absolute -bottom-1 left-0 right-0 h-0.5 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300",
+                      activeSection === section
+                        ? `scale-x-100 bg-gradient-to-r ${activePalette.primary}`
+                        : `bg-gradient-to-r ${activePalette.primary}`
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {/* Auth Buttons */}
+            <div className="flex items-center gap-3">
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    href={getDynamicHref()}
+                    className={cn(
+                      "px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300",
+                      `bg-gradient-to-r ${activePalette.primary} text-white`,
+                      "hover:shadow-lg hover:scale-105"
+                    )}
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className={cn(
+                      "w-9 h-9 rounded-xl border-2 flex items-center justify-center hover:scale-105 transition-all",
+                      `border-${activePalette.light.split("-")[0]}-500/30`,
+                      `bg-gradient-to-br ${activePalette.light}/10 ${activePalette.dark}/10`
+                    )}
+                  >
+                    <User
+                      className={`w-4 h-4 ${activePalette.light.split("-")[0]}-500`}
+                    />
+                  </button>
+                </>
               ) : (
                 <>
                   <SignInButton mode="modal">
-                    <button className="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300">
+                    <button className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-cyan-500 transition-colors">
                       Sign In
                     </button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <button className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300">
-                      Create Account
+                    <button
+                      className={cn(
+                        "px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300",
+                        `bg-gradient-to-r ${activePalette.primary} text-white`,
+                        "hover:shadow-lg hover:scale-105"
+                      )}
+                    >
+                      Get Started
                     </button>
                   </SignUpButton>
                 </>
               )}
-            </motion.div>
+            </div>
+          </div>
+        </div>
+      </motion.nav>
 
-            {/* User-specific stats */}
-            <motion.div
-              className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.8 }}
-              style={{
-                borderColor: isDarkMode
-                  ? "rgba(55, 65, 81, 0.5)"
-                  : "rgba(229, 231, 235, 0.5)",
-              }}
-            >
-              {isAuthenticated && isProfileComplete && !needsUpgrade
-                ? // User-specific stats for logged-in users with complete profiles and active access
-                  [
-                    {
-                      number: user?.completedGigsCount?.toString() || "0",
-                      label:
-                        user?.roleType === "teacher"
-                          ? "Lessons Given"
-                          : user?.isBooker
-                            ? "Events Managed"
-                            : user?.isClient
-                              ? "Gigs Posted"
-                              : "Gigs Completed",
-                    },
-                    {
-                      number: user?.followers?.length.toString() || "0",
-                      label:
-                        user?.roleType === "teacher"
-                          ? "Students"
-                          : user?.isBooker
-                            ? "Artists Managed"
-                            : user?.isClient
-                              ? "Artists Hired"
-                              : "Followers",
-                    },
-                    {
-                      number: user?.monthlyGigsBooked?.toString() || "0",
-                      label:
-                        user?.roleType === "teacher"
-                          ? "This Month"
-                          : user?.isBooker
-                            ? "Active Events"
-                            : user?.isClient
-                              ? "Active Gigs"
-                              : "This Month",
-                    },
-                  ].map((stat, index) => (
-                    <div key={index} className="text-center">
-                      <div className="text-2xl md:text-3xl font-bold text-amber-400">
-                        {stat.number}
-                      </div>
-                      <div className={cn("text-sm mt-1", colors.textMuted)}>
-                        {stat.label}
-                      </div>
-                    </div>
-                  ))
-                : // General stats for guests, incomplete profiles, or users needing upgrade
-                  [
-                    { number: "10K+", label: "Active Musicians" },
-                    { number: "2K+", label: "Music Teachers" },
-                    { number: "5K+", label: "Clients & Bookers" },
-                  ].map((stat, index) => (
-                    <div key={index} className="text-center">
-                      <div className="text-2xl md:text-3xl font-bold text-amber-400">
-                        {stat.number}
-                      </div>
-                      <div className={cn("text-sm mt-1", colors.textMuted)}>
-                        {stat.label}
-                      </div>
-                    </div>
-                  ))}
-            </motion.div>
-          </motion.div>
-        </section>
-        {/* Features Section - Dynamic based on user type */}
-        {/* Features Section - Dynamic based on user type */}
-        <section
-          className={cn(
-            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
-            colors.background
-          )}
-        >
-          <motion.div
-            className="text-center max-w-6xl mx-auto"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-          >
-            {/* Show upgrade banner before features if user needs upgrade */}
-            {needsUpgrade && (
-              <div className="mb-8">
-                <UpgradeBanner compact />
-              </div>
+      {/* Hero Section */}
+      <section
+        id="hero"
+        className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20"
+      >
+        {/* Tech Gradient Background */}
+        <div className="absolute inset-0">
+          <div
+            className={cn(
+              "absolute inset-0 bg-gradient-to-br",
+              isDarkMode
+                ? `from-${activePalette.dark} via-gray-900 to-black`
+                : `from-${activePalette.light} via-white to-gray-100`
             )}
+          />
 
-            <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-amber-400 to-pink-500 bg-clip-text">
-              {isAuthenticated
-                ? isProfileComplete
-                  ? `Features for ${getUserRoleDisplay()}s`
-                  : "Why Join GigUp?"
-                : "Amazing Tools for Artists"}
-            </h2>
-            <p
-              className={cn(
-                "text-xl mb-16 max-w-2xl mx-auto",
-                colors.textMuted
-              )}
-            >
-              {isAuthenticated && isProfileComplete
-                ? user?.isMusician && user?.roleType === "teacher"
-                  ? "Everything you need to teach music and grow your student base"
-                  : user?.isBooker
-                    ? "Professional tools for talent booking and event management"
-                    : user?.isClient
-                      ? "Find and hire the perfect musical talent for your events"
-                      : user?.isMusician
-                        ? "Everything you need to grow your music career"
-                        : "Everything you need to find amazing talent"
-                : "Discover powerful tools designed specifically for musicians, teachers, and industry professionals"}
-            </p>
-
-            {/* REPLACE THE ENTIRE GRID WITH THIS: */}
-            <FeatureDiscovery
-              features={ALL_FEATURES}
-              variant="spotlight"
-              title={isAuthenticated ? "Your Tools" : "Featured Tools"}
-              showLocked={!isAuthenticated} // Show coming soon for guests
-            />
-          </motion.div>
-        </section>
-        {/* How It Works Section */}
-        <section
-          className={cn(
-            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
-            colors.background
-          )}
-        >
+          {/* Animated Grid Overlay */}
           <motion.div
-            className="text-center max-w-6xl mx-auto"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-5xl md:text-6xl font-black mb-4 text-transparent bg-gradient-to-r from-yellow-500 to-pink-600 bg-clip-text">
-              {isAuthenticated && isProfileComplete
-                ? "Next Steps"
-                : "How It Works"}
-            </h2>
-            <p
-              className={cn(
-                "text-xl mb-12 max-w-2xl mx-auto",
-                colors.textMuted
-              )}
-            >
-              {isAuthenticated && isProfileComplete
-                ? needsUpgrade
-                  ? "Upgrade to continue using GigUp"
-                  : "Make the most of your GigUp experience"
-                : "Get started in just a few simple steps"}
-            </p>
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(90deg, ${activePalette.light.split("-")[0]}-500/5 1px, transparent 1px),
+                linear-gradient(180deg, ${activePalette.light.split("-")[0]}-500/5 1px, transparent 1px)
+              `,
+              backgroundSize: "30px 30px",
+            }}
+            animate={{
+              backgroundPosition: ["0px 0px", "30px 30px"],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+        </div>
 
-            <div className="flex justify-center mb-12">
-              {!showVideo ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 1 }}
-                  className="cursor-pointer relative group"
-                  onClick={() => setShowVideo(true)}
-                >
-                  <Image
-                    src={thumbnailImage}
-                    alt="Video Thumbnail"
-                    className="w-full max-w-4xl rounded-2xl shadow-2xl group-hover:shadow-amber-500/20 transition-all duration-300"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-2xl">
-                      <Play className="w-8 h-8 text-gray-900 ml-1" />
+        <div className="relative z-10 container mx-auto px-6">
+          <div className="max-w-6xl mx-auto">
+            {/* Upgrade Banner */}
+            {needsUpgrade && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  "mb-8 p-4 rounded-2xl backdrop-blur-lg border",
+                  `bg-gradient-to-r ${activePalette.primary}/10 ${activePalette.light.split("-")[0]}-500/10`,
+                  `border-${activePalette.light.split("-")[0]}-500/20`
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-lg bg-gradient-to-r ${activePalette.primary}`}
+                    >
+                      <Crown className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p
+                        className={`font-semibold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+                      >
+                        Upgrade to Pro
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {!isInGracePeriod
+                          ? "Your trial has ended. Upgrade for professional features."
+                          : `${daysLeft} days left in trial`}
+                      </p>
                     </div>
                   </div>
-                  <div className="absolute inset-0 bg-black/20 rounded-2xl group-hover:bg-black/10 transition-all duration-300"></div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <video
-                    controls
-                    autoPlay
-                    className="w-full max-w-4xl rounded-2xl shadow-2xl"
-                    onEnded={() => setShowVideo(false)}
+                  <Link
+                    href="/dashboard/billing"
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r ${activePalette.primary} text-white hover:scale-105 transition-transform`}
                   >
-                    <source
-                      src="https://res.cloudinary.com/dsziq73cb/video/upload/v1742520206/ike81qltg0etsoblov4c.mp4"
-                      type="video/mp4"
-                    />
-                  </video>
-                </motion.div>
-              )}
-            </div>
+                    Upgrade Now
+                  </Link>
+                </div>
+              </motion.div>
+            )}
 
-            {/* Dynamic steps based on user status */}
-            <div className="grid md:grid-cols-3 gap-8 mt-12">
-              {isAuthenticated && isProfileComplete && !needsUpgrade
-                ? // Steps for users with complete profiles and active access
-                  [
+            <div className="text-center space-y-12">
+              {/* Welcome */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1 }}
+                className="space-y-8"
+              >
+                {/* Role Badge */}
+                {isAuthenticated && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r ${activePalette.light}/10 ${activePalette.dark}/10 border ${activePalette.light.split("-")[0]}-500/20 backdrop-blur-sm`}
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className={`w-2 h-2 rounded-full bg-gradient-to-r ${activePalette.primary}`}
+                    />
+                    <span
+                      className={`text-sm font-semibold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+                    >
+                      {getUserRoleDisplay()}
+                    </span>
+                  </motion.div>
+                )}
+
+                {/* Main Heading */}
+                <div>
+                  <h1 className="text-6xl md:text-8xl font-black tracking-tight mb-6">
+                    <span
+                      className={`text-transparent bg-gradient-to-r ${activePalette.primary} ${activePalette.accent} bg-clip-text`}
+                    >
+                      {isAuthenticated ? (
+                        <>
+                          Welcome{user?.firstname ? `, ${user.firstname}` : ""}
+                          <br />
+                          {isProfileComplete
+                            ? "Ready to Perform?"
+                            : "Complete Your Profile"}
+                        </>
+                      ) : (
+                        <>
+                          Sync Your Talent.
+                          <br />
+                          Book Your Stage.
+                          <br />
+                          Amplify Your Career.
+                        </>
+                      )}
+                    </span>
+                  </h1>
+                  <p
+                    className={cn(
+                      "text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed",
+                      "text-gray-700 dark:text-gray-300"
+                    )}
+                  >
+                    {isAuthenticated
+                      ? isProfileComplete
+                        ? "The professional platform for musicians, bookers, and event managers"
+                        : "Complete your profile to access gigs, bookings, and career opportunities"
+                      : "The definitive platform connecting professional musicians with premium performance opportunities"}
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              >
+                {isAuthenticated ? (
+                  needsUpgrade ? (
+                    <Link
+                      href="/dashboard/billing"
+                      className="group relative px-10 py-5 text-lg font-semibold rounded-2xl overflow-hidden"
+                    >
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary}`}
+                      />
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-r ${activePalette.light.split("-")[0]}-600 ${activePalette.light.split("-")[0]}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                      />
+                      <div className="relative flex items-center gap-3 text-white">
+                        <Crown className="w-5 h-5" />
+                        Upgrade to Pro
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                      </div>
+                    </Link>
+                  ) : (
+                    <Link
+                      href={getDynamicHref()}
+                      className="group relative px-10 py-5 text-lg font-semibold rounded-2xl overflow-hidden"
+                    >
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary}`}
+                      />
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-r ${activePalette.light.split("-")[0]}-600 ${activePalette.light.split("-")[0]}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                      />
+                      <div className="relative flex items-center gap-3 text-white">
+                        <Sparkles className="w-5 h-5" />
+                        {isProfileComplete
+                          ? "Go to Dashboard"
+                          : "Complete Profile"}
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                      </div>
+                    </Link>
+                  )
+                ) : (
+                  <>
+                    <SignUpButton mode="modal">
+                      <button className="group relative px-10 py-5 text-lg font-semibold rounded-2xl overflow-hidden">
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary}`}
+                        />
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-r ${activePalette.light.split("-")[0]}-600 ${activePalette.light.split("-")[0]}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                        />
+                        <span className="relative text-white">
+                          Start Free Trial
+                        </span>
+                      </button>
+                    </SignUpButton>
+                    <SignInButton mode="modal">
+                      <button
+                        className={cn(
+                          "px-10 py-5 text-lg font-semibold rounded-2xl border-2",
+                          `border-${activePalette.light.split("-")[0]}-500 text-${activePalette.light.split("-")[0]}-500`,
+                          "hover:bg-cyan-500/10 transition-colors"
+                        )}
+                      >
+                        Sign In
+                      </button>
+                    </SignInButton>
+                  </>
+                )}
+              </motion.div>
+
+              {/* Stats */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6, duration: 0.8 }}
+                className="pt-16"
+              >
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
+                  {[
                     {
-                      step: "01",
-                      title: "Explore",
-                      description:
-                        user?.roleType === "teacher"
-                          ? "Browse students looking for lessons"
-                          : user?.isMusician
-                            ? "Browse available gigs in your area"
-                            : user?.isBooker
-                              ? "Discover talented musicians for your events"
-                              : user?.isClient
-                                ? "Browse talented musicians for your events"
-                                : "Discover opportunities",
+                      number: "10K+",
+                      label: "Professional Artists",
+                      icon: <Mic className="w-6 h-6" />,
                     },
                     {
-                      step: "02",
-                      title: "Connect",
-                      description:
-                        user?.roleType === "teacher"
-                          ? "Schedule lessons and share your expertise"
-                          : user?.isMusician
-                            ? "Apply for gigs and message clients"
-                            : user?.isBooker
-                              ? "Build your artist roster and manage events"
-                              : user?.isClient
-                                ? "Post gigs and review applications"
-                                : "Connect with professionals",
+                      number: "5K+",
+                      label: "Premium Venues",
+                      icon: <Building className="w-6 h-6" />,
                     },
                     {
-                      step: "03",
-                      title: "Grow",
-                      description:
-                        user?.roleType === "teacher"
-                          ? "Build your teaching reputation and student base"
-                          : user?.isMusician
-                            ? "Build your portfolio and reputation"
-                            : user?.isBooker
-                              ? "Expand your network and event portfolio"
-                              : user?.isClient
-                                ? "Build your network of reliable talent"
-                                : "Grow your presence",
+                      number: "$2M+",
+                      label: "Paid to Artists",
+                      icon: <DollarSign className="w-6 h-6" />,
                     },
-                  ].map((item, index) => (
+                    {
+                      number: "98%",
+                      label: "Booking Success",
+                      icon: <CheckCircle className="w-6 h-6" />,
+                    },
+                  ].map((stat, index) => (
                     <motion.div
                       key={index}
-                      className="text-center p-6"
                       initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.2, duration: 0.6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8 + index * 0.1 }}
+                      className="text-center group"
                     >
-                      <div className="text-4xl font-black text-amber-500 mb-4">
-                        {item.step}
+                      <div
+                        className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${activePalette.light}/10 ${activePalette.dark}/10 mb-4 group-hover:scale-110 transition-transform duration-300`}
+                      >
+                        <div
+                          className={`${activePalette.light.split("-")[0]}-500 group-hover:${activePalette.light.split("-")[0]}-400 transition-colors`}
+                        >
+                          {stat.icon}
+                        </div>
                       </div>
-                      <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
-                        {item.title}
-                      </h3>
-                      <p className={cn(colors.textMuted)}>{item.description}</p>
+                      <div
+                        className={`text-3xl font-bold bg-gradient-to-r ${activePalette.primary} bg-clip-text text-transparent`}
+                      >
+                        {stat.number}
+                      </div>
+                      <div
+                        className={cn(
+                          "text-sm mt-2",
+                          "text-gray-600 dark:text-gray-400"
+                        )}
+                      >
+                        {stat.label}
+                      </div>
                     </motion.div>
-                  ))
-                : needsUpgrade
-                  ? // Upgrade-focused steps for users needing upgrade
-                    [
-                      {
-                        step: "01",
-                        title: "Upgrade",
-                        description: "Choose the Pro plan that fits your needs",
-                      },
-                      {
-                        step: "02",
-                        title: "Unlock",
-                        description:
-                          "Get immediate access to all platform features",
-                      },
-                      {
-                        step: "03",
-                        title: "Thrive",
-                        description:
-                          "Grow your music career with unlimited access",
-                      },
-                    ].map((item, index) => (
-                      <motion.div
-                        key={index}
-                        className="text-center p-6"
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.2, duration: 0.6 }}
-                      >
-                        <div className="text-4xl font-black text-amber-500 mb-4">
-                          {item.step}
-                        </div>
-                        <h3
-                          className={cn("text-xl font-bold mb-2", colors.text)}
-                        >
-                          {item.title}
-                        </h3>
-                        <p className={cn(colors.textMuted)}>
-                          {item.description}
-                        </p>
-                      </motion.div>
-                    ))
-                  : // Steps for guests and incomplete profiles
-                    [
-                      {
-                        step: "01",
-                        title: "Create Profile",
-                        description:
-                          "Sign up and set up your musician, teacher, client, or booker profile",
-                      },
-                      {
-                        step: "02",
-                        title: "Connect",
-                        description:
-                          "Find musicians, students, gigs, or talent that match your needs",
-                      },
-                      {
-                        step: "03",
-                        title: "Perform",
-                        description:
-                          "Book gigs, teach lessons, share music, manage events, and grow",
-                      },
-                    ].map((item, index) => (
-                      <motion.div
-                        key={index}
-                        className="text-center p-6"
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.2, duration: 0.6 }}
-                      >
-                        <div className="text-4xl font-black text-amber-500 mb-4">
-                          {item.step}
-                        </div>
-                        <h3
-                          className={cn("text-xl font-bold mb-2", colors.text)}
-                        >
-                          {item.title}
-                        </h3>
-                        <p className={cn(colors.textMuted)}>
-                          {item.description}
-                        </p>
-                      </motion.div>
-                    ))}
+                  ))}
+                </div>
+              </motion.div>
             </div>
-          </motion.div>
+          </div>
+        </div>
 
-          {/* CTA Button for logged-in users */}
-          {isAuthenticated && (
+        {/* Scroll Indicator */}
+        <motion.div
+          animate={{
+            y: [0, 10, 0],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+        >
+          <div
+            className={`w-6 h-10 rounded-full border-2 ${activePalette.light.split("-")[0]}-500/30 flex items-start justify-center p-1`}
+          >
             <motion.div
-              className="mt-12"
+              animate={{ y: [0, 12, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className={`w-1 h-3 rounded-full bg-gradient-to-b ${activePalette.primary}`}
+            />
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Platform Section */}
+      {/* Platform Section */}
+      <section id="platform" className="py-32 px-6 relative overflow-hidden">
+        {/* Gradient Background */}
+        <div
+          className={cn(
+            "absolute inset-0 bg-gradient-to-b",
+            isDarkMode
+              ? `from-${activePalette.dark}/20 via-gray-900/10 to-black/20`
+              : `from-${activePalette.light}/30 via-white/20 to-gray-100/30`
+          )}
+        />
+
+        {/* Animated Circuit Lines */}
+        <div className="absolute inset-0 overflow-hidden">
+          {[...Array(3)].map((_, i) => (
+            <motion.div
+              key={`circuit-${i}`}
+              className="absolute w-full h-1"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${activePalette.light.split("-")[0]}-500/10, transparent)`,
+                top: `${i * 33}%`,
+              }}
+              animate={{
+                x: [-1000, 1000],
+              }}
+              transition={{
+                duration: 15 + i * 3,
+                repeat: Infinity,
+                delay: i * 1.5,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <div className="text-center mb-20">
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r ${activePalette.light}/10 ${activePalette.dark}/10 border ${activePalette.light.split("-")[0]}-500/20 mb-6`}
             >
-              {needsUpgrade ? (
+              <Cpu className="w-5 h-5 text-cyan-500" />
+              <span
+                className={`text-sm font-semibold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+              >
+                INTEGRATED PLATFORM
+              </span>
+            </motion.div>
+
+            <h2 className="text-5xl md:text-6xl font-black mb-8">
+              <span
+                className={`text-transparent bg-gradient-to-r ${activePalette.primary} bg-clip-text`}
+              >
+                "GigUpp: Get booked, get paid, repeat"
+              </span>
+            </h2>
+            <p
+              className={cn(
+                "text-xl max-w-3xl mx-auto",
+                "text-gray-700 dark:text-gray-300"
+              )}
+            >
+              {isAuthenticated
+                ? user?.isMusician
+                  ? "Your talent deserves the perfect stage. Find gigs that match your style."
+                  : user?.isClient
+                    ? "Find the perfect talent for your event from our curated professional network."
+                    : user?.isBooker
+                      ? "Discover, book, and manage talent seamlessly across all venues."
+                      : "Seamlessly connect with venues, book gigs, manage schedules, and get paid — all in one professional ecosystem"
+                : "Seamlessly connect with venues, book gigs, manage schedules, and get paid — all in one professional ecosystem"}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* For Musicians Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0 }}
+              className="group"
+            >
+              <div
+                className={cn(
+                  "relative p-8 rounded-2xl border backdrop-blur-sm h-full",
+                  "bg-gradient-to-br from-white/90 to-white/80",
+                  "dark:from-gray-900/90 dark:to-gray-800/80",
+                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`
+                )}
+              >
+                <div
+                  className={`w-16 h-16 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}
+                >
+                  <Mic2 className="w-8 h-8 text-white" />
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  For Artists & Performers
+                </h3>
+                <p
+                  className={cn(
+                    "text-gray-600 dark:text-gray-400 mb-6",
+                    "leading-relaxed"
+                  )}
+                >
+                  Showcase your talent, find paid gigs, manage bookings, and
+                  build your music career
+                </p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Find paid performance opportunities
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {user?.isMusician && user?.roleType === "teacher"
+                        ? "List teaching services and schedule lessons"
+                        : user?.isMusician &&
+                            user?.roleType === "instrumentalist"
+                          ? "Showcase your instrument mastery"
+                          : user?.isMusician && user?.roleType === "vocalist"
+                            ? "Highlight your vocal range and style"
+                            : user?.isMusician && user?.roleType === "dj"
+                              ? "Display your mixes and set lists"
+                              : user?.isMusician && user?.roleType === "mc"
+                                ? "Showcase your hosting skills"
+                                : "Create professional artist portfolio"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Manage bookings and calendar
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Secure payment processing
+                    </span>
+                  </div>
+                </div>
+
+                {/* Musician Type Badge */}
+                {isAuthenticated && user?.isMusician && (
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Music className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                        {user?.roleType === "teacher"
+                          ? "Music Instructor"
+                          : user?.roleType === "instrumentalist"
+                            ? "Instrumentalist"
+                            : user?.roleType === "vocalist"
+                              ? "Vocalist"
+                              : user?.roleType === "dj"
+                                ? "DJ"
+                                : user?.roleType === "mc"
+                                  ? "MC / Host"
+                                  : "Performer"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tech glow effect */}
+                <div
+                  className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-5 transition-opacity duration-500 -z-10`}
+                />
+              </div>
+            </motion.div>
+
+            {/* For Clients Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="group"
+            >
+              <div
+                className={cn(
+                  "relative p-8 rounded-2xl border backdrop-blur-sm h-full",
+                  "bg-gradient-to-br from-white/90 to-white/80",
+                  "dark:from-gray-900/90 dark:to-gray-800/80",
+                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`
+                )}
+              >
+                <div
+                  className={`w-16 h-16 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}
+                >
+                  <Building className="w-8 h-8 text-white" />
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  For Event Planners & Venues
+                </h3>
+                <p
+                  className={cn(
+                    "text-gray-600 dark:text-gray-400 mb-6",
+                    "leading-relaxed"
+                  )}
+                >
+                  Find the perfect talent for weddings, corporate events,
+                  venues, and private parties
+                </p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Browse curated professional talent
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Post gigs and receive applications
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Manage event bookings and contracts
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {user?.isClient
+                        ? "Access your booked talent dashboard"
+                        : "Secure payment and booking system"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Client Badge */}
+                {isAuthenticated && user?.isClient && (
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                        Event Manager
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tech glow effect */}
+                <div
+                  className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 opacity-0 group-hover:opacity-5 transition-opacity duration-500 -z-10`}
+                />
+              </div>
+            </motion.div>
+
+            {/* For Bookers Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              className="group"
+            >
+              <div
+                className={cn(
+                  "relative p-8 rounded-2xl border backdrop-blur-sm h-full",
+                  "bg-gradient-to-br from-white/90 to-white/80",
+                  "dark:from-gray-900/90 dark:to-gray-800/80",
+                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`
+                )}
+              >
+                <div
+                  className={`w-16 h-16 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}
+                >
+                  <Briefcase className="w-8 h-8 text-white" />
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  For Talent Bookers & Agents
+                </h3>
+                <p
+                  className={cn(
+                    "text-gray-600 dark:text-gray-400 mb-6",
+                    "leading-relaxed"
+                  )}
+                >
+                  Discover, book, and manage talent across multiple venues and
+                  events
+                </p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Access premium talent database
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {user?.isBooker
+                        ? "Manage your talent roster"
+                        : "Negotiate rates and contracts"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Coordinate schedules across venues
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Track commissions and payments
+                    </span>
+                  </div>
+                </div>
+
+                {/* Booker Badge */}
+                {isAuthenticated && user?.isBooker && (
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <UsersIcon className="w-4 h-4 text-green-500" />
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                        Talent Booker
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tech glow effect */}
+                <div
+                  className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 opacity-0 group-hover:opacity-5 transition-opacity duration-500 -z-10`}
+                />
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Call to action based on user role */}
+          {isAuthenticated && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="mt-16 text-center"
+            >
+              <div
+                className={cn(
+                  "inline-block px-8 py-4 rounded-2xl border backdrop-blur-sm",
+                  `bg-gradient-to-r ${activePalette.light}/10 ${activePalette.dark}/10`,
+                  `border-${activePalette.light.split("-")[0]}-500/20`
+                )}
+              >
+                <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                  {user?.isMusician
+                    ? user?.roleType === "teacher"
+                      ? "Ready to share your knowledge and grow your teaching business?"
+                      : user?.roleType === "instrumentalist"
+                        ? "Ready to showcase your instrumental skills and find gigs?"
+                        : user?.roleType === "vocalist"
+                          ? "Ready to share your voice and book performances?"
+                          : user?.roleType === "dj"
+                            ? "Ready to spin tracks and book shows?"
+                            : user?.roleType === "mc"
+                              ? "Ready to host events and showcase your skills?"
+                              : "Ready to find your next performance opportunity?"
+                    : user?.isClient
+                      ? "Ready to find the perfect talent for your next event?"
+                      : user?.isBooker
+                        ? "Ready to discover and book amazing talent?"
+                        : "Ready to get started?"}
+                </p>
+                <div className="mt-4">
+                  <Link
+                    href={getDynamicHref()}
+                    className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${activePalette.primary} text-white font-semibold rounded-xl hover:scale-105 transition-transform`}
+                  >
+                    {user?.isMusician
+                      ? "Find Gigs Now"
+                      : user?.isClient
+                        ? "Browse Talent"
+                        : user?.isBooker
+                          ? "Discover Talent"
+                          : "Get Started"}
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-32 px-6 relative">
+        {/* Tech Pattern Background */}
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${activePalette.light.split("-")[0]}-500 1px, transparent 0)`,
+            backgroundSize: "40px 40px",
+          }}
+        />
+
+        <div className="container mx-auto max-w-7xl relative z-10">
+          <div className="text-center mb-20">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r ${activePalette.light}/10 ${activePalette.dark}/10 border ${activePalette.light.split("-")[0]}-500/20 mb-6`}
+            >
+              <Zap className="w-5 h-5 text-amber-500" />
+              <span
+                className={`text-sm font-semibold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+              >
+                PROFESSIONAL FEATURES
+              </span>
+            </motion.div>
+
+            <h2 className="text-5xl md:text-6xl font-black mb-8">
+              <span
+                className={`text-transparent bg-gradient-to-r ${activePalette.primary} bg-clip-text`}
+              >
+                Tools That Power Careers
+              </span>
+            </h2>
+          </div>
+
+          <FeatureDiscovery
+            features={ALL_FEATURES}
+            variant="mobile"
+            title=""
+            showLocked={!isAuthenticated}
+          />
+        </div>
+      </section>
+
+      {/* Pro Tools Section */}
+      <section id="pro" className="py-32 px-6 relative overflow-hidden">
+        {/* Dark Tech Gradient */}
+        <div
+          className={`absolute inset-0 bg-gradient-to-b ${activePalette.dark}/30 via-gray-900/20 to-black/30`}
+        />
+
+        {/* Digital Pulse Lines */}
+        {[...Array(5)].map((_, i) => (
+          <motion.div
+            key={`pulse-${i}`}
+            className="absolute left-0 right-0 h-px"
+            style={{
+              top: `${20 + i * 15}%`,
+              background: `linear-gradient(90deg, transparent, ${activePalette.light.split("-")[0]}-500/10, transparent)`,
+            }}
+            animate={{
+              opacity: [0.3, 0.8, 0.3],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              delay: i * 0.6,
+            }}
+          />
+        ))}
+
+        <div className="container mx-auto max-w-7xl relative z-10">
+          <div className="text-center mb-20">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r ${activePalette.light}/10 ${activePalette.dark}/10 border ${activePalette.light.split("-")[0]}-500/20 mb-6`}
+            >
+              <Crown className="w-5 h-5 text-yellow-500" />
+              <span
+                className={`text-sm font-semibold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+              >
+                PRO TOOLS
+              </span>
+            </motion.div>
+
+            <h2 className="text-5xl md:text-6xl font-black mb-8">
+              <span
+                className={`text-transparent bg-gradient-to-r ${activePalette.primary} bg-clip-text`}
+              >
+                Premium Performance Suite
+              </span>
+            </h2>
+          </div>
+
+          <FeatureDiscovery
+            features={
+              isAuthenticated && isProfileComplete
+                ? getRoleFeatures(user?.roleType || "all")
+                : ALL_FEATURES
+            }
+            variant="dashboard"
+            title=""
+            showLocked={!isAuthenticated}
+            maxFeatures={6}
+          />
+
+          {/* Upgrade CTA */}
+          {user?.tier === "free" && isAuthenticated && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className={cn(
+                "mt-16 p-10 rounded-3xl border backdrop-blur-lg",
+                `bg-gradient-to-br ${activePalette.light}/5 ${activePalette.dark}/5 ${activePalette.light.split("-")[0]}-500/5`,
+                `border-${activePalette.light.split("-")[0]}-500/20`
+              )}
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="flex items-center gap-6">
+                  <div
+                    className={`p-4 rounded-2xl bg-gradient-to-r ${activePalette.primary}`}
+                  >
+                    <Crown className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3
+                      className={`text-2xl font-bold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+                    >
+                      Unlock Professional Tools
+                    </h3>
+                    <p
+                      className={cn(
+                        "text-lg mt-2",
+                        "text-gray-600 dark:text-gray-400"
+                      )}
+                    >
+                      Access advanced booking, analytics, and premium features
+                    </p>
+                  </div>
+                </div>
                 <Link
                   href="/dashboard/billing"
-                  className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
+                  className={`inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r ${activePalette.primary} text-white font-semibold rounded-xl hover:scale-105 transition-transform`}
                 >
                   <Crown className="w-5 h-5" />
                   Upgrade to Pro
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-              ) : (
-                <Link
-                  href={getDynamicHref()}
-                  className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-3"
-                >
-                  <SaveAll className="w-5 h-5" />
-                  {isProfileComplete
-                    ? "Open Dashboard"
-                    : needsRoleSelection
-                      ? "Choose Your Role"
-                      : "Complete Profile"}
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              )}
+              </div>
             </motion.div>
           )}
-        </section>
+        </div>
+      </section>
 
-        {/* Featured Tools Spotlight Section */}
-        <section
-          className={cn(
-            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
-            colors.background
-          )}
-        >
+      {/* Final CTA */}
+      <section id="cta" className="py-32 px-6 relative overflow-hidden">
+        {/* Dynamic Gradient */}
+        <div
+          className={`absolute inset-0 bg-gradient-to-br ${activePalette.light}/40 ${activePalette.dark}/30 ${activePalette.light.split("-")[0]}-100/20`}
+        />
+
+        {/* Animated Tech Elements */}
+        {[...Array(5)].map((_, i) => (
           <motion.div
-            className="text-center max-w-6xl mx-auto w-full"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
+            key={`tech-element-${i}`}
+            className="absolute"
+            style={{
+              bottom: `${Math.random() * 100}%`,
+              right: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              rotate: [0, 360],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{
+              duration: 10 + i * 3,
+              repeat: Infinity,
+              delay: i * 1.5,
+            }}
           >
-            <h2 className="text-5xl md:text-6xl font-black mb-6 text-transparent bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text">
-              Professional Tools
-            </h2>
-            <p
-              className={cn(
-                "text-xl mb-12 max-w-2xl mx-auto",
-                colors.textMuted
-              )}
-            >
-              Advanced features to take your music career to the next level
-            </p>
-
-            <FeatureDiscovery
-              features={
-                isAuthenticated && isProfileComplete
-                  ? getRoleFeatures(user?.roleType || "all")
-                  : ALL_FEATURES
-              }
-              variant={isAuthenticated ? "dashboard" : "spotlight"}
-              title={isAuthenticated ? "Your Tools" : "Featured Tools"}
-              showLocked={!isAuthenticated}
-              maxFeatures={isAuthenticated ? 6 : 8}
+            <Cpu
+              className={`w-6 h-6 ${activePalette.light.split("-")[0]}-400/10`}
             />
-
-            {/* Upgrade prompt for free users */}
-            {user?.tier === "free" && isAuthenticated && (
-              <motion.div
-                className="mt-8 p-6 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-              >
-                <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                  Unlock All Professional Tools
-                </h3>
-                <p className={cn("text-sm mb-4", colors.textMuted)}>
-                  Upgrade to Premium to access vocal warmups, practice tools,
-                  and all professional features
-                </p>
-                <Link
-                  href="/dashboard/billing"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                >
-                  <Crown className="w-4 h-4" />
-                  Upgrade to Premium
-                </Link>
-              </motion.div>
-            )}
           </motion.div>
-        </section>
-        {/* Final CTA Section */}
-        <section
-          className={cn(
-            "min-h-screen flex flex-col justify-center items-center snap-start py-20 px-4",
-            colors.background
-          )}
-        >
-          <motion.div
-            className="text-center max-w-4xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-5xl md:text-6xl font-black mb-6 text-transparent bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text">
-              {isAuthenticated
-                ? isProfileComplete
-                  ? needsUpgrade
-                    ? "Upgrade to Continue"
-                    : getWelcomeMessage()
-                  : "Ready to Complete Your Profile?"
-                : "Ready to Start?"}
-            </h2>
-            <p
-              className={cn("text-xl mb-8 max-w-2xl mx-auto", colors.textMuted)}
-            >
-              {isAuthenticated
-                ? isProfileComplete
-                  ? needsUpgrade
-                    ? "Your trial has ended. Upgrade to Pro to continue using all features."
-                    : `Continue your journey as a ${getUserRoleDisplay().toLowerCase()}`
-                  : "Complete your setup to unlock all features"
-                : "Join thousands of musicians, teachers, clients, and bookers already on GigUp"}
-            </p>
+        ))}
 
-            {!isAuthenticated ? (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <SignUpButton mode="modal">
-                  <button className="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300">
-                    Get Started Free
-                  </button>
-                </SignUpButton>
-                <SignInButton mode="modal">
-                  <button className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300">
-                    I Have an Account
-                  </button>
-                </SignInButton>
+        <div className="container mx-auto max-w-4xl relative z-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className={cn(
+              "rounded-3xl p-16 text-center border backdrop-blur-xl",
+              "bg-gradient-to-br from-white/90 via-white/80 to-white/70",
+              "dark:from-gray-900/90 dark:via-gray-800/80 dark:to-gray-900/70",
+              `border-${activePalette.light.split("-")[0]}-500/30 shadow-2xl`
+            )}
+          >
+            <div className="max-w-2xl mx-auto space-y-10">
+              <div>
+                <h2 className="text-5xl md:text-6xl font-black mb-8">
+                  <span
+                    className={`text-transparent bg-gradient-to-r ${activePalette.primary} ${activePalette.accent} bg-clip-text`}
+                  >
+                    {isAuthenticated
+                      ? isProfileComplete
+                        ? needsUpgrade
+                          ? "Go Professional"
+                          : "Continue Performing"
+                        : "Launch Your Career"
+                      : "Start Your Journey"}
+                  </span>
+                </h2>
+                <p
+                  className={cn("text-xl", "text-gray-700 dark:text-gray-300")}
+                >
+                  {isAuthenticated
+                    ? isProfileComplete
+                      ? needsUpgrade
+                        ? "Upgrade to Pro and access premium venues, higher rates, and advanced tools"
+                        : "Your next performance opportunity is waiting"
+                      : "Complete your profile to start booking gigs"
+                    : "Join thousands of professional musicians building their careers"}
+                </p>
               </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                {needsUpgrade ? (
+
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+                {!isAuthenticated ? (
+                  <>
+                    <SignUpButton mode="modal">
+                      <button className="group relative px-12 py-6 text-xl font-semibold rounded-2xl overflow-hidden">
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary}`}
+                        />
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-r ${activePalette.light.split("-")[0]}-600 ${activePalette.dark.split("-")[0]}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                        />
+                        <span className="relative text-white">
+                          Start Free Trial
+                        </span>
+                      </button>
+                    </SignUpButton>
+                    <SignInButton mode="modal">
+                      <button
+                        className={cn(
+                          "px-12 py-6 text-xl font-semibold rounded-2xl border-2",
+                          `border-${activePalette.light.split("-")[0]}-500 text-${activePalette.light.split("-")[0]}-500`,
+                          "hover:bg-cyan-500/10 transition-colors"
+                        )}
+                      >
+                        Sign In
+                      </button>
+                    </SignInButton>
+                  </>
+                ) : needsUpgrade ? (
                   <Link
                     href="/dashboard/billing"
-                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
+                    className="group relative px-12 py-6 text-xl font-semibold rounded-2xl overflow-hidden"
                   >
-                    <Crown className="w-5 h-5" />
-                    Upgrade to Pro
-                    <ArrowRight className="w-5 h-5" />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary}`}
+                    />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${activePalette.light.split("-")[0]}-600 ${activePalette.dark.split("-")[0]}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                    />
+                    <div className="relative flex items-center gap-3 text-white">
+                      <Crown className="w-6 h-6" />
+                      Upgrade to Pro
+                      <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                    </div>
                   </Link>
                 ) : (
-                  <>
-                    <Link
-                      href={getDynamicHref()}
-                      className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 text-lg font-bold rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300"
-                    >
-                      {isProfileComplete
-                        ? "Go to Dashboard"
-                        : needsRoleSelection
-                          ? "Choose Role"
-                          : "Complete Profile"}
-                      <ArrowRight className="w-5 h-5" />
-                    </Link>
-                    {isProfileComplete && (
-                      <Link
-                        href={
-                          user?.roleType === "teacher"
-                            ? "/teaching"
-                            : user?.isMusician
-                              ? "/profile"
-                              : user?.isBooker
-                                ? "/my-events"
-                                : "/my-gigs"
-                        }
-                        className="px-8 py-4 border-2 border-amber-500 text-amber-400 text-lg font-bold rounded-full hover:bg-amber-500/10 hover:scale-105 transition-all duration-300"
-                      >
-                        {user?.roleType === "teacher"
-                          ? "My Teaching"
-                          : user?.isMusician
-                            ? "My Profile"
-                            : user?.isBooker
-                              ? "My Events"
-                              : "My Gigs"}
-                      </Link>
-                    )}
-                  </>
+                  <Link
+                    href={getDynamicHref()}
+                    className="group relative px-12 py-6 text-xl font-semibold rounded-2xl overflow-hidden"
+                  >
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary}`}
+                    />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${activePalette.light.split("-")[0]}-600 ${activePalette.dark.split("-")[0]}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                    />
+                    <div className="relative flex items-center gap-3 text-white">
+                      <Mic className="w-6 h-6" />
+                      {isProfileComplete ? "Find Gigs Now" : "Complete Profile"}
+                      <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                    </div>
+                  </Link>
                 )}
               </div>
-            )}
+            </div>
           </motion.div>
-        </section>
-        {/* Footer */}
-        <footer
-          className={cn(
-            "min-h-40 flex flex-col justify-center items-center snap-start py-12 px-4 border-t",
-            colors.background,
-            colors.border
-          )}
-        >
-          <p className={cn("text-center", colors.textMuted)}>
-            © {new Date().getFullYear()} GigUp. All rights reserved.
-            <br />
-            <span className={cn("text-sm mt-2 block", colors.textSecondary)}>
-              Connecting musicians, teachers, clients, and bookers through music
-            </span>
-          </p>
-          {isAuthenticated && (
-            <p className={cn("text-sm mt-4", colors.textMuted)}>
-              Logged in as {user?.firstname || user?.username} (
-              {getUserRoleDisplay()})
-              {userTheme && (
-                <span
-                  className={cn("text-xs block mt-1", colors.textSecondary)}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer
+        className={cn(
+          "py-16 px-6 border-t",
+          `bg-gradient-to-b from-white to-${activePalette.light} dark:from-gray-900 dark:to-gray-800`,
+          `border-${activePalette.light.split("-")[0]}-500/20`
+        )}
+      >
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex items-center gap-4">
+              <motion.div
+                animate={{
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${activePalette.primary} flex items-center justify-center`}
+              >
+                <Headphones className="w-7 h-7 text-white" />
+              </motion.div>
+              <div>
+                <h3
+                  className={`text-2xl font-black bg-gradient-to-r ${activePalette.primary} bg-clip-text text-transparent`}
                 >
-                  Theme: {userTheme}
-                </span>
-              )}
-              {needsUpgrade && (
-                <span className={cn("text-xs block mt-1 text-amber-500")}>
-                  Trial expired - Upgrade required
-                </span>
-              )}
-              {isInGracePeriod && !needsUpgrade && (
-                <span className={cn("text-xs block mt-1 text-green-500")}>
-                  {daysLeft} days left in trial
-                </span>
-              )}
-            </p>
-          )}
-        </footer>
-      </div>
-      {/* Professional Floating Profile Completion Modal */}
+                  GigUpp
+                </h3>
+                <p
+                  className={`text-sm ${activePalette.light.split("-")[0]}-600/60 dark:${activePalette.light.split("-")[0]}-400/60`}
+                >
+                  Professional Music Platform
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-8">
+              {["platform", "features", "pro"].map((section) => (
+                <button
+                  key={section}
+                  onClick={() => scrollToSection(section)}
+                  className={`text-sm text-gray-600 dark:text-gray-400 hover:${activePalette.light.split("-")[0]}-500 transition-colors`}
+                >
+                  {section === "platform"
+                    ? "Platform"
+                    : section === "features"
+                      ? "Features"
+                      : "Pro Tools"}
+                </button>
+              ))}
+            </div>
+
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              © {new Date().getFullYear()} GigUpp. All rights reserved.
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Profile Completion Modal */}
       <AnimatePresence>
         {showProfileModal && (
           <motion.div
@@ -1128,178 +1646,133 @@ export default function Home() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            {/* Enhanced backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/70 backdrop-blur-md"
+              className="absolute inset-0 bg-black/80 backdrop-blur-lg"
               onClick={() => setShowProfileModal(false)}
             />
 
-            {/* Floating Modal Card */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{
-                type: "spring",
-                damping: 25,
-                stiffness: 300,
-              }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={cn(
-                "relative w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden",
-                colors.card,
-                colors.cardBorder
+                "relative w-full max-w-2xl rounded-3xl border overflow-hidden",
+                "bg-gradient-to-br from-white via-white to-white",
+                "dark:from-gray-900 dark:via-gray-800 dark:to-gray-900",
+                `border-${activePalette.light.split("-")[0]}-500/30`
               )}
             >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6">
+              {/* Modal Header */}
+              <div className={`bg-gradient-to-r ${activePalette.primary} p-10`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                      <AlertCircle className="w-5 h-5 text-white" />
+                  <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                      <AlertCircle className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">
+                      <h3 className="text-3xl font-bold text-white">
                         Complete Your Profile
                       </h3>
-                      <p className="text-amber-100 text-sm">
-                        Finish setup to unlock all features
+                      <p className="text-cyan-100 text-sm mt-2">
+                        Unlock gigs, bookings, and professional features
                       </p>
                     </div>
                   </div>
-
                   <button
                     onClick={() => setShowProfileModal(false)}
-                    className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-all duration-200"
+                    className="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
                   >
-                    <X className="w-4 h-4 text-white" />
+                    <X className="w-5 h-5 text-white" />
                   </button>
                 </div>
               </div>
 
-              {/* Content Area - Improved visibility */}
-              <div
-                className={cn(
-                  "p-6 max-h-[60vh] overflow-y-auto",
-                  colors.background
-                )}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  {/* Missing Information */}
-                  <div className="space-y-3">
+              {/* Modal Content */}
+              <div className={cn("p-10", colors.background)}>
+                <div className="grid md:grid-cols-2 gap-10 mb-10">
+                  <div>
                     <h4
                       className={cn(
-                        "text-lg font-semibold mb-3 flex items-center gap-2",
+                        "text-xl font-semibold mb-6 flex items-center gap-3",
                         colors.text
                       )}
                     >
-                      <User className="w-5 h-5 text-amber-500" />
-                      Missing Information
+                      <User
+                        className={`w-6 h-6 ${activePalette.light.split("-")[0]}-500`}
+                      />
+                      Required Information
                     </h4>
-
-                    <div className="space-y-2">
-                      {(user?.isMusician || user?.roleType === "teacher") &&
-                        !user?.date && (
+                    <div className="space-y-4">
+                      {[
+                        { condition: !user?.firstname, label: "Full Name" },
+                        { condition: !user?.date, label: "Birth Date" },
+                        { condition: !user?.month, label: "Birth Month" },
+                        { condition: !user?.year, label: "Birth Year" },
+                        {
+                          condition: !user?.roleType,
+                          label: "Professional Role",
+                        },
+                      ]
+                        .filter((item) => item.condition)
+                        .map((item, index) => (
                           <div
+                            key={index}
                             className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg border",
-                              colors.danger
+                              "flex items-center gap-4 p-4 rounded-xl border",
+                              `bg-gradient-to-r ${activePalette.light}/5 ${activePalette.dark}/5`,
+                              `border-${activePalette.light.split("-")[0]}-500/20`
                             )}
                           >
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span className={cn("text-sm", colors.warningText)}>
-                              Birth Date (Day)
+                            <motion.div
+                              animate={{ scale: [1, 1.2, 1] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                              className={`w-3 h-3 rounded-full bg-gradient-to-r ${activePalette.primary}`}
+                            />
+                            <span
+                              className={`${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400 font-medium`}
+                            >
+                              {item.label}
                             </span>
                           </div>
-                        )}
-
-                      {(user?.isMusician || user?.roleType === "teacher") &&
-                        !user?.month && (
-                          <div
-                            className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg border",
-                              colors.danger
-                            )}
-                          >
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span className={cn("text-sm", colors.warningText)}>
-                              Birth Date (Month)
-                            </span>
-                          </div>
-                        )}
-
-                      {(user?.isMusician || user?.roleType === "teacher") &&
-                        !user?.year && (
-                          <div
-                            className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg border",
-                              colors.danger
-                            )}
-                          >
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span className={cn("text-sm", colors.warningText)}>
-                              Birth Date (Year)
-                            </span>
-                          </div>
-                        )}
-
-                      {!user?.isMusician &&
-                        !user?.isClient &&
-                        !user?.isBooker && (
-                          <div
-                            className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg border",
-                              colors.danger
-                            )}
-                          >
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span className={cn("text-sm", colors.warningText)}>
-                              Account Type
-                            </span>
-                          </div>
-                        )}
+                        ))}
                     </div>
                   </div>
 
-                  {/* Benefits */}
-                  <div className="space-y-3">
+                  <div>
                     <h4
                       className={cn(
-                        "text-lg font-semibold mb-3 flex items-center gap-2",
+                        "text-xl font-semibold mb-6 flex items-center gap-3",
                         colors.text
                       )}
                     >
-                      <Star className="w-5 h-5 text-green-500" />
-                      Unlock Benefits
+                      <Star className="w-6 h-6 text-amber-500" />
+                      Unlock Features
                     </h4>
-
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       {[
-                        "Full platform access",
-                        user?.roleType === "teacher"
-                          ? "Find students and teach lessons"
-                          : user?.isBooker
-                            ? "Manage talent and book events"
-                            : user?.isClient
-                              ? "Find and hire musical talent"
-                              : user?.isMusician
-                                ? "Find gigs and performance opportunities"
-                                : "Access all platform features",
-                        "Connect with community",
-                        "Build your professional network",
+                        "Gig Applications",
+                        "Booking Management",
+                        "Payment Processing",
+                        "Professional Network",
                       ].map((benefit, index) => (
                         <div
                           key={index}
                           className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border",
-                            colors.successBg,
-                            colors.successBorder
+                            "flex items-center gap-4 p-4 rounded-xl border",
+                            `bg-gradient-to-r ${activePalette.light}/5 ${activePalette.dark}/5`,
+                            `border-${activePalette.light.split("-")[0]}-500/20`
                           )}
                         >
-                          <Check className="w-4 h-4 text-green-500" />
-                          <span className={cn("text-sm", colors.successText)}>
+                          <Check
+                            className={`w-5 h-5 ${activePalette.light.split("-")[0]}-500`}
+                          />
+                          <span
+                            className={`${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400 font-medium`}
+                          >
                             {benefit}
                           </span>
                         </div>
@@ -1308,78 +1781,90 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Progress Section */}
+                {/* Profile Progress */}
                 <div
                   className={cn(
-                    "mb-6 p-4 rounded-xl border",
-                    colors.backgroundSecondary,
+                    "mb-10 p-8 rounded-2xl border",
+                    "bg-gradient-to-r from-gray-50 to-gray-100",
+                    "dark:from-gray-800 dark:to-gray-900",
                     colors.border
                   )}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={cn("font-medium", colors.text)}>
+                  <div className="flex items-center justify-between mb-6">
+                    <span className={cn("font-semibold text-lg", colors.text)}>
                       Profile Completion
                     </span>
-                    <span className="text-amber-400 font-bold">
-                      {completionPercentage}%
+                    <span
+                      className={`text-3xl font-bold bg-gradient-to-r ${activePalette.primary} bg-clip-text text-transparent`}
+                    >
+                      {Math.round(
+                        (((user?.firstname ? 1 : 0) +
+                          (user?.date ? 1 : 0) +
+                          (user?.month ? 1 : 0) +
+                          (user?.year ? 1 : 0) +
+                          (user?.roleType ? 1 : 0)) /
+                          5) *
+                          100
+                      )}
+                      %
                     </span>
                   </div>
                   <div
                     className={cn(
-                      "w-full rounded-full h-2",
+                      "w-full rounded-full h-3",
                       colors.backgroundMuted
                     )}
                   >
                     <div
-                      className="bg-gradient-to-r from-amber-500 to-orange-600 h-2 rounded-full transition-all duration-500"
+                      className={`bg-gradient-to-r ${activePalette.primary} h-3 rounded-full transition-all duration-1000`}
                       style={{
                         width: `${
                           (((user?.firstname ? 1 : 0) +
                             (user?.date ? 1 : 0) +
                             (user?.month ? 1 : 0) +
                             (user?.year ? 1 : 0) +
-                            (user?.isMusician ||
-                            user?.roleType === "teacher" ||
-                            user?.isClient ||
-                            user?.isBooker
-                              ? 1
-                              : 0)) /
+                            (user?.roleType ? 1 : 0)) /
                             5) *
                           100
                         }%`,
                       }}
-                    ></div>
+                    />
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-6 justify-between items-center">
                   <Link
                     href="/profile"
-                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-900 font-semibold rounded-lg hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 flex items-center gap-2 justify-center"
+                    className="inline-flex items-center gap-3 px-10 py-5 text-lg font-semibold rounded-2xl transition-all duration-300 group"
                     onClick={() => setShowProfileModal(false)}
                   >
-                    <User className="w-4 h-4" />
-                    Complete Profile
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary} rounded-2xl`}
+                    />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-r ${activePalette.light.split("-")[0]}-600 ${activePalette.dark.split("-")[0]}-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+                    />
+                    <User className="w-6 h-6 relative text-white" />
+                    <span className="relative text-white">
+                      Complete Profile
+                    </span>
                   </Link>
 
                   <SignOutButton>
                     <button
                       className={cn(
-                        "w-full sm:w-auto px-4 py-2 border text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-2 justify-center",
-                        colors.border,
-                        colors.textMuted,
+                        "px-8 py-4 border text-sm font-medium rounded-xl transition-all duration-300",
+                        "border-gray-300 dark:border-gray-600",
+                        "text-gray-600 dark:text-gray-400",
                         "hover:text-red-400 hover:border-red-500 hover:bg-red-500/10"
                       )}
                     >
-                      <LogOut className="w-4 h-4" />
+                      <LogOut className="w-4 h-4 inline mr-2" />
                       Sign Out
                     </button>
                   </SignOutButton>
                 </div>
-                <p className={cn("text-center text-xs mt-4", colors.textMuted)}>
-                  Complete your profile for the best experience
-                </p>
               </div>
             </motion.div>
           </motion.div>

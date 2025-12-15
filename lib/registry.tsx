@@ -31,68 +31,68 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
     badge: "NEW",
     category: "sidebar",
   },
-  {
-    id: "vocal_exercises_library",
-    name: "Vocal Exercises",
-    description: "50+ vocal techniques and exercises",
-    href: "/dashboard/vocal-exercises",
-    icon: <Mic2 className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "vocal_health_tips",
-    name: "Vocal Health Guide",
-    description: "Keep your voice healthy and strong",
-    href: "/dashboard/vocal-health",
-    icon: <Headphones className="w-5 h-5" />,
-    category: "sidebar",
-  },
+  // {
+  //   id: "vocal_exercises_library",
+  //   name: "Vocal Exercises",
+  //   description: "50+ vocal techniques and exercises",
+  //   href: "/dashboard/vocal-exercises",
+  //   icon: <Mic2 className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "vocal_health_tips",
+  //   name: "Vocal Health Guide",
+  //   description: "Keep your voice healthy and strong",
+  //   href: "/dashboard/vocal-health",
+  //   icon: <Headphones className="w-5 h-5" />,
+  //   category: "sidebar",
+  // },
 
   // ==================== TEACHER FEATURES ====================
-  {
-    id: "teacher_dashboard",
-    name: "Teacher Dashboard",
-    description: "Manage your teaching business",
-    href: "/dashboard/teaching",
-    icon: <GraduationCap className="w-5 h-5" />,
-    badge: "NEW",
-    category: "dashboard",
-    requiresCompleteProfile: true,
-  },
-  {
-    id: "lesson_scheduling",
-    name: "Lesson Scheduler",
-    description: "Schedule and manage music lessons",
-    href: "/dashboard/lessons",
-    icon: <Calendar className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "student_management",
-    name: "Student Manager",
-    description: "Track student progress and payments",
-    href: "/dashboard/students",
-    icon: <Users className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "curriculum_builder",
-    name: "Curriculum Builder Manager",
-    description: "Create the curriculum using AI generated ideas and more",
-    href: "/dashboard/students",
-    icon: <Users className="w-5 h-5" />,
-    category: "dashboard",
-  },
+  // {
+  //   id: "teacher_dashboard",
+  //   name: "Teacher Dashboard",
+  //   description: "Manage your teaching business",
+  //   href: "/dashboard/teaching",
+  //   icon: <GraduationCap className="w-5 h-5" />,
+  //   badge: "NEW",
+  //   category: "dashboard",
+  //   requiresCompleteProfile: true,
+  // },
+  // {
+  //   id: "lesson_scheduling",
+  //   name: "Lesson Scheduler",
+  //   description: "Schedule and manage music lessons",
+  //   href: "/dashboard/lessons",
+  //   icon: <Calendar className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "student_management",
+  //   name: "Student Manager",
+  //   description: "Track student progress and payments",
+  //   href: "/dashboard/students",
+  //   icon: <Users className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "curriculum_builder",
+  //   name: "Curriculum Builder Manager",
+  //   description: "Create the curriculum using AI generated ideas and more",
+  //   href: "/dashboard/students",
+  //   icon: <Users className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
 
   // ==================== INSTRUMENTALIST FEATURES ====================
-  {
-    id: "sheet_music_library",
-    name: "Sheet Music Library",
-    description: "Thousands of music sheets and scores",
-    href: "/dashboard/sheet-music",
-    icon: <BookOpen className="w-5 h-5" />,
-    category: "dashboard",
-  },
+  // {
+  //   id: "sheet_music_library",
+  //   name: "Sheet Music Library",
+  //   description: "Thousands of music sheets and scores",
+  //   href: "/dashboard/sheet-music",
+  //   icon: <BookOpen className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
   {
     id: "practice_tools",
     name: "Practice Tools",
@@ -103,144 +103,144 @@ export const ALL_FEATURES: DiscoverableFeature[] = [
   },
 
   // ==================== DJ/MC FEATURES ====================
-  {
-    id: "playlist_management",
-    name: "Playlist Manager",
-    description: "Create and manage event playlists",
-    href: "/dashboard/playlists",
-    icon: <Music className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "dj_equipment_rental",
-    name: "Equipment Rental",
-    description: "Rent professional DJ equipment",
-    href: "/dashboard/equipment",
-    icon: <Headphones className="w-5 h-5" />,
-    category: "spotlight",
-  },
+  // {
+  //   id: "playlist_management",
+  //   name: "Playlist Manager",
+  //   description: "Create and manage event playlists",
+  //   href: "/dashboard/playlists",
+  //   icon: <Music className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "dj_equipment_rental",
+  //   name: "Equipment Rental",
+  //   description: "Rent professional DJ equipment",
+  //   href: "/dashboard/equipment",
+  //   icon: <Headphones className="w-5 h-5" />,
+  //   category: "spotlight",
+  // },
 
   // ==================== CLIENT FEATURES ====================
-  {
-    id: "personal_event_planner",
-    name: "Personal Event Planner",
-    description: "Plan your perfect event with ease",
-    href: "/dashboard/event-planner",
-    icon: <Calendar className="w-5 h-5" />,
-    category: "dashboard",
-    badge: "NEW",
-  },
-  {
-    id: "quick_booking",
-    name: "Quick Booking",
-    description: "Find and book talent instantly",
-    href: "/dashboard/quick-book",
-    icon: <Zap className="w-5 h-5" />,
-    category: "sidebar",
-  },
-  {
-    id: "client_event_planner",
-    name: "Professional Event Planner",
-    description: "Advanced tools for event professionals",
-    href: "/dashboard/pro-events",
-    icon: <ClipboardList className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "vendor_management",
-    name: "Vendor Management",
-    description: "Manage all your event vendors",
-    href: "/dashboard/vendors",
-    icon: <Users className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "venue_management",
-    name: "Venue Management",
-    description: "Manage your venue and bookings",
-    href: "/dashboard/venue",
-    icon: <Building className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "booking_calendar",
-    name: "Booking Calendar",
-    description: "Manage all your venue bookings",
-    href: "/dashboard/venue-calendar",
-    icon: <Calendar className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "corporate_tools",
-    name: "Corporate Suite",
-    description: "Enterprise tools for corporate clients",
-    href: "/dashboard/corporate",
-    icon: <Crown className="w-5 h-5" />,
-    category: "dashboard",
+  // {
+  //   id: "personal_event_planner",
+  //   name: "Personal Event Planner",
+  //   description: "Plan your perfect event with ease",
+  //   href: "/dashboard/event-planner",
+  //   icon: <Calendar className="w-5 h-5" />,
+  //   category: "dashboard",
+  //   badge: "NEW",
+  // },
+  // {
+  //   id: "quick_booking",
+  //   name: "Quick Booking",
+  //   description: "Find and book talent instantly",
+  //   href: "/dashboard/quick-book",
+  //   icon: <Zap className="w-5 h-5" />,
+  //   category: "sidebar",
+  // },
+  // {
+  //   id: "client_event_planner",
+  //   name: "Professional Event Planner",
+  //   description: "Advanced tools for event professionals",
+  //   href: "/dashboard/pro-events",
+  //   icon: <ClipboardList className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "vendor_management",
+  //   name: "Vendor Management",
+  //   description: "Manage all your event vendors",
+  //   href: "/dashboard/vendors",
+  //   icon: <Users className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "venue_management",
+  //   name: "Venue Management",
+  //   description: "Manage your venue and bookings",
+  //   href: "/dashboard/venue",
+  //   icon: <Building className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "booking_calendar",
+  //   name: "Booking Calendar",
+  //   description: "Manage all your venue bookings",
+  //   href: "/dashboard/venue-calendar",
+  //   icon: <Calendar className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "corporate_tools",
+  //   name: "Corporate Suite",
+  //   description: "Enterprise tools for corporate clients",
+  //   href: "/dashboard/corporate",
+  //   icon: <Crown className="w-5 h-5" />,
+  //   category: "dashboard",
 
-    badge: "PREMIUM",
-  },
+  //   badge: "PREMIUM",
+  // },
 
   // ==================== BOOKER FEATURES ====================
-  {
-    id: "artist_roster",
-    name: "Artist Roster",
-    description: "Manage your talent and bookings",
-    href: "/dashboard/roster",
-    icon: <Briefcase className="w-5 h-5" />,
-    category: "dashboard",
-    requiresCompleteProfile: true,
-  },
-  {
-    id: "contract_templates",
-    name: "Contract Templates",
-    description: "Professional gig contracts",
-    href: "/dashboard/contracts",
-    icon: <FileText className="w-5 h-5" />,
-    category: "dashboard",
-  },
+  // {
+  //   id: "artist_roster",
+  //   name: "Artist Roster",
+  //   description: "Manage your talent and bookings",
+  //   href: "/dashboard/roster",
+  //   icon: <Briefcase className="w-5 h-5" />,
+  //   category: "dashboard",
+  //   requiresCompleteProfile: true,
+  // },
+  // {
+  //   id: "contract_templates",
+  //   name: "Contract Templates",
+  //   description: "Professional gig contracts",
+  //   href: "/dashboard/contracts",
+  //   icon: <FileText className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
 
   // ==================== GENERAL FEATURES ====================
-  {
-    id: "musician_portfolio",
-    name: "Digital Portfolio",
-    description: "Showcase your work and achievements",
-    href: "/dashboard/portfolio",
-    icon: <FileText className="w-5 h-5" />,
-    category: "sidebar",
-  },
-  {
-    id: "gig_history",
-    name: "Gig History",
-    description: "Track your performances and earnings",
-    href: "/dashboard/gig-history",
-    icon: <BarChart3 className="w-5 h-5" />,
-    category: "dashboard",
-  },
-  {
-    id: "advanced_messaging",
-    name: "Advanced Messaging",
-    description: "Enhanced communication tools",
-    href: "/dashboard/messaging",
-    icon: <Users className="w-5 h-5" />,
-    category: "sidebar",
-  },
-  {
-    id: "file_sharing",
-    name: "File Sharing",
-    description: "Share files securely with collaborators",
-    href: "/dashboard/files",
-    icon: <FileText className="w-5 h-5" />,
-    category: "sidebar",
-  },
-  {
-    id: "calendar_sync",
-    name: "Calendar Sync",
-    description: "Sync with your external calendars",
-    href: "/dashboard/calendar-sync",
-    icon: <Calendar className="w-5 h-5" />,
-    category: "sidebar",
-  },
+  // {
+  //   id: "musician_portfolio",
+  //   name: "Digital Portfolio",
+  //   description: "Showcase your work and achievements",
+  //   href: "/dashboard/portfolio",
+  //   icon: <FileText className="w-5 h-5" />,
+  //   category: "sidebar",
+  // },
+  // {
+  //   id: "gig_history",
+  //   name: "Gig History",
+  //   description: "Track your performances and earnings",
+  //   href: "/dashboard/gig-history",
+  //   icon: <BarChart3 className="w-5 h-5" />,
+  //   category: "dashboard",
+  // },
+  // {
+  //   id: "advanced_messaging",
+  //   name: "Advanced Messaging",
+  //   description: "Enhanced communication tools",
+  //   href: "/dashboard/messaging",
+  //   icon: <Users className="w-5 h-5" />,
+  //   category: "sidebar",
+  // },
+  // {
+  //   id: "file_sharing",
+  //   name: "File Sharing",
+  //   description: "Share files securely with collaborators",
+  //   href: "/dashboard/files",
+  //   icon: <FileText className="w-5 h-5" />,
+  //   category: "sidebar",
+  // },
+  // {
+  //   id: "calendar_sync",
+  //   name: "Calendar Sync",
+  //   description: "Sync with your external calendars",
+  //   href: "/dashboard/calendar-sync",
+  //   icon: <Calendar className="w-5 h-5" />,
+  //   category: "sidebar",
+  // },
 ];
 
 // Helper functions
@@ -291,3 +291,40 @@ export const getRoleFeatures = (roleType: string) => {
 
 export const getNewFeatures = () =>
   ALL_FEATURES.filter((feature) => feature.badge === "NEW");
+
+// TROUBLESHOOTING CHECKLIST
+// Feature Not Appearing?
+
+//     Feature flag exists in admin panel ✅
+
+//     Feature is enabled ✅
+
+//     User meets tier requirement ✅
+
+//     User meets role requirement ✅
+
+//     Rollout percentage > 0 ✅
+
+//     Feature ID matches exactly ✅
+
+//     Added to ALL_FEATURES ✅
+
+//     Route exists ✅
+
+//     Layout uses FeatureGated ✅
+
+// Feature Appearing for Wrong Users?
+
+//     Check targeting in admin panel
+
+//     Verify role mappings in roleFeatureMap
+
+//     Check tier logic in useFeatureFlags hook
+
+// Fallback Not Showing?
+
+//     Verify fallback prop is passed to FeatureGated
+
+//     Check FeatureGated component logic
+
+//     Verify isFeatureEnabled returns correct value

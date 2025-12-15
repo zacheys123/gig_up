@@ -1188,7 +1188,7 @@ const ActionPage = () => {
           <div className="inline-flex items-center gap-2">
             <div className="h-px w-8 bg-gradient-to-r from-transparent to-orange-400"></div>
             <p className="text-xs font-mono tracking-widest text-neutral-500">
-              GIGUP v2.0 • {new Date().getFullYear()}
+              GigUppv2.0 • {new Date().getFullYear()}
             </p>
             <div className="h-px w-8 bg-gradient-to-r from-blue-400 to-transparent"></div>
           </div>

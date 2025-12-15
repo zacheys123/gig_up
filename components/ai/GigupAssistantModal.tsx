@@ -209,7 +209,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
   const getWelcomeMessage = () => {
     const messages = {
       "v1.0":
-        "Hi! I'm your GigUp assistant. Ask me about gig posting, messaging, and profiles!",
+        "Hi! I'm your GigUppassistant. Ask me about gig posting, messaging, and profiles!",
       "v2.0":
         "Hello! I'm here to help with multi-vendor events, video portfolios, and advanced analytics!",
       "v3.0":
@@ -282,7 +282,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
           <div className="flex-1">
             {/* Top Row - Title and Basic Info */}
             <div className="flex items-center gap-3 mb-2">
-              <h3 className="font-bold text-white text-xl">GigUp Assistant</h3>
+              <h3 className="font-bold text-white text-xl">GigUppAssistant</h3>
               <span
                 className={cn(
                   "px-3 py-1.5 text-sm rounded-full font-bold backdrop-blur-sm border border-white/20",
