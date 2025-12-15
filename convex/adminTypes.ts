@@ -16,11 +16,7 @@ export type AdminPermission =
   | "moderation"
   | "user_support" // Changed from "marketing"
   | "reports"
-  | "data_export"
-  | "super" // These 4 might be admin roles, not permissions
-  | "content" // Might want to remove these from permissions
-  | "support" // and keep them only in adminRole
-  | "analytics"; // Might want to remove these from permissions
+  | "data_export";
 
 export type AdminRole = "super" | "content" | "support" | "analytics";
 export type AdminAccessLevel = "full" | "limited" | "restricted";

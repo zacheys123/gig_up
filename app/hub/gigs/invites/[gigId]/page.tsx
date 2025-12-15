@@ -1028,7 +1028,8 @@ function MusicianGigView({ gigId }: { gigId: string }) {
   const availableDeputies = myDeputies.filter(
     (deputy) => deputy?.relationship?.canBeBooked !== false
   );
-
+  const bookingHistory = gig.bookingHistory || [];
+  console.log(bookingHistory);
   return (
     <div className="space-y-6">
       {/* Gig Details Card */}
@@ -1071,56 +1072,57 @@ function MusicianGigView({ gigId }: { gigId: string }) {
 
         <CardContent className="space-y-6">
           {/* Availability Section */}
-          <div
-            className={cn(
-              "flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-300",
-              colors.border,
-              "bg-gradient-to-br from-blue-50 to-purple-50",
-              "hover:shadow-lg"
-            )}
-          >
-            <div className="flex items-center space-x-4">
-              <div
-                className={cn(
-                  "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg",
-                  isAvailable || defaultAvailability
-                    ? "bg-gradient-to-br from-green-500 to-emerald-500"
-                    : "bg-gradient-to-br from-red-500 to-rose-500"
-                )}
-              >
-                {isAvailable || defaultAvailability ? (
-                  <Check className="w-6 h-6 text-white" strokeWidth={3} />
-                ) : (
-                  <X className="w-6 h-6 text-white" strokeWidth={3} />
-                )}
+          {gig?.status === "deputy-suggested" && (
+            <div
+              className={cn(
+                "flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-300",
+                colors.border,
+                "bg-gradient-to-br from-blue-50 to-purple-50",
+                "hover:shadow-lg"
+              )}
+            >
+              <div className="flex items-center space-x-4">
+                <div
+                  className={cn(
+                    "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg",
+                    isAvailable || defaultAvailability
+                      ? "bg-gradient-to-br from-green-500 to-emerald-500"
+                      : "bg-gradient-to-br from-red-500 to-rose-500"
+                  )}
+                >
+                  {isAvailable || defaultAvailability ? (
+                    <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                  ) : (
+                    <X className="w-6 h-6 text-white" strokeWidth={3} />
+                  )}
+                </div>
+                <div>
+                  <p className={cn("font-bold text-xl", colors.text)}>
+                    Gig Availability
+                  </p>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    {isAvailable || defaultAvailability
+                      ? "You can accept this gig invitation"
+                      : "You're not available - suggest deputies instead"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className={cn("font-bold text-xl", colors.text)}>
-                  Gig Availability
-                </p>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  {isAvailable || defaultAvailability
-                    ? "You can accept this gig invitation"
-                    : "You're not available - suggest deputies instead"}
-                </p>
-              </div>
+              {gig.status !== "deputy-suggested" && (
+                <GigAvailabilitySwitchWithStatus
+                  checked={isAvailable || defaultAvailability}
+                  onCheckedChange={handleAvailabilityToggle}
+                  status={
+                    gig?.musicianAvailability as
+                      | "available"
+                      | "notavailable"
+                      | "pending"
+                  }
+                  size="lg"
+                  showStatusText={false}
+                />
+              )}
             </div>
-            {gig.status !== "deputy-suggested" && (
-              <GigAvailabilitySwitchWithStatus
-                checked={isAvailable || defaultAvailability}
-                onCheckedChange={handleAvailabilityToggle}
-                status={
-                  gig?.musicianAvailability as
-                    | "available"
-                    | "notavailable"
-                    | "pending"
-                }
-                size="lg"
-                showStatusText={false}
-              />
-            )}
-          </div>
-
+          )}
           {/* Client Information */}
           <div className="border-t border-gray-200 pt-6">
             <h4
@@ -1552,8 +1554,16 @@ function MusicianGigView({ gigId }: { gigId: string }) {
             >
               <div className="flex items-center gap-3">
                 <Check className="w-5 h-5 text-green-600" />
-                <p className={cn("text-sm", colors.text)}>
-                  You've accepted this gig! Get ready to perform. 🎉
+
+                <p className={cn("text-sm", colors.textMuted)}>
+                  {gig?.originalMusicianId === user?._id
+                    ? "You've accepted this gig! Get ready to perform. 🎉"
+                    : bookingHistory[1]?.musicianId !== user?._id
+                      ? "The deputy you provided was booked:->" +
+                        " " +
+                        bookingHistory[1]?.musicianName +
+                        " was booked for this gig! 🎉"
+                      : "You've been booked for this gig! Get ready to perform. 🎉"}
                 </p>
               </div>
             </div>
