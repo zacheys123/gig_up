@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 
 import { useUser } from "@clerk/nextjs";
+import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface TestimonialFormProps {
   onSuccess?: () => void;
@@ -15,6 +17,7 @@ interface TestimonialFormProps {
 
 export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
   const { user } = useUser();
+  const { user: currentUser } = useCurrentUser();
 
   const createTestimonial = useMutation(
     api.controllers.testimonials.createTestimonial
@@ -30,19 +33,15 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
     e.preventDefault();
 
     if (!user) {
-      toast({
-        title: "Please sign in",
+      toast.error("Please sign in", {
         description: "You need to be signed in to share a testimonial",
-        variant: "destructive",
       });
       return;
     }
 
     if (!content.trim() || content.length < 10) {
-      toast({
-        title: "Story too short",
+      toast.error("Story too short", {
         description: "Please share more about your experience",
-        variant: "destructive",
       });
       return;
     }
@@ -50,6 +49,7 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
     setIsSubmitting(true);
 
     try {
+      // In your TestimonialForm handleSubmit function:
       await createTestimonial({
         userId: user.id,
         userName: user.firstName || user.username || "Anonymous",
@@ -58,14 +58,15 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
         rating,
         content,
         stats: {
-          bookings: 1, // You can pull real stats from user data
-          earnings: "$0", // Calculate from bookings
-          joinedDate: new Date().toISOString().split("T")[0],
+          bookings: currentUser?.completedGigsCount || 0, // Use real data
+          earnings: currentUser?.earnings ? currentUser?.earnings : 0, // Use real data
+          joinedDate: currentUser?._creationTime
+            ? new Date(currentUser._creationTime).toISOString().split("T")[0]
+            : new Date().toISOString().split("T")[0],
         },
       });
 
-      toast({
-        title: "Thank you!",
+      toast.success("Thank you!", {
         description: "Your story has been shared with the community",
       });
 
@@ -74,10 +75,8 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
       setUserCity("");
       onSuccess?.();
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to submit testimonial. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -89,7 +88,7 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
       <div>
         <h2 className="text-2xl font-bold mb-2">Share Your Experience</h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Help others by sharing your GigUppjourney
+          Help others by sharing your GigUpp journey
         </p>
       </div>
 
@@ -144,10 +143,11 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
             disabled={isSubmitting}
           >
             <option value="">Select your role</option>
-            <option value="Musician">Musician / Performer</option>
+            <option value="Musician">Musician / Instrumentalist</option>
             <option value="Teacher">Music Teacher</option>
             <option value="Vocalist">Vocalist</option>
             <option value="DJ">DJ</option>
+            <option value="Mc">Mc</option>
             <option value="Client">Event Planner / Client</option>
             <option value="Venue">Venue Owner</option>
             <option value="Booker">Talent Booker</option>
@@ -160,7 +160,7 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
             type="text"
             value={userCity}
             onChange={(e) => setUserCity(e.target.value)}
-            placeholder="e.g., New York, NY"
+            placeholder="e.g., Nairobi, Na"
             disabled={isSubmitting}
           />
         </div>

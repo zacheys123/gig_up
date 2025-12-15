@@ -11,7 +11,7 @@ interface TestimonialCardProps {
     content: string;
     stats: {
       bookings: number;
-      earnings: string;
+      earnings: number;
       joinedDate: string;
     };
   };

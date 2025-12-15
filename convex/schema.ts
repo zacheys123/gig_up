@@ -164,7 +164,7 @@ export default defineSchema({
     verified: v.boolean(),
     stats: v.object({
       bookings: v.number(),
-      earnings: v.string(),
+      earnings: v.number(),
       joinedDate: v.string(),
     }),
     createdAt: v.number(),

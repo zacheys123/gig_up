@@ -1,6 +1,26 @@
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
-import { AdminPermission, AdminRole } from "../adminTypes";
+import { AdminPermission, AdminRole, AdminAccessLevel } from "../adminTypes";
+
+// Define the permission values for schema validation
+const permissionValues = v.union(
+  v.literal("user_management"),
+  v.literal("content_management"),
+  v.literal("payment_management"),
+  v.literal("analytics"),
+  v.literal("feature_flags"),
+  v.literal("content_moderation"),
+  v.literal("notification_management"),
+  v.literal("system_settings"),
+  v.literal("api_access"),
+  v.literal("data_export"),
+  v.literal("billing_management"),
+  v.literal("support_tickets"),
+  v.literal("marketing"),
+  v.literal("reports"),
+  v.literal("all"),
+  v.literal("super")
+);
 
 // admin controllers
 export const syncAdminUser = mutation({
@@ -18,7 +38,7 @@ export const syncAdminUser = mutation({
         v.literal("support"),
         v.literal("analytics")
       ),
-      permissions: v.array(v.string()),
+      permissions: v.array(permissionValues),
       accessLevel: v.union(
         v.literal("full"),
         v.literal("limited"),
@@ -29,7 +49,7 @@ export const syncAdminUser = mutation({
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.clerkId))
       .first();
 
     const now = Date.now();
@@ -37,22 +57,26 @@ export const syncAdminUser = mutation({
     // Define permission-based access from admin config
     const canManageUsers =
       args.adminConfig.permissions.includes("user_management") ||
-      args.adminConfig.permissions.includes("all");
+      args.adminConfig.permissions.includes("all") ||
+      args.adminConfig.permissions.includes("super");
 
     const canManageContent =
       args.adminConfig.permissions.includes("content_management") ||
-      args.adminConfig.permissions.includes("all");
+      args.adminConfig.permissions.includes("all") ||
+      args.adminConfig.permissions.includes("super");
 
     const canManagePayments =
       args.adminConfig.permissions.includes("payment_management") ||
-      args.adminConfig.permissions.includes("all");
+      args.adminConfig.permissions.includes("all") ||
+      args.adminConfig.permissions.includes("super");
 
     const canViewAnalytics =
       args.adminConfig.permissions.includes("analytics") ||
-      args.adminConfig.permissions.includes("all");
+      args.adminConfig.permissions.includes("all") ||
+      args.adminConfig.permissions.includes("super");
 
-    // Base admin user data
-    const adminUserData = {
+    // Create a typed admin user data object
+    const adminUserData: any = {
       // Basic profile fields
       clerkId: args.clerkId,
       email: args.email,
@@ -65,15 +89,15 @@ export const syncAdminUser = mutation({
       // Admin-specific fields
       isAdmin: true,
       adminRole: args.adminConfig.role,
-      adminPermissions: args.adminConfig.permissions,
+      adminPermissions: args.adminConfig.permissions as AdminPermission[],
       adminAccessLevel: args.adminConfig.accessLevel,
       canManageUsers,
       canManageContent,
       canManagePayments,
       canViewAnalytics,
       adminDashboardAccess: true,
-      tier: "elite" as const,
-      theme: "system" as const,
+      tier: "elite",
+      theme: "system",
 
       // User defaults
       isMusician: false,
@@ -94,8 +118,8 @@ export const syncAdminUser = mutation({
       renewalAttempts: 0,
 
       // Boolean flags
-      firstLogin: false, // Admins skip first login
-      onboardingComplete: true, // Admins are automatically onboarded
+      firstLogin: false,
+      onboardingComplete: true,
       firstTimeInProfile: false,
 
       // String fields
@@ -149,7 +173,6 @@ export const syncAdminUser = mutation({
 
     if (existingUser) {
       // Update existing user with admin permissions
-      // Only update admin-specific fields and basic profile
       const updates: any = {
         // Basic profile updates
         email: args.email,
@@ -162,7 +185,7 @@ export const syncAdminUser = mutation({
         // Admin permissions
         isAdmin: true,
         adminRole: args.adminConfig.role,
-        adminPermissions: args.adminConfig.permissions,
+        adminPermissions: args.adminConfig.permissions as AdminPermission[],
         adminAccessLevel: args.adminConfig.accessLevel,
         canManageUsers,
         canManageContent,
@@ -206,7 +229,8 @@ export const syncAdminUser = mutation({
     }
   },
 });
-// convex/controllers/user.ts
+
+// Update user as admin
 export const updateUserAsAdmin = mutation({
   args: {
     clerkId: v.string(),
@@ -220,7 +244,7 @@ export const updateUserAsAdmin = mutation({
           v.literal("analytics")
         )
       ),
-      adminPermissions: v.optional(v.array(v.string())),
+      adminPermissions: v.optional(v.array(permissionValues)),
       adminAccessLevel: v.optional(
         v.union(
           v.literal("full"),
@@ -253,17 +277,20 @@ export const updateUserAsAdmin = mutation({
     try {
       const user = await ctx.db
         .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+        .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.clerkId))
         .first();
 
       if (!user) {
         throw new Error("User not found");
       }
 
-      // Filter out undefined values and ensure proper types
-      const cleanUpdates = Object.fromEntries(
-        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
-      );
+      // Filter out undefined values
+      const cleanUpdates: any = {};
+      for (const [key, value] of Object.entries(args.updates)) {
+        if (value !== undefined) {
+          cleanUpdates[key] = value;
+        }
+      }
 
       // Create final updates with proper typing
       const finalUpdates: any = {
@@ -294,8 +321,9 @@ export const updateUserAsAdmin = mutation({
       return {
         success: true,
         userId: user._id,
-        adminRole: finalUpdates.adminRole,
-        permissions: finalUpdates.adminPermissions || [],
+        adminRole: finalUpdates.adminRole || user.adminRole,
+        permissions:
+          finalUpdates.adminPermissions || user.adminPermissions || [],
       };
     } catch (error) {
       console.error("Error updating user as admin:", error);
@@ -303,6 +331,8 @@ export const updateUserAsAdmin = mutation({
     }
   },
 });
+
+// Get admin status
 export const getAdminStatus = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
@@ -311,7 +341,7 @@ export const getAdminStatus = query({
     // Check if user is admin in your database
     const adminUser = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("clerkId"), args.userId))
+      .filter((q: any) => q.eq("clerkId", args.userId))
       .first();
 
     console.log("📊 getAdminStatus result:", adminUser);
@@ -327,12 +357,12 @@ export const getAdminStatus = query({
     return {
       isAdmin: true,
       role: adminUser.adminRole as AdminRole,
-      permissions: adminUser.adminPermissions as AdminPermission[],
+      permissions: (adminUser.adminPermissions || []) as AdminPermission[],
     };
   },
 });
 
-// Optional: Function to make a user an admin
+// Make a user an admin
 export const makeUserAdmin = mutation({
   args: {
     clerkId: v.string(),
@@ -342,22 +372,12 @@ export const makeUserAdmin = mutation({
       v.literal("support"),
       v.literal("analytics")
     ),
-    permissions: v.array(
-      v.union(
-        v.literal("user_management"),
-        v.literal("content_management"),
-        v.literal("payment_management"),
-        v.literal("analytics"),
-        v.literal("feature_flags"),
-        v.literal("content_moderation"),
-        v.literal("all")
-      )
-    ),
+    permissions: v.array(permissionValues),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .filter((q: any) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) {
@@ -367,7 +387,10 @@ export const makeUserAdmin = mutation({
     await ctx.db.patch(user._id, {
       isAdmin: true,
       adminRole: args.adminRole,
-      adminPermissions: args.permissions,
+      adminPermissions: args.permissions as AdminPermission[],
+      adminDashboardAccess: true,
+      tier: "elite",
+      lastActive: Date.now(),
     });
 
     return { success: true };

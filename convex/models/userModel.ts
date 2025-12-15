@@ -30,7 +30,30 @@ export const userModel = defineTable({
       v.literal("analytics")
     )
   ),
-  adminPermissions: v.optional(v.array(v.string())),
+  // In your userModel.ts, update the adminPermissions field:
+  adminPermissions: v.optional(
+    v.array(
+      v.union(
+        v.literal("all"),
+        v.literal("content_management"),
+        v.literal("feature_flags"),
+        v.literal("user_management"),
+        v.literal("analytics"),
+        v.literal("content_moderation"),
+        v.literal("payment_management"),
+        v.literal("notification_management"),
+        v.literal("support_management"),
+        v.literal("system_settings"),
+        v.literal("security"),
+        v.literal("api_management"),
+        v.literal("infrastructure"),
+        v.literal("moderation"),
+        v.literal("user_support"),
+        v.literal("reports"),
+        v.literal("data_export")
+      )
+    )
+  ),
   adminAccessLevel: v.optional(
     v.union(v.literal("full"), v.literal("limited"), v.literal("restricted"))
   ),

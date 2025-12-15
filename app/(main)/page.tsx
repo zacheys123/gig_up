@@ -167,6 +167,7 @@ import { FeatureDiscovery } from "@/components/features/FeatureDiscovery";
 import { ALL_FEATURES, getRoleFeatures } from "@/lib/registry";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { usePlatformStats } from "@/hooks/usePlatformStats";
 // Tech Gradient Palettes
 const TECH_PALETTES = {
   neon: {
@@ -287,7 +288,9 @@ export default function Home() {
       }
     }
   };
-
+  const { totalArtists, totalVenues, totalEarnings, successRate } =
+    usePlatformStats(); // Create this hook
+  console.log(featuredTestimonials);
   // Profile completion logic
   const isProfileComplete =
     isAuthenticated &&
@@ -481,34 +484,40 @@ export default function Home() {
 
             {/* Navigation */}
             <div className="hidden md:flex items-center gap-6">
-              {["platform", "features", "pro"].map((section) => (
-                <button
-                  key={section}
-                  onClick={() => scrollToSection(section)}
-                  className={cn(
-                    "text-sm font-medium transition-all duration-300 relative group",
-                    activeSection === section
-                      ? `${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`
-                      : "text-gray-600 dark:text-gray-300 hover:text-cyan-500"
-                  )}
-                >
-                  <span className="capitalize">
-                    {section === "platform"
-                      ? "Platform"
-                      : section === "features"
-                        ? "Features"
-                        : "Pro Tools"}
-                  </span>
-                  <div
+              {["platform", "success", "features", "pro"].map(
+                (
+                  section // Added "success"
+                ) => (
+                  <button
+                    key={section}
+                    onClick={() => scrollToSection(section)}
                     className={cn(
-                      "absolute -bottom-1 left-0 right-0 h-0.5 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300",
+                      "text-sm font-medium transition-all duration-300 relative group",
                       activeSection === section
-                        ? `scale-x-100 bg-gradient-to-r ${activePalette.primary}`
-                        : `bg-gradient-to-r ${activePalette.primary}`
+                        ? `${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`
+                        : "text-gray-600 dark:text-gray-300 hover:text-cyan-500"
                     )}
-                  />
-                </button>
-              ))}
+                  >
+                    <span className="capitalize">
+                      {section === "platform"
+                        ? "Platform"
+                        : section === "success" // New
+                          ? "Stories"
+                          : section === "features"
+                            ? "Features"
+                            : "Pro Tools"}
+                    </span>
+                    <div
+                      className={cn(
+                        "absolute -bottom-1 left-0 right-0 h-0.5 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300",
+                        activeSection === section
+                          ? `scale-x-100 bg-gradient-to-r ${activePalette.primary}`
+                          : `bg-gradient-to-r ${activePalette.primary}`
+                      )}
+                    />
+                  </button>
+                )
+              )}
             </div>
 
             {/* Auth Buttons */}
@@ -796,22 +805,22 @@ export default function Home() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
                   {[
                     {
-                      number: "10K+",
+                      number: `${totalArtists || "10K+"}`,
                       label: "Professional Artists",
                       icon: <Mic className="w-6 h-6" />,
                     },
                     {
-                      number: "5K+",
+                      number: `${totalVenues || "5K+"}`,
                       label: "Premium Venues",
                       icon: <Building className="w-6 h-6" />,
                     },
                     {
-                      number: "$2M+",
+                      number: `${totalEarnings || "$2M+"}`,
                       label: "Paid to Artists",
                       icon: <DollarSign className="w-6 h-6" />,
                     },
                     {
-                      number: "98%",
+                      number: `${successRate || "98%"}`,
                       label: "Booking Success",
                       icon: <CheckCircle className="w-6 h-6" />,
                     },
@@ -878,7 +887,7 @@ export default function Home() {
       </section>
 
       {/* Platform Section */}
-      {/* Platform Section */}
+
       <section id="platform" className="py-32 px-6 relative overflow-hidden">
         {/* Gradient Background */}
         <div
@@ -1278,6 +1287,220 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Success Stories Section */}
+      <section id="success" className="py-32 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r ${activePalette.light}/10 ${activePalette.dark}/10 border ${activePalette.light.split("-")[0]}-500/20 mb-6`}
+            >
+              <Award className="w-5 h-5 text-amber-500" />
+              <span
+                className={`text-sm font-semibold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+              >
+                REAL STORIES, REAL CONNECTIONS
+              </span>
+            </motion.div>
+
+            <h2 className="text-4xl md:text-5xl font-black mb-8">
+              <span
+                className={`text-transparent bg-gradient-to-r ${activePalette.primary} bg-clip-text`}
+              >
+                Success Stories
+              </span>
+            </h2>
+            <p
+              className={cn(
+                "text-xl max-w-2xl mx-auto",
+                "text-gray-700 dark:text-gray-300"
+              )}
+            >
+              Hear from musicians, venues, and bookers who found their perfect
+              match
+            </p>
+          </div>
+
+          {featuredTestimonials.length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-8">
+              {featuredTestimonials.slice(0, 4).map((testimonial, i) => (
+                <motion.div
+                  key={testimonial._id}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.2 }}
+                  className={cn(
+                    "p-8 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]",
+                    i % 2 === 0
+                      ? "bg-gradient-to-br from-amber-50/50 to-orange-50/30 border-amber-200/50"
+                      : "bg-gradient-to-br from-cyan-50/50 to-blue-50/30 border-cyan-200/50",
+                    "dark:from-gray-800/50 dark:to-gray-900/50 dark:border-gray-700/50"
+                  )}
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <div
+                      className={`w-14 h-14 rounded-xl bg-gradient-to-r ${i % 2 === 0 ? "from-amber-500 to-orange-500" : "from-cyan-500 to-blue-500"} flex items-center justify-center`}
+                    >
+                      <User className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg text-gray-900 dark:text-white">
+                        {testimonial.userName}
+                      </p>
+                      <p
+                        className={`text-sm ${i % 2 === 0 ? "text-amber-600 dark:text-amber-400" : "text-cyan-600 dark:text-cyan-400"}`}
+                      >
+                        {testimonial.userRole} • {testimonial.userCity}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300 italic mb-6 text-lg">
+                    "{testimonial.content}"
+                  </p>
+                  <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {testimonial.stats.bookings || 0} {/* Use real data */}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Bookings
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {testimonial.stats.earnings || "$0"}{" "}
+                        {/* Use real data */}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Earned
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            // Fallback to mock data if no testimonials yet
+            <div className="grid md:grid-cols-2 gap-8">
+              {[
+                {
+                  name: "Jamie",
+                  role: "Vocalist",
+                  location: "Brooklyn, NY",
+                  story:
+                    "I went from open mics to paid gigs in 3 weeks. The community here actually cares!",
+                  bookings: 12,
+                  earnings: "$4,200",
+                },
+                {
+                  name: "The Loft",
+                  role: "Music Venue",
+                  location: "Chicago, IL",
+                  story:
+                    "Found our house band and 90% of featured artists here. Game changer for our programming.",
+                  bookings: 45,
+                  earnings: "$28,000",
+                },
+                {
+                  name: "DJ Luna",
+                  role: "Electronic Artist",
+                  location: "Miami, FL",
+                  story:
+                    "Built my entire residency schedule through GigUp. Consistent bookings all season.",
+                  bookings: 28,
+                  earnings: "$12,600",
+                },
+                {
+                  name: "Marcus",
+                  role: "Wedding Planner",
+                  location: "San Diego, CA",
+                  story:
+                    "Found the perfect acoustic duo for 15 weddings this year. Clients are thrilled!",
+                  bookings: 15,
+                  earnings: "$9,750",
+                },
+              ].map((story, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.2 }}
+                  className={cn(
+                    "p-8 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]",
+                    i % 2 === 0
+                      ? "bg-gradient-to-br from-amber-50/50 to-orange-50/30 border-amber-200/50"
+                      : "bg-gradient-to-br from-cyan-50/50 to-blue-50/30 border-cyan-200/50",
+                    "dark:from-gray-800/50 dark:to-gray-900/50 dark:border-gray-700/50"
+                  )}
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <div
+                      className={`w-14 h-14 rounded-xl bg-gradient-to-r ${i % 2 === 0 ? "from-amber-500 to-orange-500" : "from-cyan-500 to-blue-500"} flex items-center justify-center`}
+                    >
+                      {i === 0 ? (
+                        <Mic className="w-8 h-8 text-white" />
+                      ) : i === 1 ? (
+                        <Building className="w-8 h-8 text-white" />
+                      ) : i === 2 ? (
+                        <Headphones className="w-8 h-8 text-white" />
+                      ) : (
+                        <Calendar className="w-8 h-8 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg text-gray-900 dark:text-white">
+                        {story.name}
+                      </p>
+                      <p
+                        className={`text-sm ${i % 2 === 0 ? "text-amber-600 dark:text-amber-400" : "text-cyan-600 dark:text-cyan-400"}`}
+                      >
+                        {story.role} • {story.location}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300 italic mb-6 text-lg">
+                    "{story.story}"
+                  </p>
+                  <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {story.bookings}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Bookings
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {story.earnings}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Earned
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* CTA to view more testimonials */}
+          <div className="mt-16 text-center">
+            <Link
+              href="/testimonials"
+              className={`inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r ${activePalette.primary} text-white font-semibold rounded-xl hover:scale-105 transition-transform`}
+            >
+              <Users className="w-5 h-5" />
+              Read More Stories
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
       {/* Features Section */}
       <section id="features" className="py-32 px-6 relative">
         {/* Tech Pattern Background */}
