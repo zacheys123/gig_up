@@ -30,7 +30,6 @@ export const userModel = defineTable({
       v.literal("analytics")
     )
   ),
-  // In your userModel.ts, update the adminPermissions field:
   adminPermissions: v.optional(
     v.array(
       v.union(
@@ -61,8 +60,15 @@ export const userModel = defineTable({
   canManageContent: v.optional(v.boolean()),
   canManagePayments: v.optional(v.boolean()),
   canViewAnalytics: v.optional(v.boolean()),
-  adminNotes: v.optional(v.string()),
-
+  adminNotes: v.optional(
+    v.array(
+      v.object({
+        note: v.string(),
+        adminId: v.string(),
+        timestamp: v.number(),
+      })
+    )
+  ),
   adminDashboardAccess: v.optional(v.boolean()),
   lastAdminAction: v.optional(v.number()),
   isBooker: v.optional(v.boolean()),
@@ -357,6 +363,48 @@ export const userModel = defineTable({
   availability: v.optional(
     v.union(v.literal("available"), v.literal("notavailable"))
   ),
+
+  bannedBy: v.optional(v.string()),
+
+  isSuspended: v.boolean(),
+  suspensionReason: v.optional(v.string()),
+  suspensionExpiresAt: v.optional(v.number()),
+  reportedCount: v.number(),
+  reports: v.optional(
+    v.array(
+      v.object({
+        reporterId: v.string(),
+        reason: v.string(),
+        description: v.optional(v.string()),
+        timestamp: v.number(),
+        resolved: v.boolean(),
+        resolvedBy: v.optional(v.string()),
+        resolvedAt: v.optional(v.number()),
+      })
+    )
+  ),
+
+  warnings: v.optional(
+    v.array(
+      v.object({
+        warning: v.string(),
+        adminId: v.string(),
+        timestamp: v.number(),
+        acknowledged: v.boolean(),
+      })
+    )
+  ),
+
+  actionHistory: v.optional(
+    v.array(
+      v.object({
+        action: v.string(),
+        adminId: v.string(),
+        timestamp: v.number(),
+        details: v.optional(v.string()),
+      })
+    )
+  ),
 })
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])
@@ -384,4 +432,9 @@ export const userModel = defineTable({
     "performanceStats.totalGigsCompleted",
     "reliabilityScore",
   ])
-  .index("by_tier_and_reliability", ["tier", "reliabilityScore"]);
+  .index("by_tier_and_reliability", ["tier", "reliabilityScore"])
+
+  .index("by_is_suspended", ["isSuspended"])
+
+  .index("by_role", ["isMusician", "isClient", "isBooker"])
+  .index("by_reported_count", ["reportedCount"]);

@@ -51,9 +51,11 @@ export const useCheckTrial = () => {
       return;
     }
 
-    // Skip trial logic if user is already on Pro tier
-    if (user.tier === "pro") {
-      console.log("🔍 [TRIAL EFFECT] User is pro tier, skipping trial logic");
+    // Skip trial logic if user is already on paid tier
+    if (["pro", "premium", "elite"].includes(user.tier)) {
+      console.log(
+        "🔍 [TRIAL EFFECT] User is on paid tier, skipping trial logic"
+      );
       setShowTrialModal(false);
       setTrialRemainingDays(null);
       setIsFirstMonthEnd(false);

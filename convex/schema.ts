@@ -170,4 +170,20 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }),
+  audit_logs: defineTable({
+    action: v.string(),
+    adminId: v.string(),
+    adminName: v.optional(v.string()),
+    targetUserId: v.string(),
+    targetUsername: v.string(),
+    reason: v.optional(v.string()),
+    timestamp: v.number(),
+    details: v.optional(v.string()),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  })
+    .index("by_admin", ["adminId"])
+    .index("by_target", ["targetUserId"])
+    .index("by_action", ["action"])
+    .index("by_timestamp", ["timestamp"]),
 });

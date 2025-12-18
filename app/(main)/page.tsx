@@ -306,8 +306,9 @@ export default function Home() {
       (user.isBooker && user.firstname));
 
   const needsUpgrade =
-    isAuthenticated && !isInGracePeriod && user?.tier !== "pro";
-
+    isAuthenticated &&
+    !isInGracePeriod &&
+    !["pro", "premium", "elite"].includes(user?.tier || "free");
   // Dynamic navigation
   const getDynamicHref = () => {
     if (!userId || !user?.firstname) return `/profile`;
@@ -758,9 +759,11 @@ export default function Home() {
                       />
                       <div className="relative flex items-center gap-3 text-white">
                         <Sparkles className="w-5 h-5" />
-                        {isProfileComplete
+                        {isProfileComplete && !user?.onboardingComplete
                           ? "Go to Dashboard"
-                          : "Complete Profile"}
+                          : user?.onboardingComplete
+                            ? " Go to Hub"
+                            : "Complete Profile"}
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                       </div>
                     </Link>
@@ -1333,49 +1336,81 @@ export default function Home() {
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.2 }}
                   className={cn(
-                    "p-8 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]",
-                    i % 2 === 0
-                      ? "bg-gradient-to-br from-amber-50/50 to-orange-50/30 border-amber-200/50"
-                      : "bg-gradient-to-br from-cyan-50/50 to-blue-50/30 border-cyan-200/50",
-                    "dark:from-gray-800/50 dark:to-gray-900/50 dark:border-gray-700/50"
+                    "p-8 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group",
+                    // Use your theme colors
+                    isDarkMode
+                      ? "bg-gradient-to-br from-gray-900/80 to-gray-800/80"
+                      : "bg-gradient-to-br from-white/90 to-white/80",
+                    `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40`
                   )}
                 >
+                  {/* Background glow effect */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary} opacity-0 group-hover:opacity-5 transition-opacity duration-500 -z-10`}
+                  />
+
+                  {/* Rating stars */}
+                  <div className="absolute top-4 right-4 flex">
+                    {[...Array(5)].map((_, starIndex) => (
+                      <Star
+                        key={starIndex}
+                        className={`w-4 h-4 ${
+                          starIndex < testimonial.rating
+                            ? "text-yellow-500 fill-yellow-500"
+                            : "text-gray-300 dark:text-gray-600"
+                        }`}
+                      />
+                    ))}
+                  </div>
+
                   <div className="flex items-center gap-4 mb-6">
                     <div
-                      className={`w-14 h-14 rounded-xl bg-gradient-to-r ${i % 2 === 0 ? "from-amber-500 to-orange-500" : "from-cyan-500 to-blue-500"} flex items-center justify-center`}
+                      className={`w-14 h-14 rounded-xl bg-gradient-to-r ${activePalette.primary} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
                     >
                       <User className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <p className="font-semibold text-lg text-gray-900 dark:text-white">
+                      <p className={cn("font-semibold text-lg", colors.text)}>
                         {testimonial.userName}
                       </p>
                       <p
-                        className={`text-sm ${i % 2 === 0 ? "text-amber-600 dark:text-amber-400" : "text-cyan-600 dark:text-cyan-400"}`}
+                        className={`text-sm ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
                       >
                         {testimonial.userRole} • {testimonial.userCity}
                       </p>
                     </div>
                   </div>
-                  <p className="text-gray-700 dark:text-gray-300 italic mb-6 text-lg">
+                  <p
+                    className={cn(
+                      "italic mb-6 text-lg leading-relaxed",
+                      colors.textMuted
+                    )}
+                  >
                     "{testimonial.content}"
                   </p>
                   <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {testimonial.stats.bookings || 0} {/* Use real data */}
+                      <div className={cn("text-2xl font-bold", colors.text)}>
+                        {testimonial.stats.bookings || 0}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className={cn("text-xs", colors.textMuted)}>
                         Bookings
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {testimonial.stats.earnings || "$0"}{" "}
-                        {/* Use real data */}
+                      <div className={cn("text-2xl font-bold", colors.text)}>
+                        {testimonial.stats.earnings || "$0"}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className={cn("text-xs", colors.textMuted)}>
                         Earned
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className={cn("text-sm font-medium", colors.text)}>
+                        {testimonial.stats.joinedDate || "Recently"}
+                      </div>
+                      <div className={cn("text-xs", colors.textMuted)}>
+                        Member Since
                       </div>
                     </div>
                   </div>
@@ -1394,6 +1429,7 @@ export default function Home() {
                     "I went from open mics to paid gigs in 3 weeks. The community here actually cares!",
                   bookings: 12,
                   earnings: "$4,200",
+                  rating: 5,
                 },
                 {
                   name: "The Loft",
@@ -1403,15 +1439,17 @@ export default function Home() {
                     "Found our house band and 90% of featured artists here. Game changer for our programming.",
                   bookings: 45,
                   earnings: "$28,000",
+                  rating: 5,
                 },
                 {
                   name: "DJ Luna",
                   role: "Electronic Artist",
                   location: "Miami, FL",
                   story:
-                    "Built my entire residency schedule through GigUp. Consistent bookings all season.",
+                    "Built my entire residency schedule through GigUpp. Consistent bookings all season.",
                   bookings: 28,
                   earnings: "$12,600",
+                  rating: 4,
                 },
                 {
                   name: "Marcus",
@@ -1421,6 +1459,7 @@ export default function Home() {
                     "Found the perfect acoustic duo for 15 weddings this year. Clients are thrilled!",
                   bookings: 15,
                   earnings: "$9,750",
+                  rating: 5,
                 },
               ].map((story, i) => (
                 <motion.div
@@ -1430,16 +1469,35 @@ export default function Home() {
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.2 }}
                   className={cn(
-                    "p-8 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]",
-                    i % 2 === 0
-                      ? "bg-gradient-to-br from-amber-50/50 to-orange-50/30 border-amber-200/50"
-                      : "bg-gradient-to-br from-cyan-50/50 to-blue-50/30 border-cyan-200/50",
-                    "dark:from-gray-800/50 dark:to-gray-900/50 dark:border-gray-700/50"
+                    "p-8 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group",
+                    isDarkMode
+                      ? "bg-gradient-to-br from-gray-900/80 to-gray-800/80"
+                      : "bg-gradient-to-br from-white/90 to-white/80",
+                    `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40`
                   )}
                 >
+                  {/* Background glow effect */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-r ${activePalette.primary} opacity-0 group-hover:opacity-5 transition-opacity duration-500 -z-10`}
+                  />
+
+                  {/* Rating stars */}
+                  <div className="absolute top-4 right-4 flex">
+                    {[...Array(5)].map((_, starIndex) => (
+                      <Star
+                        key={starIndex}
+                        className={`w-4 h-4 ${
+                          starIndex < story.rating
+                            ? "text-yellow-500 fill-yellow-500"
+                            : "text-gray-300 dark:text-gray-600"
+                        }`}
+                      />
+                    ))}
+                  </div>
+
                   <div className="flex items-center gap-4 mb-6">
                     <div
-                      className={`w-14 h-14 rounded-xl bg-gradient-to-r ${i % 2 === 0 ? "from-amber-500 to-orange-500" : "from-cyan-500 to-blue-500"} flex items-center justify-center`}
+                      className={`w-14 h-14 rounded-xl bg-gradient-to-r ${activePalette.primary} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
                     >
                       {i === 0 ? (
                         <Mic className="w-8 h-8 text-white" />
@@ -1452,34 +1510,47 @@ export default function Home() {
                       )}
                     </div>
                     <div>
-                      <p className="font-semibold text-lg text-gray-900 dark:text-white">
+                      <p className={cn("font-semibold text-lg", colors.text)}>
                         {story.name}
                       </p>
                       <p
-                        className={`text-sm ${i % 2 === 0 ? "text-amber-600 dark:text-amber-400" : "text-cyan-600 dark:text-cyan-400"}`}
+                        className={`text-sm ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
                       >
                         {story.role} • {story.location}
                       </p>
                     </div>
                   </div>
-                  <p className="text-gray-700 dark:text-gray-300 italic mb-6 text-lg">
+                  <p
+                    className={cn(
+                      "italic mb-6 text-lg leading-relaxed",
+                      colors.textMuted
+                    )}
+                  >
                     "{story.story}"
                   </p>
                   <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <div className={cn("text-2xl font-bold", colors.text)}>
                         {story.bookings}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className={cn("text-xs", colors.textMuted)}>
                         Bookings
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <div className={cn("text-2xl font-bold", colors.text)}>
                         {story.earnings}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className={cn("text-xs", colors.textMuted)}>
                         Earned
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className={cn("text-sm font-medium", colors.text)}>
+                        Member
+                      </div>
+                      <div className={cn("text-xs", colors.textMuted)}>
+                        Since 2024
                       </div>
                     </div>
                   </div>
@@ -1488,8 +1559,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* CTA to view more testimonials */}
-          <div className="mt-16 text-center">
+          {/* Dual CTA: View More & Share Your Story */}
+          <div className="mt-16 flex flex-col sm:flex-row gap-6 justify-center items-center">
             <Link
               href="/testimonials"
               className={`inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r ${activePalette.primary} text-white font-semibold rounded-xl hover:scale-105 transition-transform`}
@@ -1498,7 +1569,56 @@ export default function Home() {
               Read More Stories
               <ArrowRight className="w-5 h-5" />
             </Link>
+
+            {/* New: Share Your Story Button */}
+            {isAuthenticated && (
+              <Link
+                href="/testimonials?q=share"
+                className={`inline-flex items-center gap-2 px-8 py-4 border-2 font-semibold rounded-xl hover:scale-105 transition-transform ${
+                  isDarkMode
+                    ? `border-${activePalette.light.split("-")[0]}-500 text-${activePalette.light.split("-")[0]}-400 hover:bg-${activePalette.light.split("-")[0]}-500/10`
+                    : `border-${activePalette.light.split("-")[0]}-500 text-${activePalette.light.split("-")[0]}-600 hover:bg-${activePalette.light.split("-")[0]}-50`
+                }`}
+              >
+                <Star className="w-5 h-5" />
+                Share Your Story
+              </Link>
+            )}
           </div>
+
+          {/* For non-authenticated users, show a sign up prompt */}
+          {!isAuthenticated && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className={cn(
+                "mt-12 p-8 rounded-2xl border backdrop-blur-sm text-center",
+                `bg-gradient-to-r ${activePalette.light}/5 ${activePalette.dark}/5`,
+                `border-${activePalette.light.split("-")[0]}-500/20`
+              )}
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="text-left">
+                  <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
+                    Ready to create your own success story?
+                  </h3>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Join thousands of musicians, venues, and bookers finding
+                    perfect matches
+                  </p>
+                </div>
+                <SignUpButton mode="modal">
+                  <button
+                    className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${activePalette.primary} text-white font-semibold rounded-lg hover:scale-105 transition-transform`}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Start Free Trial
+                  </button>
+                </SignUpButton>
+              </div>
+            </motion.div>
+          )}
         </div>
       </section>
       {/* Features Section */}

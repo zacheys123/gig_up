@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as adminTypes from "../adminTypes.js";
 import type * as cloudinary from "../cloudinary.js";
+import type * as controllers_admin_users from "../controllers/admin/users.js";
 import type * as controllers_adminFuncs from "../controllers/adminFuncs.js";
 import type * as controllers_chat from "../controllers/chat.js";
 import type * as controllers_comments from "../controllers/comments.js";
@@ -62,6 +63,7 @@ import type * as test from "../test.js";
 declare const fullApi: ApiFromModules<{
   adminTypes: typeof adminTypes;
   cloudinary: typeof cloudinary;
+  "controllers/admin/users": typeof controllers_admin_users;
   "controllers/adminFuncs": typeof controllers_adminFuncs;
   "controllers/chat": typeof controllers_chat;
   "controllers/comments": typeof controllers_comments;
