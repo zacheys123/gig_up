@@ -61,12 +61,15 @@ export const userModel = defineTable({
   canManagePayments: v.optional(v.boolean()),
   canViewAnalytics: v.optional(v.boolean()),
   adminNotes: v.optional(
-    v.array(
-      v.object({
-        note: v.string(),
-        adminId: v.string(),
-        timestamp: v.number(),
-      })
+    v.union(
+      v.string(), // Allow string during transition
+      v.array(
+        v.object({
+          adminId: v.string(),
+          note: v.string(),
+          timestamp: v.number(),
+        })
+      )
     )
   ),
   adminDashboardAccess: v.optional(v.boolean()),
@@ -366,10 +369,10 @@ export const userModel = defineTable({
 
   bannedBy: v.optional(v.string()),
 
-  isSuspended: v.boolean(),
+  isSuspended: v.optional(v.boolean()),
   suspensionReason: v.optional(v.string()),
   suspensionExpiresAt: v.optional(v.number()),
-  reportedCount: v.number(),
+  reportedCount: v.optional(v.number()),
   reports: v.optional(
     v.array(
       v.object({

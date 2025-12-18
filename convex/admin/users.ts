@@ -14,7 +14,14 @@ export const getUsersForAdmin = query({
         isMusician: v.optional(v.boolean()),
         isClient: v.optional(v.boolean()),
         isBooker: v.optional(v.boolean()),
-        tier: v.optional(v.union(v.literal("free"), v.literal("pro"))),
+        tier: v.optional(
+          v.union(
+            v.literal("free"),
+            v.literal("pro"),
+            v.literal("premium"),
+            v.literal("elite")
+          )
+        ),
         roleType: v.optional(v.string()),
         minReports: v.optional(v.number()),
         maxReports: v.optional(v.number()),
@@ -193,6 +200,16 @@ export const banUser = mutation({
         },
       ],
     });
+    await ctx.db.insert("audit_logs", {
+      action: "user_banned",
+      adminId: args.adminId,
+      adminName: admin.firstname || admin.username,
+      targetUserId: args.userId,
+      targetUsername: user.username,
+      reason: args.reason,
+      timestamp: now,
+      details: `User banned ${args.permanent ? "permanently" : "for " + args.durationDays + " days"}`,
+    });
 
     // Notify user if requested
     if (args.notifyUser && args.notifyUser === true) {
@@ -265,7 +282,16 @@ export const suspendUser = mutation({
         },
       ],
     });
-
+    await ctx.db.insert("audit_logs", {
+      action: "user_suspended",
+      adminId: args.adminId,
+      adminName: admin.firstname || admin.username,
+      targetUserId: args.userId,
+      targetUsername: user.username,
+      reason: args.reason,
+      timestamp: now,
+      details: `User suspended for ${args.durationDays} days`,
+    });
     if (args.notifyUser) {
       try {
         await createNotificationInternal(ctx, {
@@ -345,6 +371,16 @@ export const unbanUser = mutation({
     }
 
     await ctx.db.patch(user._id, updates);
+    await ctx.db.insert("audit_logs", {
+      action: "user_unbanned",
+      adminId: args.adminId,
+      adminName: admin.firstname || admin.username,
+      targetUserId: args.userId,
+      targetUsername: user.username,
+      reason: args.reason,
+      timestamp: now,
+      details: "User unbanned",
+    });
 
     return { success: true, userId: user._id };
   },
@@ -383,8 +419,34 @@ export const addAdminNote = mutation({
       timestamp: now,
     };
 
+    // Define proper type for admin notes
+    type AdminNote = {
+      note: string;
+      adminId: string;
+      timestamp: number;
+    };
+
+    let existingNotes: AdminNote[] = [];
+
+    if (Array.isArray(user.adminNotes)) {
+      // Cast to AdminNote[] since we know the structure matches
+      existingNotes = user.adminNotes as AdminNote[];
+    } else if (typeof user.adminNotes === "string") {
+      // If it's a string (legacy), create array with existing string
+      if (user.adminNotes.trim()) {
+        existingNotes = [
+          {
+            note: user.adminNotes,
+            adminId: "system",
+            timestamp: now,
+          },
+        ];
+      }
+    }
+    // If it's undefined or null, existingNotes stays as empty array
+
     await ctx.db.patch(user._id, {
-      adminNotes: [...(user.adminNotes || []), newNote],
+      adminNotes: [...existingNotes, newNote],
       lastAdminAction: now,
     });
 
@@ -440,7 +502,15 @@ export const addWarning = mutation({
         },
       ],
     });
-
+    await ctx.db.insert("audit_logs", {
+      action: "warning_added",
+      adminId: args.adminId,
+      adminName: admin.firstname || admin.username,
+      targetUserId: args.userId,
+      targetUsername: user.username,
+      timestamp: now,
+      details: `Warning: ${args.warning}`,
+    });
     // Notify user
     if (args.notifyUser) {
       try {
@@ -465,7 +535,7 @@ export const addWarning = mutation({
   },
 });
 
-// Delete user account (admin)
+// convex/admin/users.ts - Update the adminDeleteUser function
 export const adminDeleteUser = mutation({
   args: {
     adminId: v.string(),
@@ -491,13 +561,13 @@ export const adminDeleteUser = mutation({
       throw new Error("User not found");
     }
 
-    // Record the action before deletion
     const now = Date.now();
 
-    // You might want to create an audit log entry here
+    // Create audit log entry
     await ctx.db.insert("audit_logs", {
       action: "user_deleted",
       adminId: args.adminId,
+      adminName: admin.firstname || admin.username,
       targetUserId: args.userId,
       targetUsername: user.username,
       reason: args.reason,
