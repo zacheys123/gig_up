@@ -6,12 +6,13 @@ import { useAllUsers } from "@/hooks/useAllUsers";
 import { useUserStore } from "@/app/stores";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
+import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 
 const SearchInput = () => {
   const { searchQuery, setSearchQuery } = useUserStore();
   const { users } = useAllUsers();
   const { colors } = useThemeColors();
-
+  const { isBookerEnabled } = useFeatureFlags();
   const handleInputChange = useCallback(
     debounce((value: string) => setSearchQuery(value), 100),
     []
@@ -32,7 +33,7 @@ const SearchInput = () => {
       data-autofocus
       placeholder="Find anyone/username/instrument..."
       required
-      onKeyDown={() => searchFunc(users || [], searchQuery)}
+      onKeyDown={() => searchFunc(users || [], searchQuery, isBookerEnabled())}
     />
   );
 };

@@ -186,6 +186,7 @@ const CurrentUserProfile = () => {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
+  const [mpesaPhoneNumber, setMpesaPhoneNumber] = useState("");
   // Replace the current rate state initialization
 
   const [rate, setRate] = useState<RateProps>({
@@ -1229,6 +1230,7 @@ const CurrentUserProfile = () => {
         isBooker,
         firstTimeInProfile: false,
         experience,
+        mpesaPhoneNumber,
       };
 
       // Determine which roles can edit legacy fields
@@ -1357,7 +1359,6 @@ const CurrentUserProfile = () => {
       await updateUser({
         userId: user._id as Id<"users">,
         clerkId: user.clerkId,
-        onboardingComplete: true,
         updates: cleanUpdateData,
       });
 
@@ -1841,13 +1842,18 @@ const CurrentUserProfile = () => {
                   disabled
                   Icon={<Mail size={16} />}
                 />
-
                 <KenyanPhoneInput
                   value={phone}
                   onChange={setPhone}
                   label="Phone Number"
                   required={isMusician || isBooker}
-                />
+                />{" "}
+                <KenyanPhoneInput
+                  value={mpesaPhoneNumber}
+                  onChange={setMpesaPhoneNumber}
+                  label="Mpesa PhoneNumber(For payments)"
+                  required={isMusician || isBooker || isClient}
+                />{" "}
               </div>
             </SectionContainer>
 

@@ -1,4 +1,4 @@
-// app/how-it-works/page.tsx
+// app/how-it-works/page.tsx - UPDATED WITH TRUST STARS
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -15,6 +15,14 @@ import {
   FaRocket,
   FaSun,
   FaMoon,
+  FaUserCheck,
+  FaPhoneAlt,
+  FaMoneyBillWave,
+  FaUsers,
+  FaCalendarCheck,
+  FaChartBar,
+  FaHandshake,
+  FaCertificate,
 } from "react-icons/fa";
 import {
   IoRibbon,
@@ -22,12 +30,16 @@ import {
   IoSparkles,
   IoCheckmarkCircle,
   IoTrendingUp,
+  IoTime,
+  IoCard,
+  IoPeople,
 } from "react-icons/io5";
-import { GiAchievement } from "react-icons/gi";
+import { GiAchievement, GiRank3 } from "react-icons/gi";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 interface TierLabelsProps {
   [key: string]: string;
@@ -36,6 +48,7 @@ interface TierLabelsProps {
   gold: string;
   platinum: string;
 }
+
 interface TierColorsProps {
   [key: string]: string;
   bronze: string;
@@ -44,7 +57,6 @@ interface TierColorsProps {
   platinum: string;
 }
 
-// Helper functions using your theme colors
 const getTierTextColor = (tier: string, colors: any) => {
   return tier === "bronze"
     ? colors.warningText
@@ -85,131 +97,396 @@ const getTierBoxColor = (tier: string, colors: any) => {
         : "bg-purple-50 border-purple-200 text-purple-800";
 };
 
+// Star Display Component
+const StarDisplay = ({
+  stars,
+  size = "sm",
+  showValue = true,
+}: {
+  stars: number;
+  size?: "sm" | "md" | "lg";
+  showValue?: boolean;
+}) => {
+  const fullStars = Math.floor(stars);
+  const hasHalfStar = stars % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+  const starSize = {
+    sm: "w-3.5 h-3.5",
+    md: "w-4.5 h-4.5",
+    lg: "w-5.5 h-5.5",
+  }[size];
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: fullStars }).map((_, i) => (
+        <FaStar
+          key={`full-${i}`}
+          className={`${starSize} text-yellow-400 fill-yellow-400`}
+        />
+      ))}
+      {hasHalfStar && (
+        <div className="relative">
+          <FaStar className={`${starSize} text-gray-300 fill-gray-300`} />
+          <FaStar
+            className={`${starSize} absolute left-0 top-0 text-yellow-400 fill-yellow-400`}
+            style={{ clipPath: "inset(0 50% 0 0)" }}
+          />
+        </div>
+      )}
+      {Array.from({ length: emptyStars }).map((_, i) => (
+        <FaStar
+          key={`empty-${i}`}
+          className={`${starSize} text-gray-300 fill-none`}
+        />
+      ))}
+      {showValue && (
+        <span className="ml-1.5 font-medium">{stars.toFixed(1)}</span>
+      )}
+    </div>
+  );
+};
+
+// Trust Score Tier Cards Component - UPDATED WITH TRUST STARS
+const TrustScoreTierCards = ({
+  colors,
+  router,
+}: {
+  colors: any;
+  router: any;
+}) => {
+  const tiers = [
+    {
+      name: "Newcomer",
+      emoji: "🌱",
+      score: "0-29",
+      stars: "0.5-1.9",
+      color: "from-gray-400 to-gray-500",
+      requirements: [
+        { icon: <FaUserCheck />, text: "Basic profile setup", stars: "+0.2" },
+        { icon: <IoTime />, text: "Account created", stars: "+0.1" },
+      ],
+    },
+    {
+      name: "Rising Star",
+      emoji: "⭐",
+      score: "30-49",
+      stars: "2.0-2.4",
+      color: "from-blue-400 to-blue-500",
+      requirements: [
+        { icon: <FaPhoneAlt />, text: "Phone verified", stars: "+0.8" },
+        {
+          icon: <FaCalendarCheck />,
+          text: "1-2 gigs completed",
+          stars: "+0.2",
+        },
+        { icon: <FaChartBar />, text: "Good response rate", stars: "+0.5" },
+      ],
+    },
+    {
+      name: "Verified",
+      emoji: "✅",
+      score: "50-64",
+      stars: "2.5-3.4",
+      color: "from-green-400 to-green-500",
+      requirements: [
+        { icon: <FaCertificate />, text: "Identity verified", stars: "+1.0" },
+        { icon: <IoCard />, text: "Payment method added", stars: "+0.6" },
+        { icon: <FaMoneyBillWave />, text: "Earnings ≥ $500", stars: "+0.5" },
+        {
+          icon: <FaCalendarCheck />,
+          text: "3-5 gigs completed",
+          stars: "+0.3",
+        },
+      ],
+    },
+    {
+      name: "Trusted",
+      emoji: "🤝",
+      score: "65-79",
+      stars: "3.5-4.4",
+      color: "from-purple-400 to-purple-500",
+      requirements: [
+        {
+          icon: <FaCalendarCheck />,
+          text: "6-10 gigs completed",
+          stars: "+0.6",
+        },
+        { icon: <FaStar />, text: "4.5+ average rating", stars: "+0.9" },
+        { icon: <IoPeople />, text: "Real followers", stars: "+0.5" },
+        { icon: <IoTrendingUp />, text: "90%+ response rate", stars: "+0.7" },
+      ],
+    },
+    {
+      name: "Elite",
+      emoji: "🏆",
+      score: "80-100",
+      stars: "4.5-5.0",
+      color: "from-yellow-400 to-amber-500",
+      requirements: [
+        {
+          icon: <FaCalendarCheck />,
+          text: "10+ gigs completed",
+          stars: "+1.0",
+        },
+        { icon: <FaStar />, text: "4.8+ average rating", stars: "+1.0" },
+        { icon: <FaHandshake />, text: "Account age 6+ months", stars: "+1.3" },
+        { icon: <GiRank3 />, text: "Perfect reliability", stars: "+1.0" },
+      ],
+    },
+  ];
+
+  const handleTierClick = (tierName: string) => {
+    router.push(`/onboarding/trust-explained`);
+  };
+
+  return (
+    <div className="grid md:grid-cols-5 gap-4">
+      {tiers.map((tierInfo, index) => (
+        <motion.div
+          key={tierInfo.name}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          whileHover={{ scale: 1.05, y: -5 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => handleTierClick(tierInfo.name)}
+          className={`bg-gradient-to-br ${tierInfo.color} rounded-xl p-4 text-white text-center cursor-pointer hover:shadow-xl transition-all duration-300 relative overflow-hidden group`}
+        >
+          {/* Hover effect overlay */}
+          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-all duration-300" />
+
+          <div className="text-3xl mb-2 transform group-hover:scale-110 transition-transform duration-300">
+            {tierInfo.emoji}
+          </div>
+          <div className="font-bold text-lg mb-1 group-hover:text-xl transition-all duration-300">
+            {tierInfo.name}
+          </div>
+
+          {/* Star Display */}
+          <div className="mb-1 flex justify-center">
+            <StarDisplay
+              stars={parseFloat(tierInfo.stars.split("-")[0])}
+              size="sm"
+              showValue={false}
+            />
+          </div>
+
+          <div className="text-xs opacity-90 bg-white/20 px-2 py-1 rounded-full inline-block group-hover:bg-white/30 transition-all duration-300 mb-2">
+            {tierInfo.stars} stars
+          </div>
+
+          <div className="text-xs opacity-70">({tierInfo.score} points)</div>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
+// Custom hook for section navigation
+export const useSectionNavigation = () => {
+  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  const registerSection = (id: string, element: HTMLElement | null) => {
+    if (element) {
+      sectionRefs.current.set(id, element);
+    } else {
+      sectionRefs.current.delete(id);
+    }
+  };
+
+  const scrollToSection = (sectionId: string) => {
+    const element = sectionRefs.current.get(sectionId);
+    if (element) {
+      const headerHeight = 80;
+      const elementTop = element.offsetTop - headerHeight;
+
+      window.scrollTo({
+        top: elementTop,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  return { registerSection, scrollToSection };
+};
+
 export default function HowItWorksPage() {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const { toggleDarkMode } = useThemeToggle();
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { registerSection, scrollToSection } = useSectionNavigation();
+
+  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({
+    overview: null,
+    "tier-requirements": null,
+    "how-to-earn": null,
+    badges: null,
+    "getting-started": null,
+    "tier-newcomer": null,
+    "tier-rising-star": null,
+    "tier-verified": null,
+    "tier-trusted": null,
+    "tier-elite": null,
+  });
+
+  // Register sections on mount
+  useEffect(() => {
+    Object.entries(sectionRefs.current).forEach(([id, element]) => {
+      if (element) {
+        registerSection(id, element);
+      }
+    });
+  }, [registerSection]);
+
+  // Handle navigation from layout and URL parameters
   useEffect(() => {
     setIsClient(true);
 
-    const hash = window.location.hash;
-    if (hash) {
+    // Handle navigation events from layout
+    const handleSectionNavigate = (event: CustomEvent) => {
+      const { section } = event.detail;
       setTimeout(() => {
-        const element = document.getElementById(hash.substring(1));
+        scrollToSection(section);
+      }, 100);
+    };
+
+    // Handle URL parameters
+    const sectionParam = searchParams?.get("section");
+    const highlightParam = searchParams?.get("highlight");
+
+    if (sectionParam) {
+      setTimeout(() => {
+        scrollToSection(sectionParam);
+      }, 300);
+    }
+
+    if (highlightParam) {
+      setTimeout(() => {
+        scrollToSection(highlightParam);
+        // Add highlight effect
+        const element = document.getElementById(highlightParam);
         if (element) {
-          element.scrollIntoView({ behavior: "smooth" });
+          element.classList.add("ring-4", "ring-yellow-400", "ring-opacity-50");
+          setTimeout(() => {
+            element.classList.remove(
+              "ring-4",
+              "ring-yellow-400",
+              "ring-opacity-50"
+            );
+          }, 3000);
         }
       }, 500);
     }
-  }, []);
+
+    window.addEventListener(
+      "section-navigate",
+      handleSectionNavigate as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "section-navigate",
+        handleSectionNavigate as EventListener
+      );
+    };
+  }, [searchParams, scrollToSection]);
 
   const badgeCategories = [
+    {
+      title: "Trust Score Tiers",
+      description: "Progress through tiers by building your reputation",
+      badges: [
+        {
+          name: "Newcomer",
+          icon: <IoSparkles className="text-gray-400" size={24} />,
+          description: "Just starting your journey",
+          requirements: "Stars: 0.5-1.9 • Score: 0-29",
+          tier: "bronze",
+        },
+        {
+          name: "Rising Star",
+          icon: <GiRank3 className="text-blue-400" size={24} />,
+          description: "Building momentum and credibility",
+          requirements: "Stars: 2.0-2.4 • Phone verified • 1-2 gigs",
+          tier: "silver",
+        },
+        {
+          name: "Verified",
+          icon: <IoShieldCheckmark className="text-green-400" size={24} />,
+          description: "Trusted performer with verified credentials",
+          requirements: "Stars: 2.5-3.4 • ID verified • Payment method",
+          tier: "gold",
+        },
+        {
+          name: "Trusted",
+          icon: <FaHandshake className="text-purple-400" size={24} />,
+          description: "Highly reliable and experienced",
+          requirements: "Stars: 3.5-4.4 • 6-10 gigs • 4.5+ rating",
+          tier: "gold",
+        },
+        {
+          name: "Elite",
+          icon: <FaCrown className="text-amber-400" size={24} />,
+          description: "Top-tier performer with proven excellence",
+          requirements: "Stars: 4.5-5.0 • 10+ gigs • 4.8+ rating",
+          tier: "platinum",
+        },
+      ],
+    },
     {
       title: "Performance Badges",
       description: "Reward for consistent high-quality work",
       badges: [
         {
-          name: "Newcomer",
-          icon: <IoSparkles className="text-gray-400" size={24} />,
-          description: "Completed your first gig successfully",
-          requirements: "Complete 1 gig",
-          tier: "bronze",
-        },
-        {
-          name: "Reliable Gigster",
-          icon: <IoShieldCheckmark className="text-blue-400" size={24} />,
-          description: "Proven track record of reliability",
-          requirements: "Complete 5+ gigs with 90%+ reliability",
-          tier: "silver",
-        },
-        {
-          name: "Top Performer",
-          icon: <FaAward className="text-yellow-400" size={24} />,
-          description: "Exceptional performance and reliability",
-          requirements: "Complete 10+ gigs with 95%+ reliability",
-          tier: "gold",
-        },
-        {
-          name: "Gig Champion",
-          icon: <FaCrown className="text-purple-400" size={24} />,
-          description: "Elite status among performers",
-          requirements: "Complete 25+ gigs with 98%+ reliability",
-          tier: "platinum",
-        },
-      ],
-    },
-    {
-      title: "Quality Badges",
-      description: "Recognition for outstanding service quality",
-      badges: [
-        {
-          name: "Highly Rated",
-          icon: <FaStar className="text-amber-300" size={24} />,
-          description: "Consistently high ratings from clients",
-          requirements: "Maintain 4.5+ average rating across 5+ gigs",
-          tier: "gold",
-        },
-        {
-          name: "Client Favorite",
-          icon: <FaHeart className="text-pink-400" size={24} />,
-          description: "Beloved by clients for exceptional service",
-          requirements: "Receive 10+ positive reviews (4.8+ rating)",
-          tier: "gold",
-        },
-        {
-          name: "Perfect Attendance",
-          icon: <IoRibbon className="text-green-400" size={24} />,
-          description: "Flawless reliability record",
-          requirements: "100% reliability with 10+ gigs",
-          tier: "platinum",
-        },
-      ],
-    },
-    {
-      title: "Milestone Badges",
-      description: "Celebrate significant achievements and milestones",
-      badges: [
-        {
           name: "Gig Streak",
           icon: <FaFire className="text-orange-400" size={24} />,
-          description: "Consistent performance without breaks",
+          description: "Completed 5 gigs consecutively",
           requirements: "Complete 5 gigs in a row without cancellations",
           tier: "silver",
         },
         {
-          name: "Seasoned Performer",
-          icon: <GiAchievement className="text-blue-400" size={24} />,
-          description: "Vast experience in the industry",
-          requirements: "Complete 50+ gigs with 90%+ reliability",
+          name: "Perfect Attendance",
+          icon: <IoRibbon className="text-green-400" size={24} />,
+          description: "100% reliability with 10+ gigs",
+          requirements: "Never cancelled a gig with 10+ completed",
           tier: "platinum",
         },
         {
-          name: "Early Bird",
-          icon: <FaRegClock className="text-green-400" size={24} />,
-          description: "Always punctual and prepared",
-          requirements: "Consistently early arrivals to gigs",
-          tier: "silver",
+          name: "Client Favorite",
+          icon: <FaHeart className="text-pink-400" size={24} />,
+          description: "Consistently high ratings from clients",
+          requirements: "4.8+ average rating with 10+ reviews",
+          tier: "gold",
         },
       ],
     },
     {
-      title: "Accountability Badges",
-      description: "Transparent track record indicators",
+      title: "Verification Badges",
+      description: "Proof of authenticity and reliability",
       badges: [
         {
-          name: "Cancellation Risk",
-          icon: <FaThumbsDown className="text-red-400" size={24} />,
-          description: "Multiple cancellations affecting reliability",
-          requirements: "Cancel 3+ gigs",
-          tier: "bronze",
+          name: "Identity Verified",
+          icon: <FaUserCheck className="text-blue-400" size={24} />,
+          description: "Government ID verified",
+          requirements: "Complete identity verification",
+          tier: "gold",
         },
         {
-          name: "Frequent Canceller",
-          icon: <FaThumbsDown className="text-red-500" size={24} />,
-          description: "Significant cancellation history",
-          requirements: "Cancel 5+ gigs",
-          tier: "bronze",
+          name: "Payment Verified",
+          icon: <FaMoneyBillWave className="text-green-400" size={24} />,
+          description: "Secure payment method on file",
+          requirements: "Add and verify payment method",
+          tier: "silver",
+        },
+        {
+          name: "Phone Verified",
+          icon: <FaPhoneAlt className="text-teal-400" size={24} />,
+          description: "Verified phone number",
+          requirements: "Verify your mobile number",
+          tier: "silver",
         },
       ],
     },
@@ -268,83 +545,531 @@ export default function HowItWorksPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
         {/* Hero Section */}
-        <section className="text-center space-y-6">
+        <section
+          id="overview"
+          ref={(el) => {
+            sectionRefs.current["overview"] = el;
+            registerSection("overview", el);
+          }}
+          className="scroll-mt-20 text-center space-y-6"
+        >
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
             <h1 className={cn("text-4xl md:text-6xl font-bold", colors.text)}>
-              How GigUppWorks
+              GigUpp Trust Rating System
             </h1>
             <p
               className={cn("text-xl mt-4 max-w-2xl mx-auto", colors.textMuted)}
             >
-              Learn how our badge system rewards quality, reliability, and
-              exceptional performance in the gig economy.
+              Build credibility with a 5-star rating system that reflects your
+              professionalism and reliability.
             </p>
           </motion.div>
         </section>
-        {/* Overview Section */}
-        <section id="overview" className="space-y-8">
+
+        {/* Trust Score Overview */}
+        <section className="space-y-8">
           <div className="text-center">
             <h2 className={cn("text-3xl font-bold mb-4", colors.text)}>
-              Building Trust Through Transparency
+              Your Trust Rating Journey
             </h2>
             <p className={cn("text-lg max-w-3xl mx-auto", colors.textMuted)}>
-              Our badge system helps clients find reliable performers and helps
-              performers showcase their skills and reliability.
+              Progress through 5 tiers by building your reputation and
+              credibility with clients
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          {/* Clickable Tier Cards */}
+          <div className="space-y-6">
+            <h3 className={cn("text-2xl font-semibold", colors.text)}>
+              Trust Rating Tiers
+            </h3>
+            <p className={cn("text-gray-600 dark:text-gray-400 mb-6")}>
+              Click on any tier to view personalized information on your trust
+              rating page
+            </p>
+            <TrustScoreTierCards colors={colors} router={router} />
+          </div>
+
+          {/* Trust Score Components - UPDATED WITH STARS */}
+          <div className="grid md:grid-cols-2 gap-8 mt-12">
+            <div
+              className={cn(
+                "p-6 rounded-xl border-2",
+                colors.card,
+                colors.border
+              )}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <FaShieldAlt className="text-blue-500" size={24} />
+                <h3 className={cn("text-xl font-semibold", colors.text)}>
+                  What Builds Your Rating
+                </h3>
+              </div>
+              <ul className={cn("space-y-3 text-sm", colors.textMuted)}>
+                <li className="flex items-start gap-3">
+                  <FaUserCheck className="text-green-500 mt-0.5" />
+                  <div>
+                    <strong>Identity Verification:</strong> +1.0 stars
+                    <p className="text-xs">Verify your government ID</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <FaPhoneAlt className="text-green-500 mt-0.5" />
+                  <div>
+                    <strong>Phone Verification:</strong> +0.8 stars
+                    <p className="text-xs">Verify your mobile number</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <FaMoneyBillWave className="text-green-500 mt=0.5" />
+                  <div>
+                    <strong>Payment Method:</strong> +0.6 stars
+                    <p className="text-xs">Add secure payment method</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <FaCalendarCheck className="text-green-500 mt-0.5" />
+                  <div>
+                    <strong>Completed Gigs:</strong> +0.2 per gig (max 1.0)
+                    <p className="text-xs">Successfully finish gigs</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <FaStar className="text-green-500 mt-0.5" />
+                  <div>
+                    <strong>Average Rating:</strong> Up to +1.0 stars
+                    <p className="text-xs">5.0 rating = 1.0 stars</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div
+              className={cn(
+                "p-6 rounded-xl border-2",
+                colors.card,
+                colors.border
+              )}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <FaChartLine className="text-purple-500" size={24} />
+                <h3 className={cn("text-xl font-semibold", colors.text)}>
+                  Rating Impact
+                </h3>
+              </div>
+              <ul className={cn("space-y-3 text-sm", colors.textMuted)}>
+                <li className="flex items-start gap-3">
+                  <IoTrendingUp className="text-blue-500 mt-0.5" />
+                  <div>
+                    <strong>2.0+ Stars:</strong> Higher Search Ranking
+                    <p className="text-xs">Get seen by more clients</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <FaAward className="text-amber-500 mt-0.5" />
+                  <div>
+                    <strong>3.5+ Stars:</strong> Premium Opportunities
+                    <p className="text-xs">Access exclusive gigs</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <FaCertificate className="text-green-500 mt-0.5" />
+                  <div>
+                    <strong>2.5+ Stars:</strong> Verified Badge
+                    <p className="text-xs">Build instant credibility</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <IoPeople className="text-purple-500 mt-0.5" />
+                  <div>
+                    <strong>4.5+ Stars:</strong> Band Creation
+                    <p className="text-xs">Unlock at Elite tier</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <FaHandshake className="text-teal-500 mt-0.5" />
+                  <div>
+                    <strong>3.0+ Stars:</strong> Client Trust Boost
+                    <p className="text-xs">Higher booking conversion</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Detailed Tier Requirements - UPDATED WITH STARS */}
+        <section
+          id="tier-requirements"
+          ref={(el) => {
+            sectionRefs.current["tier-requirements"] = el;
+            registerSection("tier-requirements", el);
+          }}
+          className="scroll-mt-20 space-y-12"
+        >
+          <div className="text-center">
+            <h2 className={cn("text-3xl font-bold mb-4", colors.text)}>
+              Detailed Tier Requirements
+            </h2>
+            <p className={cn("text-lg max-w-3xl mx-auto", colors.textMuted)}>
+              What you need to reach each trust tier
+            </p>
+          </div>
+
+          {/* Newcomer Tier */}
+          <div
+            id="tier-newcomer"
+            ref={(el) => {
+              sectionRefs.current["tier-newcomer"] = el;
+              registerSection("tier-newcomer", el);
+            }}
+            className={cn(
+              "p-6 rounded-xl border-2 scroll-mt-20",
+              colors.card,
+              colors.border
+            )}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-2xl">🌱</div>
+              <div>
+                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                  Newcomer (0.5-1.9 stars)
+                </h3>
+                <p className={cn("text-gray-600 dark:text-gray-400")}>
+                  Getting started on the platform
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Requirements:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Basic profile setup (+0.2 stars)</li>
+                  <li>• Account creation (+0.1 stars)</li>
+                  <li>• Email verification (required)</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Benefits:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Basic gig browsing</li>
+                  <li>• Limited applications</li>
+                  <li>• Standard visibility</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Rising Star Tier */}
+          <div
+            id="tier-rising-star"
+            ref={(el) => {
+              sectionRefs.current["tier-rising-star"] = el;
+              registerSection("tier-rising-star", el);
+            }}
+            className={cn(
+              "p-6 rounded-xl border-2 scroll-mt-20",
+              colors.card,
+              colors.border
+            )}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-2xl">⭐</div>
+              <div>
+                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                  Rising Star (2.0-2.4 stars)
+                </h3>
+                <p className={cn("text-gray-600 dark:text-gray-400")}>
+                  Building momentum and credibility
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Requirements:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Phone verified (+0.8 stars)</li>
+                  <li>• 1-2 gigs completed (+0.2 stars)</li>
+                  <li>• Good response rate (+0.5 stars)</li>
+                  <li>• Profile completeness (+0.5 stars)</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Benefits:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Higher search ranking</li>
+                  <li>• More gig applications</li>
+                  <li>• Basic analytics</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Verified Tier */}
+          <div
+            id="tier-verified"
+            ref={(el) => {
+              sectionRefs.current["tier-verified"] = el;
+              registerSection("tier-verified", el);
+            }}
+            className={cn(
+              "p-6 rounded-xl border-2 scroll-mt-20",
+              colors.card,
+              colors.border
+            )}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-2xl">✅</div>
+              <div>
+                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                  Verified (2.5-3.4 stars)
+                </h3>
+                <p className={cn("text-gray-600 dark:text-gray-400")}>
+                  Trusted performer with verified credentials
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Requirements:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Identity verified (+1.0 stars)</li>
+                  <li>• Payment method added (+0.6 stars)</li>
+                  <li>• Earnings ≥ $500 (+0.5 stars)</li>
+                  <li>• 3-5 gigs completed (+0.3 stars)</li>
+                  <li>• 4.0+ average rating (+0.8 stars)</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Benefits:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Verified badge on profile</li>
+                  <li>• Premium gig visibility</li>
+                  <li>• Advanced analytics</li>
+                  <li>• Priority support</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Trusted Tier */}
+          <div
+            id="tier-trusted"
+            ref={(el) => {
+              sectionRefs.current["tier-trusted"] = el;
+              registerSection("tier-trusted", el);
+            }}
+            className={cn(
+              "p-6 rounded-xl border-2 scroll-mt-20",
+              colors.card,
+              colors.border
+            )}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-2xl">🤝</div>
+              <div>
+                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                  Trusted (3.5-4.4 stars)
+                </h3>
+                <p className={cn("text-gray-600 dark:text-gray-400")}>
+                  Highly reliable and experienced
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Requirements:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• 6-10 gigs completed (+0.6 stars)</li>
+                  <li>• 4.5+ average rating (+0.9 stars)</li>
+                  <li>• Real followers (+0.5 stars)</li>
+                  <li>• 90%+ response rate (+0.7 stars)</li>
+                  <li>• Account age 3+ months (+0.8 stars)</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Benefits:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Top search placement</li>
+                  <li>• Exclusive gig invitations</li>
+                  <li>• Band creation eligible</li>
+                  <li>• Premium networking</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Elite Tier */}
+          <div
+            id="tier-elite"
+            ref={(el) => {
+              sectionRefs.current["tier-elite"] = el;
+              registerSection("tier-elite", el);
+            }}
+            className={cn(
+              "p-6 rounded-xl border-2 scroll-mt-20",
+              colors.card,
+              colors.border
+            )}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-2xl">🏆</div>
+              <div>
+                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                  Elite (4.5-5.0 stars)
+                </h3>
+                <p className={cn("text-gray-600 dark:text-gray-400")}>
+                  Top-tier performer with proven excellence
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Requirements:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• 10+ gigs completed (+1.0 stars)</li>
+                  <li>• 4.8+ average rating (+1.0 stars)</li>
+                  <li>• Account age 6+ months (+1.3 stars)</li>
+                  <li>• Perfect reliability (+1.0 stars)</li>
+                  <li>• Consistent excellence (+0.8 stars)</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className={cn("font-semibold mb-2", colors.text)}>
+                  Benefits:
+                </h4>
+                <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
+                  <li>• Elite badge and recognition</li>
+                  <li>• Highest priority for gigs</li>
+                  <li>• Featured profile placement</li>
+                  <li>• VIP networking events</li>
+                  <li>• Premium partnership offers</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* How to Earn Section - UPDATED WITH STARS */}
+        <section
+          id="how-to-earn"
+          ref={(el) => {
+            sectionRefs.current["how-to-earn"] = el;
+            registerSection("how-to-earn", el);
+          }}
+          className="scroll-mt-20 space-y-8"
+        >
+          <div className="text-center">
+            <h2 className={cn("text-3xl font-bold mb-4", colors.text)}>
+              How to Earn Trust Stars
+            </h2>
+            <p className={cn("text-lg max-w-3xl mx-auto", colors.textMuted)}>
+              Specific actions that increase your trust rating
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                icon: <FaShieldAlt className="text-blue-500" size={32} />,
-                title: "Trust & Safety",
-                description:
-                  "Verified performance history and reliability scores help build trust between clients and performers.",
+                icon: <FaUserCheck className="text-blue-500" size={32} />,
+                title: "Verification Actions",
+                stars: "+2.4 total",
+                actions: [
+                  "Identity verification: +1.0 stars",
+                  "Phone verification: +0.8 stars",
+                  "Payment method: +0.6 stars",
+                ],
               },
               {
-                icon: (
-                  <IoCheckmarkCircle className="text-green-500" size={32} />
-                ),
-                title: "Quality Assurance",
-                description:
-                  "Badges represent proven track records of successful gigs and satisfied clients.",
+                icon: <FaCalendarCheck className="text-green-500" size={32} />,
+                title: "Gig Performance",
+                stars: "+2.0 total",
+                actions: [
+                  "Completed gigs: +0.2 per gig (max 1.0)",
+                  "Average rating: up to +1.0 stars",
+                ],
               },
               {
-                icon: <IoTrendingUp className="text-purple-500" size={32} />,
-                title: "Career Growth",
-                description:
-                  "Earn better gigs and higher rates as you build your reputation through consistent performance.",
+                icon: <FaChartBar className="text-purple-500" size={32} />,
+                title: "Consistency",
+                stars: "+1.8 total",
+                actions: [
+                  "Response rate: up to +0.7 stars",
+                  "Account age: up to +1.1 stars",
+                ],
               },
-            ].map((feature, index) => (
+            ].map((category, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 className={cn(
-                  "p-6 rounded-xl border-2 text-center transition-all duration-300 hover:shadow-lg",
+                  "p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg",
                   colors.card,
                   colors.border,
                   "hover:scale-105"
                 )}
               >
-                <div className="flex justify-center mb-4">{feature.icon}</div>
-                <h3 className={cn("text-xl font-semibold mb-2", colors.text)}>
-                  {feature.title}
-                </h3>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  {feature.description}
-                </p>
+                <div className="flex items-center gap-3 mb-4">
+                  {category.icon}
+                  <div>
+                    <h3 className={cn("text-lg font-semibold", colors.text)}>
+                      {category.title}
+                    </h3>
+                    <div className="flex items-center gap-1 text-sm text-blue-600 font-medium">
+                      <FaStar className="text-yellow-500" size={14} />
+                      {category.stars}
+                    </div>
+                  </div>
+                </div>
+                <ul className="space-y-2">
+                  {category.actions.map((action, i) => (
+                    <li
+                      key={i}
+                      className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2"
+                    >
+                      <IoCheckmarkCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      {action}
+                    </li>
+                  ))}
+                </ul>
               </motion.div>
             ))}
           </div>
         </section>
-        {/* Badges Section */}
-        <section id="badges" className="space-y-12">
+
+        {/* Badges Section - Updated */}
+        <section
+          id="badges"
+          ref={(el) => {
+            sectionRefs.current["badges"] = el;
+            registerSection("badges", el);
+          }}
+          className="scroll-mt-20 space-y-12"
+        >
           <div className="text-center">
             <h2 className={cn("text-3xl font-bold mb-4", colors.text)}>
               Badge System
@@ -353,40 +1078,6 @@ export default function HowItWorksPage() {
               Earn badges by demonstrating consistent performance, reliability,
               and quality service.
             </p>
-          </div>
-
-          {/* Tier Legend */}
-          <div
-            className={cn(
-              "p-6 rounded-xl border-2",
-              colors.card,
-              colors.border
-            )}
-          >
-            <h3 className={cn("text-xl font-semibold mb-4", colors.text)}>
-              Badge Tiers
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(tierLabels).map(([tier, label]) => (
-                <div
-                  key={tier}
-                  className={cn(
-                    "p-4 rounded-lg border-2 text-center transition-all duration-300 hover:scale-105",
-                    tierColors[tier as keyof typeof tierColors]
-                  )}
-                >
-                  <span className={cn("font-semibold capitalize", colors.text)}>
-                    {label}
-                  </span>
-                  <p className={cn("text-xs mt-1", colors.textMuted)}>
-                    {tier === "bronze" && "Beginner achievements"}
-                    {tier === "silver" && "Intermediate level"}
-                    {tier === "gold" && "Advanced performance"}
-                    {tier === "platinum" && "Elite status"}
-                  </p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Badge Categories */}
@@ -466,261 +1157,15 @@ export default function HowItWorksPage() {
           ))}
         </section>
 
-        {/* Ratings Section */}
-        <section id="ratings" className="space-y-8">
-          <div className="text-center">
-            <h2 className={cn("text-3xl font-bold mb-4", colors.text)}>
-              Rating System
-            </h2>
-            <p className={cn("text-lg max-w-3xl mx-auto", colors.textMuted)}>
-              Our comprehensive rating system ensures fair and transparent
-              feedback for both performers and clients.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div
-              className={cn(
-                "p-6 rounded-xl border-2",
-                colors.card,
-                colors.border
-              )}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <FaStar className="text-yellow-500" size={24} />
-                <h3 className={cn("text-xl font-semibold", colors.text)}>
-                  Star Ratings
-                </h3>
-              </div>
-              <p className={cn("text-sm mb-4", colors.textMuted)}>
-                Clients rate performers on a 1-5 star scale based on:
-              </p>
-              <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
-                <li className="flex items-center gap-2">
-                  <IoCheckmarkCircle className="text-green-500" />
-                  Quality of work
-                </li>
-                <li className="flex items-center gap-2">
-                  <IoCheckmarkCircle className="text-green-500" />
-                  Professionalism
-                </li>
-                <li className="flex items-center gap-2">
-                  <IoCheckmarkCircle className="text-green-500" />
-                  Communication
-                </li>
-                <li className="flex items-center gap-2">
-                  <IoCheckmarkCircle className="text-green-500" />
-                  Timeliness
-                </li>
-              </ul>
-            </div>
-
-            <div
-              className={cn(
-                "p-6 rounded-xl border-2",
-                colors.card,
-                colors.border
-              )}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <FaChartLine className="text-blue-500" size={24} />
-                <h3 className={cn("text-xl font-semibold", colors.text)}>
-                  Rating Impact
-                </h3>
-              </div>
-              <p className={cn("text-sm mb-4", colors.textMuted)}>
-                How ratings affect your profile and opportunities:
-              </p>
-              <ul className={cn("space-y-2 text-sm", colors.textMuted)}>
-                <li className="flex items-center gap-2">
-                  <IoTrendingUp className="text-green-500" />
-                  Higher visibility in search results
-                </li>
-                <li className="flex items-center gap-2">
-                  <FaAward className="text-amber-500" />
-                  Eligibility for premium badges
-                </li>
-                <li className="flex items-center gap-2">
-                  <FaCrown className="text-purple-500" />
-                  Access to exclusive gigs
-                </li>
-                <li className="flex items-center gap-2">
-                  <IoShieldCheckmark className="text-blue-500" />
-                  Increased client trust
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div
-            className={cn(
-              "p-6 rounded-xl border-2",
-              colors.card,
-              colors.border
-            )}
-          >
-            <h3 className={cn("text-xl font-semibold mb-4", colors.text)}>
-              Rating Guidelines
-            </h3>
-            <div className="grid md:grid-cols-5 gap-4 text-center">
-              {[
-                { stars: 5, label: "Excellent", color: "text-green-500" },
-                { stars: 4, label: "Good", color: "text-blue-500" },
-                { stars: 3, label: "Average", color: "text-yellow-500" },
-                { stars: 2, label: "Poor", color: "text-orange-500" },
-                { stars: 1, label: "Unacceptable", color: "text-red-500" },
-              ].map((rating) => (
-                <div key={rating.stars} className="space-y-2">
-                  <div className={cn("text-2xl font-bold", rating.color)}>
-                    {rating.stars} ★
-                  </div>
-                  <div className={cn("text-xs", colors.textMuted)}>
-                    {rating.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-        {/* Reliability Section */}
-        <section id="reliability" className="space-y-8">
-          <div className="text-center">
-            <h2 className={cn("text-3xl font-bold mb-4", colors.text)}>
-              Reliability Scoring
-            </h2>
-            <p className={cn("text-lg max-w-3xl mx-auto", colors.textMuted)}>
-              Track and improve your reliability score to build trust and unlock
-              better opportunities.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: (
-                  <IoCheckmarkCircle className="text-green-500" size={32} />
-                ),
-                title: "Completion Rate",
-                description:
-                  "Percentage of accepted gigs successfully completed",
-                details: "Based on finished vs accepted gigs",
-              },
-              {
-                icon: <FaRegClock className="text-blue-500" size={32} />,
-                title: "On-Time Performance",
-                description: "Punctuality and adherence to schedules",
-                details: "Arrival time and deadline compliance",
-              },
-              {
-                icon: <FaShieldAlt className="text-purple-500" size={32} />,
-                title: "Cancellation History",
-                description: "Frequency and timing of gig cancellations",
-                details: "Early vs last-minute cancellations",
-              },
-            ].map((metric, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className={cn(
-                  "p-6 rounded-xl border-2 text-center transition-all duration-300 hover:shadow-lg",
-                  colors.card,
-                  colors.border,
-                  "hover:scale-105"
-                )}
-              >
-                <div className="flex justify-center mb-4">{metric.icon}</div>
-                <h3 className={cn("text-xl font-semibold mb-2", colors.text)}>
-                  {metric.title}
-                </h3>
-                <p className={cn("text-sm mb-3", colors.textMuted)}>
-                  {metric.description}
-                </p>
-                <p className={cn("text-xs", colors.textSecondary)}>
-                  {metric.details}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div
-              className={cn(
-                "p-6 rounded-xl border-2",
-                colors.card,
-                colors.border
-              )}
-            >
-              <h3 className={cn("text-xl font-semibold mb-4", colors.text)}>
-                Improving Your Score
-              </h3>
-              <ul className={cn("space-y-3 text-sm", colors.textMuted)}>
-                <li className="flex items-start gap-3">
-                  <IoCheckmarkCircle className="text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>Accept gigs you're confident you can complete</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <IoCheckmarkCircle className="text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>Communicate early if issues arise</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <IoCheckmarkCircle className="text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>Arrive early and be prepared</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <IoCheckmarkCircle className="text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>Complete all required tasks thoroughly</span>
-                </li>
-              </ul>
-            </div>
-
-            <div
-              className={cn(
-                "p-6 rounded-xl border-2",
-                colors.card,
-                colors.border
-              )}
-            >
-              <h3 className={cn("text-xl font-semibold mb-4", colors.text)}>
-                Score Impact
-              </h3>
-              <div className="space-y-4">
-                {[
-                  {
-                    range: "90-100%",
-                    level: "Excellent",
-                    color: "text-green-500",
-                  },
-                  { range: "80-89%", level: "Good", color: "text-blue-500" },
-                  { range: "70-79%", level: "Fair", color: "text-yellow-500" },
-                  {
-                    range: "Below 70%",
-                    level: "Needs Improvement",
-                    color: "text-red-500",
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center"
-                  >
-                    <span className={cn("text-sm font-medium", colors.text)}>
-                      {item.range}
-                    </span>
-                    <span className={cn("text-sm font-semibold", item.color)}>
-                      {item.level}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
         {/* Getting Started Section */}
         <section
           id="getting-started"
+          ref={(el) => {
+            sectionRefs.current["getting-started"] = el;
+            registerSection("getting-started", el);
+          }}
           className={cn(
-            "p-8 rounded-xl border-2 text-center transition-all duration-300",
+            "p-8 rounded-xl border-2 text-center transition-all duration-300 scroll-mt-20",
             colors.card,
             colors.border,
             "hover:shadow-xl"
@@ -728,11 +1173,11 @@ export default function HowItWorksPage() {
         >
           <FaRocket className="mx-auto text-blue-500 mb-4" size={48} />
           <h2 className={cn("text-3xl font-bold mb-4", colors.text)}>
-            Ready to Get Started?
+            Ready to Build Your Trust Rating?
           </h2>
           <p className={cn("text-lg mb-6 max-w-2xl mx-auto", colors.textMuted)}>
-            Join thousands of performers building their reputation and earning
-            more through our transparent badge system.
+            Start building your reputation today and unlock premium
+            opportunities with our transparent 5-star rating system.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <button
@@ -745,9 +1190,10 @@ export default function HowItWorksPage() {
                 "hover:scale-105 shadow-lg"
               )}
             >
-              Create Profile
+              Complete Your Profile
             </button>
-            <button
+            <Link
+              href="/onboarding/trust-explained"
               className={cn(
                 "px-6 py-3 rounded-lg font-semibold transition-all duration-200 border-2",
                 colors.border,
@@ -756,8 +1202,8 @@ export default function HowItWorksPage() {
                 "hover:scale-105"
               )}
             >
-              Learn More
-            </button>
+              View Your Trust Rating
+            </Link>
           </div>
         </section>
       </div>

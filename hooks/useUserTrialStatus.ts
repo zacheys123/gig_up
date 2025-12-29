@@ -1,3 +1,4 @@
+// hooks/useUserTrialStatus.ts
 "use client";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
@@ -26,25 +27,17 @@ export const useUserTrialStatus = () => {
       const currentTime = Date.now();
       const isInTrial = currentTime < trialEndTime;
 
-      // console.log("🔍 [USER TRIAL CALCULATION]:", {
-      //   userId: user._id,
-      //   userCreationTime: new Date(userCreationTime).toISOString(),
-      //   trialEndTime: new Date(trialEndTime).toISOString(),
-      //   currentTime: new Date(currentTime).toISOString(),
-      //   daysRemaining: Math.ceil(
-      //     (trialEndTime - currentTime) / (1000 * 60 * 60 * 24)
-      //   ),
-      //   isInTrial,
-      // });
-
       return isInTrial;
     },
     []
   );
 
   /**
-   * Check if a user should be considered "active" (pro tier or in grace period)
-   * This is the main validation function for filtering users
+   * STRICT FILTER: Check if a user should be considered "active"
+   * - Must be either:
+   *   1. On paid tier (pro/premium/elite) with active status, OR
+   *   2. Currently in grace period
+   * Users with expired trials and no paid subscription are FILTERED OUT
    */
   const isUserActive = useMemo(
     () => (user: User | null | undefined) => {
@@ -53,13 +46,57 @@ export const useUserTrialStatus = () => {
       // Exclude banned users
       if (user.isBanned === true) return false;
 
-      // Include users who are either:
-      // - Pro tier with active status, OR
-      // - In grace period
-      const isProActive = user.tier === "pro" && user.tierStatus === "active";
+      // Define valid paid tiers
+      const validPaidTiers = ["pro", "premium", "elite", "paid"];
+      const userTier = (user.tier || "free").toLowerCase();
+      const tierStatus = (user.tierStatus || "inactive").toLowerCase();
+
+      // Check if user is on a paid tier with active status
+      const isPaidActive =
+        validPaidTiers.includes(userTier) && tierStatus === "active";
+
+      // Check if user is in grace period
       const inGracePeriod = isUserInGracePeriod(user);
 
-      return isProActive || inGracePeriod;
+      // User is active ONLY if they meet one of these conditions
+      return isPaidActive || inGracePeriod;
+    },
+    [isUserInGracePeriod]
+  );
+
+  /**
+   * Check if user should be filtered out (inverse of isUserActive)
+   */
+  const shouldFilterUserOut = useMemo(
+    () => (user: User | null | undefined) => {
+      return !isUserActive(user);
+    },
+    [isUserActive]
+  );
+
+  /**
+   * Get user's tier status for display
+   */
+  const getUserTierStatus = useMemo(
+    () => (user: User | null | undefined) => {
+      if (!user) return { status: "unknown", isValid: false };
+
+      const userTier = (user.tier || "free").toLowerCase();
+      const tierStatus = (user.tierStatus || "inactive").toLowerCase();
+      const inGracePeriod = isUserInGracePeriod(user);
+
+      if (
+        ["pro", "premium", "elite", "paid"].includes(userTier) &&
+        tierStatus === "active"
+      ) {
+        return { status: `paid-${userTier}`, isValid: true };
+      }
+
+      if (inGracePeriod) {
+        return { status: "grace-period", isValid: true };
+      }
+
+      return { status: "expired-free", isValid: false };
     },
     [isUserInGracePeriod]
   );
@@ -88,9 +125,35 @@ export const useUserTrialStatus = () => {
   return {
     isUserInGracePeriod,
     isUserActive,
+    shouldFilterUserOut,
+    getUserTierStatus,
     getUserTrialDaysLeft,
     TRIAL_DURATION_DAYS,
   };
+};
+
+// Also update the lib/trial utility function:
+// lib/trial.ts or trial-config.ts
+export const isUserActive = (user: User | null | undefined): boolean => {
+  if (!user) return false;
+  if (user.isBanned === true) return false;
+
+  const TRIAL_DURATION_MS = getTrialDurationMs();
+
+  // Check grace period
+  const inGracePeriod = user?._creationTime
+    ? Date.now() < user._creationTime + TRIAL_DURATION_MS
+    : false;
+
+  // Check paid tiers
+  const validPaidTiers = ["pro", "premium", "elite", "paid"];
+  const userTier = (user.tier || "free").toLowerCase();
+  const tierStatus = (user.tierStatus || "inactive").toLowerCase();
+
+  const isPaidActive =
+    validPaidTiers.includes(userTier) && tierStatus === "active";
+
+  return isPaidActive || inGracePeriod;
 };
 
 export const getUserTrialStatus = (user: User | null | undefined) => {

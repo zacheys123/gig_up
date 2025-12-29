@@ -22,12 +22,16 @@ export const userModel = defineTable({
   isClient: v.boolean(),
   isBoth: v.optional(v.boolean()),
   isAdmin: v.optional(v.boolean()),
+  // In your user schema, update the adminRole field to match all possible roles
   adminRole: v.optional(
     v.union(
       v.literal("super"),
       v.literal("content"),
       v.literal("support"),
-      v.literal("analytics")
+      v.literal("analytics"),
+      v.literal("admin"),
+      v.literal("security"),
+      v.literal("infrastructure")
     )
   ),
   adminPermissions: v.optional(
@@ -91,6 +95,8 @@ export const userModel = defineTable({
   vocalistGenre: v.optional(v.string()),
   talentbio: v.optional(v.string()),
   verified: v.optional(v.boolean()),
+  verificationMethod: v.optional(v.string()),
+  verifiedAt: v.optional(v.number()),
 
   // NEW: Teacher specific fields
   teacherSpecialization: v.optional(v.string()),
@@ -126,7 +132,9 @@ export const userModel = defineTable({
       })
     )
   ),
-
+  dualRoleUnlockedAt: v.optional(v.number()),
+  videoCallUnlockedAt: v.optional(v.number()),
+  trustStars: v.optional(v.number()),
   // Reviews
   allreviews: v.optional(
     v.array(
@@ -183,18 +191,20 @@ export const userModel = defineTable({
   earnings: v.number(),
   totalSpent: v.number(),
   nextBillingDate: v.optional(v.number()),
-  monthlyGigsPosted: v.number(),
+  monthlyGigsPosted: v.optional(v.number()),
   monthlyMessages: v.number(),
-  monthlyGigsBooked: v.number(),
+  monthlyGigsBooked: v.optional(v.number()),
 
   // Gig management
-  gigsBookedThisWeek: v.object({
-    count: v.number(),
-    weekStart: v.number(),
-  }),
+  gigsBookedThisWeek: v.optional(
+    v.object({
+      count: v.number(),
+      weekStart: v.number(),
+    })
+  ),
   lastBookingDate: v.optional(v.number()),
   cancelgigCount: v.number(),
-  completedGigsCount: v.number(),
+  completedGigsCount: v.optional(v.number()),
 
   // Booking history
   bookingHistory: v.optional(
@@ -264,8 +274,8 @@ export const userModel = defineTable({
   onboardingComplete: v.boolean(),
   lastActive: v.number(),
   isBanned: v.boolean(),
-  banReason: v.string(),
-  bannedAt: v.number(),
+  banReason: v.optional(v.string()),
+  bannedAt: v.optional(v.number()),
   banExpiresAt: v.optional(v.number()),
   banReference: v.optional(v.string()),
 
@@ -397,7 +407,10 @@ export const userModel = defineTable({
       })
     )
   ),
-
+  latePaymentsCount: v.optional(v.number()), // Number of late payments
+  disputesCount: v.optional(v.number()), // Number of disputes
+  noShowCount: v.optional(v.number()), // Number of no-shows
+  warningCount: v.optional(v.number()), // Number of warnings
   actionHistory: v.optional(
     v.array(
       v.object({
@@ -405,6 +418,53 @@ export const userModel = defineTable({
         adminId: v.string(),
         timestamp: v.number(),
         details: v.optional(v.string()),
+      })
+    )
+  ),
+  companyName: v.optional(v.string()),
+  managedArtists: v.optional(v.array(v.string())),
+  agencyName: v.optional(v.string()),
+  canCreateBand: v.optional(v.boolean()), // Computed field
+  bandCreationUnlockedAt: v.optional(v.number()),
+  bandLeaderOf: v.optional(v.array(v.id("bands"))),
+  bandMemberOf: v.optional(v.array(v.id("bands"))),
+  pendingBandInvites: v.optional(v.number()), // Count of pending invites
+
+  // For verification (to prevent self-booking)
+  verifiedIdentity: v.optional(v.boolean()),
+
+  governmentIdHash: v.optional(v.string()), // Last 4 of ID for verification
+
+  trustScore: v.optional(v.number()), // 0-100 score
+  trustScoreLastUpdated: v.optional(v.number()), // When last calculated
+  trustTier: v.optional(
+    // Auto-calculated tier
+    v.union(
+      v.literal("new"),
+      v.literal("basic"),
+      v.literal("verified"),
+      v.literal("trusted"),
+      v.literal("elite")
+    )
+  ),
+  // Track client-musician relationships for collusion detection
+  bookedMusicians: v.optional(
+    v.array(
+      v.object({
+        musicianId: v.id("users"),
+        gigId: v.id("gigs"),
+        date: v.number(),
+        ratingGiven: v.optional(v.number()),
+      })
+    )
+  ),
+  bookedByClients: v.optional(
+    v.array(
+      v.object({
+        clientId: v.id("users"),
+        gigId: v.id("gigs"),
+        date: v.number(),
+        ratingReceived: v.optional(v.number()),
       })
     )
   ),
@@ -435,7 +495,9 @@ export const userModel = defineTable({
     "performanceStats.totalGigsCompleted",
     "reliabilityScore",
   ])
-  .index("by_tier_and_reliability", ["tier", "reliabilityScore"])
+  .index("by_trust_tier", ["trustTier"])
+
+  .index("by_trustscore", ["trustScore"])
 
   .index("by_is_suspended", ["isSuspended"])
 

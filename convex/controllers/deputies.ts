@@ -410,6 +410,7 @@ const getInstrumentMatch = (
     (instr) => target.includes(instr) || instr.includes(target)
   );
 };
+// convex/deputies.ts - Update the searchDeputies function
 
 export const searchDeputies = query({
   args: {
@@ -419,6 +420,8 @@ export const searchDeputies = query({
     city: v.optional(v.string()),
     instrument: v.optional(v.string()),
     limit: v.optional(v.number()),
+    minTrustStars: v.optional(v.number()), // NEW: Add trust filter
+    minTrustScore: v.optional(v.number()), // NEW: Add trust score filter
   },
   handler: async (ctx, args) => {
     const {
@@ -428,10 +431,16 @@ export const searchDeputies = query({
       city,
       instrument,
       limit = 20,
+      minTrustStars,
+      minTrustScore,
     } = args;
 
     const currentUser = await ctx.db.get(currentUserId);
     if (!currentUser) throw new Error("User not found");
+
+    // Get current user's trust score to establish baseline
+    const currentUserTrust = currentUser.trustScore || 0;
+    const currentUserTrustStars = currentUser.trustStars || 0.5;
 
     let users = await ctx.db
       .query("users")
@@ -439,60 +448,57 @@ export const searchDeputies = query({
       .collect();
 
     // Filter out the current user
-    users = users.filter((user) => user._id !== currentUserId);
+    users = users.filter(
+      (user) =>
+        user._id !== currentUserId &&
+        !user?.isPrivate &&
+        !user?.isBanned &&
+        !user?.isSuspended &&
+        (user?.trustScore || 0) >= 0 &&
+        (user?.trustStars || 0.5) >= 0.5 &&
+        !user?.isAdmin
+    );
 
+    // Apply trust filters if specified
+    if (minTrustStars !== undefined) {
+      users = users.filter((user) => (user.trustStars || 0.5) >= minTrustStars);
+    }
+
+    if (minTrustScore !== undefined) {
+      users = users.filter((user) => (user.trustScore || 0) >= minTrustScore);
+    }
+
+    // Role compatibility filtering (keep existing logic)
     users = users.filter((user) => {
       const currentUserRole = currentUser.roleType;
       const targetUserRole = user.roleType;
 
       if (!currentUserRole || !targetUserRole) return false;
 
-      // Simple role compatibility rules
+      // Your existing role compatibility rules
       switch (currentUserRole) {
         case "instrumentalist":
           return (
             targetUserRole === "instrumentalist" ||
             targetUserRole === "vocalist"
           );
-
         case "vocalist":
           return (
             targetUserRole === "instrumentalist" ||
             targetUserRole === "vocalist"
           );
-
         case "dj":
           return targetUserRole === "dj" || targetUserRole === "mc";
-
         case "mc":
           return targetUserRole === "mc" || targetUserRole === "dj";
-
         case "teacher":
           return targetUserRole === "teacher" || targetUserRole === "vocalist";
-
         default:
-          return false; // Don't show anyone for unknown current roles
+          return false;
       }
     });
 
-    // Add debug logging with proper typing
-    console.log("🎯 [ROLE FILTER RESULTS]", {
-      currentUserRole: currentUser.roleType,
-      currentUserInstrument: currentUser.instrument,
-      totalUsersAfterFilter: users.length,
-      filteredUsers: users.slice(0, 5).map((u) => ({
-        username: u.username,
-        role: u.roleType,
-        instrument: u.instrument,
-      })),
-      // Properly typed role distribution
-      roleDistribution: users.reduce((acc: Record<string, number>, user) => {
-        const role = user.roleType || "unknown";
-        acc[role] = (acc[role] || 0) + 1;
-        return acc;
-      }, {}),
-    });
-    // Apply search filters
+    // Apply other filters (keep existing logic)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       users = users.filter(
@@ -529,8 +535,24 @@ export const searchDeputies = query({
       });
     }
 
-    // Sort by relevance with role compatibility bonus
+    // NEW: Sort by trust score/trust stars, then other factors
     users.sort((a, b) => {
+      // Primary: Trust stars (highest first)
+      const aTrustStars = a.trustStars || 0.5;
+      const bTrustStars = b.trustStars || 0.5;
+
+      if (Math.abs(bTrustStars - aTrustStars) > 0.5) {
+        return bTrustStars - aTrustStars;
+      }
+
+      // Secondary: Trust score
+      const aTrustScore = a.trustScore || 0;
+      const bTrustScore = b.trustScore || 0;
+      if (Math.abs(bTrustScore - aTrustScore) > 10) {
+        return bTrustScore - aTrustScore;
+      }
+
+      // Tertiary: Existing relevance factors
       const aReferrals = a.confirmedReferredGigs || 0;
       const bReferrals = b.confirmedReferredGigs || 0;
 
@@ -539,10 +561,9 @@ export const searchDeputies = query({
       const bSameCity =
         b.city?.toLowerCase() === currentUser.city?.toLowerCase() ? 1 : 0;
 
-      const aSimilarRole = a.roleType === currentUser.roleType ? 2 : 0; // Increased weight for same role
+      const aSimilarRole = a.roleType === currentUser.roleType ? 2 : 0;
       const bSimilarRole = b.roleType === currentUser.roleType ? 2 : 0;
 
-      // Bonus for same instrument (for instrumentalists)
       const aSameInstrument =
         currentUser.roleType === "instrumentalist" &&
         a.roleType === "instrumentalist" &&
@@ -585,23 +606,13 @@ export const searchDeputies = query({
                 forTheirSkill: existingRelationship.forTheirSkill,
               }
             : null,
+          // Include trust info for display
+          trustScore: user.trustScore || 0,
+          trustStars: user.trustStars || 0.5,
+          trustTier: user.trustTier || "new",
         };
       })
     );
-
-    // Log final results for debugging
-    console.log("🎯 [SEARCH RESULTS]", {
-      currentUser: currentUser.username,
-      currentUserRole: currentUser.roleType,
-      currentUserInstrument: currentUser.instrument,
-      totalResults: enhancedUsers.length,
-      results: enhancedUsers.map((u) => ({
-        username: u.username,
-        role: u.roleType,
-        instrument: u.instrument,
-        city: u.city,
-      })),
-    });
 
     return enhancedUsers;
   },

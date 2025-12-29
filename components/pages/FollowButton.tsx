@@ -26,6 +26,7 @@ const FollowButton = ({
   variant,
   size,
   className,
+  style,
 }: {
   _id: string;
   pendingFollowRequests?: string[];
@@ -44,6 +45,7 @@ const FollowButton = ({
     | undefined;
   size?: "default" | "sm" | "lg" | "icon" | null | undefined;
   className?: string;
+  style?: React.CSSProperties;
 }) => {
   const { user: currentUser } = useCurrentUser();
   const { toggleFollow } = useSocialActions();
@@ -298,6 +300,7 @@ const FollowButton = ({
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      style={style}
     >
       <button
         onClick={handleToggleFollow}

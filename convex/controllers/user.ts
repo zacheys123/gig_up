@@ -8,6 +8,7 @@ import {
   deleteFollowRequestNotification,
   isUserDocument,
 } from "../createNotificationInternal";
+import { updateUserTrust } from "./trustScore";
 // Helper function to create type-safe user data with admin defaults
 const createUserData = (args: any, now: number) => {
   return {
@@ -221,7 +222,6 @@ export const updateUserProfile = mutation({
   args: {
     userId: v.id("users"),
     clerkId: v.string(),
-    onboardingComplete: v.boolean(),
     updates: v.object({
       // Basic profile fields
       firstname: v.optional(v.string()),
@@ -238,6 +238,7 @@ export const updateUserProfile = mutation({
       phone: v.optional(v.string()),
       organization: v.optional(v.string()),
       firstTimeInProfile: v.optional(v.boolean()),
+      mpesaPhoneNumber: v.optional(v.string()),
 
       // Social and handles
       musicianhandles: v.optional(
@@ -347,11 +348,17 @@ export const updateUserProfile = mutation({
 
     await ctx.db.patch(args.userId, {
       ...cleanUpdates,
-      onboardingComplete: true,
       lastActive: Date.now(),
     });
+    const updatedTrust = await updateUserTrust(ctx, args.userId);
 
-    return { success: true };
+    return {
+      success: true,
+      trustScore: updatedTrust.trustScore,
+      trustStars: updatedTrust.trustStars,
+      tier: updatedTrust.tier,
+      isProfileComplete: updatedTrust.isProfileComplete,
+    };
   },
 });
 
@@ -1254,5 +1261,62 @@ export const updateLastActive = mutation({
         lastActive: Date.now(),
       });
     }
+  },
+});
+
+// convex/user.ts - Add this mutation
+export const markOnboardingComplete = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await ctx.db.patch(userId, {
+      onboardingComplete: true,
+      firstLogin: false,
+    });
+    await updateUserTrust(ctx, userId);
+  },
+});
+// Add this query to your convex/users.ts file
+export const getUserProfile = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) return null;
+
+    return {
+      ...user,
+      // Expose only necessary fields
+      _id: user._id,
+      clerkId: user.clerkId,
+      firstname: user.firstname,
+      city: user.city,
+      phone: user.phone,
+      picture: user.picture,
+      onboardingComplete: user.onboardingComplete,
+      isMusician: user.isMusician,
+      isClient: user.isClient,
+      isBooker: user.isBooker,
+      roleType: user.roleType,
+      instrument: user.instrument,
+      talentbio: user.talentbio,
+      musiciangenres: user.musiciangenres,
+      clientType: user.clientType,
+      organization: user.organization,
+      companyName: user.companyName,
+      clientBio: user.talentbio,
+      bookerType: user.bookerType,
+      agencyName: user.agencyName,
+      bookerBio: user.bookerBio,
+      bookerSkills: user.bookerSkills,
+      mpesaPhoneNumber: user.mpesaPhoneNumber,
+      completedGigsCount: user.completedGigsCount,
+      gigsPosted: user.gigsPosted,
+      avgRating: user.avgRating,
+      followers: user.followers,
+      _creationTime: user._creationTime,
+    };
   },
 });

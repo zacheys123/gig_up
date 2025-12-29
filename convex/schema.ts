@@ -9,6 +9,7 @@ import { pushSubscriptions } from "./models/push";
 import { videoModel } from "./models/videoModel";
 import { commentsModel } from "./models/commentsModel";
 import { instantGigs, instantGigsTemplate } from "./models/instanGigsModel";
+import { reports } from "./models/reportsModel";
 
 export default defineSchema({
   users: userModel,
@@ -185,5 +186,147 @@ export default defineSchema({
     .index("by_admin", ["adminId"])
     .index("by_target", ["targetUserId"])
     .index("by_action", ["action"])
-    .index("by_timestamp", ["timestamp"]),
+    .index("by_timestamp", ["timestamp"]), // NEW TABLES FOR BANDS:
+  bands: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    genre: v.array(v.string()), // ["rock", "pop"]
+    location: v.string(),
+    status: v.union(
+      v.literal("forming"),
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("archived")
+    ),
+    type: v.union(
+      v.literal("permanent"),
+      v.literal("ad-hoc"),
+      v.literal("cover")
+    ),
+    creatorId: v.id("users"),
+    requiredInstruments: v.array(
+      v.object({
+        instrument: v.string(),
+        quantity: v.number(),
+        filled: v.number(), // How many positions are filled
+      })
+    ),
+    bandImageUrl: v.optional(v.string()),
+    socialLinks: v.optional(
+      v.array(
+        v.object({
+          platform: v.string(),
+          url: v.string(),
+        })
+      )
+    ),
+    createdAt: v.number(),
+    activatedAt: v.optional(v.number()),
+    // Band rating (separate from individual ratings)
+    bandRating: v.optional(
+      v.object({
+        average: v.number(),
+        totalReviews: v.number(),
+        lastUpdated: v.number(),
+      })
+    ),
+  })
+    .index("by_name", ["name"])
+    .index("by_creator", ["creatorId"])
+    .index("by_status", ["status"])
+    .index("by_location", ["location"])
+    .index("by_genre", ["genre"])
+    .index("by_status_location", ["status", "location"]),
+
+  bandMembers: defineTable({
+    bandId: v.id("bands"),
+    userId: v.id("users"),
+    role: v.string(), // e.g., "lead_guitar", "vocals"
+    status: v.union(
+      v.literal("invited"),
+      v.literal("accepted"),
+      v.literal("declined"),
+      v.literal("pending") // For counter-offers
+    ),
+    isLeader: v.boolean(),
+    inviteMessage: v.optional(v.string()),
+    inviteTerms: v.optional(
+      v.object({
+        revenueShare: v.optional(v.number()), // Percentage
+        guaranteedFee: v.optional(v.number()),
+        commitmentLevel: v.optional(
+          v.union(
+            v.literal("full-time"),
+            v.literal("part-time"),
+            v.literal("session")
+          )
+        ),
+      })
+    ),
+    joinedAt: v.optional(v.number()),
+    invitedAt: v.number(),
+    respondedAt: v.optional(v.number()),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_band_user", ["bandId", "userId"])
+    .index("by_band_status", ["bandId", "status"]),
+
+  crewMessages: defineTable({
+    bandId: v.id("bands"),
+    authorId: v.id("users"),
+    content: v.string(),
+    type: v.union(v.literal("message"), v.literal("system"), v.literal("file")),
+    fileUrl: v.optional(v.string()),
+    fileName: v.optional(v.string()),
+    repliedTo: v.optional(v.id("crewMessages")),
+    readBy: v.array(v.id("users")), // Track who has read it
+    createdAt: v.number(),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_band_created", ["bandId", "createdAt"])
+    .index("by_author", ["authorId"]),
+
+  bandGigApplications: defineTable({
+    bandId: v.id("bands"),
+    gigId: v.id("gigs"),
+    status: v.union(
+      v.literal("applied"),
+      v.literal("shortlisted"),
+      v.literal("booked"),
+      v.literal("rejected")
+    ),
+    appliedAt: v.number(),
+    proposedFee: v.optional(v.number()),
+    notes: v.optional(v.string()),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_gig", ["gigId"])
+    .index("by_band_status", ["bandId", "status"]),
+
+  // // Add this to track who can create bands
+  // userBandEligibility: defineTable({
+  //   userId: v.id("users"),
+  //   canCreateBand: v.boolean(),
+  //   reason: v.optional(v.string()), // Why they can/can't create
+  //   lastChecked: v.number(),
+  //   requirements: v.object({
+  //     minReliabilityScore: v.number(),
+  //     minCompletedGigs: v.number(),
+  //     minRating: v.number(),
+  //     verifiedProfile: v.boolean(),
+  //     hasPaymentMethod: v.boolean(),
+  //   }),
+  //   metRequirements: v.object({
+  //     reliabilityScore: v.boolean(),
+  //     completedGigs: v.boolean(),
+  //     rating: v.boolean(),
+  //     verifiedProfile: v.boolean(),
+  //     hasPaymentMethod: v.boolean(),
+  //   }),
+  // })
+  //   .index("by_user", ["userId"])
+  //   .index("by_eligibility", ["canCreateBand"]),
+  reports: reports,
 });

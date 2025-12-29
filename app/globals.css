@@ -20,7 +20,20 @@ body {
     transform: translateX(200%) skewX(-12deg);
   }
 }
+/* Add to your globals.css */
+.status-banner {
+  position: relative !important;
+  z-index: 9999 !important;
+  display: block !important;
+}/* Add to globals.css */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
 
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
 .animate-shimmer {
   animation: shimmer 3s infinite;
 }

@@ -55,6 +55,116 @@ const LIGHT_COLORS = {
   disabledBorder: "border-gray-300",
   danger: "bg-red-50 border-red-200 text-red-800 hover:bg-red-100",
   skeleton: "border-gray-300",
+  clientPrimary: "#3b82f6",
+  clientSecondary: "#06b6d4",
+  clientBg: "rgba(59, 130, 246, 0.1)",
+  clientText: "#1d4ed8",
+  clientBorder: "rgba(59, 130, 246, 0.3)",
+
+  bookerPrimary: "#10b981",
+  bookerSecondary: "#14b8a6",
+  bookerBg: "rgba(16, 185, 129, 0.1)",
+  bookerText: "#047857",
+  bookerBorder: "rgba(16, 185, 129, 0.3)",
+
+  vocalistPrimary: "#ec4899",
+  vocalistSecondary: "#f43f5e",
+  vocalistBg: "rgba(236, 72, 153, 0.1)",
+  vocalistText: "#be185d",
+  vocalistBorder: "rgba(236, 72, 153, 0.3)",
+
+  djPrimary: "#8b5cf6",
+  djSecondary: "#7c3aed",
+  djBg: "rgba(139, 92, 246, 0.1)",
+  djText: "#6d28d9",
+  djBorder: "rgba(139, 92, 246, 0.3)",
+
+  mcPrimary: "#f97316",
+  mcSecondary: "#f59e0b",
+  mcBg: "rgba(249, 115, 22, 0.1)",
+  mcText: "#c2410c",
+  mcBorder: "rgba(249, 115, 22, 0.3)",
+
+  musicianPrimary: "#f59e0b",
+  musicianSecondary: "#ea580c",
+  musicianBg: "rgba(245, 158, 11, 0.1)",
+  musicianText: "#b45309",
+  musicianBorder: "rgba(245, 158, 11, 0.3)",
+
+  defaultPrimary: "#6b7280",
+  defaultSecondary: "#4b5563",
+  defaultBg: "rgba(107, 114, 128, 0.1)",
+  defaultText: "#374151",
+  defaultBorder: "rgba(107, 114, 128, 0.3)",
+
+  // Stats colors
+  followersBg: "rgba(59, 130, 246, 0.05)",
+  followersText: "#3b82f6",
+
+  gigsBg: "rgba(16, 185, 129, 0.05)",
+  gigsText: "#10b981",
+
+  viewsBg: "rgba(139, 92, 246, 0.05)",
+  viewsText: "#8b5cf6",
+
+  // Card gradients
+  cardBgStart: "#ffffff",
+  cardBgEnd: "#f9fafb",
+
+  // Tag colors
+  tagBg: "rgba(0, 0, 0, 0.05)",
+  tagText: "#4b5563",
+  tagBorder: "rgba(0, 0, 0, 0.1)",
+
+  // Button colors
+  buttonSecondaryBg: "#f3f4f6",
+
+  // Pro badge
+  proBadgeBg: "rgba(139, 92, 246, 0.1)",
+  proBadgeBorder: "rgba(139, 92, 246, 0.3)",
+  proBadgeIcon: "#8b5cf6",
+  proBadgeText: "#7c3aed",
+
+  // Skeleton colors
+  skeletonBg: "#f3f4f6",
+  skeletonBgDark: "#e5e7eb",
+
+  // Border variations
+  borderStrong: "#d1d5db",
+  borderLight: "#e5e7eb",
+
+  primaryRing: "ring-orange-500",
+  borderColor: "#d1d5db",
+
+  primaryLight: "#fb923c", // Lighter version of orange
+  primaryContrast: "#ffffff", // White for contrast on primary
+  primaryDark: "#c2410c", // Darker version of orange
+
+  secondary: "#4b5563", // Gray color
+  accent: "#8b5cf6", // Purple accent
+
+  textStrong: "#1f2937", // Very dark text
+
+  success: "#10b981", // Green for success states
+
+  // Additional gradient colors
+  gradientFrom: "#f97316", // Orange start
+  gradientTo: "#ef4444", // Red end
+
+  // Button states
+  buttonHover: "#ea580c", // Darker orange on hover
+
+  // Glass effects
+  glassBg: "rgba(255, 255, 255, 0.8)",
+  glassBorder: "rgba(255, 255, 255, 0.2)",
+
+  // Shadows
+  shadowLight: "rgba(0, 0, 0, 0.1)",
+  shadowDark: "rgba(0, 0, 0, 0.2)",
+
+  // Overlays
+  overlayLight: "rgba(255, 255, 255, 0.5)",
+  overlayDark: "rgba(0, 0, 0, 0.5)",
 };
 
 const DARK_COLORS = {
@@ -107,6 +217,115 @@ const DARK_COLORS = {
   disabledBorder: "border-gray-600",
   danger: "bg-red-900/20 border-red-800 text-red-200 hover:bg-red-900/30",
   skeleton: "border-gray-600/30",
+  clientPrimary: "#60a5fa",
+  clientSecondary: "#22d3ee",
+  clientBg: "rgba(96, 165, 250, 0.15)",
+  clientText: "#93c5fd",
+  clientBorder: "rgba(96, 165, 250, 0.3)",
+
+  bookerPrimary: "#34d399",
+  bookerSecondary: "#2dd4bf",
+  bookerBg: "rgba(52, 211, 153, 0.15)",
+  bookerText: "#a7f3d0",
+  bookerBorder: "rgba(52, 211, 153, 0.3)",
+
+  vocalistPrimary: "#f472b6",
+  vocalistSecondary: "#fb7185",
+  vocalistBg: "rgba(244, 114, 182, 0.15)",
+  vocalistText: "#fbcfe8",
+  vocalistBorder: "rgba(244, 114, 182, 0.3)",
+
+  djPrimary: "#a78bfa",
+  djSecondary: "#8b5cf6",
+  djBg: "rgba(167, 139, 250, 0.15)",
+  djText: "#ddd6fe",
+  djBorder: "rgba(167, 139, 250, 0.3)",
+
+  mcPrimary: "#fb923c",
+  mcSecondary: "#fbbf24",
+  mcBg: "rgba(251, 146, 60, 0.15)",
+  mcText: "#fed7aa",
+  mcBorder: "rgba(251, 146, 60, 0.3)",
+
+  musicianPrimary: "#fbbf24",
+  musicianSecondary: "#fb923c",
+  musicianBg: "rgba(251, 191, 36, 0.15)",
+  musicianText: "#fde68a",
+  musicianBorder: "rgba(251, 191, 36, 0.3)",
+
+  defaultPrimary: "#9ca3af",
+  defaultSecondary: "#6b7280",
+  defaultBg: "rgba(156, 163, 175, 0.15)",
+  defaultText: "#d1d5db",
+  defaultBorder: "rgba(156, 163, 175, 0.3)",
+
+  // Stats colors
+  followersBg: "rgba(96, 165, 250, 0.1)",
+  followersText: "#60a5fa",
+
+  gigsBg: "rgba(52, 211, 153, 0.1)",
+  gigsText: "#34d399",
+
+  viewsBg: "rgba(167, 139, 250, 0.1)",
+  viewsText: "#a78bfa",
+
+  // Card gradients
+  cardBgStart: "#1f2937",
+  cardBgEnd: "#111827",
+
+  // Tag colors
+  tagBg: "rgba(255, 255, 255, 0.1)",
+  tagText: "#d1d5db",
+  tagBorder: "rgba(255, 255, 255, 0.2)",
+
+  // Button colors
+  buttonSecondaryBg: "#374151",
+
+  // Pro badge
+  proBadgeBg: "rgba(167, 139, 250, 0.2)",
+  proBadgeBorder: "rgba(167, 139, 250, 0.4)",
+  proBadgeIcon: "#a78bfa",
+  proBadgeText: "#c4b5fd",
+
+  // Skeleton colors
+  skeletonBg: "#374151",
+  skeletonBgDark: "#4b5563",
+
+  // Border variations
+  borderStrong: "#4b5563",
+  borderLight: "#374151",
+  primaryRing: "ring-orange-400",
+  borderColor: "#4b5563",
+
+  primaryLight: "#fb923c", // Orange light
+  primaryContrast: "#ffffff", // White for contrast
+  primaryDark: "#c2410c", // Orange dark
+
+  secondary: "#9ca3af", // Light gray
+  accent: "#a78bfa", // Purple accent
+
+  textStrong: "#f9fafb", // Very light text
+
+  success: "#34d399", // Green for success states
+
+  // Additional gradient colors
+  gradientFrom: "#f97316", // Orange start
+  gradientTo: "#ef4444", // Red end
+
+  // Button states
+  buttonHover: "#fb923c", // Lighter orange on hover
+
+  // Glass effects
+  glassBg: "rgba(31, 41, 55, 0.8)",
+  glassBorder: "rgba(255, 255, 255, 0.1)",
+
+  // Shadows
+  shadowLight: "rgba(0, 0, 0, 0.3)",
+  shadowDark: "rgba(0, 0, 0, 0.5)",
+
+  // Overlays
+  overlayLight: "rgba(255, 255, 255, 0.1)",
+  overlayDark: "rgba(0, 0, 0, 0.7)",
 };
 
 export function useThemeColors() {

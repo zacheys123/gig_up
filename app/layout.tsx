@@ -1,24 +1,16 @@
+// app/layout.tsx (simplified version)
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./provider";
 import { AuthSync } from "@/components/AuthSync";
-import { GigUpAssistant } from "@/components/ai/GigupAssistant";
-import { NotificationSystemProvider } from "@/hooks/useNotifications";
-import { NotificationToastContainer } from "@/components/notifications/NotificationToastContainer";
+import { StatusBanner } from "@/components/StatusBanner";
 import { GlobalActivityTracker } from "@/components/GlobalActivityTracker";
 
-// ✅ Use separate exports now
 export const metadata: Metadata = {
   title: "Gigup",
   description: "New Gigup",
-  appleWebApp: {
-    capable: true,
-    title: "Gigup",
-    statusBarStyle: "default",
-  },
 };
 
-// ✅ Viewport is now its own export (Next.js 15+)
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -36,35 +28,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('SW registered: ', registration);
-                    })
-                    .catch(function(registrationError) {
-                      console.log('SW registration failed: ', registrationError);
-                    });
-                });
-              }
-            `,
-          }}
-        />
-      </head>
       <body>
         <Providers>
+          {/* StatusBanner should be at the VERY TOP */}
+          <StatusBanner />
+
           <GlobalActivityTracker />
           <AuthSync />
-          <NotificationSystemProvider>
-            {children}
-            {chat}
-            <NotificationToastContainer />
-          </NotificationSystemProvider>
+
+          {/* Main content */}
+          {children}
+          {chat}
         </Providers>
       </body>
     </html>

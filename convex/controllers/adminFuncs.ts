@@ -1,28 +1,29 @@
+// convex/controllers/adminFuncs.ts - SIMPLIFIED VERSION
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
-import { AdminPermission, AdminRole, AdminAccessLevel } from "../adminTypes";
 
-// Define the permission values for schema validation
+// Define permission values ONCE
 const permissionValues = v.union(
-  v.literal("user_management"),
-  v.literal("content_management"),
-  v.literal("payment_management"),
-  v.literal("analytics"),
-  v.literal("feature_flags"),
-  v.literal("content_moderation"),
-  v.literal("notification_management"),
-  v.literal("system_settings"),
-  v.literal("api_access"),
-  v.literal("data_export"),
-  v.literal("billing_management"),
-  v.literal("support_tickets"),
-  v.literal("marketing"),
-  v.literal("reports"),
   v.literal("all"),
-  v.literal("super")
+  v.literal("content_management"),
+  v.literal("feature_flags"),
+  v.literal("user_management"),
+  v.literal("analytics"),
+  v.literal("content_moderation"),
+  v.literal("payment_management"),
+  v.literal("notification_management"),
+  v.literal("support_management"),
+  v.literal("system_settings"),
+  v.literal("security"),
+  v.literal("api_management"),
+  v.literal("infrastructure"),
+  v.literal("moderation"),
+  v.literal("user_support"),
+  v.literal("reports"),
+  v.literal("data_export")
 );
 
-// admin controllers
+// FIXED: Simple syncAdminUser that WORKS
 export const syncAdminUser = mutation({
   args: {
     clerkId: v.string(),
@@ -36,9 +37,12 @@ export const syncAdminUser = mutation({
         v.literal("super"),
         v.literal("content"),
         v.literal("support"),
-        v.literal("analytics")
+        v.literal("analytics"),
+        v.literal("admin"),
+        v.literal("security"),
+        v.literal("infrastructure")
       ),
-      permissions: v.array(permissionValues),
+      permissions: v.array(permissionValues), // FIXED: Use the defined permissionValues
       accessLevel: v.union(
         v.literal("full"),
         v.literal("limited"),
@@ -49,36 +53,24 @@ export const syncAdminUser = mutation({
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     const now = Date.now();
 
-    // Define permission-based access from admin config
+    // Calculate permission-based access
+    const permissions = args.adminConfig.permissions;
     const canManageUsers =
-      args.adminConfig.permissions.includes("user_management") ||
-      args.adminConfig.permissions.includes("all") ||
-      args.adminConfig.permissions.includes("super");
-
+      permissions.includes("user_management") || permissions.includes("all");
     const canManageContent =
-      args.adminConfig.permissions.includes("content_management") ||
-      args.adminConfig.permissions.includes("all") ||
-      args.adminConfig.permissions.includes("super");
-
+      permissions.includes("content_management") || permissions.includes("all");
     const canManagePayments =
-      args.adminConfig.permissions.includes("payment_management") ||
-      args.adminConfig.permissions.includes("all") ||
-      args.adminConfig.permissions.includes("super");
-
+      permissions.includes("payment_management") || permissions.includes("all");
     const canViewAnalytics =
-      args.adminConfig.permissions.includes("analytics") ||
-      args.adminConfig.permissions.includes("all") ||
-      args.adminConfig.permissions.includes("super");
+      permissions.includes("analytics") || permissions.includes("all");
 
-    // Create a typed admin user data object
-    const adminUserData: any = {
-      // Basic profile fields
-      clerkId: args.clerkId,
+    const adminUpdates: any = {
+      // Basic info
       email: args.email,
       username: args.username,
       picture: args.picture,
@@ -86,10 +78,10 @@ export const syncAdminUser = mutation({
       lastname: args.lastname,
       lastActive: now,
 
-      // Admin-specific fields
+      // Admin permissions
       isAdmin: true,
       adminRole: args.adminConfig.role,
-      adminPermissions: args.adminConfig.permissions as AdminPermission[],
+      adminPermissions: permissions,
       adminAccessLevel: args.adminConfig.accessLevel,
       canManageUsers,
       canManageContent,
@@ -97,140 +89,148 @@ export const syncAdminUser = mutation({
       canViewAnalytics,
       adminDashboardAccess: true,
       tier: "elite",
-      theme: "system",
 
-      // User defaults
-      isMusician: false,
-      isClient: false,
-      isBooker: false,
-      isBoth: false,
-      isBanned: false,
-
-      // Numeric fields
-      earnings: 0,
-      totalSpent: 0,
-      monthlyGigsPosted: 0,
-      monthlyMessages: 0,
-      monthlyGigsBooked: 0,
-      completedGigsCount: 0,
-      reportsCount: 0,
-      cancelgigCount: 0,
-      renewalAttempts: 0,
-
-      // Boolean flags
-      firstLogin: false,
-      onboardingComplete: true,
-      firstTimeInProfile: false,
-
-      // String fields
-      banReason: "",
-
-      // Date fields
-      bannedAt: 0,
-
-      // Social and arrays
-      followers: [],
-      followings: [],
-      refferences: [],
-      mutualFollowers: 0,
-      allreviews: [],
-      myreviews: [],
-      savedGigs: [],
-      favoriteGigs: [],
-      bookingHistory: [],
-      adminNotes: "",
-
-      // Performance fields
-      badges: [],
-      reliabilityScore: 100,
-      avgRating: 0,
-      performanceStats: {
-        totalGigsCompleted: 0,
-        onTimeRate: 100,
-        clientSatisfaction: 100,
-        lastUpdated: now,
-      },
-      badgeMilestones: {
-        consecutiveGigs: 0,
-        earlyCompletions: 0,
-        perfectRatings: 0,
-        cancellationFreeStreak: 0,
-      },
-      gigsBookedThisWeek: {
-        count: 0,
-        weekStart: now,
-      },
-
-      // Privacy
-      isPrivate: false,
-      pendingFollowRequests: [],
-
-      // Booker fields (empty for admins)
-      bookerSkills: [],
-      managedBands: [],
-      artistsManaged: [],
+      // Trust system
+      trustScore: 100,
+      trustScoreLastUpdated: now,
+      trustTier: "elite",
+      canCreateBand: true,
+      bandCreationUnlockedAt: now,
+      verifiedIdentity: true,
     };
 
     if (existingUser) {
-      // Update existing user with admin permissions
-      const updates: any = {
-        // Basic profile updates
-        email: args.email,
-        username: args.username,
-        picture: args.picture,
-        firstname: args.firstname,
-        lastname: args.lastname,
-        lastActive: now,
-
-        // Admin permissions
-        isAdmin: true,
-        adminRole: args.adminConfig.role,
-        adminPermissions: args.adminConfig.permissions as AdminPermission[],
-        adminAccessLevel: args.adminConfig.accessLevel,
-        canManageUsers,
-        canManageContent,
-        canManagePayments,
-        canViewAnalytics,
-        adminDashboardAccess: true,
-        tier: "elite",
-        firstLogin: false,
-        onboardingComplete: true,
-      };
-
-      // Only update fields that are different or missing
-      if (args.picture && args.picture !== existingUser.picture) {
-        updates.picture = args.picture;
-      }
-      if (args.firstname && args.firstname !== existingUser.firstname) {
-        updates.firstname = args.firstname;
-      }
-      if (args.lastname && args.lastname !== existingUser.lastname) {
-        updates.lastname = args.lastname;
-      }
-
-      await ctx.db.patch(existingUser._id, updates);
+      // Update existing user - only patch what's needed
+      await ctx.db.patch(existingUser._id, adminUpdates);
       return {
         success: true,
         userId: existingUser._id,
         action: "updated",
         adminRole: args.adminConfig.role,
-        permissions: args.adminConfig.permissions,
+        permissions,
       };
     } else {
-      // Create new admin user with full data
-      const userId = await ctx.db.insert("users", adminUserData);
+      // CREATE NEW USER - simplified with minimal required fields
+      const newUserData = {
+        clerkId: args.clerkId,
+        ...adminUpdates,
+
+        // Add other REQUIRED fields that are missing
+        isMusician: false,
+        isClient: false,
+        isBoth: false,
+        isBooker: false,
+        isBanned: false,
+        earnings: 0,
+        totalSpent: 0,
+        monthlyGigsPosted: 0,
+        monthlyMessages: 0,
+        monthlyGigsBooked: 0,
+        completedGigsCount: 0,
+        reportsCount: 0,
+        cancelgigCount: 0,
+        renewalAttempts: 0,
+
+        // Add defaults for other required fields
+        firstLogin: true,
+        onboardingComplete: false,
+        banReason: "",
+        bannedAt: 0,
+
+        // Theme (required)
+        theme: "system",
+
+        // Add defaults for optional fields that might cause issues
+        city: "",
+        date: "",
+        month: "",
+        year: "",
+        address: "",
+        phone: "",
+        verification: "",
+        followers: [],
+        followings: [],
+        refferences: [],
+        mutualFollowers: 0,
+        allreviews: [],
+        myreviews: [],
+        savedGigs: [],
+        favoriteGigs: [],
+        bookingHistory: [],
+        adminNotes: "",
+        badges: [],
+        reliabilityScore: 100,
+        avgRating: 0,
+        performanceStats: {
+          totalGigsCompleted: 0,
+          onTimeRate: 100,
+          clientSatisfaction: 100,
+          lastUpdated: now,
+        },
+        badgeMilestones: {
+          consecutiveGigs: 0,
+          earlyCompletions: 0,
+          perfectRatings: 0,
+          cancellationFreeStreak: 0,
+        },
+        gigsBookedThisWeek: {
+          count: 0,
+          weekStart: now,
+        },
+        isPrivate: false,
+        pendingFollowRequests: [],
+        bookerSkills: [],
+        managedBands: [],
+        artistsManaged: [],
+        firstTimeInProfile: true,
+        mpesaPhoneNumber: "",
+        gigsBooked: 0,
+        gigsPosted: 0,
+        userearnings: 0,
+        total: 0,
+        profileViews: {
+          totalCount: 0,
+          recentViewers: [],
+          lastUpdated: now,
+        },
+        viewedProfiles: [],
+        myDeputies: [],
+        backUpFor: [],
+        backUpCount: 0,
+        confirmedReferredGigs: 0,
+        availability: "available",
+        bannedBy: "",
+        isSuspended: false,
+        suspensionReason: "",
+        suspensionExpiresAt: undefined,
+        reportedCount: 0,
+        reports: [],
+        warnings: [],
+        actionHistory: [],
+        companyName: "",
+        managedArtists: [],
+        agencyName: "",
+        bandLeaderOf: [],
+        bandMemberOf: [],
+        pendingBandInvites: 0,
+        governmentIdHash: "",
+        bookedMusicians: [],
+        bookedByClients: [],
+      };
+
+      const userId = await ctx.db.insert("users", newUserData);
       return {
         success: true,
         userId,
         action: "created",
         adminRole: args.adminConfig.role,
-        permissions: args.adminConfig.permissions,
+        permissions,
       };
     }
   },
 });
 
-// Update user as admin
+// Keep the other functions as they were
 export const updateUserAsAdmin = mutation({
   args: {
     clerkId: v.string(),
@@ -241,7 +241,10 @@ export const updateUserAsAdmin = mutation({
           v.literal("super"),
           v.literal("content"),
           v.literal("support"),
-          v.literal("analytics")
+          v.literal("analytics"),
+          v.literal("admin"),
+          v.literal("security"),
+          v.literal("infrastructure")
         )
       ),
       adminPermissions: v.optional(v.array(permissionValues)),
@@ -274,125 +277,61 @@ export const updateUserAsAdmin = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    try {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q: any) => q.eq("clerkId", args.clerkId))
-        .first();
-
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      // Filter out undefined values
-      const cleanUpdates: any = {};
-      for (const [key, value] of Object.entries(args.updates)) {
-        if (value !== undefined) {
-          cleanUpdates[key] = value;
-        }
-      }
-
-      // Create final updates with proper typing
-      const finalUpdates: any = {
-        ...cleanUpdates,
-        lastActive: Date.now(),
-      };
-
-      // If setting as admin, ensure required fields are set
-      if (args.updates.isAdmin === true) {
-        // Ensure admin permissions array exists
-        if (!finalUpdates.adminPermissions) {
-          finalUpdates.adminPermissions = [];
-        }
-
-        // Ensure admin dashboard access is enabled
-        if (finalUpdates.adminDashboardAccess === undefined) {
-          finalUpdates.adminDashboardAccess = true;
-        }
-
-        // Set elite tier for admins if not specified
-        if (!finalUpdates.tier) {
-          finalUpdates.tier = "elite";
-        }
-      }
-
-      await ctx.db.patch(user._id, finalUpdates);
-
-      return {
-        success: true,
-        userId: user._id,
-        adminRole: finalUpdates.adminRole || user.adminRole,
-        permissions:
-          finalUpdates.adminPermissions || user.adminPermissions || [],
-      };
-    } catch (error) {
-      console.error("Error updating user as admin:", error);
-      throw error;
-    }
-  },
-});
-
-// Get admin status
-export const getAdminStatus = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    console.log("🔍 getAdminStatus called for user:", args.userId);
-
-    // Check if user is admin in your database
-    const adminUser = await ctx.db
-      .query("users")
-      .filter((q: any) => q.eq("clerkId", args.userId))
-      .first();
-
-    console.log("📊 getAdminStatus result:", adminUser);
-
-    if (!adminUser || !adminUser.isAdmin) {
-      return {
-        isAdmin: false,
-        role: null,
-        permissions: [] as AdminPermission[],
-      };
-    }
-
-    return {
-      isAdmin: true,
-      role: adminUser.adminRole as AdminRole,
-      permissions: (adminUser.adminPermissions || []) as AdminPermission[],
-    };
-  },
-});
-
-// Make a user an admin
-export const makeUserAdmin = mutation({
-  args: {
-    clerkId: v.string(),
-    adminRole: v.union(
-      v.literal("super"),
-      v.literal("content"),
-      v.literal("support"),
-      v.literal("analytics")
-    ),
-    permissions: v.array(permissionValues),
-  },
-  handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .filter((q: any) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) {
       throw new Error("User not found");
     }
 
+    // Filter out undefined values
+    const cleanUpdates: any = {};
+    for (const [key, value] of Object.entries(args.updates)) {
+      if (value !== undefined) {
+        cleanUpdates[key] = value;
+      }
+    }
+
     await ctx.db.patch(user._id, {
-      isAdmin: true,
-      adminRole: args.adminRole,
-      adminPermissions: args.permissions as AdminPermission[],
-      adminDashboardAccess: true,
-      tier: "elite",
+      ...cleanUpdates,
       lastActive: Date.now(),
     });
 
-    return { success: true };
+    return {
+      success: true,
+      userId: user._id,
+    };
+  },
+});
+
+export const getAdminStatus = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) {
+      return {
+        isAdmin: false,
+        adminRole: null,
+        permissions: [],
+        exists: false,
+        userId: args.userId,
+        timestamp: Date.now(),
+      };
+    }
+
+    return {
+      isAdmin: user.isAdmin === true,
+      adminRole: user.adminRole || null,
+      permissions: user.adminPermissions || [],
+      exists: true,
+      userId: user._id,
+      timestamp: Date.now(),
+    };
   },
 });

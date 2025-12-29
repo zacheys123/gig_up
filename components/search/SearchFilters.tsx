@@ -152,7 +152,12 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
     musicianOnly: false,
     bookerOnly: false,
   });
-
+  const getActiveFilterDescription = () => {
+    if (activeFilters.clientOnly) return "Showing clients only";
+    if (activeFilters.musicianOnly) return "Showing musicians only";
+    if (activeFilters.bookerOnly) return "Showing bookers/managers only";
+    return "Showing all users";
+  };
   const { colors } = useThemeColors();
 
   // Available filter options - only objective criteria
@@ -313,33 +318,28 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
             colors.card
           )}
         >
-          <div
-            style={headerStyle}
-            className="p-4 border-b flex justify-between items-center"
-          >
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium">Discovery Options</h3>
-              {activeFilterCount > 0 && (
-                <span className="text-xs bg-blue-500 text-white rounded-full px-2 py-1">
-                  {activeFilterCount} active
-                </span>
-              )}
+          <div style={headerStyle} className="p-4 border-b flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">Discovery Options</h3>
+                {activeFilterCount > 0 && (
+                  <span className="text-xs bg-blue-500 text-white rounded-full px-2 py-1">
+                    {activeFilterCount} active
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={clearFilters}
+                className="text-xs flex items-center gap-1"
+                style={{ color: colors.primary }}
+              >
+                <FiX size={14} /> Clear all
+              </button>
             </div>
-            <button
-              onClick={clearFilters}
-              className="text-xs flex items-center gap-1"
-              style={{ color: colors.primary }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = "0.7";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = "1";
-              }}
-            >
-              <FiX size={14} /> Clear all
-            </button>
-          </div>
 
+            {/* Add this description */}
+            <p className="text-xs opacity-70">{getActiveFilterDescription()}</p>
+          </div>
           <div className="max-h-96 overflow-y-auto">
             {/* Account Type Toggles */}
             <div style={sectionStyle} className="p-4 border-b ">

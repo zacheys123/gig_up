@@ -5,7 +5,6 @@ import { useQuery } from "convex/react";
 import { useMemo } from "react";
 import { useCurrentUser } from "./useCurrentUser";
 import { Doc } from "@/convex/_generated/dataModel";
-import { useCheckTrial } from "./useCheckTrial";
 import { useUserTrialStatus } from "./useUserTrialStatus";
 
 type User = Doc<"users">;
@@ -13,138 +12,96 @@ type User = Doc<"users">;
 export function useAllUsers() {
   const users = useQuery(api.controllers.user.getAllUsers);
   const { user: currentUser } = useCurrentUser();
-  const { isUserActive } = useUserTrialStatus(); // ← Use the new hook here
+  const { isUserActive, getUserTierStatus } = useUserTrialStatus();
 
-  // Filter function to exclude banned users and only include pro/grace period users
+  // ✅ STRICT FILTER: Only include active users (paid or in grace period)
   const isValidUser = (user: User) => {
-    return isUserActive(user);
+    const isActive = isUserActive(user);
+    const tierStatus = getUserTierStatus(user);
+
+    // Debug logging for filtered users
+    if (!isActive && user.firstname) {
+      console.log(`🚫 Filtered out user: ${user.firstname}`, {
+        tier: user.tier,
+        tierStatus: user.tierStatus,
+        creationTime: user._creationTime,
+        status: tierStatus.status,
+      });
+    }
+
+    return isActive;
   };
 
+  // ✅ FIXED: All users for search (with strict filtering)
+  const allUsersForSearch = useMemo(() => {
+    if (!users) return [];
+
+    const filteredUsers = users.filter(
+      (user) =>
+        isValidUser(user) && user._id !== currentUser?._id && !user.isAdmin
+    );
+
+    console.log(
+      `🔍 User filtering: ${users.length} total, ${filteredUsers.length} active`
+    );
+
+    return filteredUsers;
+  }, [users, currentUser, isValidUser]);
+
+  // Musicians only (filtered)
   const musicians = useMemo(
     () => users?.filter((user) => user.isMusician && isValidUser(user)) || [],
     [users, isValidUser]
   );
 
-  // Filter musicians by role type
-  const musiciansByRole = useMemo(() => {
-    if (!users) return {};
-
-    return users.reduce(
-      (acc, user) => {
-        if (user.isMusician && user.roleType && isValidUser(user)) {
-          const role = user.roleType;
-          if (!acc[role]) acc[role] = [];
-          acc[role].push(user);
-        }
-        return acc;
-      },
-      {} as Record<string, User[]>
-    );
-  }, [users, isValidUser]);
-
-  // Get all musicians (without filtering out those without instruments)
-  const allMusicians = useMemo(() => {
+  // Clients only (filtered)
+  const clients = useMemo(() => {
     if (!users) return [];
     return users.filter(
       (user) =>
-        user.isMusician &&
-        isValidUser(user) &&
-        user._id !== currentUser?._id && // Exclude current user
-        !user.isClient
+        user.isClient && isValidUser(user) && user._id !== currentUser?._id
     );
   }, [users, currentUser, isValidUser]);
 
-  // Nearby musicians based on location only
-  const nearbyMusicians = useMemo(() => {
-    if (!users || !currentUser) return [];
-
-    const normalizeString = (str?: string) =>
-      str
-        ?.trim()
-        ?.toLowerCase()
-        ?.normalize("NFD")
-        ?.replace(/[\u0300-\u036f]/g, "") || "";
-
-    const currentCity = normalizeString(currentUser.city);
-
-    return users.filter((myuser: User) => {
-      // Only show other musicians in the same city who are valid
-      if (
-        !myuser.isMusician ||
-        myuser._id === currentUser._id ||
-        !isValidUser(myuser)
-      ) {
-        return false;
-      }
-
-      const targetCity = normalizeString(myuser.city);
-
-      // Match by city if available
-      if (currentCity && targetCity) {
-        return targetCity === currentCity;
-      }
-
-      return false;
-    });
-  }, [users, currentUser, isValidUser]);
-
-  // Get musicians by specific role
-  const getMusiciansByRole = (roleType: string) => {
+  // Bookers only (filtered)
+  const bookers = useMemo(() => {
     if (!users) return [];
     return users.filter(
       (user) =>
-        user.isMusician &&
-        isValidUser(user) &&
-        user.roleType === roleType &&
-        user._id !== currentUser?._id
+        user.isBooker && isValidUser(user) && user._id !== currentUser?._id
     );
-  };
+  }, [users, currentUser, isValidUser]);
+
+  // ... rest of your existing code
 
   return {
-    // All users (filtered)
+    // All users (strictly filtered)
     users: users?.filter(isValidUser) || [],
 
-    // Filtered users
-    filteredMusicians: allMusicians, // Now includes all valid musicians
-    nearbyMusicians,
-    musicians: allMusicians,
-    musiciansByRole,
-    clients: users?.filter((user) => user.isClient && isValidUser(user)) || [],
-    proUsers:
-      users?.filter(
-        (user) =>
-          user.tier === "pro" &&
-          user.tierStatus === "active" &&
-          isValidUser(user)
-      ) || [],
+    // ✅ Users for search (includes only active users of all types)
+    searchUsers: allUsersForSearch,
 
-    // Helper functions
-    getMusiciansByRole,
+    // Filtered users by type
+    filteredMusicians: musicians,
+    musicians,
+    clients,
+    bookers,
 
     // Status
     isLoading: users === undefined,
     isEmpty: users?.length === 0,
 
     // Counts
-    totalCount: users?.filter(isValidUser).length || 0,
-    musiciansCount: allMusicians.length,
-    clientsCount:
-      users?.filter((user) => user.isClient && isValidUser(user)).length || 0,
-    proUsersCount:
-      users?.filter(
-        (user) =>
-          user.tier === "pro" &&
-          user.tierStatus === "active" &&
-          isValidUser(user)
-      ).length || 0,
-    nearbyMusiciansCount: nearbyMusicians.length,
+    totalCount: allUsersForSearch.length,
+    musiciansCount: musicians.length,
+    clientsCount: clients.length,
+    bookersCount: bookers.length,
   };
 }
-
 export function useAllUsersWithPresence() {
   const { user: currentUser } = useCurrentUser();
   const users = useQuery(api.presence.getAllUsersWithPresence);
-  const { isUserActive } = useUserTrialStatus(); // ← Use the new hook
+  const { isUserActive } = useUserTrialStatus();
 
   return users?.filter((u) => u?._id !== currentUser?._id && isUserActive(u));
 }

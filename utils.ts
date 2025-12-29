@@ -11,26 +11,84 @@ export const toGigId = (id: string): Id<"gigs"> => {
   return id as Id<"gigs">;
 };
 
-export const searchFunc = (users: UserProps[], searchQuery: string) => {
-  let sortedData = users;
-  console.log(sortedData);
-  if (searchQuery) {
-    sortedData = sortedData?.filter((user: UserProps) => {
-      if (
-        user?.firstname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user?.lastname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        // user?.username?.toLowerCase().includes(searchQuery) ||
-        user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user?.instrument?.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return true;
+export const searchFunc = (
+  users: UserProps[],
+  searchQuery: string,
+  isBookerEnabled: boolean
+): UserProps[] => {
+  if (!users || users.length === 0) return [];
+
+  const query = searchQuery.toLowerCase().trim();
+
+  if (!query) return users;
+
+  console.log(`Searching ${users.length} users for: "${query}"`);
+
+  return users.filter((user: UserProps) => {
+    // Common fields for all user types
+    const basicMatch =
+      user?.firstname?.toLowerCase().includes(query) ||
+      user?.lastname?.toLowerCase().includes(query) ||
+      user?.email?.toLowerCase().includes(query) ||
+      user?.username?.toLowerCase().includes(query) ||
+      user?.bio?.toLowerCase().includes(query) ||
+      user?.city?.toLowerCase().includes(query);
+
+    if (basicMatch) return true;
+
+    // Musician-specific fields
+    if (user.isMusician) {
+      const musicianMatch =
+        user?.instrument?.toLowerCase().includes(query) ||
+        user?.roleType?.toLowerCase().includes(query) ||
+        user?.musiciangenres?.some((genre) =>
+          genre.toLowerCase().includes(query)
+        );
+      // user?.services?.some((service) =>
+      //   service.toLowerCase().includes(query)
+      // ) ||
+      // user?.expertise?.some((exp) => exp.toLowerCase().includes(query)) ||
+      // user?.styles?.some((style) => style.toLowerCase().includes(query));
+
+      if (musicianMatch) return true;
+    }
+
+    // Client-specific fields
+    if (user.isClient) {
+      const clientMatch =
+        user?.organization?.toLowerCase().includes(query) ||
+        // user?.interests?.some((interest) =>
+        //   interest.toLowerCase().includes(query)
+        // ) ||
+        // user?.eventTypes?.some((eventType) =>
+        //   eventType.toLowerCase().includes(query)
+        // ) ||
+        // user?.preferredGenres?.some((genre) =>
+        //   genre.toLowerCase().includes(query)
+        // ) ||
+        user?.clientType?.toLowerCase().includes(query);
+
+      if (clientMatch) return true;
+    }
+
+    // Booker/Manager specific fields
+    if (isBookerEnabled) {
+      if (user.isBooker) {
+        const bookerMatch =
+          user?.companyName?.toLowerCase().includes(query) ||
+          user?.agencyName?.toLowerCase().includes(query) ||
+          user?.managedArtists?.some((artist) =>
+            artist.toLowerCase().includes(query)
+          );
+
+        if (bookerMatch) return true;
       }
-    });
-  }
-  return sortedData;
+    }
+
+    return false;
+  });
 };
 
-// utils/deepseekCostTracker.ts
 export class DeepSeekCostTracker {
   private static readonly COST_PER_1K_TOKENS = 0.00014; // $0.00014 per 1K tokens
 

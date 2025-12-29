@@ -58,10 +58,26 @@ export const MyDeputies: React.FC<MyDeputiesProps> = ({ user }) => {
     }
   };
 
+  // In MyDeputies.tsx, update the handleToggleBookable function:
+
   const handleToggleBookable = async (
     deputyId: Id<"users">,
     currentValue: boolean
   ) => {
+    // Get deputy to check trust
+    const deputy = myDeputies.find((d) => d?._id === deputyId);
+
+    if (currentValue === false && deputy) {
+      // Trying to enable booking - check trust
+      const deputyTrustStars = deputy.trustStars || 0.5;
+      if (deputyTrustStars < 3.0) {
+        toast.error(
+          `This deputy needs at least 3.0 trust stars to be directly bookable. Current: ${deputyTrustStars.toFixed(1)} stars`
+        );
+        return;
+      }
+    }
+
     const result = await updateDeputySettings(deputyId, {
       canBeBooked: !currentValue,
     });
@@ -71,7 +87,7 @@ export const MyDeputies: React.FC<MyDeputiesProps> = ({ user }) => {
         `Deputy ${!currentValue ? "enabled" : "disabled"} for direct booking`
       );
     } else {
-      toast.error("Failed to update booking status");
+      toast.error(result.error || "Failed to update booking status");
     }
   };
 
@@ -225,12 +241,29 @@ const DeputyManagementCard: React.FC<{
   );
 };
 // components/DeputyManagementCard.tsx - UPDATED
+
 const DeputyHeader: React.FC<{
   deputy: any;
   onToggleBookable: (deputyId: string, currentValue: boolean) => void;
   isLoading: boolean;
 }> = ({ deputy, onToggleBookable, isLoading }) => {
   const { colors } = useThemeColors();
+  const { checkCanBeBooked } = useDeputies(deputy?._id as Id<"users">); // Get the trust check function
+
+  const handleToggleClick = () => {
+    // Check if deputy can be bookable based on trust
+    const deputyTrustStars = deputy?.trustStars || 0.5;
+    const canBeBooked = checkCanBeBooked(deputyTrustStars);
+
+    if (!canBeBooked) {
+      toast.error(
+        `This deputy needs at least 3.0 trust stars to be directly bookable. Current: ${deputyTrustStars.toFixed(1)} stars`
+      );
+      return;
+    }
+
+    onToggleBookable(deputy?._id, deputy?.relationship.canBeBooked);
+  };
 
   return (
     <div className="flex items-start gap-4 mb-6">
@@ -240,9 +273,14 @@ const DeputyHeader: React.FC<{
           alt={deputy?.username}
           className="w-16 h-16 rounded-2xl border-2 border-white shadow-lg"
         />
-        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-          <CheckCircle2 className="w-3 h-3 text-white" />
-        </div>
+        {/* Add trust indicator badge */}
+        {deputy?.trustStars && (
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
+            <span className="text-xs font-bold text-white">
+              {Math.floor(deputy.trustStars)}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -253,9 +291,7 @@ const DeputyHeader: React.FC<{
 
           {/* PER-DEPUTY TOGGLE */}
           <button
-            onClick={() =>
-              onToggleBookable(deputy?._id, deputy?.relationship.canBeBooked)
-            }
+            onClick={handleToggleClick}
             disabled={isLoading}
             className={cn(
               "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all duration-200",
@@ -280,6 +316,30 @@ const DeputyHeader: React.FC<{
           @{deputy?.username}
         </p>
 
+        {/* Add trust stars display */}
+        {deputy?.trustStars && (
+          <div className="flex items-center gap-1 mb-2">
+            <div className="flex">
+              {[...Array(5)].map((_, i) => (
+                <span
+                  key={i}
+                  className={`text-lg ${
+                    i < Math.floor(deputy.trustStars || 0)
+                      ? "text-amber-500"
+                      : "text-gray-300"
+                  }`}
+                >
+                  ★
+                </span>
+              ))}
+            </div>
+            <span className="text-xs text-gray-500">
+              {deputy.trustStars?.toFixed(1)} stars • Score:{" "}
+              {deputy.trustScore || 0}
+            </span>
+          </div>
+        )}
+
         {/* Role and Gig Type Info */}
         <div className="space-y-1">
           <Badge
@@ -301,12 +361,87 @@ const DeputyHeader: React.FC<{
     </div>
   );
 };
+const TrustDisplay: React.FC<{ deputy: any }> = ({ deputy }) => {
+  const { colors } = useThemeColors();
+  const trustStars = deputy?.trustStars || 0.5;
+  const trustScore = deputy?.trustScore || 0;
+  const trustTier = deputy?.trustTier || "new";
 
+  // Star display
+  const renderStars = () => {
+    const stars = [];
+    const fullStars = Math.floor(trustStars);
+    const hasHalfStar = trustStars % 1 >= 0.5;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <div key={`full-${i}`} className="text-amber-500">
+          ★
+        </div>
+      );
+    }
+
+    if (hasHalfStar) {
+      stars.push(
+        <div key="half" className="text-amber-500">
+          ★½
+        </div>
+      );
+    }
+
+    const emptyStars = 5 - stars.length;
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <div key={`empty-${i}`} className="text-gray-300">
+          ☆
+        </div>
+      );
+    }
+
+    return stars;
+  };
+
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <div className={cn("flex items-center gap-1", colors.text)}>
+        {renderStars()}
+        <span className="ml-2 text-sm font-medium">
+          {trustStars.toFixed(1)} stars
+        </span>
+      </div>
+
+      {/* Trust Tier Badge */}
+      <Badge
+        variant="outline"
+        className={cn(
+          "text-xs capitalize",
+          trustTier === "elite" &&
+            "bg-purple-500/10 text-purple-600 border-purple-500/20",
+          trustTier === "trusted" &&
+            "bg-green-500/10 text-green-600 border-green-500/20",
+          trustTier === "verified" &&
+            "bg-blue-500/10 text-blue-600 border-blue-500/20",
+          trustTier === "basic" &&
+            "bg-amber-500/10 text-amber-600 border-amber-500/20",
+          trustTier === "new" &&
+            "bg-gray-500/10 text-gray-600 border-gray-500/20"
+        )}
+      >
+        {trustTier}
+      </Badge>
+
+      {/* Trust Score */}
+      <div className="text-xs text-gray-500">Score: {trustScore}</div>
+    </div>
+  );
+};
 const DeputyInfo: React.FC<{ deputy: any }> = ({ deputy }) => {
   const { colors } = useThemeColors();
 
   return (
     <div className="space-y-4 mb-6">
+      {" "}
+      <TrustDisplay deputy={deputy} />
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
         <InfoField
@@ -325,7 +460,6 @@ const DeputyInfo: React.FC<{ deputy: any }> = ({ deputy }) => {
           value={`BackUp to ${deputy?.backupCount || 0} musicians`}
         />
       </div>
-
       {/* Quick Status Info */}
       <div
         className={cn(
@@ -345,7 +479,6 @@ const DeputyInfo: React.FC<{ deputy: any }> = ({ deputy }) => {
           </span>
         </div>
       </div>
-
       {/* Gig Type */}
       {deputy?.relationship.gigType && (
         <div className="flex items-center gap-2">
@@ -355,7 +488,6 @@ const DeputyInfo: React.FC<{ deputy: any }> = ({ deputy }) => {
           </span>
         </div>
       )}
-
       {/* Personal Note */}
       {deputy?.relationship.note && (
         <div

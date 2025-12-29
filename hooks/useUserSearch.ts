@@ -1,7 +1,9 @@
-// hooks/useUserSearch.ts
+"use client";
 import { useState, useMemo, useCallback } from "react";
 import { UserProps } from "@/types/userTypes";
 import { searchFunc } from "@/utils";
+import { useFeatureFlags } from "./useFeatureFlag";
+import { read } from "fs";
 
 interface UseUserSearchProps {
   users: UserProps[];
@@ -23,9 +25,18 @@ export function useUserSearch({
     bookerOnly: false,
   });
 
-  // YOUR FEATURED USER ALGORITHM - useCallback to memoize it
+  const { isBookerEnabled } = useFeatureFlags();
+  // Featured user algorithm
   const isFeaturedUser = useCallback((user: UserProps): boolean => {
     try {
+      // For clients and bookers, use simpler criteria
+      if (user.isClient || user.isBooker) {
+        const views = user.profileViews?.totalCount || 0;
+        // ✅ More lenient threshold for clients
+        return views >= 3;
+      }
+
+      // For musicians, use engagement metrics
       const views = user.profileViews?.totalCount || 0;
       const followers = Math.max(user.followers?.length || 1, 1);
       const engagementRate = views / followers;
@@ -42,12 +53,12 @@ export function useUserSearch({
     }
   }, []);
 
-  // YOUR TRENDING INSTRUMENTS LOGIC
+  // Trending instruments logic - only for musicians
   const getTrendingInstruments = useCallback((users: UserProps[]): string[] => {
     const instrumentViews: Record<string, number> = {};
 
     users.forEach((user) => {
-      if (user.instrument) {
+      if (user.isMusician && user.instrument) {
         const views = user.profileViews?.totalCount || 0;
         instrumentViews[user.instrument] =
           (instrumentViews[user.instrument] || 0) + views;
@@ -60,52 +71,106 @@ export function useUserSearch({
       .map(([instrument]) => instrument);
   }, []);
 
-  // Process users
+  // Add in processedUsers
   const processedUsers = useMemo(() => {
-    if (!users) return [];
+    if (!users) {
+      console.log("No users received");
+      return [];
+    }
 
-    return users.filter((user: UserProps) => {
+    const result = users.filter((user: UserProps) => {
       const isNotCurrentUser = user.clerkId !== currentUser?.clerkId;
       const isNotAdmin = !user.isAdmin;
-      return isNotCurrentUser && isNotAdmin;
+      const isValidType = user.isMusician || user.isClient || user.isBooker;
+
+      const passes = isNotCurrentUser && isNotAdmin && isValidType;
+
+      if (!passes) {
+        console.log("User filtered out:", user.firstname, {
+          isNotCurrentUser,
+          isNotAdmin,
+          isValidType,
+        });
+      }
+
+      return passes;
     });
+
+    console.log("Processed users count:", result.length);
+    return result;
   }, [users, currentUser]);
 
   // Apply search
   const searchedUsers = useMemo(() => {
     if (searchQuery) {
-      return searchFunc(processedUsers, searchQuery);
+      return searchFunc(processedUsers, searchQuery, isBookerEnabled());
     }
     return processedUsers;
   }, [processedUsers, searchQuery]);
 
-  // YOUR COMPLETE FILTER LOGIC WITH DISCOVERY FEATURES
+  // ✅ FIXED: Complete filter logic with proper client handling
   const applyAdditionalFilters = useCallback(
     (usersToFilter: UserProps[]) => {
       return usersToFilter.filter((user) => {
-        // Client/Musician filter
-        if (activeFilters.clientOnly && !user.isClient) return false;
-        if (activeFilters.musicianOnly && !user.isMusician) return false;
-        if (activeFilters.bookerOnly && !user.isBooker) return false;
+        // ✅ FIXED: Account type filtering logic
+        const { clientOnly, musicianOnly, bookerOnly } = activeFilters;
 
-        // Role type filter
-        if (
-          activeFilters.roleType.length > 0 &&
-          (!user.roleType || !activeFilters.roleType.includes(user.roleType))
-        ) {
-          return false;
+        // If no account type filter is selected, show all valid users
+        if (!clientOnly && !musicianOnly && !bookerOnly) {
+          // User must be at least one valid type
+          const isValidUserType =
+            user.isMusician || user.isClient || user.isBooker;
+          if (!isValidUserType) return false;
+        }
+        // If "Clients Only" is selected
+        else if (clientOnly) {
+          if (!user.isClient) return false;
+        }
+        // If "Musicians Only" is selected
+        else if (musicianOnly) {
+          if (!user.isMusician) return false;
+        }
+        // If "Bookers Only" is selected
+        else if (bookerOnly) {
+          if (!user.isBooker) return false;
         }
 
-        // Instrument filter
-        if (
-          activeFilters.instrument.length > 0 &&
-          (!user.instrument ||
-            !activeFilters.instrument.includes(user.instrument))
-        ) {
-          return false;
+        // ✅ FIXED: Role type filter - only apply to musicians
+        if (activeFilters.roleType.length > 0) {
+          // If user is a musician, check role type
+          if (user.isMusician) {
+            if (
+              !user.roleType ||
+              !activeFilters.roleType.includes(user.roleType)
+            ) {
+              return false;
+            }
+          }
+          // If user is not a musician, but role filter is set, exclude them
+          else if (activeFilters.roleType.length > 0) {
+            return false;
+          }
         }
 
-        // DISCOVERY FEATURES - YOUR ORIGINAL LOGIC
+        // ✅ FIXED: Instrument filter - only apply to musicians
+        if (activeFilters.instrument.length > 0) {
+          // If user is a musician, check instrument
+          if (user.isMusician) {
+            if (
+              !user.instrument ||
+              !activeFilters.instrument.includes(user.instrument)
+            ) {
+              return false;
+            }
+          }
+          // If user is not a musician, but instrument filter is set, exclude them
+          else if (activeFilters.instrument.length > 0) {
+            return false;
+          }
+        }
+
+        // ✅ FIXED: Discovery features - handle different user types
+        // ✅ FIXED: Discovery features - handle different user types
         if (activeFilters.discoveryType.length > 0) {
           const matchesDiscovery = activeFilters.discoveryType.some(
             (discoveryType) => {
@@ -113,21 +178,32 @@ export function useUserSearch({
                 case "new-talents":
                   return (
                     user._creationTime &&
+                    // ✅ Allow clients too
+                    (user?.isMusician || user?.isClient || user?.isBooker) &&
                     Date.now() - user._creationTime < 30 * 24 * 60 * 60 * 1000
                   );
 
                 case "featured-this-week":
-                  return isFeaturedUser(user); // Using the function here
+                  // ✅ Update isFeaturedUser to work better with clients
+                  return isFeaturedUser(user);
 
                 case "near-you":
                   return user.city === currentUser?.city;
 
                 case "similar-style":
+                  // For clients: match based on interests
+                  if (user.isClient) {
+                    // ✅ Return true for clients if they have clientType, or show all if not
+                    return user.clientType ? user.clientType : true;
+                  }
+                  // For musicians: match based on genres
                   return user.musiciangenres?.some((genre) =>
                     currentUser?.musiciangenres?.includes(genre)
                   );
 
                 case "trending-instruments":
+                  // ✅ Skip this filter for non-musicians
+                  if (!user.isMusician) return false;
                   const trendingInstruments =
                     getTrendingInstruments(usersToFilter);
                   return trendingInstruments.includes(user.instrument || "");
@@ -153,6 +229,7 @@ export function useUserSearch({
   }, [searchedUsers, applyAdditionalFilters]);
 
   const handleFilterChange = (filters: typeof activeFilters) => {
+    console.log("Filters changed:", filters);
     setActiveFilters(filters);
   };
 
@@ -180,7 +257,7 @@ export function useUserSearch({
     activeFilterCount,
     handleFilterChange,
     clearFilters,
-    isFeaturedUser, // ✅ Make sure this is returned
+    isFeaturedUser,
     totalUsers: processedUsers.length,
     filteredCount: filteredUsers.length,
   };

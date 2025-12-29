@@ -1,6 +1,5 @@
 "use client";
 
-import { OnboardingModal } from "@/components/dashboard/onboarding";
 import BallLoader from "@/components/loaders/BallLoader";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -17,6 +16,7 @@ import { ClientDashboardWithLoading } from "@/components/dashboard/client";
 
 import { DashboardSkeleton } from "@/components/skeletons/DasboardSkeleton";
 import BookerDashboardWithLoading from "@/components/dashboard/booker";
+import { OnboardingModal } from "@/components/dashboard/onboarding";
 
 export default function Dashboard() {
   const { isLoaded, userId } = useAuth();
@@ -245,7 +245,7 @@ export default function Dashboard() {
           </p>
         </div>
       )}
-      {user.firstLogin && !user.onboardingComplete && <OnboardingModal />}
+      {user && !user.onboardingComplete && <OnboardingModal />}
     </main>
   );
 }

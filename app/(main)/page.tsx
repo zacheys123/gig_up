@@ -292,6 +292,7 @@ export default function Home() {
     usePlatformStats(); // Create this hook
   console.log(featuredTestimonials);
   // Profile completion logic
+  // In your main page, update this:
   const isProfileComplete =
     isAuthenticated &&
     user &&
@@ -311,18 +312,39 @@ export default function Home() {
     !["pro", "premium", "elite"].includes(user?.tier || "free");
   // Dynamic navigation
   const getDynamicHref = () => {
-    if (!userId || !user?.firstname) return `/profile`;
-    if (!user?.isClient && !user?.isMusician && !user?.isBooker)
+    if (!userId) return `/sign-in`;
+
+    // If user doesn't have a firstname, they need to complete profile
+    if (!user?.firstname) return `/profile`;
+
+    // If user doesn't have a role, they need to choose one
+    if (!user?.isClient && !user?.isMusician && !user?.isBooker) {
       return `/roles/${userId}`;
-    if (user?.isClient)
-      return !user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=my_gigs`;
-    if (user?.isBooker)
-      return !user?.onboardingComplete
-        ? `/dashboard`
-        : `/hub/gigs?tab=applications`;
-    if (user?.isMusician)
-      return user?.onboardingComplete ? `/dashboard` : `/hub/gigs?tab=all`;
-    return `/roles/${userId}`;
+    }
+
+    // Check if profile is complete enough
+    const isProfileComplete =
+      user?.firstname &&
+      (user?.isMusician ? user?.roleType : true) &&
+      (user?.isMusician ? user?.date && user?.month && user?.year : true);
+
+    // If profile is not complete, go to profile edit
+    if (!isProfileComplete) {
+      return `/profile`;
+    }
+
+    // If onboarding is not complete, go to dashboard (which will show onboarding)
+    if (!user?.onboardingComplete) {
+      return `/dashboard`;
+    }
+
+    // After onboarding, go to appropriate hub
+    if (user?.isClient) return `/hub/gigs?tab=my_gigs`;
+    if (user?.isBooker) return `/hub/gigs?tab=applications`;
+    if (user?.isMusician) return `/hub/gigs?tab=all`;
+
+    // Fallback
+    return `/dashboard`;
   };
 
   // User role display
@@ -759,11 +781,11 @@ export default function Home() {
                       />
                       <div className="relative flex items-center gap-3 text-white">
                         <Sparkles className="w-5 h-5" />
-                        {isProfileComplete && !user?.onboardingComplete
-                          ? "Go to Dashboard"
-                          : user?.onboardingComplete
-                            ? " Go to Hub"
-                            : "Complete Profile"}
+                        {isProfileComplete
+                          ? user?.onboardingComplete
+                            ? "Go to Hub"
+                            : "Continue Setup"
+                          : "Complete Profile"}
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                       </div>
                     </Link>

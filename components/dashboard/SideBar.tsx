@@ -667,9 +667,9 @@ export function Sidebar() {
               features={getRoleFeatures(user?.roleType || "all")}
               variant="sidebar"
               title="Your Tools"
-              showLocked={false} // Show coming soon features
+              showLocked={true} // Show coming soon features
             />
-            {/* <FeatureFlagDebug /> */}
+            {/* <BandEligibilityBadge /> */}
           </div>
           {/* Theme Toggle */}
           <button

@@ -1,4 +1,4 @@
-// components/skeletons/SearchUserCardSkeleton.tsx
+// components/skeletons/SearchUserSkeleton.tsx
 "use client";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -15,161 +15,116 @@ export function SearchUserCardSkeleton({
   return (
     <div
       className={cn(
-        "group relative rounded-2xl p-5 border backdrop-blur-sm animate-pulse ",
-        isDarkMode
-          ? "bg-gray-800/50 border-gray-700"
-          : "bg-white border-gray-200"
+        "group relative rounded-2xl p-5 animate-pulse",
+        "flex flex-col h-full"
       )}
+      style={{
+        background: colors.card,
+        border: `1px solid ${colors.border}`,
+      }}
     >
-      {/* Featured Badge Skeleton */}
-      <div className="absolute -top-2 -right-2 z-10">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-5">
+        <div className="flex items-center gap-3">
+          {/* Avatar skeleton */}
+          <div className="relative">
+            <div
+              className="w-14 h-14 rounded-xl"
+              style={{ backgroundColor: colors.skeletonBg }}
+            />
+          </div>
+
+          {/* Name skeleton */}
+          <div className="min-w-0 flex-1">
+            <div
+              className="h-5 w-24 mb-2 rounded"
+              style={{ backgroundColor: colors.skeletonBg }}
+            />
+            <div
+              className="h-3 w-16 rounded"
+              style={{ backgroundColor: colors.skeletonBg }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Role badge skeleton */}
+      <div className="mb-4">
         <div
-          className={cn(
-            "w-16 h-6 rounded-full",
-            isDarkMode ? "bg-gray-700" : "bg-gray-300"
-          )}
+          className="h-7 w-20 rounded-full"
+          style={{ backgroundColor: colors.skeletonBg }}
         />
       </div>
 
-      {/* Avatar Section Skeleton */}
-      <div className="flex items-start gap-4 mb-4">
-        <div className="relative">
-          <div
-            className={cn(
-              "w-14 h-14 rounded-2xl",
-              isDarkMode ? "bg-gray-700" : "bg-gray-300"
-            )}
-          />
-          {/* Online Badge Skeleton */}
-          <div
-            className={cn(
-              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2",
-              isDarkMode
-                ? "bg-gray-600 border-gray-800"
-                : "bg-gray-400 border-white"
-            )}
-          />
-        </div>
+      {/* Location skeleton */}
+      <div className="mb-4">
+        <div
+          className="h-4 w-28 rounded"
+          style={{ backgroundColor: colors.skeletonBg }}
+        />
+      </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-2">
+      {/* Bio skeleton */}
+      <div className="mb-5 space-y-2">
+        <div
+          className="h-3 w-full rounded"
+          style={{ backgroundColor: colors.skeletonBg }}
+        />
+        <div
+          className="h-3 w-3/4 rounded"
+          style={{ backgroundColor: colors.skeletonBg }}
+        />
+      </div>
+
+      {/* Tags skeleton */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="h-6 w-16 rounded-lg"
+            style={{ backgroundColor: colors.skeletonBg }}
+          />
+        ))}
+      </div>
+
+      {/* Stats grid skeleton */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="p-2 rounded-lg border"
+            style={{
+              backgroundColor: colors.skeletonBg,
+              borderColor: colors.borderLight,
+            }}
+          >
+            <div className="flex items-center justify-center gap-1 mb-1">
               <div
-                className={cn(
-                  "w-20 h-4 rounded",
-                  isDarkMode ? "bg-gray-700" : "bg-gray-300"
-                )}
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: colors.skeletonBgDark }}
               />
               <div
-                className={cn(
-                  "w-16 h-3 rounded",
-                  isDarkMode ? "bg-gray-700" : "bg-gray-300"
-                )}
+                className="h-4 w-6 rounded"
+                style={{ backgroundColor: colors.skeletonBgDark }}
               />
             </div>
             <div
-              className={cn(
-                "w-8 h-8 rounded-xl",
-                isDarkMode ? "bg-gray-700" : "bg-gray-300"
-              )}
+              className="h-3 w-8 mx-auto rounded"
+              style={{ backgroundColor: colors.skeletonBgDark }}
             />
           </div>
-
-          {/* Role Badge Skeleton */}
-          <div
-            className={cn(
-              "w-24 h-6 rounded-full",
-              isDarkMode ? "bg-gray-700" : "bg-gray-300"
-            )}
-          />
-        </div>
+        ))}
       </div>
 
-      {/* Location Skeleton */}
-      <div className="flex items-center gap-2 mb-4">
+      {/* Buttons skeleton */}
+      <div className="mt-auto flex gap-2">
         <div
-          className={cn(
-            "w-4 h-4 rounded",
-            isDarkMode ? "bg-gray-700" : "bg-gray-300"
-          )}
+          className="flex-1 h-10 rounded-lg"
+          style={{ backgroundColor: colors.skeletonBg }}
         />
         <div
-          className={cn(
-            "w-16 h-3 rounded",
-            isDarkMode ? "bg-gray-700" : "bg-gray-300"
-          )}
-        />
-      </div>
-
-      {/* Bio Skeleton */}
-      <div className="space-y-2 mb-4">
-        <div
-          className={cn(
-            "w-full h-3 rounded",
-            isDarkMode ? "bg-gray-700" : "bg-gray-300"
-          )}
-        />
-        <div
-          className={cn(
-            "w-3/4 h-3 rounded",
-            isDarkMode ? "bg-gray-700" : "bg-gray-300"
-          )}
-        />
-      </div>
-
-      {/* Stats & Actions Skeleton */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-4">
-          <div className="text-center">
-            <div
-              className={cn(
-                "w-8 h-5 rounded mb-1",
-                isDarkMode ? "bg-gray-700" : "bg-gray-300"
-              )}
-            />
-            <div
-              className={cn(
-                "w-12 h-3 rounded",
-                isDarkMode ? "bg-gray-700" : "bg-gray-300"
-              )}
-            />
-          </div>
-          <div className="text-center">
-            <div
-              className={cn(
-                "w-6 h-5 rounded mb-1",
-                isDarkMode ? "bg-gray-700" : "bg-gray-300"
-              )}
-            />
-            <div
-              className={cn(
-                "w-8 h-3 rounded",
-                isDarkMode ? "bg-gray-700" : "bg-gray-300"
-              )}
-            />
-          </div>
-          <div className="text-center">
-            <div
-              className={cn(
-                "w-10 h-5 rounded mb-1",
-                isDarkMode ? "bg-gray-700" : "bg-gray-300"
-              )}
-            />
-            <div
-              className={cn(
-                "w-10 h-3 rounded",
-                isDarkMode ? "bg-gray-700" : "bg-gray-300"
-              )}
-            />
-          </div>
-        </div>
-
-        {/* Follow Button Skeleton */}
-        <div
-          className={cn(
-            "w-20 h-8 rounded-xl",
-            isDarkMode ? "bg-gray-700" : "bg-gray-300"
-          )}
+          className="w-10 h-10 rounded-lg"
+          style={{ backgroundColor: colors.skeletonBg }}
         />
       </div>
     </div>
