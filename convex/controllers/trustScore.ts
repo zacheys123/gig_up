@@ -383,55 +383,66 @@ async function calculateRoleSpecificScore(
 ): Promise<number> {
   let score = 0;
 
-  // ========== POSITIVE FACTORS ==========
+  // ========== BASIC PROFILE (LOW WEIGHT - MAX 20 POINTS) ==========
 
-  // Payment method verification
+  // Profile completion - LOW WEIGHT (max 25 points)
+  if (user.onboardingComplete) score += 2; // Reduced from 5
+  if (user.firstname) score += 2; // Reduced from 5
+  if (user.city) score += 2; // Reduced from 5
+  if (user.phone) score += 2; // Reduced from 5
+  if (user.picture) score += 2; // Reduced from 5
+
+  // Payment method - IMPORTANT (kept high)
   if (user.mpesaPhoneNumber) score += 15;
 
-  // Account age
+  // Account age - LOW WEIGHT
   const daysOld = (Date.now() - user._creationTime) / (1000 * 60 * 60 * 24);
-  if (daysOld > 365) score += 10;
-  else if (daysOld > 180) score += 7;
-  else if (daysOld > 90) score += 5;
-  else if (daysOld > 30) score += 3;
-  else score += 1;
+  if (daysOld > 365)
+    score += 5; // Reduced from 10
+  else if (daysOld > 180)
+    score += 3; // Reduced from 7
+  else if (daysOld > 90)
+    score += 2; // Reduced from 5
+  else if (daysOld > 30)
+    score += 1; // Reduced from 3
+  else score += 0; // Reduced from 1
 
-  // Recent activity
+  // Recent activity - MEDIUM WEIGHT
   if (user.lastActive) {
     const daysSinceActive =
       (Date.now() - user.lastActive) / (1000 * 60 * 60 * 24);
     if (daysSinceActive < 1) score += 5;
-    else if (daysSinceActive < 7) score += 5;
-    else if (daysSinceActive < 30) score += 3;
+    else if (daysSinceActive < 7)
+      score += 3; // Reduced from 5
+    else if (daysSinceActive < 30) score += 2; // Reduced from 3
   }
 
-  // Basic profile completion
-  if (user.onboardingComplete) score += 5;
-  if (user.firstname) score += 5;
-  if (user.city) score += 5;
-  if (user.phone) score += 5;
-  if (user.picture) score += 5;
-
-  // ========== ROLE-SPECIFIC SCORING ==========
+  // ========== CORE APP ACTIVITIES (HIGH WEIGHT) ==========
 
   if (user.isMusician) {
-    // Gigs completed
-    score += Math.min((user.completedGigsCount || 0) * 3, 15);
+    // GIGS COMPLETED - HIGH WEIGHT (max 30 points)
+    const completedGigs = user.completedGigsCount || 0;
+    if (completedGigs >= 10) score += 30;
+    else if (completedGigs >= 5) score += 20;
+    else if (completedGigs >= 3) score += 15;
+    else if (completedGigs >= 1) score += 10;
+    else score += 0;
 
-    // Rating
+    // RATING - HIGH WEIGHT (max 15 points)
     if (user.avgRating) {
-      if (user.avgRating >= 4.5) score += 10;
-      else if (user.avgRating >= 4.0) score += 7;
+      if (user.avgRating >= 4.8) score += 15;
+      else if (user.avgRating >= 4.5) score += 12;
+      else if (user.avgRating >= 4.0) score += 8;
       else if (user.avgRating >= 3.5) score += 4;
       else if (user.avgRating > 0) score += 2;
     }
 
-    // Profile details
-    if (user.talentbio) score += 5;
-    if (user.musiciangenres?.length) score += 5;
-    if (user.instrument) score += 5;
+    // Profile details - MEDIUM WEIGHT
+    if (user.talentbio) score += 3; // Reduced from 5
+    if (user.musiciangenres?.length) score += 3; // Reduced from 5
+    if (user.instrument) score += 3; // Reduced from 5
 
-    // Performance stats
+    // Performance stats - MEDIUM WEIGHT
     if (
       user.performanceStats?.responseTime &&
       user.performanceStats.responseTime < 24
@@ -439,99 +450,154 @@ async function calculateRoleSpecificScore(
       score += 5;
     }
   } else if (user.isClient) {
-    // Completion rate (only if both values exist)
+    // GIG COMPLETION RATE - HIGH WEIGHT (max 25 points)
     if (user.gigsPosted && user.completedGigsCount && user.gigsPosted > 0) {
       const completionRate = user.completedGigsCount / user.gigsPosted;
-      if (completionRate === 1) score += 20;
-      else if (completionRate >= 0.8) score += 15;
-      else if (completionRate >= 0.6) score += 10;
-      else if (completionRate >= 0.4) score += 5;
-      else if (completionRate > 0) score += 2;
+      if (completionRate === 1)
+        score += 25; // Increased from 20
+      else if (completionRate >= 0.9)
+        score += 20; // Increased from 15
+      else if (completionRate >= 0.8)
+        score += 15; // Increased from 15
+      else if (completionRate >= 0.7)
+        score += 10; // New tier
+      else if (completionRate >= 0.6)
+        score += 8; // Reduced from 10
+      else if (completionRate >= 0.5)
+        score += 5; // New tier
+      else if (completionRate >= 0.4)
+        score += 3; // Reduced from 5
+      else if (completionRate >= 0.3)
+        score += 2; // New tier
+      else if (completionRate > 0) score += 1; // Reduced from 2
     }
 
-    // Client type
-    if (user.clientType === "corporate_client") score += 10;
-    else if (user.clientType === "venue_client") score += 8;
-    else if (user.clientType === "event_planner_client") score += 6;
-    else if (user.clientType === "individual_client") score += 4;
+    // CLIENT TYPE - MEDIUM WEIGHT
+    if (user.clientType === "corporate_client")
+      score += 8; // Reduced from 10
+    else if (user.clientType === "venue_client")
+      score += 6; // Reduced from 8
+    else if (user.clientType === "event_planner_client")
+      score += 5; // Reduced from 6
+    else if (user.clientType === "individual_client") score += 3; // Reduced from 4
 
-    // Organization
-    if (user.organization) score += 5;
+    // Organization - LOW WEIGHT
+    if (user.organization) score += 3; // Reduced from 5
 
-    // Client rating
+    // CLIENT RATING - HIGH WEIGHT (max 12 points)
     if (user.avgRating) {
-      if (user.avgRating >= 4.8) score += 10;
+      if (user.avgRating >= 4.9) score += 12;
+      else if (user.avgRating >= 4.8) score += 10;
       else if (user.avgRating >= 4.5) score += 7;
       else if (user.avgRating >= 4.0) score += 4;
       else if (user.avgRating > 0) score += 2;
     }
   } else if (user.isBooker) {
-    // Artists managed
-    score += Math.min((user.artistsManaged?.length || 0) * 2, 10);
+    // Artists managed - HIGH WEIGHT
+    const artistsCount = user.artistsManaged?.length || 0;
+    if (artistsCount >= 10) score += 15;
+    else if (artistsCount >= 5) score += 10;
+    else if (artistsCount >= 3) score += 7;
+    else if (artistsCount >= 1) score += 5;
 
-    // Bands managed
-    score += Math.min((user.managedBands?.length || 0) * 3, 9);
+    // Bands managed - HIGH WEIGHT
+    const bandsCount = user.managedBands?.length || 0;
+    if (bandsCount >= 5) score += 12;
+    else if (bandsCount >= 3) score += 8;
+    else if (bandsCount >= 1) score += 5;
 
-    // Profile details
-    if (user.bookerBio) score += 5;
-    if (user.bookerSkills?.length) score += 5;
-    if (user.agencyName) score += 5;
-    if (user.companyName) score += 5;
+    // Profile details - LOW WEIGHT
+    if (user.bookerBio) score += 3; // Reduced from 5
+    if (user.bookerSkills?.length) score += 3; // Reduced from 5
+    if (user.agencyName) score += 3; // Reduced from 5
+    if (user.companyName) score += 3; // Reduced from 5
 
-    // Booking history
+    // Booking history - HIGH WEIGHT
     if (user.bookingHistory) {
       const successfulBookings = user.bookingHistory.filter(
         (b: any) => b.status === "completed"
       );
-      if (successfulBookings.length >= 10) score += 10;
-      else if (successfulBookings.length >= 5) score += 7;
-      else if (successfulBookings.length >= 3) score += 4;
-      else if (successfulBookings.length > 0) score += 2;
+      if (successfulBookings.length >= 20) score += 15;
+      else if (successfulBookings.length >= 10)
+        score += 10; // Reduced from 10
+      else if (successfulBookings.length >= 5)
+        score += 7; // Reduced from 7
+      else if (successfulBookings.length >= 3)
+        score += 4; // Reduced from 4
+      else if (successfulBookings.length > 0) score += 2; // Reduced from 2
     }
   }
 
+  // ========== VIDEO CONTENT (NEW - HIGH WEIGHT) ==========
+
+  // Check user's videos count and engagement
+  // Check user's videos count and engagement
+  if (user.clerkId) {
+    const userVideos = await ctx.db
+      .query("videos")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user.clerkId)) // Add :any type
+      .collect();
+
+    const videoCount = userVideos.length;
+    const totalVideoLikes = userVideos.reduce(
+      (sum: number, video: any) => sum + (video.likes || 0),
+      0
+    );
+    const totalVideoViews = userVideos.reduce(
+      (sum: number, video: any) => sum + (video.views || 0),
+      0
+    );
+
+    // ... rest of your code
+  }
   // ========== SOCIAL & REPUTATION ==========
 
-  // Followers
+  // Followers - MEDIUM WEIGHT
   const followerCount = user.followers?.length || 0;
-  if (followerCount >= 100) score += 10;
-  else if (followerCount >= 50) score += 7;
-  else if (followerCount >= 20) score += 4;
-  else if (followerCount >= 5) score += 2;
+  if (followerCount >= 100)
+    score += 8; // Reduced from 10
+  else if (followerCount >= 50)
+    score += 5; // Reduced from 7
+  else if (followerCount >= 20)
+    score += 3; // Reduced from 4
+  else if (followerCount >= 5) score += 1; // Reduced from 2
 
-  // Subscription tier
-  if (user.tier === "elite") score += 15;
-  else if (user.tier === "premium") score += 10;
-  else if (user.tier === "pro") score += 5;
-  else if (user.tier === "free") score += 1;
+  // Subscription tier - MEDIUM WEIGHT
+  if (user.tier === "elite")
+    score += 10; // Reduced from 15
+  else if (user.tier === "premium")
+    score += 7; // Reduced from 10
+  else if (user.tier === "pro")
+    score += 5; // Same
+  else if (user.tier === "free") score += 1; // Same
 
   // ========== PENALTIES ==========
 
   // Account status penalties
   if (user.isBanned) {
-    score = 0; // Banned users get 0 score
-    return score; // Return immediately since banned users can't have any score
+    score = 0;
+    return score;
   }
 
   if (user.isSuspended) {
-    score = Math.max(0, score - 30); // Suspended users lose 30 points
+    score = Math.max(0, score - 30);
   }
 
   // Reports penalty
   const reportsPenalty = Math.min((user.reportsCount || 0) * 5, 30);
   score = Math.max(0, score - reportsPenalty);
 
-  // Gig cancellation penalty
-  const cancelPenalty = Math.min((user.cancelgigCount || 0) * 3, 20);
+  // Gig cancellation penalty - HIGHER FOR CORE ACTIVITY
+  const cancelPenalty = Math.min((user.cancelgigCount || 0) * 5, 25); // Increased from 3
   score = Math.max(0, score - cancelPenalty);
 
   // Client spam penalty (only for clients)
   if (user.isClient && user.gigsPosted && user.completedGigsCount) {
     const spamRatio = user.gigsPosted / Math.max(user.completedGigsCount, 1);
     if (spamRatio > 5) {
-      score = Math.max(0, score - 20);
+      score = Math.max(0, score - 25); // Increased from 20
     } else if (spamRatio > 3) {
-      score = Math.max(0, score - 10);
+      score = Math.max(0, score - 15); // Increased from 10
     }
   }
 
@@ -541,32 +607,13 @@ async function calculateRoleSpecificScore(
     user.performanceStats?.responseTime &&
     user.performanceStats.responseTime > 72
   ) {
-    score = Math.max(0, score - 5);
+    score = Math.max(0, score - 8); // Increased from 5
   }
-
-  // Late payments penalty (you might want to add this)
-  // if (user.latePaymentsCount && user.latePaymentsCount > 0) {
-  //   const latePaymentPenalty = Math.min(user.latePaymentsCount * 5, 25);
-  //   score = Math.max(0, score - latePaymentPenalty);
-  // }
-
-  // Dispute penalty (if you track disputes)
-  // if (user.disputesCount && user.disputesCount > 0) {
-  //   const disputePenalty = Math.min(user.disputesCount * 8, 40);
-  //   score = Math.max(0, score - disputePenalty);
-  // }
-
-  // No-show penalty (if you track no-shows)
-  // if (user.noShowCount && user.noShowCount > 0) {
-  //   const noShowPenalty = Math.min(user.noShowCount * 10, 50);
-  //   score = Math.max(0, score - noShowPenalty);
-  // }
 
   // ========== FINAL BOUNDARIES ==========
 
   return Math.min(score, 100);
 }
-
 // ========== MUTATIONS ==========
 export const updateUserTrustScore = mutation({
   args: { userId: v.id("users") },

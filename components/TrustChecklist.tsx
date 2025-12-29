@@ -26,7 +26,9 @@ import {
   Target,
   Zap,
   Clock, // Add this
-  Crown, // Add this
+  Crown,
+  ThumbsUp,
+  Video, // Add this
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -36,7 +38,7 @@ import { cn } from "@/lib/utils";
 import {
   checkProfileCompleteness,
   scoreToStars,
-} from "@/convex/controllers/trustScore";
+} from "@/lib/trustScoreHelpers";
 
 interface ChecklistItem {
   id: string;
@@ -244,6 +246,41 @@ export default function TrustChecklist() {
         category: "activity" as const,
         priority: "low" as const,
         actionUrl: "/profile",
+      },
+
+      // ========== VIDEO CONTENT ==========
+      {
+        id: "videos",
+        title: "Upload Videos",
+        description: "Add videos to showcase your talent or gigs",
+        completed: false, // We'll need to query videos
+        points: 5, // Base points for having videos
+        icon: Video, // Need to import Video icon
+        category: "activity" as const,
+        priority: "medium" as const,
+        actionUrl: "/videos/upload",
+      },
+      {
+        id: "profileVideo",
+        title: "Profile Video",
+        description: "Add a video introduction to your profile",
+        completed: false, // Check if user has profile video
+        points: 5, // Bonus for profile video
+        icon: User,
+        category: "profile" as const,
+        priority: "medium" as const,
+        actionUrl: "/profile/edit?section=videos",
+      },
+      {
+        id: "videoEngagement",
+        title: "Video Engagement",
+        description: "Get likes and views on your videos",
+        completed: false, // Check video engagement
+        points: 2, // Points for engagement
+        icon: ThumbsUp,
+        category: "performance" as const,
+        priority: "low" as const,
+        actionUrl: "/videos",
       },
     ];
 

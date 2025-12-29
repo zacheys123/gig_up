@@ -372,6 +372,7 @@ const CurrentUserProfile = () => {
       setAge(user.date || "");
       setAddress(user.address || "");
       setPhone(user.phone || "");
+      setMpesaPhoneNumber(user.mpesaPhoneNumber || "");
       setOrganization(user.organization || "");
       setHandles(user.musicianhandles || []);
       setGenre(user.musiciangenres || []);

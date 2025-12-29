@@ -33,6 +33,7 @@ import {
   Rocket,
   TargetIcon,
   Activity,
+  Video,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -129,29 +130,39 @@ interface EarningCategory {
 }
 
 // How to earn points - UPDATED WITH STAR RANGES
+// How to earn points - UPDATED WITH PROPER WEIGHTING
 const EARNING_METHODS: EarningCategory[] = [
   {
-    category: "Verification",
+    category: "Core Activities",
     items: [
-      { action: "Phone verification", points: "+0.8 stars", icon: Phone },
-      { action: "Add payment method", points: "+0.6 stars", icon: CreditCard },
-      { action: "Complete profile", points: "+1.0 stars", icon: User },
+      {
+        action: "Complete gigs",
+        points: "+10-30 points per tier",
+        icon: Calendar,
+      },
+      { action: "Post and complete gigs", points: "+25 max", icon: Calendar },
+      { action: "Upload videos", points: "+5-15 points", icon: Video }, // Add Video icon
+      {
+        action: "Get video likes/views",
+        points: "+2-10 points",
+        icon: ThumbsUp,
+      },
     ],
   },
   {
     category: "Performance",
     items: [
-      { action: "Complete gigs", points: "+0.2 per gig", icon: Calendar },
-      { action: "Maintain 4.0+ rating", points: "+1.0 stars", icon: Star },
-      { action: "Quick response rate", points: "+0.3 stars", icon: Clock },
+      { action: "Maintain 4.8+ rating", points: "+12-15 points", icon: Star },
+      { action: "Quick response rate", points: "+5 points", icon: Clock },
+      { action: "High completion rate", points: "+25 max", icon: CheckCircle },
     ],
   },
   {
-    category: "Activity",
+    category: "Verification",
     items: [
-      { action: "Account age", points: "+0.8 stars", icon: Calendar },
-      { action: "Recent activity", points: "+0.3 stars", icon: Activity },
-      { action: "Followers", points: "+0.5 stars", icon: Users },
+      { action: "Add payment method", points: "+15 points", icon: CreditCard },
+      { action: "Phone verification", points: "+5 points", icon: Phone },
+      { action: "Profile completion", points: "+10 points total", icon: User },
     ],
   },
 ];
