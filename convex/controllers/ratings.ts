@@ -2,6 +2,7 @@
 import { Doc, Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
+import { calculateTrustScore } from "../trustHelper";
 export const getMultipleMusicianRatings = query({
   args: { userIds: v.array(v.id("users")) },
   handler: async (ctx, args) => {
@@ -33,43 +34,47 @@ export const getMultipleMusicianRatings = query({
   },
 });
 
+// convex/controllers/user.ts - Update getTrendingMusiciansWithRatings
 export const getTrendingMusiciansWithRatings = query({
   handler: async (ctx) => {
-    // Fetch musicians and bookers
-    const [musicians, bookers] = await Promise.all([
-      ctx.db
-        .query("users")
-        .withIndex("by_is_musician", (q) => q.eq("isMusician", true))
-        .collect(),
-      ctx.db
-        .query("users")
-        .withIndex("by_is_booker", (q) => q.eq("isBooker", true))
-        .collect(),
-    ]);
+    // Fetch musicians with their trust scores
+    const musicians = await ctx.db
+      .query("users")
+      .withIndex("by_is_musician", (q) => q.eq("isMusician", true))
+      .collect();
 
-    // Combine and deduplicate
-    const allUsersMap = new Map<string, any>();
-    [...musicians, ...bookers].forEach((u) => {
-      allUsersMap.set(u._id.toString(), u);
-    });
-    const allUsers = Array.from(allUsersMap.values());
+    // Get trust scores for all musicians
+    const musiciansWithTrust = await Promise.all(
+      musicians.map(async (user) => {
+        try {
+          // Use the trust scoring system
+          const trustScore = await calculateTrustScore(ctx, user._id);
+          const trendingScore = calculateTrendingScore(user, trustScore);
 
-    // Calculate ratings and scores in one pass
-    const usersWithData = allUsers.map((user) => {
-      const rating = calculateComprehensiveRating(user);
-      const trendingScore = calculateTrendingScore(user, rating);
-
-      return {
-        ...user,
-        rating,
-        trendingScore,
-      };
-    });
+          return {
+            ...user,
+            trustScore: trustScore.trustScore,
+            trustStars: trustScore.trustStars,
+            trustTier: trustScore.tier,
+            trendingScore,
+          };
+        } catch (error) {
+          console.error(`Error calculating trust for user ${user._id}:`, error);
+          return {
+            ...user,
+            trustScore: 0,
+            trustStars: 0.5,
+            trustTier: "new",
+            trendingScore: 0,
+          };
+        }
+      })
+    );
 
     // Sort by trending score
-    usersWithData.sort((a, b) => b.trendingScore - a.trendingScore);
+    musiciansWithTrust.sort((a, b) => b.trendingScore - a.trendingScore);
 
-    return usersWithData.slice(0, 20).map((u) => ({
+    return musiciansWithTrust.slice(0, 20).map((u) => ({
       _id: u._id,
       clerkId: u.clerkId,
       username: u.username,
@@ -82,9 +87,22 @@ export const getTrendingMusiciansWithRatings = query({
       city: u.city,
       isMusician: u.isMusician,
       isBooker: u.isBooker,
-      rating: u.rating, // Full rating object
+      rating: {
+        trustScore: u.trustScore,
+        trustStars: u.trustStars,
+        trustTier: u.trustTier,
+      },
       followersCount: u.followers?.length || 0,
       trendingScore: u.trendingScore,
+      // Include additional fields needed for trust calculation
+      allreviews: u.allreviews || [],
+      mpesaPhoneNumber: u.mpesaPhoneNumber,
+      roleType: u.roleType,
+      onboardingComplete: u.onboardingComplete || false,
+      // Add trust fields directly
+      trustScore: u.trustScore,
+      trustStars: u.trustStars,
+      trustTier: u.trustTier,
     }));
   },
 });

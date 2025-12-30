@@ -1,20 +1,62 @@
+// hooks/useTrendingMusicians.ts
 import { api } from "@/convex/_generated/api";
 import { TrendingMusician } from "@/types/trendingUser";
 import { useQuery } from "convex/react";
+import {
+  calculateActivityPoints,
+  calculateContentPoints,
+  calculateLongevityPoints,
+  calculatePenalties,
+  calculateQualityPoints,
+  calculateSocialPoints,
+  checkProfileCompleteness,
+  scoreToStars,
+} from "@/lib/trustScoreHelpers";
 
-// hooks/useTrendingMusicians.ts
 export const useTrendingMusicians = (): TrendingMusician[] => {
-  const musicians = useQuery(
+  const trendingData = useQuery(
     api.controllers.ratings.getTrendingMusiciansWithRatings
   );
 
-  // Type guard to ensure proper typing
-  if (!musicians || !Array.isArray(musicians)) {
+  // Also fetch trust scores from the dedicated trust system
+  const trustScores = useQuery(api.controllers.trustScore.getTrustLeaderboard, {
+    limit: 20,
+    role: "musician",
+  });
+
+  if (!trendingData || !Array.isArray(trendingData)) {
     return [];
   }
 
-  // Transform data to include trust scores
-  const transformedMusicians = musicians.map((musician: any) => {
+  // Create a map of trust scores for quick lookup
+  const trustScoreMap = new Map<string, any>();
+  if (trustScores) {
+    trustScores.forEach((item: any) => {
+      if (item.userId && item.score) {
+        trustScoreMap.set(item.userId, item);
+      }
+    });
+  }
+
+  // Transform data using the proper trust scoring system
+  const transformedMusicians = trendingData.map((musician: any) => {
+    // Get trust score from the dedicated system if available
+    let trustScore = 0;
+    let trustStars = 0.5;
+    let trustTier = "new";
+
+    const trustData = trustScoreMap.get(musician._id);
+    if (trustData) {
+      trustScore = trustData.score || 0;
+      trustStars = scoreToStars(trustScore);
+      trustTier = getTrustTierFromScore(trustScore);
+    } else {
+      // Fallback to calculated score using the proper system
+      trustScore = calculateRoleSpecificTrustScore(musician);
+      trustStars = scoreToStars(trustScore);
+      trustTier = getTrustTierFromScore(trustScore);
+    }
+
     // Calculate client rating from reviews
     const clientRating =
       musician.allreviews && musician.allreviews.length > 0
@@ -23,12 +65,6 @@ export const useTrendingMusicians = (): TrendingMusician[] => {
             0
           ) / musician.allreviews.length
         : 0;
-
-    // Get trust score if available, otherwise calculate a basic one
-    const trustScore =
-      musician.trustScore || calculateBasicTrustScore(musician);
-    const trustStars = musician.trustStars || scoreToStars(trustScore);
-    const trustTier = musician.trustTier || getTrustTierFromScore(trustScore);
 
     return {
       ...musician,
@@ -42,8 +78,7 @@ export const useTrendingMusicians = (): TrendingMusician[] => {
         lastUpdated: Date.now(),
         breakdown: {
           trust: {
-            profileComplete:
-              !!musician.firstname && !!musician.city && !!musician.phone,
+            profileComplete: checkProfileCompleteness(musician),
             mpesaPhoneNumber: !!musician.mpesaPhoneNumber,
             accountAgeDays: musician._creationTime
               ? Math.floor(
@@ -69,62 +104,54 @@ export const useTrendingMusicians = (): TrendingMusician[] => {
   return transformedMusicians as TrendingMusician[];
 };
 
-// Helper functions for trust scoring
-function calculateBasicTrustScore(musician: any): number {
-  let score = 0;
+// Helper function to calculate trust score using the proper system
+function calculateRoleSpecificTrustScore(musician: any): number {
+  let totalScore = 0;
 
-  // Basic profile (0-25 points)
-  if (musician.firstname) score += 2;
-  if (musician.city) score += 2;
-  if (musician.phone) score += 2;
-  if (musician.picture) score += 3;
-  if (musician.mpesaPhoneNumber) score += 5;
-  if (musician.roleType) score += 3;
+  // Profile section (max 25)
+  const profilePoints = calculateProfilePoints(musician);
+  totalScore += profilePoints;
 
-  // Activity (0-40 points)
-  const completedGigs = musician.completedGigsCount || 0;
-  score += Math.min(completedGigs * 1.5, 20);
+  // Longevity section (max 10)
+  const longevityPoints = calculateLongevityPoints(musician);
+  totalScore += longevityPoints;
 
-  // Quality (0-20 points)
-  const clientRating = musician.avgRating || 0;
-  if (clientRating >= 4.8) score += 15;
-  else if (clientRating >= 4.5) score += 10;
-  else if (clientRating >= 4.0) score += 5;
-  else if (clientRating >= 3.5) score += 2;
-  else if (clientRating > 0) score += 1;
+  // Activity section (max 40)
+  const activityPoints = calculateActivityPoints(musician);
+  totalScore += activityPoints;
 
-  // Social (0-10 points)
-  const followerCount = musician.followers?.length || 0;
-  if (followerCount >= 100) score += 4;
-  else if (followerCount >= 50) score += 2;
-  else if (followerCount >= 20) score += 1;
+  // Quality section (max 20)
+  const qualityPoints = calculateQualityPoints(musician);
+  totalScore += qualityPoints;
 
-  if (musician.tier === "elite") score += 5;
-  else if (musician.tier === "premium") score += 3;
-  else if (musician.tier === "pro") score += 2;
-  else if (musician.tier === "free") score += 1;
+  // Content section (max 15) - simplified for frontend
+  const contentPoints = calculateContentPoints(
+    musician,
+    0, // videoCount - would need to fetch this
+    0, // videoLikes
+    false, // hasProfileVideo
+    0 // gigVideoCount
+  );
+  totalScore += contentPoints;
 
-  // Penalties
-  if (musician.isBanned) return 0;
-  if (musician.isSuspended) score -= 20;
-  if (musician.reportsCount) score -= Math.min(musician.reportsCount * 3, 15);
+  // Social section (max 10)
+  const socialPoints = calculateSocialPoints(musician);
+  totalScore += socialPoints;
 
-  return Math.max(10, Math.min(score, 100));
+  // Apply penalties
+  const penalties = calculatePenalties(musician);
+  totalScore = Math.max(0, totalScore - penalties);
+
+  // Apply profile completeness multiplier
+  const isProfileComplete = checkProfileCompleteness(musician);
+  const profileMultiplier = isProfileComplete ? 1.0 : 0.7;
+  totalScore = Math.round(totalScore * profileMultiplier);
+
+  // Ensure score is within bounds (10-100)
+  return Math.max(10, Math.min(100, totalScore));
 }
 
-function scoreToStars(score: number): number {
-  if (score >= 90) return 5.0;
-  if (score >= 80) return 4.5;
-  if (score >= 70) return 4.0;
-  if (score >= 60) return 3.5;
-  if (score >= 50) return 3.0;
-  if (score >= 40) return 2.5;
-  if (score >= 30) return 2.0;
-  if (score >= 20) return 1.5;
-  if (score >= 10) return 1.0;
-  return 0.5;
-}
-
+// Helper function to get trust tier from score
 function getTrustTierFromScore(score: number): string {
   if (score >= 80) return "elite";
   if (score >= 65) return "trusted";
@@ -132,3 +159,19 @@ function getTrustTierFromScore(score: number): string {
   if (score >= 30) return "basic";
   return "new";
 }
+
+// Import these helper functions from your trustScoreHelpers
+function calculateProfilePoints(user: any): number {
+  let points = 0;
+  if (user.firstname) points += 2;
+  if (user.lastname) points += 2;
+  if (user.city) points += 2;
+  if (user.phone) points += 2;
+  if (user.picture) points += 3;
+  if (user.mpesaPhoneNumber) points += 5;
+  if (user.onboardingComplete) points += 2;
+  if (user.roleType) points += 3;
+  return Math.min(points, 25);
+}
+
+// ... (add other helper functions: calculateLongevityPoints, calculateActivityPoints, etc.)

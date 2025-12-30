@@ -155,12 +155,9 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
         {musicians
           .slice(0, 8)
           .map((musician: TrendingMusician, index: number) => {
-            const trustScore =
-              musician.trustScore || musician.rating?.trustScore || 0;
-            const trustStars =
-              musician.trustStars || musician.rating?.trustStars || 0.5;
-            const trustTier =
-              musician.trustTier || getTrustTierFromScore(trustScore);
+            const trustScore = musician.trustScore || 0;
+            const trustStars = musician.trustStars || 0.5;
+            const trustTier = musician.trustTier || "new";
             const trustInfo = getTrustTierDescription(trustTier, trustScore);
             const TrustIcon = trustInfo.icon;
 
