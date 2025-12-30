@@ -56,6 +56,7 @@ import type * as notHelpers from "../notHelpers.js";
 import type * as notificationsTypes from "../notificationsTypes.js";
 import type * as presence from "../presence.js";
 import type * as test from "../test.js";
+import type * as trustHelper from "../trustHelper.js";
 import type * as trustScore from "../trustScore.js";
 
 /**
@@ -110,6 +111,7 @@ declare const fullApi: ApiFromModules<{
   notificationsTypes: typeof notificationsTypes;
   presence: typeof presence;
   test: typeof test;
+  trustHelper: typeof trustHelper;
   trustScore: typeof trustScore;
 }>;
 export declare const api: FilterApi<

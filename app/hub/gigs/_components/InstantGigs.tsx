@@ -102,7 +102,7 @@ const TIER_LIMITS = {
   },
 } as const;
 
-// Template Usage Indicator Component
+// Template Usage Indicator Component - FIXED VERSION
 const TemplateUsageIndicator = memo(
   ({
     templateLimitInfo,
@@ -116,8 +116,28 @@ const TemplateUsageIndicator = memo(
     if (!templateLimitInfo) return null;
 
     const { current, max, reached } = templateLimitInfo;
-    const usagePercentage = (current / max) * 100;
-    const remaining = max - current;
+
+    // FIX: Safe calculations with validation
+    const safeCurrent = isNaN(current) ? 0 : Math.max(0, current);
+    const safeMax = isNaN(max) ? 1 : Math.max(1, max); // Ensure at least 1 to avoid division by zero
+
+    // Calculate percentage safely
+    let usagePercentage = 0;
+    if (safeMax > 0) {
+      usagePercentage = Math.min(
+        100,
+        Math.max(0, (safeCurrent / safeMax) * 100)
+      );
+    }
+
+    // Calculate stroke dash offset safely
+    const strokeDashoffset = 100 - usagePercentage;
+    // Ensure it's a valid number, default to 100 (no progress) if invalid
+    const safeStrokeDashoffset = isNaN(strokeDashoffset)
+      ? 100
+      : strokeDashoffset;
+
+    const remaining = safeMax - safeCurrent;
 
     return (
       <div
@@ -147,13 +167,13 @@ const TemplateUsageIndicator = memo(
                 {reached ? "Template Limit Reached" : "Template Usage"}
               </h4>
               <p className={cn("text-sm", colors.textMuted)}>
-                {current} of {max} templates used
+                {safeCurrent} of {safeMax} templates used
                 {reached && " - Upgrade for more"}
               </p>
             </div>
           </div>
 
-          {/* Progress Circle */}
+          {/* Progress Circle - FIXED: Use safeStrokeDashoffset */}
           <div className="relative w-12 h-12">
             <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
               <path
@@ -178,7 +198,7 @@ const TemplateUsageIndicator = memo(
                 }
                 strokeWidth="3"
                 strokeDasharray="100, 100"
-                strokeDashoffset={100 - usagePercentage}
+                strokeDashoffset={safeStrokeDashoffset} // FIXED: Use the safe value
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
@@ -234,9 +254,6 @@ const TemplateUsageIndicator = memo(
     );
   }
 );
-
-TemplateUsageIndicator.displayName = "TemplateUsageIndicator";
-
 // Memoize QuickStat component
 const QuickStat = memo(({ stat, colors }: any) => {
   const Icon = stat.icon;
@@ -502,6 +519,41 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
   // Memoize musicians data for booking modal
   const memoizedMusicians = useMemo(() => proMusicians || [], [proMusicians]);
 
+  // Add this transformation function
+  const transformMusicianData = useCallback(
+    (data: any[]): EnhancedMusician[] => {
+      if (!data || !Array.isArray(data)) return [];
+
+      return data.map((item) => ({
+        ...item,
+        // Fix the rateConfidence type - convert string to union type
+        rateConfidence:
+          item.rateConfidence === "high" ||
+          item.rateConfidence === "medium" ||
+          item.rateConfidence === "low"
+            ? (item.rateConfidence as "high" | "medium" | "low")
+            : undefined,
+        // Ensure other optional properties have correct defaults
+        isOptimalForGigType: item.isOptimalForGigType ?? false,
+        isCompatible: item.isCompatible ?? true,
+        gigTypeCompatibility: item.gigTypeCompatibility ?? 0,
+        trustStars: item.trustStars ?? 0.5,
+        displayRate: item.displayRate || "$0",
+        // Add any other properties that might need transformation
+      }));
+    },
+    []
+  );
+
+  // Transform the musicians data for the modal
+  const transformedMusicians = useMemo(() => {
+    return transformMusicianData(proMusicians || []);
+  }, [proMusicians, transformMusicianData]);
+
+  // Also transform the memoizedMusicians
+  const transformedMemoizedMusicians = useMemo(() => {
+    return transformMusicianData(memoizedMusicians);
+  }, [memoizedMusicians, transformMusicianData]);
   // Calculate effective template limit info
   const effectiveTemplateLimitInfo = useMemo(() => {
     if (templateLimitInfo) {
@@ -990,7 +1042,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
         templates={memoizedTemplates}
         onSubmitBooking={handleSubmitBooking}
         isLoading={isLoading}
-        musicians={memoizedMusicians}
+        musicians={transformedMemoizedMusicians}
       />
 
       {/* Help Section */}

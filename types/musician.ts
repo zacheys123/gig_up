@@ -23,6 +23,13 @@ export interface EnhancedMusician {
   reliabilityScore?: number;
   completedGigsCount?: number;
   isCompatible?: boolean;
+
+  trustStars?: number;
+  trustScore?: number;
+  canBeBookedDirectly?: boolean;
+  isVerified?: boolean;
+  isReliable?: boolean;
+  rateConfidence?: "low" | "medium" | "high" | string;
   // Rates
   rate?: {
     baseRate?: string;

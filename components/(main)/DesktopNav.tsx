@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
@@ -33,6 +33,7 @@ import {
   BookA,
   CreditCard,
   ArrowDown,
+  Book,
 } from "lucide-react";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -248,6 +249,15 @@ const getEliteTierLinks = (): NavigationItem[] => [
   },
 ];
 
+const InAppLinks = (): NavigationItem[] => [
+  {
+    href: "/dashboard/onboarding/trust-explained",
+    label: "Trust & Scores",
+    icon: <Book size={16} />,
+    availableForTiers: ["free", "pro", "premium", "elite"],
+  },
+];
+
 // Additional links for dropdown
 const getAdditionalLinks = (user: any): NavigationItem[] => {
   const additionalLinks: NavigationItem[] = [
@@ -286,15 +296,19 @@ const getAdditionalLinks = (user: any): NavigationItem[] => {
 const getNavigationLinks = (
   userTier: string,
   user: any,
-  isInGracePeriod?: boolean
+  isInGracePeriod?: boolean,
+  currentUser?: any
 ): NavigationItem[] => {
   const coreLinks = getCoreLinks();
   const proLinks = getProTierLinks(user);
   const premiumLinks = getPremiumTierLinks();
   const eliteLinks = getEliteTierLinks();
+  const trustLinks = InAppLinks();
 
   // Combine links based on user tier
   let allLinks = [...coreLinks];
+
+  allLinks = [...allLinks, ...trustLinks];
 
   if (
     userTier === "pro" ||
@@ -343,7 +357,8 @@ export function DesktopNavigation() {
   const navigationLinks = getNavigationLinks(
     userTier,
     currentUser,
-    isInGracePeriod
+    isInGracePeriod,
+    currentUser
   );
 
   // Get additional links for dropdown

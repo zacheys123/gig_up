@@ -8,7 +8,8 @@ import {
   deleteFollowRequestNotification,
   isUserDocument,
 } from "../createNotificationInternal";
-import { updateUserTrust } from "./trustScore";
+import { updateUserTrust } from "../trustHelper";
+
 // Helper function to create type-safe user data with admin defaults
 const createUserData = (args: any, now: number) => {
   return {

@@ -53,12 +53,20 @@ export const useInstantGigs = (userId: Id<"users">) => {
     async (
       gigId: Id<"instantgigs">,
       status: string,
-      musicianId: Id<"users">
+      musicianId: Id<"users">,
+      actionBy: "musician" | "client" | "system",
+      notes?: string,
+      deputySuggestedId?: Id<"users">,
+      deputysuggestedName?: string
     ) => {
       return await updateGigStatus({
         gigId,
         status: status as any,
         musicianId,
+        actionBy,
+        notes,
+        deputySuggestedId,
+        deputysuggestedName,
       });
     },
     [updateGigStatus]

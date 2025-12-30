@@ -34,6 +34,7 @@ import {
   Rocket,
   Award,
   Diamond,
+  Book,
 } from "lucide-react";
 import { MdDashboard } from "react-icons/md";
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -343,6 +344,14 @@ const getMessagesLink = (
   requiresCompleteProfile: true,
 });
 
+const InAppLinks = (): NavigationLink[] => [
+  {
+    href: "/dashboard/onboarding/trust-explained",
+    label: "Trust & Scores",
+    icon: <Book size={16} />,
+    availableForTiers: ["free", "pro", "premium", "elite"],
+  },
+];
 const getNavigationLinks = (
   userTier: string,
   user: any,
@@ -354,14 +363,14 @@ const getNavigationLinks = (
   const proLinks = getProTierLinks(user, isInGracePeriod);
   const premiumLinks = getPremiumTierLinks();
   const eliteLinks = getEliteTierLinks();
-
+  const trustLinks = InAppLinks();
   const messagesLink = handleOpenMessages
     ? [getMessagesLink(unreadCount || null, handleOpenMessages)]
     : [];
 
   // Combine links based on user tier
   let allLinks = [...coreLinks];
-
+  allLinks = [...allLinks, ...trustLinks];
   if (
     userTier === "pro" ||
     userTier === "premium" ||

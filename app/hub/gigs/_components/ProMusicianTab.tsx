@@ -17,6 +17,7 @@ import {
   Filter,
   X,
   AlertTriangle,
+  CheckCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,8 @@ import { useProMusicians, useMusicianSearch } from "@/hooks/useProMusicians";
 import { EnhancedMusician } from "@/types/musician";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GIG_TYPES } from "@/convex/gigTypes";
+import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
+import { TrustBasedRateDisplay } from "@/components/trust/TrustStars";
 
 interface ProMusiciansTabProps {
   onRequestToBook: (musician: EnhancedMusician) => void;
@@ -258,359 +261,6 @@ const MusicianCardSkeleton = memo(() => (
 
 MusicianCardSkeleton.displayName = "MusicianCardSkeleton";
 
-const RateDisplay = memo(
-  ({
-    musician,
-    selectedGigType,
-    roleType,
-  }: {
-    musician: EnhancedMusician;
-    selectedGigType?: string;
-    roleType?: string;
-  }) => {
-    const { colors } = useThemeColors();
-
-    // Helper function to get rate based on gig type and role
-    const getRateForGigType = useCallback(
-      (rate: any, gigType?: string, roleType?: string) => {
-        if (!rate) return null;
-
-        // Only use categories - no legacy rates
-        if (rate.categories && rate.categories.length > 0) {
-          // Try to find a category that matches the gig type
-          if (gigType) {
-            const gigTypeMappings: Record<string, string[]> = {
-              wedding: ["wedding", "marriage", "ceremony", "reception", "💒"],
-              corporate: ["corporate", "business", "office", "company", "🏢"],
-              "private-party": [
-                "private",
-                "party",
-                "celebration",
-                "birthday",
-                "anniversary",
-                "🎉",
-              ],
-              concert: ["concert", "show", "performance", "live", "🎤"],
-              restaurant: [
-                "restaurant",
-                "lounge",
-                "dining",
-                "cafe",
-                "bar",
-                "🍽️",
-              ],
-              church: ["church", "worship", "religious", "service", "⛪"],
-              festival: ["festival", "outdoor", "large event", "🎪"],
-              club: ["club", "nightclub", "dj set", "nightlife", "🎭"],
-              recording: ["recording", "studio", "session", "🎹"],
-              individual: [
-                "individual",
-                "personal",
-                "one-on-one",
-                "private lesson",
-                "✨",
-              ],
-              other: ["other", "custom", "special", "✨"],
-            };
-
-            const searchTerms = gigTypeMappings[gigType] || [gigType];
-
-            const matchingCategory = rate.categories.find((category: any) =>
-              searchTerms.some(
-                (term) =>
-                  category.name.toLowerCase().includes(term.toLowerCase()) ||
-                  category.description
-                    ?.toLowerCase()
-                    .includes(term.toLowerCase())
-              )
-            );
-
-            if (matchingCategory && matchingCategory.rate?.trim()) {
-              return {
-                amount: matchingCategory.rate,
-                type: matchingCategory.rateType || rate.rateType,
-                currency: rate.currency,
-                source: "category_match",
-              };
-            }
-          }
-
-          // Fallback: Try role-specific priority categories
-          if (roleType) {
-            const rolePriorityCategories: Record<string, string[]> = {
-              teacher: [
-                "private lesson",
-                "group class",
-                "online lesson",
-                "workshop",
-                "teaching",
-                "lesson",
-              ],
-              dj: [
-                "club night",
-                "festival",
-                "wedding",
-                "corporate",
-                "dj",
-                "set",
-              ],
-              mc: [
-                "award show",
-                "product launch",
-                "corporate",
-                "wedding",
-                "hosting",
-                "mc",
-              ],
-              vocalist: [
-                "recording session",
-                "solo performance",
-                "wedding",
-                "background vocals",
-                "vocal",
-                "singing",
-              ],
-              instrumentalist: [
-                "recording session",
-                "restaurant",
-                "orchestral",
-                "session musician",
-                "performance",
-                "live",
-              ],
-            };
-
-            const priorityTerms = rolePriorityCategories[roleType] || [];
-            const priorityCategory = rate.categories.find((category: any) =>
-              priorityTerms.some(
-                (term) =>
-                  category.name.toLowerCase().includes(term.toLowerCase()) &&
-                  category.rate?.trim()
-              )
-            );
-
-            if (priorityCategory) {
-              return {
-                amount: priorityCategory.rate,
-                type: priorityCategory.rateType || rate.rateType,
-                currency: rate.currency,
-                source: "category_priority",
-              };
-            }
-          }
-
-          // Fallback: Most popular/common categories first
-          const popularCategories = [
-            "wedding",
-            "corporate",
-            "private",
-            "concert",
-            "lesson",
-            "session",
-          ];
-          const popularCategory = rate.categories.find((category: any) =>
-            popularCategories.some(
-              (term) =>
-                category.name.toLowerCase().includes(term.toLowerCase()) &&
-                category.rate?.trim()
-            )
-          );
-
-          if (popularCategory) {
-            return {
-              amount: popularCategory.rate,
-              type: popularCategory.rateType || rate.rateType,
-              currency: rate.currency,
-              source: "category_popular",
-            };
-          }
-
-          // Final fallback to first category with a rate
-          const firstCategoryWithRate = rate.categories.find((cat: any) =>
-            cat.rate?.trim()
-          );
-          if (firstCategoryWithRate) {
-            return {
-              amount: firstCategoryWithRate.rate,
-              type: firstCategoryWithRate.rateType || rate.rateType,
-              currency: rate.currency,
-              source: "category_first",
-            };
-          }
-
-          // If we have categories but no rates set
-          const firstCategory = rate.categories[0];
-          if (firstCategory) {
-            return {
-              amount: "", // Empty to indicate no rate set
-              type: firstCategory.rateType || rate.rateType,
-              currency: rate.currency,
-              source: "category_no_rate",
-            };
-          }
-        }
-
-        // Base rate fallback (only if no categories exist)
-        if (rate.baseRate?.trim()) {
-          return {
-            amount: rate.baseRate,
-            type: rate.rateType,
-            currency: rate.currency,
-            source: "base_rate",
-          };
-        }
-
-        // No rates available
-        return null;
-      },
-      []
-    );
-
-    // Helper function to get rate modifiers
-    const getRateModifiers = useCallback((rate: any) => {
-      const modifiers = [];
-      if (rate?.negotiable) modifiers.push("Negotiable");
-      if (rate?.depositRequired) modifiers.push("Deposit");
-      if (rate?.travelIncluded) modifiers.push("Travel Included");
-      if (rate?.travelFee) modifiers.push(`+${rate.travelFee} travel`);
-      return modifiers;
-    }, []);
-
-    const rateInfo = musician.rate
-      ? getRateForGigType(musician.rate, selectedGigType, roleType)
-      : null;
-    const rateModifiers = musician.rate ? getRateModifiers(musician.rate) : [];
-
-    // Role-specific rate context
-    const getRoleRateContext = useCallback(() => {
-      if (!roleType) return null;
-
-      const contextMap: Record<string, { icon: string; description: string }> =
-        {
-          teacher: { icon: "📚", description: "Teaching rate" },
-          dj: { icon: "🎧", description: "DJ performance" },
-          mc: { icon: "🎤", description: "Hosting rate" },
-          vocalist: { icon: "🎵", description: "Vocal performance" },
-          instrumentalist: {
-            icon: "🎸",
-            description: "Instrumental performance",
-          },
-        };
-
-      return contextMap[roleType] || null;
-    }, [roleType]);
-
-    const roleContext = getRoleRateContext();
-
-    // Format rate type for display
-    const formatRateType = useCallback((rateType?: string) => {
-      if (!rateType) return "gig";
-
-      const typeMap: Record<string, string> = {
-        hourly: "hour",
-        daily: "day",
-        per_session: "session",
-        per_gig: "gig",
-        monthly: "month",
-        custom: "custom",
-      };
-
-      return typeMap[rateType] || rateType.replace("per_", "");
-    }, []);
-
-    // No rates available
-    if (!rateInfo || rateInfo.source === "category_no_rate") {
-      return (
-        <div className="text-right">
-          <div className={cn("font-bold text-lg", colors.text)}>
-            Contact for rates
-          </div>
-          <div className={cn("text-xs", colors.textMuted)}>
-            {selectedGigType
-              ? `for ${selectedGigType}`
-              : "Set your rates in profile"}
-            {roleContext && ` • ${roleContext.description}`}
-          </div>
-        </div>
-      );
-    }
-
-    // Rate found in categories
-    return (
-      <div className="text-right">
-        {/* Main Rate Display */}
-        <div className={cn("font-bold text-lg", colors.text)}>
-          Base Rate {rateInfo.currency || "KES"} {rateInfo.amount}
-          <span
-            className={cn("ml-1 text-xs", {
-              "text-green-600": rateInfo.source.includes("match"),
-              "text-blue-600": rateInfo.source.includes("priority"),
-              "text-amber-600":
-                rateInfo.source.includes("popular") ||
-                rateInfo.source.includes("first"),
-              "text-gray-600": rateInfo.source === "base_rate",
-            })}
-          >
-            {rateInfo.source.includes("category") ? "★" : "•"}
-          </span>
-        </div>
-
-        {/* Rate Type and Context */}
-        <div className={cn("text-xs", colors.textMuted)}>
-          {selectedGigType ? (
-            <>
-              per {formatRateType(rateInfo.type)} • {selectedGigType}
-              {roleContext && ` • ${roleContext.icon}`}
-            </>
-          ) : (
-            <>
-              per {formatRateType(rateInfo.type)}
-              {roleContext && ` • ${roleContext.description}`}
-            </>
-          )}
-        </div>
-
-        {/* Rate Source Indicator */}
-        <div
-          className={cn("text-[10px] mt-1", {
-            "text-green-600": rateInfo.source.includes("match"),
-            "text-blue-600": rateInfo.source.includes("priority"),
-            "text-amber-600":
-              rateInfo.source.includes("popular") ||
-              rateInfo.source.includes("first"),
-            "text-gray-600": rateInfo.source === "base_rate",
-            [colors.textMuted]: true,
-          })}
-        >
-          {rateInfo.source.replace(/_/g, " ")}
-        </div>
-
-        {/* Rate Modifiers */}
-        {rateModifiers.length > 0 && (
-          <div className="flex flex-wrap gap-1 justify-end mt-1">
-            {rateModifiers.map((modifier, index) => (
-              <span
-                key={index}
-                className={cn(
-                  "px-1.5 py-0.5 rounded text-[10px] font-medium border",
-                  modifier === "Negotiable"
-                    ? "bg-green-500/10 text-green-600 border-green-500/20"
-                    : modifier === "Deposit"
-                      ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                      : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                )}
-              >
-                {modifier}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-RateDisplay.displayName = "RateDisplay";
 // Memoize MusicianCard component with proper typing
 const MusicianCard = memo(
   ({
@@ -722,6 +372,18 @@ const MusicianCard = memo(
             "opacity-60 grayscale-[20%]"
         )}
       >
+        {" "}
+        <div
+          className="absolute top-4 right-4"
+          title="Trust Score: Platform reliability"
+        >
+          <TrustStarsDisplay
+            trustStars={musician.trustStars || 0.5}
+            size="sm"
+            showScore={true}
+            showTier={false}
+          />
+        </div>
         {/* Compatibility Warning */}
         {selectedGigType && musician.isCompatible === false && (
           <div className="absolute -top-2 -right-2">
@@ -767,7 +429,6 @@ const MusicianCard = memo(
             </div>
           </div>
         )}
-
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -794,23 +455,29 @@ const MusicianCard = memo(
                   <Crown className="w-4 h-4 text-amber-500" />
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                {getTierBadge(musician.tier)}
-                <div className="flex items-center gap-1 text-sm">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  <span className={colors.textMuted}>
-                    {musician.avgRating?.toFixed(1) || "New"}
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
-
-          <RateDisplay
-            musician={musician}
-            selectedGigType={selectedGigType}
-            roleType={musician.roleType}
-          />
+          <div className="mt-2">
+            <TrustBasedRateDisplay
+              musician={musician}
+              selectedGigType={selectedGigType}
+              roleType={musician.roleType}
+              compact={true}
+            />
+          </div>
+          {musician.canBeBookedDirectly && (
+            <div className="mt-3">
+              <div
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2",
+                  "bg-green-500/10 text-green-600 border-green-500/20 border"
+                )}
+              >
+                <CheckCircle className="w-3 h-3" />
+                <span>Direct Booking Available</span>
+              </div>
+            </div>
+          )}
         </div>
         {/* Instrument and Role with gigType context */}
         <div className="flex items-center gap-2 text-sm mb-3">
@@ -974,6 +641,9 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
     const [selectedGigType, setSelectedGigType] = useState("");
     const [showFilters, setShowFilters] = useState(false);
 
+    const [selectedSortBy, setSelectedSortBy] = useState<
+      "trust" | "rating" | "experience" | "recent" | "rate"
+    >("trust");
     // Debounced search query
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
@@ -984,26 +654,78 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
 
       return () => clearTimeout(timer);
     }, [searchQuery]);
+    // In ProMusiciansTab.tsx, update the filterOptions to convert string to number:
 
     const filterOptions = useMemo(
       () => ({
         city: selectedCity || undefined,
         instrument: selectedInstrument || undefined,
         gigType: selectedGigType || undefined,
+        // REMOVE minTrustStars entirely
         availableOnly: false,
+        sortBy: selectedSortBy,
       }),
-      [selectedCity, selectedInstrument, selectedGigType]
+      [
+        selectedCity,
+        selectedInstrument,
+        selectedGigType,
+        // Remove selectedMinTrustStars
+        selectedSortBy,
+      ]
+    );
+
+    const handleSortByChange = useCallback(
+      (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedSortBy(
+          e.target.value as
+            | "trust"
+            | "rating"
+            | "experience"
+            | "recent"
+            | "rate"
+        );
+      },
+      []
     );
 
     const { musicians, featuredMusicians, isLoading, isEmpty } =
       useProMusicians(filterOptions);
     const { results: searchResults, isLoading: isSearching } =
       useMusicianSearch(debouncedSearchQuery, selectedCity, selectedInstrument);
+    // Add this transformation function inside ProMusiciansTab component
+    const transformMusicianData = useCallback(
+      (data: any[]): EnhancedMusician[] => {
+        if (!data) return [];
 
-    const displayMusicians = useMemo(
-      () => (debouncedSearchQuery ? searchResults : musicians),
-      [debouncedSearchQuery, searchResults, musicians]
+        return data.map((item) => ({
+          ...item,
+          // Fix the rateConfidence type
+          rateConfidence:
+            item.rateConfidence === "high" ||
+            item.rateConfidence === "medium" ||
+            item.rateConfidence === "low"
+              ? (item.rateConfidence as "high" | "medium" | "low")
+              : undefined,
+          // Ensure other optional properties have correct defaults
+          isOptimalForGigType: item.isOptimalForGigType ?? false,
+          isCompatible: item.isCompatible ?? true,
+          gigTypeCompatibility: item.gigTypeCompatibility ?? 0,
+          trustStars: item.trustStars ?? 0.5,
+          displayRate: item.displayRate || "$0",
+        }));
+      },
+      []
     );
+
+    // Transform the musicians data
+    const displayMusicians = useMemo(() => {
+      const source = debouncedSearchQuery ? searchResults : musicians;
+      return transformMusicianData(source);
+    }, [debouncedSearchQuery, searchResults, musicians, transformMusicianData]);
+
+    const featuredMusiciansTransformed = useMemo(() => {
+      return transformMusicianData(featuredMusicians);
+    }, [featuredMusicians, transformMusicianData]);
 
     const activeFilters = useMemo(() => {
       const filters = [];
@@ -1017,12 +739,14 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
       }
       if (debouncedSearchQuery)
         filters.push(`Search: "${debouncedSearchQuery}"`);
+      // Remove minTrustStars from active filters
       return filters;
     }, [
       selectedCity,
       selectedInstrument,
       selectedGigType,
       debouncedSearchQuery,
+      // Remove selectedMinTrustStars
     ]);
 
     const getTierBadge = useCallback((tier: string) => {
@@ -1262,7 +986,6 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   </option>
                 ))}
               </select>
-
               <select
                 value={selectedInstrument}
                 onChange={handleInstrumentChange}
@@ -1280,7 +1003,6 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   </option>
                 ))}
               </select>
-
               {/* Gig Type Filter */}
               <select
                 value={selectedGigType}
@@ -1298,6 +1020,24 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                     {gigType.label}
                   </option>
                 ))}
+              </select>
+
+              {/* Sorting Filter */}
+              <select
+                value={selectedSortBy}
+                onChange={handleSortByChange} // Use the typed handler
+                className={cn(
+                  "px-3 py-2 rounded-lg border bg-transparent transition-colors",
+                  colors.border,
+                  colors.text,
+                  "hover:border-blue-300 focus:border-blue-500"
+                )}
+              >
+                <option value="trust">Sort by Trust</option>
+                <option value="rating">Sort by Rating</option>
+                <option value="experience">Sort by Experience</option>
+                <option value="rate">Sort by Rate (Lowest)</option>
+                <option value="recent">Sort by Recent</option>
               </select>
             </div>
           </div>
@@ -1351,14 +1091,14 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
         {/* Featured Musicians Section */}
         {!isLoading &&
           !debouncedSearchQuery &&
-          featuredMusicians.length > 0 &&
+          featuredMusiciansTransformed.length > 0 &&
           !selectedGigType && (
             <div>
               <h3 className={cn("text-lg font-semibold mb-4", colors.text)}>
                 🏆 Featured Musicians
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 p-4">
-                {featuredMusicians.map((musician) => (
+                {featuredMusiciansTransformed.map((musician) => (
                   <MusicianCard
                     key={musician._id}
                     musician={musician}
