@@ -351,7 +351,7 @@ export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
                         <div
                           className={cn(
                             "flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full border",
-                            colors.text,
+                            colors.textMuted,
                             colors.backgroundMuted,
                             colors.border
                           )}
@@ -612,37 +612,37 @@ const RoleChip: React.FC<{ roleType: string; colors: any }> = ({
   const roleConfig = {
     dj: {
       emoji: "🎧",
-      bg: "bg-blue-100 dark:bg-blue-900/30",
-      text: "text-blue-600 dark:text-blue-400",
-      border: "border-blue-200 dark:border-blue-800",
+      bg: "bg-blue-100 dark:bg-blue-900",
+      text: "text-blue-700 dark:text-blue-300",
+      border: "border-blue-200 dark:border-blue-700",
       icon: Music,
     },
     mc: {
       emoji: "🎤",
-      bg: "bg-red-100 dark:bg-red-900/30",
-      text: "text-red-600 dark:text-red-400",
-      border: "border-red-200 dark:border-red-800",
+      bg: "bg-red-100 dark:bg-red-900",
+      text: "text-red-700 dark:text-red-300",
+      border: "border-red-200 dark:border-red-700",
       icon: Mic,
     },
     vocalist: {
       emoji: "🎵",
-      bg: "bg-pink-100 dark:bg-pink-900/30",
-      text: "text-pink-600 dark:text-pink-400",
-      border: "border-pink-200 dark:border-pink-800",
+      bg: "bg-pink-100 dark:bg-pink-900",
+      text: "text-pink-700 dark:text-pink-300",
+      border: "border-pink-200 dark:border-pink-700",
       icon: Music,
     },
     instrumentalist: {
       emoji: "🎸",
-      bg: "bg-amber-100 dark:bg-amber-900/30",
-      text: "text-amber-600 dark:text-amber-400",
-      border: "border-amber-200 dark:border-amber-800",
+      bg: "bg-amber-100 dark:bg-amber-900",
+      text: "text-amber-700 dark:text-amber-300",
+      border: "border-amber-200 dark:border-amber-700",
       icon: Guitar,
     },
     producer: {
       emoji: "🎛️",
-      bg: "bg-purple-100 dark:bg-purple-900/30",
-      text: "text-purple-600 dark:text-purple-400",
-      border: "border-purple-200 dark:border-purple-800",
+      bg: "bg-purple-100 dark:bg-purple-900",
+      text: "text-purple-700 dark:text-purple-300",
+      border: "border-purple-200 dark:border-purple-700",
       icon: Settings,
     },
   };
@@ -655,7 +655,8 @@ const RoleChip: React.FC<{ roleType: string; colors: any }> = ({
   return (
     <div
       className={cn(
-        "px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm flex items-center gap-1.5 border",
+        "px-3 py-1.5 rounded-full text-sm font-medium border",
+        "flex items-center gap-1.5",
         config.bg,
         config.text,
         config.border
