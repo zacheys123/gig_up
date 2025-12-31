@@ -14,6 +14,10 @@ export { ClientPreBooking } from "./ClientPreBooking";
 export { GigInvites } from "./GigInvites";
 export { InstantGigs } from "./InstantGigs";
 export { GigSectionHeader } from "./GigSectionHeader";
+// This is a barrel export file
+export { CreateNormalGigs } from "./CreateNormalGigs";
+
+// ... export other components
 export {
   GigsLoadingSkeleton,
   CompactGigsSkeleton,

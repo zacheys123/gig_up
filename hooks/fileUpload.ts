@@ -1,11 +1,18 @@
+// hooks/fileUpload.ts
 import { Doc } from "@/convex/_generated/dataModel";
 
-type User = Doc<"users">;
-
+type ConvexUser = Doc<"users">;
 type Toast = {
   success: (message: string) => void;
   error: (message: string) => void;
 };
+
+// Create a minimal interface that both types must satisfy
+export interface MinimalUser {
+  _id: string;
+  clerkId?: string;
+  // Add any other properties that fileupload actually uses
+}
 
 export const fileupload = async (
   event: React.ChangeEvent<HTMLInputElement>,
@@ -16,8 +23,7 @@ export const fileupload = async (
   setFileUrl: (file: string | undefined) => void,
   setIsUploading: (isUploading: boolean) => void,
   dep: "image" | "video",
-  user: User
-  // Removed generateSignature parameter
+  user: MinimalUser // Use the minimal interface instead of specific Convex type
 ) => {
   const file = event.target.files ? event.target.files[0] : null;
 

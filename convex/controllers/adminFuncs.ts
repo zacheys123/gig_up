@@ -78,6 +78,10 @@ export const syncAdminUser = mutation({
       lastname: args.lastname,
       lastActive: now,
 
+      // Required fields
+      phoneVerified: true,
+      paymentMethodOnFile: false,
+
       // Admin permissions
       isAdmin: true,
       adminRole: args.adminConfig.role,

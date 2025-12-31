@@ -32,7 +32,7 @@ export const GigsLoadingSkeleton: React.FC = () => {
             <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
           </div>
         </div>
-        // In your GigsLoadingSkeleton.tsx - UPDATE SKELETON TABS
+
         {/* Tab Navigation Skeleton */}
         <div className="border-b border-gray-200 dark:border-gray-700 mb-8">
           <div className="flex space-x-8 overflow-x-auto scrollbar-hide">

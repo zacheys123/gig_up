@@ -28,7 +28,7 @@ export const NormalGigsTab = memo(
   ({ user, colors }: { user: any; colors: any }) => {
     const handleCreateNormalGig = useCallback(() => {
       // Redirect to your normal gig creation page
-      window.location.href = "/create-gig"; // Adjust path as needed
+      window.location.href = "/hub/gigs/client/create"; // Adjust path as needed
     }, []);
 
     return (

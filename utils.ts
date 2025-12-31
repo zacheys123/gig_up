@@ -1244,3 +1244,265 @@ export const getBestMatchingRate = (
   const allRates = getAllRates(rate);
   return allRates.length > 0 ? allRates[0] : null;
 };
+// utils/index.ts or utils/colors-fonts.ts
+export const colors = [
+  "#000000", // Black
+  "#FFFFFF", // White
+  "#FF3B30", // Red
+  "#FF9500", // Orange
+  "#FFCC00", // Yellow
+  "#4CD964", // Green
+  "#5AC8FA", // Blue
+  "#007AFF", // Primary Blue
+  "#5856D6", // Purple
+  "#FF2D55", // Pink
+  "#8B4513", // Brown
+  "#A0522D", // Sienna
+  "#D2691E", // Chocolate
+  "#1E90FF", // Dodger Blue
+  "#32CD32", // Lime Green
+  "#FF69B4", // Hot Pink
+  "#9370DB", // Medium Purple
+  "#20B2AA", // Light Sea Green
+  "#FF6347", // Tomato
+  "#6A5ACD", // Slate Blue
+  "#2E8B57", // Sea Green
+  "#DAA520", // Golden Rod
+  "#CD5C5C", // Indian Red
+  "#4682B4", // Steel Blue
+  "#9ACD32", // Yellow Green
+  "#FF4500", // Orange Red
+  "#DA70D6", // Orchid
+  "#00CED1", // Dark Turquoise
+  "#FF8C00", // Dark Orange
+  "#9932CC", // Dark Orchid
+];
+
+export const fonts = [
+  "Arial, sans-serif",
+  "Helvetica, sans-serif",
+  "Times New Roman, serif",
+  "Georgia, serif",
+  "Verdana, sans-serif",
+  "Tahoma, sans-serif",
+  "Trebuchet MS, sans-serif",
+  "Impact, sans-serif",
+  "Comic Sans MS, cursive",
+  "Courier New, monospace",
+  "Lucida Console, monospace",
+  "Palatino Linotype, serif",
+  "Garamond, serif",
+  "Bookman Old Style, serif",
+  "Arial Black, sans-serif",
+  "Brush Script MT, cursive",
+  "Lucida Handwriting, cursive",
+  "Copperplate, fantasy",
+  "Papyrus, fantasy",
+  "Rockwell, serif",
+  "Didot, serif",
+  "Optima, sans-serif",
+  "Futura, sans-serif",
+  "Baskerville, serif",
+  "Bodoni MT, serif",
+  "Franklin Gothic Medium, sans-serif",
+  "Gill Sans, sans-serif",
+  "Segoe UI, sans-serif",
+  "Calibri, sans-serif",
+  "Candara, sans-serif",
+];
+
+// You can also create utility functions for handling colors
+export const colorUtils = {
+  // Convert hex to RGB
+  hexToRgb: (hex: string): { r: number; g: number; b: number } => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : { r: 0, g: 0, b: 0 };
+  },
+
+  // Check if color is light (for determining text color)
+  isLightColor: (color: string): boolean => {
+    const { r, g, b } = colorUtils.hexToRgb(color);
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5;
+  },
+
+  // Get contrasting text color (black or white)
+  getContrastColor: (backgroundColor: string): string => {
+    return colorUtils.isLightColor(backgroundColor) ? "#000000" : "#FFFFFF";
+  },
+
+  // Generate random color from the palette
+  getRandomColor: (): string => {
+    return colors[Math.floor(Math.random() * colors.length)];
+  },
+
+  // Generate gradient colors
+  generateGradient: (
+    color1: string,
+    color2: string,
+    angle: number = 45
+  ): string => {
+    return `linear-gradient(${angle}deg, ${color1}, ${color2})`;
+  },
+
+  // Darken a color
+  darkenColor: (color: string, percent: number): string => {
+    const { r, g, b } = colorUtils.hexToRgb(color);
+    const darken = (value: number) =>
+      Math.max(0, Math.floor(value * (1 - percent / 100)));
+    return `#${darken(r).toString(16).padStart(2, "0")}${darken(g)
+      .toString(16)
+      .padStart(2, "0")}${darken(b).toString(16).padStart(2, "0")}`;
+  },
+
+  // Lighten a color
+  lightenColor: (color: string, percent: number): string => {
+    const { r, g, b } = colorUtils.hexToRgb(color);
+    const lighten = (value: number) =>
+      Math.min(255, Math.floor(value * (1 + percent / 100)));
+    return `#${lighten(r).toString(16).padStart(2, "0")}${lighten(g)
+      .toString(16)
+      .padStart(2, "0")}${lighten(b).toString(16).padStart(2, "0")}`;
+  },
+};
+
+// Font utility functions
+export const fontUtils = {
+  // Get random font
+  getRandomFont: (): string => {
+    return fonts[Math.floor(Math.random() * fonts.length)];
+  },
+
+  // Get font family name (remove fallbacks)
+  getFontName: (font: string): string => {
+    return font.split(",")[0];
+  },
+
+  // Check if font is serif
+  isSerif: (font: string): boolean => {
+    const serifFonts = [
+      "serif",
+      "Times",
+      "Georgia",
+      "Palatino",
+      "Garamond",
+      "Bookman",
+      "Baskerville",
+      "Bodoni",
+    ];
+    return serifFonts.some((serif) =>
+      font.toLowerCase().includes(serif.toLowerCase())
+    );
+  },
+
+  // Check if font is sans-serif
+  isSansSerif: (font: string): boolean => {
+    const sansSerifFonts = [
+      "sans-serif",
+      "Arial",
+      "Helvetica",
+      "Verdana",
+      "Tahoma",
+      "Trebuchet",
+      "Impact",
+      "Segoe",
+      "Calibri",
+    ];
+    return sansSerifFonts.some((sans) =>
+      font.toLowerCase().includes(sans.toLowerCase())
+    );
+  },
+
+  // Check if font is monospace
+  isMonospace: (font: string): boolean => {
+    const monoFonts = ["monospace", "Courier", "Lucida Console"];
+    return monoFonts.some((mono) =>
+      font.toLowerCase().includes(mono.toLowerCase())
+    );
+  },
+
+  // Check if font is cursive/script
+  isCursive: (font: string): boolean => {
+    const cursiveFonts = ["cursive", "Comic", "Brush", "Lucida Handwriting"];
+    return cursiveFonts.some((cursive) =>
+      font.toLowerCase().includes(cursive.toLowerCase())
+    );
+  },
+};
+
+// Preset combinations for quick selection
+export const presets = {
+  // Professional presets
+  professional: {
+    font: "Arial, sans-serif",
+    fontColor: "#000000",
+    backgroundColor: "#FFFFFF",
+  },
+  elegant: {
+    font: "Garamond, serif",
+    fontColor: "#333333",
+    backgroundColor: "#F8F8F8",
+  },
+  modern: {
+    font: "Helvetica, sans-serif",
+    fontColor: "#FFFFFF",
+    backgroundColor: "#007AFF",
+  },
+
+  // Creative presets
+  vibrant: {
+    font: "Comic Sans MS, cursive",
+    fontColor: "#FFFFFF",
+    backgroundColor: "#FF2D55",
+  },
+  artistic: {
+    font: "Brush Script MT, cursive",
+    fontColor: "#8B4513",
+    backgroundColor: "#FFCC00",
+  },
+  retro: {
+    font: "Courier New, monospace",
+    fontColor: "#FF9500",
+    backgroundColor: "#000000",
+  },
+
+  // Minimalist presets
+  minimalist: {
+    font: "Calibri, sans-serif",
+    fontColor: "#5856D6",
+    backgroundColor: "#FFFFFF",
+  },
+  clean: {
+    font: "Segoe UI, sans-serif",
+    fontColor: "#2E8B57",
+    backgroundColor: "#F5F5F5",
+  },
+
+  // Dark mode presets
+  darkElegant: {
+    font: "Times New Roman, serif",
+    fontColor: "#FFFFFF",
+    backgroundColor: "#1A1A1A",
+  },
+  darkModern: {
+    font: "Arial Black, sans-serif",
+    fontColor: "#32CD32",
+    backgroundColor: "#000000",
+  },
+};
+
+// Default export
+export default {
+  colors,
+  fonts,
+  colorUtils,
+  fontUtils,
+  presets,
+};
