@@ -317,6 +317,22 @@ export const userModel = defineTable({
   ),
   gigsBooked: v.optional(v.number()),
   gigsPosted: v.optional(v.number()),
+
+  firstGigPostedAt: v.optional(v.number()), // Track when first gig was posted
+  trustMilestones: v.optional(
+    v.union(
+      v.object({
+        firstGigPosted: v.boolean(),
+      }),
+      v.object({
+        firstGigBonusApplied: v.number(),
+      }),
+      v.object({
+        firstGigDate: v.number(),
+      })
+    )
+  ),
+
   userearnings: v.optional(v.number()),
   total: v.optional(v.number()),
 

@@ -9,19 +9,26 @@ export const gigModel = defineTable({
   secret: v.string(),
   description: v.optional(v.string()),
   phone: v.optional(v.string()),
-  price: v.optional(v.string()),
+  price: v.optional(v.number()),
   category: v.optional(v.string()),
-
+  isActive: v.boolean(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  isPublic: v.boolean(),
+  tags: v.array(v.string()),
+  requirements: v.array(v.string()),
+  benefits: v.array(v.string()),
   // Categories and bands
   bandCategory: v.array(v.string()),
   bussinesscat: v.string(),
-
+  interestedUsers: v.array(v.id("users")),
+  appliedUsers: v.array(v.id("users")),
   // Location and timing
   location: v.optional(v.string()),
   date: v.number(), // Unix timestamp
   time: v.object({
-    from: v.string(),
-    to: v.string(),
+    start: v.string(),
+    end: v.string(),
   }),
 
   // Status flags
@@ -52,7 +59,7 @@ export const gigModel = defineTable({
   currency: v.optional(v.string()),
   vocalistGenre: v.array(v.string()),
   scheduleDate: v.optional(v.number()),
-
+  schedulingProcedure: v.optional(v.string()),
   // Booking history
   bookingHistory: v.array(
     v.object({

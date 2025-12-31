@@ -1,4 +1,4 @@
-// hooks/useFeatureFlags.ts
+// hooks/useFeatureFlags.ts - OPTIMIZED
 "use client";
 
 import { useQuery } from "convex/react";
@@ -12,50 +12,53 @@ import {
 } from "@/lib/controlled_blocking_features";
 import { useCheckTrial } from "./useCheckTrial";
 
-// Simple consistent hashing for rollout
-const getConsistentRollout = (featureKey: string, userId?: string): number => {
-  const seed = userId || Math.random().toString();
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash) % 100;
+// Simple consistent hashing for rollout (memoized)
+const useConsistentRollout = (featureKey: string, userId?: string): number => {
+  return useMemo(() => {
+    const seed = userId || Math.random().toString();
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash << 5) - hash + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash) % 100;
+  }, [featureKey, userId]);
 };
 
 export const useFeatureFlags = (userId?: string) => {
   const featureFlags = useQuery(api.controllers.featureFlags.getFeatureFlags);
   const { isInGracePeriod } = useCheckTrial();
 
+  // Memoize feature flags map for O(1) lookups
+  const featureFlagsMap = useMemo(() => {
+    if (!featureFlags) return new Map<string, any>();
+    return new Map(featureFlags.map((f) => [f.id, f]));
+  }, [featureFlags]);
+
+  // Core feature check with caching
   const isFeatureEnabled = useCallback(
     (
       featureKey: FeatureFlagKey,
       userRole?: string,
       userTier: string = "free"
     ): boolean => {
-      if (!featureFlags) return false;
-
-      const flag = featureFlags.find((f) => f.id === featureKey);
+      const flag = featureFlagsMap.get(featureKey);
+      if (!flag || !flag.enabled) return false;
 
       // Special handling for role registration flags
       if (FEATURE_GROUPS.ROLE_REGISTRATION.includes(featureKey)) {
-        return flag ? flag.enabled && flag.rolloutPercentage > 0 : false;
+        return flag.rolloutPercentage > 0;
       }
 
-      // For all other flags, use full targeting logic
-      if (!flag || !flag.enabled) return false;
-
-      // GRACE PERIOD OVERRIDE: If user is in grace period, treat them as premium for tier checks
+      // Apply grace period override
       const effectiveTier = isInGracePeriod ? "pro" : userTier;
 
-      // 1. Check user tier targeting (with grace period override)
+      // Tier targeting
       if (flag.targetUsers && flag.targetUsers !== "all") {
-        if (flag.targetUsers !== effectiveTier) {
-          return false;
-        }
+        if (flag.targetUsers !== effectiveTier) return false;
       }
 
-      // 2. Check user role targeting
+      // Role targeting
       if (flag.targetRoles && flag.targetRoles.length > 0 && userRole) {
         if (
           !flag.targetRoles.includes("all") &&
@@ -65,152 +68,140 @@ export const useFeatureFlags = (userId?: string) => {
         }
       }
 
-      // 3. Check rollout percentage
+      // Rollout percentage
       if (flag.rolloutPercentage < 100) {
-        const userRollout = getConsistentRollout(featureKey, userId);
-        return userRollout < flag.rolloutPercentage;
+        const rolloutValue = useConsistentRollout(featureKey, userId);
+        return rolloutValue < flag.rolloutPercentage;
       }
 
       return true;
     },
-    [featureFlags, userId, isInGracePeriod]
+    [featureFlagsMap, userId, isInGracePeriod]
   );
 
+  // Memoized helper functions
   const getFeatureFlag = useCallback(
     (featureKey: FeatureFlagKey) => {
-      return featureFlags?.find((f) => f.id === featureKey);
+      return featureFlagsMap.get(featureKey);
     },
-    [featureFlags]
+    [featureFlagsMap]
   );
 
-  // Get all available features for a user
   const getAvailableFeatures = useCallback(
     (userRole?: string, userTier?: string) => {
-      if (!featureFlags) return [];
-
-      return featureFlags.filter((flag) => {
-        // Check if feature is enabled globally
-        if (!flag.enabled) return false;
-
-        // Apply grace period override for tier checks
-        const effectiveTier = isInGracePeriod ? "pro" : userTier;
-
-        // Check user tier targeting
-        if (flag.targetUsers && flag.targetUsers !== "all") {
-          if (flag.targetUsers !== effectiveTier) {
-            return false;
-          }
-        }
-
-        // Check user role targeting
-        if (flag.targetRoles && flag.targetRoles.length > 0 && userRole) {
-          if (
-            !flag.targetRoles.includes("all") &&
-            !flag.targetRoles.includes(userRole)
-          ) {
-            return false;
-          }
-        }
-
-        // Check rollout percentage
-        if (flag.rolloutPercentage < 100) {
-          const userRollout = getConsistentRollout(flag.id, userId);
-          return userRollout < flag.rolloutPercentage;
-        }
-
-        return true;
-      });
+      return Array.from(featureFlagsMap.values()).filter((flag) =>
+        isFeatureEnabled(flag.id as FeatureFlagKey, userRole, userTier)
+      );
     },
-    [featureFlags, userId, isInGracePeriod]
+    [featureFlagsMap, isFeatureEnabled]
   );
 
-  // Get features by group
   const getFeaturesByGroup = useCallback(
     (group: FeatureGroup, userRole?: string, userTier?: string) => {
-      const groupFeatures = FEATURE_GROUPS[group];
-      return groupFeatures.filter((featureKey) =>
+      return FEATURE_GROUPS[group].filter((featureKey) =>
         isFeatureEnabled(featureKey, userRole, userTier)
       );
     },
     [isFeatureEnabled]
   );
 
-  // Check if entire feature group is available
   const isFeatureGroupEnabled = useCallback(
     (group: FeatureGroup, userRole?: string, userTier?: string) => {
-      const enabledFeatures = getFeaturesByGroup(group, userRole, userTier);
-      return enabledFeatures.length > 0;
+      return getFeaturesByGroup(group, userRole, userTier).length > 0;
     },
     [getFeaturesByGroup]
   );
 
-  // Memoized counts
-  const enabledFlagsCount = useMemo(() => {
-    return featureFlags?.filter((f) => f.enabled).length || 0;
-  }, [featureFlags]);
+  // Pre-defined flag checks (memoized)
+  const isTeacherEnabled = useMemo(
+    () => (userRole?: string, userTier?: string) =>
+      isFeatureEnabled(FEATURE_FLAGS.TEACHER_ROLE, userRole, userTier),
+    [isFeatureEnabled]
+  );
 
-  const isLoading = featureFlags === undefined;
+  const isBookerEnabled = useMemo(
+    () => (userRole?: string, userTier?: string) =>
+      isFeatureEnabled(FEATURE_FLAGS.BOOKER_ROLE, userRole, userTier),
+    [isFeatureEnabled]
+  );
 
-  return {
-    // Data
-    featureFlags: featureFlags || [],
-    isLoading,
-    isInGracePeriod, // Expose grace period status
+  const isBothEnabled = useMemo(
+    () => (userRole?: string, userTier?: string) =>
+      isFeatureEnabled(FEATURE_FLAGS.BOTH_ROLE, userRole, userTier),
+    [isFeatureEnabled]
+  );
 
-    // Core functions
-    isFeatureEnabled,
-    getFeatureFlag,
+  const isNormalGigCreationEnabled = useMemo(
+    () => (userRole?: string, userTier?: string) =>
+      isFeatureEnabled(FEATURE_FLAGS.NORMAL_GIG_CREATION, userRole, userTier),
+    [isFeatureEnabled]
+  );
 
-    // Feature discovery functions
-    getAvailableFeatures,
-    getFeaturesByGroup,
-    isFeatureGroupEnabled,
+  const isScratchCreationEnabled = useMemo(
+    () => (userRole?: string, userTier?: string) =>
+      isFeatureEnabled(FEATURE_FLAGS.SCRATCH_CREATION, userRole, userTier),
+    [isFeatureEnabled]
+  );
 
-    // Derived data
-    enabledFlagsCount,
-    totalFlagsCount: featureFlags?.length || 0,
+  const isAICreationEnabled = useMemo(
+    () => (userRole?: string, userTier?: string) =>
+      isFeatureEnabled(FEATURE_FLAGS.AI_CREATION, userRole, userTier),
+    [isFeatureEnabled]
+  );
 
-    // Helper for enabled flags
-    getEnabledFlags: useCallback(() => {
-      return featureFlags?.filter((f) => f.enabled) || [];
-    }, [featureFlags]),
+  const isDeputyCreationEnabled = useMemo(
+    () => (userRole?: string, userTier?: string) =>
+      isFeatureEnabled(FEATURE_FLAGS.DEPUTY_CREATION, userRole, userTier),
+    [isFeatureEnabled]
+  );
 
-    // Pre-defined flag checks (for convenience)
-    isTeacherEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.TEACHER_ROLE, userRole, userTier),
-      [isFeatureEnabled]
-    ),
-    isBookerEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.BOOKER_ROLE, userRole, userTier),
-      [isFeatureEnabled]
-    ),
-    isBothEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.BOTH_ROLE, userRole, userTier),
-      [isFeatureEnabled]
-    ),
-    isNormalGigCreationEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.NORMAL_GIG_CREATION, userRole, userTier),
-      [isFeatureEnabled]
-    ),
-    isScratchCreationEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.SCRATCH_CREATION, userRole, userTier),
-      [isFeatureEnabled]
-    ),
-    isAICreationEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.AI_CREATION, userRole, userTier),
-      [isFeatureEnabled]
-    ),
+  // Derived data
+  const enabledFlagsCount = useMemo(
+    () => Array.from(featureFlagsMap.values()).filter((f) => f.enabled).length,
+    [featureFlagsMap]
+  );
 
-    isDeputyCreationEnabled: useCallback(
-      (userRole?: string, userTier?: string) =>
-        isFeatureEnabled(FEATURE_FLAGS.DEPUTY_CREATION, userRole, userTier),
-      [isFeatureEnabled]
-    ),
-  };
+  const result = useMemo(
+    () => ({
+      featureFlags: Array.from(featureFlagsMap.values()),
+      isLoading: featureFlags === undefined,
+      isInGracePeriod,
+      isFeatureEnabled,
+      getFeatureFlag,
+      getAvailableFeatures,
+      getFeaturesByGroup,
+      isFeatureGroupEnabled,
+      enabledFlagsCount,
+      totalFlagsCount: featureFlagsMap.size,
+      getEnabledFlags: () =>
+        Array.from(featureFlagsMap.values()).filter((f) => f.enabled),
+      isTeacherEnabled,
+      isBookerEnabled,
+      isBothEnabled,
+      isNormalGigCreationEnabled,
+      isScratchCreationEnabled,
+      isAICreationEnabled,
+      isDeputyCreationEnabled,
+    }),
+    [
+      featureFlagsMap,
+      featureFlags,
+      isInGracePeriod,
+      isFeatureEnabled,
+      getFeatureFlag,
+      getAvailableFeatures,
+      getFeaturesByGroup,
+      isFeatureGroupEnabled,
+      enabledFlagsCount,
+      isTeacherEnabled,
+      isBookerEnabled,
+      isBothEnabled,
+      isNormalGigCreationEnabled,
+      isScratchCreationEnabled,
+      isAICreationEnabled,
+      isDeputyCreationEnabled,
+    ]
+  );
+
+  return result;
 };

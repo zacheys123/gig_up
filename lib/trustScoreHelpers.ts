@@ -1,6 +1,11 @@
 // lib/trustScoreHelpers.ts
-// Updated with new scoring system
-
+// Updated with role-specific thresholds
+// lib/trustScoreHelpers.ts - Add this type
+export type RoleSpecificFeature = {
+  name: string;
+  key: FeatureName;
+  score: number;
+};
 // Section caps from the new system
 export const SECTION_CAPS = {
   PROFILE: 25,
@@ -67,6 +72,141 @@ export const SCORING_CONSTANTS = {
   TIER_PREMIUM: 3,
   TIER_PRO: 2,
   TIER_FREE: 1,
+} as const;
+
+// ROLE-SPECIFIC FEATURE THRESHOLDS
+export const MUSICIAN_FEATURE_THRESHOLDS = {
+  canPostBasicGigs: 10,
+  canMessageUsers: 20,
+  canVerifiedBadge: 40,
+  canCompete: 45,
+  canAccessAnalytics: 50,
+  canPostPremiumGigs: 55,
+  canBeDual: 60, // Can also be client
+  canVideoCall: 65, // Video interviews
+  canCreateBand: 70, // Create/manage bands
+  canVerifyOthers: 75, // Vouch for other musicians
+  canModerate: 80, // Help moderate community
+  canBetaFeatures: 85, // Early access to features
+} as const;
+
+export const CLIENT_FEATURE_THRESHOLDS = {
+  canPostBasicGigs: 10,
+  canMessageUsers: 15, // Lower for clients to contact musicians
+  canVerifiedBadge: 30, // Lower for clients
+  canAccessAnalytics: 40, // Analytics for gigs posted
+  canPostPremiumGigs: 45, // Feature gigs
+  canBeDual: 50, // Can also be musician
+  canHireTeams: 55, // Hire teams for projects
+  canVideoCall: 60, // Interview musicians
+  canBetaFeatures: 70, // Early access
+  canModerate: 75, // Report issues
+} as const;
+
+export const TEACHER_FEATURE_THRESHOLDS = {
+  canPostBasicGigs: 10, // Post lesson slots
+  canMessageUsers: 15, // Contact students
+  canVerifiedBadge: 35, // Verified teacher badge
+  canAccessAnalytics: 45, // Student analytics
+  canPostPremiumGigs: 50, // Premium lessons
+  canVideoCall: 55, // Online lessons
+  canBeDual: 60, // Also perform
+  canCreateBand: 65, // Create student bands
+  canBetaFeatures: 70, // Early access
+  canModerate: 75, // Help moderate
+} as const;
+
+export const BOOKER_FEATURE_THRESHOLDS = {
+  canMessageUsers: 10, // Contact artists
+  canVerifiedBadge: 25, // Verified booker
+  canHireTeams: 30, // Hire teams
+  canAccessAnalytics: 35, // Booking analytics
+  canPostPremiumGigs: 40, // Feature bookings
+  canVideoCall: 45, // Interview artists
+  canBetaFeatures: 50, // Early access
+  canVerifyOthers: 55, // Vouch for artists
+  canModerate: 60, // Moderate bookings
+} as const;
+export const ROLE_THRESHOLD_OVERRIDES = {
+  musician: {
+    canPostBasicGigs: 10,
+    canMessageUsers: 20,
+    canVerifiedBadge: 40,
+    canCompete: 45,
+    canAccessAnalytics: 50,
+    canPostPremiumGigs: 55,
+    canBeDual: 60,
+    canVideoCall: 65,
+    canCreateBand: 70,
+    canVerifyOthers: 75,
+    canModerate: 80,
+    canBetaFeatures: 85,
+  },
+  teacher: {
+    canPostBasicGigs: 10,
+    canMessageUsers: 15,
+    canVerifiedBadge: 35,
+    canAccessAnalytics: 45,
+    canPostPremiumGigs: 50,
+    canVideoCall: 55,
+    canBeDual: 60,
+    canCreateBand: 65,
+    canBetaFeatures: 70,
+    canModerate: 75,
+  },
+  client: {
+    canPostBasicGigs: 10,
+    canMessageUsers: 15,
+    canVerifiedBadge: 30,
+    canAccessAnalytics: 40,
+    canPostPremiumGigs: 45,
+    canBeDual: 50,
+    canHireTeams: 55,
+    canVideoCall: 60,
+    canBetaFeatures: 70,
+    canModerate: 75,
+  },
+  booker: {
+    canMessageUsers: 10,
+    canVerifiedBadge: 25,
+    canHireTeams: 30,
+    canAccessAnalytics: 35,
+    canPostPremiumGigs: 40,
+    canVideoCall: 45,
+    canBetaFeatures: 50,
+    canVerifyOthers: 55,
+    canModerate: 60,
+  },
+};
+// Get thresholds for specific role
+export function getRoleThresholds(user: any): Record<string, number> {
+  if (user?.isMusician) {
+    if (user?.roleType === "teacher") {
+      return TEACHER_FEATURE_THRESHOLDS;
+    }
+    return MUSICIAN_FEATURE_THRESHOLDS;
+  }
+  if (user?.isClient) return CLIENT_FEATURE_THRESHOLDS;
+  if (user?.isBooker) return BOOKER_FEATURE_THRESHOLDS;
+
+  // Default to musician thresholds
+  return MUSICIAN_FEATURE_THRESHOLDS;
+}
+
+export const FEATURE_DESCRIPTIONS: Record<FeatureName, string> = {
+  canPostBasicGigs: "Post basic gig listings",
+  canMessageUsers: "Message other users",
+  canVerifiedBadge: "Get verified badge automatically",
+  canCompete: "Enter competitions",
+  canAccessAnalytics: "Access detailed analytics",
+  canPostPremiumGigs: "Post premium gigs",
+  canBeDual: "Have musician & client roles",
+  canVideoCall: "Use video calls for interviews/lessons",
+  canCreateBand: "Create and manage bands",
+  canHireTeams: "Hire teams for projects",
+  canVerifyOthers: "Vouch for other users",
+  canModerate: "Help moderate community",
+  canBetaFeatures: "Access beta features early",
 } as const;
 
 // Calculate points for checklist items based on new system
@@ -318,19 +458,129 @@ export function checkProfileCompleteness(user: any): boolean {
   if (user?.isBooker) return !!user?.bookerType;
   return true;
 }
-// Feature eligibility thresholds for client-side
-export const FEATURE_SCORE_THRESHOLDS = {
-  canPostBasicGigs: 10,
-  canMessageUsers: 20,
-  canVerifiedBadge: 40,
-  canCompete: 45,
-  canAccessAnalytics: 50,
-  canPostPremiumGigs: 55,
-  canBeDual: 60,
-  canVideoCall: 65,
-  canCreateBand: 70,
-  canHireTeams: 75,
-  canVerifyOthers: 80,
-  canModerate: 85,
-  canBetaFeatures: 90,
-} as const;
+
+export type FeatureName =
+  | "canCreateBand"
+  | "canCompete"
+  | "canBeDual"
+  | "canVideoCall"
+  | "canPostPremiumGigs"
+  | "canAccessAnalytics"
+  | "canVerifiedBadge"
+  | "canPostBasicGigs"
+  | "canMessageUsers"
+  | "canHireTeams"
+  | "canVerifyOthers"
+  | "canModerate"
+  | "canBetaFeatures";
+
+// Get role-specific thresholds
+export function getFeatureThresholdsForRole(
+  user: any
+): Record<FeatureName, number> {
+  const roleThresholds = getRoleThresholds(user);
+  const allFeatures: FeatureName[] = [
+    "canPostBasicGigs",
+    "canMessageUsers",
+    "canVerifiedBadge",
+    "canCompete",
+    "canAccessAnalytics",
+    "canPostPremiumGigs",
+    "canBeDual",
+    "canVideoCall",
+    "canCreateBand",
+    "canHireTeams",
+    "canVerifyOthers",
+    "canModerate",
+    "canBetaFeatures",
+  ];
+
+  const thresholds: Partial<Record<FeatureName, number>> = {};
+
+  // Only include features that exist for this role
+  allFeatures.forEach((feature) => {
+    if (roleThresholds[feature as keyof typeof roleThresholds] !== undefined) {
+      thresholds[feature] =
+        roleThresholds[feature as keyof typeof roleThresholds];
+    }
+  });
+
+  return thresholds as Record<FeatureName, number>;
+}
+
+export const getMostRelevantFeature = (user: any): FeatureName => {
+  if (!user) return "canMessageUsers";
+
+  if (user.isMusician) {
+    if (user.roleType === "teacher") return "canVideoCall";
+    return "canCreateBand";
+  }
+  if (user.isClient) return "canHireTeams";
+  if (user.isBooker) return "canHireTeams";
+  return "canMessageUsers";
+};
+
+export const getRoleSpecificFeatures = (user: any) => {
+  if (!user) return [];
+
+  // Determine user role
+  let role: keyof typeof ROLE_THRESHOLD_OVERRIDES = "musician";
+  if (user.isMusician) {
+    role = user.roleType === "teacher" ? "teacher" : "musician";
+  } else if (user.isClient) {
+    role = "client";
+  } else if (user.isBooker) {
+    role = "booker";
+  }
+
+  // Get thresholds for this role
+  const thresholds = ROLE_THRESHOLD_OVERRIDES[role];
+
+  // Convert to array format
+  return Object.entries(thresholds)
+    .map(([key, score]) => ({
+      name: key
+        .replace("can", "")
+        .replace(/([A-Z])/g, " $1")
+        .trim(),
+      key: key as FeatureName,
+      score: score as number,
+    }))
+    .sort((a, b) => a.score - b.score);
+};
+
+export const getScoreNeeded = (feature: FeatureName, user: any): number => {
+  if (!user) return 999;
+
+  // Determine user role
+  let role: keyof typeof ROLE_THRESHOLD_OVERRIDES = "musician";
+  if (user.isMusician) {
+    role = user.roleType === "teacher" ? "teacher" : "musician";
+  } else if (user.isClient) {
+    role = "client";
+  } else if (user.isBooker) {
+    role = "booker";
+  }
+
+  // Get threshold for this role
+  const thresholds = ROLE_THRESHOLD_OVERRIDES[role];
+  return thresholds[feature as keyof typeof thresholds] || 999;
+};
+
+// Keep these unchanged
+export const getTierThreshold = (tier: string): number => {
+  const thresholds = {
+    new: 30,
+    basic: 50,
+    verified: 65,
+    trusted: 80,
+    elite: 90,
+  };
+  return thresholds[tier as keyof typeof thresholds] || 100;
+};
+
+export const getNextTier = (tier: string): string => {
+  const tiers = ["new", "basic", "verified", "trusted", "elite"];
+  const currentIndex = tiers.indexOf(tier);
+  return tiers[currentIndex + 1] || "elite";
+};

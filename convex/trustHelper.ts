@@ -168,23 +168,166 @@ export function getStarDescription(stars: number): string {
 }
 
 // Check feature eligibility with score
-export function getFeatureEligibility(score: number, user: Doc<"users">) {
-  return {
-    canCreateBand:
-      user.isMusician && score >= FEATURE_SCORE_THRESHOLDS.canCreateBand,
-    canCompete: score >= FEATURE_SCORE_THRESHOLDS.canCompete,
-    canBeDual: score >= FEATURE_SCORE_THRESHOLDS.canBeDual,
-    canVideoCall: score >= FEATURE_SCORE_THRESHOLDS.canVideoCall,
-    canPostPremiumGigs: score >= FEATURE_SCORE_THRESHOLDS.canPostPremiumGigs,
-    canAccessAnalytics: score >= FEATURE_SCORE_THRESHOLDS.canAccessAnalytics,
-    canVerifiedBadge: score >= FEATURE_SCORE_THRESHOLDS.canVerifiedBadge,
-    canPostBasicGigs: score >= FEATURE_SCORE_THRESHOLDS.canPostBasicGigs,
-    canMessageUsers: score >= FEATURE_SCORE_THRESHOLDS.canMessageUsers,
-    canHireTeams: score >= FEATURE_SCORE_THRESHOLDS.canHireTeams,
-    canVerifyOthers: score >= FEATURE_SCORE_THRESHOLDS.canVerifyOthers,
-    canModerate: score >= FEATURE_SCORE_THRESHOLDS.canModerate,
-    canBetaFeatures: score >= FEATURE_SCORE_THRESHOLDS.canBetaFeatures,
-  };
+// convex/trustHelper.ts - Update getFeatureEligibility function
+
+// Add role-specific thresholds at the top:
+
+export type FeatureName =
+  | "canPostBasicGigs"
+  | "canMessageUsers"
+  | "canVerifiedBadge"
+  | "canCompete"
+  | "canAccessAnalytics"
+  | "canPostPremiumGigs"
+  | "canBeDual"
+  | "canVideoCall"
+  | "canCreateBand"
+  | "canHireTeams"
+  | "canVerifyOthers"
+  | "canModerate"
+  | "canBetaFeatures";
+
+// Default thresholds (fallback)
+const DEFAULT_THRESHOLDS: Record<FeatureName, number> = {
+  canPostBasicGigs: 10,
+  canMessageUsers: 20,
+  canVerifiedBadge: 40,
+  canCompete: 45,
+  canAccessAnalytics: 50,
+  canPostPremiumGigs: 55,
+  canBeDual: 60,
+  canVideoCall: 65,
+  canCreateBand: 70,
+  canHireTeams: 75,
+  canVerifyOthers: 80,
+  canModerate: 85,
+  canBetaFeatures: 90,
+};
+
+// Simple role threshold overrides
+export const ROLE_THRESHOLD_OVERRIDES = {
+  musician: {
+    canPostBasicGigs: 10,
+    canMessageUsers: 20,
+    canVerifiedBadge: 40,
+    canCompete: 45,
+    canAccessAnalytics: 50,
+    canPostPremiumGigs: 55,
+    canBeDual: 60,
+    canVideoCall: 65,
+    canCreateBand: 70,
+    canVerifyOthers: 75,
+    canModerate: 80,
+    canBetaFeatures: 85,
+  },
+  teacher: {
+    canPostBasicGigs: 10,
+    canMessageUsers: 15,
+    canVerifiedBadge: 35,
+    canAccessAnalytics: 45,
+    canPostPremiumGigs: 50,
+    canVideoCall: 55,
+    canBeDual: 60,
+    canCreateBand: 65,
+    canBetaFeatures: 70,
+    canModerate: 75,
+  },
+  client: {
+    canPostBasicGigs: 10,
+    canMessageUsers: 15,
+    canVerifiedBadge: 30,
+    canAccessAnalytics: 40,
+    canPostPremiumGigs: 45,
+    canBeDual: 50,
+    canHireTeams: 55,
+    canVideoCall: 60,
+    canBetaFeatures: 70,
+    canModerate: 75,
+  },
+  booker: {
+    canMessageUsers: 10,
+    canVerifiedBadge: 25,
+    canHireTeams: 30,
+    canAccessAnalytics: 35,
+    canPostPremiumGigs: 40,
+    canVideoCall: 45,
+    canBetaFeatures: 50,
+    canVerifyOthers: 55,
+    canModerate: 60,
+  },
+};
+
+// Get user role
+function getUserRole(
+  user: Doc<"users">
+): keyof typeof ROLE_THRESHOLD_OVERRIDES {
+  if (user.isMusician) {
+    return user.roleType === "teacher" ? "teacher" : "musician";
+  }
+  if (user.isClient) return "client";
+  if (user.isBooker) return "booker";
+  return "musician";
+}
+
+// Get threshold for a feature (role-specific)
+function getFeatureThreshold(feature: FeatureName, user: Doc<"users">): number {
+  const role = getUserRole(user);
+  const roleThresholds = ROLE_THRESHOLD_OVERRIDES[role];
+
+  // Return role-specific threshold if it exists, otherwise use default
+  return (
+    roleThresholds[feature as keyof typeof roleThresholds] ||
+    DEFAULT_THRESHOLDS[feature]
+  );
+}
+
+// Check if feature is available for role
+function isFeatureAvailableForRole(
+  feature: FeatureName,
+  user: Doc<"users">
+): boolean {
+  const role = getUserRole(user);
+  const roleThresholds = ROLE_THRESHOLD_OVERRIDES[role];
+
+  // Feature is available if it exists in role thresholds
+  return feature in roleThresholds;
+}
+
+// SIMPLIFIED getFeatureEligibility function
+function getFeatureEligibility(score: number, user: Doc<"users">) {
+  const result: Record<FeatureName, boolean> = {} as Record<
+    FeatureName,
+    boolean
+  >;
+
+  // Check each feature
+  const features: FeatureName[] = [
+    "canPostBasicGigs",
+    "canMessageUsers",
+    "canVerifiedBadge",
+    "canCompete",
+    "canAccessAnalytics",
+    "canPostPremiumGigs",
+    "canBeDual",
+    "canVideoCall",
+    "canCreateBand",
+    "canHireTeams",
+    "canVerifyOthers",
+    "canModerate",
+    "canBetaFeatures",
+  ];
+
+  for (const feature of features) {
+    // Only check if feature is available for this role
+    if (isFeatureAvailableForRole(feature, user)) {
+      const threshold = getFeatureThreshold(feature, user);
+      result[feature] = score >= threshold;
+    } else {
+      result[feature] = false; // Not available for this role
+    }
+  }
+
+  return result;
 }
 
 // ========== HELPER FUNCTIONS (for Convex) ==========

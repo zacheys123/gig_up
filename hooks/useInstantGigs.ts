@@ -4,16 +4,15 @@ import { useCallback, useMemo } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
-// Default stats to prevent undefined errors
 const DEFAULT_STATS = {
   total: 0,
   pending: 0,
   accepted: 0,
   declined: 0,
   deputySuggested: 0,
-};
+} as const;
 
-export const useInstantGigs = (userId: Id<"users">) => {
+export const useInstantGigs = (userId?: Id<"users">) => {
   // Memoize query parameters
   const queryParams = useMemo(
     () => (userId ? { clientId: userId } : "skip"),
@@ -25,31 +24,33 @@ export const useInstantGigs = (userId: Id<"users">) => {
     api.controllers.instantGigs.getClientInstantGigs,
     queryParams
   );
+
   const stats = useQuery(
     api.controllers.instantGigs.getClientInstantGigsStats,
     queryParams
   );
 
-  // Mutations (only gig operations, no template operations)
-  const createGig = useMutation(api.controllers.instantGigs.createInstantGig);
-  const updateGigStatus = useMutation(
+  // Mutations
+  const createGigMutation = useMutation(
+    api.controllers.instantGigs.createInstantGig
+  );
+  const updateGigStatusMutation = useMutation(
     api.controllers.instantGigs.updateInstantGigStatus
   );
 
-  // Memoize data to prevent unnecessary re-renders
+  // Memoize data
   const memoizedGigs = useMemo(() => gigs || [], [gigs]);
   const memoizedStats = useMemo(() => stats || DEFAULT_STATS, [stats]);
 
-  // Memoize mutation wrappers
-  const createGigWrapper = useCallback(
+  // Memoize actions
+  const createGig = useCallback(
     async (gigData: any) => {
-      console.log("Creating gig with data:", gigData);
-      return await createGig(gigData);
+      return await createGigMutation(gigData);
     },
-    [createGig]
+    [createGigMutation]
   );
 
-  const updateGigStatusWrapper = useCallback(
+  const updateGigStatus = useCallback(
     async (
       gigId: Id<"instantgigs">,
       status: string,
@@ -59,7 +60,7 @@ export const useInstantGigs = (userId: Id<"users">) => {
       deputySuggestedId?: Id<"users">,
       deputysuggestedName?: string
     ) => {
-      return await updateGigStatus({
+      return await updateGigStatusMutation({
         gigId,
         status: status as any,
         musicianId,
@@ -69,16 +70,23 @@ export const useInstantGigs = (userId: Id<"users">) => {
         deputysuggestedName,
       });
     },
-    [updateGigStatus]
+    [updateGigStatusMutation]
   );
 
-  return {
-    // Data
-    gigs: memoizedGigs,
-    stats: memoizedStats,
+  const result = useMemo(
+    () => ({
+      gigs: memoizedGigs,
+      stats: memoizedStats,
+      createGig,
+      updateGigStatus,
+      isLoading: gigs === undefined || stats === undefined,
+      hasGigs: memoizedGigs.length > 0,
+      activeGigs: memoizedGigs.filter(
+        (g) => g.status === "pending" || g.status === "accepted"
+      ),
+    }),
+    [memoizedGigs, memoizedStats, createGig, updateGigStatus, gigs, stats]
+  );
 
-    // Mutations
-    createGig: createGigWrapper,
-    updateGigStatus: updateGigStatusWrapper,
-  };
+  return result;
 };

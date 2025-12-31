@@ -31,6 +31,9 @@ import {
   UsersIcon,
   BriefcaseIcon,
   BuildingIcon,
+  ChevronUp,
+  ChevronDown,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -48,7 +51,17 @@ import { ChatListModal } from "../chat/ChatListModal";
 import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
 import { FeatureDiscovery } from "../features/FeatureDiscovery";
 import { getRoleFeatures } from "@/lib/registry";
+import { useTrustScore } from "@/hooks/useTrustScore";
 
+import { FeatureUnlockProgress } from "../FeatureUnlockProgress";
+
+import {
+  getNextTier,
+  getMostRelevantFeature,
+  getScoreNeeded,
+  getTierThreshold,
+  getRoleSpecificFeatures,
+} from "@/lib/trustScoreHelpers";
 interface NavLink {
   name: string;
   href: string;
@@ -72,7 +85,8 @@ export default function MobileNav() {
   const { unreadCount: notCount } = useNotificationSystem();
   const { isInGracePeriod, isFirstMonthEnd } = useCheckTrial();
   const router = useRouter();
-
+  const [showTrustFeatures, setShowTrustFeatures] = useState(false);
+  const { trustScore, trustStars, tier } = useTrustScore();
   const { openChat } = useChat();
   const [showChatListModal, setShowChatListModal] = useState(false);
   const { total: unReadCount, byChat: unreadCounts } = useUnreadCount();
@@ -114,6 +128,13 @@ export default function MobileNav() {
       icon: <CreditCardIcon className="w-5 h-5" />,
       exact: false,
       availableForTiers: ["free", "pro", "premium", "elite"],
+    },
+    {
+      name: "Overall Rating Info",
+      href: "/dashboard/overall-rating",
+      icon: <Award className="w-5 h-5" />,
+      exact: false,
+      availableForTiers: ["pro", "premium", "elite"],
     },
   ];
 
@@ -578,7 +599,8 @@ export default function MobileNav() {
                   </div>
 
                   {/* Upgrade Prompt */}
-                  {nextTier && (
+                  {/* Upgrade Prompt */}
+                  {nextTier && user?.isMusician && (
                     <div
                       className={cn(
                         "mt-3 p-3 rounded-xl bg-gradient-to-r text-white",
@@ -600,10 +622,28 @@ export default function MobileNav() {
                         Unlock exclusive {nextTier.label.toLowerCase()}{" "}
                         dashboard features.
                       </p>
+
+                      {/* Add trust score progress for relevant features */}
+                      <div className="mt-3 pt-3 border-t border-white/20">
+                        <div className="text-xs font-medium mb-2">
+                          Also unlock with trust:
+                        </div>
+                        <div className="space-y-2">
+                          <FeatureUnlockProgress
+                            feature="canCompete"
+                            variant="mini"
+                          />
+                          <FeatureUnlockProgress
+                            feature="canCreateBand"
+                            variant="mini"
+                          />
+                        </div>
+                      </div>
+
                       <Link
                         href="/dashboard/billing"
                         onClick={() => setIsOpen(false)}
-                        className="block w-full text-center bg-white text-gray-800 py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors"
+                        className="block w-full text-center bg-white text-gray-800 py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors mt-3"
                       >
                         Upgrade to {nextTier.label}
                       </Link>
@@ -792,7 +832,118 @@ export default function MobileNav() {
                         showLocked={false}
                       />
                     </motion.div>
+                    {/* TRUSTsCORE SECTION MOBILE NAV STARTS HERE
+                     */}
+                    {/* Trust Score Section for Mobile */}
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{
+                        delay: (allLinks.length + 2) * 0.05,
+                        type: "spring",
+                        stiffness: 300,
+                      }}
+                      className="mt-4 border-t pt-4"
+                    >
+                      {/* Trust Score Header */}
+                      <button
+                        onClick={() => setShowTrustFeatures(!showTrustFeatures)}
+                        className={cn(
+                          "flex items-center justify-between w-full p-3 rounded-xl transition-all duration-200",
+                          colors.hoverBg,
+                          colors.text
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Shield className={cn("w-4 h-4", colors.primary)} />
+                          <div>
+                            <div className="text-sm font-medium">
+                              Trust Score
+                            </div>
+                            <div className="text-xs flex items-center gap-1">
+                              <span className={colors.textMuted}>
+                                {trustScore}/100
+                              </span>
+                              <span className="text-yellow-500 flex items-center gap-0.5">
+                                <Star className="w-3 h-3 fill-yellow-500" />
+                                {trustStars.toFixed(1)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        {showTrustFeatures ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </button>
 
+                      {/* Collapsed view */}
+                      {!showTrustFeatures && trustScore < 100 && user && (
+                        <div className="px-3 pb-2">
+                          <FeatureUnlockProgress
+                            feature={getMostRelevantFeature(user)}
+                            variant="compact"
+                            className="text-xs"
+                          />
+                        </div>
+                      )}
+
+                      {/* Expanded view */}
+                      {showTrustFeatures && user && (
+                        <div className="space-y-3 px-3 pb-3">
+                          {/* Show role-specific features */}
+                          {getRoleSpecificFeatures(user)
+                            .filter((feature: any) => {
+                              const scoreNeeded = getScoreNeeded(
+                                feature.key,
+                                user
+                              );
+                              return (
+                                scoreNeeded - trustScore <= 20 &&
+                                scoreNeeded !== 999
+                              );
+                            })
+                            .map((feature: any) => (
+                              <FeatureUnlockProgress
+                                key={feature.key}
+                                feature={feature.key}
+                                variant="compact"
+                              />
+                            ))}
+
+                          {/* Show next tier progress */}
+                          {getTierThreshold(tier) > trustScore && (
+                            <div className="pt-2 border-t">
+                              <div className="text-xs font-medium mb-2">
+                                Next Tier: {getNextTier(tier)}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                  <div
+                                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full"
+                                    style={{
+                                      width: `${(trustScore / getTierThreshold(tier)) * 100}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {trustScore}/{getTierThreshold(tier)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          <Link
+                            href="/dashboard/overall-rating"
+                            onClick={() => setIsOpen(false)}
+                            className="block text-center text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 py-1.5 rounded-lg transition-colors"
+                          >
+                            View trust dashboard →
+                          </Link>
+                        </div>
+                      )}
+                    </motion.div>
                     {/* Theme Toggle */}
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}

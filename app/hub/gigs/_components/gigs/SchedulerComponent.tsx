@@ -2,7 +2,7 @@
 
 import React, { FormEvent, useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useAllGigs } from "@/hooks/useAllGigs";
+import { useGigs } from "@/hooks/useAllGigs";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Modal } from "@/components/modals/Modal";
@@ -14,7 +14,6 @@ import { useThemeColors } from "@/hooks/useTheme";
 
 // Import trust score helpers
 import {
-  FEATURE_SCORE_THRESHOLDS,
   scoreToStars,
   getTrustTierFromScore,
   calculateProfilePoints,
@@ -26,7 +25,77 @@ import {
   calculatePenalties,
   checkProfileCompleteness,
 } from "@/lib/trustScoreHelpers";
+import { Id } from "@/convex/_generated/dataModel";
+// Add this function to your component (before the SchedulerComponent function)
+// Add this at the top of your SchedulerComponent.tsx, after the imports
 
+// Feature score thresholds (copy from your trustScoreHelpers or convex file)
+const FEATURE_SCORE_THRESHOLDS = {
+  canPostBasicGigs: 10,
+  canMessageUsers: 20,
+  canVerifiedBadge: 40,
+  canCompete: 45,
+  canAccessAnalytics: 50,
+  canPostPremiumGigs: 55,
+  canBeDual: 60,
+  canVideoCall: 65,
+  canCreateBand: 70,
+  canHireTeams: 75,
+  canVerifyOthers: 80,
+  canModerate: 85,
+  canBetaFeatures: 90,
+} as const;
+// Get role-specific threshold
+const getRoleThreshold = (
+  feature: keyof typeof FEATURE_SCORE_THRESHOLDS,
+  user: any
+): number => {
+  if (!user) return FEATURE_SCORE_THRESHOLDS[feature];
+
+  // Role adjustments
+  if (user.isClient || user.isBooker) {
+    // Lower thresholds for clients and bookers
+    const adjustments: Record<keyof typeof FEATURE_SCORE_THRESHOLDS, number> = {
+      canPostBasicGigs: 10, // Same
+      canMessageUsers: 15, // Lower
+      canVerifiedBadge: 30, // Lower
+      canCompete: 45, // Same
+      canAccessAnalytics: 40, // Lower
+      canPostPremiumGigs: 45, // Lower
+      canBeDual: 50, // Lower
+      canVideoCall: 60, // Lower
+      canCreateBand: 999, // Not available
+      canHireTeams: 55, // For clients/bookers
+      canVerifyOthers: 999, // Not available
+      canModerate: 75, // Higher
+      canBetaFeatures: 70, // Lower
+    };
+    return adjustments[feature];
+  }
+
+  if (user.isMusician && user.roleType === "teacher") {
+    // Teacher-specific adjustments
+    const adjustments: Record<keyof typeof FEATURE_SCORE_THRESHOLDS, number> = {
+      canPostBasicGigs: 10,
+      canMessageUsers: 15,
+      canVerifiedBadge: 35,
+      canCompete: 999, // Not for teachers
+      canAccessAnalytics: 45,
+      canPostPremiumGigs: 50,
+      canBeDual: 60,
+      canVideoCall: 55,
+      canCreateBand: 65,
+      canHireTeams: 999,
+      canVerifyOthers: 999,
+      canModerate: 75,
+      canBetaFeatures: 70,
+    };
+    return adjustments[feature];
+  }
+
+  // Default musician thresholds
+  return FEATURE_SCORE_THRESHOLDS[feature];
+};
 interface SubmitProps {
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   getScheduleData: (
@@ -97,7 +166,7 @@ const SchedulerComponent = ({
 }: SubmitProps) => {
   const { user: clerkUser } = useUser();
   const { user: currentUser, isLoading: userLoading } = useCurrentUser();
-  const { gigs } = useAllGigs();
+  const { gigs } = useGigs(currentUser?._id);
   const { isInGracePeriod } = useCheckTrial();
   const { colors } = useThemeColors();
 
@@ -109,9 +178,8 @@ const SchedulerComponent = ({
   const [scoreBreakdown, setScoreBreakdown] = useState<any>(null);
 
   // Filter gigs created by the logged-in user
-  const userGigs = gigs.filter(
-    (gig: any) => gig.postedBy?.clerkId === clerkUser?.id
-  );
+  const userGigs =
+    gigs && gigs?.filter((gig: any) => gig.postedBy?.clerkId === clerkUser?.id);
 
   // Calculate user's trust score
   const trustScore = calculateUserTrustScore(currentUser);
@@ -125,13 +193,12 @@ const SchedulerComponent = ({
   // Free users in grace period have basic access
   const canCreateDuringGrace = isFreeUser && isInGracePeriod;
 
-  // Trust score requirements - these are the MAIN gatekeepers
   const hasMinTrustForBasic =
-    trustScore >= FEATURE_SCORE_THRESHOLDS.canPostBasicGigs; // 10
+    trustScore >= getRoleThreshold("canPostBasicGigs", currentUser);
   const hasMinTrustForPremium =
-    trustScore >= FEATURE_SCORE_THRESHOLDS.canPostPremiumGigs; // 55
+    trustScore >= getRoleThreshold("canPostPremiumGigs", currentUser);
   const hasMinTrustForCreate =
-    trustScore >= FEATURE_SCORE_THRESHOLDS.canCreateBand; // 70
+    trustScore >= getRoleThreshold("canCreateBand", currentUser);
 
   // Check if user can create more gigs
   // Free users: 3 gigs max (grace period or not)
@@ -459,57 +526,48 @@ const SchedulerComponent = ({
       {showTrustInfo && (
         <div className={cn("mt-3 pt-3 border-t", colors.border)}>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-            <div
-              className={cn("p-2 rounded-lg border text-center", colors.border)}
-            >
-              <div className="text-xs text-gray-500 mb-1">Post Basic Gigs</div>
-              <div
-                className={
-                  trustScore >= 10 ? "text-green-600 font-bold" : "text-red-600"
-                }
-              >
-                {trustScore >= 10 ? "✓ Unlocked" : `Need ${10 - trustScore}`}
-              </div>
-            </div>
-            <div
-              className={cn("p-2 rounded-lg border text-center", colors.border)}
-            >
-              <div className="text-xs text-gray-500 mb-1">
-                Post Premium Gigs
-              </div>
-              <div
-                className={
-                  trustScore >= 55 ? "text-green-600 font-bold" : "text-red-600"
-                }
-              >
-                {trustScore >= 55 ? "✓ Unlocked" : `Need ${55 - trustScore}`}
-              </div>
-            </div>
-            <div
-              className={cn("p-2 rounded-lg border text-center", colors.border)}
-            >
-              <div className="text-xs text-gray-500 mb-1">Create Bands</div>
-              <div
-                className={
-                  trustScore >= 70 ? "text-green-600 font-bold" : "text-red-600"
-                }
-              >
-                {trustScore >= 70 ? "✓ Unlocked" : `Need ${70 - trustScore}`}
-              </div>
-            </div>
-          </div>
+            {["canPostBasicGigs", "canPostPremiumGigs", "canCreateBand"].map(
+              (feature) => {
+                const threshold = getRoleThreshold(
+                  feature as keyof typeof FEATURE_SCORE_THRESHOLDS,
+                  currentUser
+                );
+                const isUnlocked = trustScore >= threshold;
+                const featureNames: Record<string, string> = {
+                  canPostBasicGigs: "Post Basic Gigs",
+                  canPostPremiumGigs: "Post Premium Gigs",
+                  canCreateBand: "Create Bands",
+                };
 
-          <div className="flex justify-between items-center">
-            <p className={cn("text-sm", colors.textMuted)}>
-              <strong>Trust Tier:</strong>{" "}
-              {trustTier.charAt(0).toUpperCase() + trustTier.slice(1)}
-            </p>
-            <button
-              onClick={() => window.open("/trust/guide", "_blank")}
-              className="text-xs text-blue-500 hover:text-blue-700"
-            >
-              How to improve →
-            </button>
+                return (
+                  <div
+                    key={feature}
+                    className={cn(
+                      "p-2 rounded-lg border text-center",
+                      colors.border
+                    )}
+                  >
+                    <div className="text-xs text-gray-500 mb-1">
+                      {featureNames[feature]}
+                    </div>
+                    <div
+                      className={
+                        isUnlocked ? "text-green-600 font-bold" : "text-red-600"
+                      }
+                    >
+                      {isUnlocked
+                        ? "✓ Unlocked"
+                        : `Need ${threshold - trustScore}`}
+                    </div>
+                    {threshold === 999 && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        Not for your role
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+            )}
           </div>
         </div>
       )}

@@ -893,3 +893,118 @@ export const getNextFeatureToUnlock = query({
     return null; // User has unlocked all features
   },
 });
+// convex/controllers/trustScore.ts (add this query)
+export const getImprovementTips = query({
+  args: { clerkId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (!args.clerkId) return [];
+
+    // Find user by clerkId
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId!))
+      .first();
+
+    if (!user) return [];
+
+    const tips = [];
+
+    // Check profile completeness
+    if (!user.firstname || !user.city) {
+      tips.push({
+        action: "Complete your profile",
+        points: 10,
+        category: "Profile",
+        current: 0,
+        max: 1,
+      });
+    }
+
+    // Check if they have verified email
+    if (!user.verified) {
+      tips.push({
+        action: "Verify your email",
+        points: 15,
+        category: "Verification",
+        current: 0,
+        max: 1,
+      });
+    }
+
+    // Check if they have gigs
+    if (!user.gigsPosted || user.gigsPosted === 0) {
+      tips.push({
+        action: "Post your first gig",
+        points: 20,
+        category: "Activity",
+        current: 0,
+        max: 1,
+      });
+    }
+
+    // Check reviews
+    if (!user.allreviews || user.allreviews.length === 0) {
+      tips.push({
+        action: "Get your first review",
+        points: 15,
+        category: "Reputation",
+        current: 0,
+        max: 1,
+      });
+    }
+
+    // Check profile picture
+    if (!user.picture) {
+      tips.push({
+        action: "Add a profile picture",
+        points: 5,
+        category: "Profile",
+        current: 0,
+        max: 1,
+      });
+    }
+
+    return tips;
+  },
+});
+// Helper function that can be called internally
+export const applyFirstGigBonusInternal = async (
+  ctx: any,
+  userId: any
+): Promise<TrustScoreResult> => {
+  const user = await ctx.db.get(userId);
+  if (!user) throw new Error("User not found");
+
+  // Check if already got first gig bonus
+  if (user.trustMilestones?.firstGigBonusApplied) {
+    throw new Error("First gig bonus already applied");
+  }
+
+  // Check if user has posted at least one gig
+  if (!user.gigsPosted || user.gigsPosted === 0) {
+    throw new Error("User hasn't posted any gigs yet");
+  }
+
+  // Update trust score with bonus
+  const result = await updateUserTrust(ctx, userId);
+
+  // Mark first gig bonus as applied - match schema structure
+  await ctx.db.patch(userId, {
+    trustMilestones: {
+      ...user.trustMilestones,
+      firstGigBonusApplied: true,
+      firstGigDate: Date.now(),
+      firstGigPosted: true, // For schema compatibility
+    },
+  });
+
+  return result;
+};
+
+// Public mutation wrapper
+export const applyFirstGigBonus = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args): Promise<TrustScoreResult> => {
+    return applyFirstGigBonusInternal(ctx, args.userId);
+  },
+});

@@ -1,138 +1,207 @@
-// hooks/useTrustScore.ts
-import { useQuery, useMutation } from "convex/react";
+// hooks/useTrustScore.ts - OPTIMIZED
+"use client";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-react";
-import { useState, useCallback } from "react";
-
-// Define feature type based on your thresholds
-type FeatureName =
-  | "canCreateBand"
-  | "canCompete"
-  | "canBeDual"
-  | "canVideoCall"
-  | "canPostPremiumGigs"
-  | "canAccessAnalytics"
-  | "canVerifiedBadge"
-  | "canPostBasicGigs"
-  | "canMessageUsers"
-  | "canHireTeams"
-  | "canVerifyOthers"
-  | "canModerate"
-  | "canBetaFeatures";
+import { useCallback, useMemo } from "react";
+import {
+  FeatureName,
+  getFeatureThresholdsForRole,
+} from "@/lib/trustScoreHelpers";
+import { useCurrentUser } from "./useCurrentUser";
 
 export function useTrustScore() {
   const { userId: clerkId } = useAuth();
-  const [lastUpdate, setLastUpdate] = useState<number | null>(null);
+  const { user } = useCurrentUser();
 
-  // Get trust score data - Now includes trustStars
+  // Memoize query args
+  const trustArgs = useMemo(() => (clerkId ? { clerkId } : "skip"), [clerkId]);
+
+  // Queries
   const trustData = useQuery(
     api.controllers.trustScore.getTrustScore,
-    clerkId ? { clerkId } : "skip"
+    trustArgs
   );
-
-  // Get all features
   const allFeatures = useQuery(
     api.controllers.trustScore.getUserFeatureEligibility,
-    clerkId ? { clerkId } : "skip"
+    trustArgs
+  );
+  const improvementsData = useQuery(
+    api.controllers.trustScore.getImprovementTips,
+    trustArgs
   );
 
-  // Get improvements/tips
-  const improvements = useQuery(
-    api.controllers.trustScore.getTrustImprovements,
-    clerkId ? { clerkId } : "skip"
+  // Memoize core data
+  const trustScore = useMemo(() => trustData?.trustScore || 0, [trustData]);
+  const trustStars = useMemo(() => trustData?.trustStars || 0.5, [trustData]);
+  const tier = useMemo(() => trustData?.tier || "new", [trustData]);
+  const isProfileComplete = useMemo(
+    () => trustData?.isProfileComplete || false,
+    [trustData]
   );
 
-  // Get next feature to unlock
-  const nextFeature = useQuery(
-    api.controllers.trustScore.getNextFeatureToUnlock,
-    clerkId ? { clerkId } : "skip"
+  // Memoize feature access
+  const canAccess = useMemo(() => {
+    const featureMap = allFeatures || {};
+    return (feature: FeatureName): boolean => featureMap[feature] || false;
+  }, [allFeatures]);
+
+  // Memoize role features
+  const roleFeatures = useMemo(() => {
+    if (!user) return [];
+
+    const thresholds = getFeatureThresholdsForRole(user);
+    return Object.entries(thresholds)
+      .map(([key, score]) => ({
+        name: key
+          .replace("can", "")
+          .replace(/([A-Z])/g, " $1")
+          .trim(),
+        key: key as FeatureName,
+        score,
+      }))
+      .sort((a, b) => a.score - b.score);
+  }, [user]);
+
+  // Memoize next feature
+  const nextFeature = useMemo(() => {
+    if (!trustData || !allFeatures || !user) return null;
+
+    const currentScore = trustScore;
+
+    for (const feature of roleFeatures) {
+      if (!allFeatures[feature.key] && currentScore < feature.score) {
+        return {
+          feature: feature.name,
+          key: feature.key,
+          threshold: feature.score,
+          pointsNeeded: feature.score - currentScore,
+        };
+      }
+    }
+
+    return null;
+  }, [trustData, allFeatures, user, trustScore, roleFeatures]);
+
+  // Individual feature checks (memoized)
+  const canPostBasicGigs = useMemo(
+    () => canAccess("canPostBasicGigs"),
+    [canAccess]
+  );
+  const canMessageUsers = useMemo(
+    () => canAccess("canMessageUsers"),
+    [canAccess]
+  );
+  const canVerifiedBadge = useMemo(
+    () => canAccess("canVerifiedBadge"),
+    [canAccess]
+  );
+  const canCompete = useMemo(() => canAccess("canCompete"), [canAccess]);
+  const canAccessAnalytics = useMemo(
+    () => canAccess("canAccessAnalytics"),
+    [canAccess]
+  );
+  const canPostPremiumGigs = useMemo(
+    () => canAccess("canPostPremiumGigs"),
+    [canAccess]
+  );
+  const canBeDual = useMemo(() => canAccess("canBeDual"), [canAccess]);
+  const canVideoCall = useMemo(() => canAccess("canVideoCall"), [canAccess]);
+  const canCreateBand = useMemo(() => canAccess("canCreateBand"), [canAccess]);
+  const canHireTeams = useMemo(() => canAccess("canHireTeams"), [canAccess]);
+  const canVerifyOthers = useMemo(
+    () => canAccess("canVerifyOthers"),
+    [canAccess]
+  );
+  const canModerate = useMemo(() => canAccess("canModerate"), [canAccess]);
+  const canBetaFeatures = useMemo(
+    () => canAccess("canBetaFeatures"),
+    [canAccess]
   );
 
-  // Type-safe canAccess
-  const canAccess = useCallback(
-    (feature: FeatureName): boolean => {
-      if (!allFeatures) return false;
-      return allFeatures[feature] || false;
+  // Helper functions (memoized)
+  const getScoreNeeded = useCallback(
+    (feature: FeatureName): number => {
+      if (!user) return 999;
+      const thresholds = getFeatureThresholdsForRole(user);
+      return thresholds[feature] || 999;
     },
-    [allFeatures]
+    [user]
   );
 
-  // Get score needed for a feature
-  const getScoreNeeded = useCallback((feature: FeatureName): number => {
-    const thresholds: Record<FeatureName, number> = {
-      canPostBasicGigs: 10,
-      canMessageUsers: 20,
-      canVerifiedBadge: 40,
-      canCompete: 45,
-      canAccessAnalytics: 50,
-      canPostPremiumGigs: 55,
-      canBeDual: 60,
-      canVideoCall: 65,
-      canCreateBand: 70,
-      canHireTeams: 75,
-      canVerifyOthers: 80,
-      canModerate: 85,
-      canBetaFeatures: 90,
-    };
-    return thresholds[feature];
-  }, []);
-
-  // Get star description
-  const getStarDescription = useCallback((stars: number): string => {
-    if (stars >= 4.5) return "Elite - Top-rated professional";
-    if (stars >= 4.0) return "Trusted - Highly reliable";
-    if (stars >= 3.0) return "Verified - Established member";
-    if (stars >= 2.0) return "Basic - Active member";
-    return "New - Getting started";
-  }, []);
-
-  return {
-    // Core data - BOTH score and stars
-    trustScore: trustData?.trustScore || 0, // 0-100 detailed score
-    trustStars: trustData?.trustStars || 0.5, // 0.5-5.0 stars for display
-    tier: trustData?.tier || "new",
-    isProfileComplete: trustData?.isProfileComplete || false,
-    breakdown: trustData?.breakdown,
-
-    // Feature access (for convenience)
-    canCreateBand: trustData?.featureEligibility?.canCreateBand || false,
-    canCompete: trustData?.featureEligibility?.canCompete || false,
-    canBeDual: trustData?.featureEligibility?.canBeDual || false,
-    canVideoCall: trustData?.featureEligibility?.canVideoCall || false,
-    canPostPremiumGigs:
-      trustData?.featureEligibility?.canPostPremiumGigs || false,
-    canAccessAnalytics:
-      trustData?.featureEligibility?.canAccessAnalytics || false,
-    canVerifiedBadge: trustData?.featureEligibility?.canVerifiedBadge || false,
-
-    // Improvements data
-    improvements: improvements || [],
-    nextFeature: nextFeature || null,
-
-    // Helper functions
-    canAccess,
-    getScoreNeeded,
-    getStarDescription,
-
-    // Star-specific helpers
-    getStarsDescription: () => getStarDescription(trustData?.trustStars || 0.5),
-    getStarsNeeded: (feature: FeatureName): number => {
-      const starThresholds: Record<FeatureName, number> = {
-        canPostBasicGigs: 1.0,
-        canMessageUsers: 2.0,
-        canVerifiedBadge: 3.0,
-        canCompete: 3.5,
-        canAccessAnalytics: 3.5,
-        canPostPremiumGigs: 3.5,
-        canBeDual: 4.0,
-        canVideoCall: 4.0,
-        canCreateBand: 4.5,
-        canHireTeams: 4.5,
-        canVerifyOthers: 5.0,
-        canModerate: 5.0,
-        canBetaFeatures: 5.0,
-      };
-      return starThresholds[feature];
+  const getStarsNeeded = useCallback(
+    (feature: FeatureName): number => {
+      const score = getScoreNeeded(feature);
+      if (score >= 90) return 5.0;
+      if (score >= 80) return 4.5;
+      if (score >= 70) return 4.0;
+      if (score >= 60) return 3.5;
+      if (score >= 50) return 3.0;
+      if (score >= 40) return 2.5;
+      if (score >= 30) return 2.0;
+      if (score >= 20) return 1.5;
+      if (score >= 10) return 1.0;
+      return 0.5;
     },
-  };
+    [getScoreNeeded]
+  );
+
+  const getRoleFeatures = useCallback(() => roleFeatures, [roleFeatures]);
+
+  const result = useMemo(
+    () => ({
+      trustScore,
+      trustStars,
+      tier,
+      isProfileComplete,
+      breakdown: trustData?.breakdown,
+      nextFeature,
+      improvements: improvementsData || [],
+      canAccess,
+      getScoreNeeded,
+      getStarsNeeded,
+      getRoleFeatures,
+      canPostBasicGigs,
+      canMessageUsers,
+      canVerifiedBadge,
+      canCompete,
+      canAccessAnalytics,
+      canPostPremiumGigs,
+      canBeDual,
+      canVideoCall,
+      canCreateBand,
+      canHireTeams,
+      canVerifyOthers,
+      canModerate,
+      canBetaFeatures,
+    }),
+    [
+      trustScore,
+      trustStars,
+      tier,
+      isProfileComplete,
+      trustData?.breakdown,
+      nextFeature,
+      improvementsData,
+      canAccess,
+      getScoreNeeded,
+      getStarsNeeded,
+      getRoleFeatures,
+      canPostBasicGigs,
+      canMessageUsers,
+      canVerifiedBadge,
+      canCompete,
+      canAccessAnalytics,
+      canPostPremiumGigs,
+      canBeDual,
+      canVideoCall,
+      canCreateBand,
+      canHireTeams,
+      canVerifyOthers,
+      canModerate,
+      canBetaFeatures,
+    ]
+  );
+
+  return result;
 }

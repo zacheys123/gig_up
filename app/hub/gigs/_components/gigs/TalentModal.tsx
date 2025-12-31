@@ -1,21 +1,23 @@
 "use client";
 
 import { useState } from "react";
-
 import { Modal } from "@/components/modals/Modal";
-
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ModalActions, TextInput } from "@/components/profile";
 import { FieldValue, GigField, GigInputs, TalentModalProps } from "@/types/gig";
+import { cn } from "@/lib/utils";
+import { useThemeColors } from "@/hooks/useTheme";
+import { Mic, Music, Headphones, Star } from "lucide-react";
+
 const TalentModal = ({
   isOpen,
   onClose,
   talentType,
   onSubmit,
   initialData,
-  validateField, // Now only expects field and value
+  validateField,
 }: TalentModalProps) => {
+  const { colors } = useThemeColors();
   const [localData, setLocalData] = useState<Partial<GigInputs>>(
     initialData || {}
   );
@@ -29,6 +31,7 @@ const TalentModal = ({
     const error = validateField(field, value);
     setLocalErrors((prev) => ({ ...prev, [field]: error }));
   };
+
   const handleVocalistGenreChange = (genre: string) => {
     const updatedGenres = localData.vocalistGenre?.includes(genre)
       ? localData.vocalistGenre.filter((g) => g !== genre)
@@ -45,6 +48,7 @@ const TalentModal = ({
       vocalistGenre: error,
     }));
   };
+
   const handleSubmit = () => {
     const newErrors: Record<string, string> = {};
 
@@ -68,10 +72,7 @@ const TalentModal = ({
     }
 
     const filteredErrors = Object.fromEntries(
-      Object.entries(newErrors).filter(([x, value]) => {
-        console.log(x);
-        return value;
-      })
+      Object.entries(newErrors).filter(([_, value]) => value)
     );
 
     setLocalErrors(filteredErrors);
@@ -81,37 +82,78 @@ const TalentModal = ({
     }
   };
 
+  const getTalentIcon = () => {
+    switch (talentType) {
+      case "mc":
+        return <Mic className="w-6 h-6" />;
+      case "dj":
+        return <Headphones className="w-6 h-6" />;
+      case "vocalist":
+        return <Music className="w-6 h-6" />;
+      default:
+        return <Star className="w-6 h-6" />;
+    }
+  };
+
+  const getTalentColor = () => {
+    switch (talentType) {
+      case "mc":
+        return "from-red-500 to-orange-500";
+      case "dj":
+        return "from-pink-500 to-purple-500";
+      case "vocalist":
+        return "from-green-500 to-emerald-500";
+      default:
+        return "from-blue-500 to-cyan-500";
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${talentType.toUpperCase()} Details`}
+      title={talentType.toUpperCase() + " " + "Details"}
+      description={`Provide specific detail +s for your ${talentType.toUpperCase()} talent.`}
     >
-      <div className="space-y-4">
+      <div className="space-y-6 py-4">
         {talentType === "mc" && (
           <>
-            <div className="flex flex-col gap-1">
+            <div className="space-y-2">
+              <label className={cn("block text-sm font-medium", colors.text)}>
+                MC Type
+              </label>
               <TextInput
-                label="MC Type"
                 value={localData.mcType || ""}
                 onChange={(value) => handleFieldChange("mcType", value)}
-                className={localErrors.mcType ? "border-red-500" : ""}
-                placeholder="Wedding/Co-orporate/Birthdays/Eventss"
+                className={cn(
+                  "rounded-xl py-3",
+                  localErrors.mcType && "border-red-500 focus:border-red-500"
+                )}
+                placeholder="e.g., Wedding, Corporate, Birthday, Events"
               />
               {localErrors.mcType && (
-                <p className="text-red-500 text-xs">{localErrors.mcType}</p>
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  ⚠️ {localErrors.mcType}
+                </p>
               )}
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="space-y-2">
+              <label className={cn("block text-sm font-medium", colors.text)}>
+                Languages
+              </label>
               <TextInput
-                label="Languages (comma separated)"
                 value={localData.mcLanguages || ""}
                 onChange={(value) => handleFieldChange("mcLanguages", value)}
-                className={localErrors.mcLanguages ? "border-red-500" : ""}
+                className={cn(
+                  "rounded-xl py-3",
+                  localErrors.mcLanguages &&
+                    "border-red-500 focus:border-red-500"
+                )}
+                placeholder="e.g., English, Swahili, French (comma separated)"
               />
               {localErrors.mcLanguages && (
-                <p className="text-red-500 text-xs">
-                  {localErrors.mcLanguages}
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  ⚠️ {localErrors.mcLanguages}
                 </p>
               )}
             </div>
@@ -120,27 +162,42 @@ const TalentModal = ({
 
         {talentType === "dj" && (
           <>
-            <div className="flex flex-col gap-1">
+            <div className="space-y-2">
+              <label className={cn("block text-sm font-medium", colors.text)}>
+                DJ Genre
+              </label>
               <TextInput
-                label="DJ Genre"
                 value={localData.djGenre || ""}
                 onChange={(value) => handleFieldChange("djGenre", value)}
-                className={localErrors.djGenre ? "border-red-500" : ""}
+                className={cn(
+                  "rounded-xl py-3",
+                  localErrors.djGenre && "border-red-500 focus:border-red-500"
+                )}
+                placeholder="e.g., House, Hip Hop, Afrobeat, EDM"
               />
               {localErrors.djGenre && (
-                <p className="text-red-500 text-xs">{localErrors.djGenre}</p>
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  ⚠️ {localErrors.djGenre}
+                </p>
               )}
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="space-y-2">
+              <label className={cn("block text-sm font-medium", colors.text)}>
+                DJ Equipment
+              </label>
               <TextInput
-                label="DJ Equipment"
                 value={localData.djEquipment || ""}
                 onChange={(value) => handleFieldChange("djEquipment", value)}
-                className={localErrors.djEquipment ? "border-red-500" : ""}
+                className={cn(
+                  "rounded-xl py-3",
+                  localErrors.djEquipment &&
+                    "border-red-500 focus:border-red-500"
+                )}
+                placeholder="e.g., Pioneer CDJs, Mixer, Speakers"
               />
               {localErrors.djEquipment && (
-                <p className="text-red-500 text-xs">
-                  {localErrors.djEquipment}
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  ⚠️ {localErrors.djEquipment}
                 </p>
               )}
             </div>
@@ -148,34 +205,82 @@ const TalentModal = ({
         )}
 
         {talentType === "vocalist" && (
-          <div className="space-y-2">
-            <Label className="text-neutral-400">Vocalist Genres</Label>
-            <div className="flex flex-wrap gap-2">
-              {["Pop", "R&B", "Gospel", "Jazz", "Afrobeat"].map((genre) => (
-                <Badge
-                  key={genre}
-                  variant={
-                    localData.vocalistGenre?.includes(genre)
-                      ? "secondary"
-                      : "outline"
-                  }
-                  className="cursor-pointer text-red-500"
-                  onClick={() => handleVocalistGenreChange(genre)}
-                >
-                  {genre}
-                </Badge>
-              ))}
+          <div className="space-y-4">
+            <div>
+              <label
+                className={cn("block text-sm font-medium mb-3", colors.text)}
+              >
+                Vocalist Genres
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "Pop",
+                  "R&B",
+                  "Gospel",
+                  "Jazz",
+                  "Afrobeat",
+                  "Soul",
+                  "Rock",
+                  "Reggae",
+                  "Country",
+                ].map((genre) => (
+                  <Badge
+                    key={genre}
+                    variant={
+                      localData.vocalistGenre?.includes(genre)
+                        ? "secondary"
+                        : "outline"
+                    }
+                    className={cn(
+                      "cursor-pointer px-4 py-2 rounded-lg transition-all hover:scale-105",
+                      localData.vocalistGenre?.includes(genre)
+                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent"
+                        : ""
+                    )}
+                    onClick={() => handleVocalistGenreChange(genre)}
+                  >
+                    {genre}
+                  </Badge>
+                ))}
+              </div>
+              {localErrors.vocalistGenre && (
+                <p className="text-sm text-red-500 mt-2 flex items-center gap-1">
+                  ⚠️ {localErrors.vocalistGenre}
+                </p>
+              )}
             </div>
-            {localErrors.vocalistGenre && (
-              <p className="text-red-500 text-xs">
-                {localErrors.vocalistGenre}
-              </p>
-            )}
+
+            <div className="space-y-2">
+              <label className={cn("block text-sm font-medium", colors.text)}>
+                Additional Notes
+              </label>
+              <textarea
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border resize-none",
+                  colors.border,
+                  colors.background,
+                  colors.text
+                )}
+                placeholder="Any specific requirements or notes..."
+                rows={3}
+                onChange={(e) =>
+                  setLocalData((prev) => ({ ...prev, notes: e.target.value }))
+                }
+              />
+            </div>
           </div>
         )}
       </div>
-      <ModalActions onCancel={onClose} onConfirm={handleSubmit} />
+
+      <ModalActions
+        onCancel={onClose}
+        onConfirm={handleSubmit}
+        confirmText="Save Details"
+        cancelText="Cancel"
+        className="mt-6"
+      />
     </Modal>
   );
 };
+
 export default TalentModal;

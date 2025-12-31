@@ -1,68 +1,495 @@
 // convex/controllers/gigs.ts
 import { mutation, query } from "../_generated/server";
+
 import { v } from "convex/values";
 import { createNotificationInternal } from "../createNotificationInternal";
 
-// export const getAllGigs = query({
-//   args: {
-//     // Optional filters
-//     category: v.optional(v.string()),
-//     location: v.optional(v.string()),
-//     isTaken: v.optional(v.boolean()),
-//     limit: v.optional(v.number()),
-//   },
-//   handler: async (ctx, args) => {
-//     let query = ctx.db.query("gigs");
+import { applyFirstGigBonusInternal } from "./trustScore"; // Import the internal helper
 
-//     // Apply filters if provided
-//     if (args.category) {
-//       query = query.withIndex("by_category", (q) => q.eq("category", args.category!));
-//     } else if (args.location) {
-//       query = query.withIndex("by_location", (q) => q.eq("location", args.location!));
-//     } else if (args.isTaken !== undefined) {
-//       query = query.withIndex("by_isTaken", (q) => q.eq("isTaken", args.isTaken!));
-//     }
+export const createGig = mutation({
+  args: {
+    // Required fields (must match schema)
+    postedBy: v.id("users"),
+    title: v.string(),
+    secret: v.string(),
+    bussinesscat: v.string(),
+    date: v.number(),
+    time: v.object({
+      start: v.string(),
+      end: v.string(),
+    }),
+    logo: v.string(),
 
-//     const gigs = await query.collect();
+    // Optional fields that schema requires as non-optional
+    description: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    price: v.optional(v.number()),
+    category: v.optional(v.string()),
+    location: v.optional(v.string()),
 
-//     // Apply limit if specified
-//     if (args.limit) {
-//       return gigs.slice(0, args.limit);
-//     }
+    // Optional fields with defaults in schema
+    font: v.optional(v.string()),
+    fontColor: v.optional(v.string()),
+    backgroundColor: v.optional(v.string()),
+    gigtimeline: v.optional(v.string()),
+    otherTimeline: v.optional(v.string()),
+    day: v.optional(v.string()),
 
-//     return gigs;
-//   },
-// });
-// convex/controllers/gigs.ts
+    // Musician-specific optional fields
+    mcType: v.optional(v.string()),
+    mcLanguages: v.optional(v.string()),
+    djGenre: v.optional(v.string()),
+    djEquipment: v.optional(v.string()),
+    pricerange: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    scheduleDate: v.optional(v.number()),
+    schedulingProcedure: v.optional(v.string()),
 
-export const getAllGigs = query({
-  args: {}, // No arguments needed
-  handler: async (ctx) => {
-    return await ctx.db.query("gigs").collect();
+    // Arrays (optional in mutation, required in schema with defaults)
+    tags: v.optional(v.array(v.string())),
+    requirements: v.optional(v.array(v.string())),
+    benefits: v.optional(v.array(v.string())),
+    bandCategory: v.optional(v.array(v.string())),
+    vocalistGenre: v.optional(v.array(v.string())),
+
+    // Fields that should not be in create mutation (set later)
+    bookedBy: v.optional(v.id("users")),
+    paymentStatus: v.optional(
+      v.union(v.literal("pending"), v.literal("paid"), v.literal("refunded"))
+    ),
+    cancellationReason: v.optional(v.string()),
+
+    // Legacy fields for backward compatibility
+    phoneNo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const {
+      postedBy,
+      title,
+      secret,
+      bussinesscat,
+      date,
+      time,
+      logo,
+      description,
+      phone,
+      price,
+      category,
+      location,
+      font,
+      fontColor,
+      backgroundColor,
+      gigtimeline,
+      otherTimeline,
+      day,
+      mcType,
+      mcLanguages,
+      djGenre,
+      djEquipment,
+      pricerange,
+      currency,
+      scheduleDate,
+      schedulingProcedure,
+      tags,
+      requirements,
+      benefits,
+      bandCategory,
+      vocalistGenre,
+      bookedBy,
+      paymentStatus,
+      cancellationReason,
+      phoneNo,
+    } = args;
+
+    // Validate required fields
+    if (
+      !postedBy ||
+      !title ||
+      !secret ||
+      !bussinesscat ||
+      !date ||
+      !time ||
+      !logo
+    ) {
+      throw new Error("Missing required fields");
+    }
+
+    const user = await ctx.db.get(postedBy);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const isFirstGig = !user.gigsPosted || user.gigsPosted === 0;
+
+    // Combine phone and phoneNo for backward compatibility
+    const phoneNumber = phone || phoneNo || "";
+
+    // Create the gig with all required schema fields
+    const gigId = await ctx.db.insert("gigs", {
+      // Required fields
+      postedBy,
+      title,
+      secret,
+      bussinesscat,
+      date,
+      time,
+      logo,
+
+      // Optional fields with defaults
+      description: description || "",
+      phone: phoneNumber,
+      price: price || 0,
+      category: category || "",
+      location: location || "",
+      font: font || "Arial, sans-serif",
+      fontColor: fontColor || "#000000",
+      backgroundColor: backgroundColor || "#FFFFFF",
+      gigtimeline: gigtimeline || "",
+      otherTimeline: otherTimeline || "",
+      day: day || "",
+
+      // Musician-specific fields
+      mcType: mcType || "",
+      mcLanguages: mcLanguages || "",
+      djGenre: djGenre || "",
+      djEquipment: djEquipment || "",
+      pricerange: pricerange || "",
+      currency: currency || "USD",
+      scheduleDate: scheduleDate || date,
+      schedulingProcedure: schedulingProcedure || "manual",
+
+      // Arrays with defaults
+      tags: tags || [],
+      requirements: requirements || [],
+      benefits: benefits || [],
+      bandCategory: bandCategory || [],
+      vocalistGenre: vocalistGenre || [],
+
+      // Arrays required by schema
+      interestedUsers: [],
+      appliedUsers: [],
+      viewCount: [],
+      bookCount: [],
+      bookingHistory: [],
+
+      // Status fields
+      isTaken: false,
+      isPending: false,
+      isActive: true,
+      isPublic: true,
+
+      // Payment fields
+      paymentStatus: paymentStatus || "pending",
+      cancellationReason: cancellationReason || "",
+      musicianConfirmPayment: undefined,
+      clientConfirmPayment: undefined,
+      gigRating: 0,
+
+      // Timestamps
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Get poster info for notifications
+    const posterUser = await ctx.db.get(postedBy);
+    if (!posterUser) {
+      return gigId;
+    }
+
+    // Determine notification criteria
+    let notificationCriteria = "";
+    if (bussinesscat === "mc" && mcType) {
+      notificationCriteria = `MC (${mcType})`;
+    } else if (bussinesscat === "dj" && djGenre) {
+      notificationCriteria = `DJ (${djGenre})`;
+    } else if (bussinesscat === "vocalist" && vocalistGenre?.length) {
+      notificationCriteria = `Vocalist (${vocalistGenre.join(", ")})`;
+    } else if (
+      (bussinesscat === "full" || bussinesscat === "other") &&
+      bandCategory?.length
+    ) {
+      notificationCriteria = `Band (${bandCategory.join(", ")})`;
+    } else {
+      notificationCriteria = bussinesscat;
+    }
+
+    // Apply first gig bonus if applicable
+    if (isFirstGig) {
+      try {
+        // Use internal helper instead of calling mutation
+        await applyFirstGigBonusInternal(ctx, posterUser._id);
+      } catch (error) {
+        console.error("First gig bonus error:", error);
+        // Don't fail gig creation if bonus fails
+      }
+    }
+
+    // Find relevant musicians for notifications
+    try {
+      let relevantUsersQuery = ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("isMusician"), true))
+        .filter((q) => q.neq(q.field("clerkId"), posterUser.clerkId));
+
+      // Filter by role type
+      if (["mc", "dj", "vocalist"].includes(bussinesscat)) {
+        relevantUsersQuery = relevantUsersQuery.filter((q) =>
+          q.eq(q.field("roleType"), bussinesscat)
+        );
+      }
+
+      // Filter by location if available
+      if (location && posterUser.city) {
+        relevantUsersQuery = relevantUsersQuery.filter((q) =>
+          q.eq(q.field("city"), posterUser.city)
+        );
+      }
+
+      const relevantUsers = await relevantUsersQuery.take(15);
+
+      // Create notifications
+      if (relevantUsers.length > 0) {
+        const notificationPromises = relevantUsers.map(async (user) => {
+          return createNotificationInternal(ctx, {
+            userDocumentId: user._id,
+            type: "gig_opportunity",
+            title: "🎵 New Gig Opportunity!",
+            message: `${posterUser.firstname || "Someone"} posted a ${notificationCriteria} gig: "${title}"`,
+            image: posterUser.picture,
+            actionUrl: `/gigs/${gigId}`,
+            relatedUserDocumentId: posterUser._id,
+            metadata: {
+              senderId: posterUser.clerkId,
+              senderName: posterUser.firstname,
+              gigId: gigId,
+              gigTitle: title,
+              bussinesscat: bussinesscat,
+              location: location || "Unknown location",
+              price: price || 0,
+              currency: currency || "USD",
+            },
+          });
+        });
+
+        await Promise.all(notificationPromises);
+      }
+
+      // Create confirmation notification for poster
+      await createNotificationInternal(ctx, {
+        userDocumentId: posterUser._id,
+        type: "gig_created",
+        title: "✅ Gig Created Successfully!",
+        message: `Your "${title}" gig has been posted. ${relevantUsers.length} musicians have been notified.`,
+        image: posterUser.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: posterUser._id,
+        metadata: {
+          gigId: gigId,
+          gigTitle: title,
+          notifiedCount: relevantUsers.length,
+        },
+      });
+
+      // Update user's gig count
+      await ctx.db.patch(posterUser._id, {
+        gigsPosted: (posterUser.gigsPosted || 0) + 1,
+      });
+    } catch (error) {
+      console.error("Error creating notifications:", error);
+      // Continue even if notifications fail
+    }
+
+    return gigId;
   },
 });
-export const getActiveGigs = query({
+
+export const updateGig = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    updates: v.object({
+      // Basic info
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      location: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      phoneNo: v.optional(v.string()), // For backward compatibility
+      price: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      secret: v.optional(v.string()),
+
+      // Status flags
+      isActive: v.optional(v.boolean()),
+      isPublic: v.optional(v.boolean()),
+      isTaken: v.optional(v.boolean()),
+      isPending: v.optional(v.boolean()),
+
+      // Payment status - must match schema literal values
+      paymentStatus: v.optional(
+        v.union(v.literal("pending"), v.literal("paid"), v.literal("refunded"))
+      ),
+
+      // Rating
+      gigRating: v.optional(v.number()),
+
+      // Customization
+      font: v.optional(v.string()),
+      fontColor: v.optional(v.string()),
+      backgroundColor: v.optional(v.string()),
+      logo: v.optional(v.string()),
+
+      // Timeline fields
+      gigtimeline: v.optional(v.string()),
+      otherTimeline: v.optional(v.string()),
+      day: v.optional(v.string()),
+
+      // Musician-specific fields
+      mcType: v.optional(v.string()),
+      mcLanguages: v.optional(v.string()),
+      djGenre: v.optional(v.string()),
+      djEquipment: v.optional(v.string()),
+      pricerange: v.optional(v.string()),
+      category: v.optional(v.string()),
+
+      // Arrays
+      tags: v.optional(v.array(v.string())),
+      requirements: v.optional(v.array(v.string())),
+      benefits: v.optional(v.array(v.string())),
+      bandCategory: v.optional(v.array(v.string())),
+      vocalistGenre: v.optional(v.array(v.string())),
+
+      // Other
+      cancellationReason: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, updates } = args;
+
+    // Handle phone/phoneNo backward compatibility
+    const normalizedUpdates: any = { ...updates };
+
+    // If phoneNo is provided, also set phone for consistency
+    if (normalizedUpdates.phoneNo !== undefined) {
+      normalizedUpdates.phone = normalizedUpdates.phoneNo;
+    }
+
+    // Add updated timestamp
+    normalizedUpdates.updatedAt = Date.now();
+
+    await ctx.db.patch(gigId, normalizedUpdates);
+
+    return gigId;
+  },
+});
+
+// Delete gig mutation
+export const deleteGig = mutation({
+  args: { gigId: v.id("gigs") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.gigId);
+    return args.gigId;
+  },
+});
+
+// convex/controllers/gigs.ts
+export const exploreGigs = query({
   args: {
     category: v.optional(v.string()),
     location: v.optional(v.string()),
+    minPrice: v.optional(v.number()),
+    maxPrice: v.optional(v.number()),
+    bussinesscat: v.optional(v.string()),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let query = ctx.db
-      .query("gigs")
-      .withIndex("by_isTaken", (q) => q.eq("isTaken", false));
+    let query = ctx.db.query("gigs");
 
-    // Additional filters
+    // Only show active, public gigs
+    query = query.filter((q) => q.eq(q.field("isActive"), true));
+    query = query.filter((q) => q.eq(q.field("isPublic"), true));
+
+    // Apply filters with explicit checks
     if (args.category) {
-      const allGigs = await query.collect();
-      return allGigs.filter((gig) => gig.category === args.category);
+      query = query.filter((q) => q.eq(q.field("category"), args.category!));
     }
 
     if (args.location) {
-      const allGigs = await query.collect();
-      return allGigs.filter((gig) => gig.location === args.location);
+      query = query.filter((q) => q.eq(q.field("location"), args.location!));
     }
 
-    return await query.collect();
+    if (args.bussinesscat) {
+      query = query.filter((q) =>
+        q.eq(q.field("bussinesscat"), args.bussinesscat!)
+      );
+    }
+
+    if (args.minPrice !== undefined) {
+      query = query.filter((q) => q.gte(q.field("price"), args.minPrice!));
+    }
+
+    if (args.maxPrice !== undefined) {
+      query = query.filter((q) => q.lte(q.field("price"), args.maxPrice!));
+    }
+
+    const gigs = await query.order("desc").take(args.limit || 20);
+
+    // Get poster info for each gig
+    const gigsWithPosters = await Promise.all(
+      gigs.map(async (gig) => {
+        const poster = await ctx.db.get(gig.postedBy);
+        return {
+          ...gig,
+          poster: poster
+            ? {
+                _id: poster._id,
+                firstname: poster.firstname,
+                picture: poster.picture,
+                city: poster.city,
+              }
+            : null,
+        };
+      })
+    );
+
+    return gigsWithPosters;
+  },
+});
+
+// Query for gig stats
+export const getGigStats = query({
+  args: { userId: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    let gigsQuery = ctx.db.query("gigs");
+
+    if (args.userId) {
+      gigsQuery = gigsQuery.filter((q) =>
+        q.eq(q.field("postedBy"), args.userId)
+      );
+    } else {
+      gigsQuery = gigsQuery.filter((q) => q.eq(q.field("isActive"), true));
+    }
+
+    const gigs = await gigsQuery.collect();
+
+    const stats = {
+      totalGigs: gigs.length,
+      activeGigs: gigs.filter((g) => g.isActive).length,
+      takenGigs: gigs.filter((g) => g.isTaken).length,
+      pendingGigs: gigs.filter((g) => g.isPending).length,
+      totalEarnings: gigs
+        .filter((g) => g.paymentStatus === "paid")
+        .reduce((sum, gig) => sum + (gig.price || 0), 0),
+      averageRating:
+        gigs.length > 0
+          ? gigs.reduce((sum, gig) => sum + (gig.gigRating || 0), 0) /
+            gigs.length
+          : 0,
+      totalViews: gigs.reduce(
+        (sum, gig) => sum + (gig.viewCount.length || 0),
+        0
+      ),
+    };
+
+    return stats;
   },
 });
 
@@ -90,281 +517,359 @@ export const getGigsWithUsers = query({
     return gigsWithUsers;
   },
 });
-
-export const getGigsByFilters = query({
-  args: {
-    categories: v.optional(v.array(v.string())),
-    locations: v.optional(v.array(v.string())),
-    priceRange: v.optional(
-      v.object({
-        min: v.optional(v.number()),
-        max: v.optional(v.number()),
-      })
-    ),
-    dateRange: v.optional(
-      v.object({
-        start: v.optional(v.number()),
-        end: v.optional(v.number()),
-      })
-    ),
-  },
+// Query for user's gig applications
+export const getUserApplications = query({
+  args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    let gigs = await ctx.db.query("gigs").collect();
+    const user = await ctx.db.get(args.userId);
+    if (!user) return [];
 
-    // Apply multiple filters
-    if (args.categories && args.categories.length > 0) {
-      gigs = gigs.filter(
-        (gig) => gig.category && args.categories!.includes(gig.category)
-      );
-    }
+    // Get all gigs where user is in appliedUsers array
+    const gigs = await ctx.db
+      .query("gigs")
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
 
-    if (args.locations && args.locations.length > 0) {
-      gigs = gigs.filter(
-        (gig) => gig.location && args.locations!.includes(gig.location)
-      );
-    }
+    const userApplications = gigs
+      .filter((gig) => gig.appliedUsers?.includes(args.userId))
+      .map((gig) => ({
+        gig,
+        appliedAt: gig.updatedAt, // Use updatedAt as applied time
+        status: "pending", // Default status
+      }));
 
-    if (args.priceRange) {
-      gigs = gigs.filter((gig) => {
-        if (!gig.price) return false;
-        const price = parseFloat(gig.price);
-        return (
-          (!args.priceRange!.min || price >= args.priceRange!.min) &&
-          (!args.priceRange!.max || price <= args.priceRange!.max)
-        );
-      });
-    }
+    return userApplications;
+  },
+});
 
-    if (args.dateRange) {
-      gigs = gigs.filter((gig) => {
-        return (
-          (!args.dateRange!.start || gig.date >= args.dateRange!.start) &&
-          (!args.dateRange!.end || gig.date <= args.dateRange!.end)
-        );
-      });
-    }
+// Add helper query for getting user's gigs
+export const getUserGigs = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const gigs = await ctx.db
+      .query("gigs")
+      .filter((q) => q.eq(q.field("postedBy"), args.userId))
+      .order("desc")
+      .collect();
 
     return gigs;
   },
 });
 
-// Paginated gigs query
-export const getPaginatedGigs = query({
-  args: {
-    cursor: v.optional(v.string()),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit || 20;
-
-    let gigsQuery = ctx.db.query("gigs");
-
-    const gigs = await gigsQuery.collect();
-
-    // Simple pagination (Convex has built-in pagination you can use too)
-    const startIndex = args.cursor ? parseInt(args.cursor) : 0;
-    const paginatedGigs = gigs.slice(startIndex, startIndex + limit);
-
-    return {
-      gigs: paginatedGigs,
-      nextCursor:
-        startIndex + limit < gigs.length
-          ? (startIndex + limit).toString()
-          : null,
-      total: gigs.length,
-    };
-  },
-});
-
-// Basic gig operations from previous example
-// followers
-// export const createGig = mutation({
-//   args: {
-//     postedBy: v.id("users"),
-//     title: v.string(),
-//     secret: v.string(),
-//     bussinesscat: v.string(),
-//     logo: v.string(),
-//     time: v.object({
-//       from: v.string(),
-//       to: v.string(),
-//     }),
-//   },
-//   handler: async (ctx, args) => {
-//     const { postedBy, title } = args;
-
-//     // 1. Create the gig
-//     const gigId = await ctx.db.insert("gigs", {
-//       ...args,
-//       date: Date.now(),
-//       isTaken: false,
-//       isPending: false,
-//       bandCategory: [],
-//       viewCount: [],
-//       bookCount: [],
-//       bookingHistory: [],
-//       paymentStatus: "pending",
-//       gigRating: 0,
-//       vocalistGenre: [],
-//     });
-
-//     // 2. Get poster info
-//     const posterUser = await ctx.db.get(postedBy);
-//     if (!posterUser) return gigId;
-
-//     // 3. Compute followers dynamically - find users who have this user in their following list
-//     const allUsers = await ctx.db
-//       .query("users")
-//       .filter((q) => q.neq(q.field("clerkId"), posterUser.clerkId)) // Exclude poster
-//       .collect();
-
-//     const followers = allUsers.filter((user) => {
-//       // Check if user.following array exists and contains the poster's clerkId
-//       return user.followings && user.followings.includes(posterUser.clerkId);
-//     });
-
-//     // 4. Create notifications for followers
-//     const notificationPromises = followers.map(async (follower) => {
-//       return createNotificationInternal(ctx, {
-//         userId: follower.clerkId,
-//         type: "gig_invite",
-//         title: "New Gig Posted!",
-//         message: `${posterUser.firstname} posted: "${title}"`,
-//         image: posterUser.picture,
-//         actionUrl: `/gigs/${gigId}`,
-//         relatedUserId: posterUser.clerkId,
-//         metadata: {
-//           senderId: posterUser.clerkId,
-//           senderName: posterUser.firstname,
-//           gigId: gigId,
-//           gigTitle: title,
-//         },
-//       });
-//     });
-
-//     await Promise.all(notificationPromises);
-
-//     return gigId;
-//   },
-// });
-// interest based
-export const createGig = mutation({
-  args: {
-    postedBy: v.id("users"),
-    title: v.string(),
-    secret: v.string(),
-    bussinesscat: v.string(),
-    logo: v.string(),
-    time: v.object({
-      from: v.string(),
-      to: v.string(),
-    }),
-    // Add genre/category if available
-    genre: v.optional(v.string()),
-    location: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const { postedBy, title, genre, location } = args;
-
-    // 1. Create the gig
-    const gigId = await ctx.db.insert("gigs", {
-      ...args,
-      date: Date.now(),
-      isTaken: false,
-      isPending: false,
-      bandCategory: [],
-      viewCount: [],
-      bookCount: [],
-      bookingHistory: [],
-      paymentStatus: "pending",
-      gigRating: 0,
-      vocalistGenre: [],
-    });
-
-    // 2. Get poster info
-    const posterUser = await ctx.db.get(postedBy);
-    if (!posterUser) return gigId;
-
-    // 3. Find relevant musicians based on criteria
-    let relevantUsersQuery = ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("isMusician"), true)) // Only musicians
-      .filter((q) => q.neq(q.field("clerkId"), posterUser.clerkId)); // Exclude poster
-
-    // Add filters based on available data
-    if (genre) {
-      // Find musicians who have this genre in their preferences
-      relevantUsersQuery = relevantUsersQuery.filter((q) =>
-        q.eq(q.field("genres"), genre)
-      );
-    }
-
-    if (location && posterUser.city) {
-      // Find musicians in the same city
-      relevantUsersQuery = relevantUsersQuery.filter((q) =>
-        q.eq(q.field("city"), posterUser.city)
-      );
-    }
-
-    const relevantUsers = await relevantUsersQuery.take(20); // Limit to avoid spam
-
-    // 4. Create notifications
-    const notificationPromises = relevantUsers.map(async (user) => {
-      return createNotificationInternal(ctx, {
-        userDocumentId: user._id,
-        type: "gig_invite",
-        title: "New Gig Opportunity! 🎵",
-        message: `New ${genre || "gig"} posted in ${posterUser.city || "your area"}: "${title}"`,
-        image: posterUser.picture,
-        actionUrl: `/gigs/invitations/${gigId}?inviter=${posterUser._id}&status=pending`,
-        relatedUserDocumentId: posterUser._id,
-        metadata: {
-          senderId: posterUser.clerkId,
-          senderName: posterUser.firstname,
-          gigId: gigId,
-          gigTitle: title,
-          genre: genre,
-          location: posterUser.city,
-        },
-      });
-    });
-
-    await Promise.all(notificationPromises);
-
-    return gigId;
-  },
-});
+// Query for getting gig by ID
 export const getGigById = query({
   args: { gigId: v.id("gigs") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.gigId);
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) return null;
+
+    // Get poster info
+    const poster = await ctx.db.get(gig.postedBy);
+
+    return {
+      ...gig,
+      poster: poster
+        ? {
+            _id: poster._id,
+            firstname: poster.firstname,
+            lastname: poster.lastname,
+            picture: poster.picture,
+            city: poster.city,
+
+            totalGigs: poster.gigsPosted || 0,
+          }
+        : null,
+    };
   },
 });
+// convex/controllers/gigs.ts
 
-export const getGigsByUser = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("gigs")
-      .withIndex("by_postedBy", (q) => q.eq("postedBy", args.userId))
-      .collect();
-  },
-});
-
-export const updateGig = mutation({
+// Book a user for a specific role in a gig
+export const bookUserForGig = mutation({
   args: {
     gigId: v.id("gigs"),
-    updates: v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      price: v.optional(v.string()),
-      location: v.optional(v.string()),
-      isTaken: v.optional(v.boolean()),
-      // Add other updatable fields
-    }),
+    userId: v.id("users"),
+    role: v.string(), // e.g., "vocalist", "guitarist", "drummer"
+    price: v.optional(v.number()),
+    notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.gigId, args.updates);
+    const { gigId, userId, role, price, notes } = args;
+
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Check if user is already in bookCount (simple array of user IDs)
+    const isAlreadyInBookCount = gig.bookCount?.includes(userId);
+
+    // Check if user has existing booking in bookingHistory for same role
+    const existingBooking = gig.bookingHistory?.find(
+      (booking) =>
+        booking.userId === userId &&
+        booking.role === role &&
+        booking.status === "booked"
+    );
+
+    if (existingBooking) {
+      throw new Error("User is already booked for this role");
+    }
+
+    // Create booking history entry
+    const newBooking = {
+      userId,
+      status: "booked" as const, // Use "booked" to match your type
+      date: Date.now(),
+      role,
+      notes,
+    };
+
+    // Update both arrays
+    await ctx.db.patch(gigId, {
+      // Add user ID to bookCount if not already there
+      bookCount: isAlreadyInBookCount
+        ? gig.bookCount
+        : [...(gig.bookCount || []), userId],
+      // Add detailed booking to bookingHistory
+      bookingHistory: [...(gig.bookingHistory || []), newBooking],
+      updatedAt: Date.now(),
+    });
+
+    // Create notification for the booked user
+    const booker = await ctx.db.get(gig.postedBy);
+    const bookedUser = await ctx.db.get(userId);
+
+    if (booker && bookedUser) {
+      await createNotificationInternal(ctx, {
+        userDocumentId: userId,
+        type: "booking_request",
+        title: "🎵 Booking Request!",
+        message: `${booker.firstname || "A client"} wants to book you as ${role} for "${gig.title}"`,
+        image: booker.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: booker._id,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          role,
+          price,
+          status: "booked",
+        },
+      });
+    }
+
+    return { success: true, booking: newBooking };
+  },
+});
+
+// Update booking status (in bookingHistory)
+export const updateBookingStatus = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    userId: v.id("users"),
+    role: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("booked"), // Changed from "confirmed" to "booked" to match your type
+      v.literal("completed"),
+      v.literal("cancelled")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, userId, role, status } = args;
+
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Update bookingHistory
+    const updatedBookingHistory = gig.bookingHistory?.map((booking) => {
+      if (booking.userId === userId && booking.role === role) {
+        return { ...booking, status };
+      }
+      return booking;
+    });
+
+    // If status is cancelled, remove from bookCount
+    let updatedBookCount = gig.bookCount;
+    if (status === "cancelled") {
+      updatedBookCount = gig.bookCount?.filter((id) => id !== userId);
+    }
+
+    await ctx.db.patch(gigId, {
+      bookingHistory: updatedBookingHistory,
+      bookCount: updatedBookCount,
+      updatedAt: Date.now(),
+    });
+
+    // Update notification based on status
+    const gigOwner = await ctx.db.get(gig.postedBy);
+    const bookedUser = await ctx.db.get(userId);
+
+    if (gigOwner && bookedUser) {
+      let title = "";
+      let message = "";
+
+      if (status === "booked") {
+        title = "✅ Booking Confirmed!";
+        message = `${bookedUser.firstname} confirmed your booking as ${role} for "${gig.title}"`;
+      } else if (status === "cancelled") {
+        title = "❌ Booking Cancelled";
+        message = `${bookedUser.firstname} cancelled the booking as ${role} for "${gig.title}"`;
+      } else if (status === "completed") {
+        title = "🎉 Gig Completed!";
+        message = `The gig "${gig.title}" has been marked as completed`;
+      }
+
+      if (title && message) {
+        await createNotificationInternal(ctx, {
+          userDocumentId: gigOwner._id,
+          type: "booking_update",
+          title,
+          message,
+          image: bookedUser.picture,
+          actionUrl: `/gigs/${gigId}`,
+          relatedUserDocumentId: userId,
+          metadata: {
+            gigId,
+            gigTitle: gig.title,
+            role,
+            status,
+          },
+        });
+      }
+    }
+
+    return { success: true };
+  },
+});
+
+// Remove a booking completely
+export const removeBooking = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    userId: v.id("users"),
+    role: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, userId, role } = args;
+
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Remove from bookCount
+    const updatedBookCount = gig.bookCount?.filter((id) => id !== userId);
+
+    // Remove from bookingHistory
+    const updatedBookingHistory = gig.bookingHistory?.filter(
+      (booking) => !(booking.userId === userId && booking.role === role)
+    );
+
+    await ctx.db.patch(gigId, {
+      bookCount: updatedBookCount,
+      bookingHistory: updatedBookingHistory,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Query to get bookings with user details
+export const getGigBookings = query({
+  args: { gigId: v.id("gigs") },
+  handler: async (ctx, args) => {
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) return [];
+
+    // Get unique booked user IDs from bookingHistory
+    const bookedUserIds = Array.from(
+      new Set(
+        (gig.bookingHistory || [])
+          .filter((booking) => booking.status === "booked")
+          .map((booking) => booking.userId)
+      )
+    );
+
+    // Get user details for each booked user
+    const bookingsWithUsers = await Promise.all(
+      bookedUserIds.map(async (userId) => {
+        const user = await ctx.db.get(userId);
+
+        // Get all roles this user is booked for
+        const userBookings = (gig.bookingHistory || []).filter(
+          (booking) => booking.userId === userId && booking.status === "booked"
+        );
+
+        return {
+          userId,
+          user: user
+            ? {
+                _id: user._id,
+                firstname: user.firstname,
+                picture: user.picture,
+                city: user.city,
+              }
+            : null,
+          bookings: userBookings.map((booking) => ({
+            role: booking.role,
+            date: booking.date,
+            notes: booking.notes,
+          })),
+        };
+      })
+    );
+
+    return bookingsWithUsers;
+  },
+});
+
+// Simplified booking function using bookingHistory only
+export const bookUserForRole = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    userId: v.id("users"),
+    role: v.string(), // e.g., "vocalist", "guitarist", "drummer"
+    price: v.optional(v.number()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, userId, role, price, notes } = args;
+
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Check if user is already booked for this role
+    const existingBooking = gig.bookingHistory?.find(
+      (booking) =>
+        booking.userId === userId &&
+        booking.role === role &&
+        booking.status === "booked"
+    );
+
+    if (existingBooking) {
+      throw new Error("User is already booked for this role");
+    }
+
+    // Create booking history entry
+    const newBooking = {
+      userId,
+      status: "booked" as const,
+      date: Date.now(),
+      role,
+      notes,
+    };
+
+    // Add to bookCount if not already there
+    const isAlreadyInBookCount = gig.bookCount?.includes(userId);
+    const updatedBookCount = isAlreadyInBookCount
+      ? gig.bookCount
+      : [...(gig.bookCount || []), userId];
+
+    await ctx.db.patch(gigId, {
+      bookCount: updatedBookCount,
+      bookingHistory: [...(gig.bookingHistory || []), newBooking],
+      updatedAt: Date.now(),
+    });
+
     return { success: true };
   },
 });

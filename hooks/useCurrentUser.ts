@@ -1,3 +1,4 @@
+"use client";
 // hooks/useCurrentUser.ts - Enhanced version
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";

@@ -1,17 +1,12 @@
-// hooks/useProMusicians.ts - UPDATED WITH TRUST STARS INTEGRATION
+// hooks/useProMusicians.ts - OPTIMIZED WITH TRUST INTEGRATION
 import { useQuery } from "convex/react";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { EnhancedMusician } from "@/types/musician";
-import {
-  getRateForGigType,
-  getDisplayRate,
-  hasRateForGigType,
-  getAllRates,
-} from "@/utils";
+import { getDisplayRate, hasRateForGigType } from "@/utils";
 import { GigType, isValidGigType } from "@/convex/gigTypes";
-import { useTrustScore } from "./useTrustScore"; // ADD THIS IMPORT
+import { useTrustScore } from "./useTrustScore";
 
 interface UseProMusiciansProps {
   city?: string;
@@ -19,23 +14,24 @@ interface UseProMusiciansProps {
   genre?: string;
   limit?: number;
   minRating?: number;
-  minTrustStars?: number; // NEW: Add trust filter
-  minTrustScore?: number; // NEW: Add trust score filter
+  minTrustStars?: number;
+  minTrustScore?: number;
   tier?: "free" | "pro" | "premium" | "elite";
   gigType?: GigType | string;
   availableOnly?: boolean;
-  sortBy?: "trust" | "rating" | "experience" | "recent" | "rate"; // NEW: Add sorting
+  sortBy?: "trust" | "rating" | "experience" | "recent" | "rate";
 }
 
-// Trust-based eligibility thresholds
+// Constants
 const TRUST_THRESHOLDS = {
-  canBeBooked: 3.0, // Need 3.0+ stars to be directly bookable
-  isVerified: 3.0, // Auto-verified at 3.0+ stars
-  isReliable: 50, // Trust score ≥ 50 is reliable
-  canHireDirectly: 4.0, // Users need 4.0+ stars to hire directly
-};
+  canBeBooked: 3.0,
+  isVerified: 3.0,
+  isReliable: 50,
+  canHireDirectly: 4.0,
+  DEFAULT_LIMIT: 12,
+} as const;
 
-// Debounce hook for search optimization
+// Custom debounce hook
 const useDebounce = <T>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
@@ -52,53 +48,94 @@ const useDebounce = <T>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
+// Trust tier helper (memoized)
+const useTrustTier = () => {
+  return useCallback(
+    (
+      trustStars: number = 0.5
+    ): {
+      tier: string;
+      color: string;
+      description: string;
+    } => {
+      if (trustStars >= 4.5)
+        return {
+          tier: "elite",
+          color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+          description: "Elite - Top-rated professional",
+        };
+      if (trustStars >= 4.0)
+        return {
+          tier: "trusted",
+          color: "bg-green-500/10 text-green-600 border-green-500/20",
+          description: "Trusted - Highly reliable",
+        };
+      if (trustStars >= 3.0)
+        return {
+          tier: "verified",
+          color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+          description: "Verified - Established member",
+        };
+      if (trustStars >= 2.0)
+        return {
+          tier: "basic",
+          color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+          description: "Basic - Active member",
+        };
+      return {
+        tier: "new",
+        color: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+        description: "New - Getting started",
+      };
+    },
+    []
+  );
+};
+
 export const useProMusicians = (filters: UseProMusiciansProps = {}) => {
-  // Convert string gigType to GigType if valid
+  // Process and validate filters
   const processedFilters = useMemo(() => {
     const { gigType, ...rest } = filters;
-
-    // Validate and convert gigType to GigType if it's a string
     let processedGigType: GigType | undefined;
-    if (gigType) {
-      if (isValidGigType(gigType)) {
-        processedGigType = gigType as GigType;
-      } else {
-        console.warn(`Invalid gig type: ${gigType}`);
-      }
+
+    if (gigType && isValidGigType(gigType)) {
+      processedGigType = gigType as GigType;
+    } else if (gigType) {
+      console.warn(`Invalid gig type: ${gigType}`);
     }
 
     return {
+      limit: TRUST_THRESHOLDS.DEFAULT_LIMIT,
+      availableOnly: false,
       ...rest,
       gigType: processedGigType,
     };
   }, [filters]);
 
-  // Get current user's trust for eligibility checks
+  // Trust score hook
   const {
     trustStars: currentUserTrustStars,
     trustScore: currentUserTrustScore,
   } = useTrustScore();
 
+  // Memoize query filters
   const queryFilters = useMemo(
     () => ({
-      limit: 12,
-      availableOnly: false,
-      ...processedFilters,
+      limit: processedFilters.limit,
+      availableOnly: processedFilters.availableOnly,
+      city: processedFilters.city,
+      instrument: processedFilters.instrument,
+      genre: processedFilters.genre,
+      minRating: processedFilters.minRating,
+      minTrustStars: processedFilters.minTrustStars,
+      minTrustScore: processedFilters.minTrustScore,
+      tier: processedFilters.tier,
+      gigType: processedFilters.gigType,
     }),
-    [
-      processedFilters.city,
-      processedFilters.instrument,
-      processedFilters.genre,
-      processedFilters.limit,
-      processedFilters.minRating,
-      processedFilters.minTrustStars, // Add trust filter
-      processedFilters.minTrustScore, // Add trust score filter
-      processedFilters.tier,
-      processedFilters.gigType,
-      processedFilters.availableOnly,
-    ]
+    [processedFilters]
   );
 
+  // Queries
   const musicians = useQuery(
     api.controllers.musicians.getProMusicians,
     queryFilters
@@ -109,180 +146,91 @@ export const useProMusicians = (filters: UseProMusiciansProps = {}) => {
     { limit: queryFilters.limit }
   ) as EnhancedMusician[] | undefined;
 
-  // Enhanced musicians with rate AND trust information
+  // Trust tier helper
+  const getTrustTier = useTrustTier();
+
+  // Enhance musicians with trust data
   const enhancedMusicians = useMemo(() => {
-    if (!musicians || musicians.length === 0) {
-      return [];
-    }
+    if (!musicians || musicians.length === 0) return [];
 
-    // Helper function to get trust tier
-    const getTrustTier = (trustStars: number = 0.5): string => {
-      if (trustStars >= 4.5) return "elite";
-      if (trustStars >= 4.0) return "trusted";
-      if (trustStars >= 3.0) return "verified";
-      if (trustStars >= 2.0) return "basic";
-      return "new";
-    };
-
-    // Helper function to get trust tier color
-    const getTrustTierColor = (trustStars: number = 0.5): string => {
-      if (trustStars >= 4.5)
-        return "bg-purple-500/10 text-purple-600 border-purple-500/20";
-      if (trustStars >= 4.0)
-        return "bg-green-500/10 text-green-600 border-green-500/20";
-      if (trustStars >= 3.0)
-        return "bg-blue-500/10 text-blue-600 border-blue-500/20";
-      if (trustStars >= 2.0)
-        return "bg-amber-500/10 text-amber-600 border-amber-500/20";
-      return "bg-gray-500/10 text-gray-600 border-gray-500/20";
-    };
-
-    // Helper function to get trust tier description
-    const getTrustTierDescription = (trustStars: number = 0.5): string => {
-      if (trustStars >= 4.5) return "Elite - Top-rated professional";
-      if (trustStars >= 4.0) return "Trusted - Highly reliable";
-      if (trustStars >= 3.0) return "Verified - Established member";
-      if (trustStars >= 2.0) return "Basic - Active member";
-      return "New - Getting started";
-    };
-
-    const musiciansWithTrust = musicians.map((musician) => {
-      // Get gig-type specific rate if gigType filter is applied
-      const gigTypeRate = processedFilters.gigType
-        ? getRateForGigType(
-            musician.rate,
-            processedFilters.gigType,
-            musician.roleType
-          )
-        : null;
-
-      // Fallback to general display rate
-      const displayRate =
-        gigTypeRate?.displayRate ||
-        getDisplayRate(musician.rate, musician.roleType);
-
-      // Trust information (with fallbacks)
+    const sortedMusicians = [...musicians].map((musician) => {
       const trustStars = musician.trustStars || 0.5;
       const trustScore = musician.trustScore || 0;
-      const trustTier = getTrustTier(trustStars);
-      const trustTierColor = getTrustTierColor(trustStars);
-      const trustTierDescription = getTrustTierDescription(trustStars);
+      const trustTierInfo = getTrustTier(trustStars);
 
-      // Trust-based eligibility
+      const avgRating = musician.avgRating || 0;
+      const compositeRating = (avgRating + trustStars) / 2;
+
       const canBeBookedDirectly = trustStars >= TRUST_THRESHOLDS.canBeBooked;
       const isAutoVerified = trustStars >= TRUST_THRESHOLDS.isVerified;
       const isReliable = trustScore >= TRUST_THRESHOLDS.isReliable;
 
-      // Combine auto-verification with existing verification
-      const isVerified = musician.verified || isAutoVerified;
-
-      // Rate eligibility based on trust
-      const rateConfidence = canBeBookedDirectly
-        ? "high"
-        : trustStars >= 2.0
-          ? "medium"
-          : "low";
-
-      // Eligibility for current user to book this musician
-      const canCurrentUserBook = currentUserTrustStars >= 2.0; // User needs 2.0+ stars to book anyone
-      const canUserBookDirectly =
-        currentUserTrustStars >= TRUST_THRESHOLDS.canHireDirectly &&
-        canBeBookedDirectly;
-
       return {
         ...musician,
-        // Ensure all required fields have fallbacks
         firstname: musician.firstname || "Musician",
-        instrument: musician.instrument
-          ? musician.instrument
-          : musician.roleType === "dj"
+        instrument:
+          musician.instrument ||
+          (musician.roleType === "dj"
             ? "Deejay"
             : musician.roleType === "mc"
               ? "EMCee"
               : musician.roleType === "vocalist"
                 ? "Vocalist"
-                : "Various Instruments",
-        avgRating: musician.avgRating || 0,
+                : "Various Instruments"),
+        avgRating,
         completedGigsCount: musician.completedGigsCount || 0,
-        reliabilityScore: musician.reliabilityScore || 80,
         city: musician.city || "Various Locations",
-        // Rate information
-        displayRate,
-        gigTypeRate,
-        hasRateForGigType: processedFilters.gigType
-          ? hasRateForGigType(musician.rate, processedFilters.gigType)
-          : true,
-        // Trust information
+        displayRate: getDisplayRate(musician.rate, musician.roleType),
         trustScore,
         trustStars,
-        trustTier,
-        trustTierColor,
-        trustTierDescription,
-        // Trust-based eligibility
+        trustTier: trustTierInfo.tier,
+        trustTierColor: trustTierInfo.color,
+        trustTierDescription: trustTierInfo.description,
         canBeBookedDirectly,
-        isVerified,
+        isVerified: musician.verified || isAutoVerified,
         isReliable,
-        rateConfidence,
-        // User-specific eligibility
-        canCurrentUserBook,
-        canUserBookDirectly,
-        // Composite rating (combines avgRating with trustStars for display)
-        compositeRating: ((musician.avgRating || 0) + trustStars) / 2,
+        compositeRating,
+        rateConfidence: canBeBookedDirectly
+          ? "high"
+          : trustStars >= 2.0
+            ? "medium"
+            : "low",
+        canCurrentUserBook: currentUserTrustStars >= 2.0,
+        canUserBookDirectly:
+          currentUserTrustStars >= TRUST_THRESHOLDS.canHireDirectly &&
+          canBeBookedDirectly,
       };
     });
 
-    // Apply sorting if specified
-    let sortedMusicians = [...musiciansWithTrust];
-
+    // Apply sorting
     if (processedFilters.sortBy) {
       sortedMusicians.sort((a, b) => {
         switch (processedFilters.sortBy) {
           case "trust":
-            // Primary: trust stars, Secondary: trust score
-            const aTrustStars = a.trustStars || 0.5;
-            const bTrustStars = b.trustStars || 0.5;
-            if (Math.abs(bTrustStars - aTrustStars) > 0.1) {
-              return bTrustStars - aTrustStars;
-            }
-            // If stars are close, sort by trust score
-            const aTrustScore = a.trustScore || 0;
-            const bTrustScore = b.trustScore || 0;
-            return bTrustScore - aTrustScore;
+            const aTrust = a.trustStars;
+            const bTrust = b.trustStars;
+            return Math.abs(bTrust - aTrust) > 0.1
+              ? bTrust - aTrust
+              : b.trustScore - a.trustScore;
 
           case "rating":
-            // Primary: composite rating (avgRating + trustStars)
-            const aRating = a.compositeRating || 0;
-            const bRating = b.compositeRating || 0;
-            return bRating - aRating;
+            return b.compositeRating - a.compositeRating;
 
           case "experience":
-            // Primary: gigs completed, Secondary: trust stars
-            const aExp = a.completedGigsCount || 0;
-            const bExp = b.completedGigsCount || 0;
-            if (bExp !== aExp) {
-              return bExp - aExp;
-            }
-            return (b.trustStars || 0.5) - (a.trustStars || 0.5);
+            const aExp = a.completedGigsCount;
+            const bExp = b.completedGigsCount;
+            return bExp !== aExp ? bExp - aExp : b.trustStars - a.trustStars;
 
           case "rate":
-            // Sort by display rate (numeric part)
-            const getRateValue = (rateStr: string) => {
-              const match = rateStr.match(/(\d+)/);
-              return match ? parseInt(match[1]) : 0;
-            };
-            const aRate = getRateValue(a.displayRate || "");
-            const bRate = getRateValue(b.displayRate || "");
-            return aRate - bRate; // Lowest rate first
+            const getRateValue = (rateStr: string) =>
+              parseInt(rateStr.match(/(\d+)/)?.[1] || "999999");
+            return (
+              getRateValue(a.displayRate || "") -
+              getRateValue(b.displayRate || "")
+            );
 
-          case "recent":
           default:
-            // Default sorting: trust stars first, then composite rating
-            const aStars = a.trustStars || 0.5;
-            const bStars = b.trustStars || 0.5;
-            if (Math.abs(bStars - aStars) > 0.1) {
-              return bStars - aStars;
-            }
-            return (b.compositeRating || 0) - (a.compositeRating || 0);
+            return b.trustStars - a.trustStars;
         }
       });
     }
@@ -290,17 +238,17 @@ export const useProMusicians = (filters: UseProMusiciansProps = {}) => {
     return sortedMusicians;
   }, [
     musicians,
-    processedFilters.gigType,
     processedFilters.sortBy,
+    processedFilters.gigType,
     currentUserTrustStars,
+    getTrustTier,
   ]);
 
   return {
     musicians: enhancedMusicians,
     featuredMusicians: featuredMusicians || [],
     isLoading: musicians === undefined,
-    isEmpty: musicians?.length === 0,
-    // Trust information for the current user
+    isEmpty: enhancedMusicians.length === 0,
     currentUserTrustStars,
     currentUserTrustScore,
     trustThresholds: TRUST_THRESHOLDS,

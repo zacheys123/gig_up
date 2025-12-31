@@ -2,6 +2,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { UserProps } from "./types/userTypes";
 import { Notification, NotificationType } from "./convex/notificationsTypes";
 import { GigType } from "./convex/gigTypes";
+import { CreateGigInput, GigInputs } from "./types/gig";
 
 export const toUserId = (id: string): Id<"users"> => {
   return id as Id<"users">;
@@ -1505,4 +1506,204 @@ export default {
   colorUtils,
   fontUtils,
   presets,
+};
+
+export const prepareGigDataForConvex = (
+  formData: any, // Accept your form state
+  userId: Id<"users">,
+  customization: {
+    fontColor: string;
+    font: string;
+    backgroundColor: string;
+  },
+  logo?: string,
+  schedulingProcedure?: {
+    type: string;
+    date: Date;
+  }
+) => {
+  // Convert price to number
+  const price = formData.price ? parseFloat(formData.price) : 0;
+
+  // Get date as timestamp
+  const date = formData.date ? new Date(formData.date).getTime() : Date.now();
+
+  return {
+    // Required fields
+    postedBy: userId,
+    title: formData.title,
+    secret: formData.secret || "default-secret",
+    bussinesscat: formData.bussinesscat || "",
+    date,
+    time: {
+      start: formData.start || "",
+      end: formData.end || "",
+    },
+    logo: logo || "default-logo",
+
+    // Basic info
+    description: formData.description || "",
+    phone: formData.phoneNo || "",
+    phoneNo: formData.phoneNo || "",
+    price,
+    currency: formData.currency || "USD",
+    location: formData.location || "",
+    category: formData.category || "",
+
+    // Musician fields
+    mcType: formData.mcType || undefined,
+    mcLanguages: formData.mcLanguages || undefined,
+    djGenre: formData.djGenre || undefined,
+    djEquipment: formData.djEquipment || undefined,
+    pricerange: formData.pricerange || undefined,
+
+    // Arrays (convert to arrays if they're string-based)
+    tags: Array.isArray(formData.tags) ? formData.tags : [],
+    requirements: Array.isArray(formData.requirements)
+      ? formData.requirements
+      : [],
+    benefits: Array.isArray(formData.benefits) ? formData.benefits : [],
+    bandCategory: Array.isArray(formData.bandCategory)
+      ? formData.bandCategory
+      : [],
+    vocalistGenre: Array.isArray(formData.vocalistGenre)
+      ? formData.vocalistGenre
+      : [],
+
+    // Timeline
+    gigtimeline: formData.gigtimeline || undefined,
+    otherTimeline: formData.otherTimeline || undefined,
+    day: formData.day || undefined,
+
+    // Customization
+    font: customization.font || undefined,
+    fontColor: customization.fontColor || undefined,
+    backgroundColor: customization.backgroundColor || undefined,
+
+    // Scheduling
+    schedulingProcedure: schedulingProcedure?.type || undefined,
+    scheduleDate: schedulingProcedure?.date?.getTime() || date,
+
+    // Legacy time fields
+    start: formData.start || undefined,
+    end: formData.end || undefined,
+
+    // Duration fields
+    durationFrom: formData.durationfrom || undefined,
+    durationTo: formData.durationto || undefined,
+  };
+};
+
+// Function to format gig price for display
+export const formatGigPrice = (
+  price: number,
+  currency: string = "KES"
+): string => {
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
+  return formatter.format(price);
+};
+
+// Function to format date for display
+export const formatGigDate = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// Function to get gig status badge color
+export const getGigStatusColor = (status: {
+  isTaken: boolean;
+  isPending: boolean;
+  isActive: boolean;
+}): string => {
+  if (status.isTaken)
+    return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+  if (status.isPending)
+    return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
+  if (!status.isActive)
+    return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+  return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+};
+
+// Function to get talent type icon
+export const getTalentTypeIcon = (type: string): string => {
+  switch (type) {
+    case "mc":
+      return "🎤";
+    case "dj":
+      return "🎧";
+    case "vocalist":
+      return "🎵";
+    case "personal":
+      return "👤";
+    case "full":
+      return "🎸";
+    case "other":
+      return "🎭";
+    default:
+      return "🎶";
+  }
+};
+
+// Function to validate gig form
+export const validateGigForm = (
+  formData: GigInputs,
+  bussinesscat: string | null
+): Record<string, string> => {
+  const errors: Record<string, string> = {};
+
+  if (formData) {
+    if (!formData.title.trim()) {
+      errors.title = "Title is required";
+    }
+
+    if (formData?.description && !formData?.description.trim()) {
+      errors.description = "Description is required";
+    }
+
+    if (formData?.location && !formData?.location.trim()) {
+      errors.location = "Location is required";
+    }
+
+    if (!bussinesscat) {
+      errors.bussinesscat = "Please select a business category";
+    }
+
+    if (formData?.phoneNo && !formData.phoneNo.trim()) {
+      errors.phoneNo = "Phone number is required";
+    }
+
+    // Validate talent-specific fields
+    if (bussinesscat === "mc") {
+      if (!formData.mcType?.trim()) {
+        errors.mcType = "MC type is required";
+      }
+      if (!formData.mcLanguages?.trim()) {
+        errors.mcLanguages = "Languages are required";
+      }
+    } else if (bussinesscat === "dj") {
+      if (!formData.djGenre?.trim()) {
+        errors.djGenre = "DJ genre is required";
+      }
+      if (!formData.djEquipment?.trim()) {
+        errors.djEquipment = "DJ equipment is required";
+      }
+    } else if (bussinesscat === "vocalist") {
+      if (!formData.vocalistGenre?.length) {
+        errors.vocalistGenre = "At least one genre is required";
+      }
+    }
+  }
+
+  return errors;
 };

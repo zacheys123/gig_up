@@ -21,8 +21,15 @@ import { OnboardingModal } from "@/components/dashboard/onboarding";
 export default function Dashboard() {
   const { isLoaded, userId } = useAuth();
   const router = useRouter();
-  const { isPro } = useSubscriptionStore();
+  const [userTier, setUserTier] = useState<
+    "free" | "pro" | "premium" | "elite"
+  >("free");
+
+  const isPro = useCallback(() => {
+    return userTier === "pro" || userTier === "premium" || userTier === "elite";
+  }, [userTier]);
   const { colors } = useThemeColors();
+  // Determine user's actual tier from user data
 
   // Use the Convex hook to get user data
   const { user, isLoading, isAuthenticated } = useCurrentUser();
@@ -52,7 +59,14 @@ export default function Dashboard() {
       setTimeout(() => setIsDataRefreshing(false), 1000);
     }
   }, [isDataRefreshing]);
-
+  useEffect(() => {
+    if (user?.tier) {
+      setUserTier(user.tier as "free" | "pro" | "premium" | "elite");
+    } else {
+      const tier = user && user?.tier === "pro" ? "premium" : "free";
+      setUserTier(tier);
+    }
+  }, [user]);
   // Auto-refresh data every 60 seconds when authenticated
   useEffect(() => {
     if (!isAuthenticated || isLoading) return;

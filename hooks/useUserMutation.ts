@@ -16,7 +16,7 @@ export function useUserMutations() {
   const updateUserAsClient = useMutation(
     api.controllers.user.updateUserAsClient
   );
-  const updateUserAsAdmin = useMutation(api.controllers.user.updateUserAsAdmin);
+
   const updateUserAsBooker = useMutation(
     api.controllers.user.updateUserAsBooker
   );
@@ -178,26 +178,9 @@ export function useUserMutations() {
     return await updateUserAsBooker({ clerkId: userId, updates });
   };
 
-  const registerAsAdmin = async (adminData: {
-    adminRole: "super" | "content" | "support" | "analytics";
-  }) => {
-    if (!userId) throw new Error("No user ID available");
-
-    const updates = {
-      isAdmin: true as const,
-      adminRole: adminData.adminRole,
-      tier: "pro" as const,
-      firstLogin: false as const,
-      lastActive: Date.now(),
-    };
-
-    return await updateUserAsAdmin({ clerkId: userId, updates });
-  };
-
   return {
     registerAsMusician,
     registerAsClient,
     registerAsBooker,
-    registerAsAdmin,
   };
 }
