@@ -2,7 +2,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { UserProps } from "./types/userTypes";
 import { Notification, NotificationType } from "./convex/notificationsTypes";
 import { GigType } from "./convex/gigTypes";
-import { CreateGigInput, GigInputs } from "./types/gig";
+import { CustomProps, GigFormInputs } from "./types/gig";
+import { LocalGigInputs } from "./drafts";
 
 export const toUserId = (id: string): Id<"users"> => {
   return id as Id<"users">;
@@ -1509,88 +1510,66 @@ export default {
 };
 
 export const prepareGigDataForConvex = (
-  formData: any, // Accept your form state
+  formValues: LocalGigInputs,
   userId: Id<"users">,
-  customization: {
-    fontColor: string;
-    font: string;
-    backgroundColor: string;
-  },
-  logo?: string,
-  schedulingProcedure?: {
-    type: string;
-    date: Date;
-  }
+  gigcustom: CustomProps,
+  imageUrl: string | undefined, // Accept undefined
+  schedulingProcedure: any,
+  durationFrom?: string,
+  durationTo?: string
 ) => {
-  // Convert price to number
-  const price = formData.price ? parseFloat(formData.price) : 0;
-
-  // Get date as timestamp
-  const date = formData.date ? new Date(formData.date).getTime() : Date.now();
+  // Format the time object correctly for backend
+  const time = {
+    start: `${formValues.start || ""} ${durationFrom || "am"}`,
+    end: `${formValues.end || ""} ${durationTo || "pm"}`,
+  };
 
   return {
-    // Required fields
     postedBy: userId,
-    title: formData.title,
-    secret: formData.secret || "default-secret",
-    bussinesscat: formData.bussinesscat || "",
-    date,
-    time: {
-      start: formData.start || "",
-      end: formData.end || "",
-    },
-    logo: logo || "default-logo",
+    title: formValues.title,
+    secret: formValues.secret,
+    bussinesscat: formValues.bussinesscat || "",
+    date: formValues.date ? new Date(formValues.date).getTime() : Date.now(),
+    time,
+    logo: imageUrl || "", // Provide default empty string or a placeholder image
 
-    // Basic info
-    description: formData.description || "",
-    phone: formData.phoneNo || "",
-    phoneNo: formData.phoneNo || "",
-    price,
-    currency: formData.currency || "USD",
-    location: formData.location || "",
-    category: formData.category || "",
-
-    // Musician fields
-    mcType: formData.mcType || undefined,
-    mcLanguages: formData.mcLanguages || undefined,
-    djGenre: formData.djGenre || undefined,
-    djEquipment: formData.djEquipment || undefined,
-    pricerange: formData.pricerange || undefined,
-
-    // Arrays (convert to arrays if they're string-based)
-    tags: Array.isArray(formData.tags) ? formData.tags : [],
-    requirements: Array.isArray(formData.requirements)
-      ? formData.requirements
-      : [],
-    benefits: Array.isArray(formData.benefits) ? formData.benefits : [],
-    bandCategory: Array.isArray(formData.bandCategory)
-      ? formData.bandCategory
-      : [],
-    vocalistGenre: Array.isArray(formData.vocalistGenre)
-      ? formData.vocalistGenre
-      : [],
-
-    // Timeline
-    gigtimeline: formData.gigtimeline || undefined,
-    otherTimeline: formData.otherTimeline || undefined,
-    day: formData.day || undefined,
+    // Optional fields with defaults
+    description: formValues.description || "",
+    phone: formValues.phoneNo || "",
+    price: formValues.price ? Number(formValues.price) : 0,
+    category: formValues.category || "",
+    location: formValues.location || "",
 
     // Customization
-    font: customization.font || undefined,
-    fontColor: customization.fontColor || undefined,
-    backgroundColor: customization.backgroundColor || undefined,
+    font: gigcustom.font || "",
+    fontColor: gigcustom.fontColor || "",
+    backgroundColor: gigcustom.backgroundColor || "",
+
+    // Timeline
+    gigtimeline: formValues.gigtimeline || "",
+    otherTimeline: formValues.otherTimeline || "",
+    day: formValues.day || "",
+
+    // Musician-specific fields
+    mcType: formValues.mcType || "",
+    mcLanguages: formValues.mcLanguages || "",
+    djGenre: formValues.djGenre || "",
+    djEquipment: formValues.djEquipment || "",
+    pricerange: formValues.pricerange || "",
+    currency: formValues.currency || "KES",
 
     // Scheduling
-    schedulingProcedure: schedulingProcedure?.type || undefined,
-    scheduleDate: schedulingProcedure?.date?.getTime() || date,
+    scheduleDate: schedulingProcedure.date
+      ? schedulingProcedure.date.getTime()
+      : undefined,
+    schedulingProcedure: schedulingProcedure.type || "",
 
-    // Legacy time fields
-    start: formData.start || undefined,
-    end: formData.end || undefined,
-
-    // Duration fields
-    durationFrom: formData.durationfrom || undefined,
-    durationTo: formData.durationto || undefined,
+    // Arrays with defaults
+    vocalistGenre: formValues.vocalistGenre || [],
+    tags: [],
+    requirements: [],
+    benefits: [],
+    bandCategory: [],
   };
 };
 
@@ -1657,7 +1636,7 @@ export const getTalentTypeIcon = (type: string): string => {
 
 // Function to validate gig form
 export const validateGigForm = (
-  formData: GigInputs,
+  formData: GigFormInputs,
   bussinesscat: string | null
 ): Record<string, string> => {
   const errors: Record<string, string> = {};

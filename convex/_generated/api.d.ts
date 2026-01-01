@@ -28,6 +28,7 @@ import type * as controllers_gigs from "../controllers/gigs.js";
 import type * as controllers_instantGigs from "../controllers/instantGigs.js";
 import type * as controllers_musicians from "../controllers/musicians.js";
 import type * as controllers_notifications from "../controllers/notifications.js";
+import type * as controllers_payments from "../controllers/payments.js";
 import type * as controllers_ratings from "../controllers/ratings.js";
 import type * as controllers_reports from "../controllers/reports.js";
 import type * as controllers_reviews from "../controllers/reviews.js";
@@ -83,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   "controllers/instantGigs": typeof controllers_instantGigs;
   "controllers/musicians": typeof controllers_musicians;
   "controllers/notifications": typeof controllers_notifications;
+  "controllers/payments": typeof controllers_payments;
   "controllers/ratings": typeof controllers_ratings;
   "controllers/reports": typeof controllers_reports;
   "controllers/reviews": typeof controllers_reviews;

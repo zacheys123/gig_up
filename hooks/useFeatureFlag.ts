@@ -13,16 +13,14 @@ import {
 import { useCheckTrial } from "./useCheckTrial";
 
 // Simple consistent hashing for rollout (memoized)
-const useConsistentRollout = (featureKey: string, userId?: string): number => {
-  return useMemo(() => {
-    const seed = userId || Math.random().toString();
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = (hash << 5) - hash + seed.charCodeAt(i);
-      hash |= 0;
-    }
-    return Math.abs(hash) % 100;
-  }, [featureKey, userId]);
+const consistentRollout = (featureKey: string, userId?: string): number => {
+  const seed = userId || Math.random().toString();
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % 100;
 };
 
 export const useFeatureFlags = (userId?: string) => {
@@ -70,7 +68,7 @@ export const useFeatureFlags = (userId?: string) => {
 
       // Rollout percentage
       if (flag.rolloutPercentage < 100) {
-        const rolloutValue = useConsistentRollout(featureKey, userId);
+        const rolloutValue = consistentRollout(featureKey, userId);
         return rolloutValue < flag.rolloutPercentage;
       }
 

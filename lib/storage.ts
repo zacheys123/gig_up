@@ -1,7 +1,7 @@
-import { GigInputs } from "@/types/gig";
+import { LocalGigInputs } from "@/drafts";
 
 // lib/storage.ts
-export const saveDraftToLocal = (data: GigInputs) => {
+export const saveDraftToLocal = (data: LocalGigInputs) => {
   try {
     localStorage.setItem("gigDraft", JSON.stringify(data));
     return true;

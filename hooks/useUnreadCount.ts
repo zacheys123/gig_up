@@ -1,4 +1,3 @@
-// hooks/useUnreadCount.ts - OPTIMIZED
 "use client";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -10,7 +9,7 @@ interface UnreadCountsData {
   byChat: Record<string, number>;
 }
 
-export function useUnreadCount(): UnreadCountsData {
+export function useUnreadCount(): UnreadCountsData & { isLoading: boolean } {
   const { user: currentUser } = useCurrentUser();
 
   // Memoize query args
@@ -19,38 +18,42 @@ export function useUnreadCount(): UnreadCountsData {
     [currentUser?._id]
   );
 
-  const unreadData = useQuery(
-    api.controllers.chat.getUnreadCounts,
-    queryArgs
-  ) as UnreadCountsData | undefined;
+  // useQuery returns undefined while loading
+  const unreadData = useQuery(api.controllers.chat.getUnreadCounts, queryArgs);
 
-  // Use requestAnimationFrame for smoother updates
-  useMemo(() => {
-    let animationFrameId: number;
+  // Handle the data with proper typing
+  const typedData = useMemo(() => {
+    // Default to empty structure if no data
+    if (!unreadData) {
+      return {
+        total: 0,
+        byChat: {},
+        isLoading: true,
+      };
+    }
 
-    const updateLoop = () => {
-      // This creates a reference that forces periodic updates
-      // without actual state changes
-      animationFrameId = requestAnimationFrame(updateLoop);
+    // Type assertion to UnreadCountsData
+    return {
+      ...(unreadData as UnreadCountsData),
+      isLoading: false,
     };
+  }, [unreadData]);
 
-    animationFrameId = requestAnimationFrame(updateLoop);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  // Return with default values
-  return useMemo(() => unreadData || { total: 0, byChat: {} }, [unreadData]);
+  return typedData;
 }
 
 // Optional: Hook for specific chat unread count
-export function useChatUnreadCount(chatId?: string): number {
+export function useChatUnreadCount(chatId?: string): {
+  count: number;
+  isLoading: boolean;
+} {
   const unreadCounts = useUnreadCount();
 
   return useMemo(() => {
-    if (!chatId) return 0;
-    return unreadCounts.byChat[chatId] || 0;
+    if (!chatId) return { count: 0, isLoading: false };
+    return {
+      count: unreadCounts.byChat[chatId] || 0,
+      isLoading: unreadCounts.isLoading,
+    };
   }, [unreadCounts, chatId]);
 }

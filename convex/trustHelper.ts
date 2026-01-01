@@ -294,7 +294,7 @@ function isFeatureAvailableForRole(
 }
 
 // SIMPLIFIED getFeatureEligibility function
-function getFeatureEligibility(score: number, user: Doc<"users">) {
+export function getFeatureEligibility(score: number, user: Doc<"users">) {
   const result: Record<FeatureName, boolean> = {} as Record<
     FeatureName,
     boolean

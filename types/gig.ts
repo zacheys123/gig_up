@@ -1,20 +1,55 @@
 // types/gig.ts
-import { UserProps } from "./userTypes";
 
-// Core Gig Interface matching Convex schema
-export interface Gig {
+// Business categories for gigs
+export type BusinessCategory =
+  | "full" // Full Band
+  | "personal" // Individual
+  | "other" // Create Band
+  | "mc" // MC
+  | "dj" // DJ
+  | "vocalist" // Vocalist
+  | null;
+
+// Talent type (for specialized gigs)
+export type TalentType = "mc" | "dj" | "vocalist" | null;
+
+// Category visibility for form sections
+export interface CategoryVisibility {
+  title: boolean;
+  description: boolean;
+  business: boolean;
+  gtimeline: boolean;
+  othergig: boolean;
+  gduration: boolean;
+}
+
+// Custom styling properties for gig card
+export interface CustomProps {
+  fontColor: string;
+  font: string;
+  backgroundColor: string;
+}
+
+// User information for gig creation
+export interface UserInfo {
+  prefferences: string[]; // Band instrument preferences
+}
+
+// Gig interface (main gig object)
+export interface GigProps {
   _id: string;
   _creationTime: number;
 
-  // Required fields for Convex mutation
+  // Basic gig info
   postedBy: string; // user ID
-  title: string;
-  description: string;
-  location: string;
-  bussinesscat: string;
-  phoneNo: string;
-  price: number;
-  currency: string;
+  bookedBy?: string; // user ID
+  title?: string;
+  description?: string;
+  location?: string;
+  bussinesscat?: string;
+  phoneNo?: string;
+  price?: number;
+  currency?: string;
 
   // Optional fields
   secret?: string;
@@ -25,7 +60,7 @@ export interface Gig {
   end?: string;
   durationFrom?: string;
   durationTo?: string;
-  date: number;
+  date: number; // Unix timestamp
 
   // Timeline fields
   otherTimeline?: string;
@@ -88,7 +123,9 @@ export interface Gig {
     confirmedAt?: number;
     code?: string;
     temporaryConfirm?: boolean;
+    finalizedAt?: number;
   };
+
   clientConfirmPayment?: {
     gigId: string;
     confirmPayment: boolean;
@@ -96,309 +133,297 @@ export interface Gig {
     code?: string;
     temporaryConfirm?: boolean;
   };
-
+  // Time
+  time: {
+    start: string;
+    end: string;
+  };
+  negotiable?: boolean;
   // Scheduling
   schedulingProcedure?: string;
   scheduleDate?: number;
   cancellationReason?: string;
 
   // Stats
-  totalViews: number;
-  totalApplications: number;
-  totalInterested: number;
+  totalViews?: number;
+  totalApplications?: number;
+  totalInterested?: number;
 
   // Timestamps
   createdAt: number;
   updatedAt: number;
 }
-
-// Extended gig with user data
-export interface GigWithUsers extends Gig {
-  postedByUser: UserProps | null;
-  bookedByUser: UserProps | null;
-}
-
-// Type definitions for the NormalGigsForm component
-export type TalentType = "mc" | "dj" | "vocalist" | null;
-export type BusinessCategory =
-  | "full"
-  | "personal"
-  | "other"
-  | "mc"
-  | "dj"
-  | "vocalist"
-  | null;
-
-// types/gig.ts
-export interface GigInputs {
+export interface CreateGigInput {
   // Required fields
   title: string;
-  secret: string;
-  bussinesscat: BusinessCategory;
-  date: string; // Date string for input
-
-  // Time fields
-  startTime: string;
-  endTime: string;
-
-  // Optional fields
   description?: string;
-  phoneNo?: string;
-  price?: string;
+  price?: number;
   category?: string;
+  isActive: boolean;
+  isPublic: boolean;
+  date: number; // timestamp
+  time: {
+    start: string;
+    end: string;
+  };
+  isTaken: boolean;
+  isPending: boolean;
+
+  // User info
+  postedBy: string; // userId
+  bookedBy?: string; // userId
+
+  // Location & Contact
   location?: string;
+  phone?: string;
 
-  // Customization
-  font?: string;
-  fontColor?: string;
-  backgroundColor?: string;
+  // Categorization
+  tags: string[];
+  requirements: string[];
+  benefits: string[];
+  bandCategory: string[];
+  bussinesscat: string;
 
-  // Timeline
-  gigTimeline?: string;
+  // Gig Type Specific
+  gigtimeline?: string;
   otherTimeline?: string;
   day?: string;
 
-  // Musician-specific
+  // MC Specific
+  mcType?: string;
+  mcLanguages?: string;
+
+  // DJ Specific
+  djGenre?: string;
+  djEquipment?: string;
+
+  // Vocalist Specific
+  vocalistGenre: string[];
+
+  // Pricing & Payment
+  pricerange?: string;
+  currency?: string;
+  negotiable?: boolean;
+  depositRequired?: boolean;
+  paymentStatus?: "pending" | "paid" | "refunded";
+
+  // Scheduling
+  scheduleDate?: number;
+  schedulingProcedure?: string;
+
+  // Travel
+  travelIncluded?: boolean;
+  travelFee?: string;
+
+  // Styling
+  font?: string;
+  fontColor?: string;
+  backgroundColor?: string;
+  logo: string; // URL or base64
+
+  // Engagement Metrics
+  viewCount: string[]; // userIds
+  bookCount: string[]; // userIds
+
+  // Rating
+  gigRating: number;
+
+  // Security
+  secret?: string;
+
+  // Payment Confirmations
+  clientConfirmPayment?: any;
+  musicianConfirmPayment?: any;
+}
+
+// For form input handling
+export interface GigFormInputs {
+  title: string;
+  description: string;
+  phoneNo?: string;
+  price: string;
+  category: string;
+  location: string;
+  secret: string;
+  end: string;
+  start: string;
+  durationfrom: string;
+  durationto: string;
+  bussinesscat: BusinessCategory;
+  otherTimeline: string;
+  gigtimeline: string;
+  day: string;
+  date: string;
+  pricerange: string;
+  currency: string;
   mcType?: string;
   mcLanguages?: string;
   djGenre?: string;
   djEquipment?: string;
-  priceRange?: string;
-  currency?: string;
   vocalistGenre?: string[];
-  bandCategory?: string[];
-
-  // Arrays
-  tags?: string[];
-  requirements?: string[];
-  benefits?: string[];
 }
 
-// Create gig input for Convex mutation
-export interface CreateGigInput {
-  // Required
-  postedBy: string; // user ID
+// Gig creation/update payload
+export interface GigPayload {
   title: string;
   description: string;
-  location: string;
-  bussinesscat: string;
-  phoneNo: string;
-  price: number;
-  currency: string;
-
-  // Optional
-  secret?: string;
-  logo?: string;
-  start?: string;
-  end?: string;
+  phone?: string;
+  price?: number;
+  category?: string;
+  location?: string;
+  secret: string;
+  time?: {
+    start: string;
+    end: string;
+  };
   durationFrom?: string;
   durationTo?: string;
+  bussinesscat: BusinessCategory;
   otherTimeline?: string;
   gigtimeline?: string;
   day?: string;
-  date?: string;
+  date: number;
   pricerange?: string;
-  category?: string;
-
-  // Talent
+  currency?: string;
   mcType?: string;
   mcLanguages?: string;
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
   bandCategory?: string[];
-
-  // Customization
   font?: string;
   fontColor?: string;
   backgroundColor?: string;
-
-  // Scheduling
+  logo?: string;
+  isPublic?: boolean;
+  isActive?: boolean;
   schedulingProcedure?: string;
   scheduleDate?: number;
 }
 
-// Update gig input
-export interface UpdateGigInput extends Partial<CreateGigInput> {
-  _id: string;
-  isTaken?: boolean;
-  isPending?: boolean;
-  isActive?: boolean;
-  isPublic?: boolean;
-  paymentStatus?: "pending" | "paid" | "refunded";
-  gigRating?: number;
+// Talent form data
+export interface TalentFormData {
+  mcType?: string;
+  mcLanguages?: string;
+  djGenre?: string;
+  djEquipment?: string;
+  vocalistGenre?: string[];
 }
 
-// Gig filters for searching
+// Schedule data
+export interface ScheduleData {
+  type: string;
+  date: Date;
+}
+
+// Uploaded file data
+export interface FileData {
+  fileUrl: string;
+  imageUrl: string;
+  isUploading: boolean;
+}
+
+// Validation errors
+export interface GigValidationErrors {
+  title?: string;
+  description?: string;
+  location?: string;
+  bussinesscat?: string;
+  phoneNo?: string;
+  price?: string;
+  secret?: string;
+  mcType?: string;
+  mcLanguages?: string;
+  djGenre?: string;
+  djEquipment?: string;
+  vocalistGenre?: string;
+  [key: string]: string | undefined;
+}
+
+// Business category option
+export interface BusinessCategoryOption {
+  value: BusinessCategory;
+  label: string;
+  icon: React.ComponentType;
+  color: "orange" | "blue" | "purple" | "red" | "pink" | "green";
+}
+
+// Instrument option
+export interface InstrumentOption {
+  value: string;
+  label: string;
+  icon?: React.ComponentType;
+}
+
+// Price range option
+export interface PriceRangeOption {
+  value: string;
+  label: string;
+}
+
+// Day option
+export interface DayOption {
+  id: number;
+  val: string;
+  name: string;
+}
+
+// Gig statistics
+export interface GigStats {
+  totalViews: number;
+  totalBookings: number;
+  totalInterested: number;
+  totalApplied: number;
+  bookingRate: string;
+}
+
+// Gig filters
 export interface GigFilters {
   category?: string;
   location?: string;
   minPrice?: number;
   maxPrice?: number;
-  bussinesscat?: string;
-  talentType?: TalentType;
+  dateFrom?: number;
+  dateTo?: number;
+  isTaken?: boolean;
+  isPending?: boolean;
   isActive?: boolean;
-  isPublic?: boolean;
+  bussinesscat?: BusinessCategory;
+  tags?: string[];
 }
 
-// Gig stats
-export interface GigStats {
-  totalGigs: number;
-  activeGigs: number;
-  completedGigs: number;
-  totalEarnings: number;
-  averageRating: number;
-  totalViews: number;
-  totalApplications: number;
-}
-
-// Talent modal props
-export interface TalentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  talentType: Exclude<TalentType, null>;
-  onSubmit: (data: Partial<GigInputs>) => void;
-  initialData?: Partial<GigInputs>;
-  errors: Record<string, string>;
-  validateField: <K extends GigField>(field: K, value: FieldValue<K>) => string;
-}
-
-// Customization props
-export interface CustomProps {
-  fontColor: string;
-  font: string;
-  backgroundColor: string;
-}
-
-// User info for gig creation
-export interface UserInfo {
-  prefferences: string[];
-}
-
-// Category visibility for form sections
-export interface CategoryVisibility {
-  title: boolean;
-  description: boolean;
-  business: boolean;
-  gtimeline: boolean;
-  othergig: boolean;
-  gduration: boolean;
-}
-
-// Type utilities for form fields
-export type GigField = keyof GigInputs;
-export type FieldValue<T extends GigField> = T extends keyof GigInputs
-  ? GigInputs[T]
-  : never;
-
-// Gig status types
-export type GigStatus =
-  | "pending"
-  | "active"
-  | "taken"
-  | "completed"
-  | "cancelled";
-export type PaymentStatus = "pending" | "partial" | "paid" | "refunded";
-
-// Notification types for gigs
-export interface GigNotification {
-  _id: string;
-  userId: string;
-  type:
-    | "gig_created"
-    | "gig_updated"
-    | "gig_applied"
-    | "gig_approved"
-    | "gig_completed";
-  title: string;
-  message: string;
-  gigId: string;
-  read: boolean;
-  createdAt: number;
-}
-
-// Booking request
-export interface BookingRequest {
-  _id: string;
-  gigId: string;
-  musicianId: string;
-  clientId: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
-  message?: string;
-  proposedPrice?: number;
-  proposedDate?: number;
-  createdAt: number;
-  updatedAt: number;
-}
-
-// Review interface
-export interface GigReview {
-  _id: string;
-  gigId: string;
-  reviewerId: string;
-  reviewedId: string;
-  rating: number;
-  comment?: string;
-  type: "client_to_musician" | "musician_to_client";
-  createdAt: number;
-}
-
-// Payment interface
-export interface GigPayment {
-  _id: string;
-  gigId: string;
-  amount: number;
-  currency: string;
-  status: "pending" | "processing" | "completed" | "failed";
-  method: "mpesa" | "card" | "bank_transfer" | "cash";
-  transactionId?: string;
-  payerId: string;
-  payeeId: string;
-  createdAt: number;
-  completedAt?: number;
-}
-
-// Helper type for gig cards
-export interface GigCardProps {
-  gig: Gig;
-  showActions?: boolean;
-  onView?: (gigId: string) => void;
-  onApply?: (gigId: string) => void;
-  onSave?: (gigId: string) => void;
-  className?: string;
-}
-
-// Type for gig form validation errors
-export interface GigFormErrors {
-  [key: string]: string;
-}
-
-// Type for gig creation response
-export interface GigCreationResponse {
-  success: boolean;
-  gigId?: string;
-  error?: string;
-  message?: string;
-}
-
-// Type for gig search response
-export interface GigSearchResponse {
-  gigs: GigWithUsers[];
-  total: number;
+// Gig pagination
+export interface GigPagination {
   page: number;
   limit: number;
+  total: number;
   hasMore: boolean;
 }
 
-// Type for user's gig dashboard
-export interface UserGigDashboard {
-  postedGigs: GigWithUsers[];
-  bookedGigs: GigWithUsers[];
-  savedGigs: GigWithUsers[];
-  applications: Array<{
-    gig: GigWithUsers;
-    status: string;
-    appliedAt: number;
-  }>;
-  stats: GigStats;
+// Gig search results
+export interface GigSearchResults {
+  gigs: GigProps[];
+  pagination: GigPagination;
+  filters?: GigFilters;
+}
+
+// Gig creation response
+export interface GigCreationResponse {
+  success: boolean;
+  gigId?: string;
+  message?: string;
+  errors?: GigValidationErrors;
+}
+
+// Draft gig data
+export interface GigDraft {
+  id: string;
+  data: GigFormInputs &
+    TalentFormData & {
+      customization?: CustomProps;
+      scheduling?: ScheduleData;
+      uploadedFiles?: FileData;
+    };
+  createdAt: number;
+  updatedAt: number;
 }

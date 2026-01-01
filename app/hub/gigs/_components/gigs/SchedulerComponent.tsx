@@ -6,13 +6,36 @@ import { useGigs } from "@/hooks/useAllGigs";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Modal } from "@/components/modals/Modal";
-import SubscriptionOverlay from "./SubscriptionOverlay";
-import CreateLimitOverlay from "./CreateLimitOverlay";
-import TrustScoreOverlay from "./TrustScoreOverlay";
 import { cn } from "@/lib/utils";
-import { useThemeColors } from "@/hooks/useTheme";
+import { toast } from "sonner";
+import {
+  Calendar,
+  Clock,
+  Zap,
+  Lock,
+  CheckCircle,
+  ChevronRight,
+  Sparkles,
+  Target,
+  BarChart3,
+  Users,
+  Shield,
+  Star,
+  Rocket,
+  CalendarDays,
+  CalendarClock,
+  Circle,
+  ArrowRight,
+  Crown,
+  Infinity,
+  Trophy,
+  MessageSquare,
+  Gem,
+  PieChart,
+  X,
+} from "lucide-react";
 
-// Import trust score helpers
+// Trust score imports
 import {
   scoreToStars,
   getTrustTierFromScore,
@@ -25,77 +48,7 @@ import {
   calculatePenalties,
   checkProfileCompleteness,
 } from "@/lib/trustScoreHelpers";
-import { Id } from "@/convex/_generated/dataModel";
-// Add this function to your component (before the SchedulerComponent function)
-// Add this at the top of your SchedulerComponent.tsx, after the imports
 
-// Feature score thresholds (copy from your trustScoreHelpers or convex file)
-const FEATURE_SCORE_THRESHOLDS = {
-  canPostBasicGigs: 10,
-  canMessageUsers: 20,
-  canVerifiedBadge: 40,
-  canCompete: 45,
-  canAccessAnalytics: 50,
-  canPostPremiumGigs: 55,
-  canBeDual: 60,
-  canVideoCall: 65,
-  canCreateBand: 70,
-  canHireTeams: 75,
-  canVerifyOthers: 80,
-  canModerate: 85,
-  canBetaFeatures: 90,
-} as const;
-// Get role-specific threshold
-const getRoleThreshold = (
-  feature: keyof typeof FEATURE_SCORE_THRESHOLDS,
-  user: any
-): number => {
-  if (!user) return FEATURE_SCORE_THRESHOLDS[feature];
-
-  // Role adjustments
-  if (user.isClient || user.isBooker) {
-    // Lower thresholds for clients and bookers
-    const adjustments: Record<keyof typeof FEATURE_SCORE_THRESHOLDS, number> = {
-      canPostBasicGigs: 10, // Same
-      canMessageUsers: 15, // Lower
-      canVerifiedBadge: 30, // Lower
-      canCompete: 45, // Same
-      canAccessAnalytics: 40, // Lower
-      canPostPremiumGigs: 45, // Lower
-      canBeDual: 50, // Lower
-      canVideoCall: 60, // Lower
-      canCreateBand: 999, // Not available
-      canHireTeams: 55, // For clients/bookers
-      canVerifyOthers: 999, // Not available
-      canModerate: 75, // Higher
-      canBetaFeatures: 70, // Lower
-    };
-    return adjustments[feature];
-  }
-
-  if (user.isMusician && user.roleType === "teacher") {
-    // Teacher-specific adjustments
-    const adjustments: Record<keyof typeof FEATURE_SCORE_THRESHOLDS, number> = {
-      canPostBasicGigs: 10,
-      canMessageUsers: 15,
-      canVerifiedBadge: 35,
-      canCompete: 999, // Not for teachers
-      canAccessAnalytics: 45,
-      canPostPremiumGigs: 50,
-      canBeDual: 60,
-      canVideoCall: 55,
-      canCreateBand: 65,
-      canHireTeams: 999,
-      canVerifyOthers: 999,
-      canModerate: 75,
-      canBetaFeatures: 70,
-    };
-    return adjustments[feature];
-  }
-
-  // Default musician thresholds
-  return FEATURE_SCORE_THRESHOLDS[feature];
-};
 interface SubmitProps {
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   getScheduleData: (
@@ -107,56 +60,121 @@ interface SubmitProps {
   setisSchedulerOpen: (isSchedulerOpen: boolean) => void;
 }
 
-// Calculate comprehensive trust score using your helpers
-const calculateUserTrustScore = (user: any): number => {
-  if (!user) return 0;
+// Subcomponents
+const CreateLimitOverlay = ({
+  showCreateLimitOverlay,
+  isInGracePeriod = false,
+}: {
+  showCreateLimitOverlay: boolean;
+  isInGracePeriod?: boolean;
+}) => {
+  if (!showCreateLimitOverlay) return null;
+  const theme = isInGracePeriod ? "purple" : "red";
 
-  try {
-    // Calculate all section scores
-    const profileScore = calculateProfilePoints(user);
-    const longevityScore = calculateLongevityPoints(user);
-    const activityScore = calculateActivityPoints(user);
-    const qualityScore = calculateQualityPoints(user);
-    const contentScore = calculateContentPoints(user);
-    const socialScore = calculateSocialPoints(user);
-    const penalties = calculatePenalties(user);
-
-    // Sum all scores and subtract penalties
-    const totalScore = Math.min(
-      profileScore +
-        longevityScore +
-        activityScore +
-        qualityScore +
-        contentScore +
-        socialScore -
-        penalties,
-      100
-    );
-
-    // Ensure minimum score for basic users
-    const finalScore = Math.max(totalScore, 5);
-
-    console.log("🔍 [TRUST SCORE BREAKDOWN]:", {
-      profileScore,
-      longevityScore,
-      activityScore,
-      qualityScore,
-      contentScore,
-      socialScore,
-      penalties,
-      totalScore,
-      finalScore,
-      userTier: user.tier,
-      isVerified: user.isVerified,
-    });
-
-    return finalScore;
-  } catch (error) {
-    console.error("Error calculating trust score:", error);
-    return 10; // Default score for error cases
-  }
+  return (
+    <div className="mb-6">
+      <div
+        className={cn(
+          "rounded-2xl p-6 backdrop-blur-sm border",
+          theme === "purple"
+            ? "border-purple-200/50 bg-gradient-to-br from-purple-50/90 via-white to-purple-25/90"
+            : "border-red-200/50 bg-gradient-to-br from-red-50/90 via-white to-red-25/90"
+        )}
+      >
+        <div className="flex flex-col lg:flex-row items-start gap-6">
+          <div className="flex-shrink-0">
+            <div
+              className={cn(
+                "w-16 h-16 rounded-xl flex items-center justify-center mb-4",
+                theme === "purple"
+                  ? "bg-gradient-to-br from-purple-500 to-purple-600"
+                  : "bg-gradient-to-br from-red-500 to-red-600"
+              )}
+            >
+              {isInGracePeriod ? (
+                <Calendar className="w-8 h-8 text-white" />
+              ) : (
+                <Lock className="w-8 h-8 text-white" />
+              )}
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3
+              className={cn(
+                "text-xl font-bold mb-2",
+                theme === "purple" ? "text-purple-900" : "text-red-900"
+              )}
+            >
+              {isInGracePeriod ? "Grace Period Limit" : "Free Tier Limit"}
+            </h3>
+            <p
+              className={cn(
+                "mb-4",
+                theme === "purple" ? "text-purple-700" : "text-red-700"
+              )}
+            >
+              {isInGracePeriod
+                ? "Upgrade to Pro for unlimited gigs and premium features."
+                : "You've reached the free tier limit. Upgrade to Pro for unlimited gigs."}
+            </p>
+            <button
+              onClick={() => window.open("/pricing", "_blank")}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium text-white",
+                theme === "purple"
+                  ? "bg-gradient-to-r from-purple-600 to-purple-700"
+                  : "bg-gradient-to-r from-red-600 to-red-700"
+              )}
+            >
+              Upgrade Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
+const TrustScoreOverlay = ({
+  currentScore,
+  requiredScore,
+}: {
+  currentScore: number;
+  requiredScore: number;
+}) => {
+  const scoreNeeded = requiredScore - currentScore;
+
+  return (
+    <div className="mb-6">
+      <div className="rounded-2xl border border-amber-200/50 bg-gradient-to-br from-amber-50/90 via-white to-orange-25/90 p-6 backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row items-start gap-6">
+          <div className="flex-shrink-0">
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mb-4">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-amber-900 mb-2">
+              Trust Score Required
+            </h3>
+            <p className="text-amber-700 mb-3">
+              You need <strong>{scoreNeeded} more points</strong> (current:{" "}
+              {currentScore}/{requiredScore})
+            </p>
+            <button
+              onClick={() => window.open("/profile/edit", "_blank")}
+              className="px-4 py-2 rounded-lg font-medium bg-gradient-to-r from-amber-600 to-orange-600 text-white"
+            >
+              Improve Score
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main Component
 const SchedulerComponent = ({
   onSubmit,
   getScheduleData,
@@ -168,409 +186,523 @@ const SchedulerComponent = ({
   const { user: currentUser, isLoading: userLoading } = useCurrentUser();
   const { gigs } = useGigs(currentUser?._id);
   const { isInGracePeriod } = useCheckTrial();
-  const { colors } = useThemeColors();
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [activeOption, setActiveOption] = useState<
     "automatic" | "regular" | "create" | null
   >(null);
-  const [showTrustInfo, setShowTrustInfo] = useState(false);
-  const [scoreBreakdown, setScoreBreakdown] = useState<any>(null);
+  const [currentStep, setCurrentStep] = useState<
+    "eligibility" | "selection" | "confirmation"
+  >("eligibility");
 
-  // Filter gigs created by the logged-in user
+  // Calculate trust score
+  const calculateUserTrustScore = (user: any): number => {
+    if (!user) return 0;
+    try {
+      const profileScore = calculateProfilePoints(user);
+      const longevityScore = calculateLongevityPoints(user);
+      const activityScore = calculateActivityPoints(user);
+      const qualityScore = calculateQualityPoints(user);
+      const contentScore = calculateContentPoints(user);
+      const socialScore = calculateSocialPoints(user);
+      const penalties = calculatePenalties(user);
+
+      const totalScore = Math.min(
+        profileScore +
+          longevityScore +
+          activityScore +
+          qualityScore +
+          contentScore +
+          socialScore -
+          penalties,
+        100
+      );
+      return Math.max(totalScore, 5);
+    } catch (error) {
+      return 10;
+    }
+  };
+
+  // Filter user's gigs
   const userGigs =
-    gigs && gigs?.filter((gig: any) => gig.postedBy?.clerkId === clerkUser?.id);
+    gigs?.filter((gig: any) => gig.postedBy?.clerkId === clerkUser?.id) || [];
 
-  // Calculate user's trust score
+  // User status calculations
   const trustScore = calculateUserTrustScore(currentUser);
-  const trustStars = scoreToStars(trustScore);
   const trustTier = getTrustTierFromScore(trustScore);
-
-  // Eligibility checks - ONLY BASED ON TRUST SCORE & VERIFICATION
   const isVerified = currentUser?.verified || false;
   const isFreeUser = currentUser?.tier === "free";
-
-  // Free users in grace period have basic access
+  const isProUser = currentUser?.tier === "pro";
+  const isPremiumUser = ["premium", "elite"].includes(currentUser?.tier || "");
   const canCreateDuringGrace = isFreeUser && isInGracePeriod;
+  const isPaidUser = isProUser || isPremiumUser;
+  const isProfileComplete = checkProfileCompleteness(currentUser);
 
-  const hasMinTrustForBasic =
-    trustScore >= getRoleThreshold("canPostBasicGigs", currentUser);
-  const hasMinTrustForPremium =
-    trustScore >= getRoleThreshold("canPostPremiumGigs", currentUser);
-  const hasMinTrustForCreate =
-    trustScore >= getRoleThreshold("canCreateBand", currentUser);
+  // Trust score requirements
+  const hasMinTrustForBasic = trustScore >= 10;
+  const hasMinTrustForRegular = trustScore >= 40;
+  const hasMinTrustForAutomatic = trustScore >= 60;
 
-  // Check if user can create more gigs
-  // Free users: 3 gigs max (grace period or not)
-  // Paid users: unlimited
-  const isPaidUser =
-    currentUser?.tier && ["pro", "premium", "elite"].includes(currentUser.tier);
+  // Gig creation limits
   const canCreateMoreGigs = isPaidUser || userGigs.length < 3;
 
-  // Determine which options are available
-  // AUTOMATIC: Paid users only with high trust score
-  const canUseAutomatic =
-    isPaidUser && // Only paid users
-    isVerified &&
-    hasMinTrustForPremium &&
-    canCreateMoreGigs;
-
-  // REGULAR: Any verified user with basic trust score (free during grace, paid anytime)
-  const canUseRegular =
+  // Option availability
+  const canUseCreate =
     isVerified &&
     hasMinTrustForBasic &&
     canCreateMoreGigs &&
-    (isPaidUser || canCreateDuringGrace);
+    (isPaidUser || canCreateDuringGrace) &&
+    isProfileComplete;
 
-  // CREATE: Any verified user with high trust score (free during grace, paid anytime)
-  const canUseCreate =
+  const canUseRegular =
     isVerified &&
-    hasMinTrustForCreate &&
+    isProUser &&
+    hasMinTrustForRegular &&
     canCreateMoreGigs &&
-    (isPaidUser || canCreateDuringGrace);
+    isProfileComplete;
 
-  // Determine if we should show overlays
+  const canUseAutomatic =
+    isVerified &&
+    isProUser &&
+    hasMinTrustForAutomatic &&
+    canCreateMoreGigs &&
+    isProfileComplete;
+
+  // Overlay conditions
   const showCreateLimitOverlay = !canCreateMoreGigs && isFreeUser;
   const showVerificationOverlay = !isVerified;
   const showTrustScoreOverlay = !hasMinTrustForBasic;
   const showGracePeriodOverlay = isFreeUser && !isInGracePeriod;
-
-  // Profile completeness check
-  const isProfileComplete = checkProfileCompleteness(currentUser);
+  const showProfileIncompleteOverlay = !isProfileComplete && isVerified;
 
   const handleSubmit = (type: "automatic" | "regular" | "create") => {
     if (isLoading) return;
 
-    // Double-check eligibility
-    if (!isVerified) {
-      alert("Please verify your account first");
-      return;
-    }
+    const validations = {
+      create: () => {
+        if (!isVerified) {
+          toast.error("Please verify your account first");
+          return false;
+        }
+        if (!isProfileComplete) {
+          toast.error("Please complete your profile before creating gigs");
+          return false;
+        }
+        if (!hasMinTrustForBasic) {
+          toast.error(
+            "Your trust score is too low. Build your reputation first."
+          );
+          return false;
+        }
+        if (!canCreateMoreGigs && isFreeUser) {
+          toast.error(
+            "Free users are limited to 3 gigs. Upgrade to create more."
+          );
+          return false;
+        }
+        if (isFreeUser && !isInGracePeriod) {
+          toast.error(
+            "Your grace period has ended. Upgrade to continue creating gigs."
+          );
+          return false;
+        }
+        return true;
+      },
+      regular: () => {
+        if (!isProUser && !isPremiumUser) {
+          toast.error("Regular scheduling requires Pro subscription");
+          return false;
+        }
+        if (!hasMinTrustForRegular) {
+          toast.error("Regular scheduling requires trust score 40+");
+          return false;
+        }
+        return true;
+      },
+      automatic: () => {
+        if (!isProUser && !isPremiumUser) {
+          toast.error("Automatic scheduling requires Pro subscription");
+          return false;
+        }
+        if (!hasMinTrustForAutomatic) {
+          toast.error("Automatic scheduling requires trust score 60+");
+          return false;
+        }
+        if (!selectedDate) {
+          toast.error("Please select a date for automatic scheduling");
+          return false;
+        }
+        return true;
+      },
+    };
 
-    if (!isProfileComplete) {
-      alert("Please complete your profile before creating gigs");
-      return;
-    }
-
-    if (!hasMinTrustForBasic) {
-      alert("Your trust score is too low. Build your reputation first.");
-      return;
-    }
-
-    if (!canCreateMoreGigs && isFreeUser) {
-      alert("Free users are limited to 3 gigs. Upgrade to create more.");
-      return;
-    }
-
-    if (isFreeUser && !isInGracePeriod) {
-      alert("Your grace period has ended. Upgrade to continue creating gigs.");
-      return;
-    }
+    if (!validations[type]()) return;
 
     const e = { preventDefault: () => {} } as FormEvent<HTMLFormElement>;
-
     if (type === "automatic" && selectedDate) {
       getScheduleData("automatic", selectedDate);
     } else {
       getScheduleData(type);
     }
-
     onSubmit(e);
     setisSchedulerOpen(false);
   };
 
-  const getTierBadgeColor = (tier: string) => {
-    switch (tier) {
-      case "elite":
-        return "bg-purple-100 text-purple-800";
-      case "premium":
-        return "bg-blue-100 text-blue-800";
-      case "pro":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getTrustTierColor = (tier: string) => {
-    switch (tier) {
-      case "elite":
-        return "bg-gradient-to-r from-purple-600 to-purple-800";
-      case "trusted":
-        return "bg-gradient-to-r from-green-600 to-emerald-800";
-      case "verified":
-        return "bg-gradient-to-r from-blue-600 to-blue-800";
-      case "basic":
-        return "bg-gradient-to-r from-amber-600 to-amber-800";
-      default:
-        return "bg-gradient-to-r from-gray-600 to-gray-800";
-    }
-  };
-
-  const schedulerStyles = {
-    automatic: {
-      border: colors.border,
-      bg: colors.card,
-      activeBorder: "border-blue-600",
-      activeBg: colors.hoverBg,
-      button:
-        "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
-      text: colors.text,
-      icon: "text-blue-500",
-      disabledBg: colors.backgroundMuted,
-      disabledText: colors.textMuted,
-      disabledBorder: colors.border,
-    },
-    regular: {
-      border: colors.border,
-      bg: colors.card,
-      activeBorder: "border-emerald-600",
-      activeBg: colors.hoverBg,
-      button:
-        "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700",
-      text: colors.text,
-      icon: "text-emerald-500",
-      disabledBg: colors.backgroundMuted,
-      disabledText: colors.textMuted,
-      disabledBorder: colors.border,
-    },
-    create: {
-      border: colors.border,
-      bg: colors.card,
-      activeBorder: "border-amber-600",
-      activeBg: colors.hoverBg,
-      button:
-        "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
-      text: colors.text,
-      icon: "text-amber-500",
-      disabledBg: colors.backgroundMuted,
-      disabledText: colors.textMuted,
-      disabledBorder: colors.border,
-    },
-  };
-
-  const optionsToRender = [
-    {
-      id: "automatic",
-      label: "Automatic Scheduling",
-      description: "Set a specific date to automatically post publicly.",
-      available: canUseAutomatic,
-      requires: "Pro subscription & high trust score",
-      icon: "⏰",
-    },
-    {
-      id: "regular",
-      label: "Regular Scheduling",
-      description: "Gig will be created but disabled until you activate it.",
-      available: canUseRegular,
-      requires: "Verified account & basic trust score",
-      icon: "📅",
-    },
-    {
-      id: "create",
-      label: "Immediate Creation",
-      description: "Create gig immediately without scheduling.",
-      available: canUseCreate,
-      requires: "Verified account & high trust score",
-      icon: "⚡",
-    },
-  ] as const;
-
-  // User info panel
-  const UserStatusPanel = () => (
-    <div
-      className={cn(
-        "mb-4 p-4 rounded-lg border",
-        colors.border,
-        colors.backgroundMuted
-      )}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="space-y-2">
-          {/* Status badges row */}
-          <div className="flex flex-wrap gap-2">
-            {/* Verification badge */}
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                isVerified
-                  ? "bg-green-100 text-green-800"
-                  : "bg-amber-100 text-amber-800"
-              }`}
+  // Stepper Component
+  const Stepper = () => (
+    <div className="mb-8">
+      <div className="flex items-center justify-center">
+        {[
+          {
+            id: "eligibility",
+            label: "Eligibility",
+            icon: <Shield className="w-4 h-4" />,
+          },
+          {
+            id: "selection",
+            label: "Schedule",
+            icon: <CalendarDays className="w-4 h-4" />,
+          },
+          {
+            id: "confirmation",
+            label: "Confirm",
+            icon: <CheckCircle className="w-4 h-4" />,
+          },
+        ].map((step, index) => (
+          <React.Fragment key={step.id}>
+            <button
+              onClick={() => setCurrentStep(step.id as any)}
+              className="flex flex-col items-center gap-2"
             >
-              {isVerified ? "✓ Verified" : "⚠ Not Verified"}
-            </span>
-
-            {/* Tier badge */}
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${getTierBadgeColor(
-                currentUser?.tier || "free"
-              )}`}
-            >
-              {currentUser?.tier
-                ? `⭐ ${currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1)}`
-                : "Free"}
-            </span>
-
-            {/* Trust tier badge */}
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getTrustTierColor(trustTier)}`}
-            >
-              🛡️ {trustTier.charAt(0).toUpperCase() + trustTier.slice(1)}
-            </span>
-
-            {/* Grace period badge */}
-            {isFreeUser && (
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  isInGracePeriod
-                    ? "bg-purple-100 text-purple-800"
-                    : "bg-red-100 text-red-800"
-                }`}
+              <div
+                className={cn(
+                  "w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all",
+                  currentStep === step.id
+                    ? "bg-blue-500 border-blue-500 text-white shadow-lg"
+                    : "border-gray-200 bg-white text-gray-400"
+                )}
               >
-                {isInGracePeriod ? "🕒 Grace Period" : "⏰ Grace Ended"}
-              </span>
-            )}
-
-            {/* Profile completeness */}
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                isProfileComplete
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
-              }`}
-            >
-              {isProfileComplete ? "✓ Complete" : "✗ Incomplete"}
-            </span>
-          </div>
-
-          {/* Trust score and gigs row */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className={cn("text-sm", colors.textMuted)}>
-                Trust Score:
-              </span>
-              <div className="flex items-center gap-1">
-                <div className="relative">
-                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-500 via-green-500 to-blue-500 transition-all duration-500"
-                      style={{ width: `${trustScore}%` }}
-                    />
-                  </div>
-                  <span
-                    className={cn(
-                      "text-xs font-bold absolute -top-5 left-0",
-                      colors.text
-                    )}
-                  >
-                    {trustScore}/100
-                  </span>
-                </div>
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <svg
-                      key={i}
-                      className={`w-3 h-3 ${i < Math.floor(trustStars) ? "text-amber-500" : "text-gray-300"}`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setShowTrustInfo(!showTrustInfo)}
-                  className="text-xs text-blue-500 hover:text-blue-700 ml-1"
-                >
-                  {showTrustInfo ? "Hide" : "Details"}
-                </button>
+                {step.icon}
               </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span className={cn("text-sm", colors.textMuted)}>
-                Gigs: {userGigs.length}/3
+              <span
+                className={cn(
+                  "text-sm font-medium",
+                  currentStep === step.id ? "text-blue-600" : "text-gray-500"
+                )}
+              >
+                {step.label}
               </span>
-              {isFreeUser && (
-                <span className={cn("text-sm", colors.textMuted)}>
-                  Status: {isInGracePeriod ? "In Grace Period" : "Grace Ended"}
-                </span>
+            </button>
+            {index < 2 && <div className="w-16 h-0.5 mx-2 bg-gray-200" />}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Status Cards Component
+  const StatusCards = () => (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      {[
+        {
+          label: "Trust",
+          value: trustScore,
+          max: 100,
+          icon: <Shield className="w-4 h-4" />,
+          color:
+            trustScore >= 60
+              ? "bg-emerald-500"
+              : trustScore >= 40
+                ? "bg-blue-500"
+                : "bg-amber-500",
+        },
+        {
+          label: "Gigs",
+          value: userGigs.length,
+          max: 3,
+          icon: <Calendar className="w-4 h-4" />,
+          color: canCreateMoreGigs ? "bg-blue-500" : "bg-red-500",
+        },
+        {
+          label: "Tier",
+          value: isProUser ? "Pro" : isPremiumUser ? "Premium" : "Free",
+          icon: <Star className="w-4 h-4" />,
+          color: isProUser
+            ? "bg-purple-500"
+            : isPremiumUser
+              ? "bg-amber-500"
+              : "bg-gray-500",
+        },
+        {
+          label: "Profile",
+          value: isProfileComplete ? "Complete" : "Incomplete",
+          icon: <Users className="w-4 h-4" />,
+          color: isProfileComplete ? "bg-green-500" : "bg-red-500",
+        },
+      ].map((card, index) => (
+        <div
+          key={index}
+          className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className={`w-8 h-8 rounded-lg ${card.color} flex items-center justify-center`}
+            >
+              <div className="text-white">{card.icon}</div>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">
+              {typeof card.value === "number"
+                ? `${card.value}/${card.max}`
+                : card.value}
+            </div>
+          </div>
+          <div className="text-xs text-gray-600">{card.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Scheduling Options Component
+  const SchedulingOptions = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          Choose Schedule Type
+        </h3>
+        <p className="text-gray-600">Select how you want to publish your gig</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          {
+            id: "create",
+            title: "Instant",
+            description: "Post immediately",
+            icon: <Zap className="w-6 h-6" />,
+            color: "border-blue-200",
+            bg: "bg-blue-50",
+            iconColor: "bg-blue-500",
+            available: canUseCreate,
+            requirements: [
+              { met: isVerified, text: "Verified" },
+              { met: hasMinTrustForBasic, text: "Trust 10+" },
+              { met: canCreateMoreGigs, text: "Gig Slot" },
+            ],
+          },
+          {
+            id: "regular",
+            title: "Draft",
+            description: "Create now, publish later",
+            icon: <Calendar className="w-6 h-6" />,
+            color: "border-purple-200",
+            bg: "bg-purple-50",
+            iconColor: "bg-purple-500",
+            available: canUseRegular,
+            requirements: [
+              { met: isProUser, text: "Pro Plan" },
+              { met: hasMinTrustForRegular, text: "Trust 40+" },
+            ],
+          },
+          {
+            id: "automatic",
+            title: "Auto",
+            description: "Schedule for future",
+            icon: <CalendarClock className="w-6 h-6" />,
+            color: "border-emerald-200",
+            bg: "bg-emerald-50",
+            iconColor: "bg-emerald-500",
+            available: canUseAutomatic,
+            requirements: [
+              { met: isProUser, text: "Pro Plan" },
+              { met: hasMinTrustForAutomatic, text: "Trust 60+" },
+            ],
+          },
+        ].map((option) => (
+          <div
+            key={option.id}
+            onClick={() =>
+              option.available && setActiveOption(option.id as any)
+            }
+            className={cn(
+              "rounded-2xl border-2 p-6 cursor-pointer transition-all duration-300",
+              activeOption === option.id
+                ? "ring-2 ring-offset-2 ring-blue-500 shadow-lg"
+                : "hover:shadow-md",
+              option.available ? option.color : "border-gray-200 opacity-50",
+              option.bg
+            )}
+          >
+            <div className="flex flex-col items-center text-center h-full">
+              <div
+                className={cn(
+                  "w-16 h-16 rounded-full flex items-center justify-center mb-4",
+                  option.iconColor
+                )}
+              >
+                <div className="text-white">{option.icon}</div>
+              </div>
+
+              <h4 className="text-xl font-bold text-gray-900 mb-2">
+                {option.title}
+              </h4>
+
+              <p className="text-gray-600 mb-4">{option.description}</p>
+
+              <div className="space-y-2 mb-6 mt-auto">
+                {option.requirements.map((req, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "w-3 h-3 rounded-full",
+                        req.met ? "bg-green-500" : "bg-gray-300"
+                      )}
+                    />
+                    <span className="text-sm text-gray-700">{req.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              {option.available ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveOption(option.id as any);
+                  }}
+                  className={cn(
+                    "w-full py-3 rounded-lg font-medium text-white transition-colors",
+                    activeOption === option.id
+                      ? option.iconColor
+                      : "bg-gray-800 hover:bg-gray-900"
+                  )}
+                >
+                  {activeOption === option.id ? "Selected" : "Select"}
+                </button>
+              ) : (
+                <div className="w-full py-3 rounded-lg font-medium text-center bg-gray-100 text-gray-500">
+                  Locked
+                </div>
               )}
             </div>
           </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          {!isProfileComplete && (
-            <button
-              onClick={() => window.open("/profile/edit", "_blank")}
-              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors"
-            >
-              Complete Profile
-            </button>
-          )}
-
-          {trustScore < FEATURE_SCORE_THRESHOLDS.canPostBasicGigs && (
-            <button
-              onClick={() => window.open("/profile/trust", "_blank")}
-              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-lg transition-colors"
-            >
-              Improve Trust
-            </button>
-          )}
-        </div>
+        ))}
       </div>
 
-      {/* Trust score details */}
-      {showTrustInfo && (
-        <div className={cn("mt-3 pt-3 border-t", colors.border)}>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-            {["canPostBasicGigs", "canPostPremiumGigs", "canCreateBand"].map(
-              (feature) => {
-                const threshold = getRoleThreshold(
-                  feature as keyof typeof FEATURE_SCORE_THRESHOLDS,
-                  currentUser
-                );
-                const isUnlocked = trustScore >= threshold;
-                const featureNames: Record<string, string> = {
-                  canPostBasicGigs: "Post Basic Gigs",
-                  canPostPremiumGigs: "Post Premium Gigs",
-                  canCreateBand: "Create Bands",
-                };
+      {activeOption === "automatic" && (
+        <div className="mt-6 p-6 bg-gray-50 rounded-2xl">
+          <label className="block text-sm font-medium text-gray-900 mb-3">
+            Select Post Date & Time
+          </label>
+          <input
+            type="datetime-local"
+            className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+            min={new Date().toISOString().slice(0, 16)}
+          />
+          <p className="text-sm text-gray-600 mt-2">
+            Your gig will automatically publish at this time
+          </p>
+        </div>
+      )}
+    </div>
+  );
 
-                return (
-                  <div
-                    key={feature}
-                    className={cn(
-                      "p-2 rounded-lg border text-center",
-                      colors.border
-                    )}
-                  >
-                    <div className="text-xs text-gray-500 mb-1">
-                      {featureNames[feature]}
-                    </div>
-                    <div
-                      className={
-                        isUnlocked ? "text-green-600 font-bold" : "text-red-600"
-                      }
-                    >
-                      {isUnlocked
-                        ? "✓ Unlocked"
-                        : `Need ${threshold - trustScore}`}
-                    </div>
-                    {threshold === 999 && (
-                      <div className="text-xs text-gray-400 mt-1">
-                        Not for your role
-                      </div>
-                    )}
-                  </div>
-                );
-              }
+  // Confirmation Component
+  const ConfirmationView = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Ready to Go!</h3>
+        <p className="text-gray-600">Review your selection and confirm</p>
+      </div>
+
+      <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl border border-blue-200 p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h4 className="text-xl font-bold text-gray-900 mb-2">
+              {activeOption === "create"
+                ? "Instant Creation"
+                : activeOption === "regular"
+                  ? "Scheduled Draft"
+                  : "Auto-Schedule"}
+            </h4>
+            <p className="text-gray-600">All requirements are met ✓</p>
+          </div>
+          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+            {activeOption === "create" && (
+              <Zap className="w-8 h-8 text-blue-600" />
+            )}
+            {activeOption === "regular" && (
+              <Calendar className="w-8 h-8 text-purple-600" />
+            )}
+            {activeOption === "automatic" && (
+              <CalendarClock className="w-8 h-8 text-emerald-600" />
             )}
           </div>
         </div>
-      )}
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+            <span className="text-gray-700">Posting Method</span>
+            <span className="font-semibold">
+              {activeOption === "create"
+                ? "Live Immediately"
+                : activeOption === "regular"
+                  ? "Manual Publish"
+                  : "Auto-Publish"}
+            </span>
+          </div>
+
+          {activeOption === "automatic" && selectedDate && (
+            <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+              <span className="text-gray-700">Scheduled For</span>
+              <span className="font-semibold">
+                {selectedDate.toLocaleDateString()} at{" "}
+                {selectedDate.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+            <span className="text-gray-700">Status</span>
+            <span className="text-green-600 font-semibold">
+              Ready to Create
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-center gap-4">
+        <button
+          onClick={() => setCurrentStep("selection")}
+          className="px-8 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+        >
+          Back
+        </button>
+        <button
+          onClick={() => handleSubmit(activeOption!)}
+          disabled={isLoading}
+          className={cn(
+            "px-8 py-3 rounded-lg font-medium text-white transition-all flex items-center gap-2",
+            isLoading
+              ? "bg-gray-400"
+              : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg"
+          )}
+        >
+          {isLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
+              Creating...
+            </>
+          ) : (
+            <>
+              <Rocket className="w-5 h-5" />
+              Create Gig
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 
@@ -593,350 +725,121 @@ const SchedulerComponent = ({
     <Modal
       isOpen={isSchedulerOpen}
       onClose={() => !isLoading && setisSchedulerOpen(false)}
-      title="Final Step: Gig Creation Options"
-      description="Choose how you'd like to create your gig"
+      title="Schedule Your Gig"
+      description="Choose how and when to publish"
     >
-      <div className="space-y-4 md:space-y-6 p-2 md:p-4 w-full">
-        {/* User Status Panel */}
-        <UserStatusPanel />
+      <div className="p-4 md:p-6">
+        {/* Stepper */}
+        <Stepper />
 
-        {/* Verification Overlay */}
-        {showVerificationOverlay && (
-          <div
-            className={cn(
-              "mb-4 p-4 rounded-lg border",
-              "border-amber-400 bg-amber-50"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                  <span className="text-amber-600 text-xl">⚠</span>
+        {/* Current Step Content */}
+        {currentStep === "eligibility" && (
+          <div className="space-y-6">
+            {/* Status Cards */}
+            <StatusCards />
+
+            {/* Overlays */}
+            {showVerificationOverlay && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+                <div className="flex items-center gap-4">
+                  <Shield className="w-6 h-6 text-amber-600" />
+                  <div>
+                    <h4 className="font-bold text-amber-900">
+                      Account Verification Required
+                    </h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      Please verify your account to create gigs.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div>
-                <h4 className="font-semibold text-amber-900">
-                  Account Verification Required
-                </h4>
-                <p className="text-sm text-amber-700">
-                  Please verify your account to create gigs. This helps ensure a
-                  safe community.
-                </p>
-                <button
-                  onClick={() =>
-                    window.open("/settings/verification", "_blank")
-                  }
-                  className="mt-2 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg transition-colors"
-                >
-                  Verify Account
-                </button>
+            )}
+
+            {showProfileIncompleteOverlay && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+                <div className="flex items-center gap-4">
+                  <Users className="w-6 h-6 text-red-600" />
+                  <div>
+                    <h4 className="font-bold text-red-900">
+                      Profile Incomplete
+                    </h4>
+                    <p className="text-sm text-red-700 mt-1">
+                      Please complete your profile before creating gigs.
+                    </p>
+                  </div>
+                </div>
               </div>
+            )}
+
+            {showTrustScoreOverlay && (
+              <TrustScoreOverlay currentScore={trustScore} requiredScore={10} />
+            )}
+
+            {showGracePeriodOverlay && (
+              <CreateLimitOverlay
+                showCreateLimitOverlay={showCreateLimitOverlay}
+                isInGracePeriod={false}
+              />
+            )}
+
+            {showCreateLimitOverlay && isInGracePeriod && (
+              <CreateLimitOverlay
+                showCreateLimitOverlay={showCreateLimitOverlay}
+                isInGracePeriod={true}
+              />
+            )}
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setCurrentStep("selection")}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
 
-        {/* Profile Incomplete Overlay */}
-        {!isProfileComplete && isVerified && (
-          <div
-            className={cn(
-              "mb-4 p-4 rounded-lg border",
-              "border-red-400 bg-red-50"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <span className="text-red-600 text-xl">✗</span>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-red-900">
-                  Profile Incomplete
-                </h4>
-                <p className="text-sm text-red-700">
-                  Please complete your profile (name, location, phone, profile
-                  picture) before creating gigs.
-                </p>
-                <button
-                  onClick={() => window.open("/profile/edit", "_blank")}
-                  className="mt-2 px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
-                >
-                  Complete Profile
-                </button>
-              </div>
+        {currentStep === "selection" && (
+          <div className="space-y-6">
+            <SchedulingOptions />
+
+            <div className="flex justify-between">
+              <button
+                onClick={() => setCurrentStep("eligibility")}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => setCurrentStep("confirmation")}
+                disabled={!activeOption}
+                className={cn(
+                  "px-6 py-3 rounded-lg font-medium text-white transition-colors flex items-center gap-2",
+                  activeOption
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-gray-300 cursor-not-allowed"
+                )}
+              >
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
 
-        {/* Trust Score Overlay */}
-        {showTrustScoreOverlay && isVerified && isProfileComplete && (
-          <TrustScoreOverlay
-            currentScore={trustScore}
-            requiredScore={FEATURE_SCORE_THRESHOLDS.canPostBasicGigs}
-          />
-        )}
+        {currentStep === "confirmation" && activeOption && <ConfirmationView />}
 
-        {/* Grace Period Overlay */}
-        {showGracePeriodOverlay &&
-          isVerified &&
-          isProfileComplete &&
-          hasMinTrustForBasic && (
-            <CreateLimitOverlay
-              showCreateLimitOverlay={showCreateLimitOverlay}
-              isInGracePeriod={false}
-            />
-          )}
-
-        {/* Create Limit Overlay (not grace period related) */}
-        {showCreateLimitOverlay && isInGracePeriod && (
-          <CreateLimitOverlay
-            showCreateLimitOverlay={showCreateLimitOverlay}
-            isInGracePeriod={true}
-          />
-        )}
-
+        {/* Loading Overlay */}
         {isLoading && (
-          <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-30 rounded-xl">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-xl backdrop-blur-sm">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4" />
+              <p className="text-gray-700">Creating your gig...</p>
+            </div>
           </div>
         )}
-
-        {/* Scheduling Options */}
-        {optionsToRender.map((option) => {
-          const isActive = activeOption === option.id;
-          const styles = schedulerStyles[option.id];
-          const isDisabled =
-            !option.available || isLoading || !isProfileComplete;
-
-          const handleCardClick = () => {
-            if (!isDisabled) setActiveOption(option.id);
-          };
-
-          return (
-            <div
-              key={option.id}
-              className={cn(
-                "p-4 md:p-6 border-2 rounded-xl transition-all duration-300 relative",
-                isDisabled
-                  ? "cursor-not-allowed opacity-60"
-                  : "cursor-pointer hover:shadow-md",
-                isActive
-                  ? cn(styles.activeBorder, styles.activeBg, "shadow-lg")
-                  : cn(styles.border, styles.bg)
-              )}
-              onClick={handleCardClick}
-            >
-              {/* Requirement Badge */}
-              <div className="absolute top-3 right-3">
-                {!option.available && (
-                  <span
-                    className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium",
-                      "bg-gray-100 text-gray-700"
-                    )}
-                  >
-                    🔒 {option.requires}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center mb-2">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center mr-3 text-lg",
-                        option.id === "automatic" &&
-                          "bg-blue-100 text-blue-600",
-                        option.id === "regular" &&
-                          "bg-emerald-100 text-emerald-600",
-                        option.id === "create" && "bg-amber-100 text-amber-600"
-                      )}
-                    >
-                      {option.icon}
-                    </div>
-                    <div>
-                      <h3
-                        className={cn(
-                          "text-base md:text-lg font-semibold",
-                          styles.text
-                        )}
-                      >
-                        {option.label}
-                      </h3>
-                      <p className={cn("text-sm md:text-base", styles.text)}>
-                        {option.description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Date picker for automatic option */}
-                {isActive && option.id === "automatic" && (
-                  <div className="mt-4 md:mt-0 md:ml-4 w-full md:w-auto">
-                    <label
-                      className={cn(
-                        "block text-xs md:text-sm font-medium mb-1",
-                        styles.text
-                      )}
-                    >
-                      Post Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      className={cn(
-                        "w-full p-2 text-xs md:text-sm rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                        colors.border,
-                        colors.background
-                      )}
-                      onChange={(e) =>
-                        setSelectedDate(new Date(e.target.value))
-                      }
-                      min={new Date().toISOString().slice(0, 16)}
-                      required
-                      disabled={isDisabled}
-                    />
-                  </div>
-                )}
-
-                {/* Submit button */}
-                {isActive && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (option.id === "automatic" && !selectedDate) return;
-                      handleSubmit(option.id);
-                    }}
-                    disabled={
-                      isDisabled || (option.id === "automatic" && !selectedDate)
-                    }
-                    className={cn(
-                      "mt-4 md:mt-0 md:ml-4 w-full md:w-auto px-4 py-2 text-sm md:text-base rounded-lg text-white font-medium transition-all flex items-center justify-center",
-                      isDisabled || (option.id === "automatic" && !selectedDate)
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : cn(styles.button, "shadow-md hover:shadow-lg")
-                    )}
-                  >
-                    {isLoading ? (
-                      <>
-                        <svg
-                          className="animate-spin -ml-1 mr-2 h-4 w-4"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        Processing...
-                      </>
-                    ) : (
-                      `Use ${option.label}`
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Eligibility Summary */}
-        <div
-          className={cn(
-            "mt-4 pt-4 border-t text-sm",
-            colors.border,
-            colors.textMuted
-          )}
-        >
-          <p className="font-medium mb-2">Eligibility Summary:</p>
-          <ul className="space-y-1">
-            <li className="flex items-center gap-2">
-              <span className={isVerified ? "text-green-600" : "text-red-600"}>
-                {isVerified ? "✓" : "✗"}
-              </span>
-              <span>
-                Account Verification: {isVerified ? "Verified" : "Required"}
-              </span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span
-                className={
-                  isProfileComplete ? "text-green-600" : "text-red-600"
-                }
-              >
-                {isProfileComplete ? "✓" : "✗"}
-              </span>
-              <span>
-                Profile Completeness:{" "}
-                {isProfileComplete ? "Complete" : "Incomplete"}
-              </span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span
-                className={
-                  hasMinTrustForBasic ? "text-green-600" : "text-red-600"
-                }
-              >
-                {hasMinTrustForBasic ? "✓" : "✗"}
-              </span>
-              <span>
-                Trust Score: {trustScore}/100 (
-                {hasMinTrustForBasic ? "Passed" : "Need 10+"})
-              </span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span
-                className={
-                  canCreateMoreGigs ? "text-green-600" : "text-red-600"
-                }
-              >
-                {canCreateMoreGigs ? "✓" : "✗"}
-              </span>
-              <span>
-                Gig Limit: {userGigs.length}/3 (
-                {canCreateMoreGigs ? "OK" : "Limit Reached"})
-              </span>
-            </li>
-            {isFreeUser && (
-              <li className="flex items-center gap-2">
-                <span
-                  className={
-                    isInGracePeriod ? "text-green-600" : "text-red-600"
-                  }
-                >
-                  {isInGracePeriod ? "✓" : "✗"}
-                </span>
-                <span>
-                  Grace Period: {isInGracePeriod ? "Active" : "Ended"}
-                </span>
-              </li>
-            )}
-          </ul>
-
-          <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Need help?</strong> Visit the{" "}
-              <a
-                href="/help/eligibility"
-                className="text-blue-600 hover:underline font-medium"
-              >
-                eligibility guide
-              </a>{" "}
-              to learn how to unlock all features.
-            </p>
-          </div>
-        </div>
       </div>
     </Modal>
   );

@@ -75,7 +75,8 @@ export const gigModel = defineTable({
       notes: v.optional(v.string()),
     })
   ),
-
+  cancelledAt: v.optional(v.number()),
+  cancelledBy: v.optional(v.string()),
   // Payment info
   paymentStatus: v.union(
     v.literal("pending"),
@@ -92,8 +93,10 @@ export const gigModel = defineTable({
       confirmedAt: v.optional(v.number()),
       code: v.optional(v.string()),
       temporaryConfirm: v.optional(v.boolean()),
+      finalizedAt: v.optional(v.number()),
     })
   ),
+  finalizationNote: v.optional(v.string()),
   clientConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
@@ -101,12 +104,13 @@ export const gigModel = defineTable({
       confirmedAt: v.optional(v.number()),
       code: v.optional(v.string()),
       temporaryConfirm: v.optional(v.boolean()),
+      finalizedAt: v.optional(v.number()),
     })
   ),
-
+  negotiable: v.optional(v.boolean()),
   // Rating
   gigRating: v.number(),
-
+  finalizedBy: v.optional(v.union(v.literal("client"), v.literal("musician"))),
   // Timestamps (automatically added by Convex)
 })
   .index("by_postedBy", ["postedBy"])

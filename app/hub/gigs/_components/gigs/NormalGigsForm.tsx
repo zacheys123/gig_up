@@ -81,8 +81,9 @@ import SchedulerComponent from "./SchedulerComponent";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { prepareGigDataForConvex } from "@/utils";
+import { getGigDraftById, saveGigDraft } from "@/drafts";
 
-// Recreate the types locally to avoid imports
+// Update LocalGigInputs type to include duration fields
 type LocalGigInputs = {
   title: string;
   description: string;
@@ -93,8 +94,10 @@ type LocalGigInputs = {
   secret: string;
   end: string;
   start: string;
-  durationto: string;
+  // Add these with correct casing (lowercase)
   durationfrom: string;
+  durationto: string;
+
   bussinesscat: BusinessCategory;
   otherTimeline: string;
   gigtimeline: string;
@@ -107,6 +110,7 @@ type LocalGigInputs = {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
+  negotiable?: boolean;
 };
 
 // Memoized Error Message Component
@@ -240,7 +244,6 @@ export default function NormalGigsForm() {
   // Refs for managing state without re-renders
   const fieldErrorsRef = useRef<Record<string, string>>({});
 
-  // State for form values that need to be displayed
   const [formValues, setFormValues] = useState<LocalGigInputs>({
     title: "",
     description: "",
@@ -251,8 +254,10 @@ export default function NormalGigsForm() {
     secret: "",
     end: "",
     start: "",
-    durationto: "pm",
+    // Add these with initial values
     durationfrom: "am",
+    durationto: "pm",
+
     bussinesscat: null,
     otherTimeline: "",
     gigtimeline: "",
@@ -260,6 +265,8 @@ export default function NormalGigsForm() {
     date: "",
     pricerange: "",
     currency: "KES",
+    // Add negotiable with default value (true)
+    negotiable: true,
   });
 
   // State that actually triggers re-renders
@@ -309,21 +316,94 @@ export default function NormalGigsForm() {
   // Field errors state - only for display
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Stable animations - memoized to prevent re-creation
-  const sectionVariants = useMemo(
-    () => ({
-      hidden: { opacity: 0, y: 20 },
-      visible: {
-        opacity: 1,
-        y: 0,
-        transition: {
-          duration: 0.3,
-          ease: "easeOut",
-        },
-      },
-    }),
-    []
-  );
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+
+  const saveAsDraft = useCallback(async () => {
+    try {
+      setIsSavingDraft(true);
+
+      const draftData = {
+        ...formValues,
+
+        mcType: formValues.mcType,
+        mcLanguages: formValues.mcLanguages,
+        djGenre: formValues.djGenre,
+        djEquipment: formValues.djEquipment,
+        vocalistGenre: formValues.vocalistGenre,
+      };
+
+      const savedDraft = saveGigDraft(draftData, draftId || undefined);
+      setDraftId(savedDraft.id);
+
+      toast.success("Draft saved successfully!", {
+        description: "Your gig has been saved as a draft.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      toast.error("Failed to save draft", {
+        description: "Please try again.",
+        duration: 3000,
+      });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [formValues, draftId]);
+  // Update the auto-save notification
+  useEffect(() => {
+    // Auto-save after 30 seconds of inactivity
+    const autoSaveTimer = setTimeout(() => {
+      if (formValues.title || formValues.description) {
+        saveAsDraft();
+        toast.info("Auto-saved draft", {
+          description: "Your progress has been automatically saved.",
+          duration: 2000,
+        });
+      }
+    }, 30000);
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [formValues, saveAsDraft]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const draftIdParam = params.get("draft");
+
+    if (draftIdParam) {
+      const draft = getGigDraftById(draftIdParam);
+      if (draft) {
+        setDraftId(draft.id);
+
+        // Cast draft data to include duration fields if they exist
+        const draftData = draft.data as LocalGigInputs & {
+          durationFrom?: string;
+          durationTo?: string;
+        };
+
+        setFormValues(draftData);
+        setBussinessCategory(draftData.bussinesscat);
+
+        // Set talent-specific data
+        if (draftData.bussinesscat === "mc") {
+          setActiveTalentType("mc");
+        } else if (draftData.bussinesscat === "dj") {
+          setActiveTalentType("dj");
+        } else if (draftData.bussinesscat === "vocalist") {
+          setActiveTalentType("vocalist");
+        }
+
+        toast.success("Draft loaded", {
+          description: "Your draft has been loaded successfully.",
+          duration: 3000,
+        });
+      } else {
+        toast.error("Draft not found", {
+          description: "The requested draft could not be found.",
+          duration: 3000,
+        });
+      }
+    }
+  }, []);
 
   // Business categories - memoized
   const businessCategories = useMemo(
@@ -607,7 +687,7 @@ export default function NormalGigsForm() {
     return Object.keys(errors).length === 0;
   }, [bussinesscat, formValues]);
 
-  // Submit handler
+  // In your handleSubmit function
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -643,7 +723,7 @@ export default function NormalGigsForm() {
         setRefetchData(true);
 
         setTimeout(() => {
-          router.push("/gigs");
+          router.refresh();
         }, 2000);
       } catch (error) {
         console.error("Error creating gig:", error);
@@ -1389,7 +1469,59 @@ export default function NormalGigsForm() {
             </div>
           </div>
         </CollapsibleSection>
+        {/* Negotiable Switch - Alternative placement if you want it always visible */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10">
+                <DollarSign className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h4 className={cn("font-medium", colors.text)}>
+                  Price Negotiable
+                </h4>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Allow applicants to negotiate the price with you
+                </p>
+              </div>
+            </div>
 
+            <div className="flex flex-col items-end gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setFormValues((prev) => ({
+                    ...prev,
+                    negotiable: !prev.negotiable,
+                  }))
+                }
+                className={cn(
+                  "relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300",
+                  formValues.negotiable
+                    ? "bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg shadow-green-500/30"
+                    : "bg-gray-300 dark:bg-gray-700"
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all duration-300",
+                    formValues.negotiable ? "translate-x-8" : "translate-x-1"
+                  )}
+                />
+              </button>
+              <span
+                className={cn(
+                  "text-xs font-medium px-2 py-1 rounded",
+                  formValues.negotiable
+                    ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30"
+                    : "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800"
+                )}
+              >
+                {formValues.negotiable ? "Negotiable" : "Fixed"}
+              </span>
+            </div>
+          </div>
+        </div>
         {/* Gig Timeline Section */}
         <CollapsibleSection
           title="Event Details"
@@ -1447,7 +1579,7 @@ export default function NormalGigsForm() {
                   <SelectTrigger className="rounded-xl py-3">
                     <SelectValue placeholder="Select timeline" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={cn(colors.background)}>
                     <SelectItem value="once">🎯 One-time event</SelectItem>
                     <SelectItem value="weekly">🔄 Weekly recurring</SelectItem>
                     <SelectItem value="monthly">
@@ -1536,6 +1668,7 @@ export default function NormalGigsForm() {
         </CollapsibleSection>
 
         {/* Duration Section */}
+
         <div>
           {showduration ? (
             <motion.div
@@ -1558,7 +1691,7 @@ export default function NormalGigsForm() {
                         Set Duration
                       </h3>
                       <p className={cn("text-sm", colors.textMuted)}>
-                        Specify start and end times
+                        Specify when the gig starts and ends
                       </p>
                     </div>
                   </div>
@@ -1602,8 +1735,8 @@ export default function NormalGigsForm() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pm">PM</SelectItem>
                           <SelectItem value="am">AM</SelectItem>
+                          <SelectItem value="pm">PM</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1637,8 +1770,8 @@ export default function NormalGigsForm() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pm">PM</SelectItem>
                           <SelectItem value="am">AM</SelectItem>
+                          <SelectItem value="pm">PM</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1647,8 +1780,7 @@ export default function NormalGigsForm() {
 
                 <div className="mt-6 pt-4 border-t">
                   <p className={cn("text-sm text-center", colors.textMuted)}>
-                    Duration: {formValues.start} {formValues.durationfrom} -{" "}
-                    {formValues.end} {formValues.durationto}
+                    Duration: {formValues.start} - {formValues.end}
                   </p>
                 </div>
               </div>
@@ -1758,7 +1890,7 @@ export default function NormalGigsForm() {
                 <SelectTrigger className="pl-12 py-3 rounded-xl">
                   <SelectValue placeholder="Select your instrument" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={cn(colors.backgroundMuted)}>
                   {individualInstruments.map((instrument) => (
                     <SelectItem key={instrument} value={instrument}>
                       {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
@@ -1791,15 +1923,46 @@ export default function NormalGigsForm() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.back()}
+              onClick={saveAsDraft}
+              disabled={isSavingDraft}
               className={cn(
                 "py-6 rounded-xl font-medium transition-all",
                 colors.border,
                 colors.hoverBg,
-                "hover:border-orange-500"
+                "hover:border-orange-500",
+                isSavingDraft && "opacity-50 cursor-not-allowed"
               )}
             >
-              Save as Draft
+              {isSavingDraft ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-current"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save as Draft
+                </>
+              )}
             </Button>
           </div>
 
@@ -1844,7 +2007,7 @@ export default function NormalGigsForm() {
               }),
             }}
             errors={fieldErrors}
-            validateField={(field, value) => {
+            validateField={(field: string, value: string) => {
               switch (field) {
                 case "mcType":
                 case "mcLanguages":

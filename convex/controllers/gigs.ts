@@ -61,6 +61,7 @@ export const createGig = mutation({
 
     // Legacy fields for backward compatibility
     phoneNo: v.optional(v.string()),
+    negotiable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const {
@@ -99,6 +100,7 @@ export const createGig = mutation({
       paymentStatus,
       cancellationReason,
       phoneNo,
+      negotiable,
     } = args;
 
     // Validate required fields
@@ -184,6 +186,8 @@ export const createGig = mutation({
       musicianConfirmPayment: undefined,
       clientConfirmPayment: undefined,
       gigRating: 0,
+
+      negotiable,
 
       // Timestamps
       createdAt: Date.now(),
@@ -871,5 +875,157 @@ export const bookUserForRole = mutation({
     });
 
     return { success: true };
+  },
+});
+// In your convex/users.ts
+export const saveGig = mutation({
+  args: {
+    userId: v.id("users"),
+    gigId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const savedGigs = user.savedGigs || [];
+    if (!savedGigs.includes(args.gigId)) {
+      await ctx.db.patch(args.userId, {
+        savedGigs: [...savedGigs, args.gigId],
+      });
+    }
+  },
+});
+
+export const favoriteGig = mutation({
+  args: {
+    userId: v.id("users"),
+    gigId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const favoriteGigs = user.favoriteGigs || [];
+    if (!favoriteGigs.includes(args.gigId)) {
+      await ctx.db.patch(args.userId, {
+        favoriteGigs: [...favoriteGigs, args.gigId],
+      });
+    }
+  },
+});
+
+export const unsaveGig = mutation({
+  args: {
+    userId: v.id("users"),
+    gigId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const savedGigs = user.savedGigs || [];
+    await ctx.db.patch(args.userId, {
+      savedGigs: savedGigs.filter((id) => id !== args.gigId),
+    });
+  },
+});
+
+export const unfavoriteGig = mutation({
+  args: {
+    userId: v.id("users"),
+    gigId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const favoriteGigs = user.favoriteGigs || [];
+    await ctx.db.patch(args.userId, {
+      favoriteGigs: favoriteGigs.filter((id) => id !== args.gigId),
+    });
+  },
+});
+
+// In your convex/gigs.ts
+export const incrementViewCount = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    const viewCount = gig.viewCount || [];
+    if (!viewCount.includes(args.userId)) {
+      await ctx.db.patch(args.gigId, {
+        viewCount: [...viewCount, args.userId],
+      });
+    }
+  },
+});
+
+export const bookGig = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    const bookCount = gig.bookCount || [];
+    if (!bookCount.includes(args.userId)) {
+      await ctx.db.patch(args.gigId, {
+        bookCount: [...bookCount, args.userId],
+      });
+    }
+  },
+});
+// convex/gigs.ts - Additional mutations
+export const cancelGig = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    musicianId: v.id("users"),
+    reason: v.string(),
+    cancelerType: v.union(v.literal("client"), v.literal("musician")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) {
+      throw new Error("Gig not found");
+    }
+
+    // Verify permissions
+    if (args.cancelerType === "client" && gig.postedBy !== identity.subject) {
+      throw new Error("Only the client can cancel this gig");
+    }
+
+    if (args.cancelerType === "musician" && gig.bookedBy !== args.musicianId) {
+      throw new Error("Only the booked musician can cancel this gig");
+    }
+
+    // Update gig status
+    await ctx.db.patch(args.gigId, {
+      isActive: false,
+      isTaken: false,
+      bookedBy: undefined,
+      paymentStatus: "refunded",
+      cancellationReason: args.reason,
+      cancelledBy: args.cancelerType,
+      cancelledAt: Date.now(),
+    });
+
+    // Notify other party (you can add WebSocket/Socket.io notification here)
+
+    return {
+      success: true,
+      message: "Gig cancelled successfully",
+    };
   },
 });

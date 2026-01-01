@@ -4,7 +4,12 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { EnhancedMusician } from "@/types/musician";
-import { getDisplayRate, hasRateForGigType } from "@/utils";
+import {
+  getAllRates,
+  getDisplayRate,
+  getRateForGigType,
+  hasRateForGigType,
+} from "@/utils";
 import { GigType, isValidGigType } from "@/convex/gigTypes";
 import { useTrustScore } from "./useTrustScore";
 

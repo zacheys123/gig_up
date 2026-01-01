@@ -1,16 +1,17 @@
-// hooks/useDeputies.ts - Updated with proper trust integration
+// hooks/useDeputies.ts - Optimized with proper trust integration
 import { useQuery, useMutation } from "convex/react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useCheckTrial } from "./useCheckTrial";
 import { useCurrentUser } from "./useCurrentUser";
-import { useTrustScore } from "./useTrustScore"; // ADD THIS IMPORT
+import { useTrustScore } from "./useTrustScore";
 
 interface handles {
   platform: string;
   handle: string;
 }
+
 export interface DeputyUser {
   _id: Id<"users">;
   clerkId: string;
@@ -30,7 +31,6 @@ export interface DeputyUser {
     forTheirSkill: string;
   };
   musicianhandles?: handles[];
-  // ADD THESE TRUST FIELDS
   trustScore?: number;
   trustStars?: number;
   trustTier?: string;
@@ -59,21 +59,56 @@ export interface PendingRequest {
   request: PendingDeputyRequest;
 }
 
+// Constants for trust requirements
+const TRUST_REQUIREMENTS = {
+  MIN_STARS_TO_ADD_DEPUTY: 4.0,
+  MIN_STARS_TO_BE_DEPUTY: 2.0,
+  MIN_STARS_TO_BE_BOOKABLE: 3.0,
+  MIN_SCORE_TO_BE_RELIABLE: 50,
+  ONLINE_TIMEOUT_MS: 300000, // 5 minutes
+} as const;
+
+// Cache for eligibility checks
+const eligibilityCache = new Map<string, { timestamp: number; result: any }>();
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
 export const useDeputies = (currentUserId?: Id<"users">) => {
-  // Queries
-  const deputies = useQuery(
+  // Memoize query args
+  const deputiesArgs = useMemo(
+    () => (currentUserId ? { currentUserId } : "skip"),
+    [currentUserId]
+  );
+
+  const myDeputiesArgs = useMemo(
+    () => (currentUserId ? { principalId: currentUserId } : "skip"),
+    [currentUserId]
+  );
+
+  const pendingRequestsArgs = useMemo(
+    () => (currentUserId ? { userId: currentUserId } : "skip"),
+    [currentUserId]
+  );
+
+  // Queries with stable args
+  const deputiesQuery = useQuery(
     api.controllers.deputies.searchDeputies,
-    currentUserId ? { currentUserId } : "skip"
+    deputiesArgs
   );
-
-  const myDeputies = useQuery(
+  const myDeputiesQuery = useQuery(
     api.controllers.deputies.getMyDeputies,
-    currentUserId ? { principalId: currentUserId } : "skip"
+    myDeputiesArgs
+  );
+  const pendingRequestsQuery = useQuery(
+    api.controllers.deputies.getPendingRequests,
+    pendingRequestsArgs
   );
 
-  const pendingRequests = useQuery(
-    api.controllers.deputies.getPendingRequests,
-    currentUserId ? { userId: currentUserId } : "skip"
+  // Memoize data
+  const deputies = useMemo(() => deputiesQuery || [], [deputiesQuery]);
+  const myDeputies = useMemo(() => myDeputiesQuery || [], [myDeputiesQuery]);
+  const pendingRequests = useMemo(
+    () => pendingRequestsQuery || [],
+    [pendingRequestsQuery]
   );
 
   // Mutations
@@ -89,121 +124,156 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
   const updateSettingsMutation = useMutation(
     api.controllers.deputies.updateDeputySettings
   );
-
-  // State
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
-    {}
-  );
-  const { isInGracePeriod } = useCheckTrial();
-  const { user: currentUser } = useCurrentUser();
-
-  // ADD THIS: Use the trust score hook
-  const { canAccess, trustStars, trustScore } = useTrustScore();
-
-  // Actions
   const cancelRequestMutation = useMutation(
     api.controllers.deputies.cancelDeputyRequest
   );
 
-  // Add cancel function
-  const cancelDeputyRequest = useCallback(
-    async (deputyId: Id<"users">) => {
-      if (!currentUserId) throw new Error("No current user");
-
-      const key = `cancel-${deputyId}`;
-      setLoadingStates((prev) => ({ ...prev, [key]: true }));
-
-      try {
-        console.log("🎯 [HOOK] Cancelling deputy request:", {
-          currentUserId,
-          deputyId,
-        });
-
-        await cancelRequestMutation({
-          principalId: currentUserId,
-          deputyId,
-        });
-
-        console.log("✅ [HOOK] Deputy request cancelled successfully");
-        return { success: true };
-      } catch (error) {
-        console.error("❌ [HOOK] Deputy request cancellation failed:", error);
-        return { success: false, error: (error as Error).message };
-      } finally {
-        setLoadingStates((prev) => ({ ...prev, [key]: false }));
-      }
-    },
-    [currentUserId, cancelRequestMutation]
+  // State management
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
+    {}
   );
 
-  // Function to check if deputy is eligible based on trust
-  const checkDeputyEligibility = (
-    deputy: DeputyUser,
-    currentUser: any,
-    skill: string
-  ): { eligible: boolean; reason?: string } => {
-    // Get trust scores
-    const deputyTrustScore = deputy.trustScore || 0;
-    const deputyTrustStars = deputy.trustStars || 0.5;
-    const currentUserTrustScore = currentUser?.trustScore || 0;
-    const currentUserTrustStars = trustStars; // Use from hook instead
+  // External hooks
+  const { isInGracePeriod } = useCheckTrial();
+  const { user: currentUser } = useCurrentUser();
+  const { canAccess, trustStars, trustScore } = useTrustScore();
 
-    // Minimum trust requirements for different scenarios
-    const MIN_TRUST_STARS_FOR_DEPUTY = 2.0; // Basic trust required
-    const MIN_TRUST_STARS_FOR_BOOKABLE = 3.0; // Can be directly booked
-    const MIN_TRUST_SCORE_FOR_RELIABLE = 50; // Verified status
+  // Loading state helper
+  const isLoading = useCallback(
+    (key: string) => loadingStates[key] || false,
+    [loadingStates]
+  );
 
-    // Check if deputy has minimum trust
-    if (deputyTrustStars < MIN_TRUST_STARS_FOR_DEPUTY) {
-      return {
-        eligible: false,
-        reason: `Deputy needs at least ${MIN_TRUST_STARS_FOR_DEPUTY} trust stars`,
+  // Set loading state with key deduplication
+  const setLoading = useCallback((key: string, loading: boolean) => {
+    setLoadingStates((prev) => {
+      if (prev[key] === loading) return prev;
+      return { ...prev, [key]: loading };
+    });
+  }, []);
+
+  // Eligibility check with caching
+  const checkDeputyEligibility = useCallback(
+    (
+      deputy: DeputyUser,
+      targetUser: any,
+      skill: string
+    ): {
+      eligible: boolean;
+      reason?: string;
+      canBeBookable: boolean;
+      isReliable: boolean;
+    } => {
+      const cacheKey = `eligibility-${deputy._id}-${skill}`;
+      const cached = eligibilityCache.get(cacheKey);
+
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+        return cached.result;
+      }
+
+      const deputyTrustStars = deputy.trustStars || 0.5;
+      const deputyTrustScore = deputy.trustScore || 0;
+      const targetTrustStars = targetUser?.trustStars || 0.5;
+
+      // Check minimum deputy trust
+      if (deputyTrustStars < TRUST_REQUIREMENTS.MIN_STARS_TO_BE_DEPUTY) {
+        const result = {
+          eligible: false,
+          reason: `Deputy needs at least ${TRUST_REQUIREMENTS.MIN_STARS_TO_BE_DEPUTY} trust stars`,
+          canBeBookable: false,
+          isReliable: false,
+        };
+        eligibilityCache.set(cacheKey, { timestamp: Date.now(), result });
+        return result;
+      }
+
+      // Check target user trust
+      if (targetTrustStars < 2.0) {
+        const result = {
+          eligible: false,
+          reason: "Your trust rating is too low to add deputies",
+          canBeBookable: false,
+          isReliable: false,
+        };
+        eligibilityCache.set(cacheKey, { timestamp: Date.now(), result });
+        return result;
+      }
+
+      const canBeBookable =
+        deputyTrustStars >= TRUST_REQUIREMENTS.MIN_STARS_TO_BE_BOOKABLE;
+      const isReliable =
+        deputyTrustScore >= TRUST_REQUIREMENTS.MIN_SCORE_TO_BE_RELIABLE;
+
+      const result = {
+        eligible: true,
+        reason: canBeBookable
+          ? "Can be directly booked"
+          : "Needs approval for each booking",
+        canBeBookable,
+        isReliable,
       };
-    }
 
-    // Check if deputy can be bookable (higher trust required)
-    const canBeBookable = deputyTrustStars >= MIN_TRUST_STARS_FOR_BOOKABLE;
+      eligibilityCache.set(cacheKey, { timestamp: Date.now(), result });
+      return result;
+    },
+    []
+  );
 
-    // Check if deputy is verified/trusted
-    const isReliable = deputyTrustScore >= MIN_TRUST_SCORE_FOR_RELIABLE;
+  // Permission check with caching
+  const checkCanAddDeputy = useCallback(
+    (
+      targetTrustStars?: number
+    ): {
+      canAdd: boolean;
+      reason?: string;
+      requiredStars: number;
+      currentStars: number;
+    } => {
+      const requiredStars = TRUST_REQUIREMENTS.MIN_STARS_TO_ADD_DEPUTY;
+      const currentStars = trustStars;
 
-    // Additional checks based on current user's trust
-    if (currentUserTrustStars < 2.0) {
+      if (currentStars < requiredStars) {
+        return {
+          canAdd: false,
+          reason: `You need at least ${requiredStars} trust stars to add deputies. You have ${currentStars.toFixed(1)}`,
+          requiredStars,
+          currentStars,
+        };
+      }
+
+      if (
+        targetTrustStars &&
+        targetTrustStars < TRUST_REQUIREMENTS.MIN_STARS_TO_BE_DEPUTY
+      ) {
+        return {
+          canAdd: false,
+          reason: `Deputy needs at least ${TRUST_REQUIREMENTS.MIN_STARS_TO_BE_DEPUTY} trust stars. They have ${targetTrustStars.toFixed(1)}`,
+          requiredStars: TRUST_REQUIREMENTS.MIN_STARS_TO_BE_DEPUTY,
+          currentStars: targetTrustStars,
+        };
+      }
+
       return {
-        eligible: false,
-        reason: "Your trust rating is too low to add deputies",
+        canAdd: true,
+        requiredStars,
+        currentStars,
       };
-    }
+    },
+    [trustStars]
+  );
 
-    return {
-      eligible: true,
-      reason: canBeBookable
-        ? "Can be directly booked"
-        : "Needs approval for each booking",
-    };
-  };
-
-  // UPDATED: sendDeputyRequest function with proper trust checks
+  // Send deputy request with validation
   const sendDeputyRequest = useCallback(
     async (
       deputyId: Id<"users">,
       skill: string,
       gigType?: string,
       note?: string
-    ) => {
-      if (!currentUserId) throw new Error("No current user");
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (!currentUserId) {
+        return { success: false, error: "No current user" };
+      }
 
-      console.log("🎯 [HOOK DEBUG] Sending deputy request:", {
-        currentUserId,
-        deputyId,
-        skill,
-        gigType,
-        isInGracePeriod,
-        currentUserTier: currentUser?.tier,
-        currentUserTrustStars: trustStars, // Add trust info
-      });
-
-      // FIXED: Use canAccess from useTrustScore hook
       const hasPermission = canAccess("canBeDual");
       if (!hasPermission) {
         return {
@@ -212,7 +282,6 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
         };
       }
 
-      // Also check minimum stars requirement
       if (trustStars < 4.0) {
         return {
           success: false,
@@ -221,10 +290,10 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
       }
 
       const key = `send-${deputyId}`;
-      setLoadingStates((prev) => ({ ...prev, [key]: true }));
+      setLoading(key, true);
 
       try {
-        const result = await sendRequestMutation({
+        await sendRequestMutation({
           principalId: currentUserId,
           deputyId,
           forMySkill: skill,
@@ -233,68 +302,114 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
           isViewerInGracePeriod: isInGracePeriod,
         });
 
-        console.log("✅ [HOOK DEBUG] Deputy request completed:", result);
+        // Clear cache for this deputy
+        Array.from(eligibilityCache.keys())
+          .filter((k) => k.includes(deputyId))
+          .forEach((k) => eligibilityCache.delete(k));
+
         return { success: true };
       } catch (error) {
-        console.error("❌ [HOOK DEBUG] Deputy request failed:", error);
-        return { success: false, error: (error as Error).message };
+        console.error("Deputy request failed:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
       } finally {
-        setLoadingStates((prev) => ({ ...prev, [key]: false }));
+        setLoading(key, false);
       }
     },
     [
       currentUserId,
       sendRequestMutation,
       isInGracePeriod,
-      currentUser?.tier,
       canAccess,
       trustStars,
+      setLoading,
     ]
   );
 
-  // UPDATED: Enhanced sendDeputyRequest with deputy trust validation
+  // Enhanced send with validation
   const sendDeputyRequestWithValidation = useCallback(
     async (
       deputy: DeputyUser,
       skill: string,
       gigType?: string,
       note?: string
-    ) => {
-      if (!currentUserId) throw new Error("No current user");
-
-      // Validate current user can add deputies
-      const canAddResult = checkCanAddDeputy(deputy.trustStars);
-      if (!canAddResult.canAdd) {
-        return {
-          success: false,
-          error: canAddResult.reason || "Cannot add deputy",
-        };
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (!currentUserId) {
+        return { success: false, error: "No current user" };
       }
 
-      // Validate deputy eligibility
+      // Check permissions
+      const canAddResult = checkCanAddDeputy(deputy.trustStars);
+      if (!canAddResult.canAdd) {
+        return { success: false, error: canAddResult.reason };
+      }
+
+      // Check deputy eligibility
       const deputyEligibility = checkDeputyEligibility(
         deputy,
         currentUser,
         skill
       );
       if (!deputyEligibility.eligible) {
-        return {
-          success: false,
-          error: deputyEligibility.reason || "Deputy not eligible",
-        };
+        return { success: false, error: deputyEligibility.reason };
       }
 
       return await sendDeputyRequest(deputy._id, skill, gigType, note);
     },
-    [currentUserId, currentUser, checkDeputyEligibility, sendDeputyRequest]
+    [
+      currentUserId,
+      currentUser,
+      checkCanAddDeputy,
+      checkDeputyEligibility,
+      sendDeputyRequest,
+    ]
   );
 
+  // Cancel request
+  const cancelDeputyRequest = useCallback(
+    async (
+      deputyId: Id<"users">
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (!currentUserId) {
+        return { success: false, error: "No current user" };
+      }
+
+      const key = `cancel-${deputyId}`;
+      setLoading(key, true);
+
+      try {
+        await cancelRequestMutation({
+          principalId: currentUserId,
+          deputyId,
+        });
+        return { success: true };
+      } catch (error) {
+        console.error("Deputy request cancellation failed:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      } finally {
+        setLoading(key, false);
+      }
+    },
+    [currentUserId, cancelRequestMutation, setLoading]
+  );
+
+  // Respond to request
   const respondToDeputyRequest = useCallback(
-    async (principalId: Id<"users">, status: "accepted" | "rejected") => {
-      if (!currentUserId) throw new Error("No current user");
+    async (
+      principalId: Id<"users">,
+      status: "accepted" | "rejected"
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (!currentUserId) {
+        return { success: false, error: "No current user" };
+      }
 
       const key = `respond-${principalId}`;
-      setLoadingStates((prev) => ({ ...prev, [key]: true }));
+      setLoading(key, true);
 
       try {
         await respondToRequestMutation({
@@ -304,20 +419,28 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
         });
         return { success: true };
       } catch (error) {
-        return { success: false, error: (error as Error).message };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
       } finally {
-        setLoadingStates((prev) => ({ ...prev, [key]: false }));
+        setLoading(key, false);
       }
     },
-    [currentUserId, respondToRequestMutation]
+    [currentUserId, respondToRequestMutation, setLoading]
   );
 
+  // Remove deputy
   const removeDeputy = useCallback(
-    async (deputyId: Id<"users">) => {
-      if (!currentUserId) throw new Error("No current user");
+    async (
+      deputyId: Id<"users">
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (!currentUserId) {
+        return { success: false, error: "No current user" };
+      }
 
       const key = `remove-${deputyId}`;
-      setLoadingStates((prev) => ({ ...prev, [key]: true }));
+      setLoading(key, true);
 
       try {
         await removeDeputyMutation({
@@ -326,14 +449,18 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
         });
         return { success: true };
       } catch (error) {
-        return { success: false, error: (error as Error).message };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
       } finally {
-        setLoadingStates((prev) => ({ ...prev, [key]: false }));
+        setLoading(key, false);
       }
     },
-    [currentUserId, removeDeputyMutation]
+    [currentUserId, removeDeputyMutation, setLoading]
   );
 
+  // Update deputy settings
   const updateDeputySettings = useCallback(
     async (
       deputyId: Id<"users">,
@@ -342,23 +469,28 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
         note?: string;
         gigType?: string;
       }
-    ) => {
-      if (!currentUserId) throw new Error("No current user");
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (!currentUserId) {
+        return { success: false, error: "No current user" };
+      }
 
-      // Check if trying to set canBeBooked to true
+      // Validate canBeBooked permission
       if (updates.canBeBooked === true) {
-        const deputy = myDeputies?.find((d) => d?._id === deputyId);
-        if (deputy && (deputy.trustStars || 0.5) < 3.0) {
+        const deputy = myDeputies.find((d) => d?._id === deputyId);
+        if (
+          deputy &&
+          (deputy.trustStars || 0.5) <
+            TRUST_REQUIREMENTS.MIN_STARS_TO_BE_BOOKABLE
+        ) {
           return {
             success: false,
-            error:
-              "Deputy needs at least 3.0 trust stars to be directly bookable",
+            error: `Deputy needs at least ${TRUST_REQUIREMENTS.MIN_STARS_TO_BE_BOOKABLE} trust stars to be directly bookable`,
           };
         }
       }
 
       const key = `update-${deputyId}`;
-      setLoadingStates((prev) => ({ ...prev, [key]: true }));
+      setLoading(key, true);
 
       try {
         await updateSettingsMutation({
@@ -368,105 +500,149 @@ export const useDeputies = (currentUserId?: Id<"users">) => {
         });
         return { success: true };
       } catch (error) {
-        return { success: false, error: (error as Error).message };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
       } finally {
-        setLoadingStates((prev) => ({ ...prev, [key]: false }));
+        setLoading(key, false);
       }
     },
-    [currentUserId, updateSettingsMutation, myDeputies]
+    [currentUserId, updateSettingsMutation, myDeputies, setLoading]
   );
 
-  // Helper functions for trust checks
-  const checkCanAddDeputy = (
-    targetTrustStars?: number
-  ): {
-    canAdd: boolean;
-    reason?: string;
-    requiredStars: number;
-    currentStars: number;
-  } => {
-    const requiredStars = 4.0; // Need 4.0 stars to add deputies
-    const currentStars = trustStars;
+  // Helper functions
+  const checkCanBeBooked = useCallback((deputyTrustStars: number): boolean => {
+    return deputyTrustStars >= TRUST_REQUIREMENTS.MIN_STARS_TO_BE_BOOKABLE;
+  }, []);
 
-    if (currentStars < requiredStars) {
-      return {
-        canAdd: false,
-        reason: `You need at least ${requiredStars} trust stars to add deputies. You have ${currentStars.toFixed(1)}`,
-        requiredStars,
-        currentStars,
-      };
-    }
+  const checkIsReliableDeputy = useCallback(
+    (deputyTrustScore: number): boolean => {
+      return deputyTrustScore >= TRUST_REQUIREMENTS.MIN_SCORE_TO_BE_RELIABLE;
+    },
+    []
+  );
 
-    // Check if target deputy is eligible
-    if (targetTrustStars && targetTrustStars < 2.0) {
-      return {
-        canAdd: false,
-        reason: `Deputy needs at least 2.0 trust stars. They have ${targetTrustStars.toFixed(1)}`,
-        requiredStars: 2.0,
-        currentStars: targetTrustStars,
-      };
-    }
-
-    return {
-      canAdd: true,
-      requiredStars,
-      currentStars,
-    };
-  };
-
-  const checkCanBeBooked = (deputyTrustStars: number): boolean => {
-    // Deputy needs at least 3.0 stars to be directly bookable
-    return deputyTrustStars >= 3.0;
-  };
-
-  const checkIsReliableDeputy = (deputyTrustScore: number): boolean => {
-    // Deputy needs at least 50 trust score to be considered reliable
-    return deputyTrustScore >= 50;
-  };
-
-  const getTrustRequirements = () => ({
-    toAddDeputy: 4.0,
-    toBeDeputy: 2.0,
-    toBeBookable: 3.0,
-    toBeReliable: 50,
-  });
+  const getTrustRequirements = useCallback(() => TRUST_REQUIREMENTS, []);
 
   // Derived state
-  const isLoading = (key: string) => loadingStates[key] || false;
-  const hasPendingRequests = pendingRequests && pendingRequests.length > 0;
-  const hasDeputies = myDeputies && myDeputies.length > 0;
+  const hasPendingRequests = useMemo(
+    () => pendingRequests.length > 0,
+    [pendingRequests]
+  );
+  const hasDeputies = useMemo(() => myDeputies.length > 0, [myDeputies]);
+
+  // Memoize return object
+  const result = useMemo(
+    () => ({
+      // Data
+      deputies,
+      myDeputies,
+      pendingRequests,
+
+      // Actions
+      sendDeputyRequest,
+      sendDeputyRequestWithValidation,
+      respondToDeputyRequest,
+      removeDeputy,
+      updateDeputySettings,
+      cancelDeputyRequest,
+
+      // Trust-related functions
+      checkDeputyEligibility,
+      checkCanAddDeputy,
+      checkCanBeBooked,
+      checkIsReliableDeputy,
+      getTrustRequirements,
+
+      // State helpers
+      isLoading,
+      hasPendingRequests,
+      hasDeputies,
+      totalDeputies: myDeputies.length,
+      totalPending: pendingRequests.length,
+
+      // Trust state
+      currentTrustStars: trustStars,
+      currentTrustScore: trustScore,
+      canAccessDualRole: canAccess("canBeDual"),
+
+      // Loading states
+      loadingStates,
+    }),
+    [
+      deputies,
+      myDeputies,
+      pendingRequests,
+      sendDeputyRequest,
+      sendDeputyRequestWithValidation,
+      respondToDeputyRequest,
+      removeDeputy,
+      updateDeputySettings,
+      cancelDeputyRequest,
+      checkDeputyEligibility,
+      checkCanAddDeputy,
+      checkCanBeBooked,
+      checkIsReliableDeputy,
+      getTrustRequirements,
+      isLoading,
+      hasPendingRequests,
+      hasDeputies,
+      trustStars,
+      trustScore,
+      canAccess,
+      loadingStates,
+    ]
+  );
+
+  return result;
+};
+
+// Optional: Hook for deputy filtering
+export const useFilteredDeputies = (
+  currentUserId?: Id<"users">,
+  filters?: {
+    minTrustScore?: number;
+    instrument?: string;
+    city?: string;
+    canBeBooked?: boolean;
+  }
+) => {
+  const { deputies, isLoading } = useDeputies(currentUserId);
+
+  const filteredDeputies = useMemo(() => {
+    if (!filters || Object.keys(filters).length === 0) {
+      return deputies;
+    }
+
+    return deputies.filter((deputy) => {
+      if (
+        filters.minTrustScore &&
+        (deputy.trustScore || 0) < filters.minTrustScore
+      ) {
+        return false;
+      }
+      if (filters.instrument && deputy.instrument !== filters.instrument) {
+        return false;
+      }
+      if (filters.city && deputy.city !== filters.city) {
+        return false;
+      }
+      if (filters.canBeBooked !== undefined) {
+        const canBeBooked =
+          (deputy.trustStars || 0.5) >=
+          TRUST_REQUIREMENTS.MIN_STARS_TO_BE_BOOKABLE;
+        if (canBeBooked !== filters.canBeBooked) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [deputies, filters]);
 
   return {
-    // Data
-    deputies: deputies || [],
-    myDeputies: myDeputies || [],
-    pendingRequests: pendingRequests || [],
-
-    // Actions
-    sendDeputyRequest,
-    sendDeputyRequestWithValidation, // New function with validation
-    respondToDeputyRequest,
-    removeDeputy,
-    updateDeputySettings,
-    cancelDeputyRequest,
-
-    // Trust-related functions
-    checkDeputyEligibility,
-    checkCanAddDeputy,
-    checkCanBeBooked,
-    checkIsReliableDeputy,
-    getTrustRequirements,
-
-    // State
+    deputies: filteredDeputies,
     isLoading,
-    hasPendingRequests,
-    hasDeputies,
-    totalDeputies: myDeputies?.length || 0,
-    totalPending: pendingRequests?.length || 0,
-
-    // Trust state from hook
-    currentTrustStars: trustStars,
-    currentTrustScore: trustScore,
-    canAccessDualRole: canAccess("canBeDual"),
+    count: filteredDeputies.length,
   };
 };
