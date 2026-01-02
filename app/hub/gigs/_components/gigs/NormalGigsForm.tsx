@@ -82,8 +82,10 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { prepareGigDataForConvex } from "@/utils";
 import { getGigDraftById, saveGigDraft } from "@/drafts";
+import { MemoizedSwitch } from "./MemoizedSwitch";
 
 // Update LocalGigInputs type to include duration fields
+// Update LocalGigInputs type to include duration fields and negotiable
 type LocalGigInputs = {
   title: string;
   description: string;
@@ -110,7 +112,8 @@ type LocalGigInputs = {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
-  negotiable?: boolean;
+  // Add negotiable field
+  negotiable: boolean;
 };
 
 // Memoized Error Message Component
@@ -1469,59 +1472,16 @@ export default function NormalGigsForm() {
             </div>
           </div>
         </CollapsibleSection>
-        {/* Negotiable Switch - Alternative placement if you want it always visible */}
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10">
-                <DollarSign className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <h4 className={cn("font-medium", colors.text)}>
-                  Price Negotiable
-                </h4>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  Allow applicants to negotiate the price with you
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setFormValues((prev) => ({
-                    ...prev,
-                    negotiable: !prev.negotiable,
-                  }))
-                }
-                className={cn(
-                  "relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300",
-                  formValues.negotiable
-                    ? "bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg shadow-green-500/30"
-                    : "bg-gray-300 dark:bg-gray-700"
-                )}
-              >
-                <span
-                  className={cn(
-                    "inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all duration-300",
-                    formValues.negotiable ? "translate-x-8" : "translate-x-1"
-                  )}
-                />
-              </button>
-              <span
-                className={cn(
-                  "text-xs font-medium px-2 py-1 rounded",
-                  formValues.negotiable
-                    ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30"
-                    : "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800"
-                )}
-              >
-                {formValues.negotiable ? "Negotiable" : "Fixed"}
-              </span>
-            </div>
-          </div>
-        </div>
+        <MemoizedSwitch
+          checked={formValues.negotiable}
+          onChange={(checked) =>
+            setFormValues((prev) => ({ ...prev, negotiable: checked }))
+          }
+          label="Price Negotiable"
+          description="Allow applicants to negotiate the price"
+          icon={DollarSign}
+          colors={colors}
+        />
         {/* Gig Timeline Section */}
         <CollapsibleSection
           title="Event Details"

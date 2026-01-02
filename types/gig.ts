@@ -1,5 +1,29 @@
 // types/gig.ts
 
+import { Id } from "@/convex/_generated/dataModel";
+export interface BandMember {
+  userId: Id<"users">;
+  name: string;
+  role: string;
+  joinedAt: number;
+  price?: number;
+  bookedBy?: Id<"users">;
+  status?: "pending" | "booked" | "confirmed" | "cancelled";
+  notes?: string;
+}
+
+export interface BookingHistoryEntry {
+  userId: Id<"users">;
+  status: "pending" | "booked" | "completed" | "cancelled";
+  timestamp: number;
+  role: string;
+  notes?: string;
+  price?: number;
+  bookedBy?: Id<"users">;
+  action?: string;
+  gigType?: "regular" | "band";
+  metadata?: Record<string, any>;
+}
 // Business categories for gigs
 export type BusinessCategory =
   | "full" // Full Band
@@ -33,6 +57,19 @@ export interface CustomProps {
 // User information for gig creation
 export interface UserInfo {
   prefferences: string[]; // Band instrument preferences
+}
+// In your types file (types/gig.ts or similar)
+export interface BookingHistoryEntry {
+  userId: Id<"users">;
+  status: "pending" | "booked" | "completed" | "cancelled";
+  timestamp: number; // Change from 'date' to 'timestamp' for consistency
+  role: string;
+  notes?: string;
+  price?: number;
+  bookedBy?: Id<"users">;
+  action?: string;
+  gigType?: "regular" | "band";
+  metadata?: Record<string, any>;
 }
 
 // Gig interface (main gig object)
@@ -99,22 +136,10 @@ export interface GigProps {
   category?: string;
 
   // Arrays
-  viewCount: string[];
-  bookCount: string[];
-  interestedUsers: string[];
-  appliedUsers: string[];
+
   tags: string[];
   requirements: string[];
   benefits: string[];
-
-  // Booking history
-  bookingHistory: Array<{
-    userId: string;
-    status: "pending" | "booked" | "completed" | "cancelled";
-    date: number;
-    role: string;
-    notes?: string;
-  }>;
 
   // Payment confirmation
   musicianConfirmPayment?: {
@@ -152,6 +177,15 @@ export interface GigProps {
   // Timestamps
   createdAt: number;
   updatedAt: number;
+  interestedUsers?: Id<"users">[];
+  appliedUsers?: Id<"users">[];
+  viewCount?: Id<"users">[];
+  bookCount?: BandMember[]; // Array of BandMember objects
+  bookingHistory?: BookingHistoryEntry[]; // Array of BookingHistoryEntry objects
+
+  // New fields
+  isClientBand?: boolean;
+  maxSlots?: number;
 }
 export interface CreateGigInput {
   // Required fields

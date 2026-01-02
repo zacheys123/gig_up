@@ -1,64 +1,76 @@
+// components/gigs/AllGigs.tsx
+import React, { useState, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+// Components
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Icons
 import {
   Music,
   Filter,
   Search,
   RefreshCw,
-  TrendingUp,
-  MapPin,
   Grid3x3,
   List,
+  Zap,
+  X,
   SlidersHorizontal,
   Sparkles,
-  Zap,
-  Rocket,
-  Star,
-  Target,
+  TrendingUp,
+  Calendar,
+  MapPin,
+  DollarSign,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
+
+// Hooks
 import { useThemeColors } from "@/hooks/useTheme";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useGigs } from "@/hooks/useAllGigs";
-import GigCard from "./gigs/GigCard";
+
+// Convex
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { GigProps } from "@/types/gig";
-import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
-import GigDescription from "./gigs/GigDescription";
 
-// components/gigs/AllGigs.tsx
+// Types & Components
+import { GigProps } from "@/types/gig";
+import GigDescription from "./gigs/GigDescription";
+import GigCard from "./gigs/GigCard";
+import FiltersPanel from "./gigs/FilterPanel";
+import { Card, CardContent } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+
+// Main Component
 export const AllGigs = ({ user }: { user: any }) => {
   const { gigs: userGigs, exploreGigs, isLoading } = useGigs(user?._id);
-  const { colors } = useThemeColors();
-
+  const { colors, isDarkMode } = useThemeColors();
+  const router = useRouter();
   // State variables
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [sortBy, setSortBy] = useState<
-    "newest" | "popular" | "price-high" | "price-low"
-  >("newest");
-  const [showOnlyActive, setShowOnlyActive] = useState(true);
-  const [selectedTalentTypes, setSelectedTalentTypes] = useState<string[]>([]);
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // ADDED: State for GigDescription modal
+  // Filters from panel
+  const [filters, setFilters] = useState<Record<string, any>>({
+    showOnlyActive: true,
+  });
+
+  // GigDescription modal state
   const [selectedGig, setSelectedGig] = useState<GigProps | null>(null);
   const [showGigDescription, setShowGigDescription] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
@@ -67,24 +79,213 @@ export const AllGigs = ({ user }: { user: any }) => {
     {}
   );
 
-  // Talent types for filtering
-  const talentTypes = [
-    { id: "mc", label: "🎤 MC", icon: "🎤" },
-    { id: "dj", label: "🎧 DJ", icon: "🎧" },
-    { id: "vocalist", label: "🎵 Vocalist", icon: "🎵" },
-    { id: "personal", label: "👤 Individual", icon: "👤" },
-    { id: "full", label: "🎸 Full Band", icon: "🎸" },
-    { id: "other", label: "🎭 Create Band", icon: "🎭" },
-  ];
-
-  // ADDED: Convex mutations (you'll need to import these)
+  // Convex mutations
   const saveGig = useMutation(api.controllers.gigs.saveGig);
   const unsaveGig = useMutation(api.controllers.gigs.unsaveGig);
   const favoriteGig = useMutation(api.controllers.gigs.favoriteGig);
   const unfavoriteGig = useMutation(api.controllers.gigs.unfavoriteGig);
-  const bookGigMutation = useMutation(api.controllers.gigs.bookGig);
+  const bookGigMutation = useMutation(api.controllers.gigs.showInterestInGig);
 
-  // ADDED: Missing functions for GigDescription
+  // Combine and process gigs
+  const allGigs = useMemo(() => {
+    return [...(userGigs || []), ...(exploreGigs || [])];
+  }, [userGigs, exploreGigs]);
+
+  // Initialize saved/favorite maps
+  useEffect(() => {
+    const savedMap: Record<string, boolean> = {};
+    const favoriteMap: Record<string, boolean> = {};
+
+    allGigs.forEach((gig) => {
+      if (user?._id) {
+        // Check if user has saved/favorited this gig
+        // You might need to adjust this based on your data structure
+        savedMap[gig._id] = false; // Replace with actual check
+        favoriteMap[gig._id] = false; // Replace with actual check
+      }
+    });
+
+    setIsSavedMap(savedMap);
+    setIsFavoriteMap(favoriteMap);
+  }, [allGigs, user?._id]);
+
+  // Extract unique categories and locations for filters panel
+  const categories = useMemo(() => {
+    const unique = new Set<string>();
+    allGigs.forEach((gig) => gig.category && unique.add(gig.category));
+    return Array.from(unique);
+  }, [allGigs]);
+
+  const locations = useMemo(() => {
+    const unique = new Set<string>();
+    allGigs.forEach((gig) => gig.location && unique.add(gig.location));
+    return Array.from(unique);
+  }, [allGigs]);
+
+  // Filter gigs based on search and panel filters
+  const filteredGigs = useMemo(() => {
+    let result = allGigs.filter((gig) => {
+      // Apply search filter
+      const matchesSearch =
+        !searchQuery ||
+        gig.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        gig.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        gig.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        gig.tags?.some((tag) =>
+          tag.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+      // Apply filters from panel
+      let matchesFilters = true;
+
+      if (Object.keys(filters).length > 0) {
+        // Category filter - FIX: Use optional chaining and check for undefined
+        if (filters.category && filters.category !== "all") {
+          matchesFilters = gig.category === filters.category;
+          if (!matchesFilters) return false;
+        }
+
+        // Location filter
+        if (filters.location && filters.location !== "all") {
+          matchesFilters = gig.location === filters.location;
+          if (!matchesFilters) return false;
+        }
+
+        // Talent type filter
+        if (
+          filters.talentTypes &&
+          Array.isArray(filters.talentTypes) &&
+          filters.talentTypes.length > 0
+        ) {
+          matchesFilters = filters.talentTypes.includes(gig.bussinesscat);
+          if (!matchesFilters) return false;
+        }
+
+        // Status filter
+        if (filters.status && filters.status !== "all") {
+          if (filters.status === "available") {
+            matchesFilters = !gig.isTaken && !gig.isPending;
+          } else if (filters.status === "booked") {
+            matchesFilters = gig.isTaken;
+          } else if (filters.status === "pending") {
+            matchesFilters = gig.isPending;
+          }
+          if (!matchesFilters) return false;
+        }
+
+        // Price filter
+        if (filters.priceRange && filters.priceRange !== "all") {
+          const price = gig.price || 0;
+          let priceMatches = true;
+          switch (filters.priceRange) {
+            case "0-500":
+              priceMatches = price <= 500;
+              break;
+            case "500-1000":
+              priceMatches = price > 500 && price <= 1000;
+              break;
+            case "1000-2500":
+              priceMatches = price > 1000 && price <= 2500;
+              break;
+            case "2500-5000":
+              priceMatches = price > 2500 && price <= 5000;
+              break;
+            case "5000+":
+              priceMatches = price > 5000;
+              break;
+          }
+          if (!priceMatches) return false;
+        }
+
+        // Negotiable filter - FIX: Check if it exists and is true
+        if (filters.negotiable === true) {
+          matchesFilters = gig.negotiable === true;
+          if (!matchesFilters) return false;
+        }
+
+        // Gig type filter - FIX: Check if it exists and handle undefined
+        if (filters.gigType && filters.gigType !== "all") {
+          // Check if gig.category exists and contains the filter
+          const gigCategory = gig.category?.toLowerCase() || "";
+          matchesFilters = gigCategory.includes(filters.gigType.toLowerCase());
+          if (!matchesFilters) return false;
+        }
+
+        // Active filter (default to true)
+        if (filters.showOnlyActive !== false) {
+          matchesFilters = gig.isActive === true;
+          if (!matchesFilters) return false;
+        }
+      }
+
+      return matchesSearch && matchesFilters;
+    });
+
+    // Apply sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return (b.date || 0) - (a.date || 0);
+        case "oldest":
+          return (a.date || 0) - (b.date || 0);
+        case "price-high":
+          return (b.price || 0) - (a.price || 0);
+        case "price-low":
+          return (a.price || 0) - (b.price || 0);
+        case "popular":
+          return (b.viewCount?.length || 0) - (a.viewCount?.length || 0);
+        default:
+          return (b.date || 0) - (a.date || 0);
+      }
+    });
+
+    return result;
+  }, [allGigs, searchQuery, filters, sortBy]);
+  // Calculate active filters count (excluding search)
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && key !== "showOnlyActive") {
+        if (Array.isArray(value)) {
+          count += value.length;
+        } else if (value !== "all" && value !== "" && value !== true) {
+          count += 1;
+        }
+      }
+    });
+    return count;
+  }, [filters]);
+
+  // Get stats for display
+  const stats = useMemo(() => {
+    const available = filteredGigs.filter(
+      (g) => !g.isTaken && !g.isPending
+    ).length;
+    const booked = filteredGigs.filter((g) => g.isTaken).length;
+    const pending = filteredGigs.filter((g) => g.isPending).length;
+    const avgPrice =
+      filteredGigs.reduce((sum, gig) => sum + (gig.price || 0), 0) /
+        filteredGigs.length || 0;
+
+    return { available, booked, pending, avgPrice: Math.round(avgPrice) };
+  }, [filteredGigs]);
+
+  // Handlers
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setIsRefreshing(false);
+    toast.success("Gigs refreshed!");
+  };
+
+  const handleClearAll = () => {
+    setSearchQuery("");
+    setFilters({ showOnlyActive: true });
+    setSortBy("newest");
+    toast.info("Cleared all filters and search");
+  };
+
+  // GigDescription handlers
   const handleOpenGigDescription = (gig: any) => {
     setSelectedGig(gig);
     setShowGigDescription(true);
@@ -105,10 +306,12 @@ export const AllGigs = ({ user }: { user: any }) => {
         userId: user._id,
       });
 
-      toast.success("Successfully booked the gig!");
+      toast.success("🎉 Successfully booked the gig!");
       handleCloseGigDescription();
     } catch (error: any) {
-      toast.error(error.message || "Failed to book gig");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to book gig";
+      toast.error(errorMessage);
     } finally {
       setIsBooking(false);
     }
@@ -134,10 +337,14 @@ export const AllGigs = ({ user }: { user: any }) => {
           gigId: gigId,
         });
         setIsSavedMap((prev) => ({ ...prev, [gigId]: true }));
-        toast.success("Added to saved");
+        toast.success("⭐ Added to saved");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to update saved status");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update saved status";
+      toast.error(errorMessage);
     }
   };
 
@@ -161,122 +368,43 @@ export const AllGigs = ({ user }: { user: any }) => {
           gigId: gigId,
         });
         setIsFavoriteMap((prev) => ({ ...prev, [gigId]: true }));
-        toast.success("Added to favorites");
+        toast.success("❤️ Added to favorites");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to update favorite status");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update favorite status";
+      toast.error(errorMessage);
     }
   };
 
-  // Combine and process gigs
-  const allGigs = useMemo(() => {
-    return [...(userGigs || []), ...(exploreGigs || [])];
-  }, [userGigs, exploreGigs]);
-
-  // Filter and sort gigs
-  const filteredGigs = useMemo(() => {
-    let result = allGigs.filter((gig) => {
-      // Search filter
-      const matchesSearch =
-        !searchQuery ||
-        gig.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gig.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gig.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gig.location?.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Category filter
-      const matchesCategory =
-        selectedCategory === "all" || gig.category === selectedCategory;
-
-      // Location filter
-      const matchesLocation =
-        selectedLocation === "all" || gig.location === selectedLocation;
-
-      // Active status filter
-      const matchesStatus = !showOnlyActive || gig.isActive;
-
-      // Talent type filter
-      const matchesTalentType =
-        selectedTalentTypes.length === 0 ||
-        selectedTalentTypes.includes(gig.bussinesscat);
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesLocation &&
-        matchesStatus &&
-        matchesTalentType
-      );
-    });
-
-    // Apply sorting
-    result.sort((a, b) => {
-      const priceA = a.price || 0;
-      const priceB = b.price || 0;
-      const viewsA = a.viewCount?.length || 0;
-      const viewsB = b.viewCount?.length || 0;
-
-      switch (sortBy) {
-        case "newest":
-          return (b.date || 0) - (a.date || 0);
-        case "popular":
-          return viewsB - viewsA;
-        case "price-high":
-          return priceB - priceA;
-        case "price-low":
-          return priceA - priceB;
-        default:
-          return (b.date || 0) - (a.date || 0);
-      }
-    });
-
-    return result;
-  }, [
-    allGigs,
-    searchQuery,
-    selectedCategory,
-    selectedLocation,
-    showOnlyActive,
-    selectedTalentTypes,
-    sortBy,
-  ]);
-
-  // Extract unique categories and locations
-  const categories = useMemo(() => {
-    const unique = new Set<string>(["all"]);
-    allGigs.forEach((gig) => gig.category && unique.add(gig.category));
-    return Array.from(unique);
-  }, [allGigs]);
-
-  const locations = useMemo(() => {
-    const unique = new Set<string>(["all"]);
-    allGigs.forEach((gig) => gig.location && unique.add(gig.location));
-    return Array.from(unique);
-  }, [allGigs]);
-
-  // Handle refresh
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsRefreshing(false);
-  };
-
-  // Loading skeleton
+  // Loading skeleton with gradient animation
   if (isLoading.gigs || isLoading.explore) {
     return (
       <div className="space-y-8">
-        {/* Header skeleton */}
+        {/* Header Skeleton */}
         <div className="space-y-4">
-          <Skeleton className="h-10 w-64 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
-          <Skeleton className="h-14 w-full rounded-lg bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse" />
+          <Skeleton className="h-10 w-64 rounded-lg bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 animate-pulse" />
+          <Skeleton className="h-14 w-full rounded-xl bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 animate-pulse" />
         </div>
 
-        {/* Gig cards skeleton */}
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton
+              key={i}
+              className="h-20 rounded-xl bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 animate-pulse"
+            />
+          ))}
+        </div>
+
+        {/* Gig Cards Skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <Skeleton
               key={i}
-              className="h-64 rounded-xl bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 animate-pulse"
+              className="h-80 rounded-2xl bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 animate-pulse"
             />
           ))}
         </div>
@@ -297,274 +425,372 @@ export const AllGigs = ({ user }: { user: any }) => {
         currentUserId={user?._id}
       />
 
-      {/* Header Section - Simplified */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold" style={{ color: colors.text }}>
-              Available Gigs
-            </h1>
-            <p className="text-sm mt-1" style={{ color: colors.textMuted }}>
-              {filteredGigs.length} gigs • {userGigs?.length || 0} yours •{" "}
-              {exploreGigs?.length || 0} public
-            </p>
-          </div>
+      {/* Filters Panel */}
+      <FiltersPanel
+        isOpen={showFiltersPanel}
+        onClose={() => setShowFiltersPanel(false)}
+        onApplyFilters={setFilters}
+        currentFilters={filters}
+        availableCategories={categories}
+        availableLocations={locations}
+      />
 
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              style={{
-                borderColor: colors.border,
-                color: colors.text,
-              }}
-            >
-              <RefreshCw
-                className={cn("w-4 h-4", isRefreshing && "animate-spin")}
-              />
-              Refresh
-            </Button>
+      {/* Header Section with Gradient */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 md:p-8 border border-blue-100 dark:border-gray-700"
+      >
+        <div className="relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Discover Amazing Gigs
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
+                Find the perfect gig opportunity or talent for your next event.
+                {filteredGigs.length > 0 &&
+                  ` ${filteredGigs.length} amazing opportunities available now!`}
+              </p>
+            </div>
 
-            <Button
-              size="sm"
-              className="gap-2"
-              style={{
-                backgroundColor: colors.primary,
-                color: colors.primaryContrast,
-              }}
-            >
-              <Zap className="w-4 h-4" />
-              Post Gig
-            </Button>
-          </div>
-        </div>
-
-        {/* Search Bar - Simplified */}
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
-            style={{ color: colors.textMuted }}
-          />
-          <Input
-            placeholder="Search gigs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-            style={{
-              borderColor: colors.border,
-              backgroundColor: colors.background,
-              color: colors.text,
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2"
-              style={{ color: colors.textMuted }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Filters Section */}
-      <div className="space-y-4">
-        {/* View Mode and Sort */}
-        <div className="flex items-center justify-between">
-          <Tabs
-            value={viewMode}
-            onValueChange={(v) => setViewMode(v as any)}
-            className="w-auto"
-          >
-            <TabsList
-              className="p-1"
-              style={{
-                backgroundColor: colors.backgroundMuted,
-                borderColor: colors.border,
-              }}
-            >
-              <TabsTrigger
-                value="grid"
-                className="px-3 py-1 text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
-                style={{
-                  color: colors.text,
-                }}
-              >
-                <Grid3x3 className="w-4 h-4" />
-              </TabsTrigger>
-              <TabsTrigger
-                value="list"
-                className="px-3 py-1 text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
-                style={{
-                  color: colors.text,
-                }}
-              >
-                <List className="w-4 h-4" />
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-3">
               <Button
+                onClick={() => router.push("/post-gig")}
+                size="sm"
+                className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Zap className="w-4 h-4" />
+                <span className="hidden sm:inline">Post a Gig</span>
+                <span className="sm:hidden">Post</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Available
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {stats.available}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                    <Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Booked
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {stats.booked}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Avg. Price
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      ${stats.avgPrice}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Locations
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {locations.length}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                    <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search Bar with Advanced Options */}
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                placeholder="Search gigs by title, description, location, or tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 pr-12 h-12 rounded-xl border-blue-200 dark:border-gray-600 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-lg"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick Filter Bar */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                onClick={() => setShowFiltersPanel(true)}
+                variant="outline"
+                size="sm"
+                className="gap-2 border-blue-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Filters</span>
+                {activeFiltersCount > 0 && (
+                  <Badge className="ml-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[180px] border-blue-200 dark:border-gray-700">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="popular">Most Popular</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
                 variant="ghost"
                 size="sm"
-                className="gap-2 text-sm"
-                style={{ color: colors.text }}
+                className="gap-2"
               >
-                <TrendingUp className="w-4 h-4" />
-                Sort
+                <RefreshCw
+                  className={cn("w-4 h-4", isRefreshing && "animate-spin")}
+                />
+                Refresh
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-48"
-              style={{
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-              }}
-            >
-              <DropdownMenuItem
-                onClick={() => setSortBy("newest")}
-                style={{ color: colors.text }}
-              >
-                Newest First
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setSortBy("popular")}
-                style={{ color: colors.text }}
-              >
-                Most Popular
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setSortBy("price-high")}
-                style={{ color: colors.text }}
-              >
-                Price: High to Low
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setSortBy("price-low")}
-                style={{ color: colors.text }}
-              >
-                Price: Low to High
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+              {(searchQuery || activeFiltersCount > 0) && (
+                <Button
+                  onClick={handleClearAll}
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-red-500 hover:text-red-600"
+                >
+                  <X className="w-4 h-4" />
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
+      </motion.div>
 
-        {/* Category and Location Filters */}
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm"
-            style={{
-              borderColor: colors.border,
-              backgroundColor: colors.background,
-              color: colors.text,
-            }}
-          >
-            <option value="all">All Categories</option>
-            {categories.slice(1).map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+      {/* Active Filters Display */}
+      {(searchQuery || activeFiltersCount > 0) && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="p-4 rounded-xl border border-blue-100 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="font-medium text-gray-900 dark:text-white">
+                Active Filters
+              </span>
+              <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                {searchQuery ? activeFiltersCount + 1 : activeFiltersCount}
+              </Badge>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAll}
+              className="gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            >
+              <X className="w-3 h-3" />
+              Clear All Filters
+            </Button>
+          </div>
 
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm"
-            style={{
-              borderColor: colors.border,
-              backgroundColor: colors.background,
-              color: colors.text,
-            }}
-          >
-            <option value="all">All Locations</option>
-            {locations.slice(1).map((location) => (
-              <option key={location} value={location}>
-                {location}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            {searchQuery && (
+              <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-none">
+                <Search className="w-3 h-3 mr-1" />
+                Search: "{searchQuery}"
+              </Badge>
+            )}
 
-          {/* Active Gig Toggle */}
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-            style={{
-              borderColor: colors.border,
-              backgroundColor: colors.background,
-            }}
-          >
-            <Switch
-              checked={showOnlyActive}
-              onCheckedChange={setShowOnlyActive}
-              style={{
-                backgroundColor: showOnlyActive
-                  ? colors.primary
-                  : colors.border,
-              }}
-            />
-            <span style={{ color: colors.text }}>Active Only</span>
+            {filters.talentTypes && filters.talentTypes.length > 0 && (
+              <Badge className="bg-gradient-to-r from-purple-500 to-pink-600 text-white border-none">
+                <Music className="w-3 h-3 mr-1" />
+                {filters.talentTypes.length} talent type
+                {filters.talentTypes.length > 1 ? "s" : ""}
+              </Badge>
+            )}
+
+            {filters.category && filters.category !== "all" && (
+              <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-none">
+                {filters.category}
+              </Badge>
+            )}
+
+            {filters.location && filters.location !== "all" && (
+              <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-white border-none">
+                <MapPin className="w-3 h-3 mr-1" />
+                {filters.location}
+              </Badge>
+            )}
+
+            {filters.status && filters.status !== "all" && (
+              <Badge className="bg-gradient-to-r from-cyan-500 to-sky-600 text-white border-none">
+                Status: {filters.status}
+              </Badge>
+            )}
+
+            {filters.priceRange && filters.priceRange !== "all" && (
+              <Badge className="bg-gradient-to-r from-rose-500 to-red-600 text-white border-none">
+                <DollarSign className="w-3 h-3 mr-1" />
+                Price: {filters.priceRange}
+              </Badge>
+            )}
+
+            {filters.negotiable && (
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-none">
+                Negotiable Only
+              </Badge>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* View Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              View:
+            </span>
+            <Tabs
+              value={viewMode}
+              onValueChange={(v) => setViewMode(v as any)}
+              className="w-auto"
+            >
+              <TabsList className="p-1 bg-gray-100 dark:bg-gray-800">
+                <TabsTrigger
+                  value="grid"
+                  className="px-4 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded-lg"
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                </TabsTrigger>
+                <TabsTrigger
+                  value="list"
+                  className="px-4 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded-lg"
+                >
+                  <List className="w-4 h-4" />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {filteredGigs.length}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {allGigs.length}
+            </span>{" "}
+            gigs
           </div>
         </div>
 
-        {/* Talent Type Filter Chips */}
-        <div className="flex flex-wrap gap-2">
-          {talentTypes.map((talent) => (
-            <button
-              key={talent.id}
-              onClick={() => {
-                setSelectedTalentTypes((prev) =>
-                  prev.includes(talent.id)
-                    ? prev.filter((id) => id !== talent.id)
-                    : [...prev, talent.id]
-                );
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-sm flex items-center gap-2 transition-all",
-                selectedTalentTypes.includes(talent.id)
-                  ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                  : cn(
-                      "border",
-                      colors.border,
-                      colors.hoverBg,
-                      "hover:border-orange-500/50"
-                    )
-              )}
-              style={{
-                color: selectedTalentTypes.includes(talent.id)
-                  ? colors.primaryContrast
-                  : colors.text,
-              }}
-            >
-              <span>{talent.icon}</span>
-              <span>{talent.label.split(" ")[1]}</span>
-              {selectedTalentTypes.includes(talent.id) && (
-                <Star className="w-3 h-3 fill-current" />
-              )}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">
+            Sort by:
+          </span>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[160px] border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                <SelectValue placeholder="Sort by" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3 h-3" />
+                  Newest First
+                </div>
+              </SelectItem>
+              <SelectItem value="oldest">Oldest First</SelectItem>
+              <SelectItem value="price-high">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-3 h-3" />
+                  Price: High to Low
+                </div>
+              </SelectItem>
+              <SelectItem value="price-low">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-3 h-3" />
+                  Price: Low to High
+                </div>
+              </SelectItem>
+              <SelectItem value="popular">Most Popular</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Results Section */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={viewMode}
+          key={`${viewMode}-${sortBy}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.3 }}
           className={cn(
             viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
               : "space-y-4"
           )}
         >
@@ -572,79 +798,96 @@ export const AllGigs = ({ user }: { user: any }) => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="col-span-full flex flex-col items-center justify-center py-12 text-center"
+              className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center"
             >
-              <div className="mb-4">
-                <Music
-                  className="w-16 h-16"
-                  style={{ color: colors.textMuted }}
-                />
+              <div className="mb-6">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                    <Music className="w-12 h-12 text-gray-400 dark:text-gray-600" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <X className="w-6 h-6 text-white" />
+                  </div>
+                </div>
               </div>
-              <h3
-                className="text-xl font-bold mb-2"
-                style={{ color: colors.text }}
-              >
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                 No gigs found
               </h3>
-              <p
-                className="max-w-md mb-6 text-sm"
-                style={{ color: colors.textMuted }}
-              >
+              <p className="text-gray-600 dark:text-gray-400 max-w-md mb-8">
                 {allGigs.length === 0
-                  ? "Be the first to post a gig!"
-                  : "Try adjusting your filters or search terms."}
+                  ? "Be the first to post a gig and start connecting with amazing talent!"
+                  : "Try adjusting your search or filters to find what you're looking for."}
               </p>
-              <Button
-                size="sm"
-                className="gap-2"
-                style={{
-                  backgroundColor: colors.primary,
-                  color: colors.primaryContrast,
-                }}
-              >
-                <Sparkles className="w-4 h-4" />
-                Post First Gig
-              </Button>
+              {(searchQuery || activeFiltersCount > 0) && (
+                <Button
+                  onClick={handleClearAll}
+                  className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                >
+                  <X className="w-4 h-4" />
+                  Clear Search & Filters
+                </Button>
+              )}
+              {allGigs.length === 0 && (
+                <Button
+                  onClick={() => router.push("/post-gig")}
+                  className="gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
+                >
+                  <Zap className="w-4 h-4" />
+                  Post Your First Gig
+                </Button>
+              )}
             </motion.div>
           ) : (
             filteredGigs.map((gig, index) => (
               <motion.div
                 key={gig._id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.03 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
                 className={viewMode === "list" ? "w-full" : ""}
+                whileHover={{ scale: viewMode === "grid" ? 1.02 : 1 }}
               >
-                <GigCard gig={gig} />
+                <GigCard
+                  gig={gig}
+                  onClick={() => handleOpenGigDescription(gig)}
+                />
               </motion.div>
             ))
           )}
         </motion.div>
       </AnimatePresence>
 
-      {/* Stats Footer - Simplified */}
-      {filteredGigs.length > 0 && (
-        <div
-          className="mt-8 pt-6 border-t text-sm text-center"
-          style={{ borderColor: colors.border, color: colors.textMuted }}
-        >
-          Showing {filteredGigs.length} of {allGigs.length} gigs
+      {/* Pagination / Load More */}
+      {filteredGigs.length > 0 && filteredGigs.length < allGigs.length && (
+        <div className="flex justify-center mt-8">
+          <Button
+            variant="outline"
+            className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            Load More Gigs
+          </Button>
         </div>
       )}
 
-      {/* Fixed Post Button - Mobile */}
-      <div className="fixed bottom-6 right-6 z-50 md:hidden">
+      {/* Fixed Action Buttons for Mobile */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 md:hidden">
         <Button
+          onClick={() => setShowFiltersPanel(true)}
           size="icon"
-          className="rounded-full shadow-lg"
-          style={{
-            backgroundColor: colors.primary,
-            color: colors.primaryContrast,
-          }}
+          className="rounded-full shadow-lg h-14 w-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
         >
-          <Zap className="w-5 h-5" />
+          <Filter className="w-6 h-6" />
+        </Button>
+        <Button
+          onClick={() => router.push("/post-gig")}
+          size="icon"
+          className="rounded-full shadow-lg h-14 w-14 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
+        >
+          <Zap className="w-6 h-6" />
         </Button>
       </div>
     </div>
   );
 };
+
+export default AllGigs;

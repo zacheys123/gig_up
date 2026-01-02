@@ -268,7 +268,10 @@ export const userModel = defineTable({
   favoriteGigs: v.optional(v.array(v.string())),
   likedVideos: v.optional(v.array(v.string())),
   viewedVideos: v.optional(v.array(v.string())),
-
+  lastViewedAt: v.optional(v.number()), // Last time user viewed a gig
+  viewedGigs: v.optional(v.array(v.string())),
+  totalInterests: v.optional(v.number()), // Total number of gigs user has shown interest in
+  lastInterestAt: v.optional(v.number()), // Timestamp of last interest shown
   // User status and activity
   firstLogin: v.boolean(),
   onboardingComplete: v.boolean(),
@@ -486,6 +489,7 @@ export const userModel = defineTable({
   ),
   bookingsThisWeek: v.optional(v.number()),
   maxWeeklyBookings: v.optional(v.number()),
+  updatedAt: v.optional(v.number()),
 })
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])

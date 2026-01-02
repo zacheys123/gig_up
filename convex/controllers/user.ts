@@ -100,6 +100,8 @@ const createUserData = (args: any, now: number) => {
       count: 0,
       weekStart: now,
     },
+    totalInterests: 0,
+    viewedGigs: [],
   };
 };
 export const updateFirstLogin = mutation({
