@@ -870,7 +870,7 @@ export const AllGigs = ({ user }: { user: any }) => {
       )}
 
       {/* Fixed Action Buttons for Mobile */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 md:hidden">
+      {/* <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 md:hidden">
         <Button
           onClick={() => setShowFiltersPanel(true)}
           size="icon"
@@ -885,7 +885,7 @@ export const AllGigs = ({ user }: { user: any }) => {
         >
           <Zap className="w-6 h-6" />
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 };

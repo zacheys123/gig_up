@@ -1,7 +1,7 @@
 // app/(dashboard)/practice-tools/layout.tsx
 "use client";
 
-import { FeatureGated } from "@/components/features/FeatureGated";
+import { FeatureGated } from "@/components/loaders/features/FeatureGated";
 import { Guitar, Volume2 } from "lucide-react";
 
 export default function PracticeToolsLayout({

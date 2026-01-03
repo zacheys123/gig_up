@@ -163,7 +163,7 @@ import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import GigLoader from "@/components/(main)/GigLoader";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
-import { FeatureDiscovery } from "@/components/features/FeatureDiscovery";
+import { FeatureDiscovery } from "@/components/loaders/features/FeatureDiscovery";
 import { ALL_FEATURES, getRoleFeatures } from "@/lib/registry";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";

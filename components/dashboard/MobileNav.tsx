@@ -49,7 +49,7 @@ import { useChat } from "@/app/context/ChatContext";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { ChatListModal } from "../chat/ChatListModal";
 import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
-import { FeatureDiscovery } from "../features/FeatureDiscovery";
+import { FeatureDiscovery } from "../loaders/features/FeatureDiscovery";
 import { getRoleFeatures } from "@/lib/registry";
 import { useTrustScore } from "@/hooks/useTrustScore";
 

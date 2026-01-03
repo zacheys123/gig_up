@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
-import { useTrendingMusicians } from "@/hooks/useCommunityUsers";
+import { useSortedTrendingMusicians } from "@/hooks/useCommunityUsers";
 import { TrendingMusician } from "@/types/trendingUser";
 import { OnlineBadge } from "../chat/OnlineBadge";
 import { ChatIcon } from "../chat/ChatIcon";
@@ -109,7 +109,7 @@ const getTrustStatusText = (score: number) => {
 export const TrendingMusiciansTab: React.FC<TrendingMusiciansTabProps> = ({
   user,
 }) => {
-  const musicians = useTrendingMusicians();
+  const musicians = useSortedTrendingMusicians();
   const { colors, mounted } = useThemeColors();
 
   // Show loading state until theme is mounted

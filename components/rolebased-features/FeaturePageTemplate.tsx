@@ -1,7 +1,7 @@
 // components/FeaturePageTemplate.tsx
 "use client";
 
-import { FeatureGated } from "../features/FeatureGated";
+import { FeatureGated } from "../loaders/features/FeatureGated";
 
 interface FeaturePageTemplateProps {
   featureId: string;

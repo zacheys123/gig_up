@@ -46,7 +46,7 @@ import { useState } from "react";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { ChatListModal } from "../chat/ChatListModal";
 import { getTierInfo, hasMinimumData } from "../pages/MobileSheet";
-import { FeatureDiscovery } from "../features/FeatureDiscovery";
+import { FeatureDiscovery } from "../loaders/features/FeatureDiscovery";
 import { getRoleFeatures } from "@/lib/registry";
 import { useUserFeatureFlags } from "@/hooks/useUserFeatureFalgs";
 import { FeatureUnlockProgress } from "../FeatureUnlockProgress";

@@ -1,7 +1,7 @@
 // app/(dashboard)/vocal-warmups/layout.tsx - FIXED
 "use client";
 
-import { FeatureGated } from "@/components/features/FeatureGated";
+import { FeatureGated } from "@/components/loaders/features/FeatureGated";
 import { Volume2 } from "lucide-react";
 
 export default function VocalWarmupsLayout({
