@@ -2,7 +2,12 @@ import { Id } from "@/convex/_generated/dataModel";
 import { UserProps } from "./types/userTypes";
 import { Notification, NotificationType } from "./convex/notificationsTypes";
 import { GigType } from "./convex/gigTypes";
-import { CustomProps, GigFormInputs } from "./types/gig";
+import {
+  BandRoleInput,
+  BandRoleSchema,
+  CustomProps,
+  GigFormInputs,
+} from "./types/gig";
 import { LocalGigInputs } from "./drafts";
 
 export const toUserId = (id: string): Id<"users"> => {
@@ -1509,67 +1514,70 @@ export default {
   presets,
 };
 
+// In your prepareGigDataForConvex utility function:
 export const prepareGigDataForConvex = (
   formValues: LocalGigInputs,
   userId: Id<"users">,
   gigcustom: CustomProps,
-  imageUrl: string | undefined, // Accept undefined
+  imageUrl: string,
   schedulingProcedure: any,
+  bandRoles: BandRoleInput[],
   durationFrom?: string,
   durationTo?: string
 ) => {
-  // Format the time object correctly for backend
-  const time = {
-    start: `${formValues.start || ""} ${durationFrom || "am"}`,
-    end: `${formValues.end || ""} ${durationTo || "pm"}`,
-  };
+  // Validate bussinesscat
+  if (!formValues.bussinesscat) {
+    throw new Error("Business category is required");
+  }
 
   return {
     postedBy: userId,
     title: formValues.title,
-    secret: formValues.secret,
-    bussinesscat: formValues.bussinesscat || "",
-    date: formValues.date ? new Date(formValues.date).getTime() : Date.now(),
-    time,
-    logo: imageUrl || "", // Provide default empty string or a placeholder image
-
-    // Optional fields with defaults
+    secret: formValues.secret || "", // Default empty string
+    bussinesscat: formValues.bussinesscat, // This is now guaranteed to be string
+    date: schedulingProcedure.date?.getTime() || Date.now(),
+    time: {
+      start: formValues.start || "10:00",
+      end: formValues.end || "12:00",
+    },
+    logo: imageUrl || "", // Default empty string
     description: formValues.description || "",
     phone: formValues.phoneNo || "",
-    price: formValues.price ? Number(formValues.price) : 0,
+    price: parseFloat(formValues.price) || 0,
     category: formValues.category || "",
     location: formValues.location || "",
-
-    // Customization
-    font: gigcustom.font || "",
-    fontColor: gigcustom.fontColor || "",
-    backgroundColor: gigcustom.backgroundColor || "",
-
-    // Timeline
+    font: gigcustom.font || "Arial, sans-serif",
+    fontColor: gigcustom.fontColor || "#000000",
+    backgroundColor: gigcustom.backgroundColor || "#FFFFFF",
     gigtimeline: formValues.gigtimeline || "",
     otherTimeline: formValues.otherTimeline || "",
     day: formValues.day || "",
-
-    // Musician-specific fields
     mcType: formValues.mcType || "",
     mcLanguages: formValues.mcLanguages || "",
     djGenre: formValues.djGenre || "",
     djEquipment: formValues.djEquipment || "",
     pricerange: formValues.pricerange || "",
     currency: formValues.currency || "KES",
-
-    // Scheduling
-    scheduleDate: schedulingProcedure.date
-      ? schedulingProcedure.date.getTime()
-      : undefined,
-    schedulingProcedure: schedulingProcedure.type || "",
-
-    // Arrays with defaults
+    scheduleDate: schedulingProcedure.date?.getTime() || Date.now(),
+    schedulingProcedure: schedulingProcedure.type || "manual",
     vocalistGenre: formValues.vocalistGenre || [],
-    tags: [],
-    requirements: [],
-    benefits: [],
-    bandCategory: [],
+    negotiable: formValues.negotiable || false,
+
+    // Band-specific fields
+    isClientBand: formValues.bussinesscat === "other",
+    maxSlots: bandRoles.reduce((sum, role) => sum + role.maxSlots, 0) || 1,
+    bandCategory: bandRoles.map((role) => ({
+      role: role.role,
+      maxSlots: role.maxSlots,
+      filledSlots: 0,
+      applicants: [],
+      bookedUsers: [],
+      requiredSkills: role.requiredSkills || [],
+      description: role.description || "",
+      price: role.price ? parseFloat(role.price) : undefined,
+      currency: role.currency || formValues.currency || "KES",
+      negotiable: role.negotiable ?? formValues.negotiable ?? false,
+    })),
   };
 };
 

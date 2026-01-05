@@ -4,7 +4,11 @@ import {
   canUserSendOrReceiveNotifications,
   getUserNotificationStatus,
 } from "./notHelpers";
-import { NotificationSettings, NotificationType } from "./notificationsTypes";
+import {
+  NOTIFICATION_TYPE_TO_SETTING_MAP,
+  NotificationSettings,
+  NotificationType,
+} from "./notificationsTypes";
 
 export const createNotificationInternal = async (
   ctx: MutationCtx,
@@ -157,9 +161,7 @@ export const createNotificationInternal = async (
     // For actions initiated by the viewer (likes, follows, messages, etc.)
     if (viewerNotificationSettings && viewerUser) {
       const viewerSettingKey =
-        notificationTypeToSettingMap[
-          type as keyof typeof notificationTypeToSettingMap
-        ];
+        NOTIFICATION_TYPE_TO_SETTING_MAP[type as NotificationType];
 
       if (viewerSettingKey) {
         const viewerSettings = viewerNotificationSettings as any;
@@ -193,9 +195,7 @@ export const createNotificationInternal = async (
     // Check recipient settings (skip for feature_announcement)
     if (recipientNotificationSettings && type !== "feature_announcement") {
       const recipientSettingKey =
-        notificationTypeToSettingMap[
-          type as keyof typeof notificationTypeToSettingMap
-        ];
+        NOTIFICATION_TYPE_TO_SETTING_MAP[type as NotificationType];
 
       if (recipientSettingKey) {
         const recipientSettings = recipientNotificationSettings as any;
@@ -271,36 +271,6 @@ export function isUserDocument(doc: any): doc is {
     "isClient" in doc
   );
 }
-export const notificationTypeToSettingMap: Record<
-  NotificationType,
-  keyof NotificationSettings
-> = {
-  // Profile & Social
-  profile_view: "profileViews",
-  new_follower: "followRequests",
-  follow_request: "followRequests",
-  follow_accepted: "followRequests",
-  like: "likes",
-  new_review: "reviews",
-  review_received: "reviews",
-  share: "shares",
-
-  // Messages & Communication
-  new_message: "newMessages",
-
-  // Gigs & Bookings
-  gig_invite: "gigInvites",
-  gig_application: "bookingRequests",
-  gig_approved: "bookingConfirmations",
-  gig_rejected: "bookingRequests",
-  gig_cancelled: "bookingRequests",
-  gig_reminder: "gigReminders",
-  video_comment: "comments",
-
-  // System
-  system_updates: "systemUpdates",
-  feature_announcement: "featureAnnouncements", // ADDED
-};
 
 // convex/notifications.ts - Add these functions
 export const cleanupLikeNotification = async (
@@ -561,3 +531,115 @@ function truncateMessage(content: string, maxLength: number = 50): string {
   if (content.length <= maxLength) return content;
   return content.substring(0, maxLength) + "...";
 }
+// Add this to your notifications.ts file
+export const createGigNotification = async (
+  ctx: MutationCtx,
+  args: {
+    recipientDocumentId: Id<"users">;
+    senderDocumentId?: Id<"users">;
+    type:
+      | "gig_opportunity"
+      | "gig_created"
+      | "gig_interest"
+      | "interest_confirmation"
+      | "gig_selected"
+      | "gig_not_selected"
+      | "gig_favorited"
+      | "band_setup_info"
+      | "band_joined"
+      | "band_booking"
+      | "removed_from_band"
+      | "gig_view_milestone";
+    gigId: Id<"gigs">;
+    gigTitle: string;
+    additionalMetadata?: Record<string, any>;
+  }
+) => {
+  const {
+    recipientDocumentId,
+    senderDocumentId,
+    type,
+    gigId,
+    gigTitle,
+    additionalMetadata = {},
+  } = args;
+
+  const recipient = await ctx.db.get(recipientDocumentId);
+  if (!recipient) {
+    console.error("Recipient not found for gig notification");
+    return null;
+  }
+
+  const sender = senderDocumentId ? await ctx.db.get(senderDocumentId) : null;
+
+  // Default notification titles and messages based on type
+  const notificationConfig = {
+    gig_opportunity: {
+      title: "🎵 New Gig Opportunity!",
+      message: `New gig posted: "${gigTitle}"`,
+    },
+    gig_created: {
+      title: "✅ Gig Created Successfully!",
+      message: `Your gig "${gigTitle}" has been posted.`,
+    },
+    gig_interest: {
+      title: "👋 New Interest in Your Gig!",
+      message: `Someone is interested in your gig "${gigTitle}"`,
+    },
+    interest_confirmation: {
+      title: "✅ Interest Recorded!",
+      message: `Your interest in "${gigTitle}" has been recorded.`,
+    },
+    gig_selected: {
+      title: "🎉 You've Been Selected!",
+      message: `You've been selected for the gig "${gigTitle}"!`,
+    },
+    gig_not_selected: {
+      title: "ℹ️ Update on Your Interest",
+      message: `Another musician was selected for "${gigTitle}".`,
+    },
+    gig_favorited: {
+      title: "⭐ Gig Favorited!",
+      message: `Someone favorited your gig "${gigTitle}"`,
+    },
+    band_setup_info: {
+      title: "🎵 Band Setup Ready!",
+      message: `Your band gig "${gigTitle}" is live.`,
+    },
+    band_joined: {
+      title: "🎵 New Band Member!",
+      message: `Someone joined your band for "${gigTitle}"`,
+    },
+    band_booking: {
+      title: "🎵 Band Booking!",
+      message: `You've been booked for "${gigTitle}"`,
+    },
+    removed_from_band: {
+      title: "❌ Removed from Band",
+      message: `You've been removed from the band "${gigTitle}"`,
+    },
+    gig_view_milestone: {
+      title: "👀 View Milestone!",
+      message: `Your gig "${gigTitle}" reached a view milestone!`,
+    },
+  };
+
+  const config = notificationConfig[type];
+
+  return createNotificationInternal(ctx, {
+    userDocumentId: recipientDocumentId,
+    type,
+    title: config.title,
+    message: config.message,
+    image: sender?.picture,
+    actionUrl: `/gigs/${gigId}`,
+    relatedUserDocumentId: senderDocumentId,
+    metadata: {
+      gigId: gigId.toString(),
+      gigTitle,
+      senderName: sender?.firstname || sender?.username,
+      senderDocumentId: senderDocumentId?.toString(),
+      ...additionalMetadata,
+    },
+  });
+};

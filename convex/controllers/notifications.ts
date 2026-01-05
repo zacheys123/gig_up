@@ -173,30 +173,33 @@ export const getNotificationSettings = query({
   },
 });
 
+// convex/controllers/notifications.ts
 export const updateNotificationSettings = mutation({
   args: {
     userId: v.string(),
-
     settings: v.object({
-      _creationTime: v.optional(v.number()),
-      // Profile & Social - ALL REQUIRED (since we're sending full object)
+      // Profile & Social
       profileViews: v.boolean(),
+      likes: v.boolean(),
+      shares: v.boolean(),
+      reviews: v.boolean(),
       followRequests: v.boolean(),
       comments: v.boolean(),
-      likes: v.boolean(), // NEW
-      shares: v.boolean(), // NEW
-      reviews: v.boolean(), // NEW
-      // Gigs & Bookings - ALL REQUIRED
+
+      // Gigs & Bookings (ADD ALL NEW FIELDS)
       gigInvites: v.boolean(),
+      gigOpportunities: v.boolean(), // NEW FIELD
+      gigUpdates: v.boolean(), // NEW FIELD
       bookingRequests: v.boolean(),
       bookingConfirmations: v.boolean(),
       gigReminders: v.boolean(),
+      bandInvites: v.boolean(), // NEW FIELD
 
-      // Messages & Communication - ALL REQUIRED
+      // Messages & Communication
       newMessages: v.boolean(),
       messageRequests: v.boolean(),
 
-      // System & Updates - ALL REQUIRED
+      // System & Updates
       systemUpdates: v.boolean(),
       featureAnnouncements: v.boolean(),
     }),

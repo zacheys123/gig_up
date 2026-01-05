@@ -1,6 +1,31 @@
 // types/gig.ts
 
 import { Id } from "@/convex/_generated/dataModel";
+
+// Band Role Types
+// In your types file
+export interface BandRoleInput {
+  role: string;
+  maxSlots: number;
+  requiredSkills: string[];
+  description?: string;
+  // Add price fields
+  price?: string; // Price for this specific role
+  currency?: string; // Currency for this role
+  negotiable?: boolean; // Whether price is negotiable for this role
+}
+
+export interface BandRoleSchema {
+  role: string;
+  maxSlots: number;
+  filledSlots: number;
+  applicants: Id<"users">[];
+  bookedUsers: Id<"users">[];
+  requiredSkills?: string[];
+  description?: string;
+  isLocked?: boolean;
+}
+
 export interface BandMember {
   userId: Id<"users">;
   name: string;
@@ -10,6 +35,11 @@ export interface BandMember {
   bookedBy?: Id<"users">;
   status?: "pending" | "booked" | "confirmed" | "cancelled";
   notes?: string;
+  email?: string;
+  phone?: string;
+  picture?: string;
+  skills?: string;
+  experience?: string;
 }
 
 export interface BookingHistoryEntry {
@@ -24,11 +54,12 @@ export interface BookingHistoryEntry {
   gigType?: "regular" | "band";
   metadata?: Record<string, any>;
 }
+
 // Business categories for gigs
 export type BusinessCategory =
-  | "full" // Full Band
-  | "personal" // Individual
-  | "other" // Create Band
+  | "full" // Full Band (existing band needs gigs)
+  | "personal" // Individual musician needed
+  | "other" // Create Band (forming new band)
   | "mc" // MC
   | "dj" // DJ
   | "vocalist" // Vocalist
@@ -58,19 +89,6 @@ export interface CustomProps {
 export interface UserInfo {
   prefferences: string[]; // Band instrument preferences
 }
-// In your types file (types/gig.ts or similar)
-export interface BookingHistoryEntry {
-  userId: Id<"users">;
-  status: "pending" | "booked" | "completed" | "cancelled";
-  timestamp: number; // Change from 'date' to 'timestamp' for consistency
-  role: string;
-  notes?: string;
-  price?: number;
-  bookedBy?: Id<"users">;
-  action?: string;
-  gigType?: "regular" | "band";
-  metadata?: Record<string, any>;
-}
 
 // Gig interface (main gig object)
 export interface GigProps {
@@ -78,8 +96,8 @@ export interface GigProps {
   _creationTime: number;
 
   // Basic gig info
-  postedBy: string; // user ID
-  bookedBy?: string; // user ID
+  postedBy: Id<"users">;
+  bookedBy?: Id<"users">;
   title?: string;
   description?: string;
   location?: string;
@@ -104,8 +122,8 @@ export interface GigProps {
   gigtimeline?: string;
   day?: string;
 
-  // Categories and bands
-  bandCategory: string[];
+  // Band Category - NEW: Array of band roles
+  bandCategory?: BandRoleSchema[];
 
   // Talent-specific fields
   mcType?: string;
@@ -125,6 +143,10 @@ export interface GigProps {
   isActive: boolean;
   isPublic: boolean;
 
+  // Band-specific flags
+  isClientBand?: boolean; // true for "Create Band" gigs
+  maxSlots?: number; // Total slots available for the gig
+
   // Payment info
   paymentStatus: "pending" | "paid" | "refunded";
 
@@ -136,7 +158,6 @@ export interface GigProps {
   category?: string;
 
   // Arrays
-
   tags: string[];
   requirements: string[];
   benefits: string[];
@@ -158,12 +179,15 @@ export interface GigProps {
     code?: string;
     temporaryConfirm?: boolean;
   };
+
   // Time
   time: {
     start: string;
     end: string;
   };
+
   negotiable?: boolean;
+
   // Scheduling
   schedulingProcedure?: string;
   scheduleDate?: number;
@@ -177,16 +201,17 @@ export interface GigProps {
   // Timestamps
   createdAt: number;
   updatedAt: number;
+
+  // User arrays
   interestedUsers?: Id<"users">[];
   appliedUsers?: Id<"users">[];
   viewCount?: Id<"users">[];
+
+  // Band arrays
   bookCount?: BandMember[]; // Array of BandMember objects
   bookingHistory?: BookingHistoryEntry[]; // Array of BookingHistoryEntry objects
-
-  // New fields
-  isClientBand?: boolean;
-  maxSlots?: number;
 }
+
 export interface CreateGigInput {
   // Required fields
   title: string;
@@ -204,8 +229,8 @@ export interface CreateGigInput {
   isPending: boolean;
 
   // User info
-  postedBy: string; // userId
-  bookedBy?: string; // userId
+  postedBy: Id<"users">;
+  bookedBy?: Id<"users">;
 
   // Location & Contact
   location?: string;
@@ -215,7 +240,10 @@ export interface CreateGigInput {
   tags: string[];
   requirements: string[];
   benefits: string[];
-  bandCategory: string[];
+
+  // Band Category - UPDATED
+  bandCategory?: BandRoleSchema[];
+
   bussinesscat: string;
 
   // Gig Type Specific
@@ -256,8 +284,8 @@ export interface CreateGigInput {
   logo: string; // URL or base64
 
   // Engagement Metrics
-  viewCount: string[]; // userIds
-  bookCount: string[]; // userIds
+  viewCount: Id<"users">[]; // userIds
+  bookCount: Id<"users">[]; // userIds
 
   // Rating
   gigRating: number;
@@ -268,6 +296,10 @@ export interface CreateGigInput {
   // Payment Confirmations
   clientConfirmPayment?: any;
   musicianConfirmPayment?: any;
+
+  // Band-specific fields - NEW
+  isClientBand?: boolean;
+  maxSlots?: number;
 }
 
 // For form input handling
@@ -324,7 +356,10 @@ export interface GigPayload {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
-  bandCategory?: string[];
+
+  // UPDATED: Band category as BandRoleSchema array
+  bandCategory?: BandRoleSchema[];
+
   font?: string;
   fontColor?: string;
   backgroundColor?: string;
@@ -333,6 +368,11 @@ export interface GigPayload {
   isActive?: boolean;
   schedulingProcedure?: string;
   scheduleDate?: number;
+
+  // NEW: Band-specific fields
+  isClientBand?: boolean;
+  maxSlots?: number;
+  negotiable?: boolean;
 }
 
 // Talent form data
@@ -371,6 +411,7 @@ export interface GigValidationErrors {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string;
+  bandRoles?: string; // For band gig validation
   [key: string]: string | undefined;
 }
 
@@ -424,6 +465,7 @@ export interface GigFilters {
   isActive?: boolean;
   bussinesscat?: BusinessCategory;
   tags?: string[];
+  isClientBand?: boolean; // Filter for band formation gigs
 }
 
 // Gig pagination
@@ -449,7 +491,7 @@ export interface GigCreationResponse {
   errors?: GigValidationErrors;
 }
 
-// Draft gig data
+// Draft gig data with band roles
 export interface GigDraft {
   id: string;
   data: GigFormInputs &
@@ -457,7 +499,47 @@ export interface GigDraft {
       customization?: CustomProps;
       scheduling?: ScheduleData;
       uploadedFiles?: FileData;
+      bandRoles?: BandRoleInput[]; // NEW: Band roles for "Create Band" gigs
     };
   createdAt: number;
   updatedAt: number;
+}
+
+// Band Application Types
+export interface BandApplication {
+  userId: Id<"users">;
+  role: string;
+  message?: string;
+  appliedAt: number;
+  status: "pending" | "reviewed" | "accepted" | "rejected";
+}
+
+export interface BandApplicant {
+  userId: Id<"users">;
+  name: string;
+  picture?: string;
+  skills: string[];
+  experience?: string;
+  trustScore: number;
+  appliedAt: number;
+  message?: string;
+}
+
+// Band Role Progress
+export interface BandRoleProgress {
+  role: string;
+  filled: number;
+  total: number;
+  applicants: number;
+  isComplete: boolean;
+}
+
+// Band Formation Status
+export interface BandFormationStatus {
+  totalRoles: number;
+  totalPositions: number;
+  filledPositions: number;
+  progressPercentage: number;
+  isComplete: boolean;
+  missingRoles: string[];
 }

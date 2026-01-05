@@ -23,6 +23,7 @@ import {
   Heart,
   Share2,
   Star,
+  Clock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FaComment } from "react-icons/fa";
@@ -76,19 +77,24 @@ export default function NotificationSettingsPage() {
     </div>
   );
 
+  // In your NotificationSettingsPage component, update the valid keys:
   const validInAppKeys = [
-    // Profile & Social (UPDATED)
+    // Profile & Social
     "profileViews",
-    "likes", // NEW
-    "shares", // NEW
-    "reviews", // NEW
+    "likes",
+    "shares",
+    "reviews",
     "followRequests",
     "comments",
-    // Gigs & Bookings
+
+    // Gigs & Bookings (ADD THESE)
     "gigInvites",
+    "gigOpportunities", // NEW
+    "gigUpdates", // NEW
     "bookingRequests",
     "bookingConfirmations",
     "gigReminders",
+    "bandInvites", // NEW
 
     // Messages
     "newMessages",
@@ -474,8 +480,8 @@ export default function NotificationSettingsPage() {
               icon={<UserPlus className="w-4 h-4" />}
             />
           </NotificationSection>
-
           {/* Gigs & Bookings Section */}
+
           <NotificationSection
             title="Gigs & Bookings"
             icon={<Calendar className="w-5 h-5" />}
@@ -488,8 +494,20 @@ export default function NotificationSettingsPage() {
               icon={<Calendar className="w-4 h-4" />}
             />
             <ToggleRow
+              label="New Gig Opportunities"
+              description="When new gigs matching your skills are posted"
+              inAppKey="gigOpportunities"
+              icon={<Zap className="w-4 h-4" />}
+            />
+            <ToggleRow
+              label="Gig Updates"
+              description="Updates on your posted gigs and applications"
+              inAppKey="gigUpdates"
+              icon={<Bell className="w-4 h-4" />}
+            />
+            <ToggleRow
               label="Booking Requests"
-              description="New booking requests"
+              description="New booking requests for your services"
               inAppKey="bookingRequests"
               icon={<Mail className="w-4 h-4" />}
             />
@@ -497,16 +515,21 @@ export default function NotificationSettingsPage() {
               label="Booking Confirmations"
               description="When bookings are confirmed"
               inAppKey="bookingConfirmations"
-              icon={<Bell className="w-4 h-4" />}
+              icon={<CheckCircle className="w-4 h-4" />}
             />
             <ToggleRow
               label="Gig Reminders"
               description="Reminders for upcoming gigs"
               inAppKey="gigReminders"
-              icon={<Zap className="w-4 h-4" />}
+              icon={<Clock className="w-4 h-4" />}
+            />
+            <ToggleRow
+              label="Band Invites & Updates"
+              description="Invitations to join bands and band updates"
+              inAppKey="bandInvites"
+              icon={<Users className="w-4 h-4" />}
             />
           </NotificationSection>
-
           {/* Messages Section */}
           <NotificationSection
             title="Messages"
@@ -520,7 +543,6 @@ export default function NotificationSettingsPage() {
               icon={<MessageSquare className="w-4 h-4" />}
             />
           </NotificationSection>
-
           {/* System Section */}
           <NotificationSection
             title="System"

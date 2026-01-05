@@ -490,6 +490,8 @@ export const userModel = defineTable({
   bookingsThisWeek: v.optional(v.number()),
   maxWeeklyBookings: v.optional(v.number()),
   updatedAt: v.optional(v.number()),
+  openToBandWork: v.optional(v.boolean()),
+  interestedInBands: v.optional(v.boolean()),
 })
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])

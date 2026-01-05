@@ -463,21 +463,44 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
       }
     }, 300);
   }, []);
+  // Update the scrollToNormal function with better debugging
   const scrollToNormal = useCallback(() => {
+    console.log("🔄 scrollToNormal called - changing tab to 'normal'");
+
+    // Change to normal tab
     setActiveTab("normal");
-    setTimeout(() => {
+
+    // Give the tab time to render
+    const scrollTimeout = setTimeout(() => {
+      console.log("⏰ Timeout triggered, attempting to scroll");
+
       if (normalGigsRef.current) {
+        console.log("✅ Ref found, scrolling to:", normalGigsRef.current);
         normalGigsRef.current.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
       } else {
-        window.scrollTo({
-          top: 0,
-          behavior: "smooth",
-        });
+        console.log("❌ Ref not found, trying document query");
+        // Try to find the element by ID or class
+        const normalGigElement = document.querySelector('[data-tab="normal"]');
+        if (normalGigElement) {
+          console.log("✅ Found element via query selector");
+          normalGigElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        } else {
+          console.log("⚠️ No element found, using fallback scroll");
+          window.scrollTo({
+            top: window.scrollY + 200, // Scroll down a bit
+            behavior: "smooth",
+          });
+        }
       }
-    }, 300);
+    }, 400); // Increased delay to ensure React renders
+
+    return () => clearTimeout(scrollTimeout);
   }, []);
 
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -837,13 +860,14 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
             />
           </div>
         );
-
       case "normal":
         return (
-          // ← ADD THIS RETURN
-          <div ref={normalGigsRef}>
-            <NormalGigsTab user={user} colors={colors} />{" "}
-            {/* ← REMOVE THE SEMICOLON */}
+          <div
+            ref={normalGigsRef}
+            data-tab="normal" // Add this data attribute
+            className="normal-gigs-section" // Add a class for additional targeting
+          >
+            <NormalGigsTab user={user} colors={colors} />
           </div>
         );
 
@@ -955,7 +979,7 @@ export const InstantGigs = React.memo(({ user }: { user: any }) => {
               {isnormalcreation && (
                 <Button
                   variant="outline"
-                  onClick={() => setActiveTab("normal")}
+                  onClick={scrollToNormal} // Use the existing scrollToNormal function
                   className={cn(
                     "border-2 hover:border-green-300 transition-all duration-300",
                     colors.border,

@@ -302,6 +302,8 @@ export const updateUserProfile = mutation({
         })
       ),
 
+      openToBandWork: v.optional(v.boolean()),
+      interestedInBands: v.optional(v.boolean()),
       // Role-specific fields
       roleType: v.optional(v.string()),
       clientType: v.optional(

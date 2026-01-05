@@ -141,10 +141,10 @@ export const NotificationSystemProvider = ({
   const refreshNotifications = () => {
     // This will trigger a refetch since we're using useQuery
   };
-
+  // hooks/useNotificationSystem.ts - Update the shouldDisplayToast function
   const shouldDisplayToast = (notification: any, settings: any) => {
     // Critical notifications always show
-    const criticalTypes = ["system_updates"];
+    const criticalTypes = ["system_updates", "feature_announcement"];
     if (criticalTypes.includes(notification.type)) {
       return true;
     }
@@ -154,11 +154,20 @@ export const NotificationSystemProvider = ({
         notification.type as keyof typeof notificationTypeToSettingMap
       ];
 
-    if (settingKey) {
+    if (!settingKey) {
+      console.warn(
+        `No setting mapping for notification type: ${notification.type}`
+      );
+      // Default to true for unmapped types to avoid blocking new features
+      return true;
+    }
+
+    // Check if setting exists and is enabled
+    if (settings && settingKey in settings) {
       return settings[settingKey] !== false;
     }
 
-    // For unmapped types, default to true
+    // If setting doesn't exist in user's settings, default to true
     return true;
   };
 

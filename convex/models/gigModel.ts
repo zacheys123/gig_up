@@ -6,6 +6,22 @@ const bandMember = v.object({
   role: v.string(), // Role: "pianist", "guitarist", "vocalist", etc.
   joinedAt: v.number(), // Timestamp when they joined
 });
+// In your Convex schema (where bandRoleSchema is defined):
+const bandRoleSchema = v.object({
+  role: v.string(),
+  maxSlots: v.number(),
+  filledSlots: v.number(),
+  applicants: v.array(v.id("users")),
+  bookedUsers: v.array(v.id("users")),
+  requiredSkills: v.optional(v.array(v.string())),
+  description: v.optional(v.string()),
+  isLocked: v.optional(v.boolean()),
+  // Add price fields
+  price: v.optional(v.number()), // Price per slot
+  currency: v.optional(v.string()), // Currency code
+  negotiable: v.optional(v.boolean()), // Whether price is negotiable
+  bookedPrice: v.optional(v.number()), // Actual price agreed upon
+});
 const bookingHistoryEntry = v.object({
   userId: v.id("users"),
   status: v.union(
@@ -41,7 +57,12 @@ export const gigModel = defineTable({
   requirements: v.array(v.string()),
   benefits: v.array(v.string()),
   // Categories and bands
-  bandCategory: v.array(v.string()),
+
+  // In convex/schema.ts
+
+  // In gigModel:
+  bandCategory: v.optional(v.array(bandRoleSchema)),
+  isClientBand: v.optional(v.boolean()), // true for "other" category
   bussinesscat: v.string(),
   // Location and timing
   location: v.optional(v.string()),
@@ -68,9 +89,6 @@ export const gigModel = defineTable({
   // Fixed: viewCount should be optional
   viewCount: v.optional(v.array(v.id("users"))),
 
-  // Add isClientBand field
-  isClientBand: v.optional(v.boolean()),
-
   // Add maxSlots field
   maxSlots: v.optional(v.number()),
   // Styling
@@ -91,7 +109,7 @@ export const gigModel = defineTable({
   djEquipment: v.optional(v.string()),
   pricerange: v.optional(v.string()),
   currency: v.optional(v.string()),
-  vocalistGenre: v.array(v.string()),
+  vocalistGenre: v.optional(v.array(v.string())),
   scheduleDate: v.optional(v.number()),
   schedulingProcedure: v.optional(v.string()),
   // Booking history

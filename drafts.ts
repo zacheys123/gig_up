@@ -9,7 +9,19 @@ export type BusinessCategory =
   | "vocalist"
   | null;
 
-// Update LocalGigInputs type to include duration fields
+// Band Role Types for Drafts with Price support
+export interface BandRoleInput {
+  role: string;
+  maxSlots: number;
+  requiredSkills: string[];
+  description?: string;
+  // Add these price fields
+  price?: string; // Price per slot for this role
+  currency?: string; // Currency for this role (e.g., "KES", "USD")
+  negotiable?: boolean; // Whether price is negotiable for this role
+}
+
+// Update LocalGigInputs type to include all fields
 export type LocalGigInputs = {
   title: string;
   description: string;
@@ -20,10 +32,8 @@ export type LocalGigInputs = {
   secret: string;
   end: string;
   start: string;
-  // Add these with correct casing (lowercase)
   durationfrom: string;
   durationto: string;
-
   bussinesscat: BusinessCategory;
   otherTimeline: string;
   gigtimeline: string;
@@ -36,22 +46,45 @@ export type LocalGigInputs = {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
+  negotiable: boolean;
+  // Add any other fields you're using
+  [key: string]: any; // Add this to handle dynamic access
 };
+
+// Draft data structure with band roles including price
+export interface GigDraftData {
+  formValues: LocalGigInputs;
+  bandRoles?: BandRoleInput[]; // For "Create Band" (other) business category
+  customization?: {
+    fontColor: string;
+    font: string;
+    backgroundColor: string;
+  };
+  imageUrl?: string;
+  schedulingProcedure?: {
+    type: string;
+    date: Date;
+  };
+}
 
 export interface GigDraft {
   id: string;
-  data: LocalGigInputs;
+  data: GigDraftData;
   createdAt: string;
   updatedAt: string;
   title: string;
   category: string;
   progress: number; // 0-100% completion
+  isBandGig?: boolean; // Flag for band formation gigs
+  bandRoleCount?: number; // Number of band roles if applicable
+  totalSlots?: number; // Total slots for band gigs
+  estimatedBudget?: number; // Total estimated budget for band gigs
 }
 
-const DRAFTS_KEY = "gig_drafts";
-
-// Helper to calculate draft completion percentage
-const calculateProgress = (data: LocalGigInputs): number => {
+const DRAFTS_KEY = "gig_drafts_v3"; // Updated key for version 3 with price support
+// Helper to calculate draft completion percentage with band role support
+const calculateProgress = (data: GigDraftData): number => {
+  const { formValues, bandRoles } = data;
   const requiredFields = [
     "title",
     "description",
@@ -61,36 +94,58 @@ const calculateProgress = (data: LocalGigInputs): number => {
 
   let completed = 0;
 
+  // Check required fields
   requiredFields.forEach((field) => {
     if (field === "bussinesscat") {
-      if (data[field]) completed++;
-    } else if (data[field]?.trim()) {
+      if (formValues[field]) completed++;
+    } else if (formValues[field]?.trim()) {
       completed++;
     }
   });
 
   // Add talent-specific fields if applicable
-  if (data.bussinesscat === "mc") {
-    if (data.mcType?.trim()) completed++;
-    if (data.mcLanguages?.trim()) completed++;
-  } else if (data.bussinesscat === "dj") {
-    if (data.djGenre?.trim()) completed++;
-    if (data.djEquipment?.trim()) completed++;
-  } else if (data.bussinesscat === "vocalist") {
-    if (data.vocalistGenre?.length) completed++;
+  if (formValues.bussinesscat === "mc") {
+    if (formValues.mcType?.trim()) completed++;
+    if (formValues.mcLanguages?.trim()) completed++;
+  } else if (formValues.bussinesscat === "dj") {
+    if (formValues.djGenre?.trim()) completed++;
+    if (formValues.djEquipment?.trim()) completed++;
+  } else if (formValues.bussinesscat === "vocalist") {
+    if (formValues.vocalistGenre?.length) completed++;
+  } else if (formValues.bussinesscat === "other") {
+    // For "Create Band" gigs, check band roles
+    if (bandRoles && bandRoles.length > 0) {
+      completed += 2; // Give points for having band roles
+
+      // Check if at least one role has required skills
+      const hasRequiredSkills = bandRoles.some(
+        (role) => role.requiredSkills && role.requiredSkills.length > 0
+      );
+      if (hasRequiredSkills) completed++;
+
+      // Check if price is set for at least one role
+      const hasPrice = bandRoles.some(
+        (role) => role.price && parseFloat(role.price) > 0
+      );
+      if (hasPrice) completed++;
+    }
   }
 
-  const totalFields = data.bussinesscat
-    ? ["mc", "dj", "vocalist"].includes(data.bussinesscat)
-      ? 6
-      : 4
-    : 4;
+  // Adjust total fields based on business category
+  let totalFields = 4; // Base required fields
+
+  if (formValues.bussinesscat === "other") {
+    // For band gigs, add fields for band setup
+    totalFields += 4; // Band roles count as 4 fields (roles, skills, description, price)
+  } else if (["mc", "dj", "vocalist"].includes(formValues.bussinesscat || "")) {
+    totalFields += 2; // Talent-specific fields
+  }
 
   return Math.round((completed / totalFields) * 100);
 };
 
 export const saveGigDraft = (
-  draftData: LocalGigInputs,
+  draftData: GigDraftData,
   existingId?: string
 ): GigDraft => {
   const drafts = getGigDrafts();
@@ -100,6 +155,20 @@ export const saveGigDraft = (
     `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const progress = calculateProgress(draftData);
 
+  const isBandGig = draftData.formValues.bussinesscat === "other";
+  const bandRoleCount = isBandGig ? draftData.bandRoles?.length || 0 : 0;
+  const totalSlots = isBandGig
+    ? draftData.bandRoles?.reduce((sum, role) => sum + role.maxSlots, 0) || 0
+    : 0;
+
+  // Calculate estimated budget for band gigs
+  const estimatedBudget = isBandGig
+    ? draftData.bandRoles?.reduce((sum, role) => {
+        const price = parseFloat(role.price || "0");
+        return sum + price * role.maxSlots;
+      }, 0) || 0
+    : 0;
+
   const newDraft: GigDraft = {
     id: draftId,
     data: draftData,
@@ -107,9 +176,13 @@ export const saveGigDraft = (
       ? drafts.find((d) => d.id === existingId)?.createdAt || now
       : now,
     updatedAt: now,
-    title: draftData.title || "Untitled Draft",
-    category: draftData.bussinesscat || "uncategorized",
+    title: draftData.formValues.title || "Untitled Draft",
+    category: draftData.formValues.bussinesscat || "uncategorized",
     progress,
+    isBandGig,
+    bandRoleCount: isBandGig ? bandRoleCount : undefined,
+    totalSlots: isBandGig ? totalSlots : undefined,
+    estimatedBudget: isBandGig ? estimatedBudget : undefined,
   };
 
   // Remove old draft if updating
@@ -125,7 +198,10 @@ export const saveGigDraft = (
 
     // Log success to console for debugging
     console.log(
-      `Draft saved: ${newDraft.title} (ID: ${newDraft.id}, Progress: ${progress}%)`
+      `Draft saved: ${newDraft.title} (ID: ${newDraft.id}, Progress: ${progress}%)`,
+      isBandGig
+        ? `[Band Gig: ${bandRoleCount} roles, ${totalSlots} slots, Budget: ${estimatedBudget}]`
+        : ""
     );
 
     return newDraft;
@@ -148,8 +224,82 @@ export const getGigDrafts = (): GigDraft[] => {
   if (typeof window === "undefined") return [];
 
   try {
-    const drafts = localStorage.getItem(DRAFTS_KEY);
-    return drafts ? JSON.parse(drafts) : [];
+    // Try to get current version first
+    let drafts = localStorage.getItem(DRAFTS_KEY);
+
+    if (!drafts) {
+      // Try to migrate from version 2
+      const v2Drafts = localStorage.getItem("gig_drafts_v2");
+      if (v2Drafts) {
+        const parsedDrafts = JSON.parse(v2Drafts);
+        const migratedDrafts = parsedDrafts.map((draft: any) => ({
+          ...draft,
+          data: {
+            ...draft.data,
+            bandRoles:
+              draft.data.bandRoles?.map((role: any) => ({
+                ...role,
+                price: undefined,
+                currency: undefined,
+                negotiable: undefined,
+              })) || [],
+          },
+          estimatedBudget: draft.isBandGig
+            ? draft.data.bandRoles?.reduce((sum: number, role: any) => {
+                const price = parseFloat(role.price || "0");
+                return sum + price * role.maxSlots;
+              }, 0) || 0
+            : undefined,
+        }));
+        localStorage.setItem(DRAFTS_KEY, JSON.stringify(migratedDrafts));
+        localStorage.removeItem("gig_drafts_v2");
+        return migratedDrafts;
+      }
+
+      // Try to migrate from version 1
+      const v1Drafts = localStorage.getItem("gig_drafts");
+      if (v1Drafts) {
+        const parsedOldDrafts = JSON.parse(v1Drafts);
+        const migratedDrafts = parsedOldDrafts.map((oldDraft: any) => ({
+          ...oldDraft,
+          data: {
+            formValues: oldDraft.data,
+            bandRoles: [],
+            customization: undefined,
+            imageUrl: undefined,
+            schedulingProcedure: undefined,
+          },
+          isBandGig: oldDraft.data?.bussinesscat === "other",
+          estimatedBudget: 0,
+        }));
+        localStorage.setItem(DRAFTS_KEY, JSON.stringify(migratedDrafts));
+        localStorage.removeItem("gig_drafts");
+        return migratedDrafts;
+      }
+      return [];
+    }
+
+    const parsedDrafts = JSON.parse(drafts);
+
+    // Ensure all drafts have the new estimatedBudget field
+    const updatedDrafts = parsedDrafts.map((draft: GigDraft) => ({
+      ...draft,
+      estimatedBudget:
+        draft.estimatedBudget ||
+        (draft.isBandGig
+          ? draft.data.bandRoles?.reduce((sum, role) => {
+              const price = parseFloat((role as any).price || "0");
+              return sum + price * role.maxSlots;
+            }, 0) || 0
+          : undefined),
+    }));
+
+    // Save back if any updates were made
+    if (JSON.stringify(updatedDrafts) !== JSON.stringify(parsedDrafts)) {
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify(updatedDrafts));
+    }
+
+    return updatedDrafts;
   } catch (error) {
     console.error("Error reading drafts from localStorage:", error);
     return [];
@@ -185,6 +335,7 @@ export const deleteGigDraft = (id: string): boolean => {
 export const clearAllGigDrafts = (): void => {
   try {
     localStorage.removeItem(DRAFTS_KEY);
+    localStorage.removeItem("gig_drafts"); // Also clear old version
     console.log("All drafts cleared");
   } catch (error) {
     console.error("Error clearing drafts from localStorage:", error);
@@ -196,8 +347,20 @@ export const getDraftStats = () => {
   const now = new Date();
   const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
 
-  return {
+  // Calculate total budget for band gigs
+  const totalBandBudget = drafts.reduce(
+    (sum, d) => sum + (d.estimatedBudget || 0),
+    0
+  );
+  const averageBandBudget =
+    drafts.filter((d) => d.isBandGig).length > 0
+      ? Math.round(totalBandBudget / drafts.filter((d) => d.isBandGig).length)
+      : 0;
+
+  const stats = {
     total: drafts.length,
+    bandGigs: drafts.filter((d) => d.isBandGig).length,
+    individualGigs: drafts.filter((d) => !d.isBandGig).length,
     byCategory: drafts.reduce(
       (acc, draft) => {
         const category = draft.category || "uncategorized";
@@ -214,16 +377,45 @@ export const getDraftStats = () => {
           )
         : 0,
     lastUpdated: drafts[0]?.updatedAt || null,
+    totalBandRoles: drafts.reduce((sum, d) => sum + (d.bandRoleCount || 0), 0),
+    totalBandSlots: drafts.reduce((sum, d) => sum + (d.totalSlots || 0), 0),
+    totalBandBudget: totalBandBudget,
+    averageBandBudget: averageBandBudget,
+    bandGigsWithPrice: drafts.filter(
+      (d) => d.isBandGig && d.estimatedBudget && d.estimatedBudget > 0
+    ).length,
   };
+
+  return stats;
+};
+
+// Helper to get band role summary with price
+export const getBandRoleSummary = (draft: GigDraft): string => {
+  if (!draft.isBandGig || !draft.bandRoleCount) return "";
+
+  const roleText = `${draft.bandRoleCount} role${draft.bandRoleCount !== 1 ? "s" : ""}`;
+  const slotText = draft.totalSlots
+    ? `, ${draft.totalSlots} slot${draft.totalSlots !== 1 ? "s" : ""}`
+    : "";
+
+  let priceText = "";
+  if (draft.estimatedBudget && draft.estimatedBudget > 0) {
+    // Find the main currency used
+    const mainCurrency = draft.data.bandRoles?.[0]?.currency || "KES";
+    priceText = `, ${mainCurrency} ${draft.estimatedBudget.toLocaleString()}`;
+  }
+
+  return `🎵 ${roleText}${slotText}${priceText}`;
 };
 
 // Import/Export functionality
 export const exportDrafts = (): string => {
   const drafts = getGigDrafts();
   const exportData = {
-    version: "1.0",
+    version: "2.0",
     exportedAt: new Date().toISOString(),
     count: drafts.length,
+    bandGigs: drafts.filter((d) => d.isBandGig).length,
     drafts,
   };
   return JSON.stringify(exportData, null, 2);
@@ -238,7 +430,27 @@ export const importDrafts = (jsonData: string): boolean => {
     }
 
     const currentDrafts = getGigDrafts();
-    const mergedDrafts = [...importData.drafts, ...currentDrafts]
+
+    // Migrate old format drafts if needed
+    const migratedDrafts = importData.drafts.map((draft: any) => {
+      // If it's old format (just formValues), wrap it
+      if (draft.data && !draft.data.formValues) {
+        return {
+          ...draft,
+          data: {
+            formValues: draft.data,
+            bandRoles: [],
+            customization: undefined,
+            imageUrl: undefined,
+            schedulingProcedure: undefined,
+          },
+          isBandGig: draft.data?.bussinesscat === "other",
+        };
+      }
+      return draft;
+    });
+
+    const mergedDrafts = [...migratedDrafts, ...currentDrafts]
       .slice(0, 50) // Keep only 50 most recent
       .map((draft) => ({
         ...draft,
@@ -251,4 +463,75 @@ export const importDrafts = (jsonData: string): boolean => {
     console.error("Error importing drafts:", error);
     return false;
   }
+};
+
+// Filter drafts by category
+export const filterDraftsByCategory = (
+  category: BusinessCategory
+): GigDraft[] => {
+  const drafts = getGigDrafts();
+  if (!category) return drafts;
+  return drafts.filter(
+    (draft) => draft.data.formValues.bussinesscat === category
+  );
+};
+
+// Get band-specific drafts
+export const getBandGigDrafts = (): GigDraft[] => {
+  return getGigDrafts().filter((draft) => draft.isBandGig);
+};
+
+// Update band roles for a draft
+// Update band roles for a draft with price calculation
+export const updateDraftBandRoles = (
+  draftId: string,
+  bandRoles: BandRoleInput[]
+): GigDraft | null => {
+  const draft = getGigDraftById(draftId);
+  if (!draft) return null;
+
+  // Calculate estimated budget
+  const estimatedBudget = bandRoles.reduce((sum, role) => {
+    const price = parseFloat(role.price || "0");
+    return sum + price * role.maxSlots;
+  }, 0);
+
+  const updatedDraft = {
+    ...draft,
+    data: {
+      ...draft.data,
+      bandRoles,
+    },
+    updatedAt: new Date().toISOString(),
+    bandRoleCount: bandRoles.length,
+    totalSlots: bandRoles.reduce((sum, role) => sum + role.maxSlots, 0),
+    estimatedBudget,
+    progress: calculateProgress({ ...draft.data, bandRoles }),
+  };
+
+  const drafts = getGigDrafts();
+  const updatedDrafts = drafts.map((d) =>
+    d.id === draftId ? updatedDraft : d
+  );
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(updatedDrafts));
+
+  return updatedDraft;
+};
+
+// Search drafts by title or description
+export const searchDrafts = (query: string): GigDraft[] => {
+  const drafts = getGigDrafts();
+  const lowerQuery = query.toLowerCase();
+
+  return drafts.filter((draft) => {
+    const title = draft.data.formValues.title?.toLowerCase() || "";
+    const description = draft.data.formValues.description?.toLowerCase() || "";
+    const location = draft.data.formValues.location?.toLowerCase() || "";
+
+    return (
+      title.includes(lowerQuery) ||
+      description.includes(lowerQuery) ||
+      location.includes(lowerQuery)
+    );
+  });
 };

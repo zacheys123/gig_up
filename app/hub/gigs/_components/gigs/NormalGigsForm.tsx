@@ -48,6 +48,13 @@ import {
   TrendingUp,
   CheckCircle,
   AlertCircle,
+  Plus,
+  Trash2,
+  Music as MusicIcon,
+  Drum,
+  Piano,
+  Search,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -62,6 +69,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 import {
+  BandRoleInput,
   BusinessCategory,
   CategoryVisibility,
   CustomProps,
@@ -83,6 +91,9 @@ import { api } from "@/convex/_generated/api";
 import { prepareGigDataForConvex } from "@/utils";
 import { getGigDraftById, saveGigDraft } from "@/drafts";
 import { MemoizedSwitch } from "./MemoizedSwitch";
+import BandSetupModal from "./BandSetUpModal";
+import { GiTrumpet, GiViolin } from "react-icons/gi";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Update LocalGigInputs type to include duration fields
 // Update LocalGigInputs type to include duration fields and negotiable
@@ -315,10 +326,27 @@ export default function NormalGigsForm() {
     type: "",
     date: new Date(),
   });
+  const [newRole, setNewRole] = useState({
+    role: "",
+    maxSlots: 1,
+    requiredSkills: [] as string[],
+    description: "",
+  });
+  const [skillInput, setSkillInput] = useState("");
+  const [showCustomRoleForm, setShowCustomRoleForm] = useState(false);
 
   // Field errors state - only for display
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
+  const [bandRoles, setBandRoles] = useState<BandRoleInput[]>([
+    { role: "Lead Vocalist", maxSlots: 1, requiredSkills: ["Rock", "Pop"] },
+    {
+      role: "Guitarist",
+      maxSlots: 1,
+      requiredSkills: ["Electric", "Acoustic"],
+    },
+    { role: "Drummer", maxSlots: 1, requiredSkills: ["Jazz", "Rock"] },
+    { role: "Backup Vocalist", maxSlots: 2, requiredSkills: [] },
+  ]);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
@@ -327,13 +355,18 @@ export default function NormalGigsForm() {
       setIsSavingDraft(true);
 
       const draftData = {
-        ...formValues,
-
-        mcType: formValues.mcType,
-        mcLanguages: formValues.mcLanguages,
-        djGenre: formValues.djGenre,
-        djEquipment: formValues.djEquipment,
-        vocalistGenre: formValues.vocalistGenre,
+        formValues: {
+          ...formValues,
+          mcType: formValues.mcType,
+          mcLanguages: formValues.mcLanguages,
+          djGenre: formValues.djGenre,
+          djEquipment: formValues.djEquipment,
+          vocalistGenre: formValues.vocalistGenre,
+        },
+        bandRoles: bussinesscat === "other" ? bandRoles : [],
+        customization: gigcustom,
+        imageUrl,
+        schedulingProcedure,
       };
 
       const savedDraft = saveGigDraft(draftData, draftId || undefined);
@@ -352,22 +385,26 @@ export default function NormalGigsForm() {
     } finally {
       setIsSavingDraft(false);
     }
-  }, [formValues, draftId]);
-  // Update the auto-save notification
+  }, [
+    formValues,
+    bandRoles,
+    gigcustom,
+    imageUrl,
+    schedulingProcedure,
+    draftId,
+    bussinesscat,
+  ]);
+
   useEffect(() => {
-    // Auto-save after 30 seconds of inactivity
     const autoSaveTimer = setTimeout(() => {
       if (formValues.title || formValues.description) {
-        saveAsDraft();
-        toast.info("Auto-saved draft", {
-          description: "Your progress has been automatically saved.",
-          duration: 2000,
-        });
+        saveAsDraft(); // Save silently without notification
       }
     }, 30000);
 
     return () => clearTimeout(autoSaveTimer);
   }, [formValues, saveAsDraft]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const draftIdParam = params.get("draft");
@@ -377,31 +414,42 @@ export default function NormalGigsForm() {
       if (draft) {
         setDraftId(draft.id);
 
-        // Cast draft data to include duration fields if they exist
-        const draftData = draft.data as LocalGigInputs & {
-          durationFrom?: string;
-          durationTo?: string;
+        // Type assertion for draft data
+        const draftData = draft.data.formValues as Partial<LocalGigInputs>;
+
+        // Merge with defaults to ensure all fields exist
+        const mergedData: LocalGigInputs = {
+          title: "",
+          description: "",
+          phoneNo: "",
+          price: "",
+          category: "",
+          location: "",
+          secret: "",
+          end: "",
+          start: "",
+          durationfrom: "am",
+          durationto: "pm",
+          bussinesscat: null,
+          otherTimeline: "",
+          gigtimeline: "",
+          day: "",
+          date: "",
+          pricerange: "",
+          currency: "KES",
+          negotiable: true,
+          ...draftData,
         };
 
-        setFormValues(draftData);
-        setBussinessCategory(draftData.bussinesscat);
+        setFormValues(mergedData);
 
-        // Set talent-specific data
-        if (draftData.bussinesscat === "mc") {
-          setActiveTalentType("mc");
-        } else if (draftData.bussinesscat === "dj") {
-          setActiveTalentType("dj");
-        } else if (draftData.bussinesscat === "vocalist") {
-          setActiveTalentType("vocalist");
+        // Handle band roles if they exist
+        if (draft.data.bandRoles) {
+          setBandRoles(draft.data.bandRoles);
         }
 
         toast.success("Draft loaded", {
           description: "Your draft has been loaded successfully.",
-          duration: 3000,
-        });
-      } else {
-        toast.error("Draft not found", {
-          description: "The requested draft could not be found.",
           duration: 3000,
         });
       }
@@ -424,15 +472,15 @@ export default function NormalGigsForm() {
   const bandInstruments = useMemo(
     () => [
       { value: "vocalist", label: "Vocalist", icon: Mic },
-      { value: "piano", label: "Piano", icon: Music },
-      { value: "guitar", label: "Guitar", icon: Music },
-      { value: "bass", label: "Bass Guitar", icon: Music },
-      { value: "drums", label: "Drums", icon: Music },
-      { value: "sax", label: "Saxophone", icon: Music },
-      { value: "violin", label: "Violin", icon: Music },
-      { value: "cello", label: "Cello", icon: Music },
-      { value: "trumpet", label: "Trumpet", icon: Music },
-      { value: "percussion", label: "Percussion", icon: Music },
+      { value: "piano", label: "Piano", icon: MusicIcon },
+      { value: "guitar", label: "Guitar", icon: MusicIcon },
+      { value: "bass", label: "Bass Guitar", icon: MusicIcon },
+      { value: "drums", label: "Drums", icon: Drum },
+      { value: "sax", label: "Saxophone", icon: MusicIcon },
+      { value: "violin", label: "Violin", icon: GiViolin },
+      { value: "cello", label: "Cello", icon: MusicIcon },
+      { value: "trumpet", label: "Trumpet", icon: GiTrumpet },
+      { value: "percussion", label: "Percussion", icon: MusicIcon },
     ],
     []
   );
@@ -477,6 +525,33 @@ export default function NormalGigsForm() {
       { value: "tensofthousands", label: "Tens of thousands (0000)" },
       { value: "hundredsofthousands", label: "Hundreds of thousands (00000)" },
       { value: "millions", label: "Millions (000000)" },
+    ],
+    []
+  );
+
+  // Common instrument suggestions for quick selection
+  const instrumentSuggestions = useMemo(
+    () => [
+      "Percussionist",
+      "Keyboardist",
+      "DJ",
+      "Beatboxer",
+      "Beatmaker",
+      "Sound Engineer",
+      "Conductor",
+      "Composer",
+      "Arranger",
+      "Backing Vocalist",
+      "Harmony Singer",
+      "Rapper",
+      "MC",
+      "Violist",
+      "Double Bassist",
+      "Harpist",
+      "Oboist",
+      "Bassoonist",
+      "French Horn",
+      "Tuba Player",
     ],
     []
   );
@@ -535,25 +610,29 @@ export default function NormalGigsForm() {
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >
     ) => {
-      const { name, value } = e.target;
+      const { name, value, type } = e.target;
 
-      // Update state for display
-      setFormValues((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      // Handle checkbox separately
+      if (type === "checkbox") {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormValues((prev) => ({
+          ...prev,
+          [name]: checked,
+        }));
+      } else {
+        setFormValues((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
 
-      // Clear error from ref
+      // Clear error
       if (fieldErrorsRef.current[name]) {
         delete fieldErrorsRef.current[name];
-        // Only update display state if there was actually an error
         setFieldErrors((prev) => {
-          if (prev[name]) {
-            const newErrors = { ...prev };
-            delete newErrors[name];
-            return newErrors;
-          }
-          return prev;
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
         });
       }
     },
@@ -576,7 +655,86 @@ export default function NormalGigsForm() {
     [formValues]
   );
 
-  // Handle business category change
+  // Add custom role handler
+  const handleAddCustomRole = useCallback(() => {
+    if (!newRole.role.trim()) {
+      toast.error("Please enter a role name");
+      return;
+    }
+
+    const newCustomRole: BandRoleInput = {
+      role: newRole.role.trim(),
+      maxSlots: newRole.maxSlots,
+      requiredSkills: newRole.requiredSkills,
+      description: newRole.description.trim() || undefined,
+    };
+
+    setBandRoles([...bandRoles, newCustomRole]);
+    setNewRole({
+      role: "",
+      maxSlots: 1,
+      requiredSkills: [],
+      description: "",
+    });
+    setSkillInput("");
+    setShowCustomRoleForm(false);
+
+    toast.success(`Added "${newRole.role}" role`);
+  }, [newRole, bandRoles]);
+
+  // Remove role handler
+  const handleRemoveRole = useCallback(
+    (index: number) => {
+      const updatedRoles = [...bandRoles];
+      updatedRoles.splice(index, 1);
+      setBandRoles(updatedRoles);
+      toast.success("Role removed");
+    },
+    [bandRoles]
+  );
+
+  // Add skill handler
+  const handleAddSkill = useCallback(() => {
+    if (skillInput.trim()) {
+      setNewRole({
+        ...newRole,
+        requiredSkills: [...newRole.requiredSkills, skillInput.trim()],
+      });
+      setSkillInput("");
+    }
+  }, [newRole, skillInput]);
+
+  // Remove skill handler
+  const handleRemoveSkill = useCallback(
+    (index: number) => {
+      const updatedSkills = [...newRole.requiredSkills];
+      updatedSkills.splice(index, 1);
+      setNewRole({
+        ...newRole,
+        requiredSkills: updatedSkills,
+      });
+    },
+    [newRole]
+  );
+
+  // Quick add instrument handler
+  const handleQuickAddInstrument = useCallback(
+    (instrument: string) => {
+      setNewRole({
+        ...newRole,
+        role: instrument,
+        maxSlots: 1,
+        requiredSkills: [],
+        description: "",
+      });
+    },
+    [newRole]
+  );
+
+  // In your NormalGigsForm component, add:
+  const [showBandSetupModal, setShowBandSetupModal] = useState(false);
+
+  // Update handleBussinessChange:
   const handleBussinessChange = useCallback((value: BusinessCategory) => {
     setBussinessCategory(value);
     setFormValues((prev) => ({
@@ -593,14 +751,24 @@ export default function NormalGigsForm() {
         : {}),
     }));
 
-    if (!["mc", "dj", "vocalist"].includes(value || "")) {
+    if (value === "other") {
+      // Show band setup modal
+      setShowBandSetupModal(true);
+    } else if (!["mc", "dj", "vocalist"].includes(value || "")) {
       setActiveTalentType(null);
-      return;
+    } else {
+      const newTalentType = value as Exclude<TalentType, null>;
+      setActiveTalentType(newTalentType);
+      setShowTalentModal(true);
     }
+  }, []);
 
-    const newTalentType = value as Exclude<TalentType, null>;
-    setActiveTalentType(newTalentType);
-    setShowTalentModal(true);
+  // Handle band setup submission
+  const handleBandSetupSubmit = useCallback((roles: BandRoleInput[]) => {
+    setBandRoles(roles);
+    toast.success(
+      `Band setup complete! ${roles.length} role${roles.length !== 1 ? "s" : ""} selected.`
+    );
   }, []);
 
   // Handle Select changes (for Select components)
@@ -690,10 +858,22 @@ export default function NormalGigsForm() {
     return Object.keys(errors).length === 0;
   }, [bussinesscat, formValues]);
 
-  // In your handleSubmit function
+  // In handleSubmit function:
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+
+      // Validate bussinesscat first
+      if (!formValues.bussinesscat) {
+        toast.error("Please select a business category");
+        return;
+      }
+
+      // Additional validation for band gigs
+      if (formValues.bussinesscat === "other" && bandRoles.length === 0) {
+        toast.error("Please setup your band roles first");
+        return;
+      }
 
       if (!validateFields()) {
         setIsVisible(true);
@@ -715,8 +895,16 @@ export default function NormalGigsForm() {
           user._id,
           gigcustom,
           imageUrl,
-          schedulingProcedure
+          schedulingProcedure,
+          bandRoles,
+          formValues.durationfrom,
+          formValues.durationto
         );
+
+        // Ensure bussinesscat is not null
+        if (!submissionData.bussinesscat) {
+          throw new Error("Business category is required");
+        }
 
         await createGig(submissionData);
 
@@ -724,6 +912,9 @@ export default function NormalGigsForm() {
         setError(false);
         setIsVisible(true);
         setRefetchData(true);
+
+        // Clear band roles after submission
+        setBandRoles([]);
 
         setTimeout(() => {
           router.refresh();
@@ -747,6 +938,7 @@ export default function NormalGigsForm() {
       router,
       setRefetchData,
       formValues,
+      bandRoles,
     ]
   );
 
@@ -978,8 +1170,237 @@ export default function NormalGigsForm() {
     );
   }, [colors, formValues]);
 
+  // Add this component in NormalGigsForm after TalentPreview
+  const BandSetupPreview = useCallback(() => {
+    if (bussinesscat !== "other" || bandRoles.length === 0) return null;
+
+    const totalPositions = bandRoles.reduce(
+      (sum, role) => sum + role.maxSlots,
+      0
+    );
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(
+          "rounded-xl p-4 border",
+          colors.border,
+          colors.backgroundMuted,
+          "relative overflow-hidden"
+        )}
+      >
+        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+
+        <div className="flex justify-between items-center mb-4 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+              <Users className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>Band Setup</h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                {bandRoles.length} role{bandRoles.length !== 1 ? "s" : ""},{" "}
+                {totalPositions} position{totalPositions !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("text-sm", colors.hoverBg, "hover:text-purple-600")}
+            onClick={() => setShowBandSetupModal(true)}
+          >
+            Edit
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
+          {bandRoles.map((role, index) => (
+            <div key={index} className="p-3 border rounded-lg">
+              <div className="flex justify-between items-start mb-2">
+                <span className="font-medium">{role.role}</span>
+                <Badge variant="outline" className="text-xs">
+                  {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
+                </Badge>
+              </div>
+
+              {role?.requiredSkills && role.requiredSkills.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {role.requiredSkills.slice(0, 3).map((skill) => (
+                    <Badge key={skill} variant="secondary" className="text-xs">
+                      {skill}
+                    </Badge>
+                  ))}
+                  {role.requiredSkills.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{role.requiredSkills.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {role.description && (
+                <p className="text-xs text-gray-600 line-clamp-2">
+                  {role.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  }, [bandRoles, bussinesscat, colors]);
+
+  // Custom Role Form Component
+  const CustomRoleForm = useCallback(
+    () => (
+      <div className="mb-6 p-4 border rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10">
+        <h3 className="font-semibold mb-3 flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Add Custom Role
+        </h3>
+
+        <div className="space-y-3">
+          <Input
+            placeholder="e.g., Percussionist, Keyboardist, DJ, etc."
+            value={newRole.role}
+            onChange={(e) => setNewRole({ ...newRole, role: e.target.value })}
+            className="border-2"
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium">Slots Needed</label>
+              <div className="flex items-center gap-2 mt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setNewRole({
+                      ...newRole,
+                      maxSlots: Math.max(1, newRole.maxSlots - 1),
+                    })
+                  }
+                >
+                  -
+                </Button>
+                <span className="font-semibold px-2">{newRole.maxSlots}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setNewRole({ ...newRole, maxSlots: newRole.maxSlots + 1 })
+                  }
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Add Skills</label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  placeholder="e.g., Jazz, Classical"
+                  value={skillInput}
+                  onChange={(e) => setSkillInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter" && skillInput.trim()) {
+                      e.preventDefault();
+                      handleAddSkill();
+                    }
+                  }}
+                  className="border-2"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAddSkill}
+                  disabled={!skillInput.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Textarea
+            placeholder="Role description (optional)"
+            value={newRole.description}
+            onChange={(e) =>
+              setNewRole({ ...newRole, description: e.target.value })
+            }
+            className="border-2"
+            rows={2}
+          />
+
+          {/* Skills preview */}
+          {newRole.requiredSkills.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {newRole.requiredSkills.map((skill, idx) => (
+                <Badge key={idx} variant="secondary" className="gap-1">
+                  {skill}
+                  <button
+                    onClick={() => handleRemoveSkill(idx)}
+                    className="ml-1 hover:text-red-500"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <Button
+            type="button"
+            onClick={handleAddCustomRole}
+            disabled={!newRole.role.trim()}
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Custom Role
+          </Button>
+        </div>
+      </div>
+    ),
+    [
+      newRole,
+      skillInput,
+      handleAddSkill,
+      handleAddCustomRole,
+      handleRemoveSkill,
+    ]
+  );
+
+  // Quick Add Instrument Suggestions Component
+  const QuickAddInstruments = useCallback(
+    () => (
+      <div className="mb-4">
+        <h4 className="font-medium mb-2">Quick Add Common Instruments:</h4>
+        <div className="flex flex-wrap gap-2">
+          {instrumentSuggestions.map((instrument) => (
+            <Button
+              key={instrument}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickAddInstrument(instrument)}
+              className="text-xs"
+            >
+              {instrument}
+            </Button>
+          ))}
+        </div>
+      </div>
+    ),
+    [instrumentSuggestions, handleQuickAddInstrument]
+  );
+
   return (
-    <div className="relative max-w-4xl mx-auto">
+    <div className="relative max-w-4xl mx-auto pb-24">
       {/* Success/Error Message */}
       <AnimatePresence initial={false}>
         {isVisible && editMessage && (
@@ -1012,14 +1433,12 @@ export default function NormalGigsForm() {
           </motion.div>
         )}
       </AnimatePresence>
-
       {/* Offline Notification */}
       {showOfflineNotification && !isOnline && (
         <OfflineNotification
           onClose={() => setShowOfflineNotification(false)}
         />
       )}
-
       {/* Progress Indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -1051,7 +1470,6 @@ export default function NormalGigsForm() {
           />
         </div>
       </div>
-
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Business Type Section */}
         <div className="space-y-4">
@@ -1142,6 +1560,7 @@ export default function NormalGigsForm() {
           </div>
 
           <TalentPreview />
+          <BandSetupPreview />
         </div>
 
         {/* Customize Button */}
@@ -1628,7 +2047,6 @@ export default function NormalGigsForm() {
         </CollapsibleSection>
 
         {/* Duration Section */}
-
         <div>
           {showduration ? (
             <motion.div
@@ -1802,6 +2220,89 @@ export default function NormalGigsForm() {
               <p className={cn("text-sm mb-4", colors.textMuted)}>
                 Select the instruments needed for your band
               </p>
+
+              {/* Quick Add Instruments */}
+              <QuickAddInstruments />
+
+              {/* Custom Role Form Toggle */}
+              <div className="mb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCustomRoleForm(!showCustomRoleForm)}
+                  className="w-full mb-3"
+                >
+                  {showCustomRoleForm ? (
+                    <>
+                      <X className="w-4 h-4 mr-2" />
+                      Close Custom Role Form
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Custom Role
+                    </>
+                  )}
+                </Button>
+
+                {/* Custom Role Form */}
+                <AnimatePresence>
+                  {showCustomRoleForm && <CustomRoleForm />}
+                </AnimatePresence>
+              </div>
+
+              {/* Current Roles */}
+              {bandRoles.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-medium mb-3">Current Band Roles:</h4>
+                  <div className="space-y-3">
+                    {bandRoles.map((role, index) => (
+                      <div key={index} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <span className="font-medium">{role.role}</span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
+                            </Badge>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveRole(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        {role?.requiredSkills &&
+                          role.requiredSkills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {role.requiredSkills.map((skill) => (
+                                <Badge
+                                  key={skill}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+
+                        {role.description && (
+                          <p className="text-xs text-gray-600 line-clamp-2">
+                            {role.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Band Instruments Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {bandInstruments.map((instrument) => (
                   <div
@@ -1818,7 +2319,7 @@ export default function NormalGigsForm() {
                       )}
                     >
                       {userinfo.prefferences.includes(instrument.value) && (
-                        <CheckCircle className="w-3 h-3 text-white" />
+                        <Check className="w-3 h-3 text-white" />
                       )}
                     </div>
                     <label
@@ -1864,7 +2365,7 @@ export default function NormalGigsForm() {
 
         {/* Submit Button */}
         <div className="pt-8 border-t">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 mb-10 -mt-4">
             <Button
               type="button"
               onClick={() => setisSchedulerOpen(true)}
@@ -1931,7 +2432,6 @@ export default function NormalGigsForm() {
           </p>
         </div>
       </form>
-
       {/* Modals */}
       <AnimatePresence initial={false}>
         {showcustomization && (
@@ -1945,7 +2445,6 @@ export default function NormalGigsForm() {
           />
         )}
       </AnimatePresence>
-
       <AnimatePresence initial={false}>
         {activeTalentType && (
           <TalentModal
@@ -1986,7 +2485,6 @@ export default function NormalGigsForm() {
           />
         )}
       </AnimatePresence>
-
       <AnimatePresence initial={false}>
         <SchedulerComponent
           getScheduleData={getSchedulingData}
@@ -1995,6 +2493,18 @@ export default function NormalGigsForm() {
           setisSchedulerOpen={setisSchedulerOpen}
           onSubmit={handleSubmit}
         />
+      </AnimatePresence>
+      {/* Add this to your return statement, after the other modals: */}
+
+      <AnimatePresence initial={false}>
+        {showBandSetupModal && (
+          <BandSetupModal
+            isOpen={showBandSetupModal}
+            onClose={() => setShowBandSetupModal(false)}
+            onSubmit={handleBandSetupSubmit}
+            initialRoles={bandRoles}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

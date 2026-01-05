@@ -2,6 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+
 import { useThemeColors } from "@/hooks/useTheme";
 import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
 import { useSortedTrendingMusicians } from "@/hooks/useCommunityUsers";

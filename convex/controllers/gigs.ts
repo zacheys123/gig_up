@@ -1,10 +1,25 @@
 // convex/controllers/gigs.ts
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
-import { createNotificationInternal } from "../createNotificationInternal";
+import {
+  createGigNotification,
+  createNotificationInternal,
+} from "../createNotificationInternal";
 import { applyFirstGigBonusInternal } from "./trustScore";
 import { Id } from "../_generated/dataModel";
-
+interface ProcessedBandRole {
+  role: string;
+  maxSlots: number;
+  filledSlots: number;
+  applicants: Id<"users">[];
+  bookedUsers: Id<"users">[];
+  requiredSkills?: string[];
+  description?: string;
+  isLocked?: boolean;
+  price?: number;
+  currency?: string;
+  negotiable?: boolean;
+}
 // Define proper types
 interface BandMember {
   userId: Id<"users">;
@@ -1473,7 +1488,24 @@ export const createGig = mutation({
     tags: v.optional(v.array(v.string())),
     requirements: v.optional(v.array(v.string())),
     benefits: v.optional(v.array(v.string())),
-    bandCategory: v.optional(v.array(v.string())),
+    bandCategory: v.optional(
+      v.array(
+        v.object({
+          role: v.string(),
+          maxSlots: v.number(),
+          filledSlots: v.number(),
+          applicants: v.array(v.id("users")),
+          bookedUsers: v.array(v.id("users")),
+          requiredSkills: v.optional(v.array(v.string())),
+          description: v.optional(v.string()),
+          isLocked: v.optional(v.boolean()),
+          // Add these price fields
+          price: v.optional(v.number()),
+          currency: v.optional(v.string()),
+          negotiable: v.optional(v.boolean()),
+        })
+      )
+    ),
     vocalistGenre: v.optional(v.array(v.string())),
     bookedBy: v.optional(v.id("users")),
     paymentStatus: v.optional(
@@ -1543,22 +1575,104 @@ export const createGig = mutation({
       throw new Error("User not found");
     }
 
+    let relevantUsersQuery = ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("isMusician"), true))
+      .filter((q) => q.neq(q.field("clerkId"), user.clerkId));
+
     const isFirstGig = !user.gigsPosted || user.gigsPosted === 0;
 
     // Combine phone and phoneNo for backward compatibility
     const phoneNumber = phone || phoneNo || "";
 
-    // Create the gig with all required schema fields
+    let processedBandCategory: ProcessedBandRole[] = [];
+    let processedIsClientBand = false;
+    let processedMaxSlots = maxSlots;
+    let processedCategory = category || "";
+
+    switch (bussinesscat) {
+      case "full": // Full Band - Creates a normal gig (no band setup)
+        processedIsClientBand = false;
+        processedBandCategory = []; // No band roles for full band
+        processedMaxSlots = processedMaxSlots || 1; // Default 1 slot for full band
+        processedCategory = category || "full-band";
+        break;
+
+      case "personal": // Individual musician - Use category as instrument
+        processedIsClientBand = false;
+        processedBandCategory = []; // No band roles for individual
+        processedMaxSlots = processedMaxSlots || 1; // Default 1 slot
+        // Store the instrument in category field
+        processedCategory = category || "individual";
+        break;
+
+      case "other": // Create Band - This is where we create band setup
+        processedIsClientBand = true;
+        // Process band roles with default values
+        processedBandCategory = (bandCategory || []).map((role: any) => ({
+          role: role.role,
+          maxSlots: role.maxSlots,
+          filledSlots: 0, // Start with 0 filled slots
+          applicants: [],
+          bookedUsers: [],
+          requiredSkills: role.requiredSkills || [],
+          description: role.description || "",
+          isLocked: false,
+          // Add price fields if provided
+          price: role.price || undefined,
+          currency: role.currency || currency || "KES",
+          negotiable: role.negotiable ?? negotiable ?? true,
+        }));
+        // Calculate total max slots from band roles
+        const totalBandSlots = processedBandCategory.reduce(
+          (sum: number, role: any) => sum + role.maxSlots,
+          0
+        );
+        processedMaxSlots = totalBandSlots || 5; // Use calculated slots or default 5
+        processedCategory = "band-creation";
+
+        relevantUsersQuery = relevantUsersQuery.filter((q) =>
+          q.or(
+            q.eq(q.field("openToBandWork"), true),
+            q.eq(q.field("interestedInBands"), true)
+          )
+        );
+
+        break;
+
+      case "mc": // MC
+      case "dj": // DJ
+      case "vocalist": // Vocalist
+        processedIsClientBand = false;
+        processedBandCategory = []; // Talent-specific, not a band
+        processedMaxSlots = processedMaxSlots || 1;
+        processedCategory = bussinesscat; // Use the talent type as category
+        break;
+
+      default:
+        processedIsClientBand = false;
+        processedBandCategory = [];
+        processedMaxSlots = processedMaxSlots || 1;
+        processedCategory = category || "";
+    }
+
+    // ============================================
+    // CREATE GIG RECORD (UPDATED)
+    // ============================================
+
     const gigId = await ctx.db.insert("gigs", {
+      // Arrays with defaults
       interestedUsers: [],
       appliedUsers: [],
       viewCount: [],
-      bookCount: [], // Empty array of bandMember objects
-      bookingHistory: [], // Empty array of bookingHistoryEntry objects
+      bookCount: [], // This will be filled when musicians join the band
+      bookingHistory: [],
 
-      // New fields
-      isClientBand: isClientBand || false,
-      maxSlots: maxSlots || (isClientBand ? 5 : 10),
+      // Business category specific fields
+      isClientBand: processedIsClientBand,
+      maxSlots: processedMaxSlots,
+      bandCategory: processedBandCategory,
+
       // Required fields
       postedBy,
       title,
@@ -1572,7 +1686,7 @@ export const createGig = mutation({
       description: description || "",
       phone: phoneNumber,
       price: price || 0,
-      category: category || "",
+      category: processedCategory, // Use processed category
       location: location || "",
       font: font || "Arial, sans-serif",
       fontColor: fontColor || "#000000",
@@ -1581,22 +1695,27 @@ export const createGig = mutation({
       otherTimeline: otherTimeline || "",
       day: day || "",
 
-      // Musician-specific fields
-      mcType: mcType || "",
-      mcLanguages: mcLanguages || "",
-      djGenre: djGenre || "",
-      djEquipment: djEquipment || "",
+      // Talent-specific fields (only if applicable)
+      ...(bussinesscat === "mc" && {
+        mcType: mcType || "",
+        mcLanguages: mcLanguages || "",
+      }),
+      ...(bussinesscat === "dj" && {
+        djGenre: djGenre || "",
+        djEquipment: djEquipment || "",
+      }),
+      ...(bussinesscat === "vocalist" && {
+        vocalistGenre: vocalistGenre || [],
+      }),
+
+      // Other fields
       pricerange: pricerange || "",
-      currency: currency || "USD",
+      currency: currency || "KES", // Default to KES
       scheduleDate: scheduleDate || date,
       schedulingProcedure: schedulingProcedure || "manual",
-
-      // Arrays with defaults
       tags: tags || [],
       requirements: requirements || [],
       benefits: benefits || [],
-      bandCategory: bandCategory || [],
-      vocalistGenre: vocalistGenre || [],
 
       // Status fields
       isTaken: false,
@@ -1611,7 +1730,7 @@ export const createGig = mutation({
       clientConfirmPayment: undefined,
       gigRating: 0,
 
-      negotiable,
+      negotiable: bussinesscat === "other" ? undefined : negotiable,
 
       // Timestamps
       createdAt: Date.now(),
@@ -1624,46 +1743,98 @@ export const createGig = mutation({
       return gigId;
     }
 
-    // Determine notification criteria
+    // ============================================
+    // NOTIFICATION LOGIC (FIXED)
+    // ============================================
+
+    // Determine notification message based on business category
     let notificationCriteria = "";
-    if (bussinesscat === "mc" && mcType) {
-      notificationCriteria = `MC (${mcType})`;
-    } else if (bussinesscat === "dj" && djGenre) {
-      notificationCriteria = `DJ (${djGenre})`;
-    } else if (bussinesscat === "vocalist" && vocalistGenre?.length) {
-      notificationCriteria = `Vocalist (${vocalistGenre.join(", ")})`;
-    } else if (
-      (bussinesscat === "full" || bussinesscat === "other") &&
-      bandCategory?.length
-    ) {
-      notificationCriteria = `Band (${bandCategory.join(", ")})`;
-    } else {
-      notificationCriteria = bussinesscat;
+    let notificationDetails = "";
+
+    switch (bussinesscat) {
+      case "full":
+        notificationCriteria = "Full Band";
+        notificationDetails = "Looking for a complete band";
+        break;
+      case "personal":
+        notificationCriteria = "Individual Musician";
+        notificationDetails = `Looking for ${category || "a musician"}`;
+        break;
+      case "other":
+        notificationCriteria = "Band Formation";
+        notificationDetails = `Creating a band with ${processedBandCategory.length} roles`;
+        break;
+      case "mc":
+        notificationCriteria = "MC";
+        notificationDetails = `Type: ${mcType || "General"}`;
+        break;
+      case "dj":
+        notificationCriteria = "DJ";
+        notificationDetails = `Genre: ${djGenre || "Various"}`;
+        break;
+      case "vocalist":
+        notificationCriteria = "Vocalist";
+        notificationDetails = `Genres: ${vocalistGenre?.join(", ") || "Various"}`;
+        break;
+      default:
+        notificationCriteria = bussinesscat;
     }
 
     // Apply first gig bonus if applicable
     if (isFirstGig) {
       try {
-        // Use internal helper instead of calling mutation
         await applyFirstGigBonusInternal(ctx, posterUser._id);
       } catch (error) {
         console.error("First gig bonus error:", error);
-        // Don't fail gig creation if bonus fails
       }
     }
 
     // Find relevant musicians for notifications
     try {
-      let relevantUsersQuery = ctx.db
-        .query("users")
-        .filter((q) => q.eq(q.field("isMusician"), true))
-        .filter((q) => q.neq(q.field("clerkId"), posterUser.clerkId));
-
-      // Filter by role type
-      if (["mc", "dj", "vocalist"].includes(bussinesscat)) {
-        relevantUsersQuery = relevantUsersQuery.filter((q) =>
-          q.eq(q.field("roleType"), bussinesscat)
-        );
+      // Filter based on business category
+      switch (bussinesscat) {
+        case "full":
+          // For full band, look for band leaders or versatile musicians
+          relevantUsersQuery = relevantUsersQuery.filter((q) =>
+            q.eq(q.field("roleType"), "band-leader")
+          );
+          break;
+        case "personal":
+          // For individual, filter by instrument if specified
+          if (category) {
+            relevantUsersQuery = relevantUsersQuery.filter((q) =>
+              q.eq(q.field("instrument"), category)
+            );
+          }
+          break;
+        case "other":
+          // For band creation, look for musicians interested in band gigs
+          // or check if they have skills matching band roles
+          if (processedBandCategory.length > 0) {
+            const requiredSkills = processedBandCategory.flatMap(
+              (role: any) => role.requiredSkills || []
+            );
+            if (requiredSkills.length > 0) {
+              // Note: This is a simple filter, you might need a more complex query
+              // for matching skills to instruments
+              relevantUsersQuery = relevantUsersQuery.filter((q) =>
+                q.or(
+                  ...requiredSkills.map((skill: string) =>
+                    q.eq(q.field("instrument"), skill)
+                  )
+                )
+              );
+            }
+          }
+          break;
+        case "mc":
+        case "dj":
+        case "vocalist":
+          // For specific talents, filter by roleType
+          relevantUsersQuery = relevantUsersQuery.filter((q) =>
+            q.eq(q.field("roleType"), bussinesscat)
+          );
+          break;
       }
 
       // Filter by location if available
@@ -1675,26 +1846,24 @@ export const createGig = mutation({
 
       const relevantUsers = await relevantUsersQuery.take(15);
 
-      // Create notifications
+      // Create notifications for relevant musicians
       if (relevantUsers.length > 0) {
         const notificationPromises = relevantUsers.map(async (user) => {
-          return createNotificationInternal(ctx, {
-            userDocumentId: user._id,
+          return createGigNotification(ctx, {
+            recipientDocumentId: user._id,
+            senderDocumentId: posterUser._id,
             type: "gig_opportunity",
-            title: "🎵 New Gig Opportunity!",
-            message: `${posterUser.firstname || "Someone"} posted a ${notificationCriteria} gig: "${title}"`,
-            image: posterUser.picture,
-            actionUrl: `/gigs/${gigId}`,
-            relatedUserDocumentId: posterUser._id,
-            metadata: {
-              senderId: posterUser.clerkId,
-              senderName: posterUser.firstname,
-              gigId: gigId,
-              gigTitle: title,
-              bussinesscat: bussinesscat,
+            gigId,
+            gigTitle: title,
+            additionalMetadata: {
+              bussinesscat,
               location: location || "Unknown location",
               price: price || 0,
-              currency: currency || "USD",
+              currency: currency || "KES",
+              details: notificationDetails,
+              isBandGig: bussinesscat === "other",
+              bandRoleCount: processedBandCategory.length,
+              totalSlots: processedMaxSlots,
             },
           });
         });
@@ -1703,20 +1872,32 @@ export const createGig = mutation({
       }
 
       // Create confirmation notification for poster
-      await createNotificationInternal(ctx, {
-        userDocumentId: posterUser._id,
+      await createGigNotification(ctx, {
+        recipientDocumentId: posterUser._id,
+        senderDocumentId: posterUser._id, // Self notification
         type: "gig_created",
-        title: "✅ Gig Created Successfully!",
-        message: `Your "${title}" gig has been posted. ${relevantUsers.length} musicians have been notified.`,
-        image: posterUser.picture,
-        actionUrl: `/gigs/${gigId}`,
-        relatedUserDocumentId: posterUser._id,
-        metadata: {
-          gigId: gigId,
-          gigTitle: title,
+        gigId,
+        gigTitle: title,
+        additionalMetadata: {
           notifiedCount: relevantUsers.length,
+          gigType: notificationCriteria,
         },
       });
+
+      // Band setup notification
+      if (bussinesscat === "other") {
+        await createGigNotification(ctx, {
+          recipientDocumentId: posterUser._id,
+          senderDocumentId: posterUser._id,
+          type: "band_setup_info",
+          gigId,
+          gigTitle: title,
+          additionalMetadata: {
+            bandRoleCount: processedBandCategory.length,
+            totalSlots: processedMaxSlots,
+          },
+        });
+      }
 
       // Update user's gig count
       await ctx.db.patch(posterUser._id, {
@@ -1724,7 +1905,6 @@ export const createGig = mutation({
       });
     } catch (error) {
       console.error("Error creating notifications:", error);
-      // Continue even if notifications fail
     }
 
     return gigId;
