@@ -255,10 +255,11 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   };
 
   // Selection View
-  // Selection View - Fixed
+  // Selection View - Fixed with proper layout
   const SelectionView = () => (
-    <>
-      <div className="p-4 border-b">
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className={cn("text-xl font-bold", colors.text)}>
@@ -277,7 +278,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
             <X className="w-5 h-5" />
           </Button>
         </div>
-        <div className="relative mb-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             placeholder="Search roles..."
@@ -288,12 +289,11 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </div>
       </div>
 
-      {/* REMOVE THE DUPLICATE ScrollArea that's inside the header div above */}
-
+      {/* Scrollable Content */}
       <ScrollArea className="flex-1">
         <div className="p-4">
           {/* Category Filters */}
-          <div className="flex gap-2 overflow-x-auto pb-3">
+          <div className="flex gap-2 overflow-x-auto pb-3 mb-3">
             {roleCategories.map((category) => {
               const Icon = category.icon;
               return (
@@ -363,7 +363,9 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           </div>
 
           {/* Custom Role */}
-          <div className="mt-6 mb-8">
+          <div className="mt-6 mb-24">
+            {" "}
+            {/* Increased bottom margin */}
             <div className={cn("p-4 rounded-2xl border", colors.border)}>
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -420,7 +422,8 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </div>
       </ScrollArea>
 
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t">
+      {/* Footer */}
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t shrink-0">
         <div className="flex items-center justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -441,7 +444,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           </Button>
         </div>
       </div>
-    </>
+    </div>
   );
 
   // Configuration View
