@@ -529,7 +529,6 @@ const DraftsListModal = React.memo(
 
 DraftsListModal.displayName = "DraftsListModal";
 
-DraftsListModal.displayName = "DraftsListModal";
 // Memoized Error Message Component
 const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
   if (!error) return null;
@@ -546,8 +545,9 @@ const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
   );
 });
 ErrorMessage.displayName = "ErrorMessage";
+// Remove the standalone ValidationSummary component above and add it inside NormalGigsForm:
 
-// Memoized Input Component
+// Memoized Input Component - FIXED VERSION
 const MemoizedInput = React.memo(
   ({
     value,
@@ -559,6 +559,7 @@ const MemoizedInput = React.memo(
     className = "",
     error,
     icon: Icon,
+    required = false, // Add default value
     ...props
   }: {
     value: string;
@@ -569,6 +570,7 @@ const MemoizedInput = React.memo(
     type?: string;
     className?: string;
     error?: string;
+    required?: boolean; // Make it optional with default
     icon?: any;
     [key: string]: any;
   }) => {
@@ -577,6 +579,11 @@ const MemoizedInput = React.memo(
         <div className="relative">
           {Icon && (
             <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          )}
+          {required && (
+            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 text-xs">
+              *
+            </span>
           )}
           <Input
             value={value}
@@ -587,6 +594,7 @@ const MemoizedInput = React.memo(
             placeholder={placeholder}
             className={cn(
               Icon ? "pl-10" : "",
+              required ? "pr-10" : "",
               "py-3 rounded-xl border-2 transition-all",
               "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
               error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
@@ -601,7 +609,6 @@ const MemoizedInput = React.memo(
   }
 );
 MemoizedInput.displayName = "MemoizedInput";
-
 // Memoized Textarea Component
 const MemoizedTextarea = React.memo(
   ({
@@ -756,6 +763,121 @@ export default function NormalGigsForm() {
     { role: "Drummer", maxSlots: 1, requiredSkills: ["Jazz", "Rock"] },
     { role: "Backup Vocalist", maxSlots: 2, requiredSkills: [] },
   ]);
+
+  // Validation function Satrts Here!!!!!!!!
+  const validateRequiredFields = useCallback(() => {
+    const errors: Record<string, string> = {};
+
+    // Basic required fields for all categories
+    if (!formValues.title?.trim()) errors.title = "Title is required";
+    if (!formValues.description?.trim())
+      errors.description = "Description is required";
+    if (!formValues.location?.trim()) errors.location = "Location is required";
+    if (!bussinesscat) errors.bussinesscat = "Business category is required";
+
+    // Category-specific validations
+    if (bussinesscat === "mc") {
+      if (!formValues.mcType) errors.mcType = "MC type is required";
+      if (!formValues.mcLanguages)
+        errors.mcLanguages = "Languages are required";
+    } else if (bussinesscat === "dj") {
+      if (!formValues.djGenre) errors.djGenre = "DJ genre is required";
+      if (!formValues.djEquipment) errors.djEquipment = "Equipment is required";
+    } else if (bussinesscat === "vocalist") {
+      if (!formValues.vocalistGenre || formValues.vocalistGenre.length === 0) {
+        errors.vocalistGenre = "At least one genre is required";
+      }
+    } else if (bussinesscat === "personal") {
+      if (!formValues.category) errors.category = "Instrument is required";
+      if (!formValues.price?.trim()) errors.price = "Price is required";
+    } else if (bussinesscat === "full") {
+      if (!formValues.price?.trim()) errors.price = "Price is required";
+    } else if (bussinesscat === "other") {
+      // Band creation: price is NOT required, but band roles are
+      if (!bandRoles || bandRoles.length === 0) {
+        errors.bandRoles = "At least one band role is required";
+      }
+    }
+
+    // Timeline validations
+    if (formValues.gigtimeline === "once" && !formValues.date) {
+      errors.date = "Event date is required for one-time events";
+    } else if (formValues.gigtimeline !== "once" && !formValues.day) {
+      errors.day = "Day of week is required for recurring events";
+    }
+
+    fieldErrorsRef.current = errors;
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [bussinesscat, formValues, bandRoles]);
+  // Add this helper function to determine if a field is required
+  const isFieldRequired = useCallback(
+    (fieldName: string) => {
+      // Base required fields
+      const baseRequiredFields = [
+        "title",
+        "description",
+        "location",
+        "phoneNo",
+        "gigtimeline",
+        "bussinesscat",
+      ];
+
+      // Category-specific requirements - IMPORTANT: "other" doesn't need price
+      const categoryRequirements: Record<string, string[]> = {
+        mc: ["mcType", "mcLanguages"],
+        dj: ["djGenre", "djEquipment"],
+        vocalist: ["vocalistGenre"],
+        personal: ["category", "price", "maxSlots"],
+        full: ["price", "maxSlots"],
+        other: ["bandRoles"], // No price required for band creation
+      };
+
+      // Timeline requirements
+      const timelineRequirements =
+        formValues.gigtimeline === "once"
+          ? ["date"]
+          : formValues.gigtimeline !== "once" && formValues.gigtimeline !== ""
+            ? ["day"]
+            : [];
+
+      // Combine all requirements
+      const allRequiredFields = [
+        ...baseRequiredFields,
+        ...(bussinesscat ? categoryRequirements[bussinesscat] || [] : []),
+        ...timelineRequirements,
+      ];
+
+      return allRequiredFields.includes(fieldName);
+    },
+    [bussinesscat, formValues.gigtimeline]
+  );
+  const ValidationSummary = useCallback(() => {
+    if (Object.keys(fieldErrors).length === 0) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: "auto" }}
+        className="mb-6 p-4 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 rounded-xl"
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <h3 className="font-semibold text-red-700 dark:text-red-300">
+            Missing Required Information
+          </h3>
+        </div>
+        <ul className="space-y-1">
+          {Object.entries(fieldErrors).map(([field, error]) => (
+            <li key={field} className="text-sm text-red-600 dark:text-red-400">
+              • {field === "bandRoles" ? "Band roles are required" : error}
+            </li>
+          ))}
+        </ul>
+      </motion.div>
+    );
+  }, [fieldErrors]);
+
   const [draftId, setDraftId] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
@@ -1342,58 +1464,30 @@ export default function NormalGigsForm() {
     });
   }, []);
 
-  // Validation function
-  const validateFields = useCallback(() => {
-    const errors: Record<string, string> = {};
-
-    if (!formValues.title?.trim()) errors.title = "Title is required";
-    if (!formValues.description?.trim())
-      errors.description = "Description is required";
-    if (!formValues.location?.trim()) errors.location = "Location is required";
-    if (!bussinesscat) errors.bussinesscat = "Business category is required";
-
-    if (bussinesscat === "mc") {
-      if (!formValues.mcType) errors.mcType = "MC type is required";
-      if (!formValues.mcLanguages)
-        errors.mcLanguages = "Languages are required";
-    } else if (bussinesscat === "dj") {
-      if (!formValues.djGenre) errors.djGenre = "DJ genre is required";
-      if (!formValues.djEquipment) errors.djEquipment = "Equipment is required";
-    } else if (bussinesscat === "vocalist") {
-      if (!formValues.vocalistGenre || formValues.vocalistGenre.length === 0) {
-        errors.vocalistGenre = "At least one genre is required";
-      }
-    }
-
-    fieldErrorsRef.current = errors;
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  }, [bussinesscat, formValues]);
-
-  // In handleSubmit function:
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-
-      // Validate bussinesscat first
-      if (!formValues.bussinesscat) {
-        toast.error("Please select a business category");
+      if (bussinesscat === "other" && (!bandRoles || bandRoles.length === 0)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          bandRoles: "At least one band role is required",
+        }));
+        setIsVisible(true);
+        setError(true);
+        setEditMessage("Please add at least one band role");
         return;
       }
+      // Use the comprehensive validation function
+      const isValid = validateRequiredFields();
 
-      // Additional validation for band gigs
-      if (formValues.bussinesscat === "other" && bandRoles.length === 0) {
-        toast.error("Please setup your band roles first");
-        return;
-      }
-
-      if (!validateFields()) {
+      if (!isValid) {
         setIsVisible(true);
         setError(true);
         setEditMessage("Please fill in all required fields");
         return;
       }
 
+      // Check if user is logged in
       if (!user?._id) {
         toast.error("You must be logged in to create a gig");
         return;
@@ -1402,15 +1496,15 @@ export default function NormalGigsForm() {
       try {
         setIsLoading(true);
 
-        // FIX: Ensure schedulingProcedure has proper defaults
+        // Prepare submission data
         const submissionData = prepareGigDataForConvex(
           formValues,
           user._id,
           gigcustom,
           imageUrl,
           {
-            type: schedulingProcedure.type || "create", // Default to "create"
-            date: schedulingProcedure.date || new Date(), // Provide fallback date
+            type: schedulingProcedure.type || "create",
+            date: schedulingProcedure.date || new Date(),
           },
           bandRoles,
           formValues.durationfrom,
@@ -1445,16 +1539,17 @@ export default function NormalGigsForm() {
       }
     },
     [
-      validateFields,
+      validateRequiredFields, // Use the new validation function
       user,
       gigcustom,
       imageUrl,
-      schedulingProcedure, // ← Make sure this is in dependencies
+      schedulingProcedure,
       createGig,
       router,
       setRefetchData,
       formValues,
       bandRoles,
+      bussinesscat,
     ]
   );
 
@@ -1467,6 +1562,7 @@ export default function NormalGigsForm() {
         setEditMessage("");
       }, 4500);
     }
+
     return () => {
       if (timer) clearTimeout(timer);
     };
@@ -2512,7 +2608,6 @@ export default function NormalGigsForm() {
             {/* ⭐ CONDITIONAL: Show slots config ONLY for non-band gigs */}
             {shouldShowField("slotsConfig") && <SlotsConfiguration />}
           </div>
-
           {/* Customize Button - ALWAYS SHOW */}
           <div className="flex justify-between items-center">
             <Button
@@ -2540,7 +2635,6 @@ export default function NormalGigsForm() {
               </div>
             </Button>
           </div>
-
           {/* Title Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Gig Information"
@@ -2620,11 +2714,11 @@ export default function NormalGigsForm() {
                   name="title"
                   placeholder="e.g., 'Live Jazz Band Needed for Wedding Reception'"
                   error={fieldErrors.title}
+                  required={isFieldRequired("title")}
                 />
               </div>
             </div>
           </CollapsibleSection>
-
           {/* Description Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Description"
@@ -2655,7 +2749,7 @@ export default function NormalGigsForm() {
                 onChange={handleInputChange}
                 onBlur={() => handleInputBlur("description")}
                 name="description"
-                placeholder="We're looking for a professional jazz band for our wedding reception. The event will have 150 guests and we'd love a mix of classic jazz standards and modern arrangements. Please include details about your equipment needs..."
+                placeholder="We're looking for a professional jazz band for our wedding reception..."
                 rows={6}
                 error={fieldErrors.description}
               />
@@ -2667,7 +2761,6 @@ export default function NormalGigsForm() {
               </div>
             </div>
           </CollapsibleSection>
-
           {/* Business Information Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Business Information"
@@ -2710,7 +2803,6 @@ export default function NormalGigsForm() {
               {shouldShowField("priceInfo") && renderPriceInformation()}
             </div>
           </CollapsibleSection>
-
           {/* ⭐ CONDITIONAL: Show negotiable switch ONLY for non-band gigs */}
           {shouldShowField("negotiableSwitch") && (
             <MemoizedSwitch
@@ -2724,7 +2816,6 @@ export default function NormalGigsForm() {
               colors={colors}
             />
           )}
-
           {/* Gig Timeline Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Event Details"
@@ -2761,6 +2852,7 @@ export default function NormalGigsForm() {
                   placeholder="e.g., 'Nairobi City Center' or 'Sarova Stanley Hotel'"
                   error={fieldErrors.location}
                   icon={MapPin}
+                  required={isFieldRequired("location")}
                 />
               </div>
 
@@ -2887,7 +2979,6 @@ export default function NormalGigsForm() {
               )}
             </div>
           </CollapsibleSection>
-
           {/* Duration Section - ALWAYS SHOW */}
           <div>
             {showduration ? (
@@ -2980,6 +3071,40 @@ export default function NormalGigsForm() {
                           name="end"
                           placeholder="12"
                         />
+                        <MemoizedInput
+                          type="tel"
+                          value={formValues.phoneNo}
+                          onChange={handleInputChange}
+                          onBlur={() => handleInputBlur("phoneNo")}
+                          name="phoneNo"
+                          placeholder="+254 7XX XXX XXX"
+                          icon={Phone}
+                          required={isFieldRequired("phoneNo")}
+                        />
+                        <MemoizedInput
+                          type="text"
+                          value={formValues.location}
+                          onChange={handleInputChange}
+                          onBlur={() => handleInputBlur("location")}
+                          name="location"
+                          placeholder="e.g., 'Nairobi City Center' or 'Sarova Stanley Hotel'"
+                          error={fieldErrors.location}
+                          icon={MapPin}
+                          required={true} // Add this
+                        />
+                        {bussinesscat !== "other" && (
+                          <MemoizedInput
+                            type="number"
+                            value={formValues.price}
+                            onChange={handleInputChange}
+                            onBlur={() => handleInputBlur("price")}
+                            name="price"
+                            placeholder="15000"
+                            icon={DollarSign}
+                            min="0"
+                            required={isFieldRequired("price")}
+                          />
+                        )}
                         <Select
                           value={formValues.durationto}
                           onValueChange={(value) =>
@@ -3044,7 +3169,6 @@ export default function NormalGigsForm() {
               </div>
             )}
           </div>
-
           {/* ⭐ CONDITIONAL: Show individual instrument ONLY for "personal" */}
           {shouldShowField("individualInstrument") && (
             <div>
@@ -3071,7 +3195,6 @@ export default function NormalGigsForm() {
               </div>
             </div>
           )}
-
           {/* ⭐ CONDITIONAL: Show band setup ONLY for "other" */}
           {shouldShowField("bandSetup") && (
             <CollapsibleSection
@@ -3208,7 +3331,7 @@ export default function NormalGigsForm() {
               </div>
             </CollapsibleSection>
           )}
-
+          <ValidationSummary />
           {/* Submit Button - ALWAYS SHOW */}
           <div className="pt-8 border-t">
             <div className="flex flex-col sm:flex-row gap-4 mb-10 -mt-4">
