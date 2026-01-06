@@ -1,12 +1,6 @@
 // app/gigs/_components/MobileBandSetupModal.tsx
 import React, { useState } from "react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +28,6 @@ import {
   TrendingUp,
   Zap,
   Layers,
-  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BandRoleInput } from "@/types/gig";
@@ -185,9 +178,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         ];
       }
     });
-    if (selectedRoles.length === 0) {
-      setView("configuration");
-    }
   };
 
   const updateRole = (roleName: string, updates: Partial<BandRole>) => {
@@ -213,7 +203,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
       ]);
       setCustomRole("");
       setShowCustomForm(false);
-      setView("configuration");
     }
   };
 
@@ -255,7 +244,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   };
 
   // Selection View
-  // Selection View - Fixed with proper layout
   const SelectionView = () => (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -278,7 +266,8 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
             <X className="w-5 h-5" />
           </Button>
         </div>
-        <div className="relative">
+
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             placeholder="Search roles..."
@@ -289,11 +278,11 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </div>
       </div>
 
-      {/* Scrollable Content */}
+      {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4">
           {/* Category Filters */}
-          <div className="flex gap-2 overflow-x-auto pb-3 mb-3">
+          <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
             {roleCategories.map((category) => {
               const Icon = category.icon;
               return (
@@ -363,9 +352,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           </div>
 
           {/* Custom Role */}
-          <div className="mt-6 mb-24">
-            {" "}
-            {/* Increased bottom margin */}
+          <div className="mt-6 mb-8">
             <div className={cn("p-4 rounded-2xl border", colors.border)}>
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -449,8 +436,9 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
 
   // Configuration View
   const ConfigurationView = () => (
-    <>
-      <div className="p-4 border-b">
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b shrink-0">
         <div className="flex items-center justify-between mb-4">
           <Button
             variant="ghost"
@@ -500,6 +488,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </Tabs>
       </div>
 
+      {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4">
           <TabsContent value="roles" className="mt-0 space-y-4">
@@ -721,7 +710,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
 
                   <div className="space-y-4">
                     <div className="flex flex-wrap gap-2">
-                      {commonSkills.slice(0, 8).map((skill) => (
+                      {commonSkills.slice(0, 12).map((skill) => (
                         <Badge
                           key={skill}
                           variant={
@@ -930,7 +919,8 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </div>
       </ScrollArea>
 
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t">
+      {/* Footer */}
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t shrink-0">
         <Button
           onClick={handleSubmit}
           disabled={selectedRoles.length === 0}
@@ -940,7 +930,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           Create Band ({selectedRoles.length})
         </Button>
       </div>
-    </>
+    </div>
   );
 
   return (

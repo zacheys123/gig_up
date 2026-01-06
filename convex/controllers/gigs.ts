@@ -7,6 +7,7 @@ import {
 } from "../createNotificationInternal";
 import { applyFirstGigBonusInternal } from "./trustScore";
 import { Id } from "../_generated/dataModel";
+import { checkGigLimit, updateWeeklyGigCount } from "../gigsLimit";
 interface ProcessedBandRole {
   role: string;
   maxSlots: number;
@@ -1574,7 +1575,13 @@ export const createGig = mutation({
     if (!user) {
       throw new Error("User not found");
     }
+    const accountAge = Date.now() - (user._creationTime || Date.now());
+    const isInGracePeriod = accountAge <= 26 * 24 * 60 * 60 * 1000; // 26 days
+    const limitCheck = checkGigLimit(user, isInGracePeriod);
 
+    if (!limitCheck.canPost) {
+      throw new Error(limitCheck.errorMessage);
+    }
     let relevantUsersQuery = ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("isMusician"), true))
@@ -1593,42 +1600,38 @@ export const createGig = mutation({
     switch (bussinesscat) {
       case "full": // Full Band - Creates a normal gig (no band setup)
         processedIsClientBand = false;
-        processedBandCategory = []; // No band roles for full band
-        processedMaxSlots = processedMaxSlots || 1; // Default 1 slot for full band
+        processedBandCategory = [];
+        processedMaxSlots = processedMaxSlots || 1;
         processedCategory = category || "full-band";
         break;
 
       case "personal": // Individual musician - Use category as instrument
         processedIsClientBand = false;
-        processedBandCategory = []; // No band roles for individual
-        processedMaxSlots = processedMaxSlots || 1; // Default 1 slot
-        // Store the instrument in category field
+        processedBandCategory = [];
+        processedMaxSlots = processedMaxSlots || 1;
         processedCategory = category || "individual";
         break;
 
       case "other": // Create Band - This is where we create band setup
         processedIsClientBand = true;
-        // Process band roles with default values
         processedBandCategory = (bandCategory || []).map((role: any) => ({
           role: role.role,
           maxSlots: role.maxSlots,
-          filledSlots: 0, // Start with 0 filled slots
+          filledSlots: 0,
           applicants: [],
           bookedUsers: [],
           requiredSkills: role.requiredSkills || [],
           description: role.description || "",
           isLocked: false,
-          // Add price fields if provided
           price: role.price || undefined,
           currency: role.currency || currency || "KES",
           negotiable: role.negotiable ?? negotiable ?? true,
         }));
-        // Calculate total max slots from band roles
         const totalBandSlots = processedBandCategory.reduce(
           (sum: number, role: any) => sum + role.maxSlots,
           0
         );
-        processedMaxSlots = totalBandSlots || 5; // Use calculated slots or default 5
+        processedMaxSlots = totalBandSlots || 5;
         processedCategory = "band-creation";
 
         relevantUsersQuery = relevantUsersQuery.filter((q) =>
@@ -1637,16 +1640,15 @@ export const createGig = mutation({
             q.eq(q.field("interestedInBands"), true)
           )
         );
-
         break;
 
       case "mc": // MC
       case "dj": // DJ
       case "vocalist": // Vocalist
         processedIsClientBand = false;
-        processedBandCategory = []; // Talent-specific, not a band
+        processedBandCategory = [];
         processedMaxSlots = processedMaxSlots || 1;
-        processedCategory = bussinesscat; // Use the talent type as category
+        processedCategory = bussinesscat;
         break;
 
       default:
@@ -1657,7 +1659,7 @@ export const createGig = mutation({
     }
 
     // ============================================
-    // CREATE GIG RECORD (UPDATED)
+    // CREATE GIG RECORD
     // ============================================
 
     const gigId = await ctx.db.insert("gigs", {
@@ -1665,7 +1667,7 @@ export const createGig = mutation({
       interestedUsers: [],
       appliedUsers: [],
       viewCount: [],
-      bookCount: [], // This will be filled when musicians join the band
+      bookCount: [],
       bookingHistory: [],
 
       // Business category specific fields
@@ -1686,7 +1688,7 @@ export const createGig = mutation({
       description: description || "",
       phone: phoneNumber,
       price: price || 0,
-      category: processedCategory, // Use processed category
+      category: processedCategory,
       location: location || "",
       font: font || "Arial, sans-serif",
       fontColor: fontColor || "#000000",
@@ -1695,7 +1697,7 @@ export const createGig = mutation({
       otherTimeline: otherTimeline || "",
       day: day || "",
 
-      // Talent-specific fields (only if applicable)
+      // Talent-specific fields
       ...(bussinesscat === "mc" && {
         mcType: mcType || "",
         mcLanguages: mcLanguages || "",
@@ -1709,8 +1711,8 @@ export const createGig = mutation({
       }),
 
       // Other fields
-      pricerange: pricerange || "",
-      currency: currency || "KES", // Default to KES
+      pricerange: bussinesscat === "other" ? undefined : pricerange,
+      currency: currency || "KES",
       scheduleDate: scheduleDate || date,
       schedulingProcedure: schedulingProcedure || "manual",
       tags: tags || [],
@@ -1744,10 +1746,51 @@ export const createGig = mutation({
     }
 
     // ============================================
-    // NOTIFICATION LOGIC (FIXED)
+    // UPDATE USER'S WEEKLY GIG COUNT
     // ============================================
 
-    // Determine notification message based on business category
+    const updateWeeklyGigCount = (currentWeeklyData: any) => {
+      // Get current week start (Monday)
+      const now = new Date();
+      const currentWeekStart = new Date(now);
+      currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+      currentWeekStart.setHours(0, 0, 0, 0);
+
+      const weekStartTimestamp = currentWeekStart.getTime();
+      const currentGigsThisWeek = currentWeeklyData || {
+        count: 0,
+        weekStart: 0,
+      };
+
+      // Reset if new week
+      if (currentGigsThisWeek.weekStart !== weekStartTimestamp) {
+        return {
+          count: 1,
+          weekStart: weekStartTimestamp,
+        };
+      }
+
+      // Increment if same week
+      return {
+        count: currentGigsThisWeek.count + 1,
+        weekStart: weekStartTimestamp,
+      };
+    };
+
+    // Update user's weekly gig count
+    const updatedWeeklyData = updateWeeklyGigCount(user.gigsPostedThisWeek);
+
+    // Update user stats
+    await ctx.db.patch(user._id, {
+      gigsPosted: (user.gigsPosted || 0) + 1,
+      gigsPostedThisWeek: updatedWeeklyData,
+      updatedAt: Date.now(),
+    });
+
+    // ============================================
+    // NOTIFICATION LOGIC (Keep existing)
+    // ============================================
+
     let notificationCriteria = "";
     let notificationDetails = "";
 
@@ -1910,7 +1953,20 @@ export const createGig = mutation({
     return gigId;
   },
 });
+// Run this once in a migration
+export const resetAllWeeklyCounts = mutation({
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
 
+    for (const user of users) {
+      await ctx.db.patch(user._id, {
+        gigsPostedThisWeek: { count: 0, weekStart: 0 },
+      });
+    }
+
+    return users.length;
+  },
+});
 export const updateGig = mutation({
   args: {
     gigId: v.id("gigs"),

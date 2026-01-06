@@ -202,6 +202,13 @@ export const userModel = defineTable({
       weekStart: v.number(),
     })
   ),
+  gigsPostedThisWeek: v.optional(
+    v.object({
+      count: v.number(),
+      weekStart: v.number(),
+    })
+  ),
+  weeklyGigLimit: v.optional(v.number()), // Dynamic limit based on tier + trust score
   lastBookingDate: v.optional(v.number()),
   cancelgigCount: v.number(),
   completedGigsCount: v.optional(v.number()),

@@ -42,6 +42,7 @@ import type * as controllers_videos from "../controllers/videos.js";
 import type * as createNotificationInternal from "../createNotificationInternal.js";
 import type * as featureFlagsTypes from "../featureFlagsTypes.js";
 import type * as gigTypes from "../gigTypes.js";
+import type * as gigsLimit from "../gigsLimit.js";
 import type * as instantGigsTypes from "../instantGigsTypes.js";
 import type * as models_commentsModel from "../models/commentsModel.js";
 import type * as models_gigModel from "../models/gigModel.js";
@@ -98,6 +99,7 @@ declare const fullApi: ApiFromModules<{
   createNotificationInternal: typeof createNotificationInternal;
   featureFlagsTypes: typeof featureFlagsTypes;
   gigTypes: typeof gigTypes;
+  gigsLimit: typeof gigsLimit;
   instantGigsTypes: typeof instantGigsTypes;
   "models/commentsModel": typeof models_commentsModel;
   "models/gigModel": typeof models_gigModel;

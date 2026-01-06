@@ -21,7 +21,6 @@ export interface BandRoleInput {
   negotiable?: boolean; // Whether price is negotiable for this role
 }
 
-// Update LocalGigInputs type to include all fields
 export type LocalGigInputs = {
   title: string;
   description: string;
@@ -32,8 +31,13 @@ export type LocalGigInputs = {
   secret: string;
   end: string;
   start: string;
+  // Add these with correct casing (lowercase)
   durationfrom: string;
   durationto: string;
+
+  // ⭐ ADD THIS LINE ⭐
+  maxSlots?: number; // Add this for slots configuration
+
   bussinesscat: BusinessCategory;
   otherTimeline: string;
   gigtimeline: string;
@@ -46,9 +50,8 @@ export type LocalGigInputs = {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
+  // Add negotiable field
   negotiable: boolean;
-  // Add any other fields you're using
-  [key: string]: any; // Add this to handle dynamic access
 };
 
 // Draft data structure with band roles including price
@@ -66,19 +69,21 @@ export interface GigDraftData {
     date: Date;
   };
 }
-
 export interface GigDraft {
   id: string;
-  data: GigDraftData;
-  createdAt: string;
-  updatedAt: string;
+  data: {
+    formValues: Partial<LocalGigInputs>;
+    bandRoles: BandRoleInput[];
+    customization: CustomProps;
+    imageUrl: string;
+    schedulingProcedure: {
+      type: string;
+      date: Date;
+    };
+  };
   title: string;
-  category: string;
-  progress: number; // 0-100% completion
-  isBandGig?: boolean; // Flag for band formation gigs
-  bandRoleCount?: number; // Number of band roles if applicable
-  totalSlots?: number; // Total slots for band gigs
-  estimatedBudget?: number; // Total estimated budget for band gigs
+  date: Date;
+  updatedAt: Date;
 }
 
 const DRAFTS_KEY = "gig_drafts_v3"; // Updated key for version 3 with price support

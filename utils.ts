@@ -1514,13 +1514,12 @@ export default {
   presets,
 };
 
-// In your prepareGigDataForConvex utility function:
 export const prepareGigDataForConvex = (
   formValues: LocalGigInputs,
   userId: Id<"users">,
   gigcustom: CustomProps,
   imageUrl: string,
-  schedulingProcedure: any,
+  schedulingProcedure: any, // This could be undefined or have null date
   bandRoles: BandRoleInput[],
   durationFrom?: string,
   durationTo?: string
@@ -1530,17 +1529,70 @@ export const prepareGigDataForConvex = (
     throw new Error("Business category is required");
   }
 
+  // FIX: Handle scheduling date based on procedure type
+  let scheduleDate: number;
+  let publishType: string;
+
+  // Determine publish type and date based on scheduling procedure
+  if (!schedulingProcedure || !schedulingProcedure.type) {
+    // Default to immediate publish
+    publishType = "create";
+    scheduleDate = Date.now();
+  } else {
+    publishType = schedulingProcedure.type;
+
+    // Only set future date for "automatic" scheduling
+    if (schedulingProcedure.type === "automatic" && schedulingProcedure.date) {
+      try {
+        const dateObj =
+          schedulingProcedure.date instanceof Date
+            ? schedulingProcedure.date
+            : new Date(schedulingProcedure.date);
+
+        // Validate it's a future date
+        if (isNaN(dateObj.getTime()) || dateObj.getTime() <= Date.now()) {
+          // Invalid or past date, use current time
+          scheduleDate = Date.now();
+          console.warn(
+            "Invalid or past date for scheduling, using current time"
+          );
+        } else {
+          scheduleDate = dateObj.getTime();
+        }
+      } catch (error) {
+        console.warn("Error parsing schedule date, using current time:", error);
+        scheduleDate = Date.now();
+      }
+    } else {
+      // For "create" (publish now) or "regular" (save as draft), use current time
+      scheduleDate = Date.now();
+    }
+  }
+
+  // Calculate total slots based on business category
+  let totalSlots = 1; // Default for individual gigs
+
+  if (formValues.bussinesscat === "full") {
+    totalSlots = formValues.maxSlots || 5;
+  } else if (formValues.bussinesscat === "other") {
+    totalSlots = bandRoles.reduce((sum, role) => sum + role.maxSlots, 0) || 1;
+  } else if (formValues.bussinesscat === "personal") {
+    totalSlots = formValues.maxSlots || 1;
+  }
+
   return {
     postedBy: userId,
     title: formValues.title,
-    secret: formValues.secret || "", // Default empty string
-    bussinesscat: formValues.bussinesscat, // This is now guaranteed to be string
-    date: schedulingProcedure.date?.getTime() || Date.now(),
+    secret: formValues.secret || "",
+    bussinesscat: formValues.bussinesscat,
+    date: schedulingProcedure?.date?.getTime?.() || Date.now(),
     time: {
       start: formValues.start || "10:00",
       end: formValues.end || "12:00",
+      durationFrom: durationFrom || "am",
+      durationTo: durationTo || "pm",
     },
-    logo: imageUrl || "", // Default empty string
+    logo: imageUrl || "",
     description: formValues.description || "",
     phone: formValues.phoneNo || "",
     price: parseFloat(formValues.price) || 0,
@@ -1558,14 +1610,12 @@ export const prepareGigDataForConvex = (
     djEquipment: formValues.djEquipment || "",
     pricerange: formValues.pricerange || "",
     currency: formValues.currency || "KES",
-    scheduleDate: schedulingProcedure.date?.getTime() || Date.now(),
-    schedulingProcedure: schedulingProcedure.type || "manual",
+    scheduleDate: scheduleDate, // Same as date for backward compatibility
+    schedulingProcedure: publishType, // Use the determined publish type
     vocalistGenre: formValues.vocalistGenre || [],
     negotiable: formValues.negotiable || false,
-
-    // Band-specific fields
+    maxSlots: formValues.maxSlots || totalSlots,
     isClientBand: formValues.bussinesscat === "other",
-    maxSlots: bandRoles.reduce((sum, role) => sum + role.maxSlots, 0) || 1,
     bandCategory: bandRoles.map((role) => ({
       role: role.role,
       maxSlots: role.maxSlots,
@@ -1578,6 +1628,13 @@ export const prepareGigDataForConvex = (
       currency: role.currency || formValues.currency || "KES",
       negotiable: role.negotiable ?? formValues.negotiable ?? false,
     })),
+    // Add status field
+    status:
+      publishType === "create"
+        ? "published"
+        : publishType === "automatic"
+          ? "scheduled"
+          : "draft",
   };
 };
 
@@ -1693,4 +1750,120 @@ export const validateGigForm = (
   }
 
   return errors;
+};
+// utils/gigLimits.ts or add to your existing utils
+// Add this helper function at the top of your createGig mutation file
+export const checkGigLimit = (user: any, isInGracePeriod: boolean) => {
+  const userTier = user?.tier?.toLowerCase() || "free";
+  const trustScore = user?.trustScore || 0;
+
+  // Get current week start (Monday)
+  const now = new Date();
+  const currentWeekStart = new Date(now);
+  currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+  currentWeekStart.setHours(0, 0, 0, 0);
+
+  const weekStartTimestamp = currentWeekStart.getTime();
+
+  // Get weekly gigs posted - CORRECT FIELD NAME
+  const gigsThisWeek = user?.gigsPostedThisWeek || { count: 0, weekStart: 0 };
+  const weeklyGigsPosted =
+    gigsThisWeek.weekStart === weekStartTimestamp ? gigsThisWeek.count : 0;
+
+  // Check if grace period (26 days from account creation)
+  const accountAge = Date.now() - (user._creationTime || Date.now());
+  const isGracePeriod =
+    isInGracePeriod || accountAge <= 26 * 24 * 60 * 60 * 1000; // 26 days in ms
+
+  let canPost = true;
+  let errorMessage = "";
+  let weeklyLimit = 0;
+
+  if (userTier === "free") {
+    if (isGracePeriod) {
+      // Grace period: 3 gigs PER WEEK (same as Pro with trust score >= 40)
+      weeklyLimit = 3;
+      if (weeklyGigsPosted >= 3) {
+        canPost = false;
+        errorMessage =
+          "Grace period users are limited to 3 gigs per week. You've reached your weekly limit.";
+      }
+    } else {
+      // Post-grace period free users: 0 gigs
+      canPost = false;
+      errorMessage =
+        "Your grace period has ended. Upgrade to continue posting gigs.";
+    }
+  } else if (userTier === "pro") {
+    if (trustScore >= 40) {
+      // Pro with trust score >= 40: 3 gigs per week
+      weeklyLimit = 3;
+      if (weeklyGigsPosted >= 3) {
+        canPost = false;
+        errorMessage =
+          "Pro users are limited to 3 gigs per week. You've reached your weekly limit.";
+      }
+    } else {
+      // Pro with low trust score: 1 gig per week
+      weeklyLimit = 1;
+      if (weeklyGigsPosted >= 1) {
+        canPost = false;
+        errorMessage =
+          "Pro users with trust score below 40 are limited to 1 gig per week.";
+      }
+    }
+  } else if (userTier === "premium" || userTier === "elite") {
+    if (trustScore >= 40) {
+      // Premium/Elite with trust score >= 40: 5 gigs per week
+      weeklyLimit = 5;
+      if (weeklyGigsPosted >= 5) {
+        canPost = false;
+        errorMessage =
+          "Premium/Elite users are limited to 5 gigs per week. You've reached your weekly limit.";
+      }
+    } else {
+      // Premium/Elite with low trust score: 2 gigs per week
+      weeklyLimit = 2;
+      if (weeklyGigsPosted >= 2) {
+        canPost = false;
+        errorMessage =
+          "Premium/Elite users with trust score below 40 are limited to 2 gigs per week.";
+      }
+    }
+  }
+
+  return {
+    canPost,
+    errorMessage,
+    weeklyLimit,
+    weeklyGigsPosted,
+    isGracePeriod,
+    userTier,
+    trustScore,
+  };
+};
+
+export const updateWeeklyGigCount = (currentWeeklyData: any) => {
+  // Get current week start (Monday)
+  const now = new Date();
+  const currentWeekStart = new Date(now);
+  currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+  currentWeekStart.setHours(0, 0, 0, 0);
+
+  const weekStartTimestamp = currentWeekStart.getTime();
+  const currentGigsThisWeek = currentWeeklyData || { count: 0, weekStart: 0 };
+
+  // Reset if new week
+  if (currentGigsThisWeek.weekStart !== weekStartTimestamp) {
+    return {
+      count: 1,
+      weekStart: weekStartTimestamp,
+    };
+  }
+
+  // Increment if same week
+  return {
+    count: currentGigsThisWeek.count + 1,
+    weekStart: weekStartTimestamp,
+  };
 };

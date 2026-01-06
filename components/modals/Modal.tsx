@@ -13,6 +13,7 @@ export const Modal = ({
   width,
   children,
   dep,
+  className,
 }: {
   isOpen: boolean;
   onClose?: () => void;
@@ -21,6 +22,7 @@ export const Modal = ({
   description?: string;
   children: React.ReactNode;
   dep?: string;
+  className?: string;
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const { colors } = useThemeColors();
@@ -57,9 +59,14 @@ export const Modal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className={`w-full fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${
-            dep === "videos" ? "overflow-y-auto h-full" : ""
-          }`}
+          className={
+            className
+              ? className +
+                "w-full fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+              : `w-full fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${
+                  dep === "videos" ? "overflow-y-auto h-full" : ""
+                }`
+          }
           onClick={handleOutsideClick}
         >
           {/* Overlay with theme-aware background */}
