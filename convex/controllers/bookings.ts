@@ -16,7 +16,7 @@ export const getUserByClerkId = async (ctx: any, clerkId: string) => {
 
   return user;
 };
-
+// musician leaves the applicants array for a specific role
 export const withdrawFromBandRole = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -435,15 +435,20 @@ export const bookUserForBand = mutation({
   },
 });
 
-// LEAVE BAND (Musician leaves voluntarily)
-export const leaveBand = mutation({
+// In convex/controllers/gigs.ts, add these mutations:
+
+/**
+ * Simple join band mutation for musicians
+ */
+export const joinBand = mutation({
   args: {
     gigId: v.id("gigs"),
-    clerkId: v.string(), // Musician's Clerk ID
-    reason: v.optional(v.string()),
+    clerkId: v.string(),
+    role: v.string(),
+    name: v.string(),
   },
   handler: async (ctx, args) => {
-    const { gigId, clerkId, reason } = args;
+    const { gigId, clerkId, role, name } = args;
 
     // Get musician user from Clerk ID
     const musician = await getUserByClerkId(ctx, clerkId);
@@ -452,107 +457,177 @@ export const leaveBand = mutation({
     const gig = await ctx.db.get(gigId);
     if (!gig) throw new Error("Gig not found");
 
-    if (!gig.isClientBand || gig.bussinesscat !== "other") {
+    if (!gig.isClientBand) {
       throw new Error("This is not a band gig");
     }
 
-    if (!gig.bandCategory) {
-      throw new Error("No band roles found");
+    // Check if band is full
+    const currentMembers = gig.bookCount || [];
+    const maxSlots = gig.maxSlots || 5;
+
+    if (currentMembers.length >= maxSlots) {
+      throw new Error("This band is full");
     }
 
-    // Find which role the musician is booked for
-    let bandRoleIndex = -1;
-    let userRole = null;
+    // Check if user is already in the band
+    const userAlreadyInBand = currentMembers.some(
+      (member: any) => member.userId === musician._id
+    );
 
-    for (let i = 0; i < gig.bandCategory.length; i++) {
-      const role = gig.bandCategory[i];
-      if (role.bookedUsers.includes(musician._id)) {
-        bandRoleIndex = i;
-        userRole = role;
-        break;
-      }
+    if (userAlreadyInBand) {
+      throw new Error("You are already in this band");
     }
 
-    if (bandRoleIndex === -1 || !userRole) {
-      throw new Error("You're not a member of this band");
-    }
-
-    // Create updated band category - remove user from bookedUsers
-    const updatedBandCategory = [...gig.bandCategory];
-    updatedBandCategory[bandRoleIndex] = {
-      ...userRole,
-      filledSlots: Math.max(0, userRole.filledSlots - 1),
-      bookedUsers: userRole.bookedUsers.filter((id) => id !== musician._id),
-    };
-
-    // Create band booking history entry for leaving
-    const bandBookingEntry = {
-      bandRole: userRole.role,
-      bandRoleIndex,
+    // Add user to band bookCount
+    const newMember = {
       userId: musician._id,
-      userName: musician.firstname || musician.username || "Musician",
-      bookedAt: Date.now(),
-      bookedBy: musician._id,
-      appliedAt: Date.now(), // ADD THIS - required field
-      applicationStatus: "pending_review" as const, // ADD THIS - required field
-      bookedPrice: userRole.bookedPrice || userRole.price,
-      completedAt: Date.now(),
-      completionNotes: reason || "Voluntarily left the band",
-      paymentStatus: "cancelled" as const, // Use "cancelled" now that it's in schema
+      name: name || musician.firstname || musician.username,
+      role: role,
+      joinedAt: Date.now(),
+      status: "pending" as const,
     };
 
-    // Create regular booking history entry
-    const cancellationEntry = {
-      entryId: `${gigId}_${bandRoleIndex}_${musician._id}_${Date.now()}`,
+    const updatedBookCount = [...currentMembers, newMember];
+
+    // Create booking history entry
+    const bookingEntry = {
+      entryId: `${gigId}_${musician._id}_${Date.now()}`,
       timestamp: Date.now(),
       userId: musician._id,
       userRole: "musician",
-      bandRole: userRole.role,
-      bandRoleIndex,
       isBandRole: true,
-      status: "cancelled" as const,
-      gigType: "band" as const, // ADD 'as const' HERE
+      status: "applied" as const,
+      gigType: "band" as const,
       actionBy: musician._id,
       actionFor: musician._id,
-      reason: reason || "Voluntarily left the band",
+      notes: `Joined band as ${role}`,
+      reason: "Joined band",
       metadata: {
-        previousPrice: userRole.bookedPrice || userRole.price,
-        leftVoluntarily: true,
+        bandRole: role,
+        userName: name || musician.firstname || musician.username,
+        joinedAt: Date.now(),
       },
     };
 
-    // Update gig
     await ctx.db.patch(gigId, {
-      bandCategory: updatedBandCategory,
-      bookingHistory: [...(gig.bookingHistory || []), cancellationEntry],
-      bandBookingHistory: [...(gig.bandBookingHistory || []), bandBookingEntry],
+      bookCount: updatedBookCount,
+      bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
       updatedAt: Date.now(),
-      isTaken: false, // Reset taken status
-      isPending: false,
     });
 
-    // NOTIFY BAND CREATOR
+    // Notify band creator
     const bandCreator = await ctx.db.get(gig.postedBy);
     if (bandCreator) {
       await createNotificationInternal(ctx, {
         userDocumentId: gig.postedBy,
-        type: "band_member_left",
-        title: "🎵 Band Member Left",
-        message: `${musician.firstname || musician.username} left as ${userRole.role}`,
+        type: "band_member_joined",
+        title: "🎵 New Band Member",
+        message: `${name || musician.firstname || musician.username} joined as ${role}`,
         image: musician.picture,
         actionUrl: `/gigs/${gigId}`,
         relatedUserDocumentId: musician._id,
         metadata: {
           gigId,
           gigTitle: gig.title,
-          role: userRole.role,
-          reason: reason,
-          bandRoleIndex,
+          role: role,
+          memberName: name || musician.firstname || musician.username,
         },
       });
     }
 
-    return { success: true };
+    return {
+      success: true,
+      availableSlots: maxSlots - updatedBookCount.length,
+    };
+  },
+});
+
+/**
+ * Simple leave band mutation for musicians
+ */
+export const leaveBand = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, clerkId } = args;
+
+    // Get musician user from Clerk ID
+    const musician = await getUserByClerkId(ctx, clerkId);
+    if (!musician) throw new Error("Musician not found");
+
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    if (!gig.isClientBand) {
+      throw new Error("This is not a band gig");
+    }
+
+    const currentMembers = gig.bookCount || [];
+
+    // Check if user is in the band
+    const userIndex = currentMembers.findIndex(
+      (member: any) => member.userId === musician._id
+    );
+
+    if (userIndex === -1) {
+      throw new Error("You are not in this band");
+    }
+
+    // Remove user from band
+    const updatedBookCount = currentMembers.filter(
+      (member: any) => member.userId !== musician._id
+    );
+
+    // Create booking history entry
+    const bookingEntry = {
+      entryId: `${gigId}_${musician._id}_${Date.now()}`,
+      timestamp: Date.now(),
+      userId: musician._id,
+      userRole: "musician",
+      isBandRole: true,
+      status: "cancelled" as const,
+      gigType: "band" as const,
+      actionBy: musician._id,
+      actionFor: musician._id,
+      notes: `Left the band`,
+      reason: "Left band voluntarily",
+      metadata: {
+        previousRole: currentMembers[userIndex]?.role,
+        leftAt: Date.now(),
+      },
+    };
+
+    await ctx.db.patch(gigId, {
+      bookCount: updatedBookCount,
+      bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+      updatedAt: Date.now(),
+    });
+
+    // Notify band creator
+    const bandCreator = await ctx.db.get(gig.postedBy);
+    if (bandCreator) {
+      await createNotificationInternal(ctx, {
+        userDocumentId: gig.postedBy,
+        type: "band_member_left",
+        title: "🎵 Band Member Left",
+        message: `${musician.firstname || musician.username} left the band`,
+        image: musician.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: musician._id,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          memberName: musician.firstname || musician.username,
+        },
+      });
+    }
+
+    return {
+      success: true,
+      availableSlots: (gig.maxSlots || 5) - updatedBookCount.length,
+    };
   },
 });
 

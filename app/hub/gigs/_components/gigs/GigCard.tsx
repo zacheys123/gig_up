@@ -1,4 +1,3 @@
-// components/gig/GigCard.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -25,6 +24,8 @@ import {
   Check,
   AlertCircle,
   User,
+  Lock,
+  Video,
 } from "lucide-react";
 
 // Convex imports
@@ -63,6 +64,7 @@ import {
 // Custom hooks
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useThemeColors } from "@/hooks/useTheme";
+import { getInterestWindowStatus } from "@/utils";
 
 // Types
 interface BandMember {
@@ -74,6 +76,21 @@ interface BandMember {
   bookedBy?: Id<"users">;
   status?: string;
   notes?: string;
+}
+
+interface BandRole {
+  role: string;
+  maxSlots: number;
+  filledSlots: number;
+  applicants: Id<"users">[];
+  bookedUsers: Id<"users">[];
+  requiredSkills?: string[];
+  description?: string;
+  isLocked?: boolean;
+  price?: number;
+  currency?: string;
+  negotiable?: boolean;
+  bookedPrice?: number;
 }
 
 interface GigCardProps {
@@ -101,12 +118,116 @@ interface GigCardProps {
     paymentStatus?: string;
     viewCount?: Id<"users">[];
     bookingHistory?: any[];
+    acceptInterestStartTime?: string;
+    acceptInterestEndTime?: string;
+    bandCategory?: BandRole[];
     createdAt: number;
     updatedAt: number;
   };
   onClick?: () => void;
   showActions?: boolean;
 }
+
+type BandActionType =
+  | "leave"
+  | "pending"
+  | "apply"
+  | "full"
+  | "withdraw"
+  | "review"
+  | "manage"
+  | "edit";
+
+interface BandAction {
+  type: BandActionType;
+  label: string;
+  variant: "default" | "destructive" | "outline" | "secondary";
+  action: (() => Promise<void> | void) | null;
+  disabled: boolean;
+  routing: {
+    forMusician: string;
+    forClient: string;
+    message: string;
+  };
+}
+
+const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
+  const status = getInterestWindowStatus(gig);
+
+  if (!status.hasWindow) return null;
+
+  const getBadgeProps = () => {
+    switch (status.status) {
+      case "not_open":
+        return {
+          variant: "outline" as const,
+          className:
+            "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800",
+          icon: Calendar,
+        };
+      case "closed":
+        return {
+          variant: "outline" as const,
+          className:
+            "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
+          icon: Lock,
+        };
+      case "open":
+        return {
+          variant: "outline" as const,
+          className:
+            "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800",
+          icon: Clock,
+        };
+      default:
+        return {
+          variant: "outline" as const,
+          className: "bg-gray-50 text-gray-600 border-gray-200",
+          icon: Clock,
+        };
+    }
+  };
+
+  const badgeProps = getBadgeProps();
+  const Icon = badgeProps.icon;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant={badgeProps.variant}
+            className={clsx(
+              "inline-flex items-center gap-1 text-xs font-medium",
+              badgeProps.className
+            )}
+          >
+            <Icon className="w-3 h-3" />
+            <span className="hidden sm:inline">
+              {status.message.length > 20
+                ? status.message.substring(0, 20) + "..."
+                : status.message}
+            </span>
+            <span className="sm:hidden">!</span>
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{status.message}</p>
+          {gig.acceptInterestStartTime && (
+            <p className="text-xs text-gray-500">
+              Opens: {new Date(gig.acceptInterestStartTime).toLocaleString()}
+            </p>
+          )}
+          {gig.acceptInterestEndTime && (
+            <p className="text-xs text-gray-500">
+              Closes: {new Date(gig.acceptInterestEndTime).toLocaleString()}
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 const GigCard: React.FC<GigCardProps> = ({
   gig,
@@ -134,8 +255,12 @@ const GigCard: React.FC<GigCardProps> = ({
   const removeInterestFromGig = useMutation(
     api.controllers.gigs.removeInterestFromGig
   );
-  const joinBand = useMutation(api.controllers.gigs.joinBand);
-  const leaveBand = useMutation(api.controllers.gigs.leaveBand);
+  const applyForBandRole = useMutation(
+    api.controllers.bookings.applyForBandRole
+  );
+  const withdrawFromBandRole = useMutation(
+    api.controllers.bookings.withdrawFromBandRole
+  );
   const saveGig = useMutation(api.controllers.gigs.saveGig);
   const unsaveGig = useMutation(api.controllers.gigs.unsaveGig);
   const favoriteGig = useMutation(api.controllers.gigs.favoriteGig);
@@ -237,6 +362,182 @@ const GigCard: React.FC<GigCardProps> = ({
     incrementViewCount();
   }, [gig._id, currentUserId]);
 
+  // Updated handleBandAction function
+  const handleBandAction = useCallback(
+    (bandRoleIndex: number): BandAction | null => {
+      if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) return null;
+
+      const role = gig.bandCategory[bandRoleIndex];
+      const currentUserId = currentUser?._id;
+
+      if (!currentUserId) return null;
+
+      // Check if current user is the gig poster (client)
+      const isGigPoster = currentUserId === gig.postedBy;
+
+      // For client viewing their own gig
+      if (isGigPoster) {
+        // Check if role has applicants
+        const hasApplicants = role.applicants.length > 0;
+        // Check if role has booked users
+        const hasBookedUsers = role.bookedUsers.length > 0;
+
+        if (hasApplicants && !hasBookedUsers) {
+          // Role has applicants waiting for review
+          return {
+            type: "review",
+            label: "Review Applicants",
+            variant: "default",
+            action: () => {
+              router.push(`/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`);
+            },
+            disabled: false,
+            routing: {
+              forMusician: "", // Not applicable for client
+              forClient: `/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`,
+              message: "Review applicants for this role",
+            },
+          };
+        } else if (hasBookedUsers) {
+          // Role already has booked musicians
+          return {
+            type: "manage",
+            label: "Manage Role",
+            variant: "outline",
+            action: () => {
+              router.push(`/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`);
+            },
+            disabled: false,
+            routing: {
+              forMusician: "",
+              forClient: `/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`,
+              message: "Manage booked musicians for this role",
+            },
+          };
+        } else {
+          // No applicants yet
+          return {
+            type: "edit",
+            label: "Edit Role",
+            variant: "outline",
+            action: () => {
+              router.push(`/gigs/edit/${gig._id}`);
+            },
+            disabled: false,
+            routing: {
+              forMusician: "",
+              forClient: `/gigs/edit/${gig._id}`,
+              message: "Edit this role details",
+            },
+          };
+        }
+      }
+
+      // For non-client users (musicians)
+      // Check if user is in applicants array
+      const hasApplied = role.applicants.includes(currentUserId);
+      // Check if user is in bookedUsers array
+      const isBooked = role.bookedUsers.includes(currentUserId);
+      // Check if role is full
+      const isRoleFull = role.filledSlots >= role.maxSlots;
+
+      // Case 1: User is already booked
+      if (isBooked) {
+        return {
+          type: "leave",
+          label: "Leave Role",
+          variant: "destructive",
+          action: async () => {
+            try {
+              await withdrawFromBandRole({
+                gigId: gig._id,
+                bandRoleIndex,
+                clerkId: userId!,
+                reason: "Left the role voluntarily",
+              });
+              toast.success("Successfully left the role");
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : "Failed to leave role"
+              );
+            }
+          },
+          disabled: false,
+          routing: {
+            forMusician: "/hub/gigs?tab=booked",
+            forClient: "/hub/gigs?tab=my-gigs",
+            message: "You're booked for this role",
+          },
+        };
+      }
+
+      // Case 2: User has applied but not booked yet
+      if (hasApplied && !isBooked) {
+        return {
+          type: "pending",
+          label: "Application Pending",
+          variant: "outline",
+          action: null,
+          disabled: true,
+          routing: {
+            forMusician: "/hub/gigs?tab=pending",
+            forClient: "/hub/gigs?tab=my-gigs",
+            message: "Application submitted - waiting for review",
+          },
+        };
+      }
+
+      // Case 3: User hasn't applied AND role has available slots
+      if (!isRoleFull && !hasApplied && !isBooked) {
+        return {
+          type: "apply",
+          label: "Apply for Role",
+          variant: "default",
+          action: async () => {
+            try {
+              await applyForBandRole({
+                gigId: gig._id,
+                bandRoleIndex,
+                clerkId: userId!,
+                applicationNotes: interestNotes,
+              });
+              toast.success("Application submitted successfully!");
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : "Failed to apply"
+              );
+            }
+          },
+          disabled: false,
+          routing: {
+            forMusician: "/hub/gigs?tab=all",
+            forClient: "/hub/gigs?tab=my-gigs",
+            message: "Apply for this band role",
+          },
+        };
+      }
+
+      // Case 4: Role is full and user hasn't applied
+      if (isRoleFull && !hasApplied && !isBooked) {
+        return {
+          type: "full",
+          label: "Role Full",
+          variant: "secondary",
+          action: null,
+          disabled: true,
+          routing: {
+            forMusician: "/hub/gigs?tab=all",
+            forClient: "/hub/gigs?tab=my-gigs",
+            message: "This role is already filled",
+          },
+        };
+      }
+
+      return null;
+    },
+    [gig, currentUser, userId, interestNotes]
+  );
+
   // Regular gig interest handler
   const handleRegularInterest = async () => {
     if (!currentUserId) {
@@ -258,9 +559,10 @@ const GigCard: React.FC<GigCardProps> = ({
     try {
       if (regularIsInterested) {
         // Remove interest
-        const result = await removeInterestFromGig({
+        await removeInterestFromGig({
           gigId: gig._id,
-          userId: currentUserId,
+          clerkId: userId!,
+          reason: "Withdrew interest",
         });
         toast.success("Interest removed");
       } else {
@@ -304,54 +606,6 @@ const GigCard: React.FC<GigCardProps> = ({
           </div>
         </div>
       );
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Operation failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Band gig action handler
-  const handleBandAction = async (role: string, name: string) => {
-    if (!currentUserId) {
-      toast.error("Please sign in to join the band");
-      return;
-    }
-
-    if (isFull) {
-      toast.error("This band is full!");
-      return;
-    }
-
-    if (!role.trim()) {
-      toast.error("Please select a role");
-      return;
-    }
-
-    if (!name.trim()) {
-      toast.error("Please enter your name");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (userIsInBand) {
-        await leaveBand({
-          gigId: gig._id,
-          userId: currentUserId,
-        });
-        toast.success("Left the band");
-        setShowBandJoinModal(false);
-      } else {
-        await joinBand({
-          gigId: gig._id,
-          userId: currentUserId,
-          role: role.trim(),
-          name: name.trim(),
-        });
-        toast.success(`Joined as ${role}!`);
-        setShowBandJoinModal(false);
-      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Operation failed");
     } finally {
@@ -512,11 +766,49 @@ const GigCard: React.FC<GigCardProps> = ({
     );
   };
 
+  // Check if current user is the gig poster (client)
+  const isGigPoster = currentUserId === gig.postedBy;
+
+  // Check if gig has applicants
+  const hasApplicants = gig.bandCategory?.some(
+    (role) => role.applicants && role.applicants.length > 0
+  );
+
+  // Check interest window status
+  const interestWindowStatus = getInterestWindowStatus(gig);
+  const isInterestWindowOpen = interestWindowStatus.status === "open";
+
   // Render action button based on gig type
   const renderActionButton = () => {
     if (!showActions) return null;
 
     if (gig.isTaken) {
+      if (currentUser?.isMusician) {
+        return (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => router.push("/community?tab=videos")}
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
+          >
+            <Video className="w-4 h-4 mr-2" />
+            Add Videos
+          </Button>
+        );
+      } else if (isGigPoster) {
+        return (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => router.push(`/gigs/${gig._id}/review`)}
+            className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+          >
+            <UserCheck className="w-4 h-4 mr-2" />
+            Review Musician
+          </Button>
+        );
+      }
+
       return (
         <Button
           variant="outline"
@@ -530,36 +822,43 @@ const GigCard: React.FC<GigCardProps> = ({
       );
     }
 
-    if (isClientBand) {
-      if (userIsInBand) {
+    // Regular gig button
+    if (!isClientBand) {
+      if (!isInterestWindowOpen) {
         return (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => handleBandAction("", "")}
-            disabled={loading}
-            className="w-full sm:w-auto"
-          >
-            <UserCheck className="w-4 h-4 mr-2" />
-            Leave Band
-          </Button>
-        );
-      } else {
-        return (
-          <Button
-            onClick={() => setShowBandJoinModal(true)}
-            disabled={loading || isFull}
-            className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
-          >
-            <Music className="w-4 h-4 mr-2" />
-            {isFull ? "Band Full" : "Join Band"}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className="w-full sm:w-auto opacity-50 cursor-not-allowed"
+                >
+                  {interestWindowStatus.status === "closed" ? (
+                    <>
+                      <Lock className="w-4 h-4 mr-2" />
+                      Closed
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-4 h-4 mr-2" />
+                      Not Open
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{interestWindowStatus.message}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       }
-    } else {
+
       return (
         <Button
-          onClick={() => setShowInterestModal(true)}
+          onClick={handleRegularInterest}
           disabled={loading || isFull}
           variant={regularIsInterested ? "outline" : "default"}
           size="sm"
@@ -584,6 +883,101 @@ const GigCard: React.FC<GigCardProps> = ({
         </Button>
       );
     }
+
+    // Band gig button
+    if (isClientBand) {
+      // For gig poster (client)
+      if (isGigPoster) {
+        if (hasApplicants) {
+          return (
+            <Button
+              onClick={() => router.push("/hub/gigs?tab=my-gigs")}
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Review Applicants
+            </Button>
+          );
+        }
+
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            disabled
+          >
+            <Users className="w-4 h-4 mr-2" />
+            No Applicants Yet
+          </Button>
+        );
+      }
+
+      // For musicians viewing band gig
+      if (gig.bandCategory && gig.bandCategory.length > 0) {
+        // Get first available role or show general band action
+        const firstRoleAction = handleBandAction(0);
+
+        if (firstRoleAction) {
+          return (
+            <Button
+              onClick={() => {
+                if (firstRoleAction.action) {
+                  firstRoleAction.action();
+                } else if (firstRoleAction.type === "pending") {
+                  router.push(firstRoleAction.routing.forMusician);
+                }
+              }}
+              variant={firstRoleAction.variant}
+              size="sm"
+              disabled={firstRoleAction.disabled || loading}
+              className="w-full sm:w-auto"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : firstRoleAction.type === "apply" ? (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Apply for Band
+                </>
+              ) : firstRoleAction.type === "pending" ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2" />
+                  Application Pending
+                </>
+              ) : firstRoleAction.type === "leave" ? (
+                <>
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  Leave Band
+                </>
+              ) : (
+                <>
+                  <Users className="w-4 h-4 mr-2" />
+                  {firstRoleAction.label}
+                </>
+              )}
+            </Button>
+          );
+        }
+      }
+
+      // Fallback band button
+      return (
+        <Button
+          onClick={() => setShowBandJoinModal(true)}
+          disabled={loading || isFull}
+          className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+        >
+          <Music className="w-4 h-4 mr-2" />
+          {isFull ? "Band Full" : "Join Band"}
+        </Button>
+      );
+    }
+
+    return null;
   };
 
   // Render progress bar
@@ -690,6 +1084,9 @@ const GigCard: React.FC<GigCardProps> = ({
                     🎵 Band
                   </Badge>
                 )}
+                {gig.acceptInterestStartTime || gig.acceptInterestEndTime ? (
+                  <InterestWindowBadge gig={gig} />
+                ) : null}
               </div>
 
               {/* Category tags */}
@@ -861,6 +1258,14 @@ const GigCard: React.FC<GigCardProps> = ({
               </div>
             )}
           </div>
+
+          {/* Interest window info */}
+          {(gig.acceptInterestStartTime || gig.acceptInterestEndTime) && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+              <Clock className="w-3 h-3" />
+              <span>{interestWindowStatus.message}</span>
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -875,34 +1280,62 @@ const GigCard: React.FC<GigCardProps> = ({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Interest Window Info */}
+            {(gig.acceptInterestStartTime || gig.acceptInterestEndTime) && (
+              <div
+                className={clsx(
+                  "p-3 rounded-lg border",
+                  interestWindowStatus.status === "open"
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                    : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                )}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-medium">Interest Window</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {interestWindowStatus.message}
+                </p>
+                {gig.acceptInterestEndTime && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Closes:{" "}
+                    {new Date(gig.acceptInterestEndTime).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Available slots info */}
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Available Slots:</span>
-                <Badge variant="outline">
-                  {availableSlots} / {maxSlots}
-                </Badge>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Available Slots: {availableSlots} / {maxSlots}
+                </span>
+                {availableSlots <= 2 && (
+                  <Badge variant="destructive" className="animate-pulse">
+                    Almost Full!
+                  </Badge>
+                )}
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Your position in line will be #{regularInterestCount + 1}
-              </p>
+              {userPosition && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Your current position: #{userPosition}
+                </p>
+              )}
             </div>
 
-            {/* Optional note */}
+            {/* Notes input */}
             <div>
               <label className="text-sm font-medium mb-2 block">
-                Optional Note to Client
+                Notes (Optional)
               </label>
               <Textarea
                 value={interestNotes}
                 onChange={(e) => setInterestNotes(e.target.value)}
-                placeholder="Tell the client why you're a good fit for this gig..."
+                placeholder="Tell the client why you're interested..."
                 className="min-h-[100px]"
-                maxLength={500}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {interestNotes.length}/500 characters
-              </p>
             </div>
           </div>
 
@@ -916,13 +1349,13 @@ const GigCard: React.FC<GigCardProps> = ({
             </Button>
             <Button
               onClick={handleShowInterestWithNotes}
-              disabled={loading || isFull}
-              className="bg-blue-500 hover:bg-blue-600"
+              disabled={loading}
+              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Showing Interest...
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  Sending...
                 </>
               ) : (
                 <>
@@ -974,6 +1407,49 @@ const GigCard: React.FC<GigCardProps> = ({
               />
             </div>
 
+            {/* Role selection */}
+            {gig.bandCategory && gig.bandCategory.length > 0 && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Select Role
+                </label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gig.bandCategory.map((role, index) => {
+                      const roleAction = handleBandAction(index);
+                      const isFull = role.filledSlots >= role.maxSlots;
+                      const isBooked = role.bookedUsers.includes(
+                        currentUserId!
+                      );
+                      const hasApplied = role.applicants.includes(
+                        currentUserId!
+                      );
+
+                      return (
+                        <SelectItem
+                          key={index}
+                          value={role.role}
+                          disabled={isFull || isBooked || hasApplied}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{role.role}</span>
+                            <span className="text-xs text-gray-500">
+                              {role.filledSlots}/{role.maxSlots} slots
+                              {isBooked && " • Booked"}
+                              {hasApplied && !isBooked && " • Applied"}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Current band members */}
             {bandMembers.length > 0 && (
               <div>
@@ -1016,9 +1492,21 @@ const GigCard: React.FC<GigCardProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={() => handleBandAction(selectedRole, memberName)}
+              onClick={() => {
+                if (selectedRole) {
+                  const roleIndex = gig.bandCategory?.findIndex(
+                    (r) => r.role === selectedRole
+                  );
+                  if (roleIndex !== undefined && roleIndex >= 0) {
+                    const action = handleBandAction(roleIndex);
+                    if (action?.action) {
+                      action.action().then(() => setShowBandJoinModal(false));
+                    }
+                  }
+                }
+              }}
               disabled={
-                loading || !selectedRole || !memberName.trim() || isFull
+                loading || !selectedRole || !memberName.trim() || bandIsFull
               }
               className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
             >
@@ -1030,7 +1518,7 @@ const GigCard: React.FC<GigCardProps> = ({
               ) : (
                 <>
                   <Music className="w-4 h-4 mr-2" />
-                  Join Band
+                  Apply for Role
                 </>
               )}
             </Button>

@@ -68,8 +68,50 @@ export const showInterestInGig = mutation({
     const { gigId, userId, notes } = args;
 
     const gig = await ctx.db.get(gigId);
+    const user = await ctx.db.get(userId);
     if (!gig) throw new Error("Gig not found");
+    // Prevent spam - check if user has shown too much interest recently
+    const recentInterests =
+      gig.bookingHistory?.filter(
+        (entry) =>
+          entry.userId === userId &&
+          Date.now() - entry.timestamp < 24 * 60 * 60 * 1000
+      ) || [];
+    const now = new Date();
+    if (recentInterests.length >= 5) {
+      throw new Error(
+        "Too many interests shown recently. Please try again later."
+      );
+    } // Wrap critical operations in a transaction if supported
+    const existingInterest =
+      gig?.interestedUsers && gig?.interestedUsers?.includes(userId);
+    if (existingInterest) {
+      throw new Error("You've already shown interest in this gig");
+    }
 
+    // Optional: Prevent low-quality users from showing interest
+    if (user?.trustScore && user?.trustScore < 0) {
+      throw new Error(
+        "Your account needs attention before showing interest in gigs"
+      );
+    }
+    // Instead of generic "max capacity" error
+    if (gig?.interestedUsers && gig?.interestedUsers?.length >= gig?.maxSlots) {
+      throw new Error(
+        `This gig has reached maximum capacity (${gig.maxSlots} slots). ` +
+          `Currently ${gig.interestedUsers.length} interested musicians.`
+      );
+    }
+    if (gig.acceptInterestStartTime && now < gig.acceptInterestStartTime) {
+      throw new Error(
+        `Interest for this gig opens on ${new Date(gig.acceptInterestStartTime).toLocaleDateString()}`
+      );
+    }
+
+    // Check interest end time
+    if (gig.acceptInterestEndTime && now > gig.acceptInterestEndTime) {
+      throw new Error("The interest period for this gig has ended");
+    }
     // Check if this is a band gig
     if (gig.isClientBand) {
       throw new Error(
@@ -92,7 +134,6 @@ export const showInterestInGig = mutation({
       throw new Error("This gig has already been booked by another musician");
     }
 
-    const user = await ctx.db.get(userId);
     if (!user) throw new Error("User not found");
 
     const currentInterestedUsers = gig.interestedUsers || [];
@@ -887,7 +928,8 @@ export const getGigTypeInfo = query({
     const isClientBand = gig.isClientBand || false;
 
     if (isClientBand) {
-      const bandMembers = gig.bookCount || [];
+      const bandMembers =
+        (gig.bandCategory && gig?.bandCategory.bookedUsers) || [];
       const maxSlots = gig.maxSlots || 5;
 
       return {
@@ -1164,6 +1206,8 @@ export const createGig = mutation({
     cancellationReason: v.optional(v.string()),
     phoneNo: v.optional(v.string()),
     negotiable: v.optional(v.boolean()),
+    acceptInterestStartTime: v.optional(v.number()),
+    acceptInterestEndTime: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const {
@@ -1382,7 +1426,8 @@ export const createGig = mutation({
       gigRating: 0,
 
       negotiable: bussinesscat === "other" ? undefined : negotiable,
-
+      acceptInterestStartTime: args.acceptInterestStartTime,
+      acceptInterestEndTime: args.acceptInterestEndTime,
       // Timestamps
       createdAt: Date.now(),
       updatedAt: Date.now(),

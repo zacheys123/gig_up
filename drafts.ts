@@ -1,43 +1,30 @@
 // utils/draftUtils.ts
-
-export type BusinessCategory =
-  | "full"
-  | "personal"
-  | "other"
-  | "mc"
-  | "dj"
-  | "vocalist"
-  | null;
-
-// Band Role Types for Drafts with Price support
-export interface BandRoleInput {
-  role: string;
-  maxSlots: number;
-  requiredSkills: string[];
-  description?: string;
-  // Add these price fields
-  price?: string; // Price per slot for this role
-  currency?: string; // Currency for this role (e.g., "KES", "USD")
-  negotiable?: boolean; // Whether price is negotiable for this role
-}
+import { BusinessCategory, BandRoleInput } from "@/types/gig";
 
 export type LocalGigInputs = {
   title: string;
   description: string;
-  phoneNo: string;
+  phoneNo?: string;
   price: string;
   category: string;
   location: string;
   secret: string;
   end: string;
   start: string;
-  // Add these with correct casing (lowercase)
   durationfrom: string;
   durationto: string;
 
-  // ⭐ ADD THIS LINE ⭐
-  maxSlots?: number; // Add this for slots configuration
+  // ⭐ MAKE THESE OPTIONAL FOR FORM STATE ⭐
+  tags?: string[];
+  requirements?: string[];
+  benefits?: string[];
+  logo?: string;
+  isTaken?: boolean;
+  isPending?: boolean;
+  isActive?: boolean;
+  isPublic?: boolean;
 
+  maxSlots?: number;
   bussinesscat: BusinessCategory;
   otherTimeline: string;
   gigtimeline: string;
@@ -45,19 +32,24 @@ export type LocalGigInputs = {
   date: string;
   pricerange: string;
   currency: string;
+  negotiable: boolean;
+
+  // Talent-specific fields
   mcType?: string;
   mcLanguages?: string;
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
-  // Add negotiable field
-  negotiable: boolean;
+  acceptInterestStartTime?: string;
+  acceptInterestEndTime?: string;
+  interestWindowDays?: number;
+  enableInterestWindow?: boolean;
 };
 
 // Draft data structure with band roles including price
 export interface GigDraftData {
   formValues: LocalGigInputs;
-  bandRoles?: BandRoleInput[]; // For "Create Band" (other) business category
+  bandRoles?: BandRoleInput[];
   customization?: {
     fontColor: string;
     font: string;
@@ -69,24 +61,23 @@ export interface GigDraftData {
     date: Date;
   };
 }
+
 export interface GigDraft {
   id: string;
-  data: {
-    formValues: Partial<LocalGigInputs>;
-    bandRoles: BandRoleInput[];
-    customization: CustomProps;
-    imageUrl: string;
-    schedulingProcedure: {
-      type: string;
-      date: Date;
-    };
-  };
+  data: GigDraftData;
+  createdAt: string;
+  updatedAt: string;
   title: string;
-  date: Date;
-  updatedAt: Date;
+  category: string;
+  progress: number;
+  isBandGig?: boolean;
+  bandRoleCount?: number;
+  totalSlots?: number;
+  estimatedBudget?: number;
 }
 
-const DRAFTS_KEY = "gig_drafts_v3"; // Updated key for version 3 with price support
+const DRAFTS_KEY = "gig_drafts_v3";
+
 // Helper to calculate draft completion percentage with band role support
 const calculateProgress = (data: GigDraftData): number => {
   const { formValues, bandRoles } = data;
@@ -107,6 +98,14 @@ const calculateProgress = (data: GigDraftData): number => {
       completed++;
     }
   });
+
+  // ADD: Check for required fields from GigFormInputs
+  if (formValues.tags && formValues.tags.length > 0) completed++;
+  if (formValues.requirements && formValues.requirements.length > 0)
+    completed++;
+  if (formValues.benefits && formValues.benefits.length > 0) completed++;
+  if (formValues.logo?.trim()) completed++;
+  if (formValues.phoneNo?.trim()) completed++; // Check phone (was phoneNo)
 
   // Add talent-specific fields if applicable
   if (formValues.bussinesscat === "mc") {
@@ -137,13 +136,13 @@ const calculateProgress = (data: GigDraftData): number => {
   }
 
   // Adjust total fields based on business category
-  let totalFields = 4; // Base required fields
+  let totalFields = 9; // CHANGED: Increased from 4 to account for new required fields
 
   if (formValues.bussinesscat === "other") {
     // For band gigs, add fields for band setup
-    totalFields += 4; // Band roles count as 4 fields (roles, skills, description, price)
+    totalFields += 4;
   } else if (["mc", "dj", "vocalist"].includes(formValues.bussinesscat || "")) {
-    totalFields += 2; // Talent-specific fields
+    totalFields += 2;
   }
 
   return Math.round((completed / totalFields) * 100);
@@ -196,7 +195,7 @@ export const saveGigDraft = (
     : drafts;
 
   // Add new draft to beginning of array (most recent first)
-  const updatedDrafts = [newDraft, ...filteredDrafts].slice(0, 50); // Keep only last 50 drafts
+  const updatedDrafts = [newDraft, ...filteredDrafts].slice(0, 50);
 
   try {
     localStorage.setItem(DRAFTS_KEY, JSON.stringify(updatedDrafts));
@@ -216,13 +215,45 @@ export const saveGigDraft = (
     // Check if localStorage is full
     if (error instanceof DOMException && error.name === "QuotaExceededError") {
       // Try to clear some old drafts
-      const trimmedDrafts = [newDraft, ...filteredDrafts].slice(0, 10); // Keep only last 10
+      const trimmedDrafts = [newDraft, ...filteredDrafts].slice(0, 10);
       localStorage.setItem(DRAFTS_KEY, JSON.stringify(trimmedDrafts));
       return newDraft;
     }
 
     throw new Error("Failed to save draft: " + (error as Error).message);
   }
+};
+
+// ADD: Helper function to ensure backward compatibility
+const migrateOldDraftData = (oldData: any): GigDraftData => {
+  // If it's the old format (just formValues object)
+  if (oldData.formValues && !oldData.formValues.tags) {
+    const formValues = oldData.formValues;
+
+    // Migrate phoneNo to phone
+    const phone = formValues.phoneNo || formValues.phone || "";
+
+    return {
+      formValues: {
+        ...formValues,
+        phone, // Use phone field
+        tags: formValues.tags || [],
+        requirements: formValues.requirements || [],
+        benefits: formValues.benefits || [],
+        logo: formValues.logo || "",
+        isTaken: formValues.isTaken || false,
+        isPending: formValues.isPending || false,
+        isActive: formValues.isActive || true,
+        isPublic: formValues.isPublic || true,
+      },
+      bandRoles: oldData.bandRoles || [],
+      customization: oldData.customization,
+      imageUrl: oldData.imageUrl,
+      schedulingProcedure: oldData.schedulingProcedure,
+    };
+  }
+
+  return oldData;
 };
 
 export const getGigDrafts = (): GigDraft[] => {
@@ -237,25 +268,21 @@ export const getGigDrafts = (): GigDraft[] => {
       const v2Drafts = localStorage.getItem("gig_drafts_v2");
       if (v2Drafts) {
         const parsedDrafts = JSON.parse(v2Drafts);
-        const migratedDrafts = parsedDrafts.map((draft: any) => ({
-          ...draft,
-          data: {
-            ...draft.data,
-            bandRoles:
-              draft.data.bandRoles?.map((role: any) => ({
-                ...role,
-                price: undefined,
-                currency: undefined,
-                negotiable: undefined,
-              })) || [],
-          },
-          estimatedBudget: draft.isBandGig
-            ? draft.data.bandRoles?.reduce((sum: number, role: any) => {
-                const price = parseFloat(role.price || "0");
-                return sum + price * role.maxSlots;
-              }, 0) || 0
-            : undefined,
-        }));
+        const migratedDrafts = parsedDrafts.map((draft: any) => {
+          const migratedData = migrateOldDraftData(draft.data);
+
+          return {
+            ...draft,
+            data: migratedData,
+            estimatedBudget: draft.isBandGig
+              ? migratedData.bandRoles?.reduce((sum: number, role: any) => {
+                  const price = parseFloat(role.price || "0");
+                  return sum + price * role.maxSlots;
+                }, 0) || 0
+              : undefined,
+          };
+        });
+
         localStorage.setItem(DRAFTS_KEY, JSON.stringify(migratedDrafts));
         localStorage.removeItem("gig_drafts_v2");
         return migratedDrafts;
@@ -265,18 +292,23 @@ export const getGigDrafts = (): GigDraft[] => {
       const v1Drafts = localStorage.getItem("gig_drafts");
       if (v1Drafts) {
         const parsedOldDrafts = JSON.parse(v1Drafts);
-        const migratedDrafts = parsedOldDrafts.map((oldDraft: any) => ({
-          ...oldDraft,
-          data: {
+        const migratedDrafts = parsedOldDrafts.map((oldDraft: any) => {
+          const migratedData = migrateOldDraftData({
             formValues: oldDraft.data,
             bandRoles: [],
             customization: undefined,
             imageUrl: undefined,
             schedulingProcedure: undefined,
-          },
-          isBandGig: oldDraft.data?.bussinesscat === "other",
-          estimatedBudget: 0,
-        }));
+          });
+
+          return {
+            ...oldDraft,
+            data: migratedData,
+            isBandGig: oldDraft.data?.bussinesscat === "other",
+            estimatedBudget: 0,
+          };
+        });
+
         localStorage.setItem(DRAFTS_KEY, JSON.stringify(migratedDrafts));
         localStorage.removeItem("gig_drafts");
         return migratedDrafts;
@@ -286,18 +318,39 @@ export const getGigDrafts = (): GigDraft[] => {
 
     const parsedDrafts = JSON.parse(drafts);
 
-    // Ensure all drafts have the new estimatedBudget field
-    const updatedDrafts = parsedDrafts.map((draft: GigDraft) => ({
-      ...draft,
-      estimatedBudget:
-        draft.estimatedBudget ||
-        (draft.isBandGig
-          ? draft.data.bandRoles?.reduce((sum, role) => {
-              const price = parseFloat((role as any).price || "0");
-              return sum + price * role.maxSlots;
-            }, 0) || 0
-          : undefined),
-    }));
+    // Ensure all drafts have the new structure
+    const updatedDrafts = parsedDrafts.map((draft: GigDraft) => {
+      const migratedData = migrateOldDraftData(draft.data);
+
+      // Recalculate progress with migrated data
+      const progress = calculateProgress(migratedData);
+
+      const isBandGig = migratedData.formValues.bussinesscat === "other";
+      const bandRoleCount = isBandGig ? migratedData.bandRoles?.length || 0 : 0;
+      const totalSlots = isBandGig
+        ? migratedData.bandRoles?.reduce(
+            (sum, role) => sum + role.maxSlots,
+            0
+          ) || 0
+        : 0;
+
+      const estimatedBudget = isBandGig
+        ? migratedData.bandRoles?.reduce((sum, role) => {
+            const price = parseFloat(role.price || "0");
+            return sum + price * role.maxSlots;
+          }, 0) || 0
+        : 0;
+
+      return {
+        ...draft,
+        data: migratedData,
+        progress,
+        isBandGig,
+        bandRoleCount: isBandGig ? bandRoleCount : undefined,
+        totalSlots: isBandGig ? totalSlots : undefined,
+        estimatedBudget: isBandGig ? estimatedBudget : undefined,
+      };
+    });
 
     // Save back if any updates were made
     if (JSON.stringify(updatedDrafts) !== JSON.stringify(parsedDrafts)) {
@@ -417,7 +470,7 @@ export const getBandRoleSummary = (draft: GigDraft): string => {
 export const exportDrafts = (): string => {
   const drafts = getGigDrafts();
   const exportData = {
-    version: "2.0",
+    version: "3.0", // CHANGED: Updated version
     exportedAt: new Date().toISOString(),
     count: drafts.length,
     bandGigs: drafts.filter((d) => d.isBandGig).length,
@@ -436,27 +489,19 @@ export const importDrafts = (jsonData: string): boolean => {
 
     const currentDrafts = getGigDrafts();
 
-    // Migrate old format drafts if needed
+    // Migrate imported drafts to new structure
     const migratedDrafts = importData.drafts.map((draft: any) => {
-      // If it's old format (just formValues), wrap it
-      if (draft.data && !draft.data.formValues) {
-        return {
-          ...draft,
-          data: {
-            formValues: draft.data,
-            bandRoles: [],
-            customization: undefined,
-            imageUrl: undefined,
-            schedulingProcedure: undefined,
-          },
-          isBandGig: draft.data?.bussinesscat === "other",
-        };
-      }
-      return draft;
+      const migratedData = migrateOldDraftData(draft.data);
+
+      return {
+        ...draft,
+        data: migratedData,
+        isBandGig: migratedData.formValues.bussinesscat === "other",
+      };
     });
 
     const mergedDrafts = [...migratedDrafts, ...currentDrafts]
-      .slice(0, 50) // Keep only 50 most recent
+      .slice(0, 50)
       .map((draft) => ({
         ...draft,
         id: `imported_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -487,7 +532,6 @@ export const getBandGigDrafts = (): GigDraft[] => {
 };
 
 // Update band roles for a draft
-// Update band roles for a draft with price calculation
 export const updateDraftBandRoles = (
   draftId: string,
   bandRoles: BandRoleInput[]

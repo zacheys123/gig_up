@@ -2,17 +2,19 @@
 
 import { Id } from "@/convex/_generated/dataModel";
 
+// UPDATE: Add price fields to BandRoleInput
 export interface BandRoleInput {
   role: string;
   maxSlots: number;
   requiredSkills: string[];
   description?: string;
-  // Add price fields
-  price?: string; // Price for this specific role
-  currency?: string; // Currency for this role
+  // ADD THESE PRICE FIELDS:
+  price?: string; // Price per slot for this role
+  currency?: string; // Currency code (e.g., "KES", "USD")
   negotiable?: boolean; // Whether price is negotiable for this role
 }
 
+// UPDATE: Add price fields to BandRoleSchema
 export interface BandRoleSchema {
   role: string;
   maxSlots: number;
@@ -22,6 +24,11 @@ export interface BandRoleSchema {
   requiredSkills?: string[];
   description?: string;
   isLocked?: boolean;
+  // ADD THESE PRICE FIELDS:
+  price?: number; // Price per slot (converted from string to number)
+  currency?: string; // Currency code
+  negotiable?: boolean; // Whether price is negotiable
+  bookedPrice?: number; // Actual price agreed upon (when booked)
 }
 
 export interface BandMember {
@@ -40,17 +47,83 @@ export interface BandMember {
   experience?: string;
 }
 
-export interface BookingHistoryEntry {
+// NEW: Add BandBookingEntry type to match Convex schema
+export interface BandBookingEntry {
+  bandRole: string;
+  bandRoleIndex: number;
   userId: Id<"users">;
-  status: "pending" | "booked" | "completed" | "cancelled";
-  timestamp: number;
-  role: string;
-  notes?: string;
-  price?: number;
+  userName: string;
+
+  // Application phase
+  appliedAt: number;
+  applicationNotes?: string;
+  applicationStatus:
+    | "pending_review"
+    | "under_review"
+    | "interview_scheduled"
+    | "interview_completed";
+
+  // Booking phase
+  bookedAt?: number;
   bookedBy?: Id<"users">;
-  action?: string;
-  gigType?: "regular" | "band";
+  bookedPrice?: number;
+  contractSigned?: boolean;
+
+  // Completion phase
+  completedAt?: number;
+  completionNotes?: string;
+  ratingGiven?: number;
+  reviewLeft?: string;
+
+  // Payment
+  paymentStatus?: "pending" | "partial" | "paid" | "disputed" | "cancelled";
+  paymentAmount?: number;
+  paymentDate?: number;
+}
+
+// UPDATE: Add new fields to BookingHistoryEntry
+export interface BookingHistoryEntry {
+  // ADD THESE NEW FIELDS:
+  entryId: string;
+  timestamp: number;
+  userId: Id<"users">;
+  userRole?: string;
+  bandRole?: string;
+  bandRoleIndex?: number;
+  isBandRole?: boolean;
+
+  status:
+    | "applied"
+    | "shortlisted"
+    | "interviewed"
+    | "offered"
+    | "booked"
+    | "confirmed"
+    | "completed"
+    | "cancelled"
+    | "rejected";
+
+  // UPDATE gigType to match Convex schema
+  gigType: "regular" | "band";
+
+  // Financials
+  proposedPrice?: number;
+  agreedPrice?: number;
+  currency?: string;
+
+  // Parties involved
+  actionBy: Id<"users">;
+  actionFor?: Id<"users">;
+
+  // Metadata
+  notes?: string;
   metadata?: Record<string, any>;
+  attachments?: string[];
+
+  // For cancellations/rejections
+  reason?: string;
+  refundAmount?: number;
+  refundStatus?: string;
 }
 
 // Business categories for gigs
@@ -88,7 +161,7 @@ export interface UserInfo {
   prefferences: string[]; // Band instrument preferences
 }
 
-// Gig interface (main gig object)
+// UPDATE: GigProps interface to match Convex schema
 export interface GigProps {
   _id: string;
   _creationTime: number;
@@ -96,23 +169,23 @@ export interface GigProps {
   // Basic gig info
   postedBy: Id<"users">;
   bookedBy?: Id<"users">;
-  title?: string;
+  title: string; // CHANGED: Made required (no ?)
   description?: string;
   location?: string;
-  bussinesscat?: string;
-  phoneNo?: string;
+  bussinesscat: string; // CHANGED: Made required (no ?)
+  phone?: string; // CHANGED: Renamed from phoneNo to phone
   price?: number;
   currency?: string;
 
   // Optional fields
-  secret?: string;
-  logo?: string;
+  secret: string; // CHANGED: Made required (no ?)
+  logo: string; // CHANGED: Made required (no ?)
 
   // Time fields
-  start?: string;
-  end?: string;
-  durationFrom?: string;
-  durationTo?: string;
+  start?: string; // CHANGED: Not in Convex schema, use time.start
+  end?: string; // CHANGED: Not in Convex schema, use time.end
+  durationFrom?: string; // Not in Convex schema
+  durationTo?: string; // Not in Convex schema
   date: number; // Unix timestamp
 
   // Timeline fields
@@ -120,7 +193,7 @@ export interface GigProps {
   gigtimeline?: string;
   day?: string;
 
-  // Band Category - NEW: Array of band roles
+  // Band Category
   bandCategory?: BandRoleSchema[];
 
   // Talent-specific fields
@@ -128,7 +201,7 @@ export interface GigProps {
   mcLanguages?: string;
   djGenre?: string;
   djEquipment?: string;
-  vocalistGenre: string[];
+  vocalistGenre?: string[];
 
   // Customization
   font?: string;
@@ -142,8 +215,8 @@ export interface GigProps {
   isPublic: boolean;
 
   // Band-specific flags
-  isClientBand?: boolean; // true for "Create Band" gigs
-  maxSlots?: number; // Total slots available for the gig
+  isClientBand?: boolean;
+  maxSlots?: number;
 
   // Payment info
   paymentStatus: "pending" | "paid" | "refunded";
@@ -160,54 +233,53 @@ export interface GigProps {
   requirements: string[];
   benefits: string[];
 
-  // Payment confirmation
+  // Time object from Convex schema
+  time: {
+    start: string;
+    end: string;
+  };
+
+  // UPDATE: Add these fields from Convex schema
+  createdAt: number;
+  updatedAt: number;
+
+  // User arrays (optional in Convex)
+  interestedUsers?: Id<"users">[];
+  appliedUsers?: Id<"users">[];
+  viewCount?: Id<"users">[];
+
+  // Band arrays
+  bookCount?: BandMember[];
+  bookingHistory?: BookingHistoryEntry[];
+
+  // ADD: New fields from Convex schema
+  bandBookingHistory?: BandBookingEntry[];
+  scheduleDate?: number;
+  schedulingProcedure?: string;
+  cancellationReason?: string;
+  acceptInterestStartTime?: number;
+  acceptInterestEndTime?: number;
+  cancelledAt?: number;
+  cancelledBy?: string;
   musicianConfirmPayment?: {
-    gigId: string;
+    gigId: Id<"gigs">;
     confirmPayment: boolean;
     confirmedAt?: number;
     code?: string;
     temporaryConfirm?: boolean;
     finalizedAt?: number;
   };
-
   clientConfirmPayment?: {
-    gigId: string;
+    gigId: Id<"gigs">;
     confirmPayment: boolean;
     confirmedAt?: number;
     code?: string;
     temporaryConfirm?: boolean;
+    finalizedAt?: number;
   };
-
-  // Time
-  time: {
-    start: string;
-    end: string;
-  };
-
   negotiable?: boolean;
-
-  // Scheduling
-  schedulingProcedure?: string;
-  scheduleDate?: number;
-  cancellationReason?: string;
-
-  // Stats
-  totalViews?: number;
-  totalApplications?: number;
-  totalInterested?: number;
-
-  // Timestamps
-  createdAt: number;
-  updatedAt: number;
-
-  // User arrays
-  interestedUsers?: Id<"users">[];
-  appliedUsers?: Id<"users">[];
-  viewCount?: Id<"users">[];
-
-  // Band arrays
-  bookCount?: BandMember[]; // Array of BandMember objects
-  bookingHistory?: BookingHistoryEntry[]; // Array of BookingHistoryEntry objects
+  finalizationNote?: string;
+  finalizedBy?: "client" | "musician";
 }
 
 export interface CreateGigInput {
@@ -218,7 +290,7 @@ export interface CreateGigInput {
   category?: string;
   isActive: boolean;
   isPublic: boolean;
-  date: number; // timestamp
+  date: number;
   time: {
     start: string;
     end: string;
@@ -239,7 +311,7 @@ export interface CreateGigInput {
   requirements: string[];
   benefits: string[];
 
-  // Band Category - UPDATED
+  // Band Category
   bandCategory?: BandRoleSchema[];
 
   bussinesscat: string;
@@ -258,7 +330,7 @@ export interface CreateGigInput {
   djEquipment?: string;
 
   // Vocalist Specific
-  vocalistGenre: string[];
+  vocalistGenre?: string[];
 
   // Pricing & Payment
   pricerange?: string;
@@ -279,40 +351,40 @@ export interface CreateGigInput {
   font?: string;
   fontColor?: string;
   backgroundColor?: string;
-  logo: string; // URL or base64
+  logo: string;
 
   // Engagement Metrics
-  viewCount: Id<"users">[]; // userIds
-  bookCount: Id<"users">[]; // userIds
+  viewCount: Id<"users">[];
+  bookCount: Id<"users">[];
 
   // Rating
   gigRating: number;
 
   // Security
-  secret?: string;
+  secret: string;
 
-  // Payment Confirmations
-  clientConfirmPayment?: any;
-  musicianConfirmPayment?: any;
-
-  // Band-specific fields - NEW
+  // Band-specific fields
   isClientBand?: boolean;
   maxSlots?: number;
+
+  // UPDATE: Add these Convex fields
+  createdAt: number;
+  updatedAt: number;
 }
 
 // For form input handling
 export interface GigFormInputs {
   title: string;
   description: string;
-  phoneNo?: string;
+  phoneNo?: string; // CHANGED: from phoneNo to phone
   price: string;
   category: string;
   location: string;
   secret: string;
   end: string;
   start: string;
-  durationfrom: string;
-  durationto: string;
+  durationfrom: string; // Not in Convex schema
+  durationto: string; // Not in Convex schema
   bussinesscat: BusinessCategory;
   otherTimeline: string;
   gigtimeline: string;
@@ -325,13 +397,24 @@ export interface GigFormInputs {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string[];
+  // ADD: Missing fields from Convex
+  tags: string[];
+  requirements: string[];
+  benefits: string[];
+  logo: string;
+  isTaken: boolean;
+  isPending: boolean;
+  isActive: boolean;
+  isPublic: boolean;
+  negotiable: boolean;
+  maxSlots?: number;
 }
 
 // Gig creation/update payload
 export interface GigPayload {
   title: string;
-  description: string;
-  phone?: string;
+  description?: string;
+  phone?: string; // CHANGED: from phoneNo to phone
   price?: number;
   category?: string;
   location?: string;
@@ -340,8 +423,8 @@ export interface GigPayload {
     start: string;
     end: string;
   };
-  durationFrom?: string;
-  durationTo?: string;
+  durationFrom?: string; // Not in Convex schema
+  durationTo?: string; // Not in Convex schema
   bussinesscat: BusinessCategory;
   otherTimeline?: string;
   gigtimeline?: string;
@@ -355,7 +438,6 @@ export interface GigPayload {
   djEquipment?: string;
   vocalistGenre?: string[];
 
-  // UPDATED: Band category as BandRoleSchema array
   bandCategory?: BandRoleSchema[];
 
   font?: string;
@@ -367,10 +449,18 @@ export interface GigPayload {
   schedulingProcedure?: string;
   scheduleDate?: number;
 
-  // NEW: Band-specific fields
   isClientBand?: boolean;
   maxSlots?: number;
   negotiable?: boolean;
+
+  // ADD: Missing fields from Convex schema
+  tags?: string[];
+  requirements?: string[];
+  benefits?: string[];
+  paymentStatus?: "pending" | "paid" | "refunded";
+  gigRating?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // Talent form data
@@ -401,7 +491,7 @@ export interface GigValidationErrors {
   description?: string;
   location?: string;
   bussinesscat?: string;
-  phoneNo?: string;
+  phone?: string; // CHANGED: from phoneNo to phone
   price?: string;
   secret?: string;
   mcType?: string;
@@ -409,7 +499,7 @@ export interface GigValidationErrors {
   djGenre?: string;
   djEquipment?: string;
   vocalistGenre?: string;
-  bandRoles?: string; // For band gig validation
+  bandRoles?: string;
   [key: string]: string | undefined;
 }
 
@@ -463,7 +553,7 @@ export interface GigFilters {
   isActive?: boolean;
   bussinesscat?: BusinessCategory;
   tags?: string[];
-  isClientBand?: boolean; // Filter for band formation gigs
+  isClientBand?: boolean;
 }
 
 // Gig pagination
@@ -489,18 +579,13 @@ export interface GigCreationResponse {
   errors?: GigValidationErrors;
 }
 
-// Draft gig data with band roles
-export interface GigDraft {
-  id: string;
-  data: GigFormInputs &
-    TalentFormData & {
-      customization?: CustomProps;
-      scheduling?: ScheduleData;
-      uploadedFiles?: FileData;
-      bandRoles?: BandRoleInput[]; // NEW: Band roles for "Create Band" gigs
-    };
-  createdAt: number;
-  updatedAt: number;
+// UPDATE: Draft gig data with band roles (removed GigDraft interface here since it's defined in utils)
+export interface GigDraftData {
+  formValues: GigFormInputs;
+  bandRoles?: BandRoleInput[];
+  customization?: CustomProps;
+  imageUrl?: string;
+  schedulingProcedure?: ScheduleData;
 }
 
 // Band Application Types

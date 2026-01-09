@@ -170,13 +170,13 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   comments: true, // Changed from false
 
   // Gigs & Bookings
-  gigInvites: true,
-  gigOpportunities: true, // NEW
-  gigUpdates: true, // NEW
-  bookingRequests: true,
-  bookingConfirmations: true,
-  gigReminders: true,
-  bandInvites: true, // NEW
+  gigInvites: false,
+  gigOpportunities: false, // NEW
+  gigUpdates: false, // NEW
+  bookingRequests: false,
+  bookingConfirmations: false,
+  gigReminders: false,
+  bandInvites: false, // NEW
 
   // Messages & Communication
   newMessages: true,

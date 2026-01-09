@@ -1519,7 +1519,7 @@ export const prepareGigDataForConvex = (
   userId: Id<"users">,
   gigcustom: CustomProps,
   imageUrl: string,
-  schedulingProcedure: any, // This could be undefined or have null date
+  schedulingProcedure: any,
   bandRoles: BandRoleInput[],
   durationFrom?: string,
   durationTo?: string
@@ -1580,55 +1580,135 @@ export const prepareGigDataForConvex = (
     totalSlots = formValues.maxSlots || 1;
   }
 
+  // Process interest window - IMPORTANT: Only process if enabled
+  let acceptInterestStartTime: number | undefined;
+  let acceptInterestEndTime: number | undefined;
+
+  if (formValues.enableInterestWindow) {
+    // If user provided specific start time
+    if (formValues.acceptInterestStartTime) {
+      try {
+        const startDate = new Date(formValues.acceptInterestStartTime);
+        if (!isNaN(startDate.getTime())) {
+          acceptInterestStartTime = startDate.getTime();
+        }
+      } catch (error) {
+        console.warn("Invalid acceptInterestStartTime:", error);
+      }
+    }
+
+    // If user provided specific end time
+    if (formValues.acceptInterestEndTime) {
+      try {
+        const endDate = new Date(formValues.acceptInterestEndTime);
+        if (!isNaN(endDate.getTime())) {
+          acceptInterestEndTime = endDate.getTime();
+        }
+      } catch (error) {
+        console.warn("Invalid acceptInterestEndTime:", error);
+      }
+    }
+
+    // If using days duration (and no specific end time)
+    if (formValues.interestWindowDays && !acceptInterestEndTime) {
+      const startTime = acceptInterestStartTime || Date.now();
+      acceptInterestEndTime =
+        startTime + formValues.interestWindowDays * 24 * 60 * 60 * 1000;
+    }
+
+    // Validate: end time should be after start time
+    if (
+      acceptInterestStartTime &&
+      acceptInterestEndTime &&
+      acceptInterestEndTime <= acceptInterestStartTime
+    ) {
+      console.warn(
+        "Interest end time must be after start time, ignoring interest window"
+      );
+      acceptInterestStartTime = undefined;
+      acceptInterestEndTime = undefined;
+    }
+  }
+
+  // Build band category array (only for "other" business category)
+  const bandCategory =
+    formValues.bussinesscat === "other"
+      ? bandRoles.map((role) => ({
+          role: role.role,
+          maxSlots: role.maxSlots,
+          filledSlots: 0,
+          applicants: [],
+          bookedUsers: [],
+          requiredSkills: role.requiredSkills || [],
+          description: role.description || "",
+          price: role.price ? parseFloat(role.price) : undefined,
+          currency: role.currency || formValues.currency || "KES",
+          negotiable: role.negotiable ?? formValues.negotiable ?? false,
+        }))
+      : [];
+
   return {
+    // Basic info
     postedBy: userId,
     title: formValues.title,
     secret: formValues.secret || "",
     bussinesscat: formValues.bussinesscat,
-    date: schedulingProcedure?.date?.getTime?.() || Date.now(),
+
+    // Dates and times
+    date: scheduleDate, // Use the calculated schedule date
     time: {
       start: formValues.start || "10:00",
       end: formValues.end || "12:00",
       durationFrom: durationFrom || "am",
       durationTo: durationTo || "pm",
     },
+
+    // Interest window - only include if enabled and valid
+    ...(acceptInterestStartTime && { acceptInterestStartTime }),
+    ...(acceptInterestEndTime && { acceptInterestEndTime }),
+
+    // Design and branding
     logo: imageUrl || "",
-    description: formValues.description || "",
-    phone: formValues.phoneNo || "",
-    price: parseFloat(formValues.price) || 0,
-    category: formValues.category || "",
-    location: formValues.location || "",
     font: gigcustom.font || "Arial, sans-serif",
     fontColor: gigcustom.fontColor || "#000000",
     backgroundColor: gigcustom.backgroundColor || "#FFFFFF",
+
+    // Description
+    description: formValues.description || "",
+
+    // Contact and location
+    phone: formValues.phoneNo || "", // Keep using phoneNo
+    location: formValues.location || "",
+
+    // Price information
+    price: parseFloat(formValues.price) || 0,
+    currency: formValues.currency || "KES",
+    pricerange: formValues.pricerange || "",
+    negotiable: formValues.negotiable || false,
+
+    // Category and type
+    category: formValues.category || "",
     gigtimeline: formValues.gigtimeline || "",
     otherTimeline: formValues.otherTimeline || "",
     day: formValues.day || "",
+
+    // Talent-specific fields
     mcType: formValues.mcType || "",
     mcLanguages: formValues.mcLanguages || "",
     djGenre: formValues.djGenre || "",
     djEquipment: formValues.djEquipment || "",
-    pricerange: formValues.pricerange || "",
-    currency: formValues.currency || "KES",
-    scheduleDate: scheduleDate, // Same as date for backward compatibility
-    schedulingProcedure: publishType, // Use the determined publish type
     vocalistGenre: formValues.vocalistGenre || [],
-    negotiable: formValues.negotiable || false,
+
+    // Scheduling
+    scheduleDate: scheduleDate,
+    schedulingProcedure: publishType,
+
+    // Band/roles information
     maxSlots: formValues.maxSlots || totalSlots,
     isClientBand: formValues.bussinesscat === "other",
-    bandCategory: bandRoles.map((role) => ({
-      role: role.role,
-      maxSlots: role.maxSlots,
-      filledSlots: 0,
-      applicants: [],
-      bookedUsers: [],
-      requiredSkills: role.requiredSkills || [],
-      description: role.description || "",
-      price: role.price ? parseFloat(role.price) : undefined,
-      currency: role.currency || formValues.currency || "KES",
-      negotiable: role.negotiable ?? formValues.negotiable ?? false,
-    })),
-    // Add status field
+    bandCategory: bandCategory,
+
+    // Status
     status:
       publishType === "create"
         ? "published"
@@ -1865,5 +1945,55 @@ export const updateWeeklyGigCount = (currentWeeklyData: any) => {
   return {
     count: currentGigsThisWeek.count + 1,
     weekStart: weekStartTimestamp,
+  };
+};
+// utils/interestWindow.ts
+export const getInterestWindowStatus = (gig: any) => {
+  const now = Date.now();
+
+  if (!gig.acceptInterestStartTime && !gig.acceptInterestEndTime) {
+    return {
+      hasWindow: false,
+      status: "open",
+      message: "Interest can be shown anytime",
+    };
+  }
+
+  if (gig.acceptInterestStartTime && now < gig.acceptInterestStartTime) {
+    return {
+      hasWindow: true,
+      status: "not_open",
+      message: `Interest opens ${new Date(gig.acceptInterestStartTime).toLocaleDateString()}`,
+      timeLeft: gig.acceptInterestStartTime - now,
+    };
+  }
+
+  if (gig.acceptInterestEndTime && now > gig.acceptInterestEndTime) {
+    return {
+      hasWindow: true,
+      status: "closed",
+      message: "Interest period has ended",
+    };
+  }
+
+  if (gig.acceptInterestEndTime) {
+    const timeLeft = gig.acceptInterestEndTime - now;
+    const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+
+    return {
+      hasWindow: true,
+      status: "open",
+      message:
+        daysLeft > 1
+          ? `${daysLeft} days left to show interest`
+          : `${Math.ceil(timeLeft / (1000 * 60 * 60))} hours left`,
+      timeLeft,
+    };
+  }
+
+  return {
+    hasWindow: false,
+    status: "open",
+    message: "Interest can be shown",
   };
 };

@@ -684,19 +684,28 @@ export default function NormalGigsForm() {
     secret: "",
     end: "",
     start: "",
-    // Add these with initial values
     durationfrom: "am",
     durationto: "pm",
 
-    bussinesscat: null,
+    bussinesscat: null as BusinessCategory,
     otherTimeline: "",
     gigtimeline: "",
     day: "",
     date: "",
     pricerange: "",
     currency: "KES",
-    // Add negotiable with default value (true)
     negotiable: true,
+
+    // Talent-specific fields
+    mcType: "",
+    mcLanguages: "",
+    djGenre: "",
+    djEquipment: "",
+    vocalistGenre: [],
+    acceptInterestEndTime: "",
+    acceptInterestStartTime: "",
+    interestWindowDays: 7,
+    enableInterestWindow: false,
   });
 
   // State that actually triggers re-renders
@@ -2292,6 +2301,326 @@ export default function NormalGigsForm() {
       </motion.div>
     );
   }, [bussinesscat, formValues.maxSlots, colors]);
+  // Add this component in your NormalGigsForm component, after the duration section:
+
+  const InterestWindowSection = useCallback(() => {
+    const [showInterestWindow, setShowInterestWindow] = useState(false);
+    const [interestWindowType, setInterestWindowType] = useState<
+      "dates" | "days"
+    >("dates");
+
+    const handleInterestWindowChange = (field: string, value: any) => {
+      setFormValues((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    };
+
+    // If user doesn't want to use interest window
+    if (!showInterestWindow) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={cn(
+            "rounded-xl p-6 border cursor-pointer transition-all group",
+            colors.border,
+            colors.backgroundMuted,
+            "hover:shadow-lg hover:border-purple-500/50"
+          )}
+          onClick={() => setShowInterestWindow(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "p-3 rounded-lg transition-transform group-hover:scale-110",
+                  "bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+                )}
+              >
+                <Clock className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h3 className={cn("font-semibold", colors.text)}>
+                  Set Interest Window (Optional)
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Control when musicians can show interest in your gig
+                </p>
+              </div>
+            </div>
+            <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
+          </div>
+        </motion.div>
+      );
+    }
+
+    // If user wants to set interest window
+    return (
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: "auto" }}
+        className={cn(
+          "rounded-xl border overflow-hidden",
+          colors.border,
+          colors.backgroundMuted
+        )}
+      >
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+                <Clock className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h3 className={cn("font-semibold", colors.text)}>
+                  Interest Window Settings
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  When can musicians show interest in this gig?
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowInterestWindow(false)}
+              className={cn(
+                "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
+                colors.textMuted
+              )}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Window Type Selection */}
+          <div className="mb-6">
+            <label
+              className={cn("block text-sm font-medium mb-3", colors.text)}
+            >
+              Interest Window Type
+            </label>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant={interestWindowType === "dates" ? "default" : "outline"}
+                onClick={() => setInterestWindowType("dates")}
+                className={cn(
+                  "flex-1",
+                  interestWindowType === "dates" &&
+                    "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                )}
+              >
+                Specific Dates
+              </Button>
+              <Button
+                type="button"
+                variant={interestWindowType === "days" ? "default" : "outline"}
+                onClick={() => setInterestWindowType("days")}
+                className={cn(
+                  "flex-1",
+                  interestWindowType === "days" &&
+                    "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                )}
+              >
+                Days After Posting
+              </Button>
+            </div>
+          </div>
+
+          {/* Specific Dates Input */}
+          {interestWindowType === "dates" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    className={cn(
+                      "block text-sm font-medium mb-2",
+                      colors.text
+                    )}
+                  >
+                    Interest Opens
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="datetime-local"
+                      value={formValues.acceptInterestStartTime || ""}
+                      onChange={(e) =>
+                        handleInterestWindowChange(
+                          "acceptInterestStartTime",
+                          e.target.value
+                        )
+                      }
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className={cn("text-xs mt-1", colors.textMuted)}>
+                    When musicians can start showing interest
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    className={cn(
+                      "block text-sm font-medium mb-2",
+                      colors.text
+                    )}
+                  >
+                    Interest Closes
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="datetime-local"
+                      value={formValues.acceptInterestEndTime || ""}
+                      onChange={(e) =>
+                        handleInterestWindowChange(
+                          "acceptInterestEndTime",
+                          e.target.value
+                        )
+                      }
+                      className="pl-10"
+                      min={formValues.acceptInterestStartTime || undefined}
+                    />
+                  </div>
+                  <p className={cn("text-xs mt-1", colors.textMuted)}>
+                    When interest period ends
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Days Duration Input */}
+          {interestWindowType === "days" && (
+            <div>
+              <label
+                className={cn("block text-sm font-medium mb-3", colors.text)}
+              >
+                Interest Window Duration
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const current = formValues.interestWindowDays || 7;
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        Math.max(1, current - 1)
+                      );
+                    }}
+                    className="h-10 w-10"
+                  >
+                    -
+                  </Button>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={formValues.interestWindowDays || 7}
+                      onChange={(e) =>
+                        handleInterestWindowChange(
+                          "interestWindowDays",
+                          parseInt(e.target.value) || 7
+                        )
+                      }
+                      min="1"
+                      max="90"
+                      className="w-20 text-center"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                      days
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const current = formValues.interestWindowDays || 7;
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        current + 1
+                      );
+                    }}
+                    className="h-10 w-10"
+                  >
+                    +
+                  </Button>
+                </div>
+
+                <div className="flex-1">
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Musicians can show interest for{" "}
+                    <span className="font-semibold">
+                      {formValues.interestWindowDays || 7} days
+                    </span>{" "}
+                    after posting
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                {[1, 3, 7, 14, 30].map((days) => (
+                  <Button
+                    key={days}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleInterestWindowChange("interestWindowDays", days)
+                    }
+                    className={cn(
+                      formValues.interestWindowDays === days &&
+                        "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                    )}
+                  >
+                    {days} {days === 1 ? "day" : "days"}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Summary */}
+          {(formValues.acceptInterestStartTime ||
+            formValues.acceptInterestEndTime ||
+            formValues.interestWindowDays) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 pt-4 border-t"
+            >
+              <div className="flex items-center gap-3">
+                <Info className="w-5 h-5 text-blue-500" />
+                <div>
+                  <p className="text-sm font-medium">
+                    Interest Window Configured
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {interestWindowType === "dates"
+                      ? `Interest opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"}`
+                      : `Interest open for ${formValues.interestWindowDays || 7} days after posting`}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Help text */}
+          <div className="mt-4 pt-4 border-t">
+            <p className={cn("text-xs", colors.textMuted)}>
+              <strong>Tip:</strong> Setting an interest window helps manage
+              application flow and prevents last-minute applications.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }, [formValues, colors]);
   const shouldShowField = useCallback(
     (fieldType: string) => {
       switch (fieldType) {
@@ -2630,6 +2959,8 @@ export default function NormalGigsForm() {
 
             {/* ⭐ CONDITIONAL: Show slots config ONLY for non-band gigs */}
             {shouldShowField("slotsConfig") && <SlotsConfiguration />}
+            {/* Interest Window Section - OPTIONAL */}
+            <InterestWindowSection />
           </div>
           {/* Customize Button - ALWAYS SHOW */}
           <div className="flex justify-between items-center">

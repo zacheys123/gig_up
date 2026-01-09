@@ -198,7 +198,8 @@ export const gigModel = defineTable({
     v.literal("refunded")
   ),
   cancellationReason: v.optional(v.string()),
-
+  acceptInterestStartTime: v.optional(v.number()), // When interest opens
+  acceptInterestEndTime: v.optional(v.number()), // When interest closes
   // Payment confirmation
   musicianConfirmPayment: v.optional(
     v.object({

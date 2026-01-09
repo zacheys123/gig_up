@@ -1,6 +1,14 @@
-// hooks/useNotificationSystem.ts - UPDATED VERSION
+// hooks/useNotificationSystem.ts - OPTIMIZED VERSION
 "use client";
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -15,6 +23,7 @@ export interface ToastNotification {
   actionUrl?: string;
   metadata?: any;
   createdAt: number;
+  autoHide?: boolean;
 }
 
 interface NotificationSystemContextType {
@@ -22,41 +31,81 @@ interface NotificationSystemContextType {
   toasts: ToastNotification[];
   addToast: (notification: Omit<ToastNotification, "id">) => void;
   removeToast: (id: string) => void;
+  clearAllToasts: () => void;
 
   // Notifications
   notifications: any[];
   unreadCount: number;
   isLoading: boolean;
+  hasNewNotifications: boolean;
 
   // Actions
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refreshNotifications: () => void;
+  getNotificationSettings: () => any;
 }
 
 const NotificationSystemContext = createContext<
   NotificationSystemContextType | undefined
 >(undefined);
 
-// Frontend mapping
-const notificationTypeToSettingMap = {
+// COMPLETE Frontend mapping (static object to prevent recreation)
+const NOTIFICATION_TYPE_TO_SETTING_MAP = {
+  // Profile & Social
   profile_view: "profileViews",
+  like: "likes",
+  share: "shares",
+  new_review: "reviews",
+  review_received: "reviews",
+  video_comment: "comments",
+
+  // Follows
   new_follower: "followRequests",
   follow_request: "followRequests",
   follow_accepted: "followRequests",
-  like: "likes",
-  new_review: "profileViews",
-  review_received: "profileViews",
-  share: "shares",
+
+  // Messages & Communication
   new_message: "newMessages",
+  message_requests: "messageRequests",
+
+  // Gigs & Bookings
   gig_invite: "gigInvites",
+  gig_opportunity: "gigOpportunities",
+  gig_created: "gigUpdates",
   gig_application: "bookingRequests",
   gig_approved: "bookingConfirmations",
   gig_rejected: "bookingRequests",
   gig_cancelled: "bookingRequests",
+  gig_interest: "gigUpdates",
+  interest_confirmation: "gigUpdates",
+  gig_selected: "gigUpdates",
+  gig_not_selected: "gigUpdates",
+  gig_favorited: "gigUpdates",
   gig_reminder: "gigReminders",
+  gig_view_milestone: "gigUpdates",
+  interest_removed: "gigUpdates",
+
+  // Band-related
+  band_setup_info: "bandInvites",
+  band_joined: "bandInvites",
+  band_booking: "bandInvites",
+  removed_from_band: "bandInvites",
+  band_member_left: "bandInvites",
+  band_member_removed: "bandInvites",
+
+  // System
   system_updates: "systemUpdates",
+  feature_announcement: "featureAnnouncements",
 } as const;
+
+// Critical notifications that always show
+const CRITICAL_NOTIFICATION_TYPES = [
+  "system_updates",
+  "feature_announcement",
+  "gig_reminder",
+  "band_booking",
+] as const;
 
 export const useNotificationSystem = () => {
   const context = useContext(NotificationSystemContext);
@@ -74,18 +123,24 @@ export const NotificationSystemProvider = ({
   children: React.ReactNode;
 }) => {
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const { userId } = useAuth();
 
   // Track which notifications we've already shown as toasts
   const shownNotificationIds = useRef<Set<string>>(new Set());
+  const lastNotificationCheck = useRef<number>(Date.now());
+  const isProcessingRef = useRef<boolean>(false);
 
-  // Fetch notifications
-  const notifs = useQuery(
+  // Fetch all notifications (read and unread)
+  const allNotifications = useQuery(
     api.controllers.notifications.getUserNotifications,
-    userId ? { clerkId: userId, limit: 20 } : "skip"
+    userId ? { clerkId: userId, limit: 50 } : "skip"
   );
 
-  const notificationsData = notifs?.filter((n) => !n.isRead);
+  // Memoize filtered notifications to prevent unnecessary recalculations
+  const notificationsData = useMemo(() => {
+    return allNotifications?.filter((n) => !n.isRead) || [];
+  }, [allNotifications]);
 
   // Fetch unread count
   const unreadCountData = useQuery(
@@ -107,105 +162,156 @@ export const NotificationSystemProvider = ({
     api.controllers.notifications.markAllAsRead
   );
 
-  const addToast = (notification: Omit<ToastNotification, "id">) => {
-    const toast: ToastNotification = {
-      ...notification,
-      id: Math.random().toString(36).substr(2, 9),
-    };
+  const addToast = useCallback(
+    (notification: Omit<ToastNotification, "id">) => {
+      const toast: ToastNotification = {
+        ...notification,
+        id: Math.random().toString(36).substr(2, 9),
+        autoHide: notification.autoHide ?? true,
+      };
 
-    setToasts((prev) => [...prev, toast]);
+      setToasts((prev) => {
+        // Limit to 5 toasts max
+        const newToasts = [toast, ...prev].slice(0, 5);
+        return newToasts;
+      });
 
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      removeToast(toast.id);
-    }, 5000);
-  };
+      // Auto remove after duration
+      const hideDuration =
+        notification.type === "feature_announcement"
+          ? 8000
+          : notification.type === "system_updates"
+            ? 7000
+            : 5000;
 
-  const removeToast = (id: string) => {
+      if (toast.autoHide !== false) {
+        setTimeout(() => {
+          removeToast(toast.id);
+        }, hideDuration);
+      }
+    },
+    []
+  );
+
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
+  }, []);
 
-  const markAsRead = async (notificationId: string) => {
-    await markAsReadMutation({
-      notificationId: notificationId as Id<"notifications">,
-      read: true,
-    });
-  };
+  const clearAllToasts = useCallback(() => {
+    setToasts([]);
+  }, []);
 
-  const markAllAsRead = async () => {
-    if (userId) {
-      await markAllAsReadMutation({ clerkId: userId });
+  const markAsRead = useCallback(
+    async (notificationId: string) => {
+      try {
+        await markAsReadMutation({
+          notificationId: notificationId as Id<"notifications">,
+          read: true,
+        });
+      } catch (error) {
+        console.error("Error marking notification as read:", error);
+      }
+    },
+    [markAsReadMutation]
+  );
+
+  const markAllAsRead = useCallback(async () => {
+    if (userId && !isProcessingRef.current) {
+      isProcessingRef.current = true;
+      try {
+        await markAllAsReadMutation({ clerkId: userId });
+        setHasNewNotifications(false);
+      } catch (error) {
+        console.error("Error marking all as read:", error);
+      } finally {
+        isProcessingRef.current = false;
+      }
     }
-  };
+  }, [userId, markAllAsReadMutation]);
 
-  const refreshNotifications = () => {
-    // This will trigger a refetch since we're using useQuery
-  };
-  // hooks/useNotificationSystem.ts - Update the shouldDisplayToast function
-  const shouldDisplayToast = (notification: any, settings: any) => {
+  const refreshNotifications = useCallback(() => {
+    // This will trigger a refetch via useQuery
+  }, []);
+
+  const getNotificationSettings = useCallback(() => {
+    return notificationSettings;
+  }, [notificationSettings]);
+
+  // Enhanced toast display logic with theme colors
+  const shouldDisplayToast = useCallback((notification: any, settings: any) => {
     // Critical notifications always show
-    const criticalTypes = ["system_updates", "feature_announcement"];
-    if (criticalTypes.includes(notification.type)) {
+    if (CRITICAL_NOTIFICATION_TYPES.includes(notification.type as any)) {
       return true;
     }
 
+    // Get the setting key for this notification type
     const settingKey =
-      notificationTypeToSettingMap[
-        notification.type as keyof typeof notificationTypeToSettingMap
+      NOTIFICATION_TYPE_TO_SETTING_MAP[
+        notification.type as keyof typeof NOTIFICATION_TYPE_TO_SETTING_MAP
       ];
 
+    // If we don't have a mapping, default to showing it
     if (!settingKey) {
-      console.warn(
-        `No setting mapping for notification type: ${notification.type}`
-      );
-      // Default to true for unmapped types to avoid blocking new features
       return true;
     }
 
-    // Check if setting exists and is enabled
-    if (settings && settingKey in settings) {
-      return settings[settingKey] !== false;
+    // Check if user has disabled this type
+    if (settings && settings[settingKey] === false) {
+      return false;
     }
 
-    // If setting doesn't exist in user's settings, default to true
-    return true;
-  };
+    // Check tier restrictions
+    const userTier = notification.metadata?.userTier || "free";
+    const isInGracePeriod = notification.metadata?.isInGracePeriod || false;
 
+    if (
+      userTier === "free" &&
+      !isInGracePeriod &&
+      !CRITICAL_NOTIFICATION_TYPES.includes(notification.type as any)
+    ) {
+      return false;
+    }
+
+    return true;
+  }, []);
+
+  // Check for new notifications with debounce
   useEffect(() => {
     if (
       notificationsData &&
       notificationsData.length > 0 &&
-      notificationSettings
+      !isProcessingRef.current
     ) {
-      console.log("🔔 Notification System Debug:", {
-        totalNotifications: notificationsData.length,
-        shownIds: shownNotificationIds.current.size,
-        notificationSettings: notificationSettings,
-      });
+      const newestNotification = notificationsData[0];
+      if (newestNotification._creationTime > lastNotificationCheck.current) {
+        setHasNewNotifications(true);
+        lastNotificationCheck.current = newestNotification._creationTime;
+      }
+    }
+  }, [notificationsData]);
 
-      // Get current time for comparison
+  // Main notification processing effect
+  useEffect(() => {
+    if (
+      notificationsData &&
+      notificationsData.length > 0 &&
+      notificationSettings &&
+      !isProcessingRef.current
+    ) {
+      isProcessingRef.current = true;
+
       const currentTime = Date.now();
 
-      notificationsData.forEach((notification) => {
-        // Skip if we've already shown this notification
+      // Process notifications with throttling
+      const processNotification = (notification: any) => {
+        // Skip if already shown
         if (shownNotificationIds.current.has(notification._id)) {
-          console.log(
-            `⏭️ Skipping already shown notification: ${notification._id}`
-          );
           return;
         }
 
-        // Check if this is a new notification (created in the last 30 seconds)
+        // Check if this is a new notification
         const isNewNotification =
-          currentTime - notification._creationTime < 30000;
-
-        console.log(`📨 Processing notification:`, {
-          id: notification._id,
-          type: notification.type,
-          isNew: isNewNotification,
-          age: currentTime - notification._creationTime,
-          title: notification.title,
-        });
+          currentTime - notification._creationTime < 60000;
 
         if (isNewNotification) {
           const shouldShowToast = shouldDisplayToast(
@@ -213,70 +319,111 @@ export const NotificationSystemProvider = ({
             notificationSettings
           );
 
-          console.log(`🎯 Should show toast: ${shouldShowToast}`, {
-            type: notification.type,
-            setting:
-              notificationTypeToSettingMap[
-                notification.type as keyof typeof notificationTypeToSettingMap
-              ],
-            settingValue:
-              notificationSettings[
-                notificationTypeToSettingMap[
-                  notification.type as keyof typeof notificationTypeToSettingMap
-                ]
-              ],
-          });
-
           if (shouldShowToast) {
-            // Mark this notification as shown
             shownNotificationIds.current.add(notification._id);
+
+            // Determine appropriate emoji based on type
+            const getNotificationEmoji = (type: string) => {
+              const emojiMap: Record<string, string> = {
+                gig_invite: "🎵",
+                gig_opportunity: "✨",
+                gig_approved: "✅",
+                gig_rejected: "❌",
+                new_message: "💬",
+                new_follower: "👥",
+                profile_view: "👁️",
+                band_booking: "🎸",
+                band_invite: "🎭",
+                system_updates: "🔄",
+                feature_announcement: "🌟",
+                gig_reminder: "⏰",
+              };
+              return emojiMap[type] || "🔔";
+            };
 
             addToast({
               type: notification.type,
-              title: notification.title,
+              title: `${getNotificationEmoji(notification.type)} ${notification.title}`,
               message: notification.message,
               image: notification.image,
               actionUrl: notification.actionUrl,
               metadata: notification.metadata,
               createdAt: notification._creationTime,
+              autoHide:
+                notification.type === "feature_announcement" ? false : true,
             });
 
-            console.log(
-              `✅ Added toast for notification: ${notification.title}`
-            );
+            // Optional notification sound
+            if (typeof window !== "undefined" && window.Audio) {
+              try {
+                const audio = new Audio("/sounds/notification.mp3");
+                audio.volume = 0.3;
+                audio.play().catch(() => {});
+              } catch (error) {
+                // Silent fail
+              }
+            }
           }
-        } else {
-          console.log(
-            `⏰ Notification too old: ${notification._id} (${currentTime - notification._creationTime}ms old)`
-          );
         }
+      };
+
+      // Process notifications with a small delay between each
+      notificationsData.forEach((notification, index) => {
+        setTimeout(() => {
+          processNotification(notification);
+        }, index * 100); // 100ms delay between each notification
       });
+
+      setTimeout(() => {
+        isProcessingRef.current = false;
+      }, notificationsData.length * 100);
     }
-  }, [notificationsData, notificationSettings]);
-  // Clean up shown IDs when notifications change significantly
+  }, [notificationsData, notificationSettings, addToast, shouldDisplayToast]);
+
+  // Clean up shown IDs when notifications are marked as read
   useEffect(() => {
     if (notificationsData && notificationsData.length === 0) {
-      // Reset when all notifications are cleared
       shownNotificationIds.current.clear();
+      setHasNewNotifications(false);
     }
   }, [notificationsData?.length]);
 
-  const value: NotificationSystemContextType = {
-    // Toasts
-    toasts,
-    addToast,
-    removeToast,
+  // Create memoized value to prevent unnecessary re-renders
+  const value = useMemo(
+    () => ({
+      // Toasts
+      toasts,
+      addToast,
+      removeToast,
+      clearAllToasts,
 
-    // Notifications
-    notifications: notificationsData || [],
-    unreadCount: unreadCountData || 0,
-    isLoading: notificationsData === undefined,
+      // Notifications
+      notifications: notificationsData,
+      unreadCount: unreadCountData || 0,
+      isLoading: allNotifications === undefined,
+      hasNewNotifications,
 
-    // Actions
-    markAsRead,
-    markAllAsRead,
-    refreshNotifications,
-  };
+      // Actions
+      markAsRead,
+      markAllAsRead,
+      refreshNotifications,
+      getNotificationSettings,
+    }),
+    [
+      toasts,
+      addToast,
+      removeToast,
+      clearAllToasts,
+      notificationsData,
+      unreadCountData,
+      allNotifications,
+      hasNewNotifications,
+      markAsRead,
+      markAllAsRead,
+      refreshNotifications,
+      getNotificationSettings,
+    ]
+  );
 
   return (
     <NotificationSystemContext.Provider value={value}>
