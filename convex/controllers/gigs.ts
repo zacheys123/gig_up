@@ -70,6 +70,8 @@ export const showInterestInGig = mutation({
     const gig = await ctx.db.get(gigId);
     const user = await ctx.db.get(userId);
     if (!gig) throw new Error("Gig not found");
+    if (!user) throw new Error("User not found");
+
     // Prevent spam - check if user has shown too much interest recently
     const recentInterests =
       gig.bookingHistory?.filter(
@@ -77,15 +79,16 @@ export const showInterestInGig = mutation({
           entry.userId === userId &&
           Date.now() - entry.timestamp < 24 * 60 * 60 * 1000
       ) || [];
-    const now = new Date();
+
     if (recentInterests.length >= 5) {
       throw new Error(
         "Too many interests shown recently. Please try again later."
       );
-    } // Wrap critical operations in a transaction if supported
-    const existingInterest =
-      gig?.interestedUsers && gig?.interestedUsers?.includes(userId);
-    if (existingInterest) {
+    }
+
+    // Check existing interest
+    const currentInterestedUsers = gig.interestedUsers || [];
+    if (currentInterestedUsers.includes(userId)) {
       throw new Error("You've already shown interest in this gig");
     }
 
@@ -95,23 +98,43 @@ export const showInterestInGig = mutation({
         "Your account needs attention before showing interest in gigs"
       );
     }
-    // Instead of generic "max capacity" error
-    if (gig?.interestedUsers && gig?.interestedUsers?.length >= gig?.maxSlots) {
+
+    // Check max slots - provide default value
+    const maxSlots = gig.maxSlots || 10;
+    if (currentInterestedUsers.length >= maxSlots) {
       throw new Error(
-        `This gig has reached maximum capacity (${gig.maxSlots} slots). ` +
-          `Currently ${gig.interestedUsers.length} interested musicians.`
+        `This gig has reached maximum capacity (${maxSlots} slots). ` +
+          `Currently ${currentInterestedUsers.length} interested musicians.`
       );
     }
-    if (gig.acceptInterestStartTime && now < gig.acceptInterestStartTime) {
+
+    // Check interest window times - FIXED: Compare timestamps properly
+    const now = Date.now(); // Use timestamp for comparison
+
+    // FIX: Convert gig timestamps to numbers if they exist
+    const interestStartTime = gig.acceptInterestStartTime
+      ? typeof gig.acceptInterestStartTime === "string"
+        ? new Date(gig.acceptInterestStartTime).getTime()
+        : gig.acceptInterestStartTime
+      : null;
+
+    const interestEndTime = gig.acceptInterestEndTime
+      ? typeof gig.acceptInterestEndTime === "string"
+        ? new Date(gig.acceptInterestEndTime).getTime()
+        : gig.acceptInterestEndTime
+      : null;
+
+    if (interestStartTime && now < interestStartTime) {
       throw new Error(
-        `Interest for this gig opens on ${new Date(gig.acceptInterestStartTime).toLocaleDateString()}`
+        `Interest for this gig opens on ${new Date(interestStartTime).toLocaleDateString()}`
       );
     }
 
     // Check interest end time
-    if (gig.acceptInterestEndTime && now > gig.acceptInterestEndTime) {
+    if (interestEndTime && now > interestEndTime) {
       throw new Error("The interest period for this gig has ended");
     }
+
     // Check if this is a band gig
     if (gig.isClientBand) {
       throw new Error(
@@ -134,29 +157,14 @@ export const showInterestInGig = mutation({
       throw new Error("This gig has already been booked by another musician");
     }
 
-    if (!user) throw new Error("User not found");
-
-    const currentInterestedUsers = gig.interestedUsers || [];
-
-    // Check if user already showed interest
-    if (currentInterestedUsers.includes(userId)) {
-      throw new Error("You've already shown interest in this gig");
-    }
-
-    // Check if gig is full (for regular gigs) - maxSlots limits how many can show interest
-    const maxSlots = gig.maxSlots || 10;
-    if (currentInterestedUsers.length >= maxSlots) {
-      throw new Error("This gig has reached maximum interest capacity");
-    }
-
     // Add to interestedUsers
     const updatedInterestedUsers = [...currentInterestedUsers, userId];
     const position = updatedInterestedUsers.length; // User's position in queue
 
     // Use the enhanced booking entry format with "applied" status instead of "pending"
     const bookingEntry = {
-      entryId: `${gigId}_${userId}_${Date.now()}`,
-      timestamp: Date.now(),
+      entryId: `${gigId}_${userId}_${now}`,
+      timestamp: now,
       userId: userId,
       userRole: user.roleType || "musician",
       isBandRole: false,
@@ -184,7 +192,7 @@ export const showInterestInGig = mutation({
     await ctx.db.patch(gigId, {
       interestedUsers: updatedInterestedUsers,
       bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
-      updatedAt: Date.now(),
+      updatedAt: now,
       // IMPORTANT: Don't set isTaken here! isTaken is only set when someone is actually booked
       // isTaken will be set in selectMusicianFromInterested when bookedBy is assigned
     });
@@ -234,8 +242,8 @@ export const showInterestInGig = mutation({
     try {
       await ctx.db.patch(userId, {
         totalInterests: (user.totalInterests || 0) + 1,
-        lastInterestAt: Date.now(),
-        updatedAt: Date.now(),
+        lastInterestAt: now,
+        updatedAt: now,
       });
     } catch (error) {
       console.error("Failed to update user stats:", error);
@@ -928,17 +936,35 @@ export const getGigTypeInfo = query({
     const isClientBand = gig.isClientBand || false;
 
     if (isClientBand) {
-      const bandMembers =
-        (gig.bandCategory && gig?.bandCategory.bookedUsers) || [];
-      const maxSlots = gig.maxSlots || 5;
+      // Fix: bandCategory is an array, need to aggregate bookedUsers from all roles
+      const bandCategory = gig.bandCategory || [];
+      const bandMembers = bandCategory.flatMap(
+        (role) => role.bookedUsers || []
+      );
+      const totalSlots = bandCategory.reduce(
+        (sum, role) => sum + (role.maxSlots || 0),
+        0
+      );
+      const filledSlots = bandCategory.reduce(
+        (sum, role) => sum + (role.filledSlots || 0),
+        0
+      );
+      const maxSlots = gig.maxSlots || totalSlots || 5;
 
       return {
         type: "band" as const,
         totalSlots: maxSlots,
-        filledSlots: bandMembers.length,
-        availableSlots: maxSlots - bandMembers.length,
+        filledSlots: filledSlots,
+        availableSlots: maxSlots - filledSlots,
         members: bandMembers,
-        isFull: bandMembers.length >= maxSlots,
+        isFull: filledSlots >= maxSlots,
+        bandRoles: bandCategory.map((role) => ({
+          role: role.role,
+          maxSlots: role.maxSlots || 0,
+          filledSlots: role.filledSlots || 0,
+          bookedUsers: role.bookedUsers || [],
+          applicants: role.applicants || [],
+        })),
       };
     } else {
       const interestedUsers = gig.interestedUsers || [];

@@ -137,12 +137,12 @@ type BandActionType =
   | "review"
   | "manage"
   | "edit";
-
+type ActionFunction = (() => Promise<void>) | null; // Only async functions
 interface BandAction {
   type: BandActionType;
   label: string;
   variant: "default" | "destructive" | "outline" | "secondary";
-  action: (() => Promise<void> | void) | null;
+  action: ActionFunction | null;
   disabled: boolean;
   routing: {
     forMusician: string;
@@ -383,17 +383,17 @@ const GigCard: React.FC<GigCardProps> = ({
         const hasBookedUsers = role.bookedUsers.length > 0;
 
         if (hasApplicants && !hasBookedUsers) {
-          // Role has applicants waiting for review
           return {
             type: "review",
             label: "Review Applicants",
             variant: "default",
-            action: () => {
+            action: async () => {
               router.push(`/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`);
+              return Promise.resolve();
             },
             disabled: false,
             routing: {
-              forMusician: "", // Not applicable for client
+              forMusician: "",
               forClient: `/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`,
               message: "Review applicants for this role",
             },
@@ -406,6 +406,7 @@ const GigCard: React.FC<GigCardProps> = ({
             variant: "outline",
             action: () => {
               router.push(`/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`);
+              return Promise.resolve();
             },
             disabled: false,
             routing: {
@@ -422,6 +423,7 @@ const GigCard: React.FC<GigCardProps> = ({
             variant: "outline",
             action: () => {
               router.push(`/gigs/edit/${gig._id}`);
+              return Promise.resolve();
             },
             disabled: false,
             routing: {
