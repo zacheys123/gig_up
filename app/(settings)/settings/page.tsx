@@ -2,7 +2,7 @@
 import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Trash2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import {
   User,
@@ -153,7 +153,6 @@ const SettingPage = () => {
   };
 
   // Delete Account Modal
-  // Delete Account Modal
   const DeleteAccountModal = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState("");
@@ -188,7 +187,6 @@ const SettingPage = () => {
         if (!user) throw new Error("No user found");
         if (!clerkUser?.id) throw new Error("No authentication user found");
 
-        // Step 1: Delete from Convex
         setDeletionSteps((prev) => [
           ...prev,
           "Deleting your data from our database...",
@@ -196,7 +194,7 @@ const SettingPage = () => {
 
         const convexResult = await deleteUserAccount({
           userId: clerkUser.id,
-          username: user.username, // Pass username for verification
+          username: user.username,
         });
 
         if (!convexResult.success) {
@@ -205,24 +203,19 @@ const SettingPage = () => {
           );
         }
 
-        // Step 2: Delete from Clerk
         setDeletionSteps((prev) => [
           ...prev,
           "Deleting your authentication account...",
         ]);
 
-        // Use Clerk's delete method
         await clerkUser.delete();
 
         setDeletionSteps((prev) => [...prev, "Account deleted successfully!"]);
 
-        // Step 3: Sign out and redirect
         setDeletionSteps((prev) => [...prev, "Signing out and redirecting..."]);
 
-        // Small delay to show success message
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        // Sign out and redirect to home
         await signOut(() => {
           router.push("/");
         });
@@ -237,67 +230,143 @@ const SettingPage = () => {
     };
 
     return (
-      <div className="space-y-6">
-        {/* Warning Banner */}
-        <div
-          className={cn(
-            "rounded-lg p-4 border",
-            colors.destructiveBg,
-            colors.warningBorder,
-            "animate-pulse"
-          )}
-        >
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0">
-              <AlertTriangle className={cn("w-5 h-5", colors.destructive)} />
+      <div className="space-y-8">
+        {/* Modern Warning Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-50/80 via-white to-orange-50/60 dark:from-red-950/20 dark:via-gray-900 dark:to-orange-950/10 border border-red-200/60 dark:border-red-800/30 shadow-xl">
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-orange-500/5" />
+
+          {/* Decorative Elements */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-red-400/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-orange-400/10 rounded-full blur-3xl" />
+
+          <div className="relative p-6">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg shadow-red-500/20">
+                  <AlertTriangle
+                    className="w-6 h-6 text-white"
+                    strokeWidth={2.5}
+                  />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+                    Delete Account
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Permanent action • No recovery possible
+                  </p>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center px-4 py-2 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 font-semibold text-sm tracking-wide border border-red-300/50 dark:border-red-700/50">
+                ⚠️ IRREVERSIBLE
+              </span>
             </div>
-            <div className="flex-1">
-              <h4 className={cn("font-bold mb-1", colors.destructive)}>
-                ⚠️ Permanent Account Deletion
-              </h4>
-              <ul className={cn("text-sm space-y-1", colors.warningText)}>
-                <li>• All your personal data will be permanently erased</li>
-                <li>• Your gigs, applications, and bookings will be removed</li>
-                <li>• All messages and notifications will be deleted</li>
-                <li>• This action cannot be undone</li>
-              </ul>
+
+            {/* Stats Grid */}
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                Everything below will be permanently removed:
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  { text: "Personal Profile", icon: "👤" },
+                  { text: "Gigs & Applications", icon: "💼" },
+                  { text: "Chat History", icon: "💬" },
+                  { text: "Notifications", icon: "🔔" },
+                  { text: "Payment History", icon: "💰" },
+                  { text: "Connections", icon: "🤝" },
+                ].map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-white/50 dark:bg-gray-800/30 border border-gray-200/50 dark:border-gray-700/30 hover:border-red-300/50 dark:hover:border-red-700/30 transition-colors"
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {item.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Final Warning */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/5 border border-red-300/30 dark:border-red-700/30">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                    <span className="text-lg">🚨</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="font-bold text-red-700 dark:text-red-300">
+                    Immediate & Permanent
+                  </p>
+                  <p className="text-sm text-red-600/80 dark:text-red-400/80 mt-1">
+                    This action will delete all your data instantly. There is no
+                    undo button.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Deletion Steps Progress */}
+        {/* Progress Indicator */}
         {isDeleting && deletionSteps.length > 0 && (
-          <div
-            className={cn(
-              "rounded-lg p-4",
-              colors.backgroundMuted,
-              "border border-dashed"
-            )}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-              <span className="font-medium">Deleting your account...</span>
+          <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 border border-gray-200/60 dark:border-gray-700/40 shadow-lg p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+                </div>
+                <div className="absolute -inset-2 bg-blue-500/10 rounded-full animate-ping" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white">
+                  Deleting Account
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This may take a moment...
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
+
+            <div className="space-y-4">
               {deletionSteps.map((step, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
+                <div
+                  key={index}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/30 transition-colors"
+                >
                   <div
-                    className={cn(
-                      "w-2 h-2 rounded-full",
+                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                       index === deletionSteps.length - 1
-                        ? "bg-blue-500 animate-pulse"
-                        : "bg-green-500"
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      index === deletionSteps.length - 1
-                        ? "font-medium"
-                        : "opacity-70"
-                    )}
+                        ? "bg-blue-500/20 border border-blue-500/30"
+                        : "bg-green-500/20 border border-green-500/30"
+                    }`}
                   >
-                    {step}
-                  </span>
+                    {index === deletionSteps.length - 1 ? (
+                      <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse" />
+                    ) : (
+                      <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p
+                      className={`font-medium ${
+                        index === deletionSteps.length - 1
+                          ? "text-blue-700 dark:text-blue-300"
+                          : "text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {step}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Step {index + 1} of {deletionSteps.length}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -306,105 +375,140 @@ const SettingPage = () => {
 
         {/* Confirmation Form */}
         {!isDeleting && (
-          <form onSubmit={handleDeleteAccount} className="space-y-6">
-            {/* Username Confirmation */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label
-                  className={cn("text-sm font-medium", colors.textSecondary)}
-                >
-                  Confirm your username
+          <form onSubmit={handleDeleteAccount} className="space-y-8">
+            {/* Username Verification */}
+            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-gray-700/40 shadow-lg p-6">
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  Verify your identity
                 </label>
-                {username && (
-                  <span
-                    className={cn(
-                      "text-xs font-medium px-2 py-1 rounded",
-                      usernameMatches
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                    )}
-                  >
-                    {usernameMatches ? "✓ Matches" : "✗ Doesn't match"}
-                  </span>
-                )}
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Type your username exactly as shown to confirm this action
+                </p>
               </div>
-              <Input
-                ref={inputRef}
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={`Enter "${user?.username}" to confirm`}
-                className={cn(
-                  "transition-all duration-200 ",
-                  colors.textMuted,
-                  username &&
-                    !usernameMatches &&
-                    "border-red-500 focus:border-red-500"
-                )}
-                disabled={isDeleting}
-              />
-            </div>
 
-            {/* Final Confirmation */}
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="confirm-deletion"
-                  checked={confirmChecked}
-                  onCheckedChange={(checked) =>
-                    setConfirmChecked(checked === true)
-                  }
-                  className={cn(
-                    "mt-0.5",
-                    colors.destructive,
-                    "data-[state=checked]:bg-destructive data-[state=checked]:text-white"
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Your username:
+                  </span>
+                  <span className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg text-gray-900 dark:text-white">
+                    {user?.username}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    ref={inputRef}
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={`Type "${user?.username}" to confirm`}
+                    className={`h-12 text-base px-4 rounded-xl transition-all duration-200 ${
+                      username && !usernameMatches
+                        ? "border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 bg-red-50/50 dark:bg-red-900/10"
+                        : "border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    }`}
+                    disabled={isDeleting}
+                  />
+
+                  {username && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div
+                        className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                          usernameMatches
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                        }`}
+                      >
+                        {usernameMatches ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Verified
+                          </>
+                        ) : (
+                          <>
+                            <X className="w-4 h-4" />
+                            Mismatch
+                          </>
+                        )}
+                      </div>
+                    </div>
                   )}
-                  disabled={isDeleting}
-                />
-                <div className="space-y-1">
-                  <label
-                    htmlFor="confirm-deletion"
-                    className={cn(
-                      "text-sm font-medium cursor-pointer",
-                      colors.text
-                    )}
-                  >
-                    I understand all consequences
-                  </label>
-                  <p className={cn("text-xs", colors.textMuted)}>
-                    I confirm that I want to permanently delete my account and
-                    all associated data. I understand this cannot be undone.
-                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Error Message */}
+            {/* Final Consent */}
+            <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 border border-gray-200/60 dark:border-gray-700/40 shadow-lg p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 mt-1">
+                  <Checkbox
+                    id="confirm-deletion"
+                    checked={confirmChecked}
+                    onCheckedChange={(checked) =>
+                      setConfirmChecked(checked === true)
+                    }
+                    className="w-6 h-6 rounded-lg border-2 data-[state=checked]:bg-gradient-to-br data-[state=checked]:from-red-600 data-[state=checked]:to-orange-600 data-[state=checked]:border-transparent"
+                    disabled={isDeleting}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label
+                    htmlFor="confirm-deletion"
+                    className="block text-lg font-bold text-gray-900 dark:text-white cursor-pointer"
+                  >
+                    I understand and accept the consequences
+                  </label>
+                  <div className="space-y-2">
+                    <p className="text-gray-700 dark:text-gray-300">
+                      By checking this box, I confirm that:
+                    </p>
+                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                        All my data will be permanently erased
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                        This action cannot be undone or recovered
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />I
+                        will lose access to all my content permanently
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Display */}
             {error && (
-              <div
-                className={cn(
-                  "rounded-lg p-3 border",
-                  "bg-red-50 dark:bg-red-900/20",
-                  "border-red-200 dark:border-red-800",
-                  "animate-in fade-in"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  <span className="text-sm text-red-600 dark:text-red-400">
-                    {error}
-                  </span>
+              <div className="rounded-xl bg-gradient-to-r from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-900/10 border border-red-200 dark:border-red-800/30 p-4 animate-in fade-in">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-red-800 dark:text-red-300">
+                      Deletion Failed
+                    </p>
+                    <p className="text-sm text-red-700/80 dark:text-red-400/80 mt-1">
+                      {error}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button
                 type="button"
                 onClick={closeModal}
                 variant="outline"
-                className="min-w-[100px]"
+                className="flex-1 h-12 text-base rounded-xl border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 disabled={isDeleting}
               >
                 Cancel
@@ -412,18 +516,30 @@ const SettingPage = () => {
               <Button
                 type="submit"
                 variant="destructive"
-                className="min-w-[180px]"
                 disabled={!canDelete}
+                className="flex-1 h-12 text-base rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20 hover:shadow-red-500/30 transition-all duration-200"
               >
                 {isDeleting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Deleting Account...
+                  </div>
                 ) : (
-                  "Permanently Delete Account"
+                  <div className="flex items-center justify-center gap-2">
+                    <Trash2 className="w-5 h-5" />
+                    <span className="font-semibold">
+                      Permanently Delete Account
+                    </span>
+                  </div>
                 )}
               </Button>
+            </div>
+
+            {/* Safety Note */}
+            <div className="text-center pt-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Need help? Contact our support team before proceeding.
+              </p>
             </div>
           </form>
         )}
