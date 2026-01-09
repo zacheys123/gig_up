@@ -2,8 +2,6 @@
 
 import { Id } from "@/convex/_generated/dataModel";
 
-// Band Role Types
-// In your types file
 export interface BandRoleInput {
   role: string;
   maxSlots: number;

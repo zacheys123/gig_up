@@ -1,5 +1,36 @@
-// convex/controllers/gigTypes.ts - FIXED VERSION
+import { Id } from "./_generated/dataModel";
 
+// convex/controllers/gigTypes.ts - FIXED VERSION
+export interface UnifiedBookingEntry {
+  // Common fields
+  entryId: string;
+  timestamp: number;
+  userId: Id<"users">;
+  userRole: string;
+  status: "pending" | "booked" | "completed" | "cancelled" | "applied";
+  gigType: "regular" | "band";
+  actionBy: Id<"users">;
+  actionFor: Id<"users">;
+  notes?: string;
+  reason?: string;
+  metadata?: Record<string, any>;
+
+  // Price fields
+  proposedPrice?: number;
+  agreedPrice?: number;
+  currency?: string;
+
+  // Band-specific fields
+  bandRole?: string;
+  bandRoleIndex?: number;
+  isBandRole: boolean;
+
+  // Legacy fields (for backward compatibility)
+  role?: string; // legacy
+  price?: number; // legacy
+  bookedBy?: Id<"users">; // legacy
+  action?: string; // legacy
+}
 // Main gig types definition
 export const GIG_TYPES = [
   { value: "wedding", label: "💒 Wedding" },

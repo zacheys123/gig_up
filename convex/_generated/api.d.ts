@@ -19,6 +19,7 @@ import type * as adminTypes from "../adminTypes.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as controllers_adminFuncs from "../controllers/adminFuncs.js";
 import type * as controllers_bands from "../controllers/bands.js";
+import type * as controllers_bookings from "../controllers/bookings.js";
 import type * as controllers_chat from "../controllers/chat.js";
 import type * as controllers_comments from "../controllers/comments.js";
 import type * as controllers_debug from "../controllers/debug.js";
@@ -76,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   cloudinary: typeof cloudinary;
   "controllers/adminFuncs": typeof controllers_adminFuncs;
   "controllers/bands": typeof controllers_bands;
+  "controllers/bookings": typeof controllers_bookings;
   "controllers/chat": typeof controllers_chat;
   "controllers/comments": typeof controllers_comments;
   "controllers/debug": typeof controllers_debug;

@@ -63,6 +63,10 @@ interface SubmitProps {
   isLoading?: boolean;
   isSchedulerOpen: boolean;
   setisSchedulerOpen: (isSchedulerOpen: boolean) => void;
+  // Add these new props
+  isFormValid?: boolean; // Whether the form is valid
+  validationErrors?: string[]; // Any validation errors from the form
+  formValidationCheck?: () => boolean; // Function to check form validity
 }
 
 // Subcomponents
@@ -213,6 +217,9 @@ const SchedulerComponent = ({
   isLoading = false,
   isSchedulerOpen,
   setisSchedulerOpen,
+  isFormValid = true, // Default to true
+  validationErrors = [], // Default empty array
+  formValidationCheck = () => true, // Default function that returns true
 }: SubmitProps) => {
   const { user: clerkUser } = useUser();
   const { user: currentUser, isLoading: userLoading } = useCurrentUser();

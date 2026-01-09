@@ -187,8 +187,9 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   featureAnnouncements: true,
 };
 
-// ==================== NOTIFICATION TYPE MAPPING ====================
 // convex/types/notificationTypes.ts
+
+// ==================== NOTIFICATION TYPE MAPPING ====================
 export const NOTIFICATION_TYPE_TO_SETTING_MAP: Record<
   NotificationType,
   keyof NotificationSettings
@@ -209,24 +210,26 @@ export const NOTIFICATION_TYPE_TO_SETTING_MAP: Record<
   // Messages & Communication
   new_message: "newMessages",
 
-  // Gigs & Bookings (ADD ALL THESE)
+  // Gigs & Bookings - UPDATED with ALL types
   gig_invite: "gigInvites",
-  gig_opportunity: "gigOpportunities", // New gigs posted
-  gig_created: "gigUpdates", // Gig created confirmation
+  gig_opportunity: "gigOpportunities",
+  gig_created: "gigUpdates",
   gig_application: "bookingRequests",
   gig_approved: "bookingConfirmations",
   gig_rejected: "bookingRequests",
   gig_cancelled: "bookingRequests",
+  gig_reminder: "gigReminders",
+
+  // Gig interest flow - NEW
   gig_interest: "gigUpdates",
   interest_confirmation: "gigUpdates",
   gig_selected: "gigUpdates",
   gig_not_selected: "gigUpdates",
   gig_favorited: "gigUpdates",
-  gig_reminder: "gigReminders",
   gig_view_milestone: "gigUpdates",
   interest_removed: "gigUpdates",
 
-  // Band-related (NEW)
+  // Band-related - NEW (all use bandInvites)
   band_setup_info: "bandInvites",
   band_joined: "bandInvites",
   band_booking: "bandInvites",

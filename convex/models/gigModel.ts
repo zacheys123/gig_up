@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+
 const bandMember = v.object({
   userId: v.id("users"), // Reference to the user
   name: v.string(), // Display name
@@ -22,22 +23,95 @@ const bandRoleSchema = v.object({
   negotiable: v.optional(v.boolean()), // Whether price is negotiable
   bookedPrice: v.optional(v.number()), // Actual price agreed upon
 });
-const bookingHistoryEntry = v.object({
+const bandBookingEntry = v.object({
+  bandRole: v.string(),
+  bandRoleIndex: v.number(),
   userId: v.id("users"),
-  status: v.union(
-    v.literal("pending"),
-    v.literal("booked"),
-    v.literal("completed"),
-    v.literal("cancelled")
+  userName: v.string(), // Cache name for display
+
+  // Application phase
+  appliedAt: v.number(),
+  applicationNotes: v.optional(v.string()),
+  applicationStatus: v.union(
+    v.literal("pending_review"),
+    v.literal("under_review"),
+    v.literal("interview_scheduled"),
+    v.literal("interview_completed")
   ),
-  timestamp: v.number(), // Use timestamp instead of date
-  role: v.string(),
-  notes: v.optional(v.string()),
-  price: v.optional(v.number()),
+
+  // Booking phase
+  bookedAt: v.optional(v.number()),
   bookedBy: v.optional(v.id("users")),
-  action: v.optional(v.string()),
-  gigType: v.optional(v.union(v.literal("regular"), v.literal("band"))),
-  metadata: v.optional(v.any()),
+  bookedPrice: v.optional(v.number()),
+  contractSigned: v.optional(v.boolean()),
+
+  // Completion phase
+  completedAt: v.optional(v.number()),
+  completionNotes: v.optional(v.string()),
+  ratingGiven: v.optional(v.number()),
+  reviewLeft: v.optional(v.string()),
+
+  // Payment
+  paymentStatus: v.optional(
+    v.union(
+      v.literal("pending"),
+      v.literal("partial"),
+      v.literal("paid"),
+      v.literal("disputed"),
+      v.literal("cancelled")
+    )
+  ),
+  paymentAmount: v.optional(v.number()),
+  paymentDate: v.optional(v.number()),
+});
+const bookingHistoryEntry = v.object({
+  // Basic info
+  entryId: v.string(), // Unique ID for this entry
+  timestamp: v.number(),
+
+  // User & Role Info
+  userId: v.id("users"),
+  userRole: v.optional(v.string()), // User's role (e.g., "musician", "client")
+
+  // Role-specific for band gigs
+  bandRole: v.optional(v.string()), // "Vocalist", "Guitarist", etc.
+  bandRoleIndex: v.optional(v.number()), // Index in bandCategory array
+  isBandRole: v.optional(v.boolean()), // Is this a band role booking?
+
+  // Status & Actions
+  status: v.union(
+    v.literal("applied"),
+    v.literal("shortlisted"),
+    v.literal("interviewed"),
+    v.literal("offered"),
+    v.literal("booked"),
+    v.literal("confirmed"),
+    v.literal("completed"),
+    v.literal("cancelled"),
+    v.literal("rejected")
+  ),
+
+  // Gig Type
+  gigType: v.union(v.literal("regular"), v.literal("band")),
+
+  // Financials
+  proposedPrice: v.optional(v.number()),
+  agreedPrice: v.optional(v.number()),
+  currency: v.optional(v.string()),
+
+  // Parties involved
+  actionBy: v.id("users"), // Who performed this action
+  actionFor: v.optional(v.id("users")), // Who this action affects
+
+  // Metadata
+  notes: v.optional(v.string()),
+  metadata: v.optional(v.any()), // Flexible data
+  attachments: v.optional(v.array(v.string())), // Files, images
+
+  // For cancellations/rejections
+  reason: v.optional(v.string()),
+  refundAmount: v.optional(v.number()),
+  refundStatus: v.optional(v.string()),
 });
 export const gigModel = defineTable({
   // Basic gig info
@@ -75,7 +149,9 @@ export const gigModel = defineTable({
   // Status flags
   isTaken: v.boolean(),
   isPending: v.boolean(),
+  // Separate histories for clarity
   bookingHistory: v.optional(v.array(bookingHistoryEntry)),
+  bandBookingHistory: v.optional(v.array(bandBookingEntry)),
 
   // Fixed: bookCount type
   bookCount: v.optional(v.array(bandMember)),

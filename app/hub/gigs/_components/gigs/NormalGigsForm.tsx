@@ -763,18 +763,33 @@ export default function NormalGigsForm() {
     { role: "Drummer", maxSlots: 1, requiredSkills: ["Jazz", "Rock"] },
     { role: "Backup Vocalist", maxSlots: 2, requiredSkills: [] },
   ]);
+  const [formValidationErrors, setFormValidationErrors] = useState<string[]>(
+    []
+  );
+  const [isFormValid, setIsFormValid] = useState(false);
 
-  // Validation function Satrts Here!!!!!!!!
+  // Basic required fields for all categories
   const validateRequiredFields = useCallback(() => {
     const errors: Record<string, string> = {};
+    const errorMessages: string[] = [];
 
     // Basic required fields for all categories
-    if (!formValues.title?.trim()) errors.title = "Title is required";
-    if (!formValues.description?.trim())
+    if (!formValues.title?.trim()) {
+      errors.title = "Title is required";
+      errorMessages.push("Title is required");
+    }
+    if (!formValues.description?.trim()) {
       errors.description = "Description is required";
-    if (!formValues.location?.trim()) errors.location = "Location is required";
-    if (!bussinesscat) errors.bussinesscat = "Business category is required";
-
+      errorMessages.push("Description is required");
+    }
+    if (!formValues.location?.trim()) {
+      errors.location = "Location is required";
+      errorMessages.push("Location is required");
+    }
+    if (!bussinesscat) {
+      errors.bussinesscat = "Business category is required";
+      errorMessages.push("Business category is required");
+    }
     // Category-specific validations
     if (bussinesscat === "mc") {
       if (!formValues.mcType) errors.mcType = "MC type is required";
@@ -808,8 +823,16 @@ export default function NormalGigsForm() {
 
     fieldErrorsRef.current = errors;
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    setFormValidationErrors(errorMessages);
+
+    const isValid = Object.keys(errors).length === 0;
+    setIsFormValid(isValid);
+    return isValid;
   }, [bussinesscat, formValues, bandRoles]);
+  // CHECKING FORM VALIDITY
+  const checkFormValidity = useCallback(() => {
+    return validateRequiredFields();
+  }, [validateRequiredFields]);
   // Add this helper function to determine if a field is required
   const isFieldRequired = useCallback(
     (fieldName: string) => {
@@ -3448,6 +3471,10 @@ export default function NormalGigsForm() {
           isSchedulerOpen={isSchedulerOpen}
           setisSchedulerOpen={setisSchedulerOpen}
           onSubmit={handleSubmit}
+          // Add these new props:
+          isFormValid={isFormValid}
+          validationErrors={formValidationErrors}
+          formValidationCheck={checkFormValidity}
         />
       </AnimatePresence>
       <AnimatePresence initial={false}>
