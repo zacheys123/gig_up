@@ -57,6 +57,7 @@ import {
   Check,
   Info,
   ArrowRight,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -3144,7 +3145,7 @@ export default function NormalGigsForm() {
                 </label>
                 <MemoizedInput
                   type="tel"
-                  value={formValues.phoneNo}
+                  value={formValues.phoneNo ? formValues.phoneNo : ""}
                   onChange={handleInputChange}
                   onBlur={() => handleInputBlur("phoneNo")}
                   name="phoneNo"
@@ -3425,16 +3426,7 @@ export default function NormalGigsForm() {
                           name="end"
                           placeholder="12"
                         />
-                        <MemoizedInput
-                          type="tel"
-                          value={formValues.phoneNo}
-                          onChange={handleInputChange}
-                          onBlur={() => handleInputBlur("phoneNo")}
-                          name="phoneNo"
-                          placeholder="+254 7XX XXX XXX"
-                          icon={Phone}
-                          required={isFieldRequired("phoneNo")}
-                        />
+
                         <MemoizedInput
                           type="text"
                           value={formValues.location}
