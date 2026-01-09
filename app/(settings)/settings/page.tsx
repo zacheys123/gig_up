@@ -594,7 +594,7 @@ const SettingPage = () => {
                 type="button"
                 onClick={closeModal}
                 variant="outline"
-                className="flex-1 h-12 text-base rounded-xl border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="flex-1 h-12 text-base rounded-xl border-gray-300 hover:text-gray-100 dark:hover:bg-gray-800 bg-blue-500 transition-colors"
                 disabled={isDeleting}
               >
                 Cancel
