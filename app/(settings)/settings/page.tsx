@@ -388,26 +388,21 @@ const SettingPage = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Your username:
-                  </span>
-                  <span className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg text-gray-900 dark:text-white">
-                    {user?.username}
-                  </span>
-                </div>
-
                 <div className="relative">
                   <Input
                     ref={inputRef}
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder={`Type "${user?.username}" to confirm`}
-                    className={`h-12 text-base px-4 rounded-xl transition-all duration-200 ${
+                    placeholder="Enter your Username"
+                    className={`h-12 text-base px-4 rounded-xl transition-all duration-300 text-gray-900 dark:text-white ${
                       username && !usernameMatches
-                        ? "border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 bg-red-50/50 dark:bg-red-900/10"
-                        : "border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        ? "border-2 border-red-500 focus:ring-4 focus:ring-red-500/15 focus:border-red-500 bg-gradient-to-r from-red-50/80 to-red-100/30 dark:from-red-950/20 dark:to-red-900/10"
+                        : "border-2 border-gray-300 dark:border-gray-700 focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500 bg-white dark:bg-gray-900"
+                    } ${
+                      usernameMatches
+                        ? "border-green-500 focus:border-green-500 focus:ring-green-500/15 bg-gradient-to-r from-green-50/80 to-green-100/30 dark:from-green-950/20 dark:to-green-900/10"
+                        : ""
                     }`}
                     disabled={isDeleting}
                   />
@@ -443,15 +438,106 @@ const SettingPage = () => {
             <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 border border-gray-200/60 dark:border-gray-700/40 shadow-lg p-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 mt-1">
-                  <Checkbox
-                    id="confirm-deletion"
-                    checked={confirmChecked}
-                    onCheckedChange={(checked) =>
-                      setConfirmChecked(checked === true)
-                    }
-                    className="w-6 h-6 rounded-lg border-2 data-[state=checked]:bg-gradient-to-br data-[state=checked]:from-red-600 data-[state=checked]:to-orange-600 data-[state=checked]:border-transparent"
-                    disabled={isDeleting}
-                  />
+                  <div className="relative">
+                    <Checkbox
+                      id="confirm-deletion"
+                      checked={confirmChecked}
+                      onCheckedChange={(checked) =>
+                        setConfirmChecked(checked === true)
+                      }
+                      className="
+      peer
+      w-8 h-8
+      rounded-xl
+      border-2
+      border-gray-300/80
+      dark:border-gray-600/80
+      bg-white/90
+      dark:bg-gray-900/90
+      backdrop-blur-sm
+      shadow-lg
+      shadow-gray-200/50
+      dark:shadow-gray-900/50
+      transition-all
+      duration-400
+      ease-out-cubic
+      hover:border-red-400
+      hover:shadow-xl
+      hover:shadow-red-200/30
+      dark:hover:shadow-red-900/20
+      hover:scale-110
+      focus:ring-4
+      focus:ring-red-500/25
+      focus:outline-none
+      disabled:opacity-60
+      disabled:cursor-not-allowed
+      disabled:hover:scale-100
+      disabled:hover:border-gray-300
+      disabled:hover:shadow-lg
+      data-[state=checked]:border-transparent
+      data-[state=checked]:bg-gradient-to-br
+      data-[state=checked]:from-red-600
+      data-[state=checked]:to-orange-600
+      data-[state=checked]:shadow-2xl
+      data-[state=checked]:shadow-red-500/40
+      data-[state=checked]:scale-110
+    "
+                      disabled={isDeleting}
+                    />
+
+                    {/* Custom check icon with animation */}
+                    <div
+                      className="
+    absolute
+    left-1/2
+    top-1/2
+    -translate-x-1/2
+    -translate-y-1/2
+    pointer-events-none
+    transition-all
+    duration-300
+    ease-out-back
+    opacity-0
+    scale-50
+    peer-data-[state=checked]:opacity-100
+    peer-data-[state=checked]:scale-100
+  "
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="drop-shadow-sm"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+
+                    {/* Pulsing ring effect when checked */}
+                    <div
+                      className="
+    absolute
+    inset-0
+    rounded-xl
+    border-2
+    border-transparent
+    pointer-events-none
+    transition-all
+    duration-500
+    opacity-0
+    scale-100
+    peer-data-[state=checked]:border-red-400/50
+    peer-data-[state=checked]:opacity-100
+    peer-data-[state=checked]:scale-125
+    peer-data-[state=checked]:animate-pulse
+  "
+                    />
+                  </div>
                 </div>
                 <div className="space-y-3">
                   <label
