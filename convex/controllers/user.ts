@@ -1388,13 +1388,13 @@ export const deleteUserAccount = mutation({
     for (const instantGig of userInstantGigs) {
       await ctx.db.delete(instantGig._id);
     }
-    const userIdString = user._id.toString();
+
     // 8. Handle chats
     // Remove user from chats they're in
-    const userChats = await ctx.db
-      .query("chats")
-      .filter((q) => q.eq(q.field("participantIds"), userIdString))
-      .collect();
+    const allChats = await ctx.db.query("chats").collect();
+    const userChats = allChats.filter((chat) =>
+      chat.participantIds.includes(user._id)
+    );
 
     for (const chat of userChats) {
       // Remove user from participant list
@@ -1407,8 +1407,29 @@ export const deleteUserAccount = mutation({
         await ctx.db.patch(chat._id, {
           participantIds: updatedParticipants,
         });
+
+        // Also clean up unreadCounts if it exists
+        if (chat.unreadCounts) {
+          const updatedUnreadCounts = { ...chat.unreadCounts };
+          delete updatedUnreadCounts[user._id];
+
+          await ctx.db.patch(chat._id, {
+            unreadCounts: updatedUnreadCounts,
+          });
+        }
       } else {
         // Delete chat if no participants left
+        // First delete all messages in this chat
+        const chatMessages = await ctx.db
+          .query("messages")
+          .withIndex("by_chatId", (q) => q.eq("chatId", chat._id))
+          .collect();
+
+        for (const message of chatMessages) {
+          await ctx.db.delete(message._id);
+        }
+
+        // Delete the chat
         await ctx.db.delete(chat._id);
       }
     }
@@ -1562,27 +1583,12 @@ export const deleteUserAccount = mutation({
         );
       }
 
-      // Remove from mutualFollowers count if applicable
-      if (otherUser.mutualFollowers && otherUser.mutualFollowers > 0) {
-        // This would require more complex logic to recalculate
-        updates.mutualFollowers = Math.max(0, otherUser.mutualFollowers - 1);
-      }
-
       if (Object.keys(updates).length > 0) {
         await ctx.db.patch(otherUser._id, updates);
       }
     }
 
-    // 18. Delete testimonials by this user
-    const userTestimonials = await ctx.db
-      .query("testimonials")
-      .filter((q) => q.eq(q.field("userId"), user.clerkId))
-      .collect();
-
-    for (const testimonial of userTestimonials) {
-      await ctx.db.delete(testimonial._id);
-    }
-    // 20. Handle reports involving this user
+    // 18. Handle reports involving this user
     const userReports = await ctx.db
       .query("reports")
       .filter((q) =>
@@ -1601,19 +1607,20 @@ export const deleteUserAccount = mutation({
       });
     }
 
-    // 21. Remove from testimonials if they're the user being reviewed
-    const testimonials = await ctx.db
+    // 19. Delete testimonials by this user
+    const userTestimonials = await ctx.db
       .query("testimonials")
       .filter((q) => q.eq(q.field("userId"), user.clerkId))
       .collect();
 
-    for (const testimonial of testimonials) {
+    for (const testimonial of userTestimonials) {
       await ctx.db.delete(testimonial._id);
     }
-    // 19. Finally, delete the user account
+
+    // 20. Finally, delete the user account
     await ctx.db.delete(user._id);
 
-    // 20. Send notification to admins
+    // 21. Send notification to admins
     const admins = await ctx.db
       .query("users")
       .withIndex("by_is_admin", (q) => q.eq("isAdmin", true))
