@@ -3426,7 +3426,6 @@ export default function NormalGigsForm() {
                           name="end"
                           placeholder="12"
                         />
-
                         <MemoizedInput
                           type="text"
                           value={formValues.location}

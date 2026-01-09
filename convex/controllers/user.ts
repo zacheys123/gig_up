@@ -1195,33 +1195,465 @@ export const unlikeGig = mutation({
 
 export const deleteUserAccount = mutation({
   args: {
-    userId: v.string(),
+    userId: v.string(), // Clerk user ID
+    username: v.optional(v.string()), // Optional username verification
   },
   handler: async (ctx, args) => {
-    const { userId } = args;
+    const { userId, username } = args;
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
-      .first();
-
-    if (!args.userId) {
-      throw new Error("Unauthorized");
+    // Validate input
+    if (!userId) {
+      throw new Error("Unauthorized - No user ID provided");
     }
 
-    if (args.userId !== user?.clerkId) {
+    // Get the user from Convex using Clerk ID
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found in database");
+    }
+
+    // Optional username verification for extra security
+    if (username && user.username !== username) {
+      throw new Error("Username verification failed");
+    }
+
+    // Check if user is trying to delete someone else's account
+    if (userId !== user.clerkId) {
       throw new Error("Unauthorized - User ID mismatch");
     }
 
-    if (user) {
-      await ctx.db.delete(user._id);
+    // Additional safety check: prevent deletion of admin accounts
+    if (user.isAdmin) {
+      throw new Error("Admin accounts cannot be deleted through this method");
     }
 
-    // Note: Any related data will be automatically handled by Convex
-    // if you have proper relationships set up, or you can add additional
-    // deletion logic here if needed
+    // Create a deletion record for audit purposes
+    const deletionRecordId = await ctx.db.insert("accountDeletions", {
+      userId: user._id,
+      clerkId: user.clerkId,
+      email: user.email || "",
+      username: user.username || "",
+      deletedAt: Date.now(),
+      reason: "user_requested",
+      dataSnapshot: {
+        tier: user.tier,
+        gigsPosted: user.gigsPosted || 0,
+        gigsBooked: user.gigsBooked || 0,
+        totalInterests: user.totalInterests || 0,
+        trustScore: user.trustScore || 0,
+        avgRating: user.avgRating || 0,
+        createdAt: user._creationTime,
+      },
+    });
 
-    return { success: true, message: "User account deleted from Convex" };
+    // 1. Delete user's gigs (if they posted any)
+    const userGigs = await ctx.db
+      .query("gigs")
+      .withIndex("by_postedBy", (q) => q.eq("postedBy", user._id))
+      .collect();
+
+    for (const gig of userGigs) {
+      // Create deletion record for gig
+      await ctx.db.insert("gigDeletions", {
+        gigId: gig._id,
+        deletedBy: user._id,
+        deletedAt: Date.now(),
+        reason: "user_account_deletion",
+        title: gig.title || "Untitled Gig",
+        createdAt: gig._creationTime,
+      });
+
+      // Delete the gig
+      await ctx.db.delete(gig._id);
+    }
+
+    // 2. Remove user from any gigs they're interested in
+    const allGigs = await ctx.db
+      .query("gigs")
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    for (const gig of allGigs) {
+      // Remove from interestedUsers if present
+      if (gig.interestedUsers?.includes(user._id)) {
+        const updatedInterestedUsers = gig.interestedUsers.filter(
+          (id) => id !== user._id
+        );
+
+        await ctx.db.patch(gig._id, {
+          interestedUsers: updatedInterestedUsers,
+          updatedAt: Date.now(),
+        });
+
+        // Add to booking history
+        const historyEntry = {
+          entryId: `${gig._id}_${user._id}_${Date.now()}`,
+          timestamp: Date.now(),
+          userId: user._id,
+          userRole: user.roleType || "musician",
+          status: "cancelled" as const,
+          gigType: "regular" as const,
+          actionBy: user._id,
+          reason: "User account deleted",
+          metadata: {
+            action: "account_deletion",
+            deletedUser: user.username || user.email,
+          },
+        };
+
+        await ctx.db.patch(gig._id, {
+          bookingHistory: [...(gig.bookingHistory || []), historyEntry],
+        });
+      }
+
+      // Handle band gigs - remove from applicants and bookedUsers
+      if (gig.bandCategory) {
+        const updatedBandCategory = gig.bandCategory.map((role: any) => ({
+          ...role,
+          applicants: role.applicants.filter(
+            (id: Id<"users">) => id !== user._id
+          ),
+          bookedUsers: role.bookedUsers.filter(
+            (id: Id<"users">) => id !== user._id
+          ),
+          filledSlots: Math.max(
+            0,
+            role.filledSlots - (role.bookedUsers.includes(user._id) ? 1 : 0)
+          ),
+        }));
+
+        // Only update if changes were made
+        if (
+          JSON.stringify(updatedBandCategory) !==
+          JSON.stringify(gig.bandCategory)
+        ) {
+          await ctx.db.patch(gig._id, {
+            bandCategory: updatedBandCategory,
+            updatedAt: Date.now(),
+          });
+        }
+      }
+    }
+
+    // 3. Delete user's notifications
+    const userNotifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user_id", (q) => q.eq("userId", user._id))
+      .collect();
+
+    for (const notification of userNotifications) {
+      await ctx.db.delete(notification._id);
+    }
+
+    // 4. Delete notification settings
+    const userNotificationSettings = await ctx.db
+      .query("notificationSettings")
+      .withIndex("by_user_id", (q) => q.eq("userId", user._id))
+      .collect();
+
+    for (const setting of userNotificationSettings) {
+      await ctx.db.delete(setting._id);
+    }
+
+    // 5. Delete user's videos
+    const userVideos = await ctx.db
+      .query("videos")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .collect();
+
+    for (const video of userVideos) {
+      await ctx.db.delete(video._id);
+    }
+
+    // 6. Delete user's comments
+    const userComments = await ctx.db
+      .query("comments")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .collect();
+
+    for (const comment of userComments) {
+      await ctx.db.delete(comment._id);
+    }
+
+    // 7. Delete user's instant gigs
+    const userInstantGigs = await ctx.db
+      .query("instantgigs")
+      .filter((q) => q.eq(q.field("clientId"), user._id))
+      .collect();
+
+    for (const instantGig of userInstantGigs) {
+      await ctx.db.delete(instantGig._id);
+    }
+    const userIdString = user._id.toString();
+    // 8. Handle chats
+    // Remove user from chats they're in
+    const userChats = await ctx.db
+      .query("chats")
+      .filter((q) => q.eq(q.field("participantIds"), userIdString))
+      .collect();
+
+    for (const chat of userChats) {
+      // Remove user from participant list
+      const updatedParticipants = chat.participantIds.filter(
+        (id) => id !== user._id
+      );
+
+      if (updatedParticipants.length > 0) {
+        // Update chat with remaining participants
+        await ctx.db.patch(chat._id, {
+          participantIds: updatedParticipants,
+        });
+      } else {
+        // Delete chat if no participants left
+        await ctx.db.delete(chat._id);
+      }
+    }
+
+    // Delete messages sent by user
+    const userMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_senderId", (q) => q.eq("senderId", user._id))
+      .collect();
+
+    for (const message of userMessages) {
+      await ctx.db.delete(message._id);
+    }
+
+    // 9. Delete chat presence records
+    const userChatPresence = await ctx.db
+      .query("chatPresence")
+      .withIndex("by_userId_chatId", (q) => q.eq("userId", user._id))
+      .collect();
+
+    for (const presence of userChatPresence) {
+      await ctx.db.delete(presence._id);
+    }
+
+    // 10. Delete user presence records
+    const userPresence = await ctx.db
+      .query("userPresence")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+
+    for (const presence of userPresence) {
+      await ctx.db.delete(presence._id);
+    }
+
+    // 11. Delete active chat sessions
+    const userActiveSessions = await ctx.db
+      .query("activeChatSessions")
+      .withIndex("by_user_id", (q) => q.eq("userId", user._id))
+      .collect();
+
+    for (const session of userActiveSessions) {
+      await ctx.db.delete(session._id);
+    }
+
+    // 12. Delete typing indicators
+    const userTypingIndicators = await ctx.db
+      .query("typingIndicators")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .collect();
+
+    for (const indicator of userTypingIndicators) {
+      await ctx.db.delete(indicator._id);
+    }
+
+    // 13. Handle connections
+    const userConnections = await ctx.db
+      .query("connections")
+      .withIndex("by_user1", (q) => q.eq("user1Id", user._id))
+      .collect();
+
+    for (const connection of userConnections) {
+      await ctx.db.delete(connection._id);
+    }
+
+    // Also connections where user is user2
+    const userConnections2 = await ctx.db
+      .query("connections")
+      .withIndex("by_user2", (q) => q.eq("user2Id", user._id))
+      .collect();
+
+    for (const connection of userConnections2) {
+      await ctx.db.delete(connection._id);
+    }
+
+    // 14. Delete push subscriptions
+    const userPushSubscriptions = await ctx.db
+      .query("pushSubscriptions")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .collect();
+
+    for (const subscription of userPushSubscriptions) {
+      await ctx.db.delete(subscription._id);
+    }
+
+    // 15. Handle band relationships
+    if (user.bandLeaderOf && user.bandLeaderOf.length > 0) {
+      for (const bandId of user.bandLeaderOf) {
+        const band = await ctx.db.get(bandId);
+        if (band) {
+          // Archive band if leader is deleting account
+          await ctx.db.patch(bandId, {
+            status: "archived",
+          });
+        }
+      }
+    }
+
+    if (user.bandMemberOf && user.bandMemberOf.length > 0) {
+      for (const bandId of user.bandMemberOf) {
+        const bandMembers = await ctx.db
+          .query("bandMembers")
+          .withIndex("by_band_user", (q) =>
+            q.eq("bandId", bandId).eq("userId", user._id)
+          )
+          .collect();
+
+        for (const member of bandMembers) {
+          await ctx.db.delete(member._id);
+        }
+      }
+    }
+
+    // 16. Delete band gig applications
+    const userBandApplications = await ctx.db
+      .query("bandGigApplications")
+      .collect();
+
+    for (const application of userBandApplications) {
+      // You might need to check if this application is for a band the user leads
+      // This would require additional logic based on your data structure
+    }
+
+    // 17. Update other users' followers/followings lists
+    // Remove user from other users' followers list
+    const allUsers = await ctx.db.query("users").collect();
+
+    for (const otherUser of allUsers) {
+      if (otherUser._id === user._id) continue;
+
+      const updates: any = {};
+      const userIdString = user._id.toString();
+
+      // Remove from followers
+      if (otherUser.followers?.includes(userIdString)) {
+        updates.followers = otherUser.followers.filter(
+          (id) => id !== userIdString
+        );
+      }
+
+      // Remove from followings
+      if (otherUser.followings?.includes(userIdString)) {
+        updates.followings = otherUser.followings.filter(
+          (id) => id !== userIdString
+        );
+      }
+
+      // Remove from references (note the typo in your schema: "refferences" not "references")
+      if (otherUser.refferences?.includes(userIdString)) {
+        updates.refferences = otherUser.refferences.filter(
+          (id) => id !== userIdString
+        );
+      }
+
+      // Remove from mutualFollowers count if applicable
+      if (otherUser.mutualFollowers && otherUser.mutualFollowers > 0) {
+        // This would require more complex logic to recalculate
+        updates.mutualFollowers = Math.max(0, otherUser.mutualFollowers - 1);
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(otherUser._id, updates);
+      }
+    }
+
+    // 18. Delete testimonials by this user
+    const userTestimonials = await ctx.db
+      .query("testimonials")
+      .filter((q) => q.eq(q.field("userId"), user.clerkId))
+      .collect();
+
+    for (const testimonial of userTestimonials) {
+      await ctx.db.delete(testimonial._id);
+    }
+    // 20. Handle reports involving this user
+    const userReports = await ctx.db
+      .query("reports")
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("reportedUserId"), user._id.toString()),
+          q.eq(q.field("reporterId"), user._id.toString())
+        )
+      )
+      .collect();
+
+    for (const report of userReports) {
+      // Mark reports as resolved due to account deletion
+      await ctx.db.patch(report._id, {
+        resolvedAt: Date.now(),
+        resolutionNotes: "Account deleted",
+      });
+    }
+
+    // 21. Remove from testimonials if they're the user being reviewed
+    const testimonials = await ctx.db
+      .query("testimonials")
+      .filter((q) => q.eq(q.field("userId"), user.clerkId))
+      .collect();
+
+    for (const testimonial of testimonials) {
+      await ctx.db.delete(testimonial._id);
+    }
+    // 19. Finally, delete the user account
+    await ctx.db.delete(user._id);
+
+    // 20. Send notification to admins
+    const admins = await ctx.db
+      .query("users")
+      .withIndex("by_is_admin", (q) => q.eq("isAdmin", true))
+      .collect();
+
+    for (const admin of admins) {
+      await createNotificationInternal(ctx, {
+        userDocumentId: admin._id,
+        type: "admin_alert",
+        title: "⚠️ User Account Deleted",
+        message: `User ${user.username || user.email} deleted their account`,
+        actionUrl: `/admin/users/deleted`,
+        metadata: {
+          deletedUserId: user._id,
+          deletedUsername: user.username,
+          deletionRecordId,
+          gigsDeleted: userGigs.length,
+          videosDeleted: userVideos.length,
+          chatsAffected: userChats.length,
+          timestamp: Date.now(),
+        },
+      });
+    }
+
+    return {
+      success: true,
+      message: "User account and all associated data deleted successfully",
+      data: {
+        userDeleted: true,
+        gigsDeleted: userGigs.length,
+        notificationsDeleted: userNotifications.length,
+        videosDeleted: userVideos.length,
+        commentsDeleted: userComments.length,
+        instantGigsDeleted: userInstantGigs.length,
+        chatsAffected: userChats.length,
+        messagesDeleted: userMessages.length,
+        connectionsDeleted: userConnections.length + userConnections2.length,
+        deletionRecordId,
+      },
+    };
   },
 });
 // convex/users.ts

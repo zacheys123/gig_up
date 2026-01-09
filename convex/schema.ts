@@ -305,6 +305,23 @@ export default defineSchema({
     .index("by_gig", ["gigId"])
     .index("by_band_status", ["bandId", "status"]),
 
+  accountDeletions: defineTable({
+    userId: v.id("users"),
+    clerkId: v.string(),
+    email: v.string(),
+    username: v.string(),
+    deletedAt: v.number(),
+    reason: v.string(),
+    dataSnapshot: v.any(),
+  }),
+  gigDeletions: defineTable({
+    gigId: v.id("gigs"),
+    deletedBy: v.id("users"),
+    deletedAt: v.number(),
+    reason: v.string(),
+    title: v.string(),
+    createdAt: v.number(),
+  }),
   // // Add this to track who can create bands
   // userBandEligibility: defineTable({
   //   userId: v.id("users"),
