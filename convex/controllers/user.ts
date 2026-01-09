@@ -1589,12 +1589,13 @@ export const deleteUserAccount = mutation({
     }
 
     // 18. Handle reports involving this user
+    // 18. Handle reports involving this user
     const userReports = await ctx.db
       .query("reports")
       .filter((q) =>
         q.or(
-          q.eq(q.field("reportedUserId"), user._id.toString()),
-          q.eq(q.field("reporterId"), user._id.toString())
+          q.eq(q.field("reportedUserId"), user.clerkId), // Use clerkId, not user._id.toString()
+          q.eq(q.field("reporterId"), user.clerkId) // Use clerkId, not user._id.toString()
         )
       )
       .collect();
@@ -1602,8 +1603,11 @@ export const deleteUserAccount = mutation({
     for (const report of userReports) {
       // Mark reports as resolved due to account deletion
       await ctx.db.patch(report._id, {
+        status: "resolved",
+        resolvedBy: "system", // Or "account_deletion"
+        resolutionNote: "Account deleted",
         resolvedAt: Date.now(),
-        resolutionNotes: "Account deleted",
+        updatedAt: Date.now(),
       });
     }
 
