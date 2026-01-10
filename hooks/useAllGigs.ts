@@ -40,95 +40,6 @@ export const useGigs = (userId?: Id<"users">) => {
     isDeleting: false,
   });
 
-  // Create gig - simplified with async/await pattern
-  const createGig = useCallback(
-    async (
-      formData: LocalGigInputs,
-      customization: {
-        fontColor: string;
-        font: string;
-        backgroundColor: string;
-      },
-      logo?: string | undefined,
-      schedulingProcedure?: {
-        type: string;
-        date: Date;
-      }
-    ): Promise<Id<"gigs"> | null> => {
-      if (!userId) {
-        toast.error("You must be logged in to create a gig");
-        return null;
-      }
-
-      setMutationState((prev) => ({ ...prev, isCreating: true }));
-
-      try {
-        const gigData = prepareGigDataForConvex(
-          formData,
-          userId,
-          customization,
-          logo,
-          schedulingProcedure
-        );
-
-        const gigId = await createGigMutation(gigData);
-
-        if (!gigId) {
-          throw new Error("Failed to create gig - no ID returned");
-        }
-
-        toast.success("Gig created successfully!");
-        return gigId;
-      } catch (error) {
-        console.error("Error creating gig:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to create gig. Please try again."
-        );
-        return null;
-      } finally {
-        setMutationState((prev) => ({ ...prev, isCreating: false }));
-      }
-    },
-    [createGigMutation, userId]
-  );
-
-  // Update gig - better error handling
-  const updateGig = useCallback(
-    async (
-      gigId: Id<"gigs">,
-      updates: Partial<CreateGigInput>
-    ): Promise<boolean> => {
-      setMutationState((prev) => ({ ...prev, isUpdating: true }));
-
-      try {
-        // Prepare updates ensuring proper typing
-        const mutationUpdates: Record<string, unknown> = { ...updates };
-
-        // Handle specific field transformations
-        if (mutationUpdates.price !== undefined) {
-          mutationUpdates.price = String(mutationUpdates.price);
-        }
-
-        await updateGigMutation({
-          gigId,
-          updates: mutationUpdates as Partial<CreateGigInput>,
-        });
-
-        toast.success("Gig updated successfully!");
-        return true;
-      } catch (error) {
-        console.error("Error updating gig:", error);
-        toast.error("Failed to update gig. Please check your input.");
-        return false;
-      } finally {
-        setMutationState((prev) => ({ ...prev, isUpdating: false }));
-      }
-    },
-    [updateGigMutation]
-  );
-
   // Delete gig - improved error messaging
   const deleteGig = useCallback(
     async (gigId: Id<"gigs">): Promise<boolean> => {
@@ -172,9 +83,6 @@ export const useGigs = (userId?: Id<"users">) => {
       // Mutation states
       ...mutationState,
 
-      // Actions
-      createGig,
-      updateGig,
       deleteGig,
     }),
     [
@@ -183,8 +91,7 @@ export const useGigs = (userId?: Id<"users">) => {
       gigStats,
       userApplications,
       mutationState,
-      createGig,
-      updateGig,
+
       deleteGig,
     ]
   );

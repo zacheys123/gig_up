@@ -1708,13 +1708,13 @@ export const prepareGigDataForConvex = (
     isClientBand: formValues.bussinesscat === "other",
     bandCategory: bandCategory,
 
-    // Status
-    status:
-      publishType === "create"
-        ? "published"
-        : publishType === "automatic"
-          ? "scheduled"
-          : "draft",
+    //   // Status
+    //   status:
+    //     publishType === "create"
+    //       ? "published"
+    //       : publishType === "automatic"
+    //         ? "scheduled"
+    //         : "draft",
   };
 };
 
@@ -1948,52 +1948,57 @@ export const updateWeeklyGigCount = (currentWeeklyData: any) => {
   };
 };
 // utils/interestWindow.ts
-export const getInterestWindowStatus = (gig: any) => {
+// utils/index.ts
+export const getInterestWindowStatus = (gig: {
+  acceptInterestStartTime?: string | number | Date;
+  acceptInterestEndTime?: string | number | Date;
+}) => {
   const now = Date.now();
 
-  if (!gig.acceptInterestStartTime && !gig.acceptInterestEndTime) {
+  // Convert to timestamp if it's a string
+  const startTime = gig.acceptInterestStartTime
+    ? typeof gig.acceptInterestStartTime === "string"
+      ? new Date(gig.acceptInterestStartTime).getTime()
+      : typeof gig.acceptInterestStartTime === "number"
+        ? gig.acceptInterestStartTime
+        : gig.acceptInterestStartTime.getTime()
+    : null;
+
+  const endTime = gig.acceptInterestEndTime
+    ? typeof gig.acceptInterestEndTime === "string"
+      ? new Date(gig.acceptInterestEndTime).getTime()
+      : typeof gig.acceptInterestEndTime === "number"
+        ? gig.acceptInterestEndTime
+        : gig.acceptInterestEndTime.getTime()
+    : null;
+
+  if (!startTime || !endTime) {
     return {
       hasWindow: false,
-      status: "open",
-      message: "Interest can be shown anytime",
+      status: "no_window",
+      message: "No interest window set",
     };
   }
 
-  if (gig.acceptInterestStartTime && now < gig.acceptInterestStartTime) {
+  if (now < startTime) {
     return {
       hasWindow: true,
       status: "not_open",
-      message: `Interest opens ${new Date(gig.acceptInterestStartTime).toLocaleDateString()}`,
-      timeLeft: gig.acceptInterestStartTime - now,
+      message: `Interest window opens in ${Math.ceil((startTime - now) / (1000 * 60 * 60))} hours`,
     };
   }
 
-  if (gig.acceptInterestEndTime && now > gig.acceptInterestEndTime) {
+  if (now > endTime) {
     return {
       hasWindow: true,
       status: "closed",
-      message: "Interest period has ended",
-    };
-  }
-
-  if (gig.acceptInterestEndTime) {
-    const timeLeft = gig.acceptInterestEndTime - now;
-    const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
-
-    return {
-      hasWindow: true,
-      status: "open",
-      message:
-        daysLeft > 1
-          ? `${daysLeft} days left to show interest`
-          : `${Math.ceil(timeLeft / (1000 * 60 * 60))} hours left`,
-      timeLeft,
+      message: "Interest window closed",
     };
   }
 
   return {
-    hasWindow: false,
+    hasWindow: true,
     status: "open",
-    message: "Interest can be shown",
+    message: `Interest window open! Closes in ${Math.ceil((endTime - now) / (1000 * 60 * 60))} hours`,
   };
 };

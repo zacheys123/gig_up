@@ -2778,7 +2778,7 @@ export default function NormalGigsForm() {
     handleInputChange,
     handleInputBlur,
   ]);
-
+  const { isDarkMode } = useThemeColors();
   return (
     <>
       <div className="relative max-w-4xl mx-auto pb-24">
@@ -2837,10 +2837,20 @@ export default function NormalGigsForm() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="space-y-1">
-              <h2 className={cn("text-2xl font-bold", colors.text)}>
+              <h2
+                className={cn(
+                  "text-2xl font-bold",
+                  !isDarkMode ? "text-white" : "text-gray-900"
+                )}
+              >
                 Create Your Gig
               </h2>
-              <p className={cn("text-sm", colors.textMuted)}>
+              <p
+                className={cn(
+                  "text-sm",
+                  !isDarkMode ? "text-neutral-400" : "text-gray-900"
+                )}
+              >
                 Fill in the details to create an amazing gig opportunity
               </p>
             </div>
@@ -2874,7 +2884,7 @@ export default function NormalGigsForm() {
                 >
                   Who do you need for your gig?
                 </label>
-                <Tag className={cn("w-5 h-5", colors.textMuted)} />
+                <Tag className={cn("w-5 h-5", colors.primary)} />
               </div>
               <p className={cn("text-sm mb-6", colors.textMuted)}>
                 Select the type of talent you're looking for
@@ -2888,33 +2898,50 @@ export default function NormalGigsForm() {
               >
                 <SelectTrigger
                   className={cn(
-                    "py-3 rounded-xl border-2",
+                    "py-3 rounded-xl border-2 transition-all duration-200",
                     colors.border,
                     colors.background,
                     colors.text,
                     "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                    fieldErrors.bussinesscat && "border-red-500"
+                    fieldErrors.bussinesscat &&
+                      "border-red-500 ring-2 ring-red-500/20"
                   )}
                 >
                   <SelectValue placeholder="Select business category" />
                 </SelectTrigger>
                 <SelectContent
                   className={cn(
-                    "rounded-xl border-2 shadow-lg",
-                    colors.background,
-                    colors.hoverBg
+                    "rounded-xl border-2 shadow-lg backdrop-blur-sm",
+                    colors.backgroundMuted,
+                    colors.border,
+                    "max-h-[300px]"
                   )}
                 >
                   {businessCategories.map((category) => {
                     const Icon = category.icon;
-                    const colorClass = {
-                      orange: "bg-gradient-to-r from-orange-500 to-amber-500",
-                      blue: "bg-gradient-to-r from-blue-500 to-cyan-500",
-                      purple: "bg-gradient-to-r from-purple-500 to-pink-500",
-                      red: "bg-gradient-to-r from-red-500 to-orange-500",
-                      pink: "bg-gradient-to-r from-pink-500 to-rose-500",
-                      green: "bg-gradient-to-r from-green-500 to-emerald-500",
-                    }[category.color];
+                    const gradientClass = isDarkMode
+                      ? {
+                          orange:
+                            "bg-gradient-to-r from-orange-600 to-amber-600",
+                          blue: "bg-gradient-to-r from-blue-600 to-cyan-600",
+                          purple:
+                            "bg-gradient-to-r from-purple-600 to-pink-600",
+                          red: "bg-gradient-to-r from-red-600 to-orange-600",
+                          pink: "bg-gradient-to-r from-pink-600 to-rose-600",
+                          green:
+                            "bg-gradient-to-r from-green-600 to-emerald-600",
+                        }[category.color]
+                      : {
+                          orange:
+                            "bg-gradient-to-r from-orange-500 to-amber-500",
+                          blue: "bg-gradient-to-r from-blue-500 to-cyan-500",
+                          purple:
+                            "bg-gradient-to-r from-purple-500 to-pink-500",
+                          red: "bg-gradient-to-r from-red-500 to-orange-500",
+                          pink: "bg-gradient-to-r from-pink-500 to-rose-500",
+                          green:
+                            "bg-gradient-to-r from-green-500 to-emerald-500",
+                        }[category.color];
 
                     return (
                       <SelectItem
@@ -2922,29 +2949,37 @@ export default function NormalGigsForm() {
                         value={category.value}
                         className={cn(
                           "py-3 rounded-lg my-1 mx-1 transition-all duration-200",
-                          bussinesscat === category.value &&
-                            colorClass + " text-white"
+                          bussinesscat === category.value
+                            ? `${gradientClass} text-white shadow-lg`
+                            : cn(colors.hoverBg, "hover:scale-[1.02]")
                         )}
                       >
                         <div className="flex items-center gap-3">
                           <div
                             className={cn(
-                              "p-2 rounded-lg",
+                              "p-2 rounded-lg transition-all duration-200",
                               bussinesscat === category.value
-                                ? "bg-white/20"
-                                : "bg-gradient-to-br from-orange-500/10 to-red-500/10"
+                                ? "bg-white/20 backdrop-blur-sm"
+                                : cn(
+                                    isDarkMode
+                                      ? "bg-gray-700/30 border-gray-600"
+                                      : "bg-orange-500/10 border-orange-500/20",
+                                    "border"
+                                  )
                             )}
                           >
                             <Icon
                               className={cn(
-                                "w-5 h-5",
+                                "w-5 h-5 transition-colors duration-200",
                                 bussinesscat === category.value
                                   ? "text-white"
                                   : colors.primary
                               )}
                             />
                           </div>
-                          <span className="font-medium">{category.label}</span>
+                          <span className={cn("font-medium", colors.text)}>
+                            {category.label}
+                          </span>
                         </div>
                       </SelectItem>
                     );
@@ -2963,6 +2998,7 @@ export default function NormalGigsForm() {
             {/* Interest Window Section - OPTIONAL */}
             <InterestWindowSection />
           </div>
+
           {/* Customize Button - ALWAYS SHOW */}
           <div className="flex justify-between items-center">
             <Button
@@ -2970,26 +3006,29 @@ export default function NormalGigsForm() {
               type="button"
               variant="outline"
               className={cn(
-                "flex items-center gap-3 border-2 group px-6 py-6 rounded-xl",
+                "flex items-center gap-3 border-2 group px-6 py-6 rounded-xl transition-all duration-300",
                 colors.border,
-                colors.hoverBg,
-                "hover:border-orange-500 hover:shadow-lg"
+                colors.background,
+                "hover:border-orange-500 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               )}
             >
               <Palette
                 className={cn(
-                  "w-5 h-5 transition-transform group-hover:scale-110",
+                  "w-5 h-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12",
                   colors.primary
                 )}
               />
               <div className="text-left">
-                <span className="block font-semibold">Customize Gig Card</span>
+                <span className={cn("block font-semibold", colors.text)}>
+                  Customize Gig Card
+                </span>
                 <span className={cn("text-xs block", colors.textMuted)}>
                   Add your logo, colors, and branding
                 </span>
               </div>
             </Button>
           </div>
+
           {/* Title Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Gig Information"
@@ -3007,8 +3046,8 @@ export default function NormalGigsForm() {
                   className={cn("block text-sm font-medium mb-3", colors.text)}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <Shield className="w-4 h-4" />
-                    Secret Passphrase (Optional)
+                    <Shield className={cn("w-4 h-4", colors.primary)} />
+                    <span>Secret Passphrase (Optional)</span>
                   </div>
                   <span className={cn("text-xs", colors.textMuted)}>
                     Add a secret word for exclusive access
@@ -3030,13 +3069,19 @@ export default function NormalGigsForm() {
                     name="secret"
                     placeholder="Enter secret passphrase"
                     error={fieldErrors.secret}
-                    className="pl-12 pr-12"
+                    className={cn(
+                      "pl-12 pr-12 transition-all duration-200",
+                      colors.border,
+                      colors.background,
+                      colors.text,
+                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                    )}
                   />
                   <button
                     type="button"
                     onClick={() => setSecretPass(!secretpass)}
                     className={cn(
-                      "absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-lg",
+                      "absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-colors duration-200",
                       colors.hoverBg
                     )}
                   >
@@ -3055,8 +3100,8 @@ export default function NormalGigsForm() {
                   className={cn("block text-sm font-medium mb-3", colors.text)}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <Tag className="w-4 h-4" />
-                    Gig Title *
+                    <Tag className={cn("w-4 h-4", colors.primary)} />
+                    <span>Gig Title *</span>
                   </div>
                   <span className={cn("text-xs", colors.textMuted)}>
                     Make it catchy and descriptive
@@ -3070,10 +3115,18 @@ export default function NormalGigsForm() {
                   placeholder="e.g., 'Live Jazz Band Needed for Wedding Reception'"
                   error={fieldErrors.title}
                   required={isFieldRequired("title")}
+                  className={cn(
+                    "transition-all duration-200",
+                    colors.border,
+                    colors.background,
+                    colors.text,
+                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                  )}
                 />
               </div>
             </div>
           </CollapsibleSection>
+
           {/* Description Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Description"
@@ -3092,8 +3145,8 @@ export default function NormalGigsForm() {
                 className={cn("block text-sm font-medium mb-3", colors.text)}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <FileText className="w-4 h-4" />
-                  Gig Description *
+                  <FileText className={cn("w-4 h-4", colors.primary)} />
+                  <span>Gig Description *</span>
                 </div>
                 <span className={cn("text-xs", colors.textMuted)}>
                   Describe the event, vibe, and specific requirements
@@ -3107,6 +3160,13 @@ export default function NormalGigsForm() {
                 placeholder="We're looking for a professional jazz band for our wedding reception..."
                 rows={6}
                 error={fieldErrors.description}
+                className={cn(
+                  "transition-all duration-200 resize-none",
+                  colors.border,
+                  colors.background,
+                  colors.text,
+                  "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                )}
               />
               <div className="flex justify-between items-center mt-2">
                 <div />
@@ -3116,6 +3176,7 @@ export default function NormalGigsForm() {
               </div>
             </div>
           </CollapsibleSection>
+
           {/* Business Information Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Business Information"
@@ -3136,8 +3197,8 @@ export default function NormalGigsForm() {
                   className={cn("block text-sm font-medium mb-3", colors.text)}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <Phone className="w-4 h-4" />
-                    Contact Information
+                    <Phone className={cn("w-4 h-4", colors.primary)} />
+                    <span>Contact Information</span>
                   </div>
                   <span className={cn("text-xs", colors.textMuted)}>
                     Your phone number for inquiries
@@ -3151,6 +3212,13 @@ export default function NormalGigsForm() {
                   name="phoneNo"
                   placeholder="+254 7XX XXX XXX"
                   icon={Phone}
+                  className={cn(
+                    "transition-all duration-200",
+                    colors.border,
+                    colors.background,
+                    colors.text,
+                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                  )}
                 />
               </div>
 
@@ -3158,6 +3226,7 @@ export default function NormalGigsForm() {
               {shouldShowField("priceInfo") && renderPriceInformation()}
             </div>
           </CollapsibleSection>
+
           {/* ⭐ CONDITIONAL: Show negotiable switch ONLY for non-band gigs */}
           {shouldShowField("negotiableSwitch") && (
             <MemoizedSwitch
@@ -3171,6 +3240,7 @@ export default function NormalGigsForm() {
               colors={colors}
             />
           )}
+
           {/* Gig Timeline Section - ALWAYS SHOW */}
           <CollapsibleSection
             title="Event Details"
@@ -3191,8 +3261,8 @@ export default function NormalGigsForm() {
                   className={cn("block text-sm font-medium mb-3", colors.text)}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <MapPin className="w-4 h-4" />
-                    Location *
+                    <MapPin className={cn("w-4 h-4", colors.primary)} />
+                    <span>Location *</span>
                   </div>
                   <span className={cn("text-xs", colors.textMuted)}>
                     Venue address or city
@@ -3208,6 +3278,13 @@ export default function NormalGigsForm() {
                   error={fieldErrors.location}
                   icon={MapPin}
                   required={isFieldRequired("location")}
+                  className={cn(
+                    "transition-all duration-200",
+                    colors.border,
+                    colors.background,
+                    colors.text,
+                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                  )}
                 />
               </div>
 
@@ -3229,10 +3306,24 @@ export default function NormalGigsForm() {
                       handleSelectChange("gigtimeline", value)
                     }
                   >
-                    <SelectTrigger className="rounded-xl py-3">
+                    <SelectTrigger
+                      className={cn(
+                        "rounded-xl py-3 transition-all duration-200",
+                        colors.border,
+                        colors.background,
+                        colors.text,
+                        "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                      )}
+                    >
                       <SelectValue placeholder="Select timeline" />
                     </SelectTrigger>
-                    <SelectContent className={cn(colors.background)}>
+                    <SelectContent
+                      className={cn(
+                        colors.backgroundMuted,
+                        colors.border,
+                        "backdrop-blur-sm"
+                      )}
+                    >
                       <SelectItem value="once">🎯 One-time event</SelectItem>
                       <SelectItem value="weekly">
                         🔄 Weekly recurring
@@ -3262,10 +3353,24 @@ export default function NormalGigsForm() {
                         handleSelectChange("day", value)
                       }
                     >
-                      <SelectTrigger className="rounded-xl py-3">
+                      <SelectTrigger
+                        className={cn(
+                          "rounded-xl py-3 transition-all duration-200",
+                          colors.border,
+                          colors.background,
+                          colors.text,
+                          "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                        )}
+                      >
                         <SelectValue placeholder="Select day" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent
+                        className={cn(
+                          colors.backgroundMuted,
+                          colors.border,
+                          "backdrop-blur-sm"
+                        )}
+                      >
                         {days.map((day) => (
                           <SelectItem key={day.id} value={day.val}>
                             {day.name}
@@ -3282,6 +3387,7 @@ export default function NormalGigsForm() {
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
+                  className="overflow-hidden"
                 >
                   <label
                     className={cn(
@@ -3298,6 +3404,13 @@ export default function NormalGigsForm() {
                     onBlur={() => handleInputBlur("otherTimeline")}
                     name="otherTimeline"
                     placeholder="Describe your custom schedule..."
+                    className={cn(
+                      "transition-all duration-200",
+                      colors.border,
+                      colors.background,
+                      colors.text,
+                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                    )}
                   />
                 </motion.div>
               )}
@@ -3307,6 +3420,7 @@ export default function NormalGigsForm() {
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
+                  className="overflow-hidden"
                 >
                   <label
                     className={cn(
@@ -3320,10 +3434,11 @@ export default function NormalGigsForm() {
                     selected={selectedDate}
                     onChange={handleDate}
                     className={cn(
-                      "w-full px-4 py-3 border rounded-xl",
+                      "w-full px-4 py-3 border rounded-xl transition-all duration-200",
                       colors.border,
                       colors.background,
-                      colors.text
+                      colors.text,
+                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                     )}
                     placeholderText="Select a date"
                     isClearable
@@ -3334,6 +3449,7 @@ export default function NormalGigsForm() {
               )}
             </div>
           </CollapsibleSection>
+
           {/* Duration Section - ALWAYS SHOW */}
           <div>
             {showduration ? (
@@ -3341,15 +3457,24 @@ export default function NormalGigsForm() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 className={cn(
-                  "rounded-xl border overflow-hidden",
+                  "rounded-xl border overflow-hidden transition-all duration-300",
                   colors.border,
-                  colors.backgroundMuted
+                  colors.backgroundMuted,
+                  "shadow-lg"
                 )}
               >
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
+                      <div
+                        className={cn(
+                          "p-2 rounded-lg transition-all duration-300",
+                          isDarkMode
+                            ? "bg-orange-500/20 border-orange-500/30"
+                            : "bg-orange-500/10 border-orange-500/20",
+                          "border"
+                        )}
+                      >
                         <Clock className={cn("w-5 h-5", colors.primary)} />
                       </div>
                       <div>
@@ -3364,11 +3489,12 @@ export default function NormalGigsForm() {
                     <button
                       onClick={() => setshowduration(false)}
                       className={cn(
-                        "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
-                        colors.textMuted
+                        "p-2 rounded-lg transition-colors duration-200",
+                        colors.hoverBg,
+                        "hover:scale-110"
                       )}
                     >
-                      <X className="w-5 h-5" />
+                      <X className={cn("w-5 h-5", colors.textMuted)} />
                     </button>
                   </div>
 
@@ -3390,6 +3516,13 @@ export default function NormalGigsForm() {
                           onBlur={() => handleInputBlur("start")}
                           name="start"
                           placeholder="10"
+                          className={cn(
+                            "transition-all duration-200",
+                            colors.border,
+                            colors.background,
+                            colors.text,
+                            "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                          )}
                         />
                         <Select
                           value={formValues.durationfrom}
@@ -3397,10 +3530,24 @@ export default function NormalGigsForm() {
                             handleSelectChange("durationfrom", value)
                           }
                         >
-                          <SelectTrigger className="w-24 rounded-xl py-3">
+                          <SelectTrigger
+                            className={cn(
+                              "w-24 rounded-xl py-3 transition-all duration-200",
+                              colors.border,
+                              colors.background,
+                              colors.text,
+                              "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                            )}
+                          >
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent
+                            className={cn(
+                              colors.backgroundMuted,
+                              colors.border,
+                              "backdrop-blur-sm"
+                            )}
+                          >
                             <SelectItem value="am">AM</SelectItem>
                             <SelectItem value="pm">PM</SelectItem>
                           </SelectContent>
@@ -3425,41 +3572,38 @@ export default function NormalGigsForm() {
                           onBlur={() => handleInputBlur("end")}
                           name="end"
                           placeholder="12"
+                          className={cn(
+                            "transition-all duration-200",
+                            colors.border,
+                            colors.background,
+                            colors.text,
+                            "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                          )}
                         />
-                        <MemoizedInput
-                          type="text"
-                          value={formValues.location}
-                          onChange={handleInputChange}
-                          onBlur={() => handleInputBlur("location")}
-                          name="location"
-                          placeholder="e.g., 'Nairobi City Center' or 'Sarova Stanley Hotel'"
-                          error={fieldErrors.location}
-                          icon={MapPin}
-                          required={true} // Add this
-                        />
-                        {bussinesscat !== "other" && (
-                          <MemoizedInput
-                            type="number"
-                            value={formValues.price}
-                            onChange={handleInputChange}
-                            onBlur={() => handleInputBlur("price")}
-                            name="price"
-                            placeholder="15000"
-                            icon={DollarSign}
-                            min="0"
-                            required={isFieldRequired("price")}
-                          />
-                        )}
                         <Select
                           value={formValues.durationto}
                           onValueChange={(value) =>
                             handleSelectChange("durationto", value)
                           }
                         >
-                          <SelectTrigger className="w-24 rounded-xl py-3">
+                          <SelectTrigger
+                            className={cn(
+                              "w-24 rounded-xl py-3 transition-all duration-200",
+                              colors.border,
+                              colors.background,
+                              colors.text,
+                              "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                            )}
+                          >
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent
+                            className={cn(
+                              colors.backgroundMuted,
+                              colors.border,
+                              "backdrop-blur-sm"
+                            )}
+                          >
                             <SelectItem value="am">AM</SelectItem>
                             <SelectItem value="pm">PM</SelectItem>
                           </SelectContent>
@@ -3479,17 +3623,21 @@ export default function NormalGigsForm() {
               <div
                 onClick={() => setshowduration(true)}
                 className={cn(
-                  "flex justify-between items-center p-6 rounded-xl border cursor-pointer transition-all group",
+                  "flex justify-between items-center p-6 rounded-xl border cursor-pointer transition-all duration-300 group",
                   colors.border,
                   colors.backgroundMuted,
-                  "hover:shadow-lg hover:border-orange-500/50"
+                  "hover:shadow-xl hover:border-orange-500 hover:scale-[1.02]",
+                  "active:scale-[0.98]"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
-                      "p-3 rounded-lg transition-transform group-hover:scale-110",
-                      "bg-gradient-to-r from-orange-500/10 to-red-500/10"
+                      "p-3 rounded-lg transition-all duration-300 group-hover:scale-110",
+                      isDarkMode
+                        ? "bg-orange-500/20 border-orange-500/30"
+                        : "bg-orange-500/10 border-orange-500/20",
+                      "border"
                     )}
                   >
                     <Clock className={cn("w-5 h-5", colors.primary)} />
@@ -3505,8 +3653,9 @@ export default function NormalGigsForm() {
                 </div>
                 <div
                   className={cn(
-                    "p-2 rounded-lg transition-all group-hover:bg-orange-500/10",
-                    colors.hoverBg
+                    "p-2 rounded-lg transition-all duration-300",
+                    colors.hoverBg,
+                    "group-hover:bg-orange-500/10 group-hover:scale-110"
                   )}
                 >
                   <ChevronDown className={cn("w-5 h-5", colors.textMuted)} />
@@ -3514,21 +3663,41 @@ export default function NormalGigsForm() {
               </div>
             )}
           </div>
+
           {/* ⭐ CONDITIONAL: Show individual instrument ONLY for "personal" */}
           {shouldShowField("individualInstrument") && (
             <div>
               <div className="relative">
-                <Guitar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Guitar
+                  className={cn(
+                    "absolute left-3 top-1/2 transform -translate-y-1/2",
+                    colors.textMuted
+                  )}
+                />
                 <Select
                   value={formValues.category}
                   onValueChange={(value) =>
                     handleSelectChange("category", value)
                   }
                 >
-                  <SelectTrigger className="pl-12 py-3 rounded-xl">
+                  <SelectTrigger
+                    className={cn(
+                      "pl-12 py-3 rounded-xl transition-all duration-200",
+                      colors.border,
+                      colors.background,
+                      colors.text,
+                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                    )}
+                  >
                     <SelectValue placeholder="Select your instrument" />
                   </SelectTrigger>
-                  <SelectContent className={cn(colors.backgroundMuted)}>
+                  <SelectContent
+                    className={cn(
+                      colors.backgroundMuted,
+                      colors.border,
+                      "backdrop-blur-sm"
+                    )}
+                  >
                     {individualInstruments.map((instrument) => (
                       <SelectItem key={instrument} value={instrument}>
                         {instrument.charAt(0).toUpperCase() +
@@ -3540,6 +3709,7 @@ export default function NormalGigsForm() {
               </div>
             </div>
           )}
+
           {/* ⭐ CONDITIONAL: Show band setup ONLY for "other" */}
           {shouldShowField("bandSetup") && (
             <CollapsibleSection
@@ -3567,16 +3737,22 @@ export default function NormalGigsForm() {
                     type="button"
                     variant="outline"
                     onClick={() => setShowCustomRoleForm(!showCustomRoleForm)}
-                    className="w-full mb-3"
+                    className={cn(
+                      "w-full mb-3 transition-all duration-200",
+                      colors.border,
+                      colors.background,
+                      colors.text,
+                      "hover:border-orange-500 hover:shadow-lg"
+                    )}
                   >
                     {showCustomRoleForm ? (
                       <>
-                        <X className="w-4 h-4 mr-2" />
+                        <X className={cn("w-4 h-4 mr-2", colors.text)} />
                         Close Custom Role Form
                       </>
                     ) : (
                       <>
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className={cn("w-4 h-4 mr-2", colors.text)} />
                         Add Custom Role
                       </>
                     )}
@@ -3591,14 +3767,33 @@ export default function NormalGigsForm() {
                 {/* Current Roles */}
                 {bandRoles.length > 0 && (
                   <div className="mb-6">
-                    <h4 className="font-medium mb-3">Current Band Roles:</h4>
+                    <h4 className={cn("font-medium mb-3", colors.text)}>
+                      Current Band Roles:
+                    </h4>
                     <div className="space-y-3">
                       {bandRoles.map((role, index) => (
-                        <div key={index} className="p-3 border rounded-lg">
+                        <div
+                          key={index}
+                          className={cn(
+                            "p-3 border rounded-lg transition-all duration-200",
+                            colors.border,
+                            colors.background,
+                            "hover:border-orange-500 hover:shadow-md"
+                          )}
+                        >
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <span className="font-medium">{role.role}</span>
-                              <Badge variant="outline" className="ml-2 text-xs">
+                              <span className={cn("font-medium", colors.text)}>
+                                {role.role}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "ml-2 text-xs",
+                                  colors.border,
+                                  colors.textMuted
+                                )}
+                              >
                                 {role.maxSlots} slot
                                 {role.maxSlots > 1 ? "s" : ""}
                               </Badge>
@@ -3608,7 +3803,10 @@ export default function NormalGigsForm() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveRole(index)}
-                              className="text-red-500 hover:text-red-700"
+                              className={cn(
+                                "text-red-500 hover:text-red-700 hover:bg-red-500/10",
+                                "transition-colors duration-200"
+                              )}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -3621,7 +3819,11 @@ export default function NormalGigsForm() {
                                   <Badge
                                     key={skill}
                                     variant="secondary"
-                                    className="text-xs"
+                                    className={cn(
+                                      "text-xs",
+                                      colors.backgroundMuted,
+                                      colors.textMuted
+                                    )}
                                   >
                                     {skill}
                                   </Badge>
@@ -3630,7 +3832,12 @@ export default function NormalGigsForm() {
                             )}
 
                           {role.description && (
-                            <p className="text-xs text-gray-600 line-clamp-2">
+                            <p
+                              className={cn(
+                                "text-xs line-clamp-2",
+                                colors.textMuted
+                              )}
+                            >
                               {role.description}
                             </p>
                           )}
@@ -3645,14 +3852,25 @@ export default function NormalGigsForm() {
                   {bandInstruments.map((instrument) => (
                     <div
                       key={instrument.value}
-                      className="flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all hover:scale-105"
+                      className={cn(
+                        "flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all duration-200",
+                        colors.border,
+                        colors.background,
+                        "hover:scale-105 hover:shadow-lg hover:border-orange-500",
+                        userinfo.prefferences.includes(instrument.value) &&
+                          cn(
+                            "border-orange-500",
+                            isDarkMode ? "bg-orange-500/10" : "bg-orange-500/5",
+                            "shadow-orange-500/20"
+                          )
+                      )}
                       onClick={() => handleInstrumentChange(instrument.value)}
                     >
                       <div
                         className={cn(
-                          "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                          "w-4 h-4 rounded border flex items-center justify-center transition-all duration-200",
                           userinfo.prefferences.includes(instrument.value)
-                            ? "bg-gradient-to-r from-orange-500 to-red-500 border-transparent"
+                            ? "bg-gradient-to-r from-orange-500 to-red-500 border-transparent shadow-inner"
                             : colors.border
                         )}
                       >
@@ -3662,10 +3880,10 @@ export default function NormalGigsForm() {
                       </div>
                       <label
                         className={cn(
-                          "text-sm cursor-pointer flex-1",
+                          "text-sm cursor-pointer flex-1 transition-colors duration-200",
                           colors.text,
                           userinfo.prefferences.includes(instrument.value) &&
-                            "font-semibold"
+                            cn("font-semibold", colors.primary)
                         )}
                       >
                         {instrument.label}
@@ -3676,7 +3894,9 @@ export default function NormalGigsForm() {
               </div>
             </CollapsibleSection>
           )}
+
           <ValidationSummary />
+
           {/* Submit Button - ALWAYS SHOW */}
           <div className="pt-8 border-t">
             <div className="flex flex-col sm:flex-row gap-4 mb-10 -mt-4">
@@ -3686,7 +3906,8 @@ export default function NormalGigsForm() {
                 className={cn(
                   "flex-1 py-6 rounded-xl font-semibold text-lg transition-all duration-300",
                   "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                  "text-white shadow-xl hover:shadow-2xl hover:scale-105"
+                  "text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95",
+                  "focus:ring-2 focus:ring-orange-500/30"
                 )}
               >
                 <span className="flex items-center justify-center gap-3">
@@ -3700,13 +3921,15 @@ export default function NormalGigsForm() {
                 variant="outline"
                 onClick={() => setShowDraftsModal(true)}
                 className={cn(
-                  "py-6 rounded-xl font-medium transition-all border-2",
+                  "py-6 rounded-xl font-medium transition-all duration-300 border-2",
                   colors.border,
-                  colors.hoverBg,
-                  "hover:border-blue-500 hover:shadow-lg flex items-center justify-center gap-2"
+                  colors.background,
+                  colors.text,
+                  "hover:border-blue-500 hover:shadow-lg hover:scale-105 active:scale-95",
+                  "flex items-center justify-center gap-2"
                 )}
               >
-                <FileText className="w-5 h-5" />
+                <FileText className={cn("w-5 h-5", colors.primary)} />
                 View Drafts
               </Button>
 
@@ -3716,14 +3939,15 @@ export default function NormalGigsForm() {
                 onClick={saveAsDraft}
                 disabled={isSavingDraft}
                 className={cn(
-                  "py-6 rounded-xl font-medium transition-all",
+                  "py-6 rounded-xl font-medium transition-all duration-300",
                   colors.border,
-                  colors.hoverBg,
-                  "hover:border-orange-500",
+                  colors.background,
+                  colors.text,
+                  "hover:border-orange-500 hover:shadow-lg hover:scale-105 active:scale-95",
                   isSavingDraft && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <Save />
+                <Save className={cn("w-5 h-5", colors.primary)} />
               </Button>
             </div>
 

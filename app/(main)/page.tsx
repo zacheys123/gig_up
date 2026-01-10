@@ -339,7 +339,7 @@ export default function Home() {
     }
 
     // After onboarding, go to appropriate hub
-    if (user?.isClient) return `/hub/gigs?tab=my_gigs`;
+    if (user?.isClient) return `/hub/gigs/client/create`;
     if (user?.isBooker) return `/hub/gigs?tab=applications`;
     if (user?.isMusician) return `/hub/gigs?tab=all`;
 

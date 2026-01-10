@@ -54,8 +54,9 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
         { icon: Users, text: "Specify required musicians" },
       ],
       buttonText: "Create Normal Gig",
-      color: "orange",
       gradient: "from-orange-500 to-amber-500",
+      bgGradient: colors.gradientSecondary,
+      hoverBg: colors.hoverBg,
       onClick: handleCreateNormalGig,
     },
     {
@@ -70,8 +71,9 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
         { icon: Users, text: "Crew/band management" },
       ],
       buttonText: "Create Event Series",
-      color: "purple",
       gradient: "from-purple-500 to-pink-500",
+      bgGradient: colors.gradientSecondary,
+      hoverBg: colors.hoverBg,
       onClick: handleCreateEvent,
     },
     {
@@ -86,8 +88,9 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
         { icon: DollarSign, text: "Fixed rates" },
       ],
       buttonText: "Try Instant Booking",
-      color: "blue",
       gradient: "from-blue-500 to-cyan-500",
+      bgGradient: colors.gradientSecondary,
+      hoverBg: colors.hoverBg,
       onClick: () => router.push("/hub/gigs?tab=create-gigs"),
     },
   ];
@@ -102,7 +105,12 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
   ];
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div
+      className={cn(
+        "space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6",
+        colors.background
+      )}
+    >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
@@ -116,7 +124,12 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
             )}
             aria-label="Go back"
           >
-            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <ArrowLeft
+              className={cn(
+                "w-5 h-5 transition-transform group-hover:-translate-x-1",
+                colors.text
+              )}
+            />
           </button>
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -138,13 +151,19 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
             variant="outline"
             onClick={handleBackToOptions}
             className={cn(
-              "flex items-center gap-2 border-2 group",
+              "flex items-center gap-2 border-2 group transition-all duration-300",
               colors.border,
+              colors.text,
               colors.hoverBg,
-              "hover:border-orange-500 transition-colors"
+              "hover:border-orange-500 hover:shadow-md"
             )}
           >
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            <ArrowLeft
+              className={cn(
+                "w-4 h-4 transition-transform group-hover:-translate-x-1",
+                colors.text
+              )}
+            />
             Back to Options
           </Button>
         )}
@@ -169,13 +188,18 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
             transition={{ duration: 0.3 }}
             className={cn(
               "rounded-2xl p-6 sm:p-8 border overflow-hidden relative",
-              colors.card,
+              colors.background,
               colors.border,
               "shadow-lg"
             )}
           >
             {/* Background gradient */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full -translate-y-32 translate-x-32 blur-3xl" />
+            <div
+              className={cn(
+                "absolute top-0 right-0 w-64 h-64 rounded-full -translate-y-32 translate-x-32 blur-3xl",
+                colors.gradientSecondary
+              )}
+            />
 
             <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6 relative z-10">
               <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-xl flex-shrink-0">
@@ -200,8 +224,10 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   <span
                     className={cn(
                       "px-4 py-2 rounded-full text-sm font-medium transition-all hover:scale-105",
-                      "bg-gradient-to-r from-orange-500/10 to-red-500/10 text-orange-700 dark:text-orange-300",
-                      "border border-orange-200 dark:border-orange-800"
+                      colors.backgroundMuted,
+                      colors.text,
+                      colors.border,
+                      "border"
                     )}
                   >
                     🎵 Live Music
@@ -209,8 +235,10 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   <span
                     className={cn(
                       "px-4 py-2 rounded-full text-sm font-medium transition-all hover:scale-105",
-                      "bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-700 dark:text-purple-300",
-                      "border border-purple-200 dark:border-purple-800"
+                      colors.backgroundMuted,
+                      colors.text,
+                      colors.border,
+                      "border"
                     )}
                   >
                     🎭 Events
@@ -218,8 +246,10 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   <span
                     className={cn(
                       "px-4 py-2 rounded-full text-sm font-medium transition-all hover:scale-105",
-                      "bg-gradient-to-r from-blue-500/10 to-cyan-500/10 text-blue-700 dark:text-blue-300",
-                      "border border-blue-200 dark:border-blue-800"
+                      colors.backgroundMuted,
+                      colors.text,
+                      colors.border,
+                      "border"
                     )}
                   >
                     ⚡ Quick Booking
@@ -227,8 +257,10 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   <span
                     className={cn(
                       "px-4 py-2 rounded-full text-sm font-medium transition-all hover:scale-105",
-                      "bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-700 dark:text-emerald-300",
-                      "border border-emerald-200 dark:border-emerald-800"
+                      colors.backgroundMuted,
+                      colors.text,
+                      colors.border,
+                      "border"
                     )}
                   >
                     💼 Professional
@@ -256,7 +288,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                   className={cn(
                     "rounded-2xl border p-6 transition-all duration-500 group cursor-pointer",
-                    colors.card,
+                    colors.background,
                     colors.border,
                     "hover:shadow-2xl hover:scale-[1.02] hover:border-orange-500/50",
                     "relative overflow-hidden"
@@ -264,7 +296,13 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   onClick={option.onClick}
                 >
                   {/* Hover gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/0 to-red-500/0 group-hover:from-orange-500/5 group-hover:to-red-500/5 transition-all duration-500" />
+                  <div
+                    className={cn(
+                      "absolute inset-0 transition-all duration-500",
+                      colors.hoverBg,
+                      "group-hover:opacity-100 opacity-0"
+                    )}
+                  />
 
                   <div className="relative z-10">
                     <div className="flex items-center gap-4 mb-6">
@@ -303,7 +341,9 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                                 colors.hoverBg
                               )}
                             >
-                              <FeatureIcon className="w-4 h-4" />
+                              <FeatureIcon
+                                className={cn("w-4 h-4", colors.text)}
+                              />
                             </div>
                             <span
                               className={cn("text-sm font-medium", colors.text)}
@@ -348,7 +388,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
             )}
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10">
+              <div className={cn("p-3 rounded-xl", colors.background)}>
                 <Star className="w-6 h-6 text-orange-500" />
               </div>
               <div>
@@ -370,7 +410,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className={cn(
                     "flex items-start gap-3 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02]",
-                    colors.card,
+                    colors.background,
                     colors.border,
                     "hover:shadow-md hover:border-orange-500/50"
                   )}
@@ -379,15 +419,12 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                     <div
                       className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center",
-                        index % 3 === 0 &&
-                          "bg-gradient-to-r from-orange-500/20 to-red-500/20",
-                        index % 3 === 1 &&
-                          "bg-gradient-to-r from-purple-500/20 to-pink-500/20",
-                        index % 3 === 2 &&
-                          "bg-gradient-to-r from-blue-500/20 to-cyan-500/20"
+                        colors.backgroundMuted
                       )}
                     >
-                      <span className="text-sm font-bold">{index + 1}</span>
+                      <span className={cn("text-sm font-bold", colors.text)}>
+                        {index + 1}
+                      </span>
                     </div>
                   </div>
                   <span className={cn("text-sm font-medium", colors.text)}>

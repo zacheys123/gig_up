@@ -12,20 +12,16 @@ import {
   Calendar,
   Clock,
   Music,
-  X,
   Eye,
   Bookmark,
   Heart,
-  Star,
-  DollarSign,
-  MessageCircle,
-  Phone,
-  Mail,
-  Check,
   AlertCircle,
   User,
   Lock,
-  Video,
+  CheckCircle,
+  Edit,
+  MoreVertical,
+  Sparkles,
 } from "lucide-react";
 
 // Convex imports
@@ -118,14 +114,20 @@ interface GigCardProps {
     paymentStatus?: string;
     viewCount?: Id<"users">[];
     bookingHistory?: any[];
-    acceptInterestStartTime?: string;
-    acceptInterestEndTime?: string;
+    acceptInterestStartTime?: string | number | Date;
+    acceptInterestEndTime?: string | number | Date;
     bandCategory?: BandRole[];
     createdAt: number;
     updatedAt: number;
+    // Add these styling fields:
+    font?: string;
+    fontColor?: string;
+    backgroundColor?: string;
+    fontFamily?: string; // You might have this too
   };
   onClick?: () => void;
   showActions?: boolean;
+  compact?: boolean;
 }
 
 type BandActionType =
@@ -137,18 +139,20 @@ type BandActionType =
   | "review"
   | "manage"
   | "edit";
-type ActionFunction = (() => Promise<void>) | null; // Only async functions
+
 interface BandAction {
   type: BandActionType;
   label: string;
   variant: "default" | "destructive" | "outline" | "secondary";
-  action: ActionFunction | null;
+  action: (() => Promise<void>) | null;
   disabled: boolean;
   routing: {
     forMusician: string;
     forClient: string;
     message: string;
   };
+  icon?: React.ReactNode;
+  className?: string;
 }
 
 const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
@@ -191,6 +195,23 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
   const badgeProps = getBadgeProps();
   const Icon = badgeProps.icon;
 
+  const formatDate = (dateValue: string | number | Date | undefined) => {
+    if (!dateValue) return "Not set";
+
+    try {
+      const date =
+        typeof dateValue === "string"
+          ? new Date(dateValue)
+          : typeof dateValue === "number"
+            ? new Date(dateValue)
+            : dateValue;
+
+      return date.toLocaleString();
+    } catch (error) {
+      return "Invalid date";
+    }
+  };
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -198,29 +219,27 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
           <Badge
             variant={badgeProps.variant}
             className={clsx(
-              "inline-flex items-center gap-1 text-xs font-medium",
+              "inline-flex items-center gap-1 text-xs font-medium px-2 py-1",
               badgeProps.className
             )}
           >
-            <Icon className="w-3 h-3" />
-            <span className="hidden sm:inline">
-              {status.message.length > 20
-                ? status.message.substring(0, 20) + "..."
-                : status.message}
+            <Icon className="w-3 h-3 flex-shrink-0" />
+            <span className="hidden sm:inline truncate max-w-[80px]">
+              {status.message}
             </span>
             <span className="sm:hidden">!</span>
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{status.message}</p>
+          <p className="font-medium">{status.message}</p>
           {gig.acceptInterestStartTime && (
-            <p className="text-xs text-gray-500">
-              Opens: {new Date(gig.acceptInterestStartTime).toLocaleString()}
+            <p className="text-xs text-gray-500 mt-1">
+              Opens: {formatDate(gig.acceptInterestStartTime)}
             </p>
           )}
           {gig.acceptInterestEndTime && (
-            <p className="text-xs text-gray-500">
-              Closes: {new Date(gig.acceptInterestEndTime).toLocaleString()}
+            <p className="text-xs text-gray-500 mt-1">
+              Closes: {formatDate(gig.acceptInterestEndTime)}
             </p>
           )}
         </TooltipContent>
@@ -233,6 +252,7 @@ const GigCard: React.FC<GigCardProps> = ({
   gig,
   onClick,
   showActions = true,
+  compact = false,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -249,6 +269,7 @@ const GigCard: React.FC<GigCardProps> = ({
   const [interestNotes, setInterestNotes] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
 
   // Convex mutations
   const showInterestInGig = useMutation(api.controllers.gigs.showInterestInGig);
@@ -312,7 +333,7 @@ const GigCard: React.FC<GigCardProps> = ({
     : regularAvailableSlots;
   const isFull = isClientBand ? bandIsFull : regularIsFull;
   const userHasInterest = isClientBand ? userIsInBand : regularIsInterested;
-  const progressPercentage = (slotsUsed / maxSlots) * 100;
+  const progressPercentage = Math.min((slotsUsed / maxSlots) * 100, 100);
 
   // User position in interested users list
   const userPosition = regularIsInterested
@@ -362,7 +383,7 @@ const GigCard: React.FC<GigCardProps> = ({
     incrementViewCount();
   }, [gig._id, currentUserId]);
 
-  // Updated handleBandAction function
+  // Handle band action
   const handleBandAction = useCallback(
     (bandRoleIndex: number): BandAction | null => {
       if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) return null;
@@ -372,20 +393,16 @@ const GigCard: React.FC<GigCardProps> = ({
 
       if (!currentUserId) return null;
 
-      // Check if current user is the gig poster (client)
       const isGigPoster = currentUserId === gig.postedBy;
 
-      // For client viewing their own gig
       if (isGigPoster) {
-        // Check if role has applicants
         const hasApplicants = role.applicants.length > 0;
-        // Check if role has booked users
         const hasBookedUsers = role.bookedUsers.length > 0;
 
         if (hasApplicants && !hasBookedUsers) {
           return {
             type: "review",
-            label: "Review Applicants",
+            label: "Review",
             variant: "default",
             action: async () => {
               router.push(`/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`);
@@ -395,14 +412,13 @@ const GigCard: React.FC<GigCardProps> = ({
             routing: {
               forMusician: "",
               forClient: `/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`,
-              message: "Review applicants for this role",
+              message: "Review applicants",
             },
           };
         } else if (hasBookedUsers) {
-          // Role already has booked musicians
           return {
             type: "manage",
-            label: "Manage Role",
+            label: "Manage",
             variant: "outline",
             action: () => {
               router.push(`/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`);
@@ -412,14 +428,13 @@ const GigCard: React.FC<GigCardProps> = ({
             routing: {
               forMusician: "",
               forClient: `/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`,
-              message: "Manage booked musicians for this role",
+              message: "Manage musicians",
             },
           };
         } else {
-          // No applicants yet
           return {
             type: "edit",
-            label: "Edit Role",
+            label: "Edit",
             variant: "outline",
             action: () => {
               router.push(`/gigs/edit/${gig._id}`);
@@ -429,25 +444,23 @@ const GigCard: React.FC<GigCardProps> = ({
             routing: {
               forMusician: "",
               forClient: `/gigs/edit/${gig._id}`,
-              message: "Edit this role details",
+              message: "Edit gig",
             },
+            icon: <Edit className="w-4 h-4" />, // Add icon prop
+            className:
+              "border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20", // Add custom styling
           };
         }
       }
 
-      // For non-client users (musicians)
-      // Check if user is in applicants array
       const hasApplied = role.applicants.includes(currentUserId);
-      // Check if user is in bookedUsers array
       const isBooked = role.bookedUsers.includes(currentUserId);
-      // Check if role is full
       const isRoleFull = role.filledSlots >= role.maxSlots;
 
-      // Case 1: User is already booked
       if (isBooked) {
         return {
           type: "leave",
-          label: "Leave Role",
+          label: "Leave",
           variant: "destructive",
           action: async () => {
             try {
@@ -455,12 +468,12 @@ const GigCard: React.FC<GigCardProps> = ({
                 gigId: gig._id,
                 bandRoleIndex,
                 clerkId: userId!,
-                reason: "Left the role voluntarily",
+                reason: "Left voluntarily",
               });
-              toast.success("Successfully left the role");
+              toast.success("Left the role");
             } catch (error) {
               toast.error(
-                error instanceof Error ? error.message : "Failed to leave role"
+                error instanceof Error ? error.message : "Failed to leave"
               );
             }
           },
@@ -468,32 +481,30 @@ const GigCard: React.FC<GigCardProps> = ({
           routing: {
             forMusician: "/hub/gigs?tab=booked",
             forClient: "/hub/gigs?tab=my-gigs",
-            message: "You're booked for this role",
+            message: "Booked for this role",
           },
         };
       }
 
-      // Case 2: User has applied but not booked yet
       if (hasApplied && !isBooked) {
         return {
           type: "pending",
-          label: "Application Pending",
+          label: "Pending",
           variant: "outline",
           action: null,
           disabled: true,
           routing: {
             forMusician: "/hub/gigs?tab=pending",
             forClient: "/hub/gigs?tab=my-gigs",
-            message: "Application submitted - waiting for review",
+            message: "Application pending",
           },
         };
       }
 
-      // Case 3: User hasn't applied AND role has available slots
       if (!isRoleFull && !hasApplied && !isBooked) {
         return {
           type: "apply",
-          label: "Apply for Role",
+          label: "Apply",
           variant: "default",
           action: async () => {
             try {
@@ -503,7 +514,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 clerkId: userId!,
                 applicationNotes: interestNotes,
               });
-              toast.success("Application submitted successfully!");
+              toast.success("Application submitted!");
             } catch (error) {
               toast.error(
                 error instanceof Error ? error.message : "Failed to apply"
@@ -514,23 +525,22 @@ const GigCard: React.FC<GigCardProps> = ({
           routing: {
             forMusician: "/hub/gigs?tab=all",
             forClient: "/hub/gigs?tab=my-gigs",
-            message: "Apply for this band role",
+            message: "Apply for role",
           },
         };
       }
 
-      // Case 4: Role is full and user hasn't applied
       if (isRoleFull && !hasApplied && !isBooked) {
         return {
           type: "full",
-          label: "Role Full",
+          label: "Full",
           variant: "secondary",
           action: null,
           disabled: true,
           routing: {
             forMusician: "/hub/gigs?tab=all",
             forClient: "/hub/gigs?tab=my-gigs",
-            message: "This role is already filled",
+            message: "Role full",
           },
         };
       }
@@ -543,24 +553,23 @@ const GigCard: React.FC<GigCardProps> = ({
   // Regular gig interest handler
   const handleRegularInterest = async () => {
     if (!currentUserId) {
-      toast.error("Please sign in to show interest");
+      toast.error("Sign in to show interest");
       return;
     }
 
     if (gig.isTaken) {
-      toast.error("This gig has already been taken");
+      toast.error("Gig already taken");
       return;
     }
 
     if (isFull) {
-      toast.error("This gig is fully booked!");
+      toast.error("Fully booked!");
       return;
     }
 
     setLoading(true);
     try {
       if (regularIsInterested) {
-        // Remove interest
         await removeInterestFromGig({
           gigId: gig._id,
           clerkId: userId!,
@@ -568,11 +577,10 @@ const GigCard: React.FC<GigCardProps> = ({
         });
         toast.success("Interest removed");
       } else {
-        // Show interest with modal
         setShowInterestModal(true);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Operation failed");
+      toast.error(error instanceof Error ? error.message : "Failed");
     } finally {
       setLoading(false);
     }
@@ -581,7 +589,7 @@ const GigCard: React.FC<GigCardProps> = ({
   // Show interest with notes handler
   const handleShowInterestWithNotes = async () => {
     if (!currentUserId) {
-      toast.error("Please sign in to show interest");
+      toast.error("Sign in to show interest");
       return;
     }
 
@@ -601,15 +609,15 @@ const GigCard: React.FC<GigCardProps> = ({
             <UserCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <p className="font-medium">Interest shown successfully!</p>
+            <p className="font-medium">Interest shown!</p>
             <p className="text-sm opacity-90">
-              Position #{result.position} • {result.availableSlots} slots left
+              Position #{result.position} • {result.availableSlots} left
             </p>
           </div>
         </div>
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Operation failed");
+      toast.error(error instanceof Error ? error.message : "Failed");
     } finally {
       setLoading(false);
     }
@@ -618,7 +626,7 @@ const GigCard: React.FC<GigCardProps> = ({
   // Save/favorite handlers
   const handleSave = async () => {
     if (!currentUserId) {
-      toast.error("Please sign in to save gigs");
+      toast.error("Sign in to save gigs");
       return;
     }
 
@@ -639,15 +647,13 @@ const GigCard: React.FC<GigCardProps> = ({
         toast.success("Gig saved");
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update saved gigs"
-      );
+      toast.error("Failed to update saved gigs");
     }
   };
 
   const handleFavorite = async () => {
     if (!currentUserId) {
-      toast.error("Please sign in to favorite gigs");
+      toast.error("Sign in to favorite gigs");
       return;
     }
 
@@ -668,9 +674,7 @@ const GigCard: React.FC<GigCardProps> = ({
         toast.success("Added to favorites");
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update favorites"
-      );
+      toast.error("Failed to update favorites");
     }
   };
 
@@ -699,33 +703,149 @@ const GigCard: React.FC<GigCardProps> = ({
     if (roleLower.includes("mc")) return "🎤";
     return "🎵";
   };
+  const getCardStyles = () => {
+    return {
+      backgroundColor: gig.backgroundColor || undefined,
+      color: gig.fontColor || undefined,
+      fontFamily: gig.font || undefined,
+      // Preserve the border styling from the original
+      borderColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
+      "--button-bg": gig.backgroundColor
+        ? `${gig.backgroundColor}40`
+        : undefined,
+      "--button-hover": gig.backgroundColor
+        ? `${gig.backgroundColor}60`
+        : undefined,
+      "--button-text": gig.fontColor || undefined,
+    } as React.CSSProperties;
+  };
 
+  // Create a utility function for button styles
+  const getButtonStyles = (
+    variant: "default" | "outline" | "secondary" | "destructive" = "default"
+  ) => {
+    const bgColor = gig.backgroundColor;
+    const fontColor = gig.fontColor;
+
+    const baseStyle = {
+      color: fontColor || undefined,
+    };
+
+    switch (variant) {
+      case "default":
+        return {
+          ...baseStyle,
+          backgroundColor: bgColor ? `${bgColor}40` : undefined,
+          borderColor: fontColor ? `${fontColor}30` : undefined,
+        };
+      case "outline":
+        return {
+          ...baseStyle,
+          backgroundColor: "transparent",
+          borderColor: fontColor ? `${fontColor}40` : undefined,
+        };
+      case "secondary":
+        return {
+          ...baseStyle,
+          backgroundColor: bgColor ? `${bgColor}20` : undefined,
+          borderColor: fontColor ? `${fontColor}20` : undefined,
+        };
+      case "destructive":
+        return {
+          ...baseStyle,
+          backgroundColor: fontColor ? `${fontColor}20` : undefined,
+          borderColor: fontColor ? `${fontColor}30` : undefined,
+          color: fontColor || "#ef4444",
+        };
+      default:
+        return baseStyle;
+    }
+  };
   // Get status badge
   const getStatusBadge = () => {
     if (gig.isTaken) {
-      return <Badge className="bg-green-500 hover:bg-green-600">Booked</Badge>;
-    }
-    if (gig.isPending) {
       return (
-        <Badge className="bg-yellow-500 hover:bg-yellow-600">Pending</Badge>
-      );
-    }
-    if (isFull) {
-      return <Badge className="bg-red-500 hover:bg-red-600">Full</Badge>;
-    }
-    if (isClientBand) {
-      return (
-        <Badge className="bg-purple-500 hover:bg-purple-600">
-          Band Forming
+        <Badge
+          className="px-2 py-1 text-xs"
+          style={{
+            backgroundColor: gig.backgroundColor
+              ? `${gig.backgroundColor}40`
+              : undefined,
+            color: gig.fontColor || undefined,
+            borderColor: gig.fontColor ? `${gig.fontColor}30` : undefined,
+          }}
+        >
+          Booked
         </Badge>
       );
     }
-    return <Badge className="bg-blue-500 hover:bg-blue-600">Available</Badge>;
+    if (gig.isPending) {
+      return (
+        <Badge
+          className="px-2 py-1 text-xs"
+          style={{
+            backgroundColor: gig.backgroundColor
+              ? `${gig.backgroundColor}30`
+              : undefined,
+            color: gig.fontColor || "#f59e0b",
+            borderColor: gig.fontColor ? `${gig.fontColor}20` : "#f59e0b30",
+          }}
+        >
+          Pending
+        </Badge>
+      );
+    }
+    if (isFull) {
+      return (
+        <Badge
+          className="px-2 py-1 text-xs"
+          style={{
+            backgroundColor: gig.backgroundColor
+              ? `${gig.backgroundColor}30`
+              : undefined,
+            color: gig.fontColor || "#ef4444",
+            borderColor: gig.fontColor ? `${gig.fontColor}20` : "#ef444430",
+          }}
+        >
+          Full
+        </Badge>
+      );
+    }
+    if (isClientBand) {
+      return (
+        <Badge
+          className="px-2 py-1 text-xs"
+          style={{
+            backgroundColor: gig.backgroundColor
+              ? `${gig.backgroundColor}40`
+              : undefined,
+            color: gig.fontColor || "#8b5cf6",
+            borderColor: gig.fontColor ? `${gig.fontColor}30` : "#8b5cf630",
+          }}
+        >
+          Band
+        </Badge>
+      );
+    }
+    return (
+      <Badge
+        className="px-2 py-1 text-xs"
+        style={{
+          backgroundColor: gig.backgroundColor
+            ? `${gig.backgroundColor}40`
+            : undefined,
+          color: gig.fontColor || undefined,
+          borderColor: gig.fontColor ? `${gig.fontColor}30` : undefined,
+        }}
+      >
+        Available
+      </Badge>
+    );
   };
 
   // Render band members preview
   const renderBandMembersPreview = () => {
-    if (!isClientBand || bandMembers.length === 0) return null;
+    if (!isClientBand || bandMembers.length === 0 || compact) return null;
 
     const displayMembers = bandMembers.slice(0, 3);
     const remainingCount = bandMembers.length - 3;
@@ -739,7 +859,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 <TooltipTrigger asChild>
                   <div className="relative">
                     <Avatar className="w-6 h-6 border-2 border-white dark:border-gray-800">
-                      <AvatarFallback>
+                      <AvatarFallback className="text-xs">
                         {member.name?.charAt(0) || "M"}
                       </AvatarFallback>
                     </Avatar>
@@ -768,55 +888,101 @@ const GigCard: React.FC<GigCardProps> = ({
     );
   };
 
-  // Check if current user is the gig poster (client)
+  // Check if current user is the gig poster
   const isGigPoster = currentUserId === gig.postedBy;
-
-  // Check if gig has applicants
-  const hasApplicants = gig.bandCategory?.some(
-    (role) => role.applicants && role.applicants.length > 0
-  );
 
   // Check interest window status
   const interestWindowStatus = getInterestWindowStatus(gig);
   const isInterestWindowOpen = interestWindowStatus.status === "open";
 
-  // Render action button based on gig type
+  // Render action button
   const renderActionButton = () => {
     if (!showActions) return null;
 
+    const responsiveButtonClasses = "w-full sm:w-auto px-3 py-1.5 h-9";
+
+    // Helper to get button styles based on variant
+    const getButtonStyle = (
+      variant: "default" | "outline" | "secondary" | "destructive" = "default"
+    ) => {
+      const baseStyle = {
+        color: gig.fontColor || undefined,
+      };
+
+      switch (variant) {
+        case "default":
+          return {
+            ...baseStyle,
+            backgroundColor: gig.backgroundColor
+              ? `${gig.backgroundColor}40`
+              : undefined,
+            borderColor: gig.fontColor ? `${gig.fontColor}30` : undefined,
+          };
+        case "outline":
+          return {
+            ...baseStyle,
+            backgroundColor: "transparent",
+            borderColor: gig.fontColor ? `${gig.fontColor}40` : undefined,
+          };
+        case "secondary":
+          return {
+            ...baseStyle,
+            backgroundColor: gig.backgroundColor
+              ? `${gig.backgroundColor}20`
+              : undefined,
+            borderColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
+          };
+        case "destructive":
+          return {
+            ...baseStyle,
+            backgroundColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
+            borderColor: gig.fontColor ? `${gig.fontColor}30` : undefined,
+            color: gig.fontColor || "#ef4444",
+          };
+        default:
+          return baseStyle;
+      }
+    };
+
+    // Gig is taken
     if (gig.isTaken) {
-      if (currentUser?.isMusician) {
+      if (isGigPoster) {
         return (
           <Button
-            variant="default"
+            variant="outline"
             size="sm"
-            onClick={() => router.push("/community?tab=videos")}
-            className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/gigs/${gig._id}/manage`);
+            }}
+            className={clsx(
+              responsiveButtonClasses,
+              "shadow-sm hover:shadow transition-all duration-200",
+              "text-xs sm:text-sm"
+            )}
+            style={getButtonStyle("outline")}
+            onMouseEnter={(e) => {
+              if (gig.backgroundColor) {
+                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
           >
-            <Video className="w-4 h-4 mr-2" />
-            Add Videos
-          </Button>
-        );
-      } else if (isGigPoster) {
-        return (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => router.push(`/gigs/${gig._id}/review`)}
-            className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-          >
-            <UserCheck className="w-4 h-4 mr-2" />
-            Review Musician
+            <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Manage</span>
+            <span className="sm:hidden">Manage</span>
           </Button>
         );
       }
-
       return (
         <Button
           variant="outline"
           size="sm"
           disabled
-          className="w-full sm:w-auto"
+          className={clsx(responsiveButtonClasses, "opacity-50 text-xs")}
+          style={getButtonStyle("secondary")}
         >
           <UserCheck className="w-4 h-4 mr-2" />
           Booked
@@ -824,241 +990,525 @@ const GigCard: React.FC<GigCardProps> = ({
       );
     }
 
-    // Regular gig button
+    // ===== REGULAR GIG =====
     if (!isClientBand) {
-      if (!isInterestWindowOpen) {
-        return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  className="w-full sm:w-auto opacity-50 cursor-not-allowed"
-                >
-                  {interestWindowStatus.status === "closed" ? (
-                    <>
-                      <Lock className="w-4 h-4 mr-2" />
-                      Closed
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="w-4 h-4 mr-2" />
-                      Not Open
-                    </>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{interestWindowStatus.message}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      }
-
-      return (
-        <Button
-          onClick={handleRegularInterest}
-          disabled={loading || isFull}
-          variant={regularIsInterested ? "outline" : "default"}
-          size="sm"
-          className="w-full sm:w-auto"
-        >
-          {loading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-              Processing...
-            </>
-          ) : regularIsInterested ? (
-            <>
-              <UserCheck className="w-4 h-4 mr-2" />
-              Interested
-            </>
-          ) : (
-            <>
-              <UserPlus className="w-4 h-4 mr-2" />
-              {isFull ? "Full" : "Show Interest"}
-            </>
-          )}
-        </Button>
-      );
-    }
-
-    // Band gig button
-    if (isClientBand) {
-      // For gig poster (client)
       if (isGigPoster) {
-        if (hasApplicants) {
-          return (
-            <Button
-              onClick={() => router.push("/hub/gigs?tab=my-gigs")}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Review Applicants
-            </Button>
-          );
-        }
-
         return (
           <Button
             variant="outline"
             size="sm"
-            className="w-full sm:w-auto"
-            disabled
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/gigs/edit/${gig._id}`);
+            }}
+            className={clsx(
+              responsiveButtonClasses,
+              "shadow-sm hover:shadow transition-all duration-200",
+              "text-xs sm:text-sm"
+            )}
+            style={getButtonStyle("outline")}
+            onMouseEnter={(e) => {
+              if (gig.backgroundColor) {
+                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
           >
-            <Users className="w-4 h-4 mr-2" />
-            No Applicants Yet
+            <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Edit</span>
+            <span className="sm:hidden">Edit</span>
           </Button>
         );
       }
 
-      // For musicians viewing band gig
-      if (gig.bandCategory && gig.bandCategory.length > 0) {
-        // Get first available role or show general band action
-        const firstRoleAction = handleBandAction(0);
+      // Check interest window
+      if (gig.acceptInterestStartTime || gig.acceptInterestEndTime) {
+        switch (interestWindowStatus.status) {
+          case "not_open":
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className={clsx(
+                  responsiveButtonClasses,
+                  "opacity-50 cursor-not-allowed text-xs"
+                )}
+                style={getButtonStyle("secondary")}
+              >
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Opens Soon</span>
+                <span className="sm:hidden">Soon</span>
+              </Button>
+            );
 
-        if (firstRoleAction) {
+          case "closed":
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className={clsx(
+                  responsiveButtonClasses,
+                  "opacity-50 cursor-not-allowed text-xs"
+                )}
+                style={getButtonStyle("secondary")}
+              >
+                <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Closed</span>
+                <span className="sm:hidden">Closed</span>
+              </Button>
+            );
+        }
+      }
+
+      // Show interest button
+      if (regularIsInterested) {
+        return (
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRegularInterest();
+            }}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+            className={clsx(
+              responsiveButtonClasses,
+              "shadow-sm hover:shadow transition-all duration-200",
+              "text-xs sm:text-sm"
+            )}
+            style={getButtonStyle("outline")}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}20`
+                  : undefined;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }
+            }}
+          >
+            {loading ? (
+              <>
+                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
+                <span className="hidden sm:inline">Removing</span>
+                <span className="sm:hidden">...</span>
+              </>
+            ) : (
+              <>
+                <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Interested</span>
+                <span className="sm:hidden">✓</span>
+              </>
+            )}
+          </Button>
+        );
+      }
+
+      return (
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isFull) return;
+            handleRegularInterest();
+          }}
+          disabled={loading || isFull}
+          size="sm"
+          className={clsx(
+            responsiveButtonClasses,
+            "shadow-sm hover:shadow transition-all duration-200",
+            "text-xs sm:text-sm",
+            isFull && "opacity-50 cursor-not-allowed"
+          )}
+          style={getButtonStyle("default")}
+          onMouseEnter={(e) => {
+            if (!loading && !isFull) {
+              e.currentTarget.style.backgroundColor = gig.backgroundColor
+                ? `${gig.backgroundColor}60`
+                : undefined;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!loading && !isFull) {
+              e.currentTarget.style.backgroundColor = gig.backgroundColor
+                ? `${gig.backgroundColor}40`
+                : undefined;
+            }
+          }}
+        >
+          {loading ? (
+            <>
+              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
+              <span className="hidden sm:inline">Processing</span>
+              <span className="sm:hidden">...</span>
+            </>
+          ) : isFull ? (
+            <>
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Full</span>
+              <span className="sm:hidden">Full</span>
+            </>
+          ) : (
+            <>
+              <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Interest</span>
+              <span className="sm:hidden">Join</span>
+            </>
+          )}
+        </Button>
+      );
+    }
+
+    // ===== BAND GIG =====
+    if (isClientBand) {
+      if (isGigPoster) {
+        const hasApplicants =
+          gig.bandCategory?.some((role) => role.applicants.length > 0) || false;
+        const hasBookedUsers =
+          gig.bandCategory?.some((role) => role.bookedUsers.length > 0) ||
+          false;
+
+        if (hasApplicants) {
           return (
             <Button
-              onClick={() => {
-                if (firstRoleAction.action) {
-                  firstRoleAction.action();
-                } else if (firstRoleAction.type === "pending") {
-                  router.push(firstRoleAction.routing.forMusician);
-                }
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/gigs/${gig._id}/review`);
               }}
-              variant={firstRoleAction.variant}
               size="sm"
-              disabled={firstRoleAction.disabled || loading}
-              className="w-full sm:w-auto"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Processing...
-                </>
-              ) : firstRoleAction.type === "apply" ? (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Apply for Band
-                </>
-              ) : firstRoleAction.type === "pending" ? (
-                <>
-                  <Clock className="w-4 h-4 mr-2" />
-                  Application Pending
-                </>
-              ) : firstRoleAction.type === "leave" ? (
-                <>
-                  <UserCheck className="w-4 h-4 mr-2" />
-                  Leave Band
-                </>
-              ) : (
-                <>
-                  <Users className="w-4 h-4 mr-2" />
-                  {firstRoleAction.label}
-                </>
+              className={clsx(
+                responsiveButtonClasses,
+                "shadow-sm hover:shadow transition-all duration-200",
+                "text-xs sm:text-sm"
               )}
+              style={getButtonStyle("default")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}60`
+                  : undefined;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}40`
+                  : undefined;
+              }}
+            >
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Review</span>
+              <span className="sm:hidden">Review</span>
+            </Button>
+          );
+        } else if (hasBookedUsers) {
+          return (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/gigs/${gig._id}/manage`);
+              }}
+              variant="outline"
+              size="sm"
+              className={clsx(
+                responsiveButtonClasses,
+                "shadow-sm hover:shadow transition-all duration-200",
+                "text-xs sm:text-sm"
+              )}
+              style={getButtonStyle("outline")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}20`
+                  : undefined;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Manage</span>
+              <span className="sm:hidden">Manage</span>
+            </Button>
+          );
+        } else {
+          // Edit button for band gig with no applicants/bookings
+          return (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/gigs/edit/${gig._id}`);
+              }}
+              variant="outline"
+              size="sm"
+              className={clsx(
+                responsiveButtonClasses,
+                "shadow-sm hover:shadow transition-all duration-200",
+                "text-xs sm:text-sm"
+              )}
+              style={getButtonStyle("outline")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}20`
+                  : undefined;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Edit</span>
+              <span className="sm:hidden">Edit</span>
             </Button>
           );
         }
       }
 
-      // Fallback band button
+      if (userIsInBand) {
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            className={clsx(
+              responsiveButtonClasses,
+              "shadow-sm hover:shadow transition-all duration-200",
+              "text-xs sm:text-sm"
+            )}
+            disabled={loading}
+            style={getButtonStyle("secondary")}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}30`
+                  : undefined;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}20`
+                  : undefined;
+              }
+            }}
+          >
+            <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">In Band</span>
+            <span className="sm:hidden">In Band</span>
+          </Button>
+        );
+      }
+
+      // Check interest window for band
+      if (gig.acceptInterestStartTime || gig.acceptInterestEndTime) {
+        switch (interestWindowStatus.status) {
+          case "not_open":
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className={clsx(
+                  responsiveButtonClasses,
+                  "opacity-50 cursor-not-allowed text-xs"
+                )}
+                style={getButtonStyle("secondary")}
+              >
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Soon</span>
+                <span className="sm:hidden">Soon</span>
+              </Button>
+            );
+
+          case "closed":
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className={clsx(
+                  responsiveButtonClasses,
+                  "opacity-50 cursor-not-allowed text-xs"
+                )}
+                style={getButtonStyle("secondary")}
+              >
+                <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Closed</span>
+                <span className="sm:hidden">Closed</span>
+              </Button>
+            );
+        }
+      }
+
+      if (bandIsFull) {
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className={clsx(
+              responsiveButtonClasses,
+              "opacity-50 cursor-not-allowed text-xs"
+            )}
+            style={getButtonStyle("secondary")}
+          >
+            <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Full</span>
+            <span className="sm:hidden">Full</span>
+          </Button>
+        );
+      }
+
       return (
         <Button
-          onClick={() => setShowBandJoinModal(true)}
-          disabled={loading || isFull}
-          className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (gig.bandCategory && gig.bandCategory.length === 1) {
+              const roleAction = handleBandAction(0);
+              if (roleAction?.action) {
+                roleAction.action();
+              } else {
+                setShowBandJoinModal(true);
+              }
+            } else {
+              setShowBandJoinModal(true);
+            }
+          }}
+          disabled={loading || bandIsFull}
+          size="sm"
+          className={clsx(
+            responsiveButtonClasses,
+            "shadow-sm hover:shadow transition-all duration-200",
+            "text-xs sm:text-sm",
+            bandIsFull && "opacity-50 cursor-not-allowed"
+          )}
+          style={getButtonStyle("default")}
+          onMouseEnter={(e) => {
+            if (!loading && !bandIsFull) {
+              e.currentTarget.style.backgroundColor = gig.backgroundColor
+                ? `${gig.backgroundColor}60`
+                : undefined;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!loading && !bandIsFull) {
+              e.currentTarget.style.backgroundColor = gig.backgroundColor
+                ? `${gig.backgroundColor}40`
+                : undefined;
+            }
+          }}
         >
-          <Music className="w-4 h-4 mr-2" />
-          {isFull ? "Band Full" : "Join Band"}
+          {loading ? (
+            <>
+              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
+              <span className="hidden sm:inline">...</span>
+              <span className="sm:hidden">...</span>
+            </>
+          ) : bandIsFull ? (
+            <>
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Full</span>
+              <span className="sm:hidden">Full</span>
+            </>
+          ) : (
+            <>
+              <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Join Band</span>
+              <span className="sm:hidden">Join</span>
+            </>
+          )}
         </Button>
       );
     }
 
-    return null;
+    // Fallback
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled
+        className={clsx(responsiveButtonClasses, "text-xs")}
+        style={getButtonStyle("secondary")}
+      >
+        <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+        <span className="hidden sm:inline">N/A</span>
+        <span className="sm:hidden">N/A</span>
+      </Button>
+    );
+  };
+  const renderProgressBar = () => {
+    if (compact) return null;
+
+    return (
+      <div className="mt-3">
+        <div className="flex justify-between items-center mb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              {slotsUsed}/{maxSlots} {isClientBand ? "members" : "spots"}
+            </span>
+            {userPosition && (
+              <Badge
+                variant="outline"
+                className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-xs px-2 py-0"
+              >
+                <span className="flex items-center gap-1">
+                  <User className="w-3 h-3" />#{userPosition}
+                </span>
+              </Badge>
+            )}
+          </div>
+          <span className="text-xs font-semibold">{availableSlots} left</span>
+        </div>
+
+        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+          <motion.div
+            className={clsx("h-full rounded-full", {
+              "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
+              "bg-gradient-to-r from-green-500 to-emerald-600":
+                !isClientBand && !isFull,
+              "bg-gradient-to-r from-amber-500 to-orange-600":
+                !isClientBand && progressPercentage >= 80 && !isFull,
+              "bg-gradient-to-r from-red-500 to-rose-600": isFull,
+            })}
+            initial={{ width: "0%" }}
+            animate={{ width: `${progressPercentage}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+        </div>
+
+        {availableSlots <= 2 && availableSlots > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <AlertCircle className="w-3 h-3 text-amber-500" />
+            <span className="text-xs text-amber-600 dark:text-amber-400">
+              Only {availableSlots} left!
+            </span>
+          </div>
+        )}
+      </div>
+    );
   };
 
-  // Render progress bar
-  const renderProgressBar = () => (
-    <div className="mt-3">
-      <div className="flex justify-between items-center mb-1">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            {slotsUsed} of {maxSlots} {isClientBand ? "band members" : "spots"}{" "}
-            filled
-          </span>
-          {userPosition && (
-            <Badge
-              variant="outline"
-              className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800"
-            >
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                Position #{userPosition}
-              </span>
-            </Badge>
-          )}
-        </div>
-        <span className="text-xs font-semibold">
-          {availableSlots} {isClientBand ? "spots" : "slots"} left
-        </span>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-        <motion.div
-          className={clsx("h-full rounded-full", {
-            "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
-            "bg-gradient-to-r from-green-500 to-emerald-600":
-              !isClientBand && !isFull,
-            "bg-gradient-to-r from-amber-500 to-orange-600":
-              !isClientBand && progressPercentage >= 80 && !isFull,
-            "bg-gradient-to-r from-red-500 to-rose-600": isFull,
-          })}
-          initial={{ width: "0%" }}
-          animate={{ width: `${progressPercentage}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-      </div>
-
-      {/* Low slots warning */}
-      {availableSlots <= 2 && availableSlots > 0 && (
-        <div className="flex items-center gap-1 mt-1">
-          <AlertCircle className="w-3 h-3 text-amber-500" />
-          <span className="text-xs text-amber-600 dark:text-amber-400">
-            Only {availableSlots} {availableSlots === 1 ? "spot" : "spots"}{" "}
-            left!
-          </span>
-        </div>
-      )}
-    </div>
-  );
-
+  // ===== MAIN RETURN STATEMENT =====
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        whileHover={{ y: -4 }}
+        transition={{ duration: 0.2 }}
+        whileHover={{ y: -2 }}
         className={clsx(
-          "group relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800",
-          "rounded-xl p-4 shadow-sm hover:shadow-lg transition-all duration-300",
-          "cursor-pointer overflow-hidden",
+          "group relative rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200",
+          "cursor-pointer overflow-hidden w-full",
           {
-            "ring-2 ring-purple-500 ring-offset-2":
-              isClientBand && userIsInBand,
-            "ring-2 ring-green-500 ring-offset-2":
-              !isClientBand && regularIsInterested,
+            "ring-1 ring-purple-500": isClientBand && userIsInBand,
+            "ring-1 ring-green-500": !isClientBand && regularIsInterested,
           }
         )}
         onClick={handleClick}
+        style={getCardStyles()} // Add this
       >
-        {/* Status indicator */}
+        {/* Status indicator - Keep original colors */}
         <div
           className={clsx("absolute top-0 left-0 h-1 w-full", {
             "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
@@ -1070,56 +1520,88 @@ const GigCard: React.FC<GigCardProps> = ({
         />
 
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-3">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              <div className="flex flex-wrap items-start gap-2 mb-2">
+                <h3
+                  className="text-base sm:text-lg font-semibold truncate flex-1"
+                  style={{ color: gig.fontColor || undefined }}
+                >
                   {gig.title}
                 </h3>
-                {getStatusBadge()}
-                {isClientBand && (
-                  <Badge
-                    variant="outline"
-                    className="border-purple-500 text-purple-600 dark:text-purple-400"
-                  >
-                    🎵 Band
-                  </Badge>
-                )}
-                {gig.acceptInterestStartTime || gig.acceptInterestEndTime ? (
-                  <InterestWindowBadge gig={gig} />
-                ) : null}
+                <div className="flex flex-wrap gap-1 sm:gap-2">
+                  {getStatusBadge()}
+                  {isClientBand && (
+                    <Badge
+                      variant="outline"
+                      className="border-purple-500 text-purple-600 dark:text-purple-400 text-xs"
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Band
+                    </Badge>
+                  )}
+                  {(gig.acceptInterestStartTime ||
+                    gig.acceptInterestEndTime) && (
+                    <div className="hidden sm:block">
+                      <InterestWindowBadge gig={gig} />
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Category tags */}
-              <div className="flex flex-wrap gap-1 mb-2">
-                {gig.bussinesscat && (
-                  <Badge variant="secondary" className="text-xs">
-                    {gig.bussinesscat}
-                  </Badge>
-                )}
-                {gig.category && (
-                  <Badge variant="secondary" className="text-xs">
-                    {gig.category}
-                  </Badge>
-                )}
-                {gig.negotiable && (
-                  <Badge variant="outline" className="text-xs">
-                    Negotiable
-                  </Badge>
-                )}
-              </div>
+              {/* Tags - Responsive */}
+              {(gig.bussinesscat || gig.category) && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {gig.bussinesscat && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs"
+                      style={{
+                        backgroundColor: gig.backgroundColor
+                          ? `${gig.backgroundColor}30`
+                          : undefined,
+                        color: gig.fontColor || undefined,
+                      }}
+                    >
+                      {gig.bussinesscat}
+                    </Badge>
+                  )}
+                  {gig.category && (
+                    <Badge variant="secondary" className="text-xs">
+                      {gig.category}
+                    </Badge>
+                  )}
+                  {gig.negotiable && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs"
+                      style={{
+                        borderColor: gig.fontColor
+                          ? `${gig.fontColor}50`
+                          : undefined,
+                        color: gig.fontColor || undefined,
+                      }}
+                    >
+                      Negotiable
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Price */}
-            <div className="flex-shrink-0 ml-2">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="flex-shrink-0 self-end sm:self-start">
+              <div
+                className="text-xl sm:text-2xl font-bold whitespace-nowrap"
+                style={{ color: gig.fontColor || undefined }}
+              >
                 {gig.price ? `$${gig.price}` : "Contact"}
               </div>
               {gig.paymentStatus && (
                 <Badge
                   variant="outline"
-                  className={clsx("text-xs mt-1", {
+                  className={clsx("text-xs mt-1 w-full justify-center", {
                     "border-green-500 text-green-600":
                       gig.paymentStatus === "paid",
                     "border-yellow-500 text-yellow-600":
@@ -1134,138 +1616,210 @@ const GigCard: React.FC<GigCardProps> = ({
             </div>
           </div>
 
-          {/* Description preview */}
-          {gig.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+          {/* Description */}
+          {!compact && gig.description && (
+            <p
+              className="text-sm mb-3 line-clamp-2"
+              style={{
+                color: gig.fontColor ? `${gig.fontColor}CC` : undefined,
+              }}
+            >
               {gig.description}
             </p>
           )}
 
-          {/* Band members preview */}
+          {/* Band members */}
           {renderBandMembersPreview()}
 
           {/* Progress bar */}
           {renderProgressBar()}
 
           {/* Location and time */}
-          <div className="flex items-center justify-between mt-4 mb-4">
-            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3 mb-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              {gig.location && (
+                <div className="flex items-center gap-1 min-w-0">
+                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span
+                    className="truncate max-w-[120px] sm:max-w-[150px]"
+                    style={{
+                      color: gig.fontColor ? `${gig.fontColor}CC` : undefined,
+                    }}
+                  >
+                    {gig.location}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                <span className="truncate max-w-[120px]">
-                  {gig.location || "Location not specified"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>{formattedDate}</span>
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">{formattedDate}</span>
               </div>
               {gig.time?.start && (
                 <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{formattedTime}</span>
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{formattedTime}</span>
                 </div>
               )}
             </div>
 
             {/* View count */}
-            <div className="flex items-center gap-1 text-sm text-gray-500">
-              <Eye className="w-4 h-4" />
+            <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 self-start sm:self-center">
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
               <span>{gig.viewCount?.length || 0}</span>
             </div>
           </div>
 
-          {/* Footer with user info and actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
+          {/* FOOTER */}
+          <div
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t"
+            style={{
+              borderTopColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
+            }}
+          >
+            {" "}
             {/* Poster info */}
-            <div className="flex items-center gap-2">
-              <Avatar className="w-8 h-8">
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0">
                 <AvatarImage src={gigPoster?.picture} />
-                <AvatarFallback>
+                <AvatarFallback className="text-xs">
                   {gigPoster?.firstname?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className="min-w-0">
+                <p
+                  className="text-xs sm:text-sm font-medium truncate"
+                  style={{
+                    color: gig.fontColor ? `${gig.fontColor}CC` : undefined,
+                  }}
+                >
                   {gigPoster?.firstname || "User"}
                 </p>
                 {gigPoster?.city && (
-                  <p className="text-xs text-gray-500">{gigPoster.city}</p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {gigPoster.city}
+                  </p>
                 )}
               </div>
             </div>
-
-            {/* Action buttons */}
+            {/* Actions */}
             {showActions && (
-              <div className="flex items-center gap-2">
-                {/* Save and favorite buttons */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSave();
-                        }}
-                        className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
-                        title={isSaved ? "Remove from saved" : "Save for later"}
-                      >
-                        {isSaved ? (
-                          <Bookmark className="w-5 h-5 fill-yellow-500 text-yellow-500" />
-                        ) : (
-                          <Bookmark className="w-5 h-5" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {isSaved ? "Remove from saved" : "Save for later"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              <div className="flex items-center gap-2 self-stretch sm:self-center">
+                {/* Save/Favorite - Hidden on mobile */}
+                <div className="hidden sm:flex items-center gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSave();
+                          }}
+                          className="p-1.5 rounded-md transition-colors"
+                          title={isSaved ? "Remove from saved" : "Save"}
+                          style={{
+                            backgroundColor: gig.backgroundColor
+                              ? `${gig.backgroundColor}20`
+                              : undefined,
+                            color: gig.fontColor
+                              ? `${gig.fontColor}80`
+                              : undefined,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (gig.backgroundColor) {
+                              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (gig.backgroundColor) {
+                              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+                            } else {
+                              e.currentTarget.style.backgroundColor = "";
+                            }
+                          }}
+                        >
+                          {isSaved ? (
+                            <Bookmark
+                              className="w-4 h-4"
+                              style={{ fill: gig.fontColor || "#fbbf24" }}
+                            />
+                          ) : (
+                            <Bookmark className="w-4 h-4" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isSaved ? "Remove from saved" : "Save"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFavorite();
-                        }}
-                        className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
-                        title={
-                          isFavorite
-                            ? "Remove from favorites"
-                            : "Add to favorites"
-                        }
-                      >
-                        {isFavorite ? (
-                          <Heart className="w-5 h-5 fill-red-500 text-red-500" />
-                        ) : (
-                          <Heart className="w-5 h-5" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {isFavorite
-                        ? "Remove from favorites"
-                        : "Add to favorites"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFavorite();
+                          }}
+                          className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
+                          title={isFavorite ? "Remove favorite" : "Favorite"}
+                        >
+                          {isFavorite ? (
+                            <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                          ) : (
+                            <Heart className="w-4 h-4" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isFavorite ? "Remove favorite" : "Favorite"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
 
-                {/* Primary action button */}
-                <div onClick={(e) => e.stopPropagation()}>
+                {/* Mobile save/favorite button */}
+                <div className="sm:hidden">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSave();
+                          }}
+                          className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
+                        >
+                          {isSaved ? (
+                            <Bookmark className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                          ) : (
+                            <Bookmark className="w-4 h-4" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isSaved ? "Remove saved" : "Save"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                {/* Primary action */}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 sm:flex-none"
+                >
                   {renderActionButton()}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Interest window info */}
+          {/* Mobile interest window badge */}
           {(gig.acceptInterestStartTime || gig.acceptInterestEndTime) && (
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+            <div className="sm:hidden mt-2 flex items-center gap-2 text-xs text-gray-500">
               <Clock className="w-3 h-3" />
-              <span>{interestWindowStatus.message}</span>
+              <span className="truncate">{interestWindowStatus.message}</span>
             </div>
           )}
         </div>
@@ -1277,7 +1831,7 @@ const GigCard: React.FC<GigCardProps> = ({
           <DialogHeader>
             <DialogTitle>Show Interest in "{gig.title}"</DialogTitle>
             <DialogDescription>
-              Add an optional note to introduce yourself to the client.
+              Add an optional note to introduce yourself.
             </DialogDescription>
           </DialogHeader>
 
@@ -1299,20 +1853,14 @@ const GigCard: React.FC<GigCardProps> = ({
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {interestWindowStatus.message}
                 </p>
-                {gig.acceptInterestEndTime && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Closes:{" "}
-                    {new Date(gig.acceptInterestEndTime).toLocaleString()}
-                  </p>
-                )}
               </div>
             )}
 
-            {/* Available slots info */}
+            {/* Available slots */}
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Available Slots: {availableSlots} / {maxSlots}
+                  Available: {availableSlots}/{maxSlots}
                 </span>
                 {availableSlots <= 2 && (
                   <Badge variant="destructive" className="animate-pulse">
@@ -1320,39 +1868,34 @@ const GigCard: React.FC<GigCardProps> = ({
                   </Badge>
                 )}
               </div>
-              {userPosition && (
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  Your current position: #{userPosition}
-                </p>
-              )}
             </div>
 
-            {/* Notes input */}
+            {/* Notes */}
             <div>
-              <label className="text-sm font-medium mb-2 block">
-                Notes (Optional)
-              </label>
+              <label className="text-sm font-medium mb-2 block">Notes</label>
               <Textarea
                 value={interestNotes}
                 onChange={(e) => setInterestNotes(e.target.value)}
                 placeholder="Tell the client why you're interested..."
-                className="min-h-[100px]"
+                className="min-h-[80px]"
               />
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setShowInterestModal(false)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleShowInterestWithNotes}
               disabled={loading}
-              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
+              className="w-full sm:w-auto"
+              style={getButtonStyle("default")}
             >
               {loading ? (
                 <>
@@ -1374,19 +1917,18 @@ const GigCard: React.FC<GigCardProps> = ({
       <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Join Band as Musician</DialogTitle>
+            <DialogTitle>Join Band</DialogTitle>
             <DialogDescription>
-              Join the band "{gig.title}" by selecting your role and entering
-              your name.
+              Select your role and enter your name.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Available slots info */}
+            {/* Available slots */}
             <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                  Available Spots: {availableSlots} / {maxSlots}
+                  Available: {availableSlots}/{maxSlots}
                 </span>
                 {availableSlots <= 2 && (
                   <Badge variant="destructive" className="animate-pulse">
@@ -1396,32 +1938,28 @@ const GigCard: React.FC<GigCardProps> = ({
               </div>
             </div>
 
-            {/* Member name */}
+            {/* Name */}
             <div>
               <label className="text-sm font-medium mb-2 block">
-                Your Display Name
+                Your Name
               </label>
               <Input
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="Enter your name"
-                className="w-full"
               />
             </div>
 
             {/* Role selection */}
             {gig.bandCategory && gig.bandCategory.length > 0 && (
               <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Select Role
-                </label>
+                <label className="text-sm font-medium mb-2 block">Role</label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a role" />
                   </SelectTrigger>
                   <SelectContent>
                     {gig.bandCategory.map((role, index) => {
-                      const roleAction = handleBandAction(index);
                       const isFull = role.filledSlots >= role.maxSlots;
                       const isBooked = role.bookedUsers.includes(
                         currentUserId!
@@ -1439,7 +1977,7 @@ const GigCard: React.FC<GigCardProps> = ({
                           <div className="flex items-center justify-between">
                             <span>{role.role}</span>
                             <span className="text-xs text-gray-500">
-                              {role.filledSlots}/{role.maxSlots} slots
+                              {role.filledSlots}/{role.maxSlots}
                               {isBooked && " • Booked"}
                               {hasApplied && !isBooked && " • Applied"}
                             </span>
@@ -1452,13 +1990,13 @@ const GigCard: React.FC<GigCardProps> = ({
               </div>
             )}
 
-            {/* Current band members */}
+            {/* Current members */}
             {bandMembers.length > 0 && (
               <div>
                 <label className="text-sm font-medium mb-2 block">
-                  Current Band Members
+                  Current Members
                 </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
+                <div className="space-y-2 max-h-32 overflow-y-auto">
                   {bandMembers.map((member, index) => (
                     <div
                       key={index}
@@ -1467,7 +2005,7 @@ const GigCard: React.FC<GigCardProps> = ({
                       <div className="flex items-center gap-2">
                         <Avatar className="w-8 h-8">
                           <AvatarFallback>
-                            {member.name?.charAt(0) || "M"}
+                            {member.name?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -1485,11 +2023,12 @@ const GigCard: React.FC<GigCardProps> = ({
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setShowBandJoinModal(false)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
@@ -1510,17 +2049,18 @@ const GigCard: React.FC<GigCardProps> = ({
               disabled={
                 loading || !selectedRole || !memberName.trim() || bandIsFull
               }
-              className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+              className="w-full sm:w-auto"
+              style={getButtonStyles("default")}
             >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Processing...
+                  Applying...
                 </>
               ) : (
                 <>
                   <Music className="w-4 h-4 mr-2" />
-                  Apply for Role
+                  Apply
                 </>
               )}
             </Button>

@@ -514,3 +514,45 @@ export const getFeatureFlagsForUser = query({
     return filteredFlags;
   },
 });
+export const updateFeatureFlag = mutation({
+  args: {
+    flagId: v.string(),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    targetUsers: v.optional(
+      v.union(
+        v.literal("all"),
+        v.literal("free"),
+        v.literal("premium"),
+        v.literal("pro"),
+        v.literal("elite")
+      )
+    ),
+    targetRoles: v.optional(v.array(v.string())),
+    rolloutPercentage: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { flagId, ...updates } = args;
+
+    console.log("🎯 [FEATURE FLAG UPDATE] Received:", { flagId, updates });
+
+    // Get all flags and find the matching one
+    const allFlags = await ctx.db.query("featureFlags").collect();
+    const existingFlag = allFlags.find((flag) => flag.id === flagId);
+
+    if (!existingFlag) {
+      throw new Error(`Feature flag ${flagId} not found`);
+    }
+
+    console.log("📋 [FEATURE FLAG UPDATE] Existing flag:", existingFlag);
+    console.log("🔄 [FEATURE FLAG UPDATE] Applying updates:", updates);
+
+    await ctx.db.patch(existingFlag._id, {
+      ...updates,
+      updatedAt: Date.now(),
+    });
+
+    console.log("✅ [FEATURE FLAG UPDATE] Successfully updated");
+  },
+});
+// convex/featureFlags.ts

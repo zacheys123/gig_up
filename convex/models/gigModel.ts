@@ -144,6 +144,8 @@ export const gigModel = defineTable({
   time: v.object({
     start: v.string(),
     end: v.string(),
+    durationFrom: v.optional(v.string()), // Add this
+    durationTo: v.optional(v.string()), // Add this
   }),
 
   // Status flags

@@ -1182,6 +1182,8 @@ export const createGig = mutation({
     time: v.object({
       start: v.string(),
       end: v.string(),
+      durationFrom: v.optional(v.string()),
+      durationTo: v.optional(v.string()),
     }),
     logo: v.string(),
     description: v.optional(v.string()),
@@ -1234,6 +1236,8 @@ export const createGig = mutation({
     negotiable: v.optional(v.boolean()),
     acceptInterestStartTime: v.optional(v.number()),
     acceptInterestEndTime: v.optional(v.number()),
+    durationFrom: v.optional(v.string()), // Add this
+    durationTo: v.optional(v.string()), // Add this
   },
   handler: async (ctx, args) => {
     const {
@@ -1469,7 +1473,16 @@ export const createGig = mutation({
     // UPDATE USER'S WEEKLY GIG COUNT
     // ============================================
 
-    const updateWeeklyGigCount = (currentWeeklyData: any) => {
+    // Add this type definition at the top of your file (after imports)
+    type WeeklyGigData = {
+      count: number;
+      weekStart: number;
+    };
+
+    // Update the updateWeeklyGigCount function with explicit typing
+    const updateWeeklyGigCount = (
+      currentWeeklyData: WeeklyGigData | null
+    ): WeeklyGigData => {
       // Get current week start (Monday)
       const now = new Date();
       const currentWeekStart = new Date(now);
@@ -1498,7 +1511,9 @@ export const createGig = mutation({
     };
 
     // Update user's weekly gig count
-    const updatedWeeklyData = updateWeeklyGigCount(user.gigsPostedThisWeek);
+    const updatedWeeklyData = updateWeeklyGigCount(
+      user.gigsPostedThisWeek as WeeklyGigData | null
+    );
 
     // Update user stats
     await ctx.db.patch(user._id, {

@@ -829,11 +829,12 @@ export const AllGigs = ({ user }: { user: any }) => {
               )}
               {allGigs.length === 0 && (
                 <Button
-                  onClick={() => router.push("/post-gig")}
+                  onClick={() => router.push("/hub/gigs?tab=invites")}
                   className="gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
                 >
                   <Zap className="w-4 h-4" />
-                  Post Your First Gig
+                  No Gigs Yet - Check your Notifications maybe you have
+                  instantGig!!!!!
                 </Button>
               )}
             </motion.div>
