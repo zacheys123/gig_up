@@ -345,5 +345,54 @@ export default defineSchema({
   // })
   //   .index("by_user", ["userId"])
   //   .index("by_eligibility", ["canCreateBand"]),
+  // In your Convex schema.ts
+
+  secretKeyResets: defineTable({
+    gigId: v.id("gigs"),
+    userId: v.id("users"),
+    resetToken: v.string(),
+    resetCode: v.string(),
+    email: v.string(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    used: v.boolean(),
+  })
+    .index("by_gig_and_user", ["gigId", "userId"])
+    .index("by_token", ["resetToken"]),
+  securityLogs: defineTable({
+    gigId: v.id("gigs"),
+    userId: v.id("users"),
+    action: v.string(),
+    timestamp: v.number(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    success: v.boolean(),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_gig", ["gigId"])
+    .index("by_user", ["userId"])
+    .index("by_timestamp", ["timestamp"]),emailLogs : defineTable({
+  type: v.union(
+    v.literal("secret_key_reset"),
+    v.literal("verification"),
+    v.literal("booking_notification"),
+    v.literal("welcome"),
+    v.literal("password_reset")
+  ),
+  toEmail: v.string(),
+  gigId: v.optional(v.id("gigs")),
+  userId: v.optional(v.id("users")),
+  bookingId: v.optional(v.id("bookings")),
+  subject: v.string(),
+  sentAt: v.number(),
+  status: v.union(v.literal("sent"), v.literal("failed"), v.literal("pending")),
+  error: v.optional(v.string()),
+  metadata: v.optional(v.any()),
+})
+  .index("by_user", ["userId"])
+  .index("by_gig", ["gigId"])
+  .index("by_type", ["type"])
+  .index("by_status", ["status"])
+  .index("by_sent_at", ["sentAt"])
   reports: reports,
 });

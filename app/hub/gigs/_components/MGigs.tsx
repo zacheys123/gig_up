@@ -162,7 +162,7 @@ export const MyGigs = ({ user }: { user: any }) => {
   };
 
   const handleCreateGig = () => {
-    router.push("/post-gig");
+    router.push("/hub/gigs/client/create");
   };
 
   const handleClearSearch = () => {

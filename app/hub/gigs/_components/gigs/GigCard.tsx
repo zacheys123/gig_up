@@ -437,13 +437,13 @@ const GigCard: React.FC<GigCardProps> = ({
             label: "Edit",
             variant: "outline",
             action: () => {
-              router.push(`/gigs/edit/${gig._id}`);
+              router.push(`/hub/gigs/client/edit/${gig._id}`);
               return Promise.resolve();
             },
             disabled: false,
             routing: {
               forMusician: "",
-              forClient: `/gigs/edit/${gig._id}`,
+              forClient: `/hub/gigs/client/edit/${gig._id}`,
               message: "Edit gig",
             },
             icon: <Edit className="w-4 h-4" />, // Add icon prop
@@ -999,7 +999,7 @@ const GigCard: React.FC<GigCardProps> = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/gigs/edit/${gig._id}`);
+              router.push(`/hub/gigs/client/edit/${gig._id}`);
             }}
             className={clsx(
               responsiveButtonClasses,
@@ -1081,16 +1081,18 @@ const GigCard: React.FC<GigCardProps> = ({
               "text-xs sm:text-sm"
             )}
             style={getButtonStyle("outline")}
-            onMouseEnter={(e) => {
-              if (!loading) {
+            onMouseLeave={(e) => {
+              if (!loading && !bandIsFull) {
                 e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}20`
-                  : undefined;
+                  ? `${gig.backgroundColor}40`
+                  : "";
               }
             }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = "transparent";
+            onMouseEnter={(e) => {
+              if (!loading && !bandIsFull) {
+                e.currentTarget.style.backgroundColor = gig.backgroundColor
+                  ? `${gig.backgroundColor}60`
+                  : ""; // Use empty string instead of undefined
               }
             }}
           >
@@ -1128,17 +1130,15 @@ const GigCard: React.FC<GigCardProps> = ({
           )}
           style={getButtonStyle("default")}
           onMouseEnter={(e) => {
-            if (!loading && !isFull) {
-              e.currentTarget.style.backgroundColor = gig.backgroundColor
-                ? `${gig.backgroundColor}60`
-                : undefined;
+            if (gig.backgroundColor) {
+              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
             }
           }}
           onMouseLeave={(e) => {
-            if (!loading && !isFull) {
-              e.currentTarget.style.backgroundColor = gig.backgroundColor
-                ? `${gig.backgroundColor}40`
-                : undefined;
+            if (gig.backgroundColor) {
+              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+            } else {
+              e.currentTarget.style.backgroundColor = "";
             }
           }}
         >
@@ -1189,14 +1189,16 @@ const GigCard: React.FC<GigCardProps> = ({
               )}
               style={getButtonStyle("default")}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}60`
-                  : undefined;
+                if (gig.backgroundColor) {
+                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}40`
-                  : undefined;
+                if (gig.backgroundColor) {
+                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+                } else {
+                  e.currentTarget.style.backgroundColor = "";
+                }
               }}
             >
               <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -1220,9 +1222,9 @@ const GigCard: React.FC<GigCardProps> = ({
               )}
               style={getButtonStyle("outline")}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}20`
-                  : undefined;
+                if (gig.backgroundColor) {
+                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
@@ -1239,7 +1241,7 @@ const GigCard: React.FC<GigCardProps> = ({
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/gigs/edit/${gig._id}`);
+                router.push(`/hub/gigs/client/edit/${gig._id}`);
               }}
               variant="outline"
               size="sm"
@@ -1250,9 +1252,9 @@ const GigCard: React.FC<GigCardProps> = ({
               )}
               style={getButtonStyle("outline")}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}20`
-                  : undefined;
+                if (gig.backgroundColor) {
+                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
@@ -1279,17 +1281,15 @@ const GigCard: React.FC<GigCardProps> = ({
             disabled={loading}
             style={getButtonStyle("secondary")}
             onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}30`
-                  : undefined;
+              if (gig.backgroundColor) {
+                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
               }
             }}
             onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}20`
-                  : undefined;
+              if (gig.backgroundColor) {
+                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
+              } else {
+                e.currentTarget.style.backgroundColor = "";
               }
             }}
           >
@@ -1385,17 +1385,13 @@ const GigCard: React.FC<GigCardProps> = ({
           )}
           style={getButtonStyle("default")}
           onMouseEnter={(e) => {
-            if (!loading && !bandIsFull) {
-              e.currentTarget.style.backgroundColor = gig.backgroundColor
-                ? `${gig.backgroundColor}60`
-                : undefined;
+            if (!loading && !bandIsFull && gig.backgroundColor) {
+              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}60`;
             }
           }}
           onMouseLeave={(e) => {
-            if (!loading && !bandIsFull) {
-              e.currentTarget.style.backgroundColor = gig.backgroundColor
-                ? `${gig.backgroundColor}40`
-                : undefined;
+            if (!loading && !bandIsFull && gig.backgroundColor) {
+              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
             }
           }}
         >
@@ -1895,7 +1891,7 @@ const GigCard: React.FC<GigCardProps> = ({
               onClick={handleShowInterestWithNotes}
               disabled={loading}
               className="w-full sm:w-auto"
-              style={getButtonStyle("default")}
+              style={getButtonStyles("default")}
             >
               {loading ? (
                 <>
