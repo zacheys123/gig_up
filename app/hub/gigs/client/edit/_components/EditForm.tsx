@@ -1,13 +1,7 @@
+// EditGigForm component with full themig
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-  Suspense,
-} from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,44 +16,18 @@ import {
 import {
   ArrowLeft,
   Calendar,
-  Clock,
   MapPin,
   DollarSign,
-  Users,
-  Music,
-  Mic,
-  Volume2,
   Save,
-  X,
-  Phone,
-  Type,
-  FileText,
-  Briefcase,
-  ChevronDown,
-  ChevronUp,
+  Trash2,
+  Shield,
+  History,
+  Loader2,
+  AlertCircle,
+  Palette,
   Eye,
   EyeOff,
-  Guitar,
-  Zap,
-  Palette,
-  Tag,
-  Shield,
-  Star,
-  TrendingUp,
-  CheckCircle,
-  AlertCircle,
-  Plus,
-  Trash2,
-  Music as MusicIcon,
-  Drum,
-  Piano,
-  Search,
-  Check,
-  Info,
-  Edit,
-  Loader2,
-  History,
-  RefreshCw,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -70,27 +38,12 @@ import { toast } from "sonner";
 import { fileupload, MinimalUser } from "@/hooks/fileUpload";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-
-// Types
-import {
-  BandRoleInput,
-  BusinessCategory,
-  CategoryVisibility,
-  CustomProps,
-  TalentType,
-  UserInfo,
-} from "@/types/gig";
-
-// Convex
+import { CustomProps } from "@/types/gig"; // Add this imp
+import { BandRoleInput, BusinessCategory } from "@/types/gig";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
-// Custom hooks and components
-import { useNetworkStatus } from "@/hooks/useNetwork";
-
-import { GiTrumpet, GiViolin } from "react-icons/gi";
-import { prepareGigDataForConvex } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -104,11 +57,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { UpdateGigParams, useGigUpdate } from "@/lib/gigUpdates";
 
-// Memoized components
+// Memoized ErrorMessage component
 const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
   if (!error) return null;
-
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
@@ -122,6 +75,7 @@ const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
 });
 ErrorMessage.displayName = "ErrorMessage";
 
+// Memoized Input component
 const MemoizedInput = React.memo(
   ({
     value,
@@ -148,6 +102,7 @@ const MemoizedInput = React.memo(
     icon?: any;
     [key: string]: any;
   }) => {
+    const { colors } = useThemeColors();
     return (
       <div>
         <div className="relative">
@@ -171,7 +126,8 @@ const MemoizedInput = React.memo(
               required ? "pr-10" : "",
               "py-3 rounded-xl border-2 transition-all",
               "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-              error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
+              error ? "border-red-500" : `${colors.border}`,
+              `${colors.background} ${colors.text}`,
               className
             )}
             {...props}
@@ -184,6 +140,7 @@ const MemoizedInput = React.memo(
 );
 MemoizedInput.displayName = "MemoizedInput";
 
+// Memoized Textarea component
 const MemoizedTextarea = React.memo(
   ({
     value,
@@ -206,6 +163,7 @@ const MemoizedTextarea = React.memo(
     rows?: number;
     [key: string]: any;
   }) => {
+    const { colors } = useThemeColors();
     return (
       <div>
         <Textarea
@@ -218,7 +176,8 @@ const MemoizedTextarea = React.memo(
           className={cn(
             "rounded-xl border-2 resize-none transition-all",
             "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-            error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
+            error ? "border-red-500" : `${colors.border}`,
+            `${colors.background} ${colors.text}`,
             className
           )}
           {...props}
@@ -230,26 +189,32 @@ const MemoizedTextarea = React.memo(
 );
 MemoizedTextarea.displayName = "MemoizedTextarea";
 
+// HistoryView component
 const HistoryView = React.memo(({ gig }: { gig: any }) => {
+  const { colors } = useThemeColors();
+
   if (!gig.bookingHistory || gig.bookingHistory.length === 0) {
     return (
       <div className="text-center py-8">
         <History className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-        <p className="text-gray-500 dark:text-gray-400">
-          No booking history yet
-        </p>
+        <p className={colors.textMuted}>No booking history yet</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold mb-4">Booking History</h3>
+      <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
+        Booking History
+      </h3>
       <div className="space-y-3">
         {gig.bookingHistory
           .sort((a: any, b: any) => b.timestamp - a.timestamp)
           .map((entry: any, index: number) => (
-            <Card key={index} className="overflow-hidden">
+            <Card
+              key={index}
+              className={`overflow-hidden ${colors.cardBorder}`}
+            >
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
@@ -264,7 +229,7 @@ const HistoryView = React.memo(({ gig }: { gig: any }) => {
                     >
                       {entry.status}
                     </Badge>
-                    <span className="text-sm text-gray-500">
+                    <span className={`text-sm ${colors.textMuted}`}>
                       {new Date(entry.timestamp).toLocaleString()}
                     </span>
                   </div>
@@ -272,9 +237,9 @@ const HistoryView = React.memo(({ gig }: { gig: any }) => {
                     <Badge variant="secondary">{entry.userRole}</Badge>
                   )}
                 </div>
-                <p className="text-sm">{entry.notes}</p>
+                <p className={`text-sm ${colors.text}`}>{entry.notes}</p>
                 {entry.agreedPrice && (
-                  <p className="text-sm font-medium mt-2">
+                  <p className={`text-sm font-medium mt-2 ${colors.text}`}>
                     Price: {entry.currency || "$"}
                     {entry.agreedPrice}
                   </p>
@@ -288,14 +253,13 @@ const HistoryView = React.memo(({ gig }: { gig: any }) => {
 });
 HistoryView.displayName = "HistoryView";
 
+// Main EditGigForm component
 export default function EditGigForm() {
   const router = useRouter();
   const params = useParams();
   const gigId = params.id as Id<"gigs">;
-
   const { colors } = useThemeColors();
   const { user } = useCurrentUser();
-  const isOnline = useNetworkStatus();
 
   // State
   const [isLoading, setIsLoading] = useState(true);
@@ -303,36 +267,25 @@ export default function EditGigForm() {
   const [formValues, setFormValues] = useState<any>(null);
   const [originalValues, setOriginalValues] = useState<any>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showTalentModal, setShowTalentModal] = useState(false);
-  const [activeTalentType, setActiveTalentType] = useState<TalentType>(null);
-  const [showCustomization, setShowCustomization] = useState(false);
-  const [showBandSetupModal, setShowBandSetupModal] = useState(false);
-  const [gigcustom, setGigCustom] = useState<CustomProps>({
-    fontColor: "",
-    font: "",
-    backgroundColor: "",
-  });
   const [imageUrl, setUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [bandRoles, setBandRoles] = useState<BandRoleInput[]>([]);
   const [bussinesscat, setBussinessCategory] = useState<BusinessCategory>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [schedulingProcedure, setSchedulingProcedure] = useState({
-    type: "",
-    date: new Date(),
-  });
   const [hasChanges, setHasChanges] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [secretpass, setSecretPass] = useState<boolean>(false);
-
-  // Convex queries and mutations
-  const gig = useQuery(api.controllers.gigs.getGigById, {
-    gigId,
+  // State - ADD THIS SECTION
+  const [gigcustom, setGigCustom] = useState<CustomProps>({
+    fontColor: "",
+    font: "",
+    backgroundColor: "",
   });
+  // Convex queries and mutations
+  const gig = useQuery(api.controllers.gigs.getGigById, { gigId });
 
-  const updateGig = useMutation(api.controllers.gigs.updateGig);
   const deleteGig = useMutation(api.controllers.gigs.deleteGig);
 
   // Check if user is the owner
@@ -390,22 +343,24 @@ export default function EditGigForm() {
       setFormValues(formattedValues);
       setOriginalValues(formattedValues);
       setBussinessCategory(gig.bussinesscat as BusinessCategory);
+      setUrl(gig.logo || "");
+
+      // ADD THIS: Initialize gigcustom state
       setGigCustom({
         fontColor: gig.fontColor || "",
         font: gig.font || "",
         backgroundColor: gig.backgroundColor || "",
       });
-      setUrl(gig.logo || "");
+
       const bandRolesFromGig =
         gig.bandCategory?.map((role: any) => ({
           role: role.role,
           maxSlots: role.maxSlots,
-          requiredSkills: role.requiredSkills || [], // Default to empty array
+          requiredSkills: role.requiredSkills || [],
           description: role.description,
           price: role.price,
           currency: role.currency,
           negotiable: role.negotiable,
-          // Don't include fields that are not in BandRoleInput
         })) || [];
 
       setBandRoles(bandRolesFromGig);
@@ -417,24 +372,22 @@ export default function EditGigForm() {
       setIsLoading(false);
     }
   }, [gig]);
-
   // Check for changes
   useEffect(() => {
-    if (formValues && originalValues) {
+    if (formValues && originalValues && gig) {
       const hasChanges =
         JSON.stringify(formValues) !== JSON.stringify(originalValues) ||
         JSON.stringify(gigcustom) !==
           JSON.stringify({
-            fontColor: gig?.fontColor || "",
-            font: gig?.font || "",
-            backgroundColor: gig?.backgroundColor || "",
+            fontColor: gig.fontColor || "",
+            font: gig.font || "",
+            backgroundColor: gig.backgroundColor || "",
           }) ||
         JSON.stringify(bandRoles) !== JSON.stringify(gig?.bandCategory || []);
 
       setHasChanges(hasChanges);
     }
   }, [formValues, originalValues, gigcustom, bandRoles, gig]);
-
   // File upload handler
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -536,39 +489,6 @@ export default function EditGigForm() {
     setHasChanges(true);
   }, []);
 
-  // Band setup handlers
-  const handleBandSetupSubmit = useCallback((roles: BandRoleInput[]) => {
-    setBandRoles(roles);
-    setHasChanges(true);
-    toast.success(
-      `Band setup updated! ${roles.length} role${roles.length !== 1 ? "s" : ""} selected.`
-    );
-  }, []);
-
-  // Talent modal handlers
-  const handleTalentSubmit = useCallback(
-    (data: any) => {
-      setFormValues((prev: any) => ({
-        ...prev,
-        ...(activeTalentType === "mc" && {
-          mcType: data.mcType,
-          mcLanguages: data.mcLanguages,
-        }),
-        ...(activeTalentType === "dj" && {
-          djGenre: data.djGenre,
-          djEquipment: data.djEquipment,
-        }),
-        ...(activeTalentType === "vocalist" && {
-          vocalistGenre: data.vocalistGenre,
-        }),
-      }));
-      setShowTalentModal(false);
-      setHasChanges(true);
-      toast.success("Talent details updated!");
-    },
-    [activeTalentType]
-  );
-
   // Date selection
   const handleDate = useCallback((date: Date | null) => {
     if (date) {
@@ -623,97 +543,7 @@ export default function EditGigForm() {
     return Object.keys(errors).length === 0;
   }, [formValues]);
 
-  // Handle save
-  const handleSave = useCallback(async () => {
-    if (!validateForm()) {
-      toast.error("Please fix all errors before saving");
-      return;
-    }
-
-    if (!user?._id || !gigId) {
-      toast.error("Authentication error");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      // Prepare update data
-      const updateData = {
-        gigId,
-        title: formValues.title,
-        description: formValues.description,
-        phone: formValues.phoneNo,
-        price: formValues.price ? parseFloat(formValues.price) : undefined,
-        category: formValues.category,
-        location: formValues.location,
-        secret: formValues.secret,
-        bussinesscat: formValues.bussinesscat,
-        otherTimeline: formValues.otherTimeline,
-        gigtimeline: formValues.gigtimeline,
-        day: formValues.day,
-        date: formValues.date ? new Date(formValues.date).getTime() : gig.date,
-        pricerange: formValues.pricerange,
-        currency: formValues.currency,
-        negotiable: formValues.negotiable,
-        mcType: formValues.mcType,
-        mcLanguages: formValues.mcLanguages,
-        djGenre: formValues.djGenre,
-        djEquipment: formValues.djEquipment,
-        vocalistGenre: formValues.vocalistGenre,
-        acceptInterestEndTime: formValues.acceptInterestEndTime
-          ? new Date(formValues.acceptInterestEndTime).getTime()
-          : undefined,
-        acceptInterestStartTime: formValues.acceptInterestStartTime
-          ? new Date(formValues.acceptInterestStartTime).getTime()
-          : undefined,
-        maxSlots: formValues.maxSlots
-          ? parseInt(formValues.maxSlots)
-          : undefined,
-        font: gigcustom.font,
-        fontColor: gigcustom.fontColor,
-        backgroundColor: gigcustom.backgroundColor,
-        logo: imageUrl,
-        bandCategory: bussinesscat === "other" ? bandRoles : undefined,
-        time: {
-          start: formValues.start,
-          end: formValues.end,
-          durationFrom: formValues.durationfrom,
-          durationTo: formValues.durationto,
-        },
-      };
-
-      await updateGig(updateData);
-
-      // Update original values
-      setOriginalValues(formValues);
-      setHasChanges(false);
-
-      toast.success("Gig updated successfully!");
-      setShowSaveConfirm(false);
-
-      // Refresh the page data
-      setTimeout(() => {
-        router.refresh();
-      }, 1000);
-    } catch (error) {
-      console.error("Error updating gig:", error);
-      toast.error("Failed to update gig. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [
-    formValues,
-    gigcustom,
-    imageUrl,
-    bandRoles,
-    bussinesscat,
-    user,
-    gigId,
-    validateForm,
-    updateGig,
-    router,
-    gig?.date,
-  ]);
+  const { updateGig, updateGigStatus, updateGigVisibility } = useGigUpdate();
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -744,44 +574,170 @@ export default function EditGigForm() {
     }
   }, [hasChanges, router]);
 
-  // Confirm cancel
+  const handleSave = useCallback(async () => {
+    if (!validateForm()) {
+      toast.error("Please fix all errors before saving");
+      return;
+    }
+
+    if (!user?._id || !gigId) {
+      toast.error("Authentication error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Format band roles properly before sending
+      const formattedBandRoles =
+        bussinesscat === "other" && bandRoles.length > 0
+          ? bandRoles.map((role) => ({
+              role: role.role,
+              maxSlots: role.maxSlots || 1,
+              filledSlots: role.filledSlots || 0,
+              applicants: role.applicants || [],
+              bookedUsers: role.bookedUsers || [],
+              requiredSkills: role.requiredSkills || [],
+              description: role.description || "",
+              isLocked: role.isLocked || false,
+              price: role.price !== undefined ? role.price : null,
+              currency: role.currency || "KES",
+              negotiable:
+                role.negotiable !== undefined ? role.negotiable : true,
+              bookedPrice:
+                role.bookedPrice !== undefined ? role.bookedPrice : null,
+            }))
+          : undefined; // Send undefined if not "other" category
+
+      // Prepare update data - ADD gigcustom fields
+      const updateData = {
+        gigId,
+        clerkId: user.clerkId,
+        title: formValues.title,
+        description: formValues.description,
+        phone: formValues.phoneNo || undefined,
+        price: formValues.price ? parseFloat(formValues.price) : undefined,
+        category: formValues.category || undefined,
+        location: formValues.location,
+        secret: formValues.secret || undefined,
+        bussinesscat: formValues.bussinesscat,
+        otherTimeline: formValues.otherTimeline || undefined,
+        gigtimeline: formValues.gigtimeline || undefined,
+        day: formValues.day || undefined,
+        date: formValues.date ? new Date(formValues.date).getTime() : undefined,
+        pricerange: formValues.pricerange || undefined,
+        currency: formValues.currency || "KES",
+        negotiable: formValues.negotiable ?? true,
+        mcType: formValues.mcType || undefined,
+        mcLanguages: formValues.mcLanguages || undefined,
+        djGenre: formValues.djGenre || undefined,
+        djEquipment: formValues.djEquipment || undefined,
+        vocalistGenre: formValues.vocalistGenre || undefined,
+        acceptInterestEndTime: formValues.acceptInterestEndTime
+          ? new Date(formValues.acceptInterestEndTime).getTime()
+          : undefined,
+        acceptInterestStartTime: formValues.acceptInterestStartTime
+          ? new Date(formValues.acceptInterestStartTime).getTime()
+          : undefined,
+        maxSlots: formValues.maxSlots
+          ? parseInt(formValues.maxSlots)
+          : undefined,
+        // ADD THESE: gigcustom fields
+        font: gigcustom.font || undefined,
+        fontColor: gigcustom.fontColor || undefined,
+        backgroundColor: gigcustom.backgroundColor || undefined,
+        logo: imageUrl || undefined,
+        bandCategory: formattedBandRoles,
+        time: {
+          start: formValues.start,
+          end: formValues.end,
+          durationFrom: formValues.durationfrom,
+          durationTo: formValues.durationto,
+        },
+      };
+
+      // Remove undefined values
+      const cleanUpdateData = Object.fromEntries(
+        Object.entries(updateData).filter(([_, v]) => v !== undefined)
+      );
+
+      // Use the helper utility
+      const result = await updateGig(cleanUpdateData as UpdateGigParams);
+
+      // Update original values
+      setOriginalValues(formValues);
+      setHasChanges(false);
+
+      toast.success("Gig updated successfully!");
+      setShowSaveConfirm(false);
+
+      // Refresh the page data
+      setTimeout(() => {
+        router.refresh();
+      }, 1000);
+
+      return result;
+    } catch (error) {
+      console.error("Error updating gig:", error);
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    formValues,
+    gigcustom, // ADD THIS dependency
+    imageUrl,
+    bandRoles,
+    bussinesscat,
+    user,
+    gigId,
+    validateForm,
+    updateGig,
+    router,
+  ]);
+
+  // Confirm cancel - UPDATE THIS function
   const confirmCancel = useCallback(() => {
     if (formValues && originalValues) {
       setFormValues(originalValues);
     }
-    setGigCustom({
-      fontColor: gig?.fontColor || "",
-      font: gig?.font || "",
-      backgroundColor: gig?.backgroundColor || "",
-    });
     setUrl(gig?.logo || "");
+
+    // ADD THIS: Reset gigcustom state
+    if (gig) {
+      setGigCustom({
+        fontColor: gig.fontColor || "",
+        font: gig.font || "",
+        backgroundColor: gig.backgroundColor || "",
+      });
+    }
+
     const bandRolesFromGig =
-      gig.bandCategory?.map((role: any) => ({
-        role: role.role,
-        maxSlots: role.maxSlots,
-        requiredSkills: role.requiredSkills || [], // Default to empty array
-        description: role.description,
-        price: role.price,
-        currency: role.currency,
-        negotiable: role.negotiable,
-        // Don't include fields that are not in BandRoleInput
-      })) || [];
+      (gig &&
+        gig?.bandCategory?.map((role: any) => ({
+          role: role.role,
+          maxSlots: role.maxSlots,
+          requiredSkills: role.requiredSkills || [],
+          description: role.description,
+          price: role.price,
+          currency: role.currency,
+          negotiable: role.negotiable,
+        }))) ||
+      [];
 
     setBandRoles(bandRolesFromGig);
     setHasChanges(false);
     setShowCancelConfirm(false);
     router.back();
   }, [formValues, originalValues, gig, router]);
-
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div
+        className={`flex items-center justify-center min-h-screen ${colors.background}`}
+      >
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
-            Loading gig data...
-          </p>
+          <p className={colors.textMuted}>Loading gig data...</p>
         </div>
       </div>
     );
@@ -790,11 +746,15 @@ export default function EditGigForm() {
   // Not found
   if (!gig) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div
+        className={`flex items-center justify-center min-h-screen ${colors.background}`}
+      >
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Gig Not Found</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <h2 className={`text-2xl font-bold mb-2 ${colors.text}`}>
+            Gig Not Found
+          </h2>
+          <p className={`${colors.textMuted} mb-6`}>
             The gig you're trying to edit doesn't exist or you don't have
             permission to edit it.
           </p>
@@ -807,11 +767,15 @@ export default function EditGigForm() {
   // Not owner
   if (!isOwner) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div
+        className={`flex items-center justify-center min-h-screen ${colors.background}`}
+      >
         <div className="text-center">
           <Shield className="w-12 h-12 text-orange-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <h2 className={`text-2xl font-bold mb-2 ${colors.text}`}>
+            Access Denied
+          </h2>
+          <p className={`${colors.textMuted} mb-6`}>
             You don't have permission to edit this gig.
           </p>
           <Button onClick={() => router.push("/hub/gigs")}>Back to Gigs</Button>
@@ -821,9 +785,11 @@ export default function EditGigForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-black">
+    <div className={`min-h-screen ${colors.background}`}>
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b">
+      <div
+        className={`sticky top-0 z-40 ${colors.navBackground}/80 backdrop-blur-sm ${colors.navBorder} border-b`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -832,10 +798,10 @@ export default function EditGigForm() {
                 Back
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">Edit Gig</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {gig.title}
-                </p>
+                <h1 className={`text-2xl font-bold ${colors.text}`}>
+                  Edit Gig
+                </h1>
+                <p className={`text-sm ${colors.textMuted}`}>{gig.title}</p>
               </div>
             </div>
 
@@ -879,21 +845,24 @@ export default function EditGigForm() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 mb-8">
+          <TabsList
+            className={`grid grid-cols-4 mb-8 ${colors.backgroundSecondary}`}
+          >
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="customize">Customize</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
-
           {/* Basic Info Tab */}
           <TabsContent value="basic" className="space-y-6">
-            <Card>
+            <Card className={colors.cardBorder}>
               <CardContent className="p-6">
                 <div className="space-y-6">
                   {/* Title */}
                   <div>
-                    <Label htmlFor="title">Title</Label>
+                    <Label htmlFor="title" className={colors.text}>
+                      Title
+                    </Label>
                     <MemoizedInput
                       id="title"
                       value={formValues.title}
@@ -907,7 +876,9 @@ export default function EditGigForm() {
 
                   {/* Description */}
                   <div>
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description" className={colors.text}>
+                      Description
+                    </Label>
                     <MemoizedTextarea
                       id="description"
                       value={formValues.description}
@@ -922,7 +893,9 @@ export default function EditGigForm() {
 
                   {/* Location */}
                   <div>
-                    <Label htmlFor="location">Location</Label>
+                    <Label htmlFor="location" className={colors.text}>
+                      Location
+                    </Label>
                     <MemoizedInput
                       id="location"
                       value={formValues.location}
@@ -937,17 +910,17 @@ export default function EditGigForm() {
 
                   {/* Business Category */}
                   <div>
-                    <Label>Business Category</Label>
+                    <Label className={colors.text}>Business Category</Label>
                     <Select
                       value={bussinesscat || ""}
                       onValueChange={(value) =>
                         handleBussinessChange(value as BusinessCategory)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={colors.border}>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className={colors.background}>
                         <SelectItem value="full">Full Band</SelectItem>
                         <SelectItem value="personal">Individual</SelectItem>
                         <SelectItem value="other">Create Band</SelectItem>
@@ -962,15 +935,14 @@ export default function EditGigForm() {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* Details Tab */}
           <TabsContent value="details" className="space-y-6">
-            <Card>
+            <Card className={colors.cardBorder}>
               <CardContent className="p-6">
                 <div className="space-y-6">
                   {/* Contact Info */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">
+                    <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
                       Contact Information
                     </h3>
                     <MemoizedInput
@@ -984,22 +956,22 @@ export default function EditGigForm() {
 
                   {/* Price Info */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">
+                    <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
                       Price Information
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <Label>Currency</Label>
+                        <Label className={colors.text}>Currency</Label>
                         <Select
                           value={formValues.currency}
                           onValueChange={(value) =>
                             handleSelectChange("currency", value)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={colors.border}>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className={colors.background}>
                             <SelectItem value="USD">USD ($)</SelectItem>
                             <SelectItem value="EUR">EUR (€)</SelectItem>
                             <SelectItem value="GBP">GBP (£)</SelectItem>
@@ -1009,7 +981,7 @@ export default function EditGigForm() {
                         </Select>
                       </div>
                       <div>
-                        <Label>Amount</Label>
+                        <Label className={colors.text}>Amount</Label>
                         <MemoizedInput
                           type="number"
                           value={formValues.price}
@@ -1020,17 +992,17 @@ export default function EditGigForm() {
                         />
                       </div>
                       <div>
-                        <Label>Price Range</Label>
+                        <Label className={colors.text}>Price Range</Label>
                         <Select
                           value={formValues.pricerange}
                           onValueChange={(value) =>
                             handleSelectChange("pricerange", value)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={colors.border}>
                             <SelectValue placeholder="Select range" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className={colors.background}>
                             <SelectItem value="0">Select range</SelectItem>
                             <SelectItem value="hundreds">
                               Hundreds (00)
@@ -1055,20 +1027,22 @@ export default function EditGigForm() {
 
                   {/* Timeline */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Timeline</h3>
+                    <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
+                      Timeline
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>Gig Type</Label>
+                        <Label className={colors.text}>Gig Type</Label>
                         <Select
                           value={formValues.gigtimeline}
                           onValueChange={(value) =>
                             handleSelectChange("gigtimeline", value)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={colors.border}>
                             <SelectValue placeholder="Select timeline" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className={colors.background}>
                             <SelectItem value="once">One-time event</SelectItem>
                             <SelectItem value="weekly">
                               Weekly recurring
@@ -1084,17 +1058,17 @@ export default function EditGigForm() {
                       </div>
                       {formValues.gigtimeline !== "once" && (
                         <div>
-                          <Label>Day of Week</Label>
+                          <Label className={colors.text}>Day of Week</Label>
                           <Select
                             value={formValues.day}
                             onValueChange={(value) =>
                               handleSelectChange("day", value)
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className={colors.border}>
                               <SelectValue placeholder="Select day" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className={colors.background}>
                               <SelectItem value="monday">Monday</SelectItem>
                               <SelectItem value="tuesday">Tuesday</SelectItem>
                               <SelectItem value="wednesday">
@@ -1113,11 +1087,11 @@ export default function EditGigForm() {
 
                     {formValues.gigtimeline === "once" && (
                       <div className="mt-4">
-                        <Label>Event Date</Label>
+                        <Label className={colors.text}>Event Date</Label>
                         <DatePicker
                           selected={selectedDate}
                           onChange={handleDate}
-                          className="w-full px-3 py-2 border rounded-lg"
+                          className={`w-full px-3 py-2 rounded-lg ${colors.border} ${colors.background} ${colors.text}`}
                           placeholderText="Select date"
                           minDate={new Date()}
                         />
@@ -1127,7 +1101,7 @@ export default function EditGigForm() {
 
                     {formValues.gigtimeline === "other" && (
                       <div className="mt-4">
-                        <Label>Custom Timeline</Label>
+                        <Label className={colors.text}>Custom Timeline</Label>
                         <MemoizedInput
                           value={formValues.otherTimeline}
                           onChange={handleInputChange}
@@ -1140,10 +1114,12 @@ export default function EditGigForm() {
 
                   {/* Duration */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Duration</h3>
+                    <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
+                      Duration
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>Start Time</Label>
+                        <Label className={colors.text}>Start Time</Label>
                         <div className="flex gap-2">
                           <MemoizedInput
                             value={formValues.start}
@@ -1157,10 +1133,10 @@ export default function EditGigForm() {
                               handleSelectChange("durationfrom", value)
                             }
                           >
-                            <SelectTrigger className="w-24">
+                            <SelectTrigger className={`w-24 ${colors.border}`}>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className={colors.background}>
                               <SelectItem value="am">AM</SelectItem>
                               <SelectItem value="pm">PM</SelectItem>
                             </SelectContent>
@@ -1168,7 +1144,7 @@ export default function EditGigForm() {
                         </div>
                       </div>
                       <div>
-                        <Label>End Time</Label>
+                        <Label className={colors.text}>End Time</Label>
                         <div className="flex gap-2">
                           <MemoizedInput
                             value={formValues.end}
@@ -1182,10 +1158,10 @@ export default function EditGigForm() {
                               handleSelectChange("durationto", value)
                             }
                           >
-                            <SelectTrigger className="w-24">
+                            <SelectTrigger className={`w-24 ${colors.border}`}>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className={colors.background}>
                               <SelectItem value="am">AM</SelectItem>
                               <SelectItem value="pm">PM</SelectItem>
                             </SelectContent>
@@ -1197,9 +1173,11 @@ export default function EditGigForm() {
 
                   {/* Secret Passphrase */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Security</h3>
+                    <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
+                      Security
+                    </h3>
                     <div>
-                      <Label>Secret Passphrase</Label>
+                      <Label className={colors.text}>Secret Passphrase</Label>
                       <div className="relative">
                         <MemoizedInput
                           type={secretpass ? "text" : "password"}
@@ -1226,8 +1204,8 @@ export default function EditGigForm() {
                   {/* Negotiable */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Price Negotiable</Label>
-                      <p className="text-sm text-gray-500">
+                      <Label className={colors.text}>Price Negotiable</Label>
+                      <p className={`text-sm ${colors.textMuted}`}>
                         Allow applicants to negotiate the price
                       </p>
                     </div>
@@ -1245,7 +1223,7 @@ export default function EditGigForm() {
 
                   {/* Max Slots */}
                   <div>
-                    <Label>Maximum Slots</Label>
+                    <Label className={colors.text}>Maximum Slots</Label>
                     <MemoizedInput
                       type="number"
                       value={formValues.maxSlots?.toString() || "1"}
@@ -1259,54 +1237,59 @@ export default function EditGigForm() {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* Customize Tab */}
+          // Customize Tab - UPDATE to show gigcustom values
           <TabsContent value="customize">
-            <Card>
+            <Card className={colors.cardBorder}>
               <CardContent className="p-6">
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="text-lg font-semibold">
+                      <h3 className={`text-lg font-semibold ${colors.text}`}>
                         Customize Gig Card
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className={`text-sm ${colors.textMuted}`}>
                         Add your branding and styling
                       </p>
                     </div>
-                    <Button
-                      onClick={() => setShowCustomization(true)}
-                      variant="outline"
-                    >
+                    <Button variant="outline">
                       <Palette className="w-4 h-4 mr-2" />
                       Customize
                     </Button>
                   </div>
 
-                  {/* Current Preview */}
-                  <div className="border rounded-lg p-4">
-                    <h4 className="font-medium mb-3">Current Styling</h4>
+                  {/* Current Preview - UPDATE to show gigcustom values */}
+                  <div className={`rounded-lg p-4 ${colors.border} border`}>
+                    <h4 className={`font-medium mb-3 ${colors.text}`}>
+                      Current Styling
+                    </h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <div
                           className="w-4 h-4 rounded border"
-                          style={{ backgroundColor: gigcustom.backgroundColor }}
+                          style={{
+                            backgroundColor:
+                              gigcustom.backgroundColor || "transparent",
+                          }}
                         />
-                        <span className="text-sm">
+                        <span className={`text-sm ${colors.text}`}>
                           Background: {gigcustom.backgroundColor || "Default"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div
                           className="w-4 h-4 rounded border"
-                          style={{ backgroundColor: gigcustom.fontColor }}
+                          style={{
+                            backgroundColor:
+                              gigcustom.fontColor || "transparent",
+                          }}
                         />
-                        <span className="text-sm">
+                        <span className={`text-sm ${colors.text}`}>
                           Text Color: {gigcustom.fontColor || "Default"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm">
+                        <span className={`text-sm ${colors.text}`}>
                           Font: {gigcustom.font || "Default"}
                         </span>
                       </div>
@@ -1317,7 +1300,9 @@ export default function EditGigForm() {
                             alt="Logo"
                             className="w-8 h-8 rounded"
                           />
-                          <span className="text-sm">Logo uploaded</span>
+                          <span className={`text-sm ${colors.text}`}>
+                            Logo uploaded
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1326,10 +1311,9 @@ export default function EditGigForm() {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* History Tab */}
           <TabsContent value="history">
-            <Card>
+            <Card className={colors.cardBorder}>
               <CardContent className="p-6">
                 <HistoryView gig={gig} />
               </CardContent>
@@ -1338,25 +1322,11 @@ export default function EditGigForm() {
         </Tabs>
       </div>
 
-      {/* Modals */}
-      <AnimatePresence>
-        {showCustomization && (
-          <GigCustomization
-            customization={gigcustom}
-            setCustomization={setGigCustom}
-            closeModal={() => setShowCustomization(false)}
-            logo={imageUrl}
-            handleFileChange={handleFileChange}
-            isUploading={isUploading}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Cancel Confirmation Dialog */}
       <Dialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
-        <DialogContent>
+        <DialogContent className={colors.background}>
           <DialogHeader>
-            <DialogTitle>Discard Changes?</DialogTitle>
+            <DialogTitle className={colors.text}>Discard Changes?</DialogTitle>
             <DialogDescription>
               You have unsaved changes. Are you sure you want to discard them?
             </DialogDescription>
@@ -1377,9 +1347,9 @@ export default function EditGigForm() {
 
       {/* Save Confirmation Dialog */}
       <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
-        <DialogContent>
+        <DialogContent className={colors.background}>
           <DialogHeader>
-            <DialogTitle>Save Changes</DialogTitle>
+            <DialogTitle className={colors.text}>Save Changes</DialogTitle>
             <DialogDescription>
               Are you sure you want to save all changes to this gig?
             </DialogDescription>

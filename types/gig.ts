@@ -6,12 +6,16 @@ import { Id } from "@/convex/_generated/dataModel";
 export interface BandRoleInput {
   role: string;
   maxSlots: number;
-  requiredSkills: string[];
+  filledSlots?: number;
+  applicants?: Id<"users">[];
+  bookedUsers?: Id<"users">[];
+  requiredSkills?: string[];
   description?: string;
-  // ADD THESE PRICE FIELDS:
-  price?: string; // Price per slot for this role
-  currency?: string; // Currency code (e.g., "KES", "USD")
-  negotiable?: boolean; // Whether price is negotiable for this role
+  isLocked?: boolean;
+  price?: number;
+  currency?: string;
+  negotiable?: boolean;
+  bookedPrice?: number;
 }
 
 // UPDATE: Add price fields to BandRoleSchema

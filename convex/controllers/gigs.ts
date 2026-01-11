@@ -1,12 +1,12 @@
 // convex/controllers/gigs.ts
-import { mutation, query } from "../_generated/server";
+import { mutation, query, QueryCtx } from "../_generated/server";
 import { v } from "convex/values";
 import {
   createGigNotification,
   createNotificationInternal,
 } from "../createNotificationInternal";
 import { applyFirstGigBonusInternal } from "./trustScore";
-import { Id } from "../_generated/dataModel";
+import { Doc, Id } from "../_generated/dataModel";
 import { checkGigLimit, updateWeeklyGigCount } from "../gigsLimit";
 import { getUserByClerkId } from "./bookings";
 interface ProcessedBandRole {
@@ -1702,66 +1702,6 @@ export const resetAllWeeklyCounts = mutation({
     return users.length;
   },
 });
-export const updateGig = mutation({
-  args: {
-    gigId: v.id("gigs"),
-    updates: v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.string()),
-      location: v.optional(v.string()),
-      phone: v.optional(v.string()),
-      phoneNo: v.optional(v.string()),
-      price: v.optional(v.number()),
-      currency: v.optional(v.string()),
-      secret: v.optional(v.string()),
-      isActive: v.optional(v.boolean()),
-      isPublic: v.optional(v.boolean()),
-      isTaken: v.optional(v.boolean()),
-      isPending: v.optional(v.boolean()),
-      paymentStatus: v.optional(
-        v.union(v.literal("pending"), v.literal("paid"), v.literal("refunded"))
-      ),
-      gigRating: v.optional(v.number()),
-      font: v.optional(v.string()),
-      fontColor: v.optional(v.string()),
-      backgroundColor: v.optional(v.string()),
-      logo: v.optional(v.string()),
-      gigtimeline: v.optional(v.string()),
-      otherTimeline: v.optional(v.string()),
-      day: v.optional(v.string()),
-      mcType: v.optional(v.string()),
-      mcLanguages: v.optional(v.string()),
-      djGenre: v.optional(v.string()),
-      djEquipment: v.optional(v.string()),
-      pricerange: v.optional(v.string()),
-      category: v.optional(v.string()),
-      tags: v.optional(v.array(v.string())),
-      requirements: v.optional(v.array(v.string())),
-      benefits: v.optional(v.array(v.string())),
-      bandCategory: v.optional(v.array(v.string())),
-      vocalistGenre: v.optional(v.array(v.string())),
-      cancellationReason: v.optional(v.string()),
-    }),
-  },
-  handler: async (ctx, args) => {
-    const { gigId, updates } = args;
-
-    // Handle phone/phoneNo backward compatibility
-    const normalizedUpdates: any = { ...updates };
-
-    // If phoneNo is provided, also set phone for consistency
-    if (normalizedUpdates.phoneNo !== undefined) {
-      normalizedUpdates.phone = normalizedUpdates.phoneNo;
-    }
-
-    // Add updated timestamp
-    normalizedUpdates.updatedAt = Date.now();
-
-    await ctx.db.patch(gigId, normalizedUpdates);
-
-    return gigId;
-  },
-});
 
 // Delete gig mutation
 export const deleteGig = mutation({
@@ -1955,6 +1895,465 @@ export const getGigById = query({
             totalGigs: poster.gigsPosted || 0,
           }
         : null,
+    };
+  },
+});
+
+// Band role schema from your definitions
+const bandRoleSchema = v.object({
+  role: v.string(),
+  maxSlots: v.number(),
+  filledSlots: v.optional(v.number()),
+  applicants: v.optional(v.array(v.id("users"))),
+  bookedUsers: v.optional(v.array(v.id("users"))),
+  requiredSkills: v.optional(v.array(v.string())),
+  description: v.optional(v.string()),
+  isLocked: v.optional(v.boolean()),
+  price: v.optional(v.number()),
+  currency: v.optional(v.string()),
+  negotiable: v.optional(v.boolean()),
+  bookedPrice: v.optional(v.number()),
+});
+
+// Helper function to get current user with clerkId
+async function getCurrentUser(ctx: QueryCtx, subject?: string) {
+  // Get user from database using clerkId
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerkId", (q) => q.eq("clerkId", subject as string))
+    .first();
+
+  if (!user) {
+    throw new Error("Unauthorized: Please log in to update gigs");
+  }
+
+  return { authUser: user, dbUser: user };
+}
+
+// Helper function to validate user ownership
+
+// Type for gig document
+type GigDoc = Doc<"gigs">;
+
+async function validateGigOwnership(
+  ctx: QueryCtx,
+  gigId: Id<"gigs">,
+  userId: Id<"users">
+): Promise<GigDoc> {
+  const gig = await ctx.db.get(gigId);
+
+  if (!gig) {
+    throw new Error("Gig not found");
+  }
+
+  // Type guard to ensure it's a gig document
+  if (!isGigDocument(gig)) {
+    throw new Error("Invalid gig document");
+  }
+
+  if (gig.postedBy !== userId) {
+    throw new Error("Unauthorized: You can only edit your own gigs");
+  }
+
+  return gig;
+}
+
+// Type guard function
+function isGigDocument(doc: any): doc is GigDoc {
+  return (
+    doc &&
+    typeof doc === "object" &&
+    "postedBy" in doc &&
+    "title" in doc &&
+    "description" in doc
+  );
+}
+// Format band roles for update
+function formatBandRolesForUpdate(bandRoles: any[]) {
+  return bandRoles.map((role) => ({
+    role: role.role || "",
+    maxSlots: role.maxSlots || 1,
+    filledSlots: role.filledSlots || 0,
+    applicants: role.applicants || [],
+    bookedUsers: role.bookedUsers || [],
+    requiredSkills: role.requiredSkills || [],
+    description: role.description || "",
+    isLocked: role.isLocked || false,
+    price: role.price !== undefined ? role.price : null,
+    currency: role.currency || "KES",
+    negotiable: role.negotiable !== undefined ? role.negotiable : true,
+    bookedPrice: role.bookedPrice !== undefined ? role.bookedPrice : null,
+  }));
+}
+
+export const updateGig = mutation({
+  args: {
+    clerkId: v.string(),
+    gigId: v.id("gigs"),
+    // Basic info
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    price: v.optional(v.number()),
+    category: v.optional(v.string()),
+    location: v.optional(v.string()),
+    secret: v.optional(v.string()),
+
+    // Time
+    time: v.optional(
+      v.object({
+        start: v.string(),
+        end: v.string(),
+        durationFrom: v.optional(v.string()),
+        durationTo: v.optional(v.string()),
+      })
+    ),
+
+    // Business category
+    bussinesscat: v.optional(v.string()),
+
+    // Timeline
+    otherTimeline: v.optional(v.string()),
+    gigtimeline: v.optional(v.string()),
+    day: v.optional(v.string()),
+    date: v.optional(v.number()),
+
+    // Price info
+    pricerange: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    negotiable: v.optional(v.boolean()),
+
+    // Talent-specific
+    mcType: v.optional(v.string()),
+    mcLanguages: v.optional(v.string()),
+    djGenre: v.optional(v.string()),
+    djEquipment: v.optional(v.string()),
+    vocalistGenre: v.optional(v.array(v.string())),
+
+    // Interest window
+    acceptInterestEndTime: v.optional(v.number()),
+    acceptInterestStartTime: v.optional(v.number()),
+
+    // Capacity
+    maxSlots: v.optional(v.number()),
+
+    // Styling
+    font: v.optional(v.string()),
+    fontColor: v.optional(v.string()),
+    backgroundColor: v.optional(v.string()),
+    logo: v.optional(v.string()),
+
+    // Band setup
+    bandCategory: v.optional(v.array(bandRoleSchema)),
+
+    // Other fields
+    isActive: v.optional(v.boolean()),
+    isPublic: v.optional(v.boolean()),
+    tags: v.optional(v.array(v.string())),
+    requirements: v.optional(v.array(v.string())),
+    benefits: v.optional(v.array(v.string())),
+    isClientBand: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, bandCategory, ...otherArgs } = args;
+
+    // Get current user with clerkId
+    const { dbUser } = await getCurrentUser(ctx, args.clerkId);
+
+    // Validate ownership
+    const existingGig = await validateGigOwnership(ctx, gigId, dbUser._id);
+
+    // Prepare update payload
+    const payload: any = {
+      updatedAt: Date.now(),
+    };
+
+    // Add regular fields
+    Object.keys(otherArgs).forEach((key) => {
+      const value = otherArgs[key as keyof typeof otherArgs];
+      if (value !== undefined) {
+        payload[key] = value;
+      }
+    });
+
+    // Handle bandCategory update specially
+    if (bandCategory !== undefined) {
+      if (bandCategory === null || bandCategory.length === 0) {
+        // Clear bandCategory if empty array or null
+        payload.bandCategory = [];
+      } else {
+        // Format band roles properly
+        payload.bandCategory = formatBandRolesForUpdate(bandCategory);
+      }
+
+      // Also update isClientBand based on bandCategory
+      if (bandCategory.length > 0) {
+        payload.isClientBand = true;
+      } else {
+        payload.isClientBand = false;
+      }
+    }
+
+    // If time is being updated, ensure it has proper structure
+    if (otherArgs.time) {
+      payload.time = {
+        start: otherArgs.time.start,
+        end: otherArgs.time.end,
+        durationFrom: otherArgs.time.durationFrom || "am",
+        durationTo: otherArgs.time.durationTo || "pm",
+      };
+    }
+
+    // Update the gig
+    await ctx.db.patch(gigId, payload);
+
+    // Log the update in booking history
+    const historyEntry = {
+      entryId: `update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      userId: dbUser._id,
+      userRole: "owner",
+      status: "updated",
+      gigType: bandCategory ? "band" : "regular",
+      actionBy: dbUser._id,
+      notes: "Gig details updated",
+      metadata: {
+        updatedFields: Object.keys(payload).filter(
+          (key) => key !== "updatedAt"
+        ),
+        bandRolesUpdated: bandCategory ? bandCategory.length : 0,
+      },
+    };
+
+    // Add to booking history
+    const updatedHistory = existingGig.bookingHistory || [];
+    updatedHistory.push(historyEntry as any);
+    await ctx.db.patch(gigId, {
+      bookingHistory: updatedHistory,
+    });
+
+    return {
+      success: true,
+      message: "Gig updated successfully",
+      gigId,
+      updatedAt: payload.updatedAt,
+      bandRolesUpdated: bandCategory ? bandCategory.length : 0,
+    };
+  },
+});
+
+// Optional: Separate mutation for specific field updates
+export const updateGigField = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    field: v.string(),
+    value: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, field, value } = args;
+
+    // Get current user
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) {
+      throw new Error("Unauthorized: Please log in to update gigs");
+    }
+
+    // Get user from database
+    const userRecord = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", user.subject))
+      .first();
+
+    if (!userRecord) {
+      throw new Error("User not found");
+    }
+
+    // Validate ownership
+    await validateGigOwnership(ctx, gigId, userRecord._id);
+
+    // Update the specific field
+    await ctx.db.patch(gigId, {
+      [field]: value,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: `Field "${field}" updated successfully`,
+    };
+  },
+});
+
+// Mutation to update band role specifically
+export const updateBandRole = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    roleIndex: v.number(),
+    updates: v.object({
+      role: v.optional(v.string()),
+      maxSlots: v.optional(v.number()),
+      description: v.optional(v.string()),
+      requiredSkills: v.optional(v.array(v.string())),
+      price: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      negotiable: v.optional(v.boolean()),
+      isLocked: v.optional(v.boolean()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, roleIndex, updates } = args;
+
+    // Get current user
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) {
+      throw new Error("Unauthorized: Please log in to update gigs");
+    }
+
+    // Get user from database
+    const userRecord = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", user.subject))
+      .first();
+
+    if (!userRecord) {
+      throw new Error("User not found");
+    }
+
+    // Validate ownership
+    const gig = await validateGigOwnership(ctx, gigId, userRecord._id);
+
+    // Check if gig has bandCategory
+    if (!gig.bandCategory || gig.bandCategory.length === 0) {
+      throw new Error("This gig doesn't have band roles setup");
+    }
+
+    // Check if roleIndex is valid
+    if (roleIndex < 0 || roleIndex >= gig.bandCategory.length) {
+      throw new Error("Invalid role index");
+    }
+
+    // Update the specific role
+    const updatedBandCategory = [...gig.bandCategory];
+    updatedBandCategory[roleIndex] = {
+      ...updatedBandCategory[roleIndex],
+      ...updates,
+    };
+
+    // Update the gig
+    await ctx.db.patch(gigId, {
+      bandCategory: updatedBandCategory,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: "Band role updated successfully",
+      role: updatedBandCategory[roleIndex],
+    };
+  },
+});
+
+// Mutation to update gig status (active/inactive)
+export const updateGigStatus = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, isActive } = args;
+
+    // Get current user
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) {
+      throw new Error("Unauthorized: Please log in to update gigs");
+    }
+
+    // Get user from database
+    const userRecord = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", user.subject))
+      .first();
+
+    if (!userRecord) {
+      throw new Error("User not found");
+    }
+
+    // Validate ownership
+    await validateGigOwnership(ctx, gigId, userRecord._id);
+
+    // Update status
+    await ctx.db.patch(gigId, {
+      isActive,
+      updatedAt: Date.now(),
+    });
+
+    // Add to booking history
+    const gig = await ctx.db.get(gigId);
+    if (gig) {
+      const historyEntry = {
+        entryId: `status_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: Date.now(),
+        userId: userRecord._id,
+        userRole: "owner",
+        status: isActive ? "activated" : "deactivated",
+        gigType: gig.bandCategory ? "band" : "regular",
+        actionBy: userRecord._id,
+        notes: isActive ? "Gig activated" : "Gig deactivated",
+      };
+
+      const updatedHistory = gig.bookingHistory || [];
+      updatedHistory.push(historyEntry as any);
+      await ctx.db.patch(gigId, {
+        bookingHistory: updatedHistory,
+      });
+    }
+
+    return {
+      success: true,
+      message: isActive
+        ? "Gig activated successfully"
+        : "Gig deactivated successfully",
+    };
+  },
+});
+
+// Mutation to update gig visibility
+export const updateGigVisibility = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    isPublic: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, isPublic } = args;
+
+    // Get current user
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) {
+      throw new Error("Unauthorized: Please log in to update gigs");
+    }
+
+    // Get user from database
+    const userRecord = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", user.subject))
+      .first();
+
+    if (!userRecord) {
+      throw new Error("User not found");
+    }
+
+    // Validate ownership
+    await validateGigOwnership(ctx, gigId, userRecord._id);
+
+    // Update visibility
+    await ctx.db.patch(gigId, {
+      isPublic,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: isPublic ? "Gig made public" : "Gig made private",
     };
   },
 });
