@@ -15,11 +15,12 @@ export interface ShortlistedUser {
   userId: Id<"users">;
   shortlistedAt: number;
   notes?: string;
-  status?: string;
+  status?: "active" | "booked" | "removed";
+  // Add these fields
   bandRole?: string;
-  bandRoleIndex?: number; // Add this for band role tracking
+  bandRoleIndex?: number;
+  bookedAt?: number;
 }
-
 export interface GigWithApplicants {
   gig: {
     _id: Id<"gigs">;

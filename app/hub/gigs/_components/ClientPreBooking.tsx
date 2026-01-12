@@ -1,4 +1,4 @@
-// components/gigs/ClientPreBooking.tsx (UPDATED - SIMPLIFIED)
+// components/gigs/ClientPreBooking.tsx (COMPLETE VERSION)
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Icons
 import {
@@ -41,10 +42,24 @@ import {
   Users,
   Users2,
   User,
-  DollarSign as DollarSignIcon,
   History,
+  CheckCircle,
+  Eye,
+  Bookmark as BookmarkIcon,
+  Star,
+  XCircle,
 } from "lucide-react";
 
+// Custom Components
+import { ChatIcon } from "@/components/chat/ChatIcon";
+
+// Tab Components
+
+import { BandRolesTab } from "@/components/booking/BandGigWithRoleTab";
+import { FullBandTab } from "@/components/booking/FullBandGig";
+import { HistoryTab } from "@/components/booking/History";
+import { RegularGigsTab } from "@/components/booking/RegularGigsTab";
+import { StatsCards } from "@/components/booking/StatsCards";
 // Types
 import {
   Applicant,
@@ -52,13 +67,8 @@ import {
   GigWithApplicants,
   GigTabType,
 } from "@/types/bookings";
-import { ShortlistTab } from "./booking/ShortlIstTab";
-import { GigInfoCard } from "./booking/GigInfo";
-
-import { BandRolesTab } from "./booking/BandGigWithRoleTab";
-import { FullBandTab } from "./booking/FullBandGig";
-import { HistoryTab } from "./booking/History";
-import { RegularGigsTab } from "./booking/RegularGigsTab";
+import { ShortlistTab } from "@/components/booking/ShortlIstTab";
+import { GigInfoCard } from "@/components/booking/GigInfo";
 
 interface ClientPreBookingProps {
   user: any;
@@ -107,7 +117,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
 
   const allUsers = useQuery(api.controllers.user.getAllUsers);
 
-  // Effects and helper functions remain the same...
+  // Effects
   useEffect(() => {
     if (userGigs && allUsers) {
       processGigsWithApplicants();
@@ -180,7 +190,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               ) {
                 status = "rejected";
               } else if (
-                statusHistory.some((entry) => entry.status === "viewed")
+                statusHistory.some((entry) => entry.status === "updated") // Use "updated" instead of "viewed"
               ) {
                 status = "viewed";
               }
@@ -216,7 +226,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                     gig.shortlistedUsers?.some(
                       (item) =>
                         item.userId === userId &&
-                        item.bandRoleIndex === roleIndex
+                        (item as any).bandRoleIndex === roleIndex // Type assertion
                     )
                   ) {
                     status = "shortlisted";
@@ -287,14 +297,14 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             break;
         }
 
-        // Get shortlisted users for all gig types
+        // Get shortlisted users for all gig types - use type assertion for bandRoleIndex
         shortlisted = (gig.shortlistedUsers || []).map((item) => ({
           userId: item.userId,
           shortlistedAt: item.shortlistedAt,
           notes: item.notes,
           status: item.status,
-          bandRole: item.bandRole,
-          bandRoleIndex: item.bandRoleIndex,
+          bandRole: (item as any).bandRole,
+          bandRoleIndex: (item as any).bandRoleIndex,
         }));
 
         return {
@@ -318,6 +328,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   };
 
   // Action handlers
+  // In your BandRolesTab component or ClientPreBooking.tsx
   const handleAddToShortlist = async (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
@@ -330,8 +341,10 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         applicantId,
         notes: bandRole ? `Interested for ${bandRole} role` : undefined,
         clerkId: userId!,
+        bandRole, // Pass band role
+        bandRoleIndex, // Pass band role index
       });
-      toast.success("Added to shortlist!");
+      toast.success(`Added to shortlist for ${bandRole || "gig"}!`);
       processGigsWithApplicants();
     } catch (error) {
       console.error("Failed to add to shortlist:", error);
@@ -354,7 +367,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   };
 
-  // Single booking handler for ALL buttons
   const handleBookMusician = (userId: Id<"users">, userName: string) => {
     setSelectedMusician({ userId, userName });
     setBookingPrice("");
@@ -369,14 +381,22 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
 
     try {
       // Determine source based on active tab
-      let source: "interested" | "shortlisted" | "regular" = "interested";
+      let source:
+        | "interested"
+        | "shortlisted"
+        | "regular"
+        | "band-role"
+        | "full-band" = "regular";
 
+      // Update this mapping:
       if (activeGigTab === "shortlist") {
         source = "shortlisted";
-      } else if (activeGigTab === "regular") {
-        source = "regular";
+      } else if (activeGigTab === "band-roles") {
+        source = "band-role"; // From bandCategory[].applicants
+      } else if (activeGigTab === "full-band") {
+        source = "full-band"; // From bookCount array
       } else {
-        source = "interested"; // For band-roles and full-band
+        source = "regular"; // From interestedUsers array
       }
 
       await bookMusician({
@@ -385,11 +405,12 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         source: source,
         agreedPrice: bookingPrice ? Number(bookingPrice) : undefined,
         notes: `Booked from ${activeGigTab} tab`,
+        clerkId: userId!,
       });
 
       toast.success(`Booked ${selectedMusician.userName}!`);
       setShowBookDialog(false);
-      processGigsWithApplicants(); // Refresh the list
+      processGigsWithApplicants();
     } catch (error: any) {
       console.error("Failed to book musician:", error);
       toast.error(error.message || "Failed to book musician");
@@ -497,6 +518,48 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       );
     }
   );
+
+  // Empty state content
+  const getEmptyStateIcon = () => {
+    switch (activeGigTab) {
+      case "shortlist":
+        return (
+          <BookmarkIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+        );
+      case "band-roles":
+        return <Users className="w-16 h-16 mx-auto text-gray-400 mb-4" />;
+      case "full-band":
+        return <Users2 className="w-16 h-16 mx-auto text-gray-400 mb-4" />;
+      default:
+        return <User className="w-16 h-16 mx-auto text-gray-400 mb-4" />;
+    }
+  };
+
+  const getEmptyStateMessage = () => {
+    switch (activeGigTab) {
+      case "shortlist":
+        return {
+          title: "No Shortlisted Gigs",
+          description:
+            "Shortlist musicians from other tabs to compare and book them here.",
+        };
+      case "band-roles":
+        return {
+          title: "No Band Roles with Applicants",
+          description: "No band role applicants yet",
+        };
+      case "full-band":
+        return {
+          title: "No Full Band Gigs",
+          description: "No full band applicants yet",
+        };
+      default:
+        return {
+          title: "No Regular Gigs with Applicants",
+          description: "No applicants for regular gigs yet",
+        };
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -733,7 +796,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                         </TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="applicants">
+                      <TabsContent value="applicants" className="space-y-4">
                         {activeGigTab === "regular" && (
                           <RegularGigsTab
                             selectedGigData={selectedGigData}
@@ -743,6 +806,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                               handleRemoveFromShortlist
                             }
                             handleViewProfile={handleViewProfile}
+                            handleBookMusician={handleBookMusician}
                             getStatusColor={getStatusColor}
                           />
                         )}
@@ -755,6 +819,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                               handleRemoveFromShortlist
                             }
                             handleViewProfile={handleViewProfile}
+                            handleBookMusician={handleBookMusician}
                             getStatusColor={getStatusColor}
                             getRoleIcon={getRoleIcon}
                           />
@@ -768,6 +833,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                               handleRemoveFromShortlist
                             }
                             handleViewProfile={handleViewProfile}
+                            handleBookMusician={handleBookMusician}
                             getStatusColor={getStatusColor}
                           />
                         )}
@@ -789,14 +855,26 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             // Empty state
             <Card className="text-center py-12">
               <CardContent>
-                {/* ... same empty state content ... */}
+                {getEmptyStateIcon()}
+                <h3 className="text-xl font-semibold mb-2">
+                  {getEmptyStateMessage().title}
+                </h3>
+                <p className="text-gray-500 mb-6">
+                  {getEmptyStateMessage().description}
+                </p>
+                <Button
+                  onClick={() => router.push("/hub/gigs")}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                >
+                  View Your Gigs
+                </Button>
               </CardContent>
             </Card>
           )}
         </CardContent>
       </Card>
 
-      {/* Book Now Dialog */}
+      {/* Book Now Dialog - COMPLETE VERSION */}
       <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -806,7 +884,63 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">{/* ... dialog content ... */}</div>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Avatar className="w-12 h-12">
+                  <AvatarFallback className="bg-green-100 text-green-800">
+                    {selectedMusician?.userName?.charAt(0) || "M"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h4 className="font-semibold">
+                    {selectedMusician?.userName}
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Ready to book for {selectedGigData?.gig.title}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Agreed Price (Optional)
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="number"
+                  placeholder="Enter agreed price"
+                  value={bookingPrice}
+                  onChange={(e) =>
+                    setBookingPrice(
+                      e.target.value ? Number(e.target.value) : ""
+                    )
+                  }
+                  className="pl-9"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Leave empty to use the gig's listed price
+              </p>
+            </div>
+
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Booking Confirmation
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    The musician will receive a notification and can confirm the
+                    booking.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button

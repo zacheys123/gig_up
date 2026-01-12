@@ -84,7 +84,8 @@ const bookingHistoryEntry = v.object({
     v.literal("completed"),
     v.literal("cancelled"),
     v.literal("rejected"),
-    v.literal("updated") // For tracking gig updates
+    v.literal("updated"), // For tracking gig updates
+    v.literal("viewed") // ADD THIS LINE
   ),
 
   gigType: v.union(v.literal("regular"), v.literal("band")),
@@ -228,6 +229,11 @@ export const gigModel = defineTable({
             v.literal("removed")
           )
         ),
+        // Add these fields for band roles
+        bandRole: v.optional(v.string()),
+        bandRoleIndex: v.optional(v.number()),
+        // Add this if you need to track bookedAt
+        bookedAt: v.optional(v.number()),
       })
     )
   ),

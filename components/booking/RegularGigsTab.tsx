@@ -5,15 +5,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Star, Eye, Bookmark, XCircle } from "lucide-react";
+import { Star, Eye, Bookmark, XCircle, Users, ShoppingBag } from "lucide-react";
 import { ChatIcon } from "@/components/chat/ChatIcon";
 import { motion } from "framer-motion";
 import clsx from "clsx";
+import { Applicant, GigWithApplicants } from "@/types/bookings";
 
 interface RegularGigsTabProps {
-  gigsWithApplicants: any[];
-  selectedGigData: any;
-  filteredApplicants: any[];
+  selectedGigData: GigWithApplicants;
+  filteredApplicants: Applicant[];
   handleAddToShortlist: (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
@@ -29,7 +29,7 @@ interface RegularGigsTabProps {
     gigId: Id<"gigs">,
     applicantId: Id<"users">
   ) => Promise<void>;
-  formatTime: (timestamp: number) => string;
+  handleBookMusician: (userId: Id<"users">, userName: string) => void;
   getStatusColor: (status: string) => string;
 }
 
@@ -39,6 +39,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
   handleAddToShortlist,
   handleRemoveFromShortlist,
   handleViewProfile,
+  handleBookMusician,
   getStatusColor,
 }) => {
   return (
@@ -111,66 +112,84 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                         </p>
                       </div>
                       <div className="text-center p-2 bg-gray-50 rounded">
-                        <p className="text-xs text-gray-500">Trust</p>
+                        <p className="text-xs text-gray-500">Rate</p>
                         <p className="font-semibold">
-                          {userData.trustScore || "90"}%
+                          ${userData.rate?.baseRate || "Contact"}
                         </p>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2">
+                      {/* Top row: Profile, Chat, Shortlist/Remove */}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() =>
+                            handleViewProfile(
+                              selectedGigData.gig._id,
+                              applicant.userId
+                            )
+                          }
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Profile
+                        </Button>
+                        <ChatIcon
+                          userId={applicant.userId}
+                          size="sm"
+                          variant="cozy"
+                          className="flex-1"
+                          showText={false}
+                        />
+                        {isShortlisted ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="flex-1"
+                            onClick={() =>
+                              handleRemoveFromShortlist(
+                                selectedGigData.gig._id,
+                                applicant.userId
+                              )
+                            }
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Remove
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                            onClick={() =>
+                              handleAddToShortlist(
+                                selectedGigData.gig._id,
+                                applicant.userId
+                              )
+                            }
+                          >
+                            <Bookmark className="w-4 h-4 mr-2" />
+                            Shortlist
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Bottom row: Book Now button */}
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="flex-1"
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
                         onClick={() =>
-                          handleViewProfile(
-                            selectedGigData.gig._id,
-                            applicant.userId
+                          handleBookMusician(
+                            applicant.userId,
+                            userData.firstname || userData.username
                           )
                         }
                       >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Profile
+                        <ShoppingBag className="w-4 h-4 mr-2" />
+                        Book Now
                       </Button>
-                      <ChatIcon
-                        userId={applicant.userId}
-                        size="sm"
-                        variant="cozy"
-                        className="flex-1"
-                        showText={false}
-                      />
-                      {isShortlisted ? (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="flex-1"
-                          onClick={() =>
-                            handleRemoveFromShortlist(
-                              selectedGigData.gig._id,
-                              applicant.userId
-                            )
-                          }
-                        >
-                          <XCircle className="w-4 h-4 mr-2" />
-                          Remove
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="flex-1 bg-blue-600 hover:bg-blue-700"
-                          onClick={() =>
-                            handleAddToShortlist(
-                              selectedGigData.gig._id,
-                              applicant.userId
-                            )
-                          }
-                        >
-                          <Bookmark className="w-4 h-4 mr-2" />
-                          Shortlist
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
