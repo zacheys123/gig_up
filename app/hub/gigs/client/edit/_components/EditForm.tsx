@@ -1238,7 +1238,7 @@ export default function EditGigForm() {
             </Card>
           </TabsContent>
           {/* Customize Tab */}
-          // Customize Tab - UPDATE to show gigcustom values
+
           <TabsContent value="customize">
             <Card className={colors.cardBorder}>
               <CardContent className="p-6">

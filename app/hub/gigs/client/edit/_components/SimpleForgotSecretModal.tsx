@@ -1685,12 +1685,19 @@ export function SimpleForgotSecretModal({
                   <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center shadow-xl shadow-emerald-500/30">
                     <CheckCircle className="w-12 h-12 text-white" />
                   </div>
-                  <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-800 animate-ping opacity-20" />
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-300 dark:border-emerald-600 animate-ping opacity-30" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
+                <h3
+                  className={cn(
+                    "text-2xl font-bold mt-6 mb-2",
+                    isDarkMode ? "text-white" : "text-white"
+                  )}
+                >
                   Success!
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p
+                  className={cn(isDarkMode ? "text-gray-300" : "text-gray-200")}
+                >
                   Your secret key has been successfully reset
                 </p>
               </div>
@@ -1700,26 +1707,43 @@ export function SimpleForgotSecretModal({
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5" />
                 <div
                   className={cn(
-                    "relative p-6 rounded-2xl border backdrop-blur-sm",
+                    "relative p-6 rounded-2xl border backdrop-blur-sm m-4",
                     isDarkMode
                       ? "bg-gray-900/80 border-gray-700/50"
-                      : "bg-white/80 border-emerald-100"
+                      : "bg-neutral-700/20 border-emerald-100"
                   )}
                 >
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 block">
+                      <Label
+                        className={cn(
+                          "text-sm font-medium mb-3 block",
+                          isDarkMode ? "text-gray-300" : "text-gray-100"
+                        )}
+                      >
                         Your New Secret Key
                       </Label>
                       <div className="flex items-stretch gap-3">
-                        <div className="flex-1 p-4 bg-gray-50 dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 rounded-xl">
-                          <p className="font-mono text-lg text-center text-gray-900 dark:text-white tracking-wider select-all">
+                        <div
+                          className={cn(
+                            "flex-1 p-4 border rounded-xl",
+                            isDarkMode
+                              ? "bg-gray-800 border-emerald-700"
+                              : "bg-white/10 border-emerald-400"
+                          )}
+                        >
+                          <p className="font-mono text-lg text-center text-white dark:text-white tracking-wider select-all">
                             {generatedSecret}
                           </p>
                         </div>
                         <Button
                           onClick={() => copyToClipboard(generatedSecret)}
-                          className="px-5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30"
+                          className={cn(
+                            "px-5 text-white font-semibold shadow-lg",
+                            copied
+                              ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+                              : "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-emerald-500/20 hover:shadow-emerald-500/30"
+                          )}
                           aria-label="Copy secret key"
                         >
                           {copied ? (
@@ -1729,6 +1753,14 @@ export function SimpleForgotSecretModal({
                           )}
                         </Button>
                       </div>
+
+                      {/* Copy status message */}
+                      {copied && (
+                        <p className="text-sm text-emerald-400 dark:text-emerald-400 mt-2 text-center animate-in fade-in slide-in-from-top-1 duration-200">
+                          <Check className="w-4 h-4 inline mr-1" />
+                          Copied to clipboard!
+                        </p>
+                      )}
                     </div>
 
                     {/* Instructions */}
@@ -1737,35 +1769,124 @@ export function SimpleForgotSecretModal({
                         "p-4 rounded-xl border",
                         isDarkMode
                           ? "bg-amber-900/30 border-amber-800/50"
-                          : "bg-amber-50 border-amber-200"
+                          : "bg-amber-500/10 border-amber-400/50"
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
+                        <AlertTriangle className="w-5 h-5 text-amber-400 dark:text-amber-500 mt-0.5" />
                         <div>
-                          <h5 className="font-semibold text-amber-700 dark:text-amber-400 mb-2">
+                          <h5
+                            className={cn(
+                              "font-semibold mb-2",
+                              isDarkMode ? "text-amber-400" : "text-amber-300"
+                            )}
+                          >
                             Important Instructions
                           </h5>
-                          <ul className="text-sm text-amber-600 dark:text-amber-500 space-y-2">
+                          <ul className="text-sm space-y-2">
                             <li className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                              <span>
+                              <div
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  isDarkMode ? "bg-amber-500" : "bg-amber-400"
+                                )}
+                              />
+                              <span
+                                className={
+                                  isDarkMode
+                                    ? "text-amber-500"
+                                    : "text-amber-400"
+                                }
+                              >
                                 Save this key in a secure password manager
                               </span>
                             </li>
                             <li className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                              <span>
+                              <div
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  isDarkMode ? "bg-amber-500" : "bg-amber-400"
+                                )}
+                              />
+                              <span
+                                className={
+                                  isDarkMode
+                                    ? "text-amber-500"
+                                    : "text-amber-400"
+                                }
+                              >
                                 Required for all future edits to this gig
                               </span>
                             </li>
                             <li className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                              <span>
+                              <div
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  isDarkMode ? "bg-amber-500" : "bg-amber-400"
+                                )}
+                              />
+                              <span
+                                className={
+                                  isDarkMode
+                                    ? "text-amber-500"
+                                    : "text-amber-400"
+                                }
+                              >
                                 Never share your secret key with anyone
                               </span>
                             </li>
+                            <li className="flex items-center gap-2">
+                              <div
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  isDarkMode ? "bg-amber-500" : "bg-amber-400"
+                                )}
+                              />
+                              <span
+                                className={
+                                  isDarkMode
+                                    ? "text-amber-500"
+                                    : "text-amber-400"
+                                }
+                              >
+                                We cannot recover lost keys
+                              </span>
+                            </li>
                           </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Additional Info */}
+                    <div
+                      className={cn(
+                        "p-4 rounded-xl border",
+                        isDarkMode
+                          ? "bg-blue-900/20 border-blue-800/50"
+                          : "bg-blue-500/10 border-blue-400/50"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-blue-400 dark:text-blue-400 mt-0.5" />
+                        <div>
+                          <h6
+                            className={cn(
+                              "font-medium mb-1",
+                              isDarkMode ? "text-blue-300" : "text-blue-200"
+                            )}
+                          >
+                            Next Steps
+                          </h6>
+                          <p
+                            className={cn(
+                              "text-sm",
+                              isDarkMode ? "text-blue-400" : "text-blue-300"
+                            )}
+                          >
+                            You can now continue to edit your gig. Remember to
+                            use this secret key whenever you need to make
+                            changes.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1774,7 +1895,7 @@ export function SimpleForgotSecretModal({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-3 px-4">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1782,10 +1903,20 @@ export function SimpleForgotSecretModal({
                     setGeneratedSecret("");
                     setNewSecret("");
                     setConfirmSecret("");
+                    setEmail("");
+                    setSecurityAnswer("");
+                    setEmailValidationState(null);
+                    setSecurityValidationState(null);
+                    setNewSecretValidationState(null);
                   }}
-                  className="flex-1 h-12 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900"
+                  className={cn(
+                    "flex-1 h-12",
+                    isDarkMode
+                      ? "border-gray-700 hover:bg-gray-900 text-gray-200"
+                      : "border-gray-400 hover:bg-gray-600/20 text-gray-100"
+                  )}
                 >
-                  Reset Another
+                  Reset Another Key
                 </Button>
                 <Button
                   onClick={() => {
@@ -1797,6 +1928,19 @@ export function SimpleForgotSecretModal({
                   <ArrowRight className="w-4 h-4 mr-2" />
                   Continue to Gig
                 </Button>
+              </div>
+
+              {/* Final Note */}
+              <div className="text-center px-4">
+                <p
+                  className={cn(
+                    "text-xs",
+                    isDarkMode ? "text-gray-400" : "text-gray-300"
+                  )}
+                >
+                  ⓘ This modal will close automatically when you click "Continue
+                  to Gig"
+                </p>
               </div>
             </div>
           )}

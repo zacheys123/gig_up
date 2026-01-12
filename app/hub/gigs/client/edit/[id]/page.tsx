@@ -38,6 +38,7 @@ export default function EditGigPage() {
     setIsVerified(true);
     setShowVerification(false);
     localStorage.setItem(`gig_verified_${gigId}`, Date.now().toString());
+    window.location.href = `/hub/gigs/client/edit/${gigId}`;
   };
 
   return (

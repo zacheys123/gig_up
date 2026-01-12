@@ -2071,7 +2071,8 @@ export const updateGig = mutation({
     // Add regular fields
     Object.keys(otherArgs).forEach((key) => {
       const value = otherArgs[key as keyof typeof otherArgs];
-      if (value !== undefined) {
+      if (value !== undefined && key !== "clerkId") {
+        // Ensure clerkId is excluded
         payload[key] = value;
       }
     });
@@ -2381,13 +2382,4 @@ export const getGigBasicInfo = query({
       isPublic: gig.isPublic,
     };
   },
-});
-
-// Then in your component, use it like this:
-const {
-  data: gigInfo,
-  isLoading,
-  error,
-} = useQuery(api.controllers.gigs.getGigBasicInfo, {
-  gigId: gigId, // Pass the gigId as an argument
 });

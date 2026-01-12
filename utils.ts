@@ -1641,7 +1641,7 @@ export const prepareGigDataForConvex = (
           bookedUsers: [],
           requiredSkills: role.requiredSkills || [],
           description: role.description || "",
-          price: role.price ? parseFloat(role.price) : undefined,
+          price: role.price ? role.price : undefined,
           currency: role.currency || formValues.currency || "KES",
           negotiable: role.negotiable ?? formValues.negotiable ?? false,
         }))

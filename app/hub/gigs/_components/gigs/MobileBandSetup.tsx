@@ -1,5 +1,5 @@
 // app/gigs/_components/MobileBandSetupModal.tsx
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,8 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BandRoleInput } from "@/types/gig";
+import { BandRoleInput, BandSetupRole } from "@/types/gig";
+
 import { useThemeColors } from "@/hooks/useTheme";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -47,21 +48,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-interface BandRole {
-  role: string;
-  maxSlots: number;
-  requiredSkills: string[];
-  description?: string;
-  price?: string;
-  currency?: string;
-  negotiable?: boolean;
-}
-
 interface MobileBandSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (roles: BandRoleInput[]) => void;
-  initialRoles?: BandRole[];
+  initialRoles?: BandSetupRole[];
 }
 
 const commonRoles = [
@@ -129,7 +120,15 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   initialRoles = [],
 }) => {
   const { colors } = useThemeColors();
-  const [selectedRoles, setSelectedRoles] = useState<BandRole[]>(initialRoles);
+  const [selectedRoles, setSelectedRoles] = useState<BandSetupRole[]>(
+    initialRoles.map((role) => ({
+      ...role,
+      requiredSkills: role.requiredSkills || [],
+      price: role.price || "",
+      currency: role.currency || "KES",
+      negotiable: role.negotiable ?? true,
+    }))
+  );
   const [customRole, setCustomRole] = useState("");
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -139,27 +138,40 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   );
   const [view, setView] = useState<"selection" | "configuration">("selection");
 
-  // Calculate totals
-  const totalPositions = selectedRoles.reduce(
-    (sum, role) => sum + role.maxSlots,
-    0
-  );
-  const totalBudget = selectedRoles.reduce((total, role) => {
-    const price = parseFloat(role.price || "0");
-    return total + price * role.maxSlots;
-  }, 0);
+  // Memoized calculations
+  const { totalPositions, totalBudget } = useMemo(() => {
+    const positions = selectedRoles.reduce(
+      (sum, role) => sum + role.maxSlots,
+      0
+    );
+    const budget = selectedRoles.reduce((total, role) => {
+      const price = role.price ? parseFloat(role.price) : 0;
+      return total + (isNaN(price) ? 0 : price) * role.maxSlots;
+    }, 0);
+    return { totalPositions: positions, totalBudget: budget };
+  }, [selectedRoles]);
 
-  // Filter roles
-  const filteredRoles = commonRoles.filter((role) => {
-    const matchesSearch = role.value
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || role.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredRoles = useMemo(() => {
+    return commonRoles.filter((role) => {
+      const matchesSearch = role.value
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesCategory =
+        selectedCategory === "all" || role.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory]);
 
-  const toggleRole = (roleName: string) => {
+  const progressPercentage = useMemo(() => {
+    const baseProgress = Math.min(selectedRoles.length * 15, 60);
+    const configuredProgress =
+      selectedRoles.filter(
+        (role) => role.maxSlots > 0 && role.requiredSkills.length > 0
+      ).length * 5;
+    return Math.min(baseProgress + configuredProgress, 100);
+  }, [selectedRoles]);
+
+  const toggleRole = useCallback((roleName: string) => {
     setSelectedRoles((prev) => {
       const existing = prev.find((r) => r.role === roleName);
       if (existing) {
@@ -178,17 +190,20 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         ];
       }
     });
-  };
+  }, []);
 
-  const updateRole = (roleName: string, updates: Partial<BandRole>) => {
-    setSelectedRoles((prev) =>
-      prev.map((role) =>
-        role.role === roleName ? { ...role, ...updates } : role
-      )
-    );
-  };
+  const updateRole = useCallback(
+    (roleName: string, updates: Partial<BandSetupRole>) => {
+      setSelectedRoles((prev) =>
+        prev.map((role) =>
+          role.role === roleName ? { ...role, ...updates } : role
+        )
+      );
+    },
+    []
+  );
 
-  const addCustomRole = () => {
+  const addCustomRole = useCallback(() => {
     if (customRole.trim()) {
       setSelectedRoles((prev) => [
         ...prev,
@@ -204,13 +219,13 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
       setCustomRole("");
       setShowCustomForm(false);
     }
-  };
+  }, [customRole]);
 
-  const removeRole = (roleName: string) => {
+  const removeRole = useCallback((roleName: string) => {
     setSelectedRoles((prev) => prev.filter((r) => r.role !== roleName));
-  };
+  }, []);
 
-  const toggleSkill = (roleName: string, skill: string) => {
+  const toggleSkill = useCallback((roleName: string, skill: string) => {
     setSelectedRoles((prev) =>
       prev.map((role) => {
         if (role.role === roleName) {
@@ -225,28 +240,36 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         return role;
       })
     );
-  };
+  }, []);
 
-  const handleSubmit = () => {
+  const prepareForSubmission = useCallback(
+    (role: BandSetupRole): BandRoleInput => {
+      const price = role.price ? parseFloat(role.price) : undefined;
+      return {
+        role: role.role,
+        maxSlots: role.maxSlots,
+        requiredSkills:
+          role.requiredSkills.length > 0 ? role.requiredSkills : undefined,
+        description: role.description || undefined,
+        price: price && !isNaN(price) ? price : undefined,
+        currency: role.currency,
+        negotiable: role.negotiable,
+      };
+    },
+    []
+  );
+
+  const handleSubmit = useCallback(() => {
     if (selectedRoles.length > 0) {
-      onSubmit(selectedRoles);
+      const rolesToSubmit = selectedRoles.map(prepareForSubmission);
+      onSubmit(rolesToSubmit);
       onClose();
     }
-  };
-
-  const getProgressPercentage = () => {
-    const baseProgress = Math.min(selectedRoles.length * 15, 60);
-    const configuredProgress =
-      selectedRoles.filter(
-        (role) => role.maxSlots > 0 && role.requiredSkills.length > 0
-      ).length * 5;
-    return Math.min(baseProgress + configuredProgress, 100);
-  };
+  }, [selectedRoles, prepareForSubmission, onSubmit, onClose]);
 
   // Selection View
   const SelectionView = () => (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-4 border-b shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -278,10 +301,8 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </div>
       </div>
 
-      {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4">
-          {/* Category Filters */}
           <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
             {roleCategories.map((category) => {
               const Icon = category.icon;
@@ -303,7 +324,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
             })}
           </div>
 
-          {/* Role Grid */}
           <div className="grid grid-cols-2 gap-3">
             {filteredRoles.map((role) => {
               const isSelected = selectedRoles.some(
@@ -351,7 +371,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
             })}
           </div>
 
-          {/* Custom Role */}
           <div className="mt-6 mb-8">
             <div className={cn("p-4 rounded-2xl border", colors.border)}>
               <div className="flex items-center justify-between mb-3">
@@ -409,7 +428,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </div>
       </ScrollArea>
 
-      {/* Footer */}
       <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t shrink-0">
         <div className="flex items-center justify-between mb-3">
           <div className="flex-1">
@@ -419,7 +437,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                 {selectedRoles.length} roles selected
               </span>
             </div>
-            <Progress value={getProgressPercentage()} className="h-2" />
+            <Progress value={progressPercentage} className="h-2" />
           </div>
           <Button
             onClick={() => setView("configuration")}
@@ -437,7 +455,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   // Configuration View
   const ConfigurationView = () => (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-4 border-b shrink-0">
         <div className="flex items-center justify-between mb-4">
           <Button
@@ -488,7 +505,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </Tabs>
       </div>
 
-      {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4">
           <TabsContent value="roles" className="mt-0 space-y-4">
@@ -638,7 +654,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                         <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50">
                           <div className="flex items-center gap-2">
                             <Switch
-                              checked={role.negotiable !== false}
+                              checked={role.negotiable ?? true}
                               onCheckedChange={(checked) =>
                                 updateRole(role.role, { negotiable: checked })
                               }
@@ -649,21 +665,15 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                               Negotiable
                             </span>
                           </div>
-                          {role.price && (
+                          {role.price && parseFloat(role.price) > 0 && (
                             <Badge
-                              variant={
-                                role.negotiable !== false
-                                  ? "default"
-                                  : "outline"
-                              }
+                              variant={role.negotiable ? "default" : "outline"}
                               className={cn(
-                                role.negotiable !== false &&
+                                role.negotiable &&
                                   "bg-gradient-to-r from-green-500 to-emerald-500"
                               )}
                             >
-                              {role.negotiable !== false
-                                ? "Negotiable"
-                                : "Fixed"}
+                              {role.negotiable ? "Negotiable" : "Fixed"}
                             </Badge>
                           )}
                         </div>
@@ -741,20 +751,18 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                       </Label>
                       <Input
                         placeholder="Type skill and press Enter"
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (
                             e.key === "Enter" &&
-                            (e.target as HTMLInputElement).value.trim()
+                            e.currentTarget.value.trim()
                           ) {
-                            const skill = (
-                              e.target as HTMLInputElement
-                            ).value.trim();
+                            const skill = e.currentTarget.value.trim();
                             if (!role.requiredSkills.includes(skill)) {
                               updateRole(role.role, {
                                 requiredSkills: [...role.requiredSkills, skill],
                               });
                             }
-                            (e.target as HTMLInputElement).value = "";
+                            e.currentTarget.value = "";
                           }
                         }}
                       />
@@ -780,7 +788,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
               </div>
             ) : (
               <>
-                {/* Budget Summary */}
                 <div
                   className={cn("rounded-xl border p-4 mb-3", colors.border)}
                 >
@@ -834,7 +841,11 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                           </span>
                         </div>
                         <div className="text-xl font-bold">
-                          {selectedRoles.filter((r) => r.price).length}
+                          {
+                            selectedRoles.filter(
+                              (r) => r.price && parseFloat(r.price) > 0
+                            ).length
+                          }
                         </div>
                       </div>
                       <div className="p-3 rounded-lg bg-white/50">
@@ -847,27 +858,26 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                           </span>
                         </div>
                         <div className="text-xl font-bold">
-                          {
-                            selectedRoles.filter((r) => r.negotiable !== false)
-                              .length
-                          }
+                          {selectedRoles.filter((r) => r.negotiable).length}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Budget Breakdown */}
-                {selectedRoles.filter((r) => r.price).length > 0 && (
+                {selectedRoles.filter((r) => r.price && parseFloat(r.price) > 0)
+                  .length > 0 && (
                   <div className={cn("rounded-xl border p-4", colors.border)}>
                     <h4 className={cn("font-semibold mb-3", colors.text)}>
                       Budget Breakdown
                     </h4>
                     <div className="space-y-2">
                       {selectedRoles
-                        .filter((role) => role.price)
+                        .filter(
+                          (role) => role.price && parseFloat(role.price) > 0
+                        )
                         .map((role) => {
-                          const price = parseFloat(role.price || "0");
+                          const price = parseFloat(role.price!);
                           return (
                             <div
                               key={role.role}
@@ -886,7 +896,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                                   <Badge variant="outline" className="text-xs">
                                     {role.maxSlots} pos
                                   </Badge>
-                                  {role.negotiable !== false && (
+                                  {role.negotiable && (
                                     <Badge
                                       variant="secondary"
                                       className="text-xs bg-green-100 text-green-800"
@@ -898,13 +908,14 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                               </div>
                               <div className="text-right">
                                 <div className="text-lg font-bold text-green-600">
-                                  {role.currency}{" "}
+                                  {role.currency || "KES"}{" "}
                                   {(price * role.maxSlots).toLocaleString()}
                                 </div>
                                 <div
                                   className={cn("text-xs", colors.textMuted)}
                                 >
-                                  {role.currency} {price.toLocaleString()} each
+                                  {role.currency || "KES"}{" "}
+                                  {price.toLocaleString()} each
                                 </div>
                               </div>
                             </div>
@@ -919,7 +930,6 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         </div>
       </ScrollArea>
 
-      {/* Footer */}
       <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t shrink-0">
         <Button
           onClick={handleSubmit}

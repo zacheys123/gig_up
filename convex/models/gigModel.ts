@@ -66,19 +66,15 @@ const bandBookingEntry = v.object({
 });
 const bookingHistoryEntry = v.object({
   // Basic info
-  entryId: v.string(), // Unique ID for this entry
+  entryId: v.string(),
   timestamp: v.number(),
-
-  // User & Role Info
   userId: v.id("users"),
-  userRole: v.optional(v.string()), // User's role (e.g., "musician", "client")
+  userRole: v.optional(v.string()),
+  bandRole: v.optional(v.string()),
+  bandRoleIndex: v.optional(v.number()),
+  isBandRole: v.optional(v.boolean()),
 
-  // Role-specific for band gigs
-  bandRole: v.optional(v.string()), // "Vocalist", "Guitarist", etc.
-  bandRoleIndex: v.optional(v.number()), // Index in bandCategory array
-  isBandRole: v.optional(v.boolean()), // Is this a band role booking?
-
-  // Status & Actions
+  // Status & Actions - includes "updated" for tracking edits
   status: v.union(
     v.literal("applied"),
     v.literal("shortlisted"),
@@ -88,27 +84,19 @@ const bookingHistoryEntry = v.object({
     v.literal("confirmed"),
     v.literal("completed"),
     v.literal("cancelled"),
-    v.literal("rejected")
+    v.literal("rejected"),
+    v.literal("updated") // For tracking gig updates
   ),
 
-  // Gig Type
   gigType: v.union(v.literal("regular"), v.literal("band")),
-
-  // Financials
   proposedPrice: v.optional(v.number()),
   agreedPrice: v.optional(v.number()),
   currency: v.optional(v.string()),
-
-  // Parties involved
-  actionBy: v.id("users"), // Who performed this action
-  actionFor: v.optional(v.id("users")), // Who this action affects
-
-  // Metadata
+  actionBy: v.id("users"),
+  actionFor: v.optional(v.id("users")),
   notes: v.optional(v.string()),
-  metadata: v.optional(v.any()), // Flexible data
-  attachments: v.optional(v.array(v.string())), // Files, images
-
-  // For cancellations/rejections
+  metadata: v.optional(v.any()),
+  attachments: v.optional(v.array(v.string())),
   reason: v.optional(v.string()),
   refundAmount: v.optional(v.number()),
   refundStatus: v.optional(v.string()),

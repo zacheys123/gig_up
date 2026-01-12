@@ -42,7 +42,6 @@ import {
   Zap,
   Palette,
   Tag,
-  Globe,
   Shield,
   Star,
   TrendingUp,
@@ -58,6 +57,13 @@ import {
   Info,
   ArrowRight,
   ChevronRight,
+  Loader2,
+  Clock as ClockIcon,
+  Users as UsersIcon,
+  Key,
+  Shield as ShieldIcon,
+  Palette as PaletteIcon,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -65,16 +71,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-
 import { fileupload, MinimalUser } from "@/hooks/fileUpload";
 import DatePicker from "react-datepicker";
-
 import "react-datepicker/dist/react-datepicker.css";
-
 import {
   BandRoleInput,
+  BandSetupRole,
   BusinessCategory,
-  CategoryVisibility,
   CustomProps,
   TalentType,
   UserInfo,
@@ -103,434 +106,12 @@ import {
 import { MemoizedSwitch } from "./MemoizedSwitch";
 import BandSetupModal from "./BandSetUpModal";
 import { GiTrumpet, GiViolin } from "react-icons/gi";
-import { Id } from "@/convex/_generated/dataModel";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
-interface DraftsListModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onLoadDraft: (draftId: string) => void;
-  onDeleteDraft: (draftId: string) => void;
-  currentDraftId: string | null;
-  drafts: GigDraft[]; // Add this
-  refreshDrafts: () => void; // Add this
-}
-// Update LocalGigInputs type to include duration fields
-// Add this component definition after your imports
-const DraftsListModal = React.memo(
-  ({
-    isOpen,
-    onClose,
-    onLoadDraft,
-    onDeleteDraft,
-    currentDraftId,
-    drafts, // Receive drafts as prop
-    refreshDrafts, // Receive refresh function
-  }: DraftsListModalProps) => {
-    // Remove the local state and useEffect that loads drafts
-    const [searchQuery, setSearchQuery] = useState("");
-    const [filterCategory, setFilterCategory] = useState<string>("all");
-
-    // Update filteredDrafts to use prop instead of state
-    const filteredDrafts = useMemo(() => {
-      return drafts
-        .filter((draft) => {
-          if (filterCategory === "all") return true;
-          return draft.category === filterCategory;
-        })
-        .filter((draft) => {
-          if (!searchQuery.trim()) return true;
-          const query = searchQuery.toLowerCase();
-          return (
-            draft.title.toLowerCase().includes(query) ||
-            draft.data.formValues.description?.toLowerCase().includes(query) ||
-            draft.data.formValues.location?.toLowerCase().includes(query) ||
-            (draft.isBandGig &&
-              draft.data.bandRoles?.some((role) =>
-                role.role.toLowerCase().includes(query)
-              ))
-          );
-        });
-    }, [drafts, searchQuery, filterCategory]); // Use drafts prop
-    const getCategoryIcon = (category: string) => {
-      switch (category) {
-        case "full":
-          return <Users className="w-4 h-4" />;
-        case "personal":
-          return <Music className="w-4 h-4" />;
-        case "other":
-          return <Zap className="w-4 h-4" />;
-        case "mc":
-          return <Mic className="w-4 h-4" />;
-        case "dj":
-          return <Volume2 className="w-4 h-4" />;
-        case "vocalist":
-          return <Music className="w-4 h-4" />;
-        default:
-          return <FileText className="w-4 h-4" />;
-      }
-    };
-
-    const getCategoryLabel = (category: string) => {
-      switch (category) {
-        case "full":
-          return "Full Band";
-        case "personal":
-          return "Individual";
-        case "other":
-          return "Create Band";
-        case "mc":
-          return "MC";
-        case "dj":
-          return "DJ";
-        case "vocalist":
-          return "Vocalist";
-        default:
-          return "Uncategorized";
-      }
-    };
-
-    // Format time ago
-    const getTimeAgo = (date: Date) => {
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / (1000 * 60));
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-      if (diffMins < 1) return "Just now";
-      if (diffMins < 60) return `${diffMins}m ago`;
-      if (diffHours < 24) return `${diffHours}h ago`;
-      if (diffDays < 7) return `${diffDays}d ago`;
-
-      // Return date if older than a week
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-    };
-
-    // Format time (e.g., "2:30 PM")
-    const getFormattedTime = (date: Date) => {
-      return date.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-
-    if (!isOpen) return null;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        onClick={(e) => e.target === e.currentTarget && onClose()}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800"
-        >
-          {/* Header */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                  <FileText className="w-7 h-7 text-blue-600" />
-                  Your Drafts
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {drafts.length} saved draft{drafts.length !== 1 ? "s" : ""}
-                  {currentDraftId && " • Current draft is auto-saving"}
-                </p>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-          </div>
-
-          {/* Filters and Search */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search drafts by title, description, or role..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 rounded-xl border-2 focus:border-blue-500"
-                />
-              </div>
-              <Select
-                value={filterCategory}
-                onValueChange={(value) => setFilterCategory(value)}
-              >
-                <SelectTrigger className="w-[180px] rounded-xl">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent className={"bg-neutral-600"}>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="full">🎵 Full Band</SelectItem>
-                  <SelectItem value="personal">👤 Individual</SelectItem>
-                  <SelectItem value="other">🎭 Create Band</SelectItem>
-                  <SelectItem value="mc">🎤 MC</SelectItem>
-                  <SelectItem value="dj">🎧 DJ</SelectItem>
-                  <SelectItem value="vocalist">🎤 Vocalist</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Drafts List */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {filteredDrafts.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
-                  <FileText className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  No drafts found
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {searchQuery || filterCategory !== "all"
-                    ? "Try adjusting your search or filters"
-                    : "Start creating a gig to save your first draft!"}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredDrafts.map((draft) => {
-                  const draftDate = new Date(draft.updatedAt);
-                  const timeAgo = getTimeAgo(draftDate);
-                  const formattedTime = getFormattedTime(draftDate);
-
-                  return (
-                    <motion.div
-                      key={draft.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`group relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border p-4 hover:shadow-lg transition-all duration-200 ${
-                        draft.id === currentDraftId
-                          ? "border-2 border-blue-500 ring-2 ring-blue-500/20"
-                          : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"
-                      }`}
-                    >
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`p-2 rounded-lg ${
-                              draft.category === "full"
-                                ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10"
-                                : draft.category === "personal"
-                                  ? "bg-gradient-to-r from-blue-500/10 to-cyan-500/10"
-                                  : draft.category === "other"
-                                    ? "bg-gradient-to-r from-purple-500/10 to-pink-500/10"
-                                    : "bg-gradient-to-r from-gray-500/10 to-gray-600/10"
-                            }`}
-                          >
-                            {getCategoryIcon(draft.category)}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                              {getCategoryLabel(draft.category)}
-                            </span>
-                            {draft.isBandGig && (
-                              <span className="text-xs text-purple-600 dark:text-purple-400">
-                                Band Setup
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => onLoadDraft(draft.id)}
-                            className="group relative overflow-hidden px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white font-semibold text-sm tracking-wide shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                            title="Load Draft"
-                          >
-                            {/* Sparkle particles */}
-                            <div className="absolute inset-0">
-                              {[...Array(3)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="absolute w-1 h-1 bg-white/40 rounded-full animate-ping"
-                                  style={{
-                                    top: `${20 + i * 30}%`,
-                                    left: `${10 + i * 40}%`,
-                                    animationDelay: `${i * 0.2}s`,
-                                  }}
-                                />
-                              ))}
-                            </div>
-
-                            {/* Button content */}
-                            <div className="relative flex items-center justify-center gap-2">
-                              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                              <span>Load Draft</span>
-                            </div>
-
-                            {/* Hover shine effect */}
-                            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000">
-                              <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
-                            </div>
-                          </button>
-                          <button
-                            onClick={() => onDeleteDraft(draft.id)}
-                            className="p-1.5 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
-                            title="Delete Draft"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {draft.title}
-                        </h3>
-
-                        {draft.data.formValues.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                            {draft.data.formValues.description}
-                          </p>
-                        )}
-
-                        {/* Band Role Summary */}
-                        {draft.isBandGig && draft.bandRoleCount && (
-                          <div className="flex items-center gap-2 text-xs text-purple-700 dark:text-purple-300">
-                            <Users className="w-3 h-3" />
-                            <span>
-                              {draft.bandRoleCount} role
-                              {draft.bandRoleCount !== 1 ? "s" : ""}
-                            </span>
-                            {draft.totalSlots && (
-                              <>
-                                <span>•</span>
-                                <span>
-                                  {draft.totalSlots} slot
-                                  {draft.totalSlots !== 1 ? "s" : ""}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Location and Date */}
-                        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-500">
-                          {draft.data.formValues.location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span className="truncate">
-                                {draft.data.formValues.location}
-                              </span>
-                            </div>
-                          )}
-
-                          {draft.data.formValues.gigtimeline && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>
-                                {draft.data.formValues.gigtimeline === "once"
-                                  ? "One-time"
-                                  : draft.data.formValues.gigtimeline}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Progress
-                            </span>
-                            <span className="font-semibold">
-                              {draft.progress}%
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${draft.progress}%` }}
-                              transition={{ duration: 0.5 }}
-                              className={`h-full rounded-full ${
-                                draft.progress >= 75
-                                  ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                                  : draft.progress >= 50
-                                    ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                                    : "bg-gradient-to-r from-orange-500 to-amber-500"
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Footer with TIME */}
-                      <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-500">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span className="font-medium">{timeAgo}</span>
-                            </div>
-                            <div className="text-gray-400 dark:text-gray-600 text-[10px]">
-                              {formattedTime}
-                            </div>
-                          </div>
-                          {draft.id === currentDraftId && (
-                            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium">
-                              Current
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-medium">
-                  {filteredDrafts.length} draft
-                  {filteredDrafts.length !== 1 ? "s" : ""}
-                </span>
-                <span className="mx-2">•</span>
-                <span>
-                  {drafts.filter((d) => d.isBandGig).length} band gig
-                  {drafts.filter((d) => d.isBandGig).length !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <Button
-                onClick={onClose}
-                variant="outline"
-                className="rounded-xl border-2 hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    );
-  }
-);
-
-DraftsListModal.displayName = "DraftsListModal";
-
-// Memoized Error Message Component
+// Memoized ErrorMessage Component
 const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
   if (!error) return null;
 
@@ -546,9 +127,8 @@ const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
   );
 });
 ErrorMessage.displayName = "ErrorMessage";
-// Remove the standalone ValidationSummary component above and add it inside NormalGigsForm:
 
-// Memoized Input Component - FIXED VERSION
+// Memoized Input Component
 const MemoizedInput = React.memo(
   ({
     value,
@@ -560,7 +140,7 @@ const MemoizedInput = React.memo(
     className = "",
     error,
     icon: Icon,
-    required = false, // Add default value
+    required = false,
     ...props
   }: {
     value: string;
@@ -571,10 +151,11 @@ const MemoizedInput = React.memo(
     type?: string;
     className?: string;
     error?: string;
-    required?: boolean; // Make it optional with default
+    required?: boolean;
     icon?: any;
     [key: string]: any;
   }) => {
+    const { colors } = useThemeColors();
     return (
       <div>
         <div className="relative">
@@ -610,6 +191,7 @@ const MemoizedInput = React.memo(
   }
 );
 MemoizedInput.displayName = "MemoizedInput";
+
 // Memoized Textarea Component
 const MemoizedTextarea = React.memo(
   ({
@@ -657,18 +239,968 @@ const MemoizedTextarea = React.memo(
 );
 MemoizedTextarea.displayName = "MemoizedTextarea";
 
+// DraftsListModal Component
+interface DraftsListModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onLoadDraft: (draftId: string) => void;
+  onDeleteDraft: (draftId: string) => void;
+  currentDraftId: string | null;
+  drafts: GigDraft[];
+  refreshDrafts: () => void;
+}
+
+const DraftsListModal = React.memo(
+  ({
+    isOpen,
+    onClose,
+    onLoadDraft,
+    onDeleteDraft,
+    currentDraftId,
+    drafts,
+    refreshDrafts,
+  }: DraftsListModalProps) => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterCategory, setFilterCategory] = useState<string>("all");
+
+    const filteredDrafts = useMemo(() => {
+      return drafts
+        .filter((draft) => {
+          if (filterCategory === "all") return true;
+          return draft.category === filterCategory;
+        })
+        .filter((draft) => {
+          if (!searchQuery.trim()) return true;
+          const query = searchQuery.toLowerCase();
+          return (
+            draft.title.toLowerCase().includes(query) ||
+            draft.data.formValues.description?.toLowerCase().includes(query) ||
+            draft.data.formValues.location?.toLowerCase().includes(query) ||
+            (draft.isBandGig &&
+              draft.data.bandRoles?.some((role) =>
+                role.role.toLowerCase().includes(query)
+              ))
+          );
+        });
+    }, [drafts, searchQuery, filterCategory]);
+
+    const getCategoryIcon = (category: string) => {
+      switch (category) {
+        case "full":
+          return <Users className="w-4 h-4" />;
+        case "personal":
+          return <Music className="w-4 h-4" />;
+        case "other":
+          return <Zap className="w-4 h-4" />;
+        case "mc":
+          return <Mic className="w-4 h-4" />;
+        case "dj":
+          return <Volume2 className="w-4 h-4" />;
+        case "vocalist":
+          return <Music className="w-4 h-4" />;
+        default:
+          return <FileText className="w-4 h-4" />;
+      }
+    };
+
+    const getCategoryLabel = (category: string) => {
+      switch (category) {
+        case "full":
+          return "Full Band";
+        case "personal":
+          return "Individual";
+        case "other":
+          return "Create Band";
+        case "mc":
+          return "MC";
+        case "dj":
+          return "DJ";
+        case "vocalist":
+          return "Vocalist";
+        default:
+          return "Uncategorized";
+      }
+    };
+
+    const getTimeAgo = (date: Date) => {
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    };
+
+    const getFormattedTime = (date: Date) => {
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+
+    if (!isOpen) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800"
+        >
+          <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                  <FileText className="w-7 h-7 text-blue-600" />
+                  Your Drafts
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {drafts.length} saved draft{drafts.length !== 1 ? "s" : ""}
+                  {currentDraftId && " • Current draft is auto-saving"}
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search drafts by title, description, or role..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 rounded-xl border-2 focus:border-blue-500"
+                />
+              </div>
+              <Select
+                value={filterCategory}
+                onValueChange={(value) => setFilterCategory(value)}
+              >
+                <SelectTrigger className="w-[180px] rounded-xl">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent className={"bg-neutral-600"}>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="full">🎵 Full Band</SelectItem>
+                  <SelectItem value="personal">👤 Individual</SelectItem>
+                  <SelectItem value="other">🎭 Create Band</SelectItem>
+                  <SelectItem value="mc">🎤 MC</SelectItem>
+                  <SelectItem value="dj">🎧 DJ</SelectItem>
+                  <SelectItem value="vocalist">🎤 Vocalist</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {filteredDrafts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  No drafts found
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {searchQuery || filterCategory !== "all"
+                    ? "Try adjusting your search or filters"
+                    : "Start creating a gig to save your first draft!"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredDrafts.map((draft) => {
+                  const draftDate = new Date(draft.updatedAt);
+                  const timeAgo = getTimeAgo(draftDate);
+                  const formattedTime = getFormattedTime(draftDate);
+
+                  return (
+                    <motion.div
+                      key={draft.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`group relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border p-4 hover:shadow-lg transition-all duration-200 ${
+                        draft.id === currentDraftId
+                          ? "border-2 border-blue-500 ring-2 ring-blue-500/20"
+                          : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`p-2 rounded-lg ${
+                              draft.category === "full"
+                                ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10"
+                                : draft.category === "personal"
+                                  ? "bg-gradient-to-r from-blue-500/10 to-cyan-500/10"
+                                  : draft.category === "other"
+                                    ? "bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+                                    : "bg-gradient-to-r from-gray-500/10 to-gray-600/10"
+                            }`}
+                          >
+                            {getCategoryIcon(draft.category)}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                              {getCategoryLabel(draft.category)}
+                            </span>
+                            {draft.isBandGig && (
+                              <span className="text-xs text-purple-600 dark:text-purple-400">
+                                Band Setup
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => onLoadDraft(draft.id)}
+                            className="group relative overflow-hidden px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white font-semibold text-sm tracking-wide shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                            title="Load Draft"
+                          >
+                            <div className="absolute inset-0">
+                              {[...Array(3)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="absolute w-1 h-1 bg-white/40 rounded-full animate-ping"
+                                  style={{
+                                    top: `${20 + i * 30}%`,
+                                    left: `${10 + i * 40}%`,
+                                    animationDelay: `${i * 0.2}s`,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <div className="relative flex items-center justify-center gap-2">
+                              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                              <span>Load Draft</span>
+                            </div>
+                            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000">
+                              <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => onDeleteDraft(draft.id)}
+                            className="p-1.5 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
+                            title="Delete Draft"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          {draft.title}
+                        </h3>
+
+                        {draft.data.formValues.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                            {draft.data.formValues.description}
+                          </p>
+                        )}
+
+                        {draft.isBandGig && draft.bandRoleCount && (
+                          <div className="flex items-center gap-2 text-xs text-purple-700 dark:text-purple-300">
+                            <Users className="w-3 h-3" />
+                            <span>
+                              {draft.bandRoleCount} role
+                              {draft.bandRoleCount !== 1 ? "s" : ""}
+                            </span>
+                            {draft.totalSlots && (
+                              <>
+                                <span>•</span>
+                                <span>
+                                  {draft.totalSlots} slot
+                                  {draft.totalSlots !== 1 ? "s" : ""}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-500">
+                          {draft.data.formValues.location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="truncate">
+                                {draft.data.formValues.location}
+                              </span>
+                            </div>
+                          )}
+
+                          {draft.data.formValues.gigtimeline && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              <span>
+                                {draft.data.formValues.gigtimeline === "once"
+                                  ? "One-time"
+                                  : draft.data.formValues.gigtimeline}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Progress
+                            </span>
+                            <span className="font-semibold">
+                              {draft.progress}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${draft.progress}%` }}
+                              transition={{ duration: 0.5 }}
+                              className={`h-full rounded-full ${
+                                draft.progress >= 75
+                                  ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                                  : draft.progress >= 50
+                                    ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                                    : "bg-gradient-to-r from-orange-500 to-amber-500"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-500">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span className="font-medium">{timeAgo}</span>
+                            </div>
+                            <div className="text-gray-400 dark:text-gray-600 text-[10px]">
+                              {formattedTime}
+                            </div>
+                          </div>
+                          {draft.id === currentDraftId && (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium">
+                  {filteredDrafts.length} draft
+                  {filteredDrafts.length !== 1 ? "s" : ""}
+                </span>
+                <span className="mx-2">•</span>
+                <span>
+                  {drafts.filter((d) => d.isBandGig).length} band gig
+                  {drafts.filter((d) => d.isBandGig).length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <Button
+                onClick={onClose}
+                variant="outline"
+                className="rounded-xl border-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  }
+);
+DraftsListModal.displayName = "DraftsListModal";
+
+// Talent Preview Component
+const TalentPreview = React.memo(({ formValues, colors }: any) => {
+  if (
+    !formValues.mcType &&
+    !formValues.djGenre &&
+    !formValues.vocalistGenre?.length
+  ) {
+    return null;
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={cn(
+        "rounded-xl p-4 border mt-4",
+        colors.border,
+        colors.backgroundMuted,
+        "relative overflow-hidden"
+      )}
+    >
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+
+      <div className="flex justify-between items-center mb-4 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
+            <Star className="w-5 h-5 text-orange-500" />
+          </div>
+          <h3 className={cn("font-semibold", colors.text)}>Talent Details</h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("text-sm", colors.hoverBg, "hover:text-orange-600")}
+          onClick={() => {
+            const type = formValues.mcType
+              ? "mc"
+              : formValues.djGenre
+                ? "dj"
+                : formValues.vocalistGenre?.length
+                  ? "vocalist"
+                  : null;
+            // This would be handled by parent component
+          }}
+        >
+          Edit
+        </Button>
+      </div>
+
+      <div className="space-y-3 relative z-10">
+        {formValues.mcType && (
+          <div className="flex items-center gap-3">
+            <Badge
+              variant="outline"
+              className={cn(
+                "border-red-200 text-red-700 dark:border-red-800 dark:text-red-300",
+                "px-3 py-1 rounded-full font-medium"
+              )}
+            >
+              MC: {formValues.mcType}
+            </Badge>
+            {formValues.mcLanguages && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "border-purple-200 text-purple-700 dark:border-purple-800 dark:text-purple-300",
+                  "px-3 py-1 rounded-full font-medium"
+                )}
+              >
+                {formValues.mcLanguages}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {formValues.djGenre && (
+          <div className="flex items-center gap-3">
+            <Badge
+              variant="outline"
+              className={cn(
+                "border-pink-200 text-pink-700 dark:border-pink-800 dark:text-pink-300",
+                "px-3 py-1 rounded-full font-medium"
+              )}
+            >
+              DJ: {formValues.djGenre}
+            </Badge>
+            {formValues.djEquipment && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "border-amber-200 text-amber-700 dark:border-amber-800 dark:text-amber-300",
+                  "px-3 py-1 rounded-full font-medium"
+                )}
+              >
+                {formValues.djEquipment}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {formValues.vocalistGenre?.length && (
+          <div className="flex flex-wrap gap-2">
+            {formValues.vocalistGenre.map((genre: string) => (
+              <Badge
+                key={genre}
+                variant="outline"
+                className={cn(
+                  "border-green-200 text-green-700 dark:border-green-800 dark:text-green-300",
+                  "px-3 py-1 rounded-full font-medium"
+                )}
+              >
+                {genre}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+});
+TalentPreview.displayName = "TalentPreview";
+
+// Band Setup Preview Component
+const BandSetupPreview = React.memo(
+  ({ bandRoles, bussinesscat, colors, setShowBandSetupModal }: any) => {
+    if (bussinesscat !== "other" || bandRoles.length === 0) return null;
+
+    const totalPositions = bandRoles.reduce(
+      (sum: number, role: BandRoleInput) => sum + role.maxSlots,
+      0
+    );
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(
+          "rounded-xl p-4 border mt-4",
+          colors.border,
+          colors.backgroundMuted,
+          "relative overflow-hidden"
+        )}
+      >
+        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+
+        <div className="flex justify-between items-center mb-4 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+              <Users className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>Band Setup</h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                {bandRoles.length} role{bandRoles.length !== 1 ? "s" : ""},{" "}
+                {totalPositions} position{totalPositions !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("text-sm", colors.hoverBg, "hover:text-purple-600")}
+            onClick={() => setShowBandSetupModal(true)}
+          >
+            Edit
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
+          {bandRoles.map((role: BandRoleInput, index: number) => (
+            <div key={index} className="p-3 border rounded-lg">
+              <div className="flex justify-between items-start mb-2">
+                <span className="font-medium">{role.role}</span>
+                <Badge variant="outline" className="text-xs">
+                  {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
+                </Badge>
+              </div>
+
+              {role?.requiredSkills && role.requiredSkills.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {role.requiredSkills.slice(0, 3).map((skill) => (
+                    <Badge key={skill} variant="secondary" className="text-xs">
+                      {skill}
+                    </Badge>
+                  ))}
+                  {role.requiredSkills.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{role.requiredSkills.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {role.description && (
+                <p className="text-xs text-gray-600 line-clamp-2">
+                  {role.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  }
+);
+BandSetupPreview.displayName = "BandSetupPreview";
+
+// Interest Window Section Component
+const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
+  const [showInterestWindow, setShowInterestWindow] = useState(false);
+  const [interestWindowType, setInterestWindowType] = useState<
+    "dates" | "days"
+  >("dates");
+
+  const handleInterestWindowChange = useCallback(
+    (field: string, value: any) => {
+      // This would be handled by parent component
+    },
+    []
+  );
+
+  if (!showInterestWindow) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(
+          "rounded-xl p-6 border cursor-pointer transition-all group",
+          colors.border,
+          colors.backgroundMuted,
+          "hover:shadow-lg hover:border-purple-500/50"
+        )}
+        onClick={() => setShowInterestWindow(true)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "p-3 rounded-lg transition-transform group-hover:scale-110",
+                "bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+              )}
+            >
+              <Clock className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>
+                Set Interest Window (Optional)
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                Control when musicians can show interest in your gig
+              </p>
+            </div>
+          </div>
+          <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      className={cn(
+        "rounded-xl border overflow-hidden",
+        colors.border,
+        colors.backgroundMuted
+      )}
+    >
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+              <Clock className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>
+                Interest Window Settings
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                When can musicians show interest in this gig?
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowInterestWindow(false)}
+            className={cn(
+              "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
+              colors.textMuted
+            )}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <label className={cn("block text-sm font-medium mb-3", colors.text)}>
+            Interest Window Type
+          </label>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant={interestWindowType === "dates" ? "default" : "outline"}
+              onClick={() => setInterestWindowType("dates")}
+              className={cn(
+                "flex-1",
+                interestWindowType === "dates" &&
+                  "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+              )}
+            >
+              Specific Dates
+            </Button>
+            <Button
+              type="button"
+              variant={interestWindowType === "days" ? "default" : "outline"}
+              onClick={() => setInterestWindowType("days")}
+              className={cn(
+                "flex-1",
+                interestWindowType === "days" &&
+                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+              )}
+            >
+              Days After Posting
+            </Button>
+          </div>
+        </div>
+
+        {interestWindowType === "dates" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  className={cn("block text-sm font-medium mb-2", colors.text)}
+                >
+                  Interest Opens
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="datetime-local"
+                    value={formValues.acceptInterestStartTime || ""}
+                    onChange={(e) =>
+                      handleInterestWindowChange(
+                        "acceptInterestStartTime",
+                        e.target.value
+                      )
+                    }
+                    className="pl-10"
+                  />
+                </div>
+                <p className={cn("text-xs mt-1", colors.textMuted)}>
+                  When musicians can start showing interest
+                </p>
+              </div>
+
+              <div>
+                <label
+                  className={cn("block text-sm font-medium mb-2", colors.text)}
+                >
+                  Interest Closes
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="datetime-local"
+                    value={formValues.acceptInterestEndTime || ""}
+                    onChange={(e) =>
+                      handleInterestWindowChange(
+                        "acceptInterestEndTime",
+                        e.target.value
+                      )
+                    }
+                    className="pl-10"
+                  />
+                </div>
+                <p className={cn("text-xs mt-1", colors.textMuted)}>
+                  When interest period ends
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {interestWindowType === "days" && (
+          <div>
+            <label
+              className={cn("block text-sm font-medium mb-3", colors.text)}
+            >
+              Interest Window Duration
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const current = formValues.interestWindowDays || 7;
+                    handleInterestWindowChange(
+                      "interestWindowDays",
+                      Math.max(1, current - 1)
+                    );
+                  }}
+                  className="h-10 w-10"
+                >
+                  -
+                </Button>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={formValues.interestWindowDays || 7}
+                    onChange={(e) =>
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        parseInt(e.target.value) || 7
+                      )
+                    }
+                    min="1"
+                    max="90"
+                    className="w-20 text-center"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                    days
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const current = formValues.interestWindowDays || 7;
+                    handleInterestWindowChange(
+                      "interestWindowDays",
+                      current + 1
+                    );
+                  }}
+                  className="h-10 w-10"
+                >
+                  +
+                </Button>
+              </div>
+
+              <div className="flex-1">
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Musicians can show interest for{" "}
+                  <span className="font-semibold">
+                    {formValues.interestWindowDays || 7} days
+                  </span>{" "}
+                  after posting
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {[1, 3, 7, 14, 30].map((days) => (
+                <Button
+                  key={days}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleInterestWindowChange("interestWindowDays", days)
+                  }
+                  className={cn(
+                    formValues.interestWindowDays === days &&
+                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                  )}
+                >
+                  {days} {days === 1 ? "day" : "days"}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(formValues.acceptInterestStartTime ||
+          formValues.acceptInterestEndTime ||
+          formValues.interestWindowDays) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 pt-4 border-t"
+          >
+            <div className="flex items-center gap-3">
+              <Info className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm font-medium">
+                  Interest Window Configured
+                </p>
+                <p className="text-xs text-gray-500">
+                  {interestWindowType === "dates"
+                    ? `Interest opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"}`
+                    : `Interest open for ${formValues.interestWindowDays || 7} days after posting`}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="mt-4 pt-4 border-t">
+          <p className={cn("text-xs", colors.textMuted)}>
+            <strong>Tip:</strong> Setting an interest window helps manage
+            application flow and prevents last-minute applications.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+InterestWindowSection.displayName = "InterestWindowSection";
+
+// Validation Summary Component
+// Validation Summary Component
+const ValidationSummary = React.memo(({ fieldErrors }: any) => {
+  if (Object.keys(fieldErrors).length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      className="mb-6 p-4 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 rounded-xl"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <AlertCircle className="w-5 h-5 text-red-500" />
+        <h3 className="font-semibold text-red-700 dark:text-red-300">
+          Missing Required Information
+        </h3>
+      </div>
+      <ul className="space-y-1">
+        {Object.entries(fieldErrors).map(([field, error]) => (
+          <li key={field} className="text-sm text-red-600 dark:text-red-400">
+            •{" "}
+            {field === "bandRoles"
+              ? "Band roles are required"
+              : (error as string)}
+          </li>
+        ))}
+      </ul>
+    </motion.div>
+  );
+});
+ValidationSummary.displayName = "ValidationSummary";
+// Main NormalGigsForm Component
 export default function NormalGigsForm() {
   const router = useRouter();
-  const { colors } = useThemeColors();
+  const { colors, isDarkMode } = useThemeColors();
   const { user } = useCurrentUser();
   const isOnline = useNetworkStatus();
   const [drafts, setDrafts] = useState<GigDraft[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("basic");
 
   // Function to refresh drafts
   const refreshDrafts = useCallback(() => {
     const loadedDrafts = getGigDrafts();
     setDrafts(loadedDrafts);
   }, []);
+
   // Convex mutations
   const createGig = useMutation(api.controllers.gigs.createGig);
 
@@ -687,7 +1219,6 @@ export default function NormalGigsForm() {
     start: "",
     durationfrom: "am",
     durationto: "pm",
-
     bussinesscat: null as BusinessCategory,
     otherTimeline: "",
     gigtimeline: "",
@@ -696,8 +1227,6 @@ export default function NormalGigsForm() {
     pricerange: "",
     currency: "KES",
     negotiable: true,
-
-    // Talent-specific fields
     mcType: "",
     mcLanguages: "",
     djGenre: "",
@@ -707,6 +1236,7 @@ export default function NormalGigsForm() {
     acceptInterestStartTime: "",
     interestWindowDays: 7,
     enableInterestWindow: false,
+    maxSlots: 1,
   });
 
   // State that actually triggers re-renders
@@ -733,17 +1263,9 @@ export default function NormalGigsForm() {
     backgroundColor: "",
   });
 
-  // Form display state (minimal re-renders)
+  // Form display state
   const [bussinesscat, setBussinessCategory] = useState<BusinessCategory>(null);
   const [showduration, setshowduration] = useState<boolean>(false);
-  const [showCategories, setshowCategories] = useState<CategoryVisibility>({
-    title: false,
-    description: false,
-    business: false,
-    gtimeline: false,
-    othergig: true,
-    gduration: false,
-  });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [userinfo, setUserInfo] = useState<UserInfo>({
     prefferences: [],
@@ -761,266 +1283,52 @@ export default function NormalGigsForm() {
   const [skillInput, setSkillInput] = useState("");
   const [showCustomRoleForm, setShowCustomRoleForm] = useState(false);
 
-  // Field errors state - only for display
+  // Field errors state
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [bandRoles, setBandRoles] = useState<BandRoleInput[]>([
-    { role: "Lead Vocalist", maxSlots: 1, requiredSkills: ["Rock", "Pop"] },
+    {
+      role: "Lead Vocalist",
+      maxSlots: 1,
+      requiredSkills: ["Rock", "Pop"],
+    },
     {
       role: "Guitarist",
       maxSlots: 1,
       requiredSkills: ["Electric", "Acoustic"],
     },
-    { role: "Drummer", maxSlots: 1, requiredSkills: ["Jazz", "Rock"] },
-    { role: "Backup Vocalist", maxSlots: 2, requiredSkills: [] },
+    {
+      role: "Drummer",
+      maxSlots: 1,
+      requiredSkills: ["Jazz", "Rock"],
+    },
+    {
+      role: "Backup Vocalist",
+      maxSlots: 2,
+      requiredSkills: [],
+    },
   ]);
+  const convertToBandSetupRole = (role: BandRoleInput): BandSetupRole => {
+    return {
+      role: role.role,
+      maxSlots: role.maxSlots,
+      requiredSkills: role.requiredSkills || [], // Ensure array exists
+      description: role.description || "",
+      price: role.price?.toString() || "", // Convert number to string
+      currency: role.currency || "KES",
+      negotiable: role.negotiable ?? true,
+      filledSlots: role.filledSlots || 0,
+      isLocked: role.isLocked || false,
+    };
+  };
   const [formValidationErrors, setFormValidationErrors] = useState<string[]>(
     []
   );
   const [isFormValid, setIsFormValid] = useState(false);
-
-  // Basic required fields for all categories
-  const validateRequiredFields = useCallback(() => {
-    const errors: Record<string, string> = {};
-    const errorMessages: string[] = [];
-
-    // Basic required fields for all categories
-    if (!formValues.title?.trim()) {
-      errors.title = "Title is required";
-      errorMessages.push("Title is required");
-    }
-    if (!formValues.description?.trim()) {
-      errors.description = "Description is required";
-      errorMessages.push("Description is required");
-    }
-    if (!formValues.location?.trim()) {
-      errors.location = "Location is required";
-      errorMessages.push("Location is required");
-    }
-    if (!bussinesscat) {
-      errors.bussinesscat = "Business category is required";
-      errorMessages.push("Business category is required");
-    }
-    // Category-specific validations
-    if (bussinesscat === "mc") {
-      if (!formValues.mcType) errors.mcType = "MC type is required";
-      if (!formValues.mcLanguages)
-        errors.mcLanguages = "Languages are required";
-    } else if (bussinesscat === "dj") {
-      if (!formValues.djGenre) errors.djGenre = "DJ genre is required";
-      if (!formValues.djEquipment) errors.djEquipment = "Equipment is required";
-    } else if (bussinesscat === "vocalist") {
-      if (!formValues.vocalistGenre || formValues.vocalistGenre.length === 0) {
-        errors.vocalistGenre = "At least one genre is required";
-      }
-    } else if (bussinesscat === "personal") {
-      if (!formValues.category) errors.category = "Instrument is required";
-      if (!formValues.price?.trim()) errors.price = "Price is required";
-    } else if (bussinesscat === "full") {
-      if (!formValues.price?.trim()) errors.price = "Price is required";
-    } else if (bussinesscat === "other") {
-      // Band creation: price is NOT required, but band roles are
-      if (!bandRoles || bandRoles.length === 0) {
-        errors.bandRoles = "At least one band role is required";
-      }
-    }
-
-    // Timeline validations
-    if (formValues.gigtimeline === "once" && !formValues.date) {
-      errors.date = "Event date is required for one-time events";
-    } else if (formValues.gigtimeline !== "once" && !formValues.day) {
-      errors.day = "Day of week is required for recurring events";
-    }
-
-    fieldErrorsRef.current = errors;
-    setFieldErrors(errors);
-    setFormValidationErrors(errorMessages);
-
-    const isValid = Object.keys(errors).length === 0;
-    setIsFormValid(isValid);
-    return isValid;
-  }, [bussinesscat, formValues, bandRoles]);
-  // CHECKING FORM VALIDITY
-  const checkFormValidity = useCallback(() => {
-    return validateRequiredFields();
-  }, [validateRequiredFields]);
-  // Add this helper function to determine if a field is required
-  const isFieldRequired = useCallback(
-    (fieldName: string) => {
-      // Base required fields
-      const baseRequiredFields = [
-        "title",
-        "description",
-        "location",
-        "phoneNo",
-        "gigtimeline",
-        "bussinesscat",
-      ];
-
-      // Category-specific requirements - IMPORTANT: "other" doesn't need price
-      const categoryRequirements: Record<string, string[]> = {
-        mc: ["mcType", "mcLanguages"],
-        dj: ["djGenre", "djEquipment"],
-        vocalist: ["vocalistGenre"],
-        personal: ["category", "price", "maxSlots"],
-        full: ["price", "maxSlots"],
-        other: ["bandRoles"], // No price required for band creation
-      };
-
-      // Timeline requirements
-      const timelineRequirements =
-        formValues.gigtimeline === "once"
-          ? ["date"]
-          : formValues.gigtimeline !== "once" && formValues.gigtimeline !== ""
-            ? ["day"]
-            : [];
-
-      // Combine all requirements
-      const allRequiredFields = [
-        ...baseRequiredFields,
-        ...(bussinesscat ? categoryRequirements[bussinesscat] || [] : []),
-        ...timelineRequirements,
-      ];
-
-      return allRequiredFields.includes(fieldName);
-    },
-    [bussinesscat, formValues.gigtimeline]
-  );
-  const ValidationSummary = useCallback(() => {
-    if (Object.keys(fieldErrors).length === 0) return null;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 1, height: "auto" }}
-        className="mb-6 p-4 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 rounded-xl"
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <AlertCircle className="w-5 h-5 text-red-500" />
-          <h3 className="font-semibold text-red-700 dark:text-red-300">
-            Missing Required Information
-          </h3>
-        </div>
-        <ul className="space-y-1">
-          {Object.entries(fieldErrors).map(([field, error]) => (
-            <li key={field} className="text-sm text-red-600 dark:text-red-400">
-              • {field === "bandRoles" ? "Band roles are required" : error}
-            </li>
-          ))}
-        </ul>
-      </motion.div>
-    );
-  }, [fieldErrors]);
-
   const [draftId, setDraftId] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [showBandSetupModal, setShowBandSetupModal] = useState(false);
 
-  const saveAsDraft = useCallback(async () => {
-    try {
-      setIsSavingDraft(true);
-
-      const draftData = {
-        formValues: {
-          ...formValues,
-          mcType: formValues.mcType,
-          mcLanguages: formValues.mcLanguages,
-          djGenre: formValues.djGenre,
-          djEquipment: formValues.djEquipment,
-          vocalistGenre: formValues.vocalistGenre,
-        },
-        bandRoles: bussinesscat === "other" ? bandRoles : [],
-        customization: gigcustom,
-        imageUrl,
-        schedulingProcedure,
-      };
-
-      const savedDraft = saveGigDraft(draftData, draftId || undefined);
-      setDraftId(savedDraft.id);
-
-      toast.success("Draft saved successfully!", {
-        description: "Your gig has been saved as a draft.",
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error("Error saving draft:", error);
-      toast.error("Failed to save draft", {
-        description: "Please try again.",
-        duration: 3000,
-      });
-    } finally {
-      setIsSavingDraft(false);
-    }
-  }, [
-    formValues,
-    bandRoles,
-    gigcustom,
-    imageUrl,
-    schedulingProcedure,
-    draftId,
-    bussinesscat,
-  ]);
-
-  useEffect(() => {
-    const autoSaveTimer = setTimeout(() => {
-      if (formValues.title || formValues.description) {
-        saveAsDraft(); // Save silently without notification
-      }
-    }, 30000);
-
-    return () => clearTimeout(autoSaveTimer);
-  }, [formValues, saveAsDraft]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const draftIdParam = params.get("draft");
-
-    if (draftIdParam) {
-      const draft = getGigDraftById(draftIdParam);
-      if (draft) {
-        setDraftId(draft.id);
-
-        // Type assertion for draft data
-        const draftData = draft.data.formValues as Partial<LocalGigInputs>;
-
-        // Merge with defaults to ensure all fields exist
-        const mergedData: LocalGigInputs = {
-          title: "",
-          description: "",
-          phoneNo: "",
-          price: "",
-          category: "",
-          location: "",
-          secret: "",
-          end: "",
-          start: "",
-          durationfrom: "am",
-          durationto: "pm",
-          bussinesscat: null,
-          otherTimeline: "",
-          gigtimeline: "",
-          day: "",
-          date: "",
-          pricerange: "",
-          currency: "KES",
-          negotiable: true,
-          ...draftData,
-        };
-
-        setFormValues(mergedData);
-
-        // Handle band roles if they exist
-        if (draft.data.bandRoles) {
-          setBandRoles(draft.data.bandRoles);
-        }
-
-        toast.success("Draft loaded", {
-          description: "Your draft has been loaded successfully.",
-          duration: 3000,
-        });
-      }
-    }
-  }, []);
-
-  // Business categories - memoized
+  // Business categories
   const businessCategories = useMemo(
     () => [
       { value: "full", label: "🎵 Full Band", icon: Users, color: "orange" },
@@ -1093,7 +1401,6 @@ export default function NormalGigsForm() {
     []
   );
 
-  // Common instrument suggestions for quick selection
   const instrumentSuggestions = useMemo(
     () => [
       "Percussionist",
@@ -1118,6 +1425,132 @@ export default function NormalGigsForm() {
       "Tuba Player",
     ],
     []
+  );
+
+  // Validate form
+  const validateRequiredFields = useCallback(() => {
+    const errors: Record<string, string> = {};
+    const errorMessages: string[] = [];
+
+    // Basic required fields for all categories
+    if (!formValues.title?.trim()) {
+      errors.title = "Title is required";
+      errorMessages.push("Title is required");
+    }
+    if (!formValues.description?.trim()) {
+      errors.description = "Description is required";
+      errorMessages.push("Description is required");
+    }
+    if (!formValues.location?.trim()) {
+      errors.location = "Location is required";
+      errorMessages.push("Location is required");
+    }
+    if (!bussinesscat) {
+      errors.bussinesscat = "Business category is required";
+      errorMessages.push("Business category is required");
+    }
+    // Category-specific validations
+    if (bussinesscat === "mc") {
+      if (!formValues.mcType) errors.mcType = "MC type is required";
+      if (!formValues.mcLanguages)
+        errors.mcLanguages = "Languages are required";
+    } else if (bussinesscat === "dj") {
+      if (!formValues.djGenre) errors.djGenre = "DJ genre is required";
+      if (!formValues.djEquipment) errors.djEquipment = "Equipment is required";
+    } else if (bussinesscat === "vocalist") {
+      if (!formValues.vocalistGenre || formValues.vocalistGenre.length === 0) {
+        errors.vocalistGenre = "At least one genre is required";
+      }
+    } else if (bussinesscat === "personal") {
+      if (!formValues.category) errors.category = "Instrument is required";
+      if (!formValues.price?.trim()) errors.price = "Price is required";
+    } else if (bussinesscat === "full") {
+      if (!formValues.price?.trim()) errors.price = "Price is required";
+    } else if (bussinesscat === "other") {
+      if (!bandRoles || bandRoles.length === 0) {
+        errors.bandRoles = "At least one band role is required";
+      }
+    }
+
+    // Timeline validations
+    if (formValues.gigtimeline === "once" && !formValues.date) {
+      errors.date = "Event date is required for one-time events";
+    } else if (formValues.gigtimeline !== "once" && !formValues.day) {
+      errors.day = "Day of week is required for recurring events";
+    }
+
+    fieldErrorsRef.current = errors;
+    setFieldErrors(errors);
+    setFormValidationErrors(errorMessages);
+
+    const isValid = Object.keys(errors).length === 0;
+    setIsFormValid(isValid);
+    return isValid;
+  }, [bussinesscat, formValues, bandRoles]);
+
+  // Check form validity
+  const checkFormValidity = useCallback(() => {
+    return validateRequiredFields();
+  }, [validateRequiredFields]);
+
+  // Determine if field is required
+  const isFieldRequired = useCallback(
+    (fieldName: string) => {
+      const baseRequiredFields = [
+        "title",
+        "description",
+        "location",
+        "phoneNo",
+        "gigtimeline",
+        "bussinesscat",
+      ];
+
+      const categoryRequirements: Record<string, string[]> = {
+        mc: ["mcType", "mcLanguages"],
+        dj: ["djGenre", "djEquipment"],
+        vocalist: ["vocalistGenre"],
+        personal: ["category", "price", "maxSlots"],
+        full: ["price", "maxSlots"],
+        other: ["bandRoles"],
+      };
+
+      const timelineRequirements =
+        formValues.gigtimeline === "once"
+          ? ["date"]
+          : formValues.gigtimeline !== "once" && formValues.gigtimeline !== ""
+            ? ["day"]
+            : [];
+
+      const allRequiredFields = [
+        ...baseRequiredFields,
+        ...(bussinesscat ? categoryRequirements[bussinesscat] || [] : []),
+        ...timelineRequirements,
+      ];
+
+      return allRequiredFields.includes(fieldName);
+    },
+    [bussinesscat, formValues.gigtimeline]
+  );
+
+  // Should show field condition
+  const shouldShowField = useCallback(
+    (fieldType: string) => {
+      switch (fieldType) {
+        case "priceInfo":
+          return bussinesscat !== "other";
+        case "slotsConfig":
+          return bussinesscat !== "other";
+        case "individualInstrument":
+          return bussinesscat === "personal";
+        case "negotiableSwitch":
+          return bussinesscat !== "other";
+        case "bandSetup":
+          return bussinesscat === "other";
+        default:
+          return true;
+      }
+    },
+    [bussinesscat]
   );
 
   // File upload handler
@@ -1167,7 +1600,7 @@ export default function NormalGigsForm() {
     [fileUrl, user]
   );
 
-  // Optimized input change handler
+  // Input change handler
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<
@@ -1176,7 +1609,6 @@ export default function NormalGigsForm() {
     ) => {
       const { name, value, type } = e.target;
 
-      // Handle checkbox separately
       if (type === "checkbox") {
         const checked = (e.target as HTMLInputElement).checked;
         setFormValues((prev) => ({
@@ -1203,10 +1635,9 @@ export default function NormalGigsForm() {
     []
   );
 
-  // Handle input blur for validation
+  // Handle input blur
   const handleInputBlur = useCallback(
     (fieldName: string) => {
-      // Validate on blur if needed
       const value = formValues[fieldName as keyof LocalGigInputs];
       if (!value && fieldName === "title") {
         fieldErrorsRef.current[fieldName] = "Title is required";
@@ -1219,86 +1650,15 @@ export default function NormalGigsForm() {
     [formValues]
   );
 
-  // Add custom role handler
-  const handleAddCustomRole = useCallback(() => {
-    if (!newRole.role.trim()) {
-      toast.error("Please enter a role name");
-      return;
-    }
+  // Handle select change
+  const handleSelectChange = useCallback((name: string, value: string) => {
+    setFormValues((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }, []);
 
-    const newCustomRole: BandRoleInput = {
-      role: newRole.role.trim(),
-      maxSlots: newRole.maxSlots,
-      requiredSkills: newRole.requiredSkills,
-      description: newRole.description.trim() || undefined,
-    };
-
-    setBandRoles([...bandRoles, newCustomRole]);
-    setNewRole({
-      role: "",
-      maxSlots: 1,
-      requiredSkills: [],
-      description: "",
-    });
-    setSkillInput("");
-    setShowCustomRoleForm(false);
-
-    toast.success(`Added "${newRole.role}" role`);
-  }, [newRole, bandRoles]);
-
-  // Remove role handler
-  const handleRemoveRole = useCallback(
-    (index: number) => {
-      const updatedRoles = [...bandRoles];
-      updatedRoles.splice(index, 1);
-      setBandRoles(updatedRoles);
-      toast.success("Role removed");
-    },
-    [bandRoles]
-  );
-
-  // Add skill handler
-  const handleAddSkill = useCallback(() => {
-    if (skillInput.trim()) {
-      setNewRole({
-        ...newRole,
-        requiredSkills: [...newRole.requiredSkills, skillInput.trim()],
-      });
-      setSkillInput("");
-    }
-  }, [newRole, skillInput]);
-
-  // Remove skill handler
-  const handleRemoveSkill = useCallback(
-    (index: number) => {
-      const updatedSkills = [...newRole.requiredSkills];
-      updatedSkills.splice(index, 1);
-      setNewRole({
-        ...newRole,
-        requiredSkills: updatedSkills,
-      });
-    },
-    [newRole]
-  );
-
-  // Quick add instrument handler
-  const handleQuickAddInstrument = useCallback(
-    (instrument: string) => {
-      setNewRole({
-        ...newRole,
-        role: instrument,
-        maxSlots: 1,
-        requiredSkills: [],
-        description: "",
-      });
-    },
-    [newRole]
-  );
-
-  // In your NormalGigsForm component, add:
-  const [showBandSetupModal, setShowBandSetupModal] = useState(false);
-
-  // Update handleBussinessChange:
+  // Handle business category change
   const handleBussinessChange = useCallback((value: BusinessCategory) => {
     setBussinessCategory(value);
     setFormValues((prev) => ({
@@ -1316,7 +1676,6 @@ export default function NormalGigsForm() {
     }));
 
     if (value === "other") {
-      // Show band setup modal
       setShowBandSetupModal(true);
     } else if (!["mc", "dj", "vocalist"].includes(value || "")) {
       setActiveTalentType(null);
@@ -1327,23 +1686,18 @@ export default function NormalGigsForm() {
     }
   }, []);
 
-  // Handle band setup submission
-  const handleBandSetupSubmit = useCallback((roles: BandRoleInput[]) => {
-    setBandRoles(roles);
-    toast.success(
-      `Band setup complete! ${roles.length} role${roles.length !== 1 ? "s" : ""} selected.`
-    );
+  // Handle date selection
+  const handleDate = useCallback((date: Date | null) => {
+    if (date) {
+      setSelectedDate(date);
+      setFormValues((prev) => ({
+        ...prev,
+        date: date.toISOString(),
+      }));
+    }
   }, []);
 
-  // Handle Select changes (for Select components)
-  const handleSelectChange = useCallback((name: string, value: string) => {
-    setFormValues((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  }, []);
-
-  // Handle talent modal submit
+  // Handle talent submit
   const handleTalentSubmit = useCallback(
     (data: Partial<LocalGigInputs>) => {
       setFormValues((prev) => ({
@@ -1366,33 +1720,74 @@ export default function NormalGigsForm() {
     [activeTalentType]
   );
 
-  // Handle band instrument selection
-  const handleInstrumentChange = useCallback((instrument: string) => {
-    setUserInfo((prev) => ({
-      prefferences: prev.prefferences.includes(instrument)
-        ? prev.prefferences.filter((item) => item !== instrument)
-        : [...prev.prefferences, instrument],
-    }));
+  // Handle band setup submit
+  const handleBandSetupSubmit = useCallback((roles: BandRoleInput[]) => {
+    setBandRoles(roles);
+    toast.success(
+      `Band setup complete! ${roles.length} role${roles.length !== 1 ? "s" : ""} selected.`
+    );
   }, []);
 
-  // Handle date selection
-  const handleDate = useCallback((date: Date | null) => {
-    if (date) {
-      setSelectedDate(date);
-      setFormValues((prev) => ({
-        ...prev,
-        date: date.toISOString(),
-      }));
+  // Handle scheduling data
+  const getSchedulingData = useCallback((type: string, date?: Date) => {
+    setSchedulingProcedure({
+      type,
+      date: date ?? new Date(),
+    });
+  }, []);
+
+  // Save as draft
+  const saveAsDraft = useCallback(async () => {
+    try {
+      setIsSavingDraft(true);
+
+      const draftData = {
+        formValues: {
+          ...formValues,
+          mcType: formValues.mcType,
+          mcLanguages: formValues.mcLanguages,
+          djGenre: formValues.djGenre,
+          djEquipment: formValues.djEquipment,
+          vocalistGenre: formValues.vocalistGenre,
+        },
+        bandRoles: bussinesscat === "other" ? bandRoles : [],
+        customization: gigcustom,
+        imageUrl,
+        schedulingProcedure,
+      };
+
+      const savedDraft = saveGigDraft(draftData, draftId || undefined);
+      setDraftId(savedDraft.id);
+
+      toast.success("Draft saved successfully!", {
+        description: "Your gig has been saved as a draft.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      toast.error("Failed to save draft", {
+        description: "Please try again.",
+        duration: 3000,
+      });
+    } finally {
+      setIsSavingDraft(false);
     }
-  }, []);
-  // Add these functions in your NormalGigsForm component:
+  }, [
+    formValues,
+    bandRoles,
+    gigcustom,
+    imageUrl,
+    schedulingProcedure,
+    draftId,
+    bussinesscat,
+  ]);
 
+  // Handle load draft
   const handleLoadDraft = useCallback((draftId: string) => {
     const draft = getGigDraftById(draftId);
     if (draft) {
       setDraftId(draft.id);
 
-      // Merge draft data with defaults
       const draftData = draft.data.formValues as Partial<LocalGigInputs>;
       const mergedData: LocalGigInputs = {
         title: "",
@@ -1414,33 +1809,37 @@ export default function NormalGigsForm() {
         pricerange: "",
         currency: "KES",
         negotiable: true,
+        mcType: "",
+        mcLanguages: "",
+        djGenre: "",
+        djEquipment: "",
+        vocalistGenre: [],
+        acceptInterestEndTime: "",
+        acceptInterestStartTime: "",
+        interestWindowDays: 7,
+        enableInterestWindow: false,
+        maxSlots: 1,
         ...draftData,
       };
 
-      // Set all form values
       setFormValues(mergedData);
 
-      // Set business category
       if (draft.data.formValues.bussinesscat) {
         setBussinessCategory(draft.data.formValues.bussinesscat);
       }
 
-      // Set band roles if they exist
       if (draft.data.bandRoles) {
         setBandRoles(draft.data.bandRoles);
       }
 
-      // Set customization if it exists
       if (draft.data.customization) {
         setGigCustom(draft.data.customization);
       }
 
-      // Set image URL if it exists
       if (draft.data.imageUrl) {
         setUrl(draft.data.imageUrl);
       }
 
-      // Set scheduling procedure if it exists
       if (draft.data.schedulingProcedure) {
         setSchedulingProcedure(draft.data.schedulingProcedure);
       }
@@ -1450,11 +1849,11 @@ export default function NormalGigsForm() {
         duration: 3000,
       });
 
-      // Close the drafts modal
       setShowDraftsModal(false);
     }
   }, []);
 
+  // Handle delete draft
   const handleDeleteDraft = useCallback(
     (draftIdToDelete: string) => {
       if (
@@ -1465,12 +1864,10 @@ export default function NormalGigsForm() {
         const success = deleteGigDraft(draftIdToDelete);
 
         if (success) {
-          // If we're deleting the current draft, clear the draft ID
           if (draftIdToDelete === draftId) {
             setDraftId(null);
           }
 
-          // Refresh the drafts list
           refreshDrafts();
 
           toast.success("Draft deleted successfully", {
@@ -1485,18 +1882,8 @@ export default function NormalGigsForm() {
     },
     [draftId, refreshDrafts]
   );
-  // Load drafts when component mounts
-  useEffect(() => {
-    refreshDrafts();
-  }, [refreshDrafts]);
-  // Handle scheduling data
-  const getSchedulingData = useCallback((type: string, date?: Date) => {
-    setSchedulingProcedure({
-      type,
-      date: date ?? new Date(),
-    });
-  }, []);
 
+  // Handle form submit
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -1510,7 +1897,7 @@ export default function NormalGigsForm() {
         setEditMessage("Please add at least one band role");
         return;
       }
-      // Use the comprehensive validation function
+
       const isValid = validateRequiredFields();
 
       if (!isValid) {
@@ -1520,7 +1907,6 @@ export default function NormalGigsForm() {
         return;
       }
 
-      // Check if user is logged in
       if (!user?._id) {
         toast.error("You must be logged in to create a gig");
         return;
@@ -1529,7 +1915,6 @@ export default function NormalGigsForm() {
       try {
         setIsLoading(true);
 
-        // Prepare submission data
         const submissionData = prepareGigDataForConvex(
           formValues,
           user._id,
@@ -1544,7 +1929,6 @@ export default function NormalGigsForm() {
           formValues.durationto
         );
 
-        // Ensure bussinesscat is not null
         if (!submissionData.bussinesscat) {
           throw new Error("Business category is required");
         }
@@ -1556,7 +1940,6 @@ export default function NormalGigsForm() {
         setIsVisible(true);
         setRefetchData(true);
 
-        // Clear band roles after submission
         setBandRoles([]);
 
         setTimeout(() => {
@@ -1572,7 +1955,7 @@ export default function NormalGigsForm() {
       }
     },
     [
-      validateRequiredFields, // Use the new validation function
+      validateRequiredFields,
       user,
       gigcustom,
       imageUrl,
@@ -1585,6 +1968,80 @@ export default function NormalGigsForm() {
       bussinesscat,
     ]
   );
+
+  // Auto-save draft
+  useEffect(() => {
+    const autoSaveTimer = setTimeout(() => {
+      if (formValues.title || formValues.description) {
+        saveAsDraft();
+      }
+    }, 30000);
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [formValues, saveAsDraft]);
+
+  // Load drafts on mount
+  useEffect(() => {
+    refreshDrafts();
+  }, [refreshDrafts]);
+
+  // Load draft from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const draftIdParam = params.get("draft");
+
+    if (draftIdParam) {
+      const draft = getGigDraftById(draftIdParam);
+      if (draft) {
+        setDraftId(draft.id);
+
+        const draftData = draft.data.formValues as Partial<LocalGigInputs>;
+        const mergedData: LocalGigInputs = {
+          title: "",
+          description: "",
+          phoneNo: "",
+          price: "",
+          category: "",
+          location: "",
+          secret: "",
+          end: "",
+          start: "",
+          durationfrom: "am",
+          durationto: "pm",
+          bussinesscat: null,
+          otherTimeline: "",
+          gigtimeline: "",
+          day: "",
+          date: "",
+          pricerange: "",
+          currency: "KES",
+          negotiable: true,
+          mcType: "",
+          mcLanguages: "",
+          djGenre: "",
+          djEquipment: "",
+          vocalistGenre: [],
+          acceptInterestEndTime: "",
+          acceptInterestStartTime: "",
+          interestWindowDays: 7,
+          enableInterestWindow: false,
+          maxSlots: 1,
+          ...draftData,
+        };
+
+        setFormValues(mergedData);
+
+        if (draft.data.bandRoles) {
+          setBandRoles(draft.data.bandRoles);
+        }
+
+        toast.success("Draft loaded", {
+          description: "Your draft has been loaded successfully.",
+          duration: 3000,
+        });
+      }
+    }
+  }, []);
 
   // Handle success message timeout
   useEffect(() => {
@@ -1601,472 +2058,22 @@ export default function NormalGigsForm() {
     };
   }, [isVisible, editMessage]);
 
-  // Collapsible section component
-  const CollapsibleSection = useCallback(
-    ({
-      title,
-      icon: Icon,
-      isOpen,
-      onToggle,
-      children,
-      badge,
-    }: {
-      title: string;
-      icon: any;
-      isOpen: boolean;
-      onToggle: () => void;
-      children: React.ReactNode;
-      badge?: string;
-    }) => (
-      <div className="mb-4">
-        <div
-          className={cn(
-            "flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-300",
-            colors.border,
-            colors.backgroundMuted,
-            isOpen
-              ? "bg-gradient-to-r from-orange-500/5 to-red-500/5 border-orange-500/30"
-              : "hover:bg-gradient-to-r hover:from-orange-500/5 hover:to-red-500/5 hover:border-orange-500/20"
-          )}
-          onClick={onToggle}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "p-2 rounded-lg",
-                isOpen
-                  ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-600"
-                  : colors.hoverBg
-              )}
-            >
-              <Icon className="w-5 h-5" />
-            </div>
-            <div className="flex items-center gap-2">
-              <h3 className={cn("font-semibold", colors.text)}>{title}</h3>
-              {badge && (
-                <span
-                  className={cn(
-                    "px-2 py-0.5 rounded-full text-xs font-medium",
-                    "bg-gradient-to-r from-orange-500/10 to-red-500/10",
-                    "text-orange-700 dark:text-orange-300"
-                  )}
-                >
-                  {badge}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isOpen ? (
-              <ChevronUp className={cn("w-5 h-5", colors.textMuted)} />
-            ) : (
-              <ChevronDown className={cn("w-5 h-5", colors.textMuted)} />
-            )}
-          </div>
-        </div>
-
-        <AnimatePresence initial={false}>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
-            >
-              <div
-                className={cn(
-                  "p-4 border border-t-0 rounded-b-xl",
-                  colors.border,
-                  colors.backgroundMuted
-                )}
-              >
-                {children}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    ),
-    [colors]
-  );
-
-  // Talent preview component
-  const TalentPreview = useCallback(() => {
-    if (
-      !formValues.mcType &&
-      !formValues.djGenre &&
-      !formValues.vocalistGenre?.length
-    ) {
-      return null;
-    }
-
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className={cn(
-          "rounded-xl p-4 border",
-          colors.border,
-          colors.backgroundMuted,
-          "relative overflow-hidden"
-        )}
-      >
-        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
-
-        <div className="flex justify-between items-center mb-4 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
-              <Star className="w-5 h-5 text-orange-500" />
-            </div>
-            <h3 className={cn("font-semibold", colors.text)}>Talent Details</h3>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("text-sm", colors.hoverBg, "hover:text-orange-600")}
-            onClick={() => {
-              const type = formValues.mcType
-                ? "mc"
-                : formValues.djGenre
-                  ? "dj"
-                  : formValues.vocalistGenre?.length
-                    ? "vocalist"
-                    : null;
-              if (type) {
-                setActiveTalentType(type);
-                setShowTalentModal(true);
-              }
-            }}
-          >
-            Edit
-          </Button>
-        </div>
-
-        <div className="space-y-3 relative z-10">
-          {formValues.mcType && (
-            <div className="flex items-center gap-3">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "border-red-200 text-red-700 dark:border-red-800 dark:text-red-300",
-                  "px-3 py-1 rounded-full font-medium"
-                )}
-              >
-                MC: {formValues.mcType}
-              </Badge>
-              {formValues.mcLanguages && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "border-purple-200 text-purple-700 dark:border-purple-800 dark:text-purple-300",
-                    "px-3 py-1 rounded-full font-medium"
-                  )}
-                >
-                  {formValues.mcLanguages}
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {formValues.djGenre && (
-            <div className="flex items-center gap-3">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "border-pink-200 text-pink-700 dark:border-pink-800 dark:text-pink-300",
-                  "px-3 py-1 rounded-full font-medium"
-                )}
-              >
-                DJ: {formValues.djGenre}
-              </Badge>
-              {formValues.djEquipment && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "border-amber-200 text-amber-700 dark:border-amber-800 dark:text-amber-300",
-                    "px-3 py-1 rounded-full font-medium"
-                  )}
-                >
-                  {formValues.djEquipment}
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {formValues.vocalistGenre?.length && (
-            <div className="flex flex-wrap gap-2">
-              {formValues.vocalistGenre.map((genre) => (
-                <Badge
-                  key={genre}
-                  variant="outline"
-                  className={cn(
-                    "border-green-200 text-green-700 dark:border-green-800 dark:text-green-300",
-                    "px-3 py-1 rounded-full font-medium"
-                  )}
-                >
-                  {genre}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      </motion.div>
-    );
-  }, [colors, formValues]);
-
-  // Add this component in NormalGigsForm after TalentPreview
-  const BandSetupPreview = useCallback(() => {
-    if (bussinesscat !== "other" || bandRoles.length === 0) return null;
-
-    const totalPositions = bandRoles.reduce(
-      (sum, role) => sum + role.maxSlots,
-      0
-    );
-
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className={cn(
-          "rounded-xl p-4 border",
-          colors.border,
-          colors.backgroundMuted,
-          "relative overflow-hidden"
-        )}
-      >
-        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
-
-        <div className="flex justify-between items-center mb-4 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
-              <Users className="w-5 h-5 text-purple-500" />
-            </div>
-            <div>
-              <h3 className={cn("font-semibold", colors.text)}>Band Setup</h3>
-              <p className={cn("text-sm", colors.textMuted)}>
-                {bandRoles.length} role{bandRoles.length !== 1 ? "s" : ""},{" "}
-                {totalPositions} position{totalPositions !== 1 ? "s" : ""}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("text-sm", colors.hoverBg, "hover:text-purple-600")}
-            onClick={() => setShowBandSetupModal(true)}
-          >
-            Edit
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
-          {bandRoles.map((role, index) => (
-            <div key={index} className="p-3 border rounded-lg">
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-medium">{role.role}</span>
-                <Badge variant="outline" className="text-xs">
-                  {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
-                </Badge>
-              </div>
-
-              {role?.requiredSkills && role.requiredSkills.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {role.requiredSkills.slice(0, 3).map((skill) => (
-                    <Badge key={skill} variant="secondary" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
-                  {role.requiredSkills.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{role.requiredSkills.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              {role.description && (
-                <p className="text-xs text-gray-600 line-clamp-2">
-                  {role.description}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      </motion.div>
-    );
-  }, [bandRoles, bussinesscat, colors]);
-
-  // Custom Role Form Component
-  const CustomRoleForm = useCallback(
-    () => (
-      <div className="mb-6 p-4 border rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Custom Role
-        </h3>
-
-        <div className="space-y-3">
-          <Input
-            placeholder="e.g., Percussionist, Keyboardist, DJ, etc."
-            value={newRole.role}
-            onChange={(e) => setNewRole({ ...newRole, role: e.target.value })}
-            className="border-2"
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium">Slots Needed</label>
-              <div className="flex items-center gap-2 mt-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setNewRole({
-                      ...newRole,
-                      maxSlots: Math.max(1, newRole.maxSlots - 1),
-                    })
-                  }
-                >
-                  -
-                </Button>
-                <span className="font-semibold px-2">{newRole.maxSlots}</span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setNewRole({ ...newRole, maxSlots: newRole.maxSlots + 1 })
-                  }
-                >
-                  +
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Add Skills</label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  placeholder="e.g., Jazz, Classical"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter" && skillInput.trim()) {
-                      e.preventDefault();
-                      handleAddSkill();
-                    }
-                  }}
-                  className="border-2"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAddSkill}
-                  disabled={!skillInput.trim()}
-                >
-                  Add
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <Textarea
-            placeholder="Role description (optional)"
-            value={newRole.description}
-            onChange={(e) =>
-              setNewRole({ ...newRole, description: e.target.value })
-            }
-            className="border-2"
-            rows={2}
-          />
-
-          {/* Skills preview */}
-          {newRole.requiredSkills.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {newRole.requiredSkills.map((skill, idx) => (
-                <Badge key={idx} variant="secondary" className="gap-1">
-                  {skill}
-                  <button
-                    onClick={() => handleRemoveSkill(idx)}
-                    className="ml-1 hover:text-red-500"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          <Button
-            type="button"
-            onClick={handleAddCustomRole}
-            disabled={!newRole.role.trim()}
-            className="w-full"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Custom Role
-          </Button>
-        </div>
-      </div>
-    ),
-    [
-      newRole,
-      skillInput,
-      handleAddSkill,
-      handleAddCustomRole,
-      handleRemoveSkill,
-    ]
-  );
-
-  // Quick Add Instrument Suggestions Component
-  const QuickAddInstruments = useCallback(
-    () => (
-      <div className="mb-4">
-        <h4 className="font-medium mb-2">Quick Add Common Instruments:</h4>
-        <div className="flex flex-wrap gap-2">
-          {instrumentSuggestions.map((instrument) => (
-            <Button
-              key={instrument}
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAddInstrument(instrument)}
-              className="text-xs"
-            >
-              {instrument}
-            </Button>
-          ))}
-        </div>
-      </div>
-    ),
-    [instrumentSuggestions, handleQuickAddInstrument]
-  );
-  // Slots Configuration Component
   // Slots Configuration Component
   const SlotsConfiguration = useCallback(() => {
-    if (!bussinesscat) return null;
+    if (!bussinesscat || bussinesscat === "other") return null;
 
-    // ⭐ FIX: Explicitly check for 'other' first
-    if (bussinesscat === "other") {
-      return null; // Don't show slots config for band creation
-    }
-
-    // ⭐ FIX: Now TypeScript knows bussinesscat can't be "other" here
-    // So we can safely use it in the switch statement
     const getDefaultSlots = () => {
       switch (bussinesscat) {
         case "full":
-          return 5; // Full band default
+          return 5;
         case "personal":
-          return 1; // Individual default
+          return 1;
         case "mc":
         case "dj":
         case "vocalist":
-          return 1; // Talent default
+          return 1;
         default:
-          return 1; // Fallback (should never happen)
+          return 1;
       }
     };
 
@@ -2155,7 +2162,6 @@ export default function NormalGigsForm() {
 
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-            {/* Slots Input */}
             <div className="flex-1">
               <label
                 className={cn("block text-sm font-medium mb-3", colors.text)}
@@ -2222,7 +2228,6 @@ export default function NormalGigsForm() {
                   </Button>
                 </div>
 
-                {/* Quick selection for full band */}
                 {bussinesscat === "full" && (
                   <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
                     {[3, 4, 5, 6, 7, 8].map((num) => (
@@ -2251,7 +2256,6 @@ export default function NormalGigsForm() {
               </div>
             </div>
 
-            {/* Visual representation */}
             <div className="flex-1">
               <div className={cn("p-4 rounded-xl border", colors.border)}>
                 <div className="flex items-center justify-between mb-2">
@@ -2287,7 +2291,6 @@ export default function NormalGigsForm() {
             </div>
           </div>
 
-          {/* Helper text */}
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-start gap-2">
               <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
@@ -2302,441 +2305,86 @@ export default function NormalGigsForm() {
       </motion.div>
     );
   }, [bussinesscat, formValues.maxSlots, colors]);
-  // Add this component in your NormalGigsForm component, after the duration section:
 
-  const InterestWindowSection = useCallback(() => {
-    const [showInterestWindow, setShowInterestWindow] = useState(false);
-    const [interestWindowType, setInterestWindowType] = useState<
-      "dates" | "days"
-    >("dates");
-
-    const handleInterestWindowChange = (field: string, value: any) => {
-      setFormValues((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    };
-
-    // If user doesn't want to use interest window
-    if (!showInterestWindow) {
-      return (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className={cn(
-            "rounded-xl p-6 border cursor-pointer transition-all group",
-            colors.border,
-            colors.backgroundMuted,
-            "hover:shadow-lg hover:border-purple-500/50"
-          )}
-          onClick={() => setShowInterestWindow(true)}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "p-3 rounded-lg transition-transform group-hover:scale-110",
-                  "bg-gradient-to-r from-purple-500/10 to-pink-500/10"
-                )}
-              >
-                <Clock className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <h3 className={cn("font-semibold", colors.text)}>
-                  Set Interest Window (Optional)
-                </h3>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  Control when musicians can show interest in your gig
-                </p>
-              </div>
-            </div>
-            <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
-          </div>
-        </motion.div>
-      );
-    }
-
-    // If user wants to set interest window
-    return (
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 1, height: "auto" }}
-        className={cn(
-          "rounded-xl border overflow-hidden",
-          colors.border,
-          colors.backgroundMuted
-        )}
-      >
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
-                <Clock className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <h3 className={cn("font-semibold", colors.text)}>
-                  Interest Window Settings
-                </h3>
-                <p className={cn("text-sm", colors.textMuted)}>
-                  When can musicians show interest in this gig?
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowInterestWindow(false)}
-              className={cn(
-                "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
-                colors.textMuted
-              )}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Window Type Selection */}
-          <div className="mb-6">
-            <label
-              className={cn("block text-sm font-medium mb-3", colors.text)}
-            >
-              Interest Window Type
-            </label>
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant={interestWindowType === "dates" ? "default" : "outline"}
-                onClick={() => setInterestWindowType("dates")}
-                className={cn(
-                  "flex-1",
-                  interestWindowType === "dates" &&
-                    "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                )}
-              >
-                Specific Dates
-              </Button>
-              <Button
-                type="button"
-                variant={interestWindowType === "days" ? "default" : "outline"}
-                onClick={() => setInterestWindowType("days")}
-                className={cn(
-                  "flex-1",
-                  interestWindowType === "days" &&
-                    "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
-                )}
-              >
-                Days After Posting
-              </Button>
-            </div>
-          </div>
-
-          {/* Specific Dates Input */}
-          {interestWindowType === "dates" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    className={cn(
-                      "block text-sm font-medium mb-2",
-                      colors.text
-                    )}
-                  >
-                    Interest Opens
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      type="datetime-local"
-                      value={formValues.acceptInterestStartTime || ""}
-                      onChange={(e) =>
-                        handleInterestWindowChange(
-                          "acceptInterestStartTime",
-                          e.target.value
-                        )
-                      }
-                      className="pl-10"
-                    />
-                  </div>
-                  <p className={cn("text-xs mt-1", colors.textMuted)}>
-                    When musicians can start showing interest
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    className={cn(
-                      "block text-sm font-medium mb-2",
-                      colors.text
-                    )}
-                  >
-                    Interest Closes
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      type="datetime-local"
-                      value={formValues.acceptInterestEndTime || ""}
-                      onChange={(e) =>
-                        handleInterestWindowChange(
-                          "acceptInterestEndTime",
-                          e.target.value
-                        )
-                      }
-                      className="pl-10"
-                      min={formValues.acceptInterestStartTime || undefined}
-                    />
-                  </div>
-                  <p className={cn("text-xs mt-1", colors.textMuted)}>
-                    When interest period ends
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Days Duration Input */}
-          {interestWindowType === "days" && (
-            <div>
-              <label
-                className={cn("block text-sm font-medium mb-3", colors.text)}
-              >
-                Interest Window Duration
-              </label>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const current = formValues.interestWindowDays || 7;
-                      handleInterestWindowChange(
-                        "interestWindowDays",
-                        Math.max(1, current - 1)
-                      );
-                    }}
-                    className="h-10 w-10"
-                  >
-                    -
-                  </Button>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      value={formValues.interestWindowDays || 7}
-                      onChange={(e) =>
-                        handleInterestWindowChange(
-                          "interestWindowDays",
-                          parseInt(e.target.value) || 7
-                        )
-                      }
-                      min="1"
-                      max="90"
-                      className="w-20 text-center"
-                    />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                      days
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const current = formValues.interestWindowDays || 7;
-                      handleInterestWindowChange(
-                        "interestWindowDays",
-                        current + 1
-                      );
-                    }}
-                    className="h-10 w-10"
-                  >
-                    +
-                  </Button>
-                </div>
-
-                <div className="flex-1">
-                  <p className={cn("text-sm", colors.textMuted)}>
-                    Musicians can show interest for{" "}
-                    <span className="font-semibold">
-                      {formValues.interestWindowDays || 7} days
-                    </span>{" "}
-                    after posting
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mt-3">
-                {[1, 3, 7, 14, 30].map((days) => (
-                  <Button
-                    key={days}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      handleInterestWindowChange("interestWindowDays", days)
-                    }
-                    className={cn(
-                      formValues.interestWindowDays === days &&
-                        "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
-                    )}
-                  >
-                    {days} {days === 1 ? "day" : "days"}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Summary */}
-          {(formValues.acceptInterestStartTime ||
-            formValues.acceptInterestEndTime ||
-            formValues.interestWindowDays) && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 pt-4 border-t"
-            >
-              <div className="flex items-center gap-3">
-                <Info className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="text-sm font-medium">
-                    Interest Window Configured
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {interestWindowType === "dates"
-                      ? `Interest opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"}`
-                      : `Interest open for ${formValues.interestWindowDays || 7} days after posting`}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Help text */}
-          <div className="mt-4 pt-4 border-t">
-            <p className={cn("text-xs", colors.textMuted)}>
-              <strong>Tip:</strong> Setting an interest window helps manage
-              application flow and prevents last-minute applications.
-            </p>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }, [formValues, colors]);
-  const shouldShowField = useCallback(
-    (fieldType: string) => {
-      switch (fieldType) {
-        case "priceInfo":
-          // Show price info for ALL categories EXCEPT "other"
-          return bussinesscat !== "other";
-        case "slotsConfig":
-          // Show slots config for ALL categories EXCEPT "other"
-          return bussinesscat !== "other";
-        case "individualInstrument":
-          // Show instrument selection ONLY for "personal"
-          return bussinesscat === "personal";
-        case "negotiableSwitch":
-          // Show negotiable switch for ALL categories EXCEPT "other"
-          return bussinesscat !== "other";
-        case "bandSetup":
-          // Show band setup ONLY for "other"
-          return bussinesscat === "other";
-        default:
-          return true;
-      }
-    },
-    [bussinesscat]
-  ); // Conditional sections render
+  // Price Information Component
   const renderPriceInformation = useCallback(() => {
     if (!shouldShowField("priceInfo")) return null;
 
     return (
-      <div>
-        <label className={cn("block text-sm font-medium mb-4", colors.text)}>
-          <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="w-4 h-4" />
+      <div className="space-y-4">
+        <div>
+          <Label className={cn("text-lg font-semibold mb-4", colors.text)}>
             Budget Information
-          </div>
-          <span className={cn("text-xs", colors.textMuted)}>
-            Set your budget range and currency
-          </span>
-        </label>
+          </Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label className={cn("text-sm font-medium mb-2", colors.text)}>
+                Currency
+              </Label>
+              <Select
+                value={formValues.currency}
+                onValueChange={(value) => handleSelectChange("currency", value)}
+              >
+                <SelectTrigger className={cn("rounded-xl py-3", colors.border)}>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent className={colors.background}>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
+                  <SelectItem value="KES">KES (KSh)</SelectItem>
+                  <SelectItem value="NGN">NGN (₦)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Currency */}
-          <div>
-            <label
-              className={cn("block text-xs font-medium mb-2", colors.textMuted)}
-            >
-              Currency
-            </label>
-            <Select
-              value={formValues.currency}
-              onValueChange={(value) => handleSelectChange("currency", value)}
-            >
-              <SelectTrigger className="rounded-xl py-3">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USD">USD ($)</SelectItem>
-                <SelectItem value="EUR">EUR (€)</SelectItem>
-                <SelectItem value="GBP">GBP (£)</SelectItem>
-                <SelectItem value="KES">KES (KSh)</SelectItem>
-                <SelectItem value="NGN">NGN (₦)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label className={cn("text-sm font-medium mb-2", colors.text)}>
+                Amount
+              </Label>
+              <MemoizedInput
+                type="number"
+                value={formValues.price}
+                onChange={handleInputChange}
+                onBlur={() => handleInputBlur("price")}
+                name="price"
+                placeholder="15000"
+                icon={DollarSign}
+                min="0"
+              />
+            </div>
 
-          {/* Price */}
-          <div>
-            <label
-              className={cn("block text-xs font-medium mb-2", colors.textMuted)}
-            >
-              Amount
-            </label>
-            <MemoizedInput
-              type="number"
-              value={formValues.price}
-              onChange={handleInputChange}
-              onBlur={() => handleInputBlur("price")}
-              name="price"
-              placeholder="15000"
-              icon={DollarSign}
-              min="0"
-            />
-          </div>
-
-          {/* Price Range */}
-          <div>
-            <label
-              className={cn("block text-xs font-medium mb-2", colors.textMuted)}
-            >
-              Price Range
-            </label>
-            <Select
-              value={formValues.pricerange}
-              onValueChange={(value) => handleSelectChange("pricerange", value)}
-            >
-              <SelectTrigger className="rounded-xl py-3">
-                <SelectValue placeholder="Select range" />
-              </SelectTrigger>
-              <SelectContent>
-                {priceRanges.map((range) => (
-                  <SelectItem key={range.value} value={range.value}>
-                    {range.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div>
+              <Label className={cn("text-sm font-medium mb-2", colors.text)}>
+                Price Range
+              </Label>
+              <Select
+                value={formValues.pricerange}
+                onValueChange={(value) =>
+                  handleSelectChange("pricerange", value)
+                }
+              >
+                <SelectTrigger className={cn("rounded-xl py-3", colors.border)}>
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent className={colors.background}>
+                  {priceRanges.map((range) => (
+                    <SelectItem key={range.value} value={range.value}>
+                      {range.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        {/* Price Summary */}
         {(formValues.price || formValues.pricerange !== "0") && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-              "rounded-xl p-4 border mt-4",
+              "rounded-xl p-4 border",
               colors.border,
               colors.backgroundMuted
             )}
@@ -2778,10 +2426,10 @@ export default function NormalGigsForm() {
     handleInputChange,
     handleInputBlur,
   ]);
-  const { isDarkMode } = useThemeColors();
+
   return (
     <>
-      <div className="relative max-w-4xl mx-auto pb-24">
+      <div className="relative min-h-screen">
         {/* Success/Error Message */}
         <AnimatePresence initial={false}>
           {isVisible && editMessage && (
@@ -2814,7 +2462,8 @@ export default function NormalGigsForm() {
             </motion.div>
           )}
         </AnimatePresence>
-        {/* Auto-save indicator - ADD THIS */}
+
+        {/* Auto-save indicator */}
         {draftId && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -2827,1136 +2476,719 @@ export default function NormalGigsForm() {
             </div>
           </motion.div>
         )}
+
         {/* Offline Notification */}
         {showOfflineNotification && !isOnline && (
           <OfflineNotification
             onClose={() => setShowOfflineNotification(false)}
           />
         )}
-        {/* Progress Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="space-y-1">
-              <h2
-                className={cn(
-                  "text-2xl font-bold",
-                  !isDarkMode ? "text-white" : "text-gray-900"
-                )}
-              >
-                Create Your Gig
-              </h2>
-              <p
-                className={cn(
-                  "text-sm",
-                  !isDarkMode ? "text-neutral-400" : "text-gray-900"
-                )}
-              >
-                Fill in the details to create an amazing gig opportunity
-              </p>
-            </div>
-            <div
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium",
-                "bg-gradient-to-r from-orange-500/10 to-red-500/10",
-                "text-orange-700 dark:text-orange-300"
-              )}
-            >
-              Step 1 of 3
-            </div>
-          </div>
 
-          {/* Progress bar */}
-          <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: "33%" }}
-              animate={{ width: "66%" }}
-              className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
-            />
+        {/* Header */}
+        <div
+          className={cn(
+            "sticky top-0 z-40 border-b backdrop-blur-sm",
+            colors.navBackground,
+            colors.navBorder
+          )}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => router.back()}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <div>
+                  <h1 className={cn("text-2xl font-bold", colors.text)}>
+                    Create New Gig
+                  </h1>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Fill in the details to create an amazing gig opportunity
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant="outline"
+                  className={cn("animate-pulse", colors.primary)}
+                >
+                  Step 1 of 3
+                </Badge>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDraftsModal(true)}
+                  className="gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  View Drafts
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Business Type Section - ALWAYS SHOW */}
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <label
-                  className={cn("block text-lg font-semibold", colors.text)}
-                >
-                  Who do you need for your gig?
-                </label>
-                <Tag className={cn("w-5 h-5", colors.primary)} />
-              </div>
-              <p className={cn("text-sm mb-6", colors.textMuted)}>
-                Select the type of talent you're looking for
-              </p>
 
-              <Select
-                value={bussinesscat || ""}
-                onValueChange={(value) =>
-                  handleBussinessChange(value as BusinessCategory)
-                }
-              >
-                <SelectTrigger
-                  className={cn(
-                    "py-3 rounded-xl border-2 transition-all duration-200",
-                    colors.border,
-                    colors.background,
-                    colors.text,
-                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                    fieldErrors.bussinesscat &&
-                      "border-red-500 ring-2 ring-red-500/20"
-                  )}
-                >
-                  <SelectValue placeholder="Select business category" />
-                </SelectTrigger>
-                <SelectContent
-                  className={cn(
-                    "rounded-xl border-2 shadow-lg backdrop-blur-sm",
-                    colors.backgroundMuted,
-                    colors.border,
-                    "max-h-[300px]"
-                  )}
-                >
-                  {businessCategories.map((category) => {
-                    const Icon = category.icon;
-                    const gradientClass = isDarkMode
-                      ? {
-                          orange:
-                            "bg-gradient-to-r from-orange-600 to-amber-600",
-                          blue: "bg-gradient-to-r from-blue-600 to-cyan-600",
-                          purple:
-                            "bg-gradient-to-r from-purple-600 to-pink-600",
-                          red: "bg-gradient-to-r from-red-600 to-orange-600",
-                          pink: "bg-gradient-to-r from-pink-600 to-rose-600",
-                          green:
-                            "bg-gradient-to-r from-green-600 to-emerald-600",
-                        }[category.color]
-                      : {
-                          orange:
-                            "bg-gradient-to-r from-orange-500 to-amber-500",
-                          blue: "bg-gradient-to-r from-blue-500 to-cyan-500",
-                          purple:
-                            "bg-gradient-to-r from-purple-500 to-pink-500",
-                          red: "bg-gradient-to-r from-red-500 to-orange-500",
-                          pink: "bg-gradient-to-r from-pink-500 to-rose-500",
-                          green:
-                            "bg-gradient-to-r from-green-500 to-emerald-500",
-                        }[category.color];
-
-                    return (
-                      <SelectItem
-                        key={category.value}
-                        value={category.value}
-                        className={cn(
-                          "py-3 rounded-lg my-1 mx-1 transition-all duration-200",
-                          bussinesscat === category.value
-                            ? `${gradientClass} text-white shadow-lg`
-                            : cn(colors.hoverBg, "hover:scale-[1.02]")
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "p-2 rounded-lg transition-all duration-200",
-                              bussinesscat === category.value
-                                ? "bg-white/20 backdrop-blur-sm"
-                                : cn(
-                                    isDarkMode
-                                      ? "bg-gray-700/30 border-gray-600"
-                                      : "bg-orange-500/10 border-orange-500/20",
-                                    "border"
-                                  )
-                            )}
-                          >
-                            <Icon
-                              className={cn(
-                                "w-5 h-5 transition-colors duration-200",
-                                bussinesscat === category.value
-                                  ? "text-white"
-                                  : colors.primary
-                              )}
-                            />
-                          </div>
-                          <span className={cn("font-medium", colors.text)}>
-                            {category.label}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-
-              <ErrorMessage error={fieldErrors.bussinesscat} />
-            </div>
-
-            <TalentPreview />
-            <BandSetupPreview />
-
-            {/* ⭐ CONDITIONAL: Show slots config ONLY for non-band gigs */}
-            {shouldShowField("slotsConfig") && <SlotsConfiguration />}
-            {/* Interest Window Section - OPTIONAL */}
-            <InterestWindowSection />
-          </div>
-
-          {/* Customize Button - ALWAYS SHOW */}
-          <div className="flex justify-between items-center">
-            <Button
-              onClick={() => setShowCustomization(true)}
-              type="button"
-              variant="outline"
+        {/* Main Content with Tabs */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="space-y-6"
+          >
+            <TabsList
               className={cn(
-                "flex items-center gap-3 border-2 group px-6 py-6 rounded-xl transition-all duration-300",
-                colors.border,
-                colors.background,
-                "hover:border-orange-500 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                "grid grid-cols-4 mb-6",
+                colors.backgroundSecondary
               )}
             >
-              <Palette
-                className={cn(
-                  "w-5 h-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12",
-                  colors.primary
-                )}
-              />
-              <div className="text-left">
-                <span className={cn("block font-semibold", colors.text)}>
-                  Customize Gig Card
-                </span>
-                <span className={cn("text-xs block", colors.textMuted)}>
-                  Add your logo, colors, and branding
-                </span>
-              </div>
-            </Button>
-          </div>
+              <TabsTrigger value="basic">
+                <Type className="w-4 h-4 mr-2" />
+                Basic Info
+              </TabsTrigger>
+              <TabsTrigger value="details">
+                <Settings className="w-4 h-4 mr-2" />
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="customize">
+                <PaletteIcon className="w-4 h-4 mr-2" />
+                Customize
+              </TabsTrigger>
+              <TabsTrigger value="security">
+                <ShieldIcon className="w-4 h-4 mr-2" />
+                Security
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Title Section - ALWAYS SHOW */}
-          <CollapsibleSection
-            title="Gig Information"
-            icon={Type}
-            isOpen={showCategories.title}
-            onToggle={() =>
-              setshowCategories((prev) => ({ ...prev, title: !prev.title }))
-            }
-            badge="Required"
-          >
-            <div className="space-y-6">
-              {/* Secret Passphrase */}
-              <div>
-                <label
-                  className={cn("block text-sm font-medium mb-3", colors.text)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className={cn("w-4 h-4", colors.primary)} />
-                    <span>Secret Passphrase (Optional)</span>
-                  </div>
-                  <span className={cn("text-xs", colors.textMuted)}>
-                    Add a secret word for exclusive access
-                  </span>
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                    {secretpass ? (
-                      <EyeOff className={cn("w-5 h-5", colors.textMuted)} />
-                    ) : (
-                      <Eye className={cn("w-5 h-5", colors.textMuted)} />
-                    )}
-                  </div>
-                  <MemoizedInput
-                    type={secretpass ? "text" : "password"}
-                    value={formValues.secret}
-                    onChange={handleInputChange}
-                    onBlur={() => handleInputBlur("secret")}
-                    name="secret"
-                    placeholder="Enter secret passphrase"
-                    error={fieldErrors.secret}
-                    className={cn(
-                      "pl-12 pr-12 transition-all duration-200",
-                      colors.border,
-                      colors.background,
-                      colors.text,
-                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                    )}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setSecretPass(!secretpass)}
-                    className={cn(
-                      "absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-colors duration-200",
-                      colors.hoverBg
-                    )}
-                  >
-                    {secretpass ? (
-                      <EyeOff className={cn("w-4 h-4", colors.textMuted)} />
-                    ) : (
-                      <Eye className={cn("w-4 h-4", colors.textMuted)} />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Gig Title */}
-              <div>
-                <label
-                  className={cn("block text-sm font-medium mb-3", colors.text)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Tag className={cn("w-4 h-4", colors.primary)} />
-                    <span>Gig Title *</span>
-                  </div>
-                  <span className={cn("text-xs", colors.textMuted)}>
-                    Make it catchy and descriptive
-                  </span>
-                </label>
-                <MemoizedInput
-                  value={formValues.title}
-                  onChange={handleInputChange}
-                  onBlur={() => handleInputBlur("title")}
-                  name="title"
-                  placeholder="e.g., 'Live Jazz Band Needed for Wedding Reception'"
-                  error={fieldErrors.title}
-                  required={isFieldRequired("title")}
-                  className={cn(
-                    "transition-all duration-200",
-                    colors.border,
-                    colors.background,
-                    colors.text,
-                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                  )}
-                />
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* Description Section - ALWAYS SHOW */}
-          <CollapsibleSection
-            title="Description"
-            icon={FileText}
-            isOpen={showCategories.description}
-            onToggle={() =>
-              setshowCategories((prev) => ({
-                ...prev,
-                description: !prev.description,
-              }))
-            }
-            badge="Required"
-          >
-            <div>
-              <label
-                className={cn("block text-sm font-medium mb-3", colors.text)}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <FileText className={cn("w-4 h-4", colors.primary)} />
-                  <span>Gig Description *</span>
-                </div>
-                <span className={cn("text-xs", colors.textMuted)}>
-                  Describe the event, vibe, and specific requirements
-                </span>
-              </label>
-              <MemoizedTextarea
-                value={formValues.description}
-                onChange={handleInputChange}
-                onBlur={() => handleInputBlur("description")}
-                name="description"
-                placeholder="We're looking for a professional jazz band for our wedding reception..."
-                rows={6}
-                error={fieldErrors.description}
-                className={cn(
-                  "transition-all duration-200 resize-none",
-                  colors.border,
-                  colors.background,
-                  colors.text,
-                  "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                )}
-              />
-              <div className="flex justify-between items-center mt-2">
-                <div />
-                <span className={cn("text-xs", colors.textMuted)}>
-                  {formValues.description.length}/500 characters
-                </span>
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* Business Information Section - ALWAYS SHOW */}
-          <CollapsibleSection
-            title="Business Information"
-            icon={Briefcase}
-            isOpen={showCategories.business}
-            onToggle={() =>
-              setshowCategories((prev) => ({
-                ...prev,
-                business: !prev.business,
-              }))
-            }
-            badge="Required"
-          >
-            <div className="space-y-6">
-              {/* Contact Information - ALWAYS SHOW */}
-              <div>
-                <label
-                  className={cn("block text-sm font-medium mb-3", colors.text)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Phone className={cn("w-4 h-4", colors.primary)} />
-                    <span>Contact Information</span>
-                  </div>
-                  <span className={cn("text-xs", colors.textMuted)}>
-                    Your phone number for inquiries
-                  </span>
-                </label>
-                <MemoizedInput
-                  type="tel"
-                  value={formValues.phoneNo ? formValues.phoneNo : ""}
-                  onChange={handleInputChange}
-                  onBlur={() => handleInputBlur("phoneNo")}
-                  name="phoneNo"
-                  placeholder="+254 7XX XXX XXX"
-                  icon={Phone}
-                  className={cn(
-                    "transition-all duration-200",
-                    colors.border,
-                    colors.background,
-                    colors.text,
-                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                  )}
-                />
-              </div>
-
-              {/* ⭐ CONDITIONAL: Show price information ONLY for non-band gigs */}
-              {shouldShowField("priceInfo") && renderPriceInformation()}
-            </div>
-          </CollapsibleSection>
-
-          {/* ⭐ CONDITIONAL: Show negotiable switch ONLY for non-band gigs */}
-          {shouldShowField("negotiableSwitch") && (
-            <MemoizedSwitch
-              checked={formValues.negotiable}
-              onChange={(checked) =>
-                setFormValues((prev) => ({ ...prev, negotiable: checked }))
-              }
-              label="Price Negotiable"
-              description="Allow applicants to negotiate the price"
-              icon={DollarSign}
-              colors={colors}
-            />
-          )}
-
-          {/* Gig Timeline Section - ALWAYS SHOW */}
-          <CollapsibleSection
-            title="Event Details"
-            icon={Calendar}
-            isOpen={showCategories.gtimeline}
-            onToggle={() =>
-              setshowCategories((prev) => ({
-                ...prev,
-                gtimeline: !prev.gtimeline,
-              }))
-            }
-            badge="Required"
-          >
-            <div className="space-y-6">
-              {/* Location */}
-              <div>
-                <label
-                  className={cn("block text-sm font-medium mb-3", colors.text)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <MapPin className={cn("w-4 h-4", colors.primary)} />
-                    <span>Location *</span>
-                  </div>
-                  <span className={cn("text-xs", colors.textMuted)}>
-                    Venue address or city
-                  </span>
-                </label>
-                <MemoizedInput
-                  type="text"
-                  value={formValues.location}
-                  onChange={handleInputChange}
-                  onBlur={() => handleInputBlur("location")}
-                  name="location"
-                  placeholder="e.g., 'Nairobi City Center' or 'Sarova Stanley Hotel'"
-                  error={fieldErrors.location}
-                  icon={MapPin}
-                  required={isFieldRequired("location")}
-                  className={cn(
-                    "transition-all duration-200",
-                    colors.border,
-                    colors.background,
-                    colors.text,
-                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                  )}
-                />
-              </div>
-
-              {/* Timeline Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Gig Type */}
-                <div>
-                  <label
-                    className={cn(
-                      "block text-sm font-medium mb-3",
-                      colors.text
-                    )}
-                  >
-                    Gig Type
-                  </label>
-                  <Select
-                    value={formValues.gigtimeline}
-                    onValueChange={(value) =>
-                      handleSelectChange("gigtimeline", value)
-                    }
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        "rounded-xl py-3 transition-all duration-200",
-                        colors.border,
-                        colors.background,
-                        colors.text,
-                        "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                      )}
-                    >
-                      <SelectValue placeholder="Select timeline" />
-                    </SelectTrigger>
-                    <SelectContent
-                      className={cn(
-                        colors.backgroundMuted,
-                        colors.border,
-                        "backdrop-blur-sm"
-                      )}
-                    >
-                      <SelectItem value="once">🎯 One-time event</SelectItem>
-                      <SelectItem value="weekly">
-                        🔄 Weekly recurring
-                      </SelectItem>
-                      <SelectItem value="monthly">
-                        📅 Monthly recurring
-                      </SelectItem>
-                      <SelectItem value="other">✨ Custom schedule</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Day of Week */}
-                {formValues.gigtimeline !== "once" && (
-                  <div>
-                    <label
-                      className={cn(
-                        "block text-sm font-medium mb-3",
-                        colors.text
-                      )}
-                    >
-                      Day of Week
-                    </label>
-                    <Select
-                      value={formValues.day}
-                      onValueChange={(value) =>
-                        handleSelectChange("day", value)
-                      }
-                    >
-                      <SelectTrigger
-                        className={cn(
-                          "rounded-xl py-3 transition-all duration-200",
-                          colors.border,
-                          colors.background,
-                          colors.text,
-                          "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                        )}
-                      >
-                        <SelectValue placeholder="Select day" />
-                      </SelectTrigger>
-                      <SelectContent
-                        className={cn(
-                          colors.backgroundMuted,
-                          colors.border,
-                          "backdrop-blur-sm"
-                        )}
-                      >
-                        {days.map((day) => (
-                          <SelectItem key={day.id} value={day.val}>
-                            {day.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-
-              {/* Custom Timeline */}
-              {formValues.gigtimeline === "other" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="overflow-hidden"
-                >
-                  <label
-                    className={cn(
-                      "block text-sm font-medium mb-3",
-                      colors.text
-                    )}
-                  >
-                    Custom Timeline Details
-                  </label>
-                  <MemoizedInput
-                    type="text"
-                    value={formValues.otherTimeline}
-                    onChange={handleInputChange}
-                    onBlur={() => handleInputBlur("otherTimeline")}
-                    name="otherTimeline"
-                    placeholder="Describe your custom schedule..."
-                    className={cn(
-                      "transition-all duration-200",
-                      colors.border,
-                      colors.background,
-                      colors.text,
-                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                    )}
-                  />
-                </motion.div>
-              )}
-
-              {/* Event Date for one-time events */}
-              {formValues.gigtimeline === "once" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="overflow-hidden"
-                >
-                  <label
-                    className={cn(
-                      "block text-sm font-medium mb-3",
-                      colors.text
-                    )}
-                  >
-                    Event Date
-                  </label>
-                  <DatePicker
-                    selected={selectedDate}
-                    onChange={handleDate}
-                    className={cn(
-                      "w-full px-4 py-3 border rounded-xl transition-all duration-200",
-                      colors.border,
-                      colors.background,
-                      colors.text,
-                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                    )}
-                    placeholderText="Select a date"
-                    isClearable
-                    minDate={new Date()}
-                    dateFormat="MMMM d, yyyy"
-                  />
-                </motion.div>
-              )}
-            </div>
-          </CollapsibleSection>
-
-          {/* Duration Section - ALWAYS SHOW */}
-          <div>
-            {showduration ? (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className={cn(
-                  "rounded-xl border overflow-hidden transition-all duration-300",
-                  colors.border,
-                  colors.backgroundMuted,
-                  "shadow-lg"
-                )}
-              >
-                <div className="p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "p-2 rounded-lg transition-all duration-300",
-                          isDarkMode
-                            ? "bg-orange-500/20 border-orange-500/30"
-                            : "bg-orange-500/10 border-orange-500/20",
-                          "border"
-                        )}
-                      >
-                        <Clock className={cn("w-5 h-5", colors.primary)} />
-                      </div>
-                      <div>
-                        <h3 className={cn("font-semibold", colors.text)}>
-                          Set Duration
-                        </h3>
-                        <p className={cn("text-sm", colors.textMuted)}>
-                          Specify when the gig starts and ends
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setshowduration(false)}
-                      className={cn(
-                        "p-2 rounded-lg transition-colors duration-200",
-                        colors.hoverBg,
-                        "hover:scale-110"
-                      )}
-                    >
-                      <X className={cn("w-5 h-5", colors.textMuted)} />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Basic Info Tab */}
+            <TabsContent value="basic" className="space-y-6">
+              <Card className={colors.cardBorder}>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    {/* Business Category */}
                     <div>
-                      <label
+                      <Label
                         className={cn(
-                          "block text-sm font-medium mb-3",
+                          "text-lg font-semibold mb-4",
                           colors.text
                         )}
                       >
-                        Start Time
-                      </label>
-                      <div className="flex gap-3">
-                        <MemoizedInput
-                          type="text"
-                          value={formValues.start}
-                          onChange={handleInputChange}
-                          onBlur={() => handleInputBlur("start")}
-                          name="start"
-                          placeholder="10"
-                          className={cn(
-                            "transition-all duration-200",
-                            colors.border,
-                            colors.background,
-                            colors.text,
-                            "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                          )}
-                        />
-                        <Select
-                          value={formValues.durationfrom}
-                          onValueChange={(value) =>
-                            handleSelectChange("durationfrom", value)
-                          }
-                        >
-                          <SelectTrigger
+                        Business Category
+                      </Label>
+                      <Select
+                        value={bussinesscat || ""}
+                        onValueChange={(value) =>
+                          handleBussinessChange(value as BusinessCategory)
+                        }
+                      >
+                        <SelectTrigger className={cn("py-6", colors.border)}>
+                          <SelectValue placeholder="Select who you need for your gig" />
+                        </SelectTrigger>
+                        <SelectContent className={colors.background}>
+                          {businessCategories.map((category) => {
+                            const Icon = category.icon;
+                            return (
+                              <SelectItem
+                                key={category.value}
+                                value={category.value}
+                                className="py-3"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Icon className="w-5 h-5" />
+                                  <span>{category.label}</span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <ErrorMessage error={fieldErrors.bussinesscat} />
+                    </div>
+
+                    {/* Talent Preview */}
+                    <TalentPreview formValues={formValues} colors={colors} />
+
+                    {/* Band Setup Preview */}
+                    <BandSetupPreview
+                      bandRoles={bandRoles}
+                      bussinesscat={bussinesscat}
+                      colors={colors}
+                      setShowBandSetupModal={setShowBandSetupModal}
+                    />
+
+                    {/* Title */}
+                    <div>
+                      <Label
+                        htmlFor="title"
+                        className={cn(
+                          "text-lg font-semibold mb-4",
+                          colors.text
+                        )}
+                      >
+                        Gig Title
+                      </Label>
+                      <MemoizedInput
+                        id="title"
+                        value={formValues.title}
+                        onChange={handleInputChange}
+                        onBlur={() => handleInputBlur("title")}
+                        name="title"
+                        placeholder="e.g., 'Live Jazz Band Needed for Wedding Reception'"
+                        error={fieldErrors.title}
+                        required={isFieldRequired("title")}
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <Label
+                        htmlFor="description"
+                        className={cn(
+                          "text-lg font-semibold mb-4",
+                          colors.text
+                        )}
+                      >
+                        Description
+                      </Label>
+                      <MemoizedTextarea
+                        id="description"
+                        value={formValues.description}
+                        onChange={handleInputChange}
+                        onBlur={() => handleInputBlur("description")}
+                        name="description"
+                        placeholder="We're looking for a professional jazz band for our wedding reception..."
+                        rows={6}
+                        error={fieldErrors.description}
+                        required={isFieldRequired("description")}
+                      />
+                      <div className="flex justify-between items-center mt-2">
+                        <div />
+                        <span className={cn("text-xs", colors.textMuted)}>
+                          {formValues.description.length}/500 characters
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Details Tab */}
+            <TabsContent value="details" className="space-y-6">
+              <Card className={colors.cardBorder}>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    {/* Location */}
+                    <div>
+                      <Label
+                        htmlFor="location"
+                        className={cn(
+                          "text-lg font-semibold mb-4",
+                          colors.text
+                        )}
+                      >
+                        Location
+                      </Label>
+                      <MemoizedInput
+                        id="location"
+                        value={formValues.location}
+                        onChange={handleInputChange}
+                        onBlur={() => handleInputBlur("location")}
+                        name="location"
+                        placeholder="e.g., 'Nairobi City Center' or 'Sarova Stanley Hotel'"
+                        error={fieldErrors.location}
+                        icon={MapPin}
+                        required={isFieldRequired("location")}
+                      />
+                    </div>
+
+                    {/* Timeline Section */}
+                    <div>
+                      <Label
+                        className={cn(
+                          "text-lg font-semibold mb-4",
+                          colors.text
+                        )}
+                      >
+                        Event Details
+                      </Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Gig Type */}
+                        <div>
+                          <Label
                             className={cn(
-                              "w-24 rounded-xl py-3 transition-all duration-200",
+                              "text-sm font-medium mb-2",
+                              colors.text
+                            )}
+                          >
+                            Gig Type
+                          </Label>
+                          <Select
+                            value={formValues.gigtimeline}
+                            onValueChange={(value) =>
+                              handleSelectChange("gigtimeline", value)
+                            }
+                          >
+                            <SelectTrigger className={colors.border}>
+                              <SelectValue placeholder="Select timeline" />
+                            </SelectTrigger>
+                            <SelectContent className={colors.background}>
+                              <SelectItem value="once">
+                                🎯 One-time event
+                              </SelectItem>
+                              <SelectItem value="weekly">
+                                🔄 Weekly recurring
+                              </SelectItem>
+                              <SelectItem value="monthly">
+                                📅 Monthly recurring
+                              </SelectItem>
+                              <SelectItem value="other">
+                                ✨ Custom schedule
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Day of Week */}
+                        {formValues.gigtimeline !== "once" && (
+                          <div>
+                            <Label
+                              className={cn(
+                                "text-sm font-medium mb-2",
+                                colors.text
+                              )}
+                            >
+                              Day of Week
+                            </Label>
+                            <Select
+                              value={formValues.day}
+                              onValueChange={(value) =>
+                                handleSelectChange("day", value)
+                              }
+                            >
+                              <SelectTrigger className={colors.border}>
+                                <SelectValue placeholder="Select day" />
+                              </SelectTrigger>
+                              <SelectContent className={colors.background}>
+                                {days.map((day) => (
+                                  <SelectItem key={day.id} value={day.val}>
+                                    {day.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Date for one-time events */}
+                      {formValues.gigtimeline === "once" && (
+                        <div className="mt-4">
+                          <Label
+                            className={cn(
+                              "text-sm font-medium mb-2",
+                              colors.text
+                            )}
+                          >
+                            Event Date
+                          </Label>
+                          <DatePicker
+                            selected={selectedDate}
+                            onChange={handleDate}
+                            className={cn(
+                              "w-full px-4 py-3 border rounded-xl transition-all duration-200",
                               colors.border,
                               colors.background,
                               colors.text,
                               "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                             )}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent
-                            className={cn(
-                              colors.backgroundMuted,
-                              colors.border,
-                              "backdrop-blur-sm"
-                            )}
-                          >
-                            <SelectItem value="am">AM</SelectItem>
-                            <SelectItem value="pm">PM</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                            placeholderText="Select a date"
+                            isClearable
+                            minDate={new Date()}
+                            dateFormat="MMMM d, yyyy"
+                          />
+                        </div>
+                      )}
 
-                    <div>
-                      <label
-                        className={cn(
-                          "block text-sm font-medium mb-3",
-                          colors.text
-                        )}
-                      >
-                        End Time
-                      </label>
-                      <div className="flex gap-3">
-                        <MemoizedInput
-                          type="text"
-                          value={formValues.end}
-                          onChange={handleInputChange}
-                          onBlur={() => handleInputBlur("end")}
-                          name="end"
-                          placeholder="12"
-                          className={cn(
-                            "transition-all duration-200",
-                            colors.border,
-                            colors.background,
-                            colors.text,
-                            "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                          )}
-                        />
-                        <Select
-                          value={formValues.durationto}
-                          onValueChange={(value) =>
-                            handleSelectChange("durationto", value)
-                          }
-                        >
-                          <SelectTrigger
-                            className={cn(
-                              "w-24 rounded-xl py-3 transition-all duration-200",
-                              colors.border,
-                              colors.background,
-                              colors.text,
-                              "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                            )}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent
-                            className={cn(
-                              colors.backgroundMuted,
-                              colors.border,
-                              "backdrop-blur-sm"
-                            )}
-                          >
-                            <SelectItem value="am">AM</SelectItem>
-                            <SelectItem value="pm">PM</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t">
-                    <p className={cn("text-sm text-center", colors.textMuted)}>
-                      Duration: {formValues.start} - {formValues.end}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <div
-                onClick={() => setshowduration(true)}
-                className={cn(
-                  "flex justify-between items-center p-6 rounded-xl border cursor-pointer transition-all duration-300 group",
-                  colors.border,
-                  colors.backgroundMuted,
-                  "hover:shadow-xl hover:border-orange-500 hover:scale-[1.02]",
-                  "active:scale-[0.98]"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "p-3 rounded-lg transition-all duration-300 group-hover:scale-110",
-                      isDarkMode
-                        ? "bg-orange-500/20 border-orange-500/30"
-                        : "bg-orange-500/10 border-orange-500/20",
-                      "border"
-                    )}
-                  >
-                    <Clock className={cn("w-5 h-5", colors.primary)} />
-                  </div>
-                  <div>
-                    <h3 className={cn("font-semibold", colors.text)}>
-                      Add Duration
-                    </h3>
-                    <p className={cn("text-sm", colors.textMuted)}>
-                      Specify when the gig starts and ends
-                    </p>
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    "p-2 rounded-lg transition-all duration-300",
-                    colors.hoverBg,
-                    "group-hover:bg-orange-500/10 group-hover:scale-110"
-                  )}
-                >
-                  <ChevronDown className={cn("w-5 h-5", colors.textMuted)} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ⭐ CONDITIONAL: Show individual instrument ONLY for "personal" */}
-          {shouldShowField("individualInstrument") && (
-            <div>
-              <div className="relative">
-                <Guitar
-                  className={cn(
-                    "absolute left-3 top-1/2 transform -translate-y-1/2",
-                    colors.textMuted
-                  )}
-                />
-                <Select
-                  value={formValues.category}
-                  onValueChange={(value) =>
-                    handleSelectChange("category", value)
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "pl-12 py-3 rounded-xl transition-all duration-200",
-                      colors.border,
-                      colors.background,
-                      colors.text,
-                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                    )}
-                  >
-                    <SelectValue placeholder="Select your instrument" />
-                  </SelectTrigger>
-                  <SelectContent
-                    className={cn(
-                      colors.backgroundMuted,
-                      colors.border,
-                      "backdrop-blur-sm"
-                    )}
-                  >
-                    {individualInstruments.map((instrument) => (
-                      <SelectItem key={instrument} value={instrument}>
-                        {instrument.charAt(0).toUpperCase() +
-                          instrument.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          {/* ⭐ CONDITIONAL: Show band setup ONLY for "other" */}
-          {shouldShowField("bandSetup") && (
-            <CollapsibleSection
-              title="Band Setup"
-              icon={Users}
-              isOpen={!showCategories.othergig}
-              onToggle={() =>
-                setshowCategories((prev) => ({
-                  ...prev,
-                  othergig: !prev.othergig,
-                }))
-              }
-            >
-              <div>
-                <p className={cn("text-sm mb-4", colors.textMuted)}>
-                  Select the instruments needed for your band
-                </p>
-
-                {/* Quick Add Instruments */}
-                <QuickAddInstruments />
-
-                {/* Custom Role Form Toggle */}
-                <div className="mb-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCustomRoleForm(!showCustomRoleForm)}
-                    className={cn(
-                      "w-full mb-3 transition-all duration-200",
-                      colors.border,
-                      colors.background,
-                      colors.text,
-                      "hover:border-orange-500 hover:shadow-lg"
-                    )}
-                  >
-                    {showCustomRoleForm ? (
-                      <>
-                        <X className={cn("w-4 h-4 mr-2", colors.text)} />
-                        Close Custom Role Form
-                      </>
-                    ) : (
-                      <>
-                        <Plus className={cn("w-4 h-4 mr-2", colors.text)} />
-                        Add Custom Role
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Custom Role Form */}
-                  <AnimatePresence>
-                    {showCustomRoleForm && <CustomRoleForm />}
-                  </AnimatePresence>
-                </div>
-
-                {/* Current Roles */}
-                {bandRoles.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className={cn("font-medium mb-3", colors.text)}>
-                      Current Band Roles:
-                    </h4>
-                    <div className="space-y-3">
-                      {bandRoles.map((role, index) => (
+                      {/* Duration */}
+                      <div className="mt-4">
                         <div
-                          key={index}
+                          onClick={() => setshowduration(!showduration)}
                           className={cn(
-                            "p-3 border rounded-lg transition-all duration-200",
+                            "flex justify-between items-center p-4 rounded-xl border cursor-pointer",
                             colors.border,
-                            colors.background,
-                            "hover:border-orange-500 hover:shadow-md"
+                            colors.backgroundMuted
                           )}
                         >
-                          <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-3">
+                            <ClockIcon className="w-5 h-5" />
+                            <span className={cn("font-medium", colors.text)}>
+                              {showduration ? "Hide Duration" : "Set Duration"}
+                            </span>
+                          </div>
+                          {showduration ? (
+                            <ChevronUp className="w-5 h-5" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
+                        </div>
+
+                        {showduration && (
+                          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <span className={cn("font-medium", colors.text)}>
-                                {role.role}
-                              </span>
-                              <Badge
-                                variant="outline"
+                              <Label
                                 className={cn(
-                                  "ml-2 text-xs",
-                                  colors.border,
-                                  colors.textMuted
+                                  "text-sm font-medium mb-2",
+                                  colors.text
                                 )}
                               >
-                                {role.maxSlots} slot
-                                {role.maxSlots > 1 ? "s" : ""}
-                              </Badge>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveRole(index)}
-                              className={cn(
-                                "text-red-500 hover:text-red-700 hover:bg-red-500/10",
-                                "transition-colors duration-200"
-                              )}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-
-                          {role?.requiredSkills &&
-                            role.requiredSkills.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-2">
-                                {role.requiredSkills.map((skill) => (
-                                  <Badge
-                                    key={skill}
-                                    variant="secondary"
-                                    className={cn(
-                                      "text-xs",
-                                      colors.backgroundMuted,
-                                      colors.textMuted
-                                    )}
-                                  >
-                                    {skill}
-                                  </Badge>
-                                ))}
+                                Start Time
+                              </Label>
+                              <div className="flex gap-2">
+                                <MemoizedInput
+                                  value={formValues.start}
+                                  onChange={handleInputChange}
+                                  name="start"
+                                  placeholder="10"
+                                />
+                                <Select
+                                  value={formValues.durationfrom}
+                                  onValueChange={(value) =>
+                                    handleSelectChange("durationfrom", value)
+                                  }
+                                >
+                                  <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="am">AM</SelectItem>
+                                    <SelectItem value="pm">PM</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
-                            )}
+                            </div>
 
-                          {role.description && (
-                            <p
-                              className={cn(
-                                "text-xs line-clamp-2",
-                                colors.textMuted
-                              )}
-                            >
-                              {role.description}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Band Instruments Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {bandInstruments.map((instrument) => (
-                    <div
-                      key={instrument.value}
-                      className={cn(
-                        "flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all duration-200",
-                        colors.border,
-                        colors.background,
-                        "hover:scale-105 hover:shadow-lg hover:border-orange-500",
-                        userinfo.prefferences.includes(instrument.value) &&
-                          cn(
-                            "border-orange-500",
-                            isDarkMode ? "bg-orange-500/10" : "bg-orange-500/5",
-                            "shadow-orange-500/20"
-                          )
-                      )}
-                      onClick={() => handleInstrumentChange(instrument.value)}
-                    >
-                      <div
-                        className={cn(
-                          "w-4 h-4 rounded border flex items-center justify-center transition-all duration-200",
-                          userinfo.prefferences.includes(instrument.value)
-                            ? "bg-gradient-to-r from-orange-500 to-red-500 border-transparent shadow-inner"
-                            : colors.border
-                        )}
-                      >
-                        {userinfo.prefferences.includes(instrument.value) && (
-                          <Check className="w-3 h-3 text-white" />
+                            <div>
+                              <Label
+                                className={cn(
+                                  "text-sm font-medium mb-2",
+                                  colors.text
+                                )}
+                              >
+                                End Time
+                              </Label>
+                              <div className="flex gap-2">
+                                <MemoizedInput
+                                  value={formValues.end}
+                                  onChange={handleInputChange}
+                                  name="end"
+                                  placeholder="12"
+                                />
+                                <Select
+                                  value={formValues.durationto}
+                                  onValueChange={(value) =>
+                                    handleSelectChange("durationto", value)
+                                  }
+                                >
+                                  <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="am">AM</SelectItem>
+                                    <SelectItem value="pm">PM</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
-                      <label
+                    </div>
+
+                    {/* Contact Info */}
+                    <div>
+                      <Label
+                        htmlFor="phoneNo"
                         className={cn(
-                          "text-sm cursor-pointer flex-1 transition-colors duration-200",
-                          colors.text,
-                          userinfo.prefferences.includes(instrument.value) &&
-                            cn("font-semibold", colors.primary)
+                          "text-lg font-semibold mb-4",
+                          colors.text
                         )}
                       >
-                        {instrument.label}
-                      </label>
+                        Contact Information
+                      </Label>
+                      <MemoizedInput
+                        id="phoneNo"
+                        type="tel"
+                        value={formValues.phoneNo || ""}
+                        onChange={handleInputChange}
+                        onBlur={() => handleInputBlur("phoneNo")}
+                        name="phoneNo"
+                        placeholder="+254 7XX XXX XXX"
+                        icon={Phone}
+                      />
                     </div>
-                  ))}
-                </div>
+
+                    {/* Price Information - Conditionally shown */}
+                    {renderPriceInformation()}
+
+                    {/* Slots Configuration */}
+                    <SlotsConfiguration />
+
+                    {/* Individual Instrument Selection */}
+                    {shouldShowField("individualInstrument") && (
+                      <div>
+                        <Label
+                          className={cn(
+                            "text-lg font-semibold mb-4",
+                            colors.text
+                          )}
+                        >
+                          Instrument Selection
+                        </Label>
+                        <div className="relative">
+                          <Guitar
+                            className={cn(
+                              "absolute left-3 top-1/2 transform -translate-y-1/2",
+                              colors.textMuted
+                            )}
+                          />
+                          <Select
+                            value={formValues.category}
+                            onValueChange={(value) =>
+                              handleSelectChange("category", value)
+                            }
+                          >
+                            <SelectTrigger
+                              className={cn(
+                                "pl-12 py-3 rounded-xl transition-all duration-200",
+                                colors.border,
+                                colors.background,
+                                colors.text,
+                                "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                              )}
+                            >
+                              <SelectValue placeholder="Select your instrument" />
+                            </SelectTrigger>
+                            <SelectContent
+                              className={cn(
+                                colors.backgroundMuted,
+                                colors.border,
+                                "backdrop-blur-sm"
+                              )}
+                            >
+                              {individualInstruments.map((instrument) => (
+                                <SelectItem key={instrument} value={instrument}>
+                                  {instrument.charAt(0).toUpperCase() +
+                                    instrument.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Customize Tab */}
+            <TabsContent value="customize" className="space-y-6">
+              <Card className={colors.cardBorder}>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3
+                          className={cn("text-lg font-semibold", colors.text)}
+                        >
+                          Customize Gig Card
+                        </h3>
+                        <p className={cn("text-sm", colors.textMuted)}>
+                          Add your branding and styling
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => setShowCustomization(true)}
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <Palette className="w-4 h-4" />
+                        Customize
+                      </Button>
+                    </div>
+
+                    {/* Current Preview */}
+                    <div className={cn("rounded-lg p-4 border", colors.border)}>
+                      <h4 className={cn("font-medium mb-3", colors.text)}>
+                        Current Styling
+                      </h4>
+                      <div className="space-y-2">
+                        {imageUrl && (
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={imageUrl}
+                              alt="Logo"
+                              className="w-8 h-8 rounded"
+                            />
+                            <span className={cn("text-sm", colors.text)}>
+                              Logo uploaded
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded border"
+                            style={{
+                              backgroundColor:
+                                gigcustom.backgroundColor || "transparent",
+                            }}
+                          />
+                          <span className={cn("text-sm", colors.text)}>
+                            Background: {gigcustom.backgroundColor || "Default"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded border"
+                            style={{
+                              backgroundColor:
+                                gigcustom.fontColor || "transparent",
+                            }}
+                          />
+                          <span className={cn("text-sm", colors.text)}>
+                            Text Color: {gigcustom.fontColor || "Default"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Security Tab */}
+            <TabsContent value="security" className="space-y-6">
+              <Card className={colors.cardBorder}>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    {/* Secret Passphrase */}
+                    <div>
+                      <Label
+                        htmlFor="secret"
+                        className={cn(
+                          "text-lg font-semibold mb-4",
+                          colors.text
+                        )}
+                      >
+                        Secret Passphrase
+                      </Label>
+                      <p className={cn("text-sm mb-4", colors.textMuted)}>
+                        Add a secret word for exclusive access (optional)
+                      </p>
+                      <div className="relative">
+                        <MemoizedInput
+                          id="secret"
+                          type={secretpass ? "text" : "password"}
+                          value={formValues.secret}
+                          onChange={handleInputChange}
+                          name="secret"
+                          placeholder="Enter secret passphrase"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSecretPass(!secretpass)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5"
+                        >
+                          {secretpass ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Negotiable Switch */}
+                    {shouldShowField("negotiableSwitch") && (
+                      <MemoizedSwitch
+                        checked={formValues.negotiable}
+                        onChange={(checked) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            negotiable: checked,
+                          }))
+                        }
+                        label="Price Negotiable"
+                        description="Allow applicants to negotiate the price"
+                        icon={DollarSign}
+                        colors={colors}
+                      />
+                    )}
+
+                    {/* Interest Window Section */}
+                    <InterestWindowSection
+                      formValues={formValues}
+                      colors={colors}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {/* Validation Summary */}
+          <ValidationSummary fieldErrors={fieldErrors} />
+
+          {/* Action Buttons - Fixed at bottom */}
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background to-transparent pt-8 pb-4">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                  type="button"
+                  onClick={() => setisSchedulerOpen(true)}
+                  className={cn(
+                    "flex-1 py-6 rounded-xl font-semibold text-lg",
+                    "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
+                    "text-white shadow-xl"
+                  )}
+                >
+                  <span className="flex items-center justify-center gap-3">
+                    <Calendar className="w-5 h-5" />
+                    Finalize & Schedule Gig
+                  </span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={saveAsDraft}
+                  disabled={isSavingDraft}
+                  className="py-6 rounded-xl font-medium"
+                >
+                  {isSavingDraft ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 mr-2" />
+                      Save Draft
+                    </>
+                  )}
+                </Button>
               </div>
-            </CollapsibleSection>
-          )}
 
-          <ValidationSummary />
-
-          {/* Submit Button - ALWAYS SHOW */}
-          <div className="pt-8 border-t">
-            <div className="flex flex-col sm:flex-row gap-4 mb-10 -mt-4">
-              <Button
-                type="button"
-                onClick={() => setisSchedulerOpen(true)}
-                className={cn(
-                  "flex-1 py-6 rounded-xl font-semibold text-lg transition-all duration-300",
-                  "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                  "text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95",
-                  "focus:ring-2 focus:ring-orange-500/30"
-                )}
-              >
-                <span className="flex items-center justify-center gap-3">
-                  <Calendar className="w-5 h-5" />
-                  Finalize & Schedule Gig
-                </span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowDraftsModal(true)}
-                className={cn(
-                  "py-6 rounded-xl font-medium transition-all duration-300 border-2",
-                  colors.border,
-                  colors.background,
-                  colors.text,
-                  "hover:border-blue-500 hover:shadow-lg hover:scale-105 active:scale-95",
-                  "flex items-center justify-center gap-2"
-                )}
-              >
-                <FileText className={cn("w-5 h-5", colors.primary)} />
-                View Drafts
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={saveAsDraft}
-                disabled={isSavingDraft}
-                className={cn(
-                  "py-6 rounded-xl font-medium transition-all duration-300",
-                  colors.border,
-                  colors.background,
-                  colors.text,
-                  "hover:border-orange-500 hover:shadow-lg hover:scale-105 active:scale-95",
-                  isSavingDraft && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <Save className={cn("w-5 h-5", colors.primary)} />
-              </Button>
+              <p className={cn("text-center text-sm mt-4", colors.textMuted)}>
+                By creating this gig, you agree to our terms and conditions
+              </p>
             </div>
-
-            <p className={cn("text-center text-sm mt-4", colors.textMuted)}>
-              By creating this gig, you agree to our terms and conditions
-            </p>
           </div>
-        </form>
-      </div>{" "}
+        </div>
+      </div>
+
       {/* Modals */}
       <AnimatePresence initial={false}>
         {showcustomization && (
@@ -3970,6 +3202,7 @@ export default function NormalGigsForm() {
           />
         )}
       </AnimatePresence>
+
       <AnimatePresence initial={false}>
         {activeTalentType && (
           <TalentModal
@@ -4010,6 +3243,7 @@ export default function NormalGigsForm() {
           />
         )}
       </AnimatePresence>
+
       <AnimatePresence initial={false}>
         <SchedulerComponent
           getScheduleData={getSchedulingData}
@@ -4017,23 +3251,23 @@ export default function NormalGigsForm() {
           isSchedulerOpen={isSchedulerOpen}
           setisSchedulerOpen={setisSchedulerOpen}
           onSubmit={handleSubmit}
-          // Add these new props:
           isFormValid={isFormValid}
           validationErrors={formValidationErrors}
           formValidationCheck={checkFormValidity}
         />
       </AnimatePresence>
+
       <AnimatePresence initial={false}>
         {showBandSetupModal && (
           <BandSetupModal
             isOpen={showBandSetupModal}
             onClose={() => setShowBandSetupModal(false)}
             onSubmit={handleBandSetupSubmit}
-            initialRoles={bandRoles}
+            initialRoles={bandRoles.map(convertToBandSetupRole)}
           />
         )}
       </AnimatePresence>
-      {/* Add this modal at the end of your return statement */}
+
       <AnimatePresence initial={false}>
         {showDraftsModal && (
           <DraftsListModal
@@ -4042,11 +3276,11 @@ export default function NormalGigsForm() {
             onLoadDraft={handleLoadDraft}
             onDeleteDraft={handleDeleteDraft}
             currentDraftId={draftId}
-            drafts={drafts} // Pass drafts
-            refreshDrafts={refreshDrafts} // Pass refresh function
+            drafts={drafts}
+            refreshDrafts={refreshDrafts}
           />
         )}
-      </AnimatePresence>{" "}
+      </AnimatePresence>
     </>
   );
 }

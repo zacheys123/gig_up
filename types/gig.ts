@@ -17,7 +17,18 @@ export interface BandRoleInput {
   negotiable?: boolean;
   bookedPrice?: number;
 }
-
+// types/band.ts (or update types/gig.ts)
+export interface BandSetupRole {
+  role: string;
+  maxSlots: number;
+  requiredSkills: string[];
+  description?: string;
+  price?: string; // Store as string for input fields
+  currency?: string;
+  negotiable?: boolean;
+  filledSlots?: number;
+  isLocked?: boolean;
+}
 // UPDATE: Add price fields to BandRoleSchema
 export interface BandRoleSchema {
   role: string;

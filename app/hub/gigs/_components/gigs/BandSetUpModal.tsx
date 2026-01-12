@@ -1,26 +1,15 @@
 // app/gigs/_components/BandSetupModal.tsx
 import React from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-
-import { BandRoleInput } from "@/types/gig";
+import { BandRoleInput, BandSetupRole } from "@/types/gig";
 import DesktopBandSetupModal from "./DesktopBandSetupModal";
 import MobileBandSetupModal from "./MobileBandSetup";
-
-interface BandRole {
-  role: string;
-  maxSlots: number;
-  requiredSkills: string[];
-  description?: string;
-  price?: string;
-  currency?: string;
-  negotiable?: boolean;
-}
 
 interface BandSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (roles: BandRoleInput[]) => void;
-  initialRoles?: BandRole[];
+  initialRoles?: BandSetupRole[];
 }
 
 const BandSetupModal: React.FC<BandSetupModalProps> = (props) => {
