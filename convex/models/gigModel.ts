@@ -41,7 +41,7 @@ const bandBookingEntry = v.object({
 
   // Booking phase
   bookedAt: v.optional(v.number()),
-  bookedBy: v.optional(v.id("users")),
+
   bookedPrice: v.optional(v.number()),
   contractSigned: v.optional(v.boolean()),
 
@@ -118,11 +118,7 @@ export const gigModel = defineTable({
   tags: v.array(v.string()),
   requirements: v.array(v.string()),
   benefits: v.array(v.string()),
-  // Categories and bands
 
-  // In convex/schema.ts
-
-  // In gigModel:
   bandCategory: v.optional(v.array(bandRoleSchema)),
   isClientBand: v.optional(v.boolean()), // true for "other" category
   bussinesscat: v.string(),
@@ -136,6 +132,9 @@ export const gigModel = defineTable({
     durationTo: v.optional(v.string()), // Add this
   }),
 
+  // In your schema.ts, update the gigs table fields:
+  bookedBandId: v.optional(v.id("bands")), // For band bookings
+  bookedBandLeader: v.optional(v.id("users")), // Band leader/contact person
   // Status flags
   isTaken: v.boolean(),
   isPending: v.boolean(),
@@ -143,8 +142,23 @@ export const gigModel = defineTable({
   bookingHistory: v.optional(v.array(bookingHistoryEntry)),
   bandBookingHistory: v.optional(v.array(bandBookingEntry)),
 
-  // Fixed: bookCount type
-  bookCount: v.optional(v.array(bandMember)),
+  bookCount: v.optional(
+    v.array(
+      v.object({
+        bandId: v.id("bands"),
+        appliedAt: v.number(),
+        status: v.union(
+          v.literal("applied"),
+          v.literal("shortlisted"),
+          v.literal("booked"),
+          v.literal("rejected")
+        ),
+        appliedBy: v.id("users"),
+        proposedFee: v.optional(v.number()),
+        notes: v.optional(v.string()),
+      })
+    )
+  ),
 
   // Fixed: interestedUsers should be optional
   interestedUsers: v.optional(v.array(v.id("users"))),

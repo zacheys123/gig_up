@@ -286,175 +286,6 @@ export const removeFromShortlist = mutation({
   },
 });
 
-// convex/preBooking.ts - Updated bookMusician mutation
-export const bookMusician = mutation({
-  args: {
-    gigId: v.id("gigs"),
-    musicianId: v.id("users"),
-    source: v.union(
-      v.literal("regular"), // From interestedUsers array
-      v.literal("shortlisted"), // From shortlistedUsers array
-      v.literal("band-role"), // From bandCategory[].applicants
-      v.literal("full-band") // From bookCount array
-    ),
-    agreedPrice: v.optional(v.number()),
-    notes: v.optional(v.string()),
-    clerkId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-    if (!user) throw new Error("User not found");
-
-    const gig = await ctx.db.get(args.gigId);
-    if (!gig) throw new Error("Gig not found");
-
-    if (gig.postedBy !== user._id) throw new Error("Not authorized");
-
-    const musician = await ctx.db.get(args.musicianId);
-    if (!musician) throw new Error("Musician not found");
-
-    if (gig.isTaken) {
-      throw new Error("Gig is already booked");
-    }
-
-    // VALIDATE USER IS IN CORRECT SOURCE ARRAY
-    if (args.source === "regular") {
-      // Check if in interestedUsers
-      if (!gig.interestedUsers?.includes(args.musicianId)) {
-        throw new Error("Musician is not in interested users");
-      }
-    } else if (args.source === "shortlisted") {
-      // Check if in shortlistedUsers
-      if (
-        !gig.shortlistedUsers?.some((item) => item.userId === args.musicianId)
-      ) {
-        throw new Error("Musician is not in shortlist");
-      }
-    } else if (args.source === "band-role") {
-      // Check if in any band role applicants
-      const isInBandRole = gig.bandCategory?.some(
-        (role) =>
-          role.applicants?.includes(args.musicianId) ||
-          role.bookedUsers?.includes(args.musicianId)
-      );
-      if (!isInBandRole) {
-        throw new Error("Musician is not in any band role applicants");
-      }
-    } else if (args.source === "full-band") {
-      // Check if in bookCount (existing band members)
-      const isInBookCount = gig.bookCount?.some(
-        (member) => member.userId === args.musicianId
-      );
-      if (!isInBookCount) {
-        throw new Error("Musician is not in the band members list");
-      }
-    }
-
-    // Create booking history entry
-    const bookingEntry = {
-      entryId: `${args.gigId}-${args.musicianId}-${Date.now()}`,
-      timestamp: Date.now(),
-      userId: args.musicianId,
-      userRole: musician.roleType,
-      status: "booked" as "booked",
-      gigType: gig.isClientBand ? ("band" as "band") : ("regular" as "regular"),
-      actionBy: user._id,
-      actionFor: args.musicianId,
-      notes: args.notes || `Booked from ${args.source}`,
-      agreedPrice: args.agreedPrice,
-    };
-
-    // SPECIAL HANDLING FOR BAND ROLES:
-    if (args.source === "band-role" && gig.bandCategory) {
-      // Find which role the musician applied for
-      const updatedBandCategory = gig.bandCategory.map((role) => {
-        // If musician was an applicant, move them to bookedUsers
-        if (role.applicants?.includes(args.musicianId)) {
-          return {
-            ...role,
-            applicants: role.applicants.filter((id) => id !== args.musicianId),
-            bookedUsers: [...(role.bookedUsers || []), args.musicianId],
-            filledSlots: (role.filledSlots || 0) + 1,
-          };
-        }
-        return role;
-      });
-
-      await ctx.db.patch(args.gigId, {
-        isTaken: true,
-        isActive: false,
-        isPending: false,
-        bookedBy: args.musicianId,
-        bandCategory: updatedBandCategory,
-        // Still clear other arrays
-        interestedUsers: [],
-        shortlistedUsers: [],
-        appliedUsers: [],
-        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
-        updatedAt: Date.now(),
-      });
-    }
-    // SPECIAL HANDLING FOR FULL BAND:
-    else if (args.source === "full-band" && gig.bookCount) {
-      // Update existing band member status
-      const updatedBookCount = gig.bookCount.map((member) =>
-        member.userId === args.musicianId
-          ? { ...member, status: "booked" as "booked" }
-          : member
-      );
-
-      await ctx.db.patch(args.gigId, {
-        isTaken: true,
-        isActive: false,
-        isPending: false,
-        bookedBy: args.musicianId,
-        bookCount: updatedBookCount,
-        // Still clear other arrays
-        interestedUsers: [],
-        shortlistedUsers: [],
-        appliedUsers: [],
-        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
-        updatedAt: Date.now(),
-      });
-    }
-    // REGULAR AND SHORTLIST (same as before):
-    else {
-      await ctx.db.patch(args.gigId, {
-        isTaken: true,
-        isActive: false,
-        isPending: false,
-        bookedBy: args.musicianId,
-        // Clear ALL arrays
-        interestedUsers: [],
-        shortlistedUsers: [],
-        appliedUsers: [],
-        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
-        updatedAt: Date.now(),
-      });
-    }
-
-    // Create notification
-    await createNotificationInternal(ctx, {
-      userDocumentId: args.musicianId,
-      type: "gig_approved",
-      title: "🎉 You've Been Booked!",
-      message: `${user.firstname || user.username} has booked you for "${gig.title}"!`,
-      actionUrl: `/gigs/${args.gigId}`,
-      relatedUserDocumentId: user._id,
-    });
-
-    return {
-      success: true,
-      message: "Musician booked successfully",
-      gigId: args.gigId,
-      musicianId: args.musicianId,
-    };
-  },
-});
-
 // Remove/reject an applicant (updated to also remove from shortlist)
 export const removeApplicant = mutation({
   args: {
@@ -560,5 +391,322 @@ export const markApplicantViewed = mutation({
     });
 
     return { success: true };
+  },
+});
+
+// Now update the bookMusician mutation:
+export const bookMusician = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    musicianId: v.id("users"),
+    source: v.union(
+      v.literal("regular"),
+      v.literal("band-role"),
+      v.literal("full-band"),
+      v.literal("shortlisted")
+    ),
+    bandId: v.optional(v.id("bands")), // Add bandId for full-band bookings
+    bandRoleIndex: v.optional(v.number()), // For band-role bookings
+    agreedPrice: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get current user (client) using clerkId
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    // Get the gig
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Verify user owns the gig
+    if (gig.postedBy !== user._id) throw new Error("Not authorized");
+
+    // Check if gig is already taken
+    if (gig.isTaken) {
+      throw new Error("Gig is already booked");
+    }
+
+    // VALIDATE BASED ON SOURCE
+    switch (args.source) {
+      case "regular":
+        if (!gig.interestedUsers?.includes(args.musicianId)) {
+          throw new Error("Musician is not in interested users");
+        }
+        break;
+
+      case "band-role":
+        if (args.bandRoleIndex === undefined) {
+          throw new Error("bandRoleIndex is required for band-role booking");
+        }
+        if (
+          !gig.bandCategory ||
+          args.bandRoleIndex >= gig.bandCategory.length
+        ) {
+          throw new Error("Invalid band role index");
+        }
+        const role = gig.bandCategory[args.bandRoleIndex];
+        const isApplicant = role.applicants?.includes(args.musicianId);
+        const isAlreadyBooked = role.bookedUsers?.includes(args.musicianId);
+        if (!isApplicant && !isAlreadyBooked) {
+          throw new Error("Musician is not an applicant for this band role");
+        }
+        if (role.filledSlots >= role.maxSlots) {
+          throw new Error(`No slots available for ${role.role} role`);
+        }
+        break;
+
+      case "full-band":
+        if (!args.bandId) {
+          throw new Error("bandId is required for full-band bookings");
+        }
+        const bandHasApplied = gig.bookCount?.some(
+          (item) => item.bandId === args.bandId
+        );
+        if (!bandHasApplied) {
+          throw new Error("This band has not applied to this gig");
+        }
+        break;
+
+      case "shortlisted":
+        const isInShortlist = gig.shortlistedUsers?.some(
+          (item) => item.userId === args.musicianId
+        );
+        if (!isInShortlist) {
+          throw new Error("Musician is not in shortlist");
+        }
+        break;
+    }
+
+    // Get musician to book (for individual bookings)
+    const musician = await ctx.db.get(args.musicianId);
+
+    // Create booking history entry
+    const bookingEntry = {
+      entryId: `${args.gigId}-${args.musicianId}-${Date.now()}`,
+      timestamp: Date.now(),
+      userId: args.musicianId,
+      userRole: musician?.roleType,
+      status: "booked" as "booked",
+      gigType: gig.isClientBand ? ("band" as "band") : ("regular" as "regular"),
+      actionBy: user._id,
+      actionFor: args.musicianId,
+      notes: args.notes || `Booked from ${args.source}`,
+      agreedPrice: args.agreedPrice,
+      bandRoleIndex: args.bandRoleIndex,
+      bandId: args.bandId,
+    };
+
+    // HANDLE DIFFERENT SOURCES
+    if (args.source === "band-role" && gig.bandCategory) {
+      // BAND-ROLE: Move musician from applicants to bookedUsers
+      const updatedBandCategory = gig.bandCategory.map((role, index) => {
+        if (index === args.bandRoleIndex) {
+          const updatedApplicants =
+            role.applicants?.filter((id) => id !== args.musicianId) || [];
+          const updatedBookedUsers = role.bookedUsers?.includes(args.musicianId)
+            ? role.bookedUsers
+            : [...(role.bookedUsers || []), args.musicianId];
+          const wasAlreadyBooked = role.bookedUsers?.includes(args.musicianId);
+          const newFilledSlots = wasAlreadyBooked
+            ? role.filledSlots
+            : (role.filledSlots || 0) + 1;
+
+          return {
+            ...role,
+            applicants: updatedApplicants,
+            bookedUsers: updatedBookedUsers,
+            filledSlots: newFilledSlots,
+          };
+        }
+        return role;
+      });
+
+      const allRolesFilled = updatedBandCategory.every(
+        (role) => (role.filledSlots || 0) >= role.maxSlots
+      );
+
+      await ctx.db.patch(args.gigId, {
+        isTaken: allRolesFilled,
+        isActive: false,
+        isPending: false,
+        bookedBy: args.musicianId, // Single musician for band role
+        bandCategory: updatedBandCategory,
+        interestedUsers: [],
+        shortlistedUsers: [],
+        appliedUsers: [],
+        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+        updatedAt: Date.now(),
+      });
+
+      let notificationMessage = "";
+      // Create notification for individual musician
+      // FIXED: Add proper null check for bandRoleIndex
+      if (
+        args.source === "band-role" &&
+        gig.bandCategory &&
+        args.bandRoleIndex !== undefined // Add this check
+      ) {
+        const roleName =
+          gig.bandCategory[args.bandRoleIndex]?.role || "the band";
+        notificationMessage = `${user.firstname || user.username} has booked you as ${roleName} for "${gig.title}"!`;
+      }
+
+      await createNotificationInternal(ctx, {
+        userDocumentId: args.musicianId,
+        type: "gig_approved",
+        title: "🎉 You've Been Booked!",
+        message: notificationMessage,
+        actionUrl: `/gigs/${args.gigId}`,
+        relatedUserDocumentId: user._id,
+      });
+    } else if (args.source === "full-band" && args.bandId) {
+      // FULL-BAND: Update band application status to "booked"
+      const updatedBookCount = (gig.bookCount || []).map((item) =>
+        item.bandId === args.bandId
+          ? { ...item, status: "booked" as const }
+          : item
+      );
+
+      // Get the band to find the band leader
+      const band = await ctx.db.get(args.bandId);
+      const bandLeader = band?.members?.find(
+        (member) => member.isLeader
+      )?.userId;
+
+      await ctx.db.patch(args.gigId, {
+        isTaken: true,
+        isActive: false,
+        isPending: false,
+        bookedBandId: args.bandId, // Track which band was booked
+        bookedBandLeader: bandLeader, // Track band leader
+        bookCount: updatedBookCount,
+        interestedUsers: [],
+        shortlistedUsers: [],
+        appliedUsers: [],
+        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+        updatedAt: Date.now(),
+      });
+
+      // Notify all band members
+      if (band?.members) {
+        for (const member of band.members) {
+          await createNotificationInternal(ctx, {
+            userDocumentId: member.userId,
+            type: "gig_approved",
+            title: "🎉 Band Booked!",
+            message: `Your band "${band.name}" has been booked for "${gig.title}" by ${user.firstname || user.username}.`,
+            actionUrl: `/gigs/${args.gigId}`,
+            relatedUserDocumentId: user._id,
+          });
+        }
+      }
+    } else {
+      // REGULAR & SHORTLISTED: Standard booking for single musician
+      await ctx.db.patch(args.gigId, {
+        isTaken: true,
+        isActive: false,
+        isPending: false,
+        bookedBy: args.musicianId, // Single musician
+        interestedUsers: [],
+        shortlistedUsers: [],
+        appliedUsers: [],
+        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+        updatedAt: Date.now(),
+      });
+
+      // Create notification for individual musician
+      let notificationMessage = `${user.firstname || user.username} has booked you for "${gig.title}"!`;
+
+      await createNotificationInternal(ctx, {
+        userDocumentId: args.musicianId,
+        type: "gig_approved",
+        title: "🎉 You've Been Booked!",
+        message: notificationMessage,
+        actionUrl: `/gigs/${args.gigId}`,
+        relatedUserDocumentId: user._id,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Booking successful",
+      gigId: args.gigId,
+      musicianId: args.musicianId,
+      bandId: args.source === "full-band" ? args.bandId : undefined,
+    };
+  },
+});
+
+// Add band to gig (when a band applies to a gig)
+export const addBandToGig = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    bandId: v.id("bands"),
+    clerkId: v.string(),
+    proposedFee: v.optional(v.number()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Get user (band representative)
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    // Get the band
+    const band = await ctx.db.get(args.bandId);
+    if (!band) throw new Error("Band not found");
+
+    // Get the gig
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Check if gig is already taken
+    if (gig.isTaken) {
+      throw new Error("Gig is already booked");
+    }
+
+    // Check if band has already applied
+    const existingApplication = gig.bookCount?.find(
+      (item) => item.bandId === args.bandId
+    );
+    if (existingApplication) {
+      throw new Error("Band has already applied to this gig");
+    }
+
+    // Add band to bookCount
+    const newApplication = {
+      bandId: args.bandId,
+      appliedAt: Date.now(),
+      status: "applied" as const,
+      appliedBy: user._id,
+      proposedFee: args.proposedFee,
+      notes: args.notes,
+    };
+
+    await ctx.db.patch(args.gigId, {
+      bookCount: [...(gig.bookCount || []), newApplication],
+    });
+
+    // Get the gig creator (client)
+    const clientUser = await ctx.db.get(gig.postedBy);
+
+    // Create notification for the client
+    await createNotificationInternal(ctx, {
+      userDocumentId: gig.postedBy,
+      type: "gig_interest",
+      title: "🎸 New Band Application!",
+      message: `${band.name} has applied for your gig "${gig.title}".`,
+      actionUrl: `/gigs/${args.gigId}`,
+      relatedUserDocumentId: user._id,
+    });
+
+    return { success: true, bandName: band.name };
   },
 });

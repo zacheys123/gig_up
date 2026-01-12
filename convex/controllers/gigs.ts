@@ -953,47 +953,47 @@ export const getGigTypeInfo = query({
   },
 });
 
-// Check if user can join band (available roles)
-export const getAvailableBandRoles = query({
-  args: { gigId: v.id("gigs") },
-  handler: async (ctx, args) => {
-    const gig = await ctx.db.get(args.gigId);
-    if (!gig || !gig.isClientBand) return [];
+// // Check if user can join band (available roles)
+// export const getAvailableBandRoles = query({
+//   args: { gigId: v.id("gigs") },
+//   handler: async (ctx, args) => {
+//     const gig = await ctx.db.get(args.gigId);
+//     if (!gig || !gig.isClientBand) return [];
 
-    const currentBandMembers = gig.bookCount || [];
-    const maxSlots = gig.maxSlots || 5;
+//     const currentBandMembers = gig.bookCount || [];
+//     const maxSlots = gig.maxSlots || 5;
 
-    if (currentBandMembers.length >= maxSlots) {
-      return []; // No slots available
-    }
+//     if (currentBandMembers.length >= maxSlots) {
+//       return []; // No slots available
+//     }
 
-    // Common music roles
-    const allRoles = [
-      "Vocalist",
-      "Lead Guitarist",
-      "Rhythm Guitarist",
-      "Bassist",
-      "Drummer",
-      "Pianist/Keyboardist",
-      "Saxophonist",
-      "Trumpeter",
-      "Violinist",
-      "DJ",
-      "MC",
-      "Backup Vocalist",
-      "Percussionist",
-      "Other",
-    ];
+//     // Common music roles
+//     const allRoles = [
+//       "Vocalist",
+//       "Lead Guitarist",
+//       "Rhythm Guitarist",
+//       "Bassist",
+//       "Drummer",
+//       "Pianist/Keyboardist",
+//       "Saxophonist",
+//       "Trumpeter",
+//       "Violinist",
+//       "DJ",
+//       "MC",
+//       "Backup Vocalist",
+//       "Percussionist",
+//       "Other",
+//     ];
 
-    // Get filled roles
-    const filledRoles = new Set(
-      currentBandMembers.map((member) => member.role)
-    );
+//     // Get filled roles
+//     const filledRoles = new Set(
+//       currentBandMembers.map((member) => member.role)
+//     );
 
-    // Return available roles
-    return allRoles.filter((role) => !filledRoles.has(role));
-  },
-});
+//     // Return available roles
+//     return allRoles.filter((role) => !filledRoles.has(role));
+//   },
+// });
 
 /**
  * Get user's saved gigs

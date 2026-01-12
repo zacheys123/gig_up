@@ -190,7 +190,7 @@ export default defineSchema({
   bands: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
-    genre: v.array(v.string()), // ["rock", "pop"]
+    genre: v.array(v.string()),
     location: v.string(),
     status: v.union(
       v.literal("forming"),
@@ -204,14 +204,30 @@ export default defineSchema({
       v.literal("cover")
     ),
     creatorId: v.id("users"),
-    requiredInstruments: v.array(
+
+    // Band members structure
+    members: v.array(
       v.object({
-        instrument: v.string(),
-        quantity: v.number(),
-        filled: v.number(), // How many positions are filled
+        userId: v.id("users"),
+        role: v.string(), // e.g., "lead_guitar", "vocals"
+        joinedAt: v.number(),
+        isLeader: v.boolean(),
+        status: v.union(
+          v.literal("active"),
+          v.literal("former"),
+          v.literal("invited")
+        ),
       })
     ),
+
+    // Band statistics
+    totalGigs: v.number(),
+    completedGigs: v.number(),
+    rating: v.optional(v.number()),
+
+    // Band images and links
     bandImageUrl: v.optional(v.string()),
+    bannerImageUrl: v.optional(v.string()),
     socialLinks: v.optional(
       v.array(
         v.object({
@@ -220,16 +236,15 @@ export default defineSchema({
         })
       )
     ),
+
+    // Availability
+    isAvailable: v.boolean(),
+    availabilitySchedule: v.optional(v.any()), // Complex schedule object
+
+    // Timestamps
     createdAt: v.number(),
-    activatedAt: v.optional(v.number()),
-    // Band rating (separate from individual ratings)
-    bandRating: v.optional(
-      v.object({
-        average: v.number(),
-        totalReviews: v.number(),
-        lastUpdated: v.number(),
-      })
-    ),
+    updatedAt: v.number(),
+    lastActive: v.optional(v.number()),
   })
     .index("by_name", ["name"])
     .index("by_creator", ["creatorId"])
@@ -237,41 +252,6 @@ export default defineSchema({
     .index("by_location", ["location"])
     .index("by_genre", ["genre"])
     .index("by_status_location", ["status", "location"]),
-
-  bandMembers: defineTable({
-    bandId: v.id("bands"),
-    userId: v.id("users"),
-    role: v.string(), // e.g., "lead_guitar", "vocals"
-    status: v.union(
-      v.literal("invited"),
-      v.literal("accepted"),
-      v.literal("declined"),
-      v.literal("pending") // For counter-offers
-    ),
-    isLeader: v.boolean(),
-    inviteMessage: v.optional(v.string()),
-    inviteTerms: v.optional(
-      v.object({
-        revenueShare: v.optional(v.number()), // Percentage
-        guaranteedFee: v.optional(v.number()),
-        commitmentLevel: v.optional(
-          v.union(
-            v.literal("full-time"),
-            v.literal("part-time"),
-            v.literal("session")
-          )
-        ),
-      })
-    ),
-    joinedAt: v.optional(v.number()),
-    invitedAt: v.number(),
-    respondedAt: v.optional(v.number()),
-  })
-    .index("by_band", ["bandId"])
-    .index("by_user", ["userId"])
-    .index("by_status", ["status"])
-    .index("by_band_user", ["bandId", "userId"])
-    .index("by_band_status", ["bandId", "status"]),
 
   crewMessages: defineTable({
     bandId: v.id("bands"),
