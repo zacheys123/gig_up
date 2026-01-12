@@ -1310,7 +1310,7 @@ export default function Home() {
                 )}
               >
                 <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                  {user?.isMusician
+                  {user?.isMusician && user?.tier !== "free" && !isInGracePeriod
                     ? user?.roleType === "teacher"
                       ? "Ready to share your knowledge and grow your teaching business?"
                       : user?.roleType === "instrumentalist"
@@ -1326,20 +1326,23 @@ export default function Home() {
                       ? "Ready to find the perfect talent for your next event?"
                       : user?.isBooker
                         ? "Ready to discover and book amazing talent?"
-                        : "Ready to get started?"}
+                        : user?.tier !== "free" && !isInGracePeriod
+                          ? "Ready to get started?"
+                          : "Upgrade to Pro to unlock all features!"}
                 </p>
                 <div className="mt-4">
                   <Link
                     href={getDynamicHref()}
                     className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${activePalette.primary} text-white font-semibold rounded-xl hover:scale-105 transition-transform`}
                   >
-                    {user?.isMusician
+                    {user?.isMusician user?.tier !== "free" && !isInGracePeriod
                       ? "Find Gigs Now"
-                      : user?.isClient
+                      : user?.isClient user?.tier !== "free" && !isInGracePeriod
                         ? "Browse Talent"
-                        : user?.isBooker
+                        : user?.isBooker user?.tier !== "free" && !isInGracePeriod
                           ? "Discover Talent"
-                          : "Get Started"}
+                          : user?.tier !== "free" && !isInGracePeriod"Get Started" : "Upgrade to Pro"}
+                         
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>

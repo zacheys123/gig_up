@@ -1091,9 +1091,6 @@ const GigCard: React.FC<GigCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               if (isFull) return;
-
-              // Show modal for notes on desktop, quick interest on mobile?
-              // OR just quick interest always?
               handleRegularInterest(); // Quick interest without notes
             }}
             disabled={loading || isFull}
@@ -1118,12 +1115,6 @@ const GigCard: React.FC<GigCardProps> = ({
                 <span className="hidden sm:inline">Full</span>
                 <span className="sm:hidden">Full</span>
               </>
-            ) : regularIsInterested ? (
-              <>
-                <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Interested</span>
-                <span className="sm:hidden">✓</span>
-              </>
             ) : (
               <>
                 <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -1132,6 +1123,31 @@ const GigCard: React.FC<GigCardProps> = ({
               </>
             )}
           </Button>
+
+          {/* Optional: Add a small button for notes (desktop only) */}
+          {!isFull && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowInterestModal(true);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex h-9 w-9 p-0"
+                    style={getButtonStyle("outline")}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Interest with notes</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       );
 
@@ -1910,7 +1926,7 @@ const GigCard: React.FC<GigCardProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={handleRegularInterest}
+              onClick={() => handleRegularInterest(interestNotes)}
               disabled={loading}
               className="w-full sm:w-auto"
               style={getButtonStyles("default")}
