@@ -98,6 +98,7 @@ export function SimpleForgotSecretModal({
   const [emailValidationMessage, setEmailValidationMessage] = useState("");
 
   // Update your handleEmailSubmit function
+  // Update your handleEmailSubmit function to handle the specific error
   const handleEmailSubmit = async () => {
     if (!email.trim()) {
       setEmailValidationState("invalid");
@@ -115,6 +116,7 @@ export function SimpleForgotSecretModal({
 
     setIsLoading(true);
     setEmailValidationState(null);
+    setEmailValidationMessage("");
 
     try {
       const result = await requestReset({
@@ -128,20 +130,46 @@ export function SimpleForgotSecretModal({
 
       if (!result.hasSecurityQuestion) {
         setEmailValidationState("invalid");
-        setEmailValidationMessage("No security question set for this account");
+        setEmailValidationMessage(
+          "No security question found. Please set up a security question in your account settings first."
+        );
         return;
       }
 
       // Show success state briefly before moving to next step
       setEmailValidationState("valid");
+      setEmailValidationMessage(
+        "Email verified! Redirecting to security question..."
+      );
+
       setTimeout(() => {
         setStep("security");
+        setEmailValidationState(null);
+        setEmailValidationMessage("");
       }, 1500);
     } catch (error: any) {
-      setEmailValidationState("invalid");
-      setEmailValidationMessage(
-        error.message || "Email not found or not associated with this gig"
-      );
+      // Check for specific error messages
+      if (error.message.includes("Email does not match your account")) {
+        setEmailValidationState("invalid");
+        setEmailValidationMessage(
+          "This email doesn't match your account. Please use the email associated with your account."
+        );
+      } else if (error.message.includes("User account not found")) {
+        setEmailValidationState("invalid");
+        setEmailValidationMessage(
+          "Account not found. Please make sure you're logged in with the correct account."
+        );
+      } else if (error.message.includes("haven't set up a security question")) {
+        setEmailValidationState("invalid");
+        setEmailValidationMessage(
+          "You haven't set up a security question. Please set one up in your account settings first."
+        );
+      } else {
+        setEmailValidationState("invalid");
+        setEmailValidationMessage(
+          error.message || "An error occurred. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -202,60 +230,170 @@ export function SimpleForgotSecretModal({
   }, [secretInput]);
   // Verify security answer
   // In your SimpleForgotSecretModal component
+  // Add near your other useState declarations
+  const [showSecurityAnswer, setShowSecurityAnswer] = useState(false);
+  const [securityValidationState, setSecurityValidationState] = useState<
+    "valid" | "invalid" | null
+  >(null);
+  const [securityValidationMessage, setSecurityValidationMessage] =
+    useState("");
+
+  // Update your handleSecuritySubmit function
   const handleSecuritySubmit = async () => {
     if (!securityAnswer.trim()) {
-      toast.error("Please enter your security answer");
+      setSecurityValidationState("invalid");
+      setSecurityValidationMessage("Please enter your security answer");
       return;
     }
 
     setIsLoading(true);
+    setSecurityValidationState(null);
+    setSecurityValidationMessage("");
+
     try {
       // If gig has no secret, we can just verify and finish
       if (!hasExistingSecret) {
         const result = await verifyAndReset({
           gigId,
-          securityAnswer: securityAnswer.trim(), // ← Make sure to trim here
+          securityAnswer: securityAnswer.trim(),
           clerkId: user?.clerkId || "",
         });
 
+        // Show success state
+        setSecurityValidationState("valid");
+        setSecurityValidationMessage("Answer verified! Setting up your gig...");
+
         if (result.newSecret) {
-          setGeneratedSecret(result.newSecret);
-          setStep("success");
+          setTimeout(() => {
+            setGeneratedSecret(result.newSecret);
+            setStep("success");
+            setSecurityValidationState(null);
+            setSecurityValidationMessage("");
+          }, 1500);
         } else {
-          toast.success("Verified successfully!");
-          onSuccess();
-          onClose();
+          setTimeout(() => {
+            toast.success("Verified successfully!");
+            onSuccess();
+            onClose();
+          }, 1500);
         }
         return;
       }
 
-      // If gig has secret, move to new secret step
-      setStep("newSecret");
+      // If gig has secret, show success state then move to next step
+      setSecurityValidationState("valid");
+      setSecurityValidationMessage(
+        "Answer verified! Proceeding to set new secret..."
+      );
+
+      setTimeout(() => {
+        setStep("newSecret");
+        setSecurityValidationState(null);
+        setSecurityValidationMessage("");
+      }, 1500);
     } catch (error: any) {
-      toast.error(error.message || "Incorrect security answer");
+      if (error.message.includes("Incorrect security answer")) {
+        setSecurityValidationState("invalid");
+        setSecurityValidationMessage("Incorrect answer. Please try again.");
+      } else if (error.message.includes("No security question set")) {
+        setSecurityValidationState("invalid");
+        setSecurityValidationMessage(
+          "No security question found. Please contact support."
+        );
+      } else {
+        setSecurityValidationState("invalid");
+        setSecurityValidationMessage(
+          error.message || "An error occurred. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Add useEffect to clear validation when answer changes
+  useEffect(() => {
+    if (securityValidationState && securityAnswer) {
+      setSecurityValidationState(null);
+      setSecurityValidationMessage("");
+    }
+  }, [securityAnswer]);
+
   // Reset secret with new one
+  // Add near your other useState declarations
+  const [showNewSecret, setShowNewSecret] = useState(false);
+  const [newSecretValidationState, setNewSecretValidationState] = useState<
+    "valid" | "invalid" | null
+  >(null);
+
+  // Add password strength helper function
+  const getPasswordStrength = (
+    password: string
+  ): "weak" | "medium" | "strong" => {
+    if (password.length < 8) return "weak";
+
+    let score = 0;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (password.length >= 12) score++;
+
+    if (score >= 4) return "strong";
+    if (score >= 2) return "medium";
+    return "weak";
+  };
+
+  // Update generateRandomSecret function to create stronger passwords
+  const generateRandomSecret = () => {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let result = "";
+
+    // Ensure at least one of each type
+    result += "ABCDEFGHIJKLMNOPQRSTUVWXYZ".charAt(
+      Math.floor(Math.random() * 26)
+    );
+    result += "abcdefghijklmnopqrstuvwxyz".charAt(
+      Math.floor(Math.random() * 26)
+    );
+    result += "0123456789".charAt(Math.floor(Math.random() * 10));
+    result += "!@#$%^&*".charAt(Math.floor(Math.random() * 8));
+
+    // Fill remaining characters
+    for (let i = 4; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    // Shuffle the result
+    result = result
+      .split("")
+      .sort(() => Math.random() - 0.5)
+      .join("");
+
+    setNewSecret(result);
+    setConfirmSecret(result);
+  };
+
+  // Update handleResetSecret to show validation
   const handleResetSecret = async () => {
     if (!newSecret.trim()) {
-      toast.error("Please enter a new secret key");
+      setNewSecretValidationState("invalid");
       return;
     }
 
     if (newSecret !== confirmSecret) {
-      toast.error("Secret keys don't match");
+      setNewSecretValidationState("invalid");
       return;
     }
 
-    if (newSecret.length < 4) {
-      toast.error("Secret key must be at least 4 characters");
+    if (newSecret.length < 8) {
+      setNewSecretValidationState("invalid");
       return;
     }
 
     setIsLoading(true);
+    setNewSecretValidationState(null);
+
     try {
       const result = await verifyAndReset({
         gigId,
@@ -267,22 +405,11 @@ export function SimpleForgotSecretModal({
       setGeneratedSecret(result.newSecret || newSecret);
       setStep("success");
     } catch (error: any) {
+      setNewSecretValidationState("invalid");
       toast.error(error.message || "Failed to reset secret");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Generate a random secret
-  const generateRandomSecret = () => {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "";
-    for (let i = 0; i < 8; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setNewSecret(result);
-    setConfirmSecret(result);
   };
 
   // Copy secret to clipboard
@@ -653,10 +780,36 @@ export function SimpleForgotSecretModal({
                                 isDarkMode ? "text-gray-400" : "text-gray-300"
                               )}
                             >
-                              Enter your email to begin recovery
+                              Enter your account email
                             </p>
                           </div>
                         </div>
+
+                        {/* Display current user's email if available */}
+                        {user?.email && email === user?.email && (
+                          <div
+                            className={cn(
+                              "mb-4 p-3 rounded-lg",
+                              isDarkMode
+                                ? "bg-blue-900/30 border border-blue-800/50"
+                                : "bg-blue-500/10 border border-blue-400/50"
+                            )}
+                          >
+                            <p className="text-sm flex items-center gap-2">
+                              <Info className="w-4 h-4" />
+                              <span
+                                className={
+                                  isDarkMode ? "text-blue-300" : "text-blue-200"
+                                }
+                              >
+                                Your account email:{" "}
+                                <span className="font-medium">
+                                  {user.email}
+                                </span>
+                              </span>
+                            </p>
+                          </div>
+                        )}
 
                         <p
                           className={cn(
@@ -664,108 +817,127 @@ export function SimpleForgotSecretModal({
                             isDarkMode ? "text-gray-300" : "text-gray-200"
                           )}
                         >
-                          We'll send you instructions to reset your secret key
-                          using your security question.
+                          Enter the email address associated with your account
+                          to verify your identity.
                         </p>
 
                         <div className="space-y-5">
                           <div className="space-y-2">
-                            <Label
-                              htmlFor="email"
-                              className={cn(
-                                "text-sm font-medium",
-                                isDarkMode ? "text-gray-200" : "text-gray-100"
-                              )}
-                            >
-                              Email Address
-                            </Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={email}
-                              onChange={(e) => {
-                                setEmail(e.target.value);
-                                setEmailValidationState(null); // Clear validation when typing
-                              }}
-                              placeholder="your@email.com"
-                              className={cn(
-                                "h-12 transition-all duration-200",
-                                isDarkMode
-                                  ? "bg-gray-800 border-gray-600 placeholder-gray-500 text-white"
-                                  : "bg-white/10 border-gray-400 placeholder-gray-300 text-white",
-                                // Validation states
-                                emailValidationState === "valid" && [
-                                  "border-emerald-500 dark:border-emerald-400",
-                                  isDarkMode
-                                    ? "bg-emerald-950/20 focus:bg-emerald-950/30"
-                                    : "bg-emerald-50/20 focus:bg-emerald-50/30",
-                                  "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
-                                ],
-                                emailValidationState === "invalid" && [
-                                  "border-red-500 dark:border-red-400",
-                                  isDarkMode
-                                    ? "bg-red-950/20 focus:bg-red-950/30"
-                                    : "bg-red-50/20 focus:bg-red-50/30",
-                                  "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
-                                ],
-                                !emailValidationState && [
-                                  isDarkMode
-                                    ? "focus:border-orange-400 focus:bg-gray-900"
-                                    : "focus:border-orange-500 focus:bg-white/20",
-                                  "focus:ring-2 focus:ring-orange-500/20",
-                                ]
-                              )}
-                              aria-invalid={emailValidationState === "invalid"}
-                              aria-describedby={
-                                emailValidationState === "invalid"
-                                  ? "email-error"
-                                  : emailValidationState === "valid"
-                                    ? "email-success"
-                                    : undefined
-                              }
-                            />
-
-                            {/* Validation icon */}
-                            {emailValidationState && (
-                              <div className="absolute right-9 top-[calc(50%+1rem)] transform -translate-y-1/2">
-                                {emailValidationState === "valid" ? (
-                                  <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                                ) : (
-                                  <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                            <div className="flex items-center justify-between">
+                              <Label
+                                htmlFor="email"
+                                className={cn(
+                                  "text-sm font-medium",
+                                  isDarkMode ? "text-gray-200" : "text-gray-100"
                                 )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Validation messages */}
-                          <div className="min-h-[20px]">
-                            {emailValidationState === "invalid" && (
-                              <p
-                                id="email-error"
-                                className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
                               >
-                                <XCircle className="w-4 h-4 flex-shrink-0" />
-                                {emailValidationMessage ||
-                                  "Invalid email or not associated with this gig"}
-                              </p>
-                            )}
+                                Email Address
+                              </Label>
+                              {/* {user?.email && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEmail(user.email || "")}
+                                  className="text-xs text-blue-400 hover:text-blue-300 underline"
+                                >
+                                  Use account email
+                                </button>
+                              )} */}
+                            </div>
 
-                            {emailValidationState === "valid" && (
-                              <p
-                                id="email-success"
-                                className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
-                              >
-                                <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                                Email verified! Proceeding to security
-                                question...
-                              </p>
-                            )}
+                            <div className="relative">
+                              <Input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => {
+                                  setEmail(e.target.value);
+                                  setEmailValidationState(null);
+                                  setEmailValidationMessage("");
+                                }}
+                                placeholder="your@email.com"
+                                className={cn(
+                                  "h-12 pr-12 transition-all duration-200",
+                                  isDarkMode
+                                    ? "bg-gray-800 border-gray-600 placeholder-gray-500 text-white"
+                                    : "bg-white/10 border-gray-400 placeholder-gray-300 text-white",
+                                  // Validation states
+                                  emailValidationState === "valid" && [
+                                    "border-emerald-500 dark:border-emerald-400",
+                                    isDarkMode
+                                      ? "bg-emerald-950/20 focus:bg-emerald-950/30"
+                                      : "bg-emerald-50/20 focus:bg-emerald-50/30",
+                                    "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
+                                  ],
+                                  emailValidationState === "invalid" && [
+                                    "border-red-500 dark:border-red-400",
+                                    isDarkMode
+                                      ? "bg-red-950/20 focus:bg-red-950/30"
+                                      : "bg-red-50/20 focus:bg-red-50/30",
+                                    "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
+                                  ],
+                                  !emailValidationState && [
+                                    isDarkMode
+                                      ? "focus:border-orange-400 focus:bg-gray-900"
+                                      : "focus:border-orange-500 focus:bg-white/20",
+                                    "focus:ring-2 focus:ring-orange-500/20",
+                                  ]
+                                )}
+                                aria-invalid={
+                                  emailValidationState === "invalid"
+                                }
+                                aria-describedby={
+                                  emailValidationState === "invalid"
+                                    ? "email-error"
+                                    : emailValidationState === "valid"
+                                      ? "email-success"
+                                      : undefined
+                                }
+                              />
+
+                              {/* Validation icon */}
+                              {emailValidationState && (
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                  {emailValidationState === "valid" ? (
+                                    <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+                                  ) : (
+                                    <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Validation messages */}
+                            <div className="min-h-[20px]">
+                              {emailValidationState === "invalid" && (
+                                <p
+                                  id="email-error"
+                                  className="text-sm text-red-400 dark:text-red-400 flex items-start gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                                >
+                                  <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                  <span>{emailValidationMessage}</span>
+                                </p>
+                              )}
+
+                              {emailValidationState === "valid" && (
+                                <p
+                                  id="email-success"
+                                  className="text-sm text-emerald-400 dark:text-emerald-400 flex items-start gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                                >
+                                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                  <span>{emailValidationMessage}</span>
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex gap-3">
                             <Button
                               variant="outline"
-                              onClick={() => setStep("trySecret")}
+                              onClick={() => {
+                                setStep("trySecret");
+                                setEmailValidationState(null);
+                                setEmailValidationMessage("");
+                              }}
                               className={cn(
                                 "flex-1 h-12",
                                 isDarkMode
@@ -779,22 +951,35 @@ export function SimpleForgotSecretModal({
                             </Button>
                             <Button
                               onClick={handleEmailSubmit}
-                              className="flex-1 h-12 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-semibold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30"
+                              className="flex-1 h-12 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-semibold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 disabled:opacity-50"
                               disabled={
                                 isLoading ||
-                                !email ||
+                                !email.trim() ||
                                 emailValidationState === "invalid"
                               }
                             >
                               {isLoading ? (
                                 <>
                                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                  Sending...
+                                  Verifying...
                                 </>
                               ) : (
-                                "Continue"
+                                "Verify Email"
                               )}
                             </Button>
+                          </div>
+
+                          {/* Help text */}
+                          <div
+                            className={cn(
+                              "text-xs pt-2",
+                              isDarkMode ? "text-gray-400" : "text-gray-300"
+                            )}
+                          >
+                            <p>
+                              ⓘ You must use the exact email address associated
+                              with your account when you created this gig.
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -811,64 +996,225 @@ export function SimpleForgotSecretModal({
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5" />
                 <div
                   className={cn(
-                    "relative p-6 rounded-2xl border backdrop-blur-sm",
+                    "relative p-6 rounded-2xl border backdrop-blur-sm m-4",
                     isDarkMode
                       ? "bg-gray-900/80 border-gray-700/50"
-                      : "bg-white/80 border-purple-100"
+                      : "bg-neutral-700/20 border-purple-100"
                   )}
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
-                      <Key className="w-5 h-5 text-white" />
+                      <Shield className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-xl text-gray-900 dark:text-white">
+                      <h3 className="font-bold text-xl text-white dark:text-white">
                         Security Verification
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p
+                        className={cn(
+                          "text-sm mt-1",
+                          isDarkMode ? "text-gray-400" : "text-gray-300"
+                        )}
+                      >
                         Answer your security question
                       </p>
                     </div>
                   </div>
 
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  <p
+                    className={cn(
+                      "mb-6",
+                      isDarkMode ? "text-gray-300" : "text-gray-200"
+                    )}
+                  >
                     Please answer the security question you set up when creating
-                    this gig.
+                    your account.
                   </p>
 
                   <div className="space-y-6">
-                    <div className="p-5 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wider">
-                        Your Security Question
-                      </p>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {securityQuestion}
-                      </p>
+                    {/* Security Question Display */}
+                    <div
+                      className={cn(
+                        "p-4 rounded-xl border",
+                        isDarkMode
+                          ? "bg-purple-900/20 border-purple-800/50"
+                          : "bg-purple-500/10 border-purple-400/50"
+                      )}
+                    >
+                      <div className="space-y-2">
+                        <p
+                          className={cn(
+                            "text-xs font-medium uppercase tracking-wider",
+                            isDarkMode ? "text-purple-400" : "text-purple-300"
+                          )}
+                        >
+                          Your Security Question
+                        </p>
+                        <p
+                          className={cn(
+                            "text-lg font-semibold",
+                            isDarkMode ? "text-white" : "text-white"
+                          )}
+                        >
+                          {securityQuestion}
+                        </p>
+                      </div>
                     </div>
 
+                    {/* Security Answer Input */}
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="securityAnswer"
-                        className="text-sm font-medium"
-                      >
-                        Your Answer
-                      </Label>
-                      <Input
-                        id="securityAnswer"
-                        type="text"
-                        value={securityAnswer}
-                        onChange={(e) => setSecurityAnswer(e.target.value)}
-                        placeholder="Enter your answer..."
-                        className="h-12"
-                        autoFocus
-                      />
+                      <div className="flex items-center justify-between">
+                        <Label
+                          htmlFor="securityAnswer"
+                          className={cn(
+                            "text-sm font-medium",
+                            isDarkMode ? "text-gray-200" : "text-gray-100"
+                          )}
+                        >
+                          Your Answer
+                        </Label>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Case-sensitive
+                        </span>
+                      </div>
+
+                      <div className="relative">
+                        <Input
+                          id="securityAnswer"
+                          type={showSecurityAnswer ? "text" : "password"}
+                          value={securityAnswer}
+                          onChange={(e) => {
+                            setSecurityAnswer(e.target.value);
+                            setSecurityValidationState(null);
+                            setSecurityValidationMessage("");
+                          }}
+                          placeholder="Enter your answer..."
+                          className={cn(
+                            "h-12 pr-12 transition-all duration-200",
+                            isDarkMode
+                              ? "bg-gray-800 border-gray-600 placeholder-gray-500 text-white"
+                              : "bg-white/10 border-gray-400 placeholder-gray-300 text-white",
+                            // Validation states
+                            securityValidationState === "valid" && [
+                              "border-emerald-500 dark:border-emerald-400",
+                              isDarkMode
+                                ? "bg-emerald-950/20 focus:bg-emerald-950/30"
+                                : "bg-emerald-50/20 focus:bg-emerald-50/30",
+                              "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
+                            ],
+                            securityValidationState === "invalid" && [
+                              "border-red-500 dark:border-red-400",
+                              isDarkMode
+                                ? "bg-red-950/20 focus:bg-red-950/30"
+                                : "bg-red-50/20 focus:bg-red-50/30",
+                              "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
+                            ],
+                            !securityValidationState && [
+                              isDarkMode
+                                ? "focus:border-purple-400 focus:bg-gray-900"
+                                : "focus:border-purple-500 focus:bg-white/20",
+                              "focus:ring-2 focus:ring-purple-500/20",
+                            ]
+                          )}
+                          autoFocus
+                          aria-invalid={securityValidationState === "invalid"}
+                          aria-describedby={
+                            securityValidationState === "invalid"
+                              ? "security-error"
+                              : securityValidationState === "valid"
+                                ? "security-success"
+                                : undefined
+                          }
+                        />
+
+                        {/* Eye toggle button */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowSecurityAnswer(!showSecurityAnswer)
+                          }
+                          className={cn(
+                            "absolute right-10 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md transition-colors",
+                            isDarkMode
+                              ? "hover:bg-gray-700/50"
+                              : "hover:bg-gray-100/50",
+                            securityValidationState === "valid" && [
+                              isDarkMode
+                                ? "text-emerald-400"
+                                : "text-emerald-600",
+                            ],
+                            securityValidationState === "invalid" && [
+                              isDarkMode ? "text-red-400" : "text-red-600",
+                            ]
+                          )}
+                          aria-label={
+                            showSecurityAnswer ? "Hide answer" : "Show answer"
+                          }
+                        >
+                          {showSecurityAnswer ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+
+                        {/* Validation icon */}
+                        {securityValidationState && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            {securityValidationState === "valid" ? (
+                              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Validation messages */}
+                      <div className="min-h-[20px]">
+                        {securityValidationState === "invalid" && (
+                          <p
+                            id="security-error"
+                            className="text-sm text-red-400 dark:text-red-400 flex items-start gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                          >
+                            <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>
+                              {securityValidationMessage ||
+                                "Incorrect answer. Please try again."}
+                            </span>
+                          </p>
+                        )}
+
+                        {securityValidationState === "valid" && (
+                          <p
+                            id="security-success"
+                            className="text-sm text-emerald-400 dark:text-emerald-400 flex items-start gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                          >
+                            <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>
+                              {securityValidationMessage ||
+                                "Answer verified! Proceeding..."}
+                            </span>
+                          </p>
+                        )}
+                      </div>
                     </div>
 
+                    {/* Action Buttons */}
                     <div className="flex gap-3">
                       <Button
                         variant="outline"
-                        onClick={() => setStep("email")}
-                        className="flex-1 h-12 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900"
+                        onClick={() => {
+                          setStep("email");
+                          setSecurityValidationState(null);
+                          setSecurityValidationMessage("");
+                        }}
+                        className={cn(
+                          "flex-1 h-12",
+                          isDarkMode
+                            ? "border-gray-700 hover:bg-gray-900 text-gray-200"
+                            : "border-gray-400 hover:bg-gray-600/20 text-gray-100"
+                        )}
                         disabled={isLoading}
                       >
                         <ArrowLeft className="w-4 h-4 mr-2" />
@@ -876,8 +1222,12 @@ export function SimpleForgotSecretModal({
                       </Button>
                       <Button
                         onClick={handleSecuritySubmit}
-                        className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30"
-                        disabled={isLoading || !securityAnswer}
+                        className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 disabled:opacity-50"
+                        disabled={
+                          isLoading ||
+                          !securityAnswer.trim() ||
+                          securityValidationState === "invalid"
+                        }
                       >
                         {isLoading ? (
                           <>
@@ -885,9 +1235,22 @@ export function SimpleForgotSecretModal({
                             Verifying...
                           </>
                         ) : (
-                          "Verify & Continue"
+                          "Verify Answer"
                         )}
                       </Button>
+                    </div>
+
+                    {/* Help Text */}
+                    <div
+                      className={cn(
+                        "text-xs pt-2",
+                        isDarkMode ? "text-gray-400" : "text-gray-300"
+                      )}
+                    >
+                      <p>
+                        ⓘ Your security answer is case-sensitive and must match
+                        exactly what you set up.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -896,19 +1259,29 @@ export function SimpleForgotSecretModal({
               {/* Info Box */}
               <div
                 className={cn(
-                  "p-5 rounded-xl border",
+                  "p-4 rounded-xl border m-4",
                   isDarkMode
                     ? "bg-blue-900/20 border-blue-800/50"
-                    : "bg-blue-50 border-blue-200"
+                    : "bg-blue-500/10 border-blue-400/50"
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-blue-500 mt-0.5" />
+                  <Info className="w-5 h-5 text-blue-400 dark:text-blue-400 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-blue-700 dark:text-blue-400 mb-2">
-                      Security Question Importance
+                    <h4
+                      className={cn(
+                        "font-semibold mb-2",
+                        isDarkMode ? "text-blue-300" : "text-blue-200"
+                      )}
+                    >
+                      About Security Questions
                     </h4>
-                    <p className="text-sm text-blue-600 dark:text-blue-300">
+                    <p
+                      className={cn(
+                        "text-sm",
+                        isDarkMode ? "text-blue-400" : "text-blue-300"
+                      )}
+                    >
                       This extra layer of security ensures only you can access
                       your gigs, even if you forget your secret key. Your answer
                       is encrypted and never stored in plain text.
@@ -925,10 +1298,10 @@ export function SimpleForgotSecretModal({
                 <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5" />
                 <div
                   className={cn(
-                    "relative p-6 rounded-2xl border backdrop-blur-sm",
+                    "relative p-6 rounded-2xl border backdrop-blur-sm m-4",
                     isDarkMode
                       ? "bg-gray-900/80 border-gray-700/50"
-                      : "bg-white/80 border-green-100"
+                      : "bg-neutral-700/20 border-green-100"
                   )}
                 >
                   <div className="flex items-center gap-3 mb-4">
@@ -936,10 +1309,15 @@ export function SimpleForgotSecretModal({
                       <Key className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-xl text-gray-900 dark:text-white">
+                      <h3 className="font-bold text-xl text-white dark:text-white">
                         Create New Secret Key
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p
+                        className={cn(
+                          "text-sm mt-1",
+                          isDarkMode ? "text-gray-400" : "text-gray-300"
+                        )}
+                      >
                         Set a new secret key for this gig
                       </p>
                     </div>
@@ -952,16 +1330,26 @@ export function SimpleForgotSecretModal({
                         "p-4 rounded-xl border",
                         isDarkMode
                           ? "bg-amber-900/30 border-amber-800/50"
-                          : "bg-amber-50 border-amber-200"
+                          : "bg-amber-500/10 border-amber-400/50"
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
+                        <AlertTriangle className="w-5 h-5 text-amber-400 dark:text-amber-500 mt-0.5" />
                         <div>
-                          <h5 className="font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                          <h5
+                            className={cn(
+                              "font-semibold mb-1",
+                              isDarkMode ? "text-amber-400" : "text-amber-300"
+                            )}
+                          >
                             Important Notice
                           </h5>
-                          <p className="text-sm text-amber-600 dark:text-amber-500">
+                          <p
+                            className={cn(
+                              "text-sm",
+                              isDarkMode ? "text-amber-500" : "text-amber-400"
+                            )}
+                          >
                             Save this key securely. You'll need it for all
                             future edits. We cannot recover it if lost.
                           </p>
@@ -970,11 +1358,15 @@ export function SimpleForgotSecretModal({
                     </div>
 
                     <div className="space-y-5">
+                      {/* New Secret Input */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label
                             htmlFor="newSecret"
-                            className="text-sm font-medium"
+                            className={cn(
+                              "text-sm font-medium",
+                              isDarkMode ? "text-gray-200" : "text-gray-100"
+                            )}
                           >
                             New Secret Key
                           </Label>
@@ -983,93 +1375,301 @@ export function SimpleForgotSecretModal({
                             variant="ghost"
                             size="sm"
                             onClick={generateRandomSecret}
-                            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="text-sm text-blue-400 hover:text-blue-300 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             <Sparkles className="w-4 h-4 mr-2" />
-                            Generate Secure Key
+                            Generate
                           </Button>
                         </div>
-                        <div className="relative group">
+
+                        <div className="relative">
                           <Input
                             id="newSecret"
-                            type={showSecret ? "text" : "password"}
+                            type={showNewSecret ? "text" : "password"}
                             value={newSecret}
-                            onChange={(e) => setNewSecret(e.target.value)}
+                            onChange={(e) => {
+                              setNewSecret(e.target.value);
+                              setNewSecretValidationState(null);
+                            }}
                             placeholder="Enter new secret key (min. 8 characters)"
-                            className="h-12 pr-12 font-mono tracking-wide group-hover:border-green-400 transition-colors"
+                            className={cn(
+                              "h-12 pr-12 font-mono tracking-wide transition-all duration-200",
+                              isDarkMode
+                                ? "bg-gray-800 border-gray-600 placeholder-gray-500 text-white"
+                                : "bg-white/10 border-gray-400 placeholder-gray-300 text-white",
+                              // Validation states
+                              newSecretValidationState === "valid" && [
+                                "border-emerald-500 dark:border-emerald-400",
+                                isDarkMode
+                                  ? "bg-emerald-950/20 focus:bg-emerald-950/30"
+                                  : "bg-emerald-50/20 focus:bg-emerald-50/30",
+                                "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
+                              ],
+                              newSecretValidationState === "invalid" && [
+                                "border-red-500 dark:border-red-400",
+                                isDarkMode
+                                  ? "bg-red-950/20 focus:bg-red-950/30"
+                                  : "bg-red-50/20 focus:bg-red-50/30",
+                                "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
+                              ],
+                              !newSecretValidationState && [
+                                isDarkMode
+                                  ? "focus:border-green-400 focus:bg-gray-900"
+                                  : "focus:border-green-500 focus:bg-white/20",
+                                "focus:ring-2 focus:ring-green-500/20",
+                              ],
+                              newSecret &&
+                                newSecret.length < 8 && [
+                                  "border-yellow-500 dark:border-yellow-400",
+                                  isDarkMode
+                                    ? "bg-yellow-950/20"
+                                    : "bg-yellow-50/20",
+                                ]
+                            )}
+                            aria-invalid={
+                              newSecretValidationState === "invalid"
+                            }
+                            aria-describedby={
+                              newSecretValidationState === "invalid"
+                                ? "newSecret-error"
+                                : newSecretValidationState === "valid"
+                                  ? "newSecret-success"
+                                  : undefined
+                            }
                           />
+
+                          {/* Eye toggle button */}
                           <button
                             type="button"
-                            onClick={() => setShowSecret(!showSecret)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            onClick={() => setShowNewSecret(!showNewSecret)}
+                            className={cn(
+                              "absolute right-10 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md transition-colors",
+                              isDarkMode
+                                ? "hover:bg-gray-700/50"
+                                : "hover:bg-gray-100/50",
+                              newSecretValidationState === "valid" && [
+                                isDarkMode
+                                  ? "text-emerald-400"
+                                  : "text-emerald-600",
+                              ],
+                              newSecretValidationState === "invalid" && [
+                                isDarkMode ? "text-red-400" : "text-red-600",
+                              ]
+                            )}
                             aria-label={
-                              showSecret ? "Hide secret" : "Show secret"
+                              showNewSecret ? "Hide secret" : "Show secret"
                             }
                           >
-                            {showSecret ? (
-                              <EyeOff className="w-4 h-4 text-gray-500" />
+                            {showNewSecret ? (
+                              <EyeOff className="w-4 h-4" />
                             ) : (
-                              <Eye className="w-4 h-4 text-gray-500" />
+                              <Eye className="w-4 h-4" />
                             )}
                           </button>
+
+                          {/* Validation icon */}
+                          {newSecretValidationState && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              {newSecretValidationState === "valid" ? (
+                                <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+                              ) : (
+                                <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                              )}
+                            </div>
+                          )}
                         </div>
+
+                        {/* Length warning */}
+                        {newSecret && newSecret.length < 8 && (
+                          <p className="text-sm text-yellow-400 dark:text-yellow-500 flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            Should be at least 8 characters
+                          </p>
+                        )}
                       </div>
 
+                      {/* Confirm Secret Input */}
                       <div className="space-y-2">
                         <Label
                           htmlFor="confirmSecret"
-                          className="text-sm font-medium"
+                          className={cn(
+                            "text-sm font-medium",
+                            isDarkMode ? "text-gray-200" : "text-gray-100"
+                          )}
                         >
                           Confirm Secret Key
                         </Label>
-                        <Input
-                          id="confirmSecret"
-                          type={showSecret ? "text" : "password"}
-                          value={confirmSecret}
-                          onChange={(e) => setConfirmSecret(e.target.value)}
-                          placeholder="Re-enter the secret key"
-                          className="h-12 font-mono tracking-wide"
-                        />
-                        {newSecret &&
-                          confirmSecret &&
-                          newSecret !== confirmSecret && (
-                            <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2 mt-2">
-                              <AlertCircle className="w-4 h-4" />
+
+                        <div className="relative">
+                          <Input
+                            id="confirmSecret"
+                            type={showNewSecret ? "text" : "password"}
+                            value={confirmSecret}
+                            onChange={(e) => {
+                              setConfirmSecret(e.target.value);
+                              setNewSecretValidationState(null);
+                            }}
+                            placeholder="Re-enter the secret key"
+                            className={cn(
+                              "h-12 pr-12 font-mono tracking-wide transition-all duration-200",
+                              isDarkMode
+                                ? "bg-gray-800 border-gray-600 placeholder-gray-500 text-white"
+                                : "bg-white/10 border-gray-400 placeholder-gray-300 text-white",
+                              // Validation states
+                              confirmSecret &&
+                                newSecret !== confirmSecret && [
+                                  "border-red-500 dark:border-red-400",
+                                  isDarkMode
+                                    ? "bg-red-950/20 focus:bg-red-950/30"
+                                    : "bg-red-50/20 focus:bg-red-50/30",
+                                  "focus:ring-2 focus:ring-red-500/20",
+                                ],
+                              confirmSecret &&
+                                newSecret === confirmSecret && [
+                                  "border-emerald-500 dark:border-emerald-400",
+                                  isDarkMode
+                                    ? "bg-emerald-950/20 focus:bg-emerald-950/30"
+                                    : "bg-emerald-50/20 focus:bg-emerald-50/30",
+                                  "focus:ring-2 focus:ring-emerald-500/20",
+                                ],
+                              !confirmSecret && [
+                                isDarkMode
+                                  ? "focus:border-green-400 focus:bg-gray-900"
+                                  : "focus:border-green-500 focus:bg-white/20",
+                                "focus:ring-2 focus:ring-green-500/20",
+                              ]
+                            )}
+                          />
+
+                          {/* Match indicator */}
+                          {confirmSecret && newSecret === confirmSecret && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+                            </div>
+                          )}
+                          {confirmSecret && newSecret !== confirmSecret && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Match validation messages */}
+                        <div className="min-h-[20px]">
+                          {confirmSecret && newSecret !== confirmSecret && (
+                            <p className="text-sm text-red-400 dark:text-red-400 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <XCircle className="w-4 h-4 flex-shrink-0" />
                               Keys don't match
                             </p>
                           )}
+                          {confirmSecret && newSecret === confirmSecret && (
+                            <p className="text-sm text-emerald-400 dark:text-emerald-400 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                              Keys match
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => setStep("security")}
-                        className="flex-1 h-12 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900"
-                        disabled={isLoading}
-                      >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
-                      </Button>
-                      <Button
-                        onClick={handleResetSecret}
-                        className="flex-1 h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/20 hover:shadow-green-500/30"
-                        disabled={
-                          isLoading ||
-                          !newSecret ||
-                          !confirmSecret ||
-                          newSecret !== confirmSecret
-                        }
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                            Setting...
-                          </>
-                        ) : (
-                          "Set New Key"
+                      {/* Strength indicator */}
+                      {newSecret && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              Strength
+                            </span>
+                            <span
+                              className={cn(
+                                "text-xs font-medium",
+                                getPasswordStrength(newSecret) === "weak"
+                                  ? "text-red-400"
+                                  : getPasswordStrength(newSecret) === "medium"
+                                    ? "text-yellow-400"
+                                    : "text-emerald-400"
+                              )}
+                            >
+                              {getPasswordStrength(newSecret).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-700 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full transition-all duration-300",
+                                getPasswordStrength(newSecret) === "weak"
+                                  ? "w-1/3 bg-red-500"
+                                  : getPasswordStrength(newSecret) === "medium"
+                                    ? "w-2/3 bg-yellow-500"
+                                    : "w-full bg-emerald-500"
+                              )}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {newSecret.length < 8
+                              ? "Use at least 8 characters"
+                              : !/[A-Z]/.test(newSecret)
+                                ? "Add uppercase letters"
+                                : !/[0-9]/.test(newSecret)
+                                  ? "Add numbers"
+                                  : !/[^A-Za-z0-9]/.test(newSecret)
+                                    ? "Add special characters"
+                                    : "Strong password"}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setStep("security");
+                            setNewSecretValidationState(null);
+                          }}
+                          className={cn(
+                            "flex-1 h-12",
+                            isDarkMode
+                              ? "border-gray-700 hover:bg-gray-900 text-gray-200"
+                              : "border-gray-400 hover:bg-gray-600/20 text-gray-100"
+                          )}
+                          disabled={isLoading}
+                        >
+                          <ArrowLeft className="w-4 h-4 mr-2" />
+                          Back
+                        </Button>
+                        <Button
+                          onClick={handleResetSecret}
+                          className="flex-1 h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/20 hover:shadow-green-500/30 disabled:opacity-50"
+                          disabled={
+                            isLoading ||
+                            !newSecret ||
+                            !confirmSecret ||
+                            newSecret !== confirmSecret ||
+                            newSecret.length < 8
+                          }
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                              Setting...
+                            </>
+                          ) : (
+                            "Set New Key"
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Help Text */}
+                      <div
+                        className={cn(
+                          "text-xs pt-2",
+                          isDarkMode ? "text-gray-400" : "text-gray-300"
                         )}
-                      </Button>
+                      >
+                        <p>
+                          ⓘ Make sure to save your secret key in a secure place.
+                          You'll need it every time you want to edit this gig.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
