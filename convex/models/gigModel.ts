@@ -72,7 +72,6 @@ const bookingHistoryEntry = v.object({
   userRole: v.optional(v.string()),
   bandRole: v.optional(v.string()),
   bandRoleIndex: v.optional(v.number()),
-  isBandRole: v.optional(v.boolean()),
 
   // Status & Actions - includes "updated" for tracking edits
   status: v.union(
@@ -216,6 +215,22 @@ export const gigModel = defineTable({
   // Rating
   gigRating: v.number(),
   finalizedBy: v.optional(v.union(v.literal("client"), v.literal("musician"))),
+  shortlistedUsers: v.optional(
+    v.array(
+      v.object({
+        userId: v.id("users"),
+        shortlistedAt: v.number(),
+        notes: v.optional(v.string()),
+        status: v.optional(
+          v.union(
+            v.literal("active"),
+            v.literal("booked"),
+            v.literal("removed")
+          )
+        ),
+      })
+    )
+  ),
 
   // Timestamps (automatically added by Convex)
 })

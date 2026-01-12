@@ -1322,9 +1322,13 @@ export default function Home() {
                             : user?.roleType === "mc"
                               ? "Ready to host events and showcase your skills?"
                               : "Ready to find your next performance opportunity?"
-                    : user?.isClient
+                    : user?.isClient &&
+                        user?.tier !== "free" &&
+                        !isInGracePeriod
                       ? "Ready to find the perfect talent for your next event?"
-                      : user?.isBooker
+                      : user?.isBooker &&
+                          user?.tier !== "free" &&
+                          !isInGracePeriod
                         ? "Ready to discover and book amazing talent?"
                         : user?.tier !== "free" && !isInGracePeriod
                           ? "Ready to get started?"
@@ -1335,14 +1339,22 @@ export default function Home() {
                     href={getDynamicHref()}
                     className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${activePalette.primary} text-white font-semibold rounded-xl hover:scale-105 transition-transform`}
                   >
-                    {user?.isMusician user?.tier !== "free" && !isInGracePeriod
+                    {user?.isMusician &&
+                    user?.tier !== "free" &&
+                    !isInGracePeriod
                       ? "Find Gigs Now"
-                      : user?.isClient user?.tier !== "free" && !isInGracePeriod
+                      : user?.isClient &&
+                          user?.tier !== "free" &&
+                          !isInGracePeriod
                         ? "Browse Talent"
-                        : user?.isBooker user?.tier !== "free" && !isInGracePeriod
+                        : user?.isBooker &&
+                            user?.tier !== "free" &&
+                            !isInGracePeriod
                           ? "Discover Talent"
-                          : user?.tier !== "free" && !isInGracePeriod"Get Started" : "Upgrade to Pro"}
-                         
+                          : user?.tier !== "free" && !isInGracePeriod
+                            ? "Get Started"
+                            : "Upgrade to Pro"}
+
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>

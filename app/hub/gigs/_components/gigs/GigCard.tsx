@@ -686,6 +686,55 @@ const GigCard: React.FC<GigCardProps> = ({
     if (roleLower.includes("trumpet")) return "🎺";
     if (roleLower.includes("mc")) return "🎤";
     return "🎵";
+  }; // Add this helper function near the other utility functions
+
+  const getContrastColor = (hexColor: string) => {
+    // Remove the hash if present
+    const hex = hexColor.replace("#", "");
+
+    // Convert hex to RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    // Calculate relative luminance (WCAG formula)
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    // Return black for light colors, white for dark colors
+    return luminance > 0.5 ? "#000000" : "#ffffff";
+  };
+
+  const getBadgeStyle = () => {
+    const bgColor = gig.backgroundColor;
+    const fontColor = gig.fontColor;
+
+    // Use a vibrant color that contrasts well
+    const badgeColor = fontColor || "#ef4444";
+    const textColor = getContrastColor(badgeColor);
+
+    // If the badge color is too light/dark, adjust it
+    const hex = badgeColor.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    // Ensure minimum contrast
+    let finalBadgeColor = badgeColor;
+    if (luminance > 0.7) {
+      // Too light, darken it
+      finalBadgeColor = "#dc2626"; // Darker red
+    } else if (luminance < 0.3) {
+      // Too dark, lighten it
+      finalBadgeColor = "#f87171"; // Lighter red
+    }
+
+    return {
+      backgroundColor: finalBadgeColor,
+      color: getContrastColor(finalBadgeColor),
+      fontWeight: "bold" as const,
+      boxShadow: "0 0 0 1px rgba(0,0,0,0.1)",
+    };
   };
   const getCardStyles = () => {
     return {
@@ -977,33 +1026,63 @@ const GigCard: React.FC<GigCardProps> = ({
     // ===== REGULAR GIG =====
     if (!isClientBand) {
       if (isGigPoster) {
+        // Calculate number of interested users
+        const interestedCount = regularInterestCount;
+
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/hub/gigs/client/edit/${gig._id}`);
-            }}
-            className={clsx(
-              responsiveButtonClasses,
-              "shadow-sm hover:shadow transition-all duration-200",
-              "text-xs sm:text-sm"
+          <div className="flex items-center gap-2">
+            {/* Review Applicants Button with Badge */}
+            {interestedCount > 0 && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/gigs/${gig._id}/review-applicants`);
+                }}
+                variant="default"
+                size="sm"
+                className={clsx(
+                  responsiveButtonClasses,
+                  "shadow-sm hover:shadow transition-all duration-200 relative",
+                  "text-xs sm:text-sm"
+                )}
+                style={getButtonStyle("default")}
+              >
+                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Review</span>
+                <span className="sm:hidden">Review</span>
+
+                {/* Badge showing count */}
+                {interestedCount > 0 && (
+                  <Badge
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px]"
+                    style={getBadgeStyle()}
+                  >
+                    {interestedCount > 99 ? "99+" : interestedCount}
+                  </Badge>
+                )}
+              </Button>
             )}
-            style={getButtonStyle("outline")}
-            onMouseEnter={(e) => {
-              if (gig.backgroundColor) {
-                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-          >
-            <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Edit</span>
-            <span className="sm:hidden">Edit</span>
-          </Button>
+
+            {/* Edit Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/hub/gigs/client/edit/${gig._id}`);
+              }}
+              className={clsx(
+                responsiveButtonClasses,
+                "shadow-sm hover:shadow transition-all duration-200",
+                "text-xs sm:text-sm"
+              )}
+              style={getButtonStyle("outline")}
+            >
+              <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Edit</span>
+              <span className="sm:hidden">Edit</span>
+            </Button>
+          </div>
         );
       }
 
@@ -1212,37 +1291,68 @@ const GigCard: React.FC<GigCardProps> = ({
           gig.bandCategory?.some((role) => role.bookedUsers.length > 0) ||
           false;
 
+        // Calculate total applicants across all roles
+        const totalApplicants =
+          gig.bandCategory?.reduce(
+            (total, role) => total + role.applicants.length,
+            0
+          ) || 0;
+
         if (hasApplicants) {
           return (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/gigs/${gig._id}/review`);
-              }}
-              size="sm"
-              className={clsx(
-                responsiveButtonClasses,
-                "shadow-sm hover:shadow transition-all duration-200",
-                "text-xs sm:text-sm"
-              )}
-              style={getButtonStyle("default")}
-              onMouseEnter={(e) => {
-                if (gig.backgroundColor) {
-                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (gig.backgroundColor) {
-                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-                } else {
-                  e.currentTarget.style.backgroundColor = "";
-                }
-              }}
-            >
-              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Review</span>
-              <span className="sm:hidden">Review</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Review Applicants Button with Badge */}
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/gigs/${gig._id}/review`);
+                }}
+                size="sm"
+                className={clsx(
+                  responsiveButtonClasses,
+                  "shadow-sm hover:shadow transition-all duration-200 relative",
+                  "text-xs sm:text-sm"
+                )}
+                style={getButtonStyle("default")}
+              >
+                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Review</span>
+                <span className="sm:hidden">Review</span>
+
+                {/* Badge showing applicant count */}
+                {totalApplicants > 0 && (
+                  <Badge
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px]"
+                    style={{
+                      backgroundColor: gig.fontColor || "#ef4444",
+                      color: gig.backgroundColor || "#ffffff",
+                    }}
+                  >
+                    {totalApplicants > 99 ? "99+" : totalApplicants}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Edit Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/hub/gigs/client/edit/${gig._id}`);
+                }}
+                className={clsx(
+                  responsiveButtonClasses,
+                  "shadow-sm hover:shadow transition-all duration-200",
+                  "text-xs sm:text-sm"
+                )}
+                style={getButtonStyle("outline")}
+              >
+                <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Edit</span>
+                <span className="sm:hidden">Edit</span>
+              </Button>
+            </div>
           );
         } else if (hasBookedUsers) {
           return (
@@ -1289,14 +1399,6 @@ const GigCard: React.FC<GigCardProps> = ({
                 "text-xs sm:text-sm"
               )}
               style={getButtonStyle("outline")}
-              onMouseEnter={(e) => {
-                if (gig.backgroundColor) {
-                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }}
             >
               <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Edit</span>

@@ -22,35 +22,6 @@ interface ProcessedBandRole {
   currency?: string;
   negotiable?: boolean;
 }
-// Define proper types
-interface BandMember {
-  userId: Id<"users">;
-  name: string;
-  role: string;
-  joinedAt: number;
-  price?: number;
-  bookedBy?: Id<"users">;
-  status?: "pending" | "booked" | "confirmed" | "cancelled";
-  notes?: string;
-  email?: string;
-  phone?: string;
-  picture?: string;
-  skills?: string;
-  experience?: string;
-}
-
-interface BookingHistoryEntry {
-  userId: Id<"users">;
-  status: "pending" | "booked" | "completed" | "cancelled";
-  timestamp: number;
-  role: string;
-  notes?: string;
-  price?: number;
-  bookedBy?: Id<"users">;
-  action?: string;
-  gigType?: "regular" | "band";
-  metadata?: Record<string, any>;
-}
 
 // =================== REGULAR GIG FUNCTIONS ===================
 
@@ -1898,7 +1869,63 @@ export const getGigById = query({
     };
   },
 });
+export const getGigsByUser = query({
+  args: {
+    clerkId: v.string(),
+    // Optional filters
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("taken"),
+        v.literal("pending"),
+        v.literal("all")
+      )
+    ),
+    gigType: v.optional(
+      v.union(v.literal("regular"), v.literal("band"), v.literal("all"))
+    ),
+  },
+  handler: async (ctx, args) => {
+    const { clerkId, status = "all", gigType = "all" } = args;
 
+    // Get user by clerkId
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
+
+    if (!user) {
+      return [];
+    }
+
+    // Get all gigs posted by this user
+    let gigs = await ctx.db
+      .query("gigs")
+      .withIndex("by_postedBy", (q) => q.eq("postedBy", user._id))
+      .collect();
+
+    // Apply filters
+    if (status !== "all") {
+      gigs = gigs.filter((gig) => {
+        if (status === "active") return !gig.isTaken && !gig.isPending;
+        if (status === "taken") return gig.isTaken;
+        if (status === "pending") return gig.isPending;
+        return true;
+      });
+    }
+
+    if (gigType !== "all") {
+      gigs = gigs.filter((gig) => {
+        if (gigType === "regular") return !gig.isClientBand;
+        if (gigType === "band") return gig.isClientBand;
+        return true;
+      });
+    }
+
+    // Sort by creation date (newest first)
+    return gigs.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
 // Band role schema from your definitions
 const bandRoleSchema = v.object({
   role: v.string(),
