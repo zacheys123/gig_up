@@ -16,7 +16,30 @@ import {
 import { ChatIcon } from "@/components/chat/ChatIcon";
 import { motion } from "framer-motion";
 import clsx from "clsx";
-// components/booking/FullBandGig.tsx - Updated for bands only
+import { GigWithApplicants, Applicant } from "@/types/bookings";
+
+interface FullBandTabProps {
+  selectedGigData: GigWithApplicantsApplicants;
+  filteredApplicants: Applicant[];
+  handleAddToShortlist: (
+    gigId: Id<"gigs">,
+    applicantId: Id<"users">,
+    bandRole?: string,
+    bandRoleIndex?: number
+  ) => Promise<void>;
+  handleRemoveFromShortlist: (
+    gigId: Id<"gigs">,
+    applicantId: Id<"users">,
+    bandRoleIndex?: number
+  ) => Promise<void>;
+  handleViewProfile: (
+    gigId: Id<"gigs">,
+    applicantId: Id<"users">
+  ) => Promise<void>;
+  handleBookMusician: (userId: Id<"users">, userName: string) => void;
+  getStatusColor: (status: string) => string;
+}
+
 export const FullBandTab: React.FC<FullBandTabProps> = ({
   selectedGigData,
   filteredApplicants,
