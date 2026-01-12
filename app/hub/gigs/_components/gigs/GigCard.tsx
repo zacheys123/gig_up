@@ -551,7 +551,7 @@ const GigCard: React.FC<GigCardProps> = ({
   );
 
   // Regular gig interest handler
-  const handleRegularInterest = async () => {
+  const handleRegularInterest = async (notes?: string) => {
     if (!currentUserId) {
       toast.error("Sign in to show interest");
       return;
@@ -577,49 +577,33 @@ const GigCard: React.FC<GigCardProps> = ({
         });
         toast.success("Interest removed");
       } else {
-        setShowInterestModal(true);
+        // Pass notes to backend
+        await showInterestInGig({
+          gigId: gig._id,
+          userId: currentUserId,
+          notes: notes || undefined, // Pass undefined if no notes
+        });
+
+        toast.success(
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
+              <UserCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="font-medium">Interest shown!</p>
+              <p className="text-sm opacity-90">
+                Position #{userPosition || "?"} • {availableSlots} left
+              </p>
+            </div>
+          </div>
+        );
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Show interest with notes handler
-  const handleShowInterestWithNotes = async () => {
-    if (!currentUserId) {
-      toast.error("Sign in to show interest");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await showInterestInGig({
-        gigId: gig._id,
-        userId: currentUserId,
-      });
-
       setShowInterestModal(false);
-      setInterestNotes("");
-
-      toast.success(
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
-            <UserCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <p className="font-medium">Interest shown!</p>
-            <p className="text-sm opacity-90">
-              Position #{result.position} • {result.availableSlots} left
-            </p>
-          </div>
-        </div>
-      );
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed");
-    } finally {
-      setLoading(false);
+      setInterestNotes(""); // Clear notes
     }
   };
 
@@ -1065,12 +1049,13 @@ const GigCard: React.FC<GigCardProps> = ({
       }
 
       // Show interest button
+      // In your renderActionButton function, replace the regular interest section:
       if (regularIsInterested) {
         return (
           <Button
             onClick={(e) => {
               e.stopPropagation();
-              handleRegularInterest();
+              handleRegularInterest(); // This will remove interest
             }}
             disabled={loading}
             variant="outline"
@@ -1081,20 +1066,6 @@ const GigCard: React.FC<GigCardProps> = ({
               "text-xs sm:text-sm"
             )}
             style={getButtonStyle("outline")}
-            onMouseLeave={(e) => {
-              if (!loading && !bandIsFull) {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}40`
-                  : "";
-              }
-            }}
-            onMouseEnter={(e) => {
-              if (!loading && !bandIsFull) {
-                e.currentTarget.style.backgroundColor = gig.backgroundColor
-                  ? `${gig.backgroundColor}60`
-                  : ""; // Use empty string instead of undefined
-              }
-            }}
           >
             {loading ? (
               <>
@@ -1112,6 +1083,57 @@ const GigCard: React.FC<GigCardProps> = ({
           </Button>
         );
       }
+
+      // For showing interest - QUICK BY DEFAULT
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isFull) return;
+
+              // Show modal for notes on desktop, quick interest on mobile?
+              // OR just quick interest always?
+              handleRegularInterest(); // Quick interest without notes
+            }}
+            disabled={loading || isFull}
+            size="sm"
+            className={clsx(
+              responsiveButtonClasses,
+              "shadow-sm hover:shadow transition-all duration-200",
+              "text-xs sm:text-sm",
+              isFull && "opacity-50 cursor-not-allowed"
+            )}
+            style={getButtonStyle("default")}
+          >
+            {loading ? (
+              <>
+                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
+                <span className="hidden sm:inline">...</span>
+                <span className="sm:hidden">...</span>
+              </>
+            ) : isFull ? (
+              <>
+                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Full</span>
+                <span className="sm:hidden">Full</span>
+              </>
+            ) : regularIsInterested ? (
+              <>
+                <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Interested</span>
+                <span className="sm:hidden">✓</span>
+              </>
+            ) : (
+              <>
+                <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Interest</span>
+                <span className="sm:hidden">Join</span>
+              </>
+            )}
+          </Button>
+        </div>
+      );
 
       return (
         <Button
@@ -1888,7 +1910,7 @@ const GigCard: React.FC<GigCardProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={handleShowInterestWithNotes}
+              onClick={handleRegularInterest}
               disabled={loading}
               className="w-full sm:w-auto"
               style={getButtonStyles("default")}
