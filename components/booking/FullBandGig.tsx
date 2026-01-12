@@ -19,7 +19,7 @@ import clsx from "clsx";
 import { GigWithApplicants, Applicant } from "@/types/bookings";
 
 interface FullBandTabProps {
-  selectedGigData: GigWithApplicantsApplicants;
+  selectedGigData: GigWithApplicants;
   filteredApplicants: Applicant[];
   handleAddToShortlist: (
     gigId: Id<"gigs">,
