@@ -167,7 +167,9 @@ import { FeatureDiscovery } from "@/components/loaders/features/FeatureDiscovery
 import { ALL_FEATURES, getRoleFeatures } from "@/lib/registry";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { usePlatformStats } from "@/hooks/usePlatformStats";
+import { usePlatformStats } from "@/hooks/usePlatformStats"; // In your main page component, add:
+import { SecurityQuestionSetupModal } from "@/components/(main)/SecurityQuestionModal";
+
 // Tech Gradient Palettes
 const TECH_PALETTES = {
   neon: {
@@ -222,6 +224,46 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const featuredTestimonials =
     useQuery(api.controllers.testimonials.getFeaturedTestimonials) || [];
+
+  // Add these state variables:
+  const [showSecuritySetupModal, setShowSecuritySetupModal] = useState(false);
+  const [securityReminderCount, setSecurityReminderCount] = useState(0);
+
+  // Add this useEffect for 5-minute reminders:
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      user &&
+      !user.securityQuestion &&
+      !showSecuritySetupModal
+    ) {
+      const checkReminder = () => {
+        const snoozedUntil = localStorage.getItem("security_reminder_snooze");
+        const skipped = localStorage.getItem("security_question_skipped");
+
+        if (snoozedUntil) {
+          const snoozeTime = new Date(snoozedUntil);
+          if (Date.now() < snoozeTime.getTime()) {
+            return; // Still snoozed
+          }
+        }
+
+        if (!skipped && securityReminderCount < 3) {
+          // Limit to 3 reminders per session
+          setShowSecuritySetupModal(true);
+          setSecurityReminderCount((prev) => prev + 1);
+        }
+      };
+
+      // Check immediately
+      checkReminder();
+
+      // Set up 5-minute interval
+      const interval = setInterval(checkReminder, 5 * 60 * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, user, showSecuritySetupModal, securityReminderCount]);
 
   // Rotate through tech palettes
   useEffect(() => {
@@ -381,7 +423,6 @@ export default function Home() {
           <VolumeX className="w-5 h-5 text-cyan-400" />
         )}
       </button>
-
       {/* Tech Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Digital Grid */}
@@ -451,7 +492,6 @@ export default function Home() {
           />
         ))}
       </div>
-
       {/* Navigation */}
       <motion.nav
         initial={{ y: -100 }}
@@ -594,7 +634,6 @@ export default function Home() {
           </div>
         </div>
       </motion.nav>
-
       {/* Hero Section */}
       <section
         id="hero"
@@ -910,9 +949,7 @@ export default function Home() {
           </div>
         </motion.div>
       </section>
-
       {/* Platform Section */}
-
       <section id="platform" className="py-32 px-6 relative overflow-hidden">
         {/* Gradient Background */}
         <div
@@ -1311,7 +1348,6 @@ export default function Home() {
           )}
         </div>
       </section>
-
       {/* Success Stories Section */}
       <section id="success" className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
@@ -1687,7 +1723,6 @@ export default function Home() {
           />
         </div>
       </section>
-
       {/* Pro Tools Section */}
       <section id="pro" className="py-32 px-6 relative overflow-hidden">
         {/* Dark Tech Gradient */}
@@ -1799,7 +1834,6 @@ export default function Home() {
           )}
         </div>
       </section>
-
       {/* Final CTA */}
       <section id="cta" className="py-32 px-6 relative overflow-hidden">
         {/* Dynamic Gradient */}
@@ -1940,7 +1974,6 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-
       {/* Footer */}
       <footer
         className={cn(
@@ -2001,7 +2034,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
       {/* Profile Completion Modal */}
       <AnimatePresence>
         {showProfileModal && (
@@ -2235,6 +2267,25 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+      <SecurityQuestionSetupModal
+        isOpen={showSecuritySetupModal}
+        onClose={() => setShowSecuritySetupModal(false)}
+        onSuccess={() => {
+          // Refresh user data
+          // You might want to update user store here
+          setShowSecuritySetupModal(false);
+        }}
+        userRole={
+          user?.isMusician
+            ? "musician"
+            : user?.isClient
+              ? "client"
+              : user?.isBooker
+                ? "booker"
+                : "musician"
+        }
+      />
+      ;
     </>
   );
 }

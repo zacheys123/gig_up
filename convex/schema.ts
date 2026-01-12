@@ -347,46 +347,5 @@ export default defineSchema({
   //   .index("by_eligibility", ["canCreateBand"]),
   // In your Convex schema.ts
 
-  securityLogs: defineTable({
-    gigId: v.id("gigs"),
-    userId: v.id("users"),
-    clerkId: v.string(),
-    action: v.string(),
-    timestamp: v.number(),
-    ipAddress: v.optional(v.string()),
-    userAgent: v.optional(v.string()),
-    success: v.boolean(),
-    metadata: v.optional(v.any()),
-  })
-    .index("by_gig", ["gigId"])
-    .index("by_user", ["userId"])
-    .index("by_clerk", ["clerkId"])
-    .index("by_timestamp", ["timestamp"]),
-
-  secretKeyResets: defineTable({
-    gigId: v.id("gigs"),
-    userId: v.id("users"),
-    clerkId: v.string(),
-    resetToken: v.string(),
-    resetCode: v.string(),
-    email: v.string(),
-    expiresAt: v.number(),
-    createdAt: v.number(),
-    used: v.boolean(),
-  })
-    .index("by_gig_and_clerk", ["gigId", "clerkId"])
-    .index("by_token", ["resetToken"])
-    .index("by_expires", ["expiresAt"]),
-
-  emailLogs: defineTable({
-    toEmail: v.string(),
-    subject: v.string(),
-    gigId: v.id("gigs"),
-    timestamp: v.number(),
-    status: v.string(),
-  })
-    .index("by_gig", ["gigId"])
-    .index("by_email", ["toEmail"]),
-
   reports: reports,
 });

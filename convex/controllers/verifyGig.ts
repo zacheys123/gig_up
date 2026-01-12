@@ -1,264 +1,127 @@
-// convex/verifyGig.ts
-
-import { v } from "convex/values";
+// convex/controllers/verifyGig.ts
 import { mutation } from "../_generated/server";
+import { v } from "convex/values";
+import { generateRandomSecret, verifySecurityAnswer } from "../verifyUtil";
 
-// Regular mutation without auth middleware
-export const verifyGigSecretKey = mutation({
-  args: {
-    gigId: v.id("gigs"),
-    secretKey: v.string(),
-    clerkId: v.string(), // Pass Clerk ID from client
-  },
-  handler: async (ctx, args) => {
-    const { gigId, secretKey, clerkId } = args;
-
-    // Find user by clerkId
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
-      .first();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Get the gig
-    const gig = await ctx.db.get(gigId);
-    if (!gig) {
-      throw new Error("Gig not found");
-    }
-
-    // Check if user is the gig owner
-    if (gig.postedBy !== user._id) {
-      throw new Error("Unauthorized: Not the gig owner");
-    }
-
-    // Verify secret key
-    const isMatch = gig.secret === secretKey.trim();
-
-    // Create security log
-    try {
-      await ctx.db.insert("securityLogs", {
-        gigId,
-        userId: user._id,
-        clerkId: user.clerkId,
-        action: isMatch ? "secret_key_verified" : "secret_key_failed",
-        timestamp: Date.now(),
-        success: isMatch,
-      });
-    } catch (error) {
-      console.warn("Failed to create security log:", error);
-    }
-
-    return isMatch;
-  },
-});
-
-export const requestSecretKeyReset = mutation({
+export const requestSecretReset = mutation({
   args: {
     gigId: v.id("gigs"),
     email: v.string(),
-    clerkId: v.string(), // Pass Clerk ID from client
+    clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { gigId, email, clerkId } = args;
-
-    // Find user by clerkId
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error("User account not found");
     }
 
-    // Get the gig
-    const gig = await ctx.db.get(gigId);
+    if (user.email !== args.email.trim()) {
+      throw new Error("Email does not match your account");
+    }
+
+    if (!user.securityQuestion || !user.securityAnswer) {
+      throw new Error(
+        "You haven't set up a security question. " +
+          "Please set one up in your account settings first."
+      );
+    }
+
+    const gig = await ctx.db.get(args.gigId);
     if (!gig) {
       throw new Error("Gig not found");
     }
 
-    // Check if user is the gig owner
     if (gig.postedBy !== user._id) {
-      throw new Error("Unauthorized: Not the gig owner");
+      throw new Error("You don't have permission to edit this gig");
     }
 
-    // Verify email matches user's email
-    if (user.email !== email) {
-      throw new Error("Email does not match registered account");
-    }
-
-    // Generate reset token (6-digit code)
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetToken = `${Date.now()}-${resetCode}-${gigId}`;
-
-    // Store reset token with expiration (15 minutes)
-    await ctx.db.insert("secretKeyResets", {
-      gigId,
-      userId: user._id,
-      clerkId: user.clerkId,
-      resetToken,
-      resetCode,
-      email,
-      expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
-      createdAt: Date.now(),
-      used: false,
-    });
-
-    // Log reset request
-    await ctx.db.insert("securityLogs", {
-      gigId,
-      userId: user._id,
-      clerkId: user.clerkId,
-      action: "secret_key_reset_requested",
-      timestamp: Date.now(),
-      success: true,
-    });
-
-    return resetToken;
+    return {
+      securityQuestion: user.securityQuestion,
+      hasSecret: !!gig.secret,
+      hasSecurityQuestion: true,
+    };
   },
 });
 
-export const resetSecretKey = mutation({
+export const verifySecurityAnswerAndReset = mutation({
   args: {
     gigId: v.id("gigs"),
-    resetToken: v.string(),
-    resetCode: v.string(),
-    newSecretKey: v.string(),
-    clerkId: v.string(), // Pass Clerk ID from client
+    securityAnswer: v.string(),
+    newSecretKey: v.optional(v.string()),
+    clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { gigId, resetToken, resetCode, newSecretKey, clerkId } = args;
-
-    // Find user by clerkId
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) {
       throw new Error("User not found");
     }
 
-    // Get the gig
-    const gig = await ctx.db.get(gigId);
+    if (!user.securityQuestion || !user.securityAnswer) {
+      throw new Error("No security question set for this account");
+    }
+
+    // Verify the answer
+    const isCorrect = verifySecurityAnswer(
+      args.securityAnswer,
+      user.securityAnswer
+    );
+
+    if (!isCorrect) {
+      throw new Error("Incorrect security answer. Please try again.");
+    }
+
+    const gig = await ctx.db.get(args.gigId);
     if (!gig) {
       throw new Error("Gig not found");
     }
 
-    // Check if user is the gig owner
     if (gig.postedBy !== user._id) {
-      throw new Error("Unauthorized: Not the gig owner");
+      throw new Error("You don't have permission to edit this gig");
     }
 
-    // Find reset record using clerkId
-    const resetRecords = await ctx.db
-      .query("secretKeyResets")
-      .withIndex("by_gig_and_clerk", (q) =>
-        q.eq("gigId", gigId).eq("clerkId", user.clerkId)
-      )
-      .collect();
-
-    const validReset = resetRecords.find(
-      (record) =>
-        record.resetToken === resetToken &&
-        record.resetCode === resetCode &&
-        !record.used &&
-        record.expiresAt > Date.now()
-    );
-
-    if (!validReset) {
-      throw new Error("Invalid or expired reset token");
+    let newSecret: string;
+    if (args.newSecretKey) {
+      if (args.newSecretKey.length < 4) {
+        throw new Error("Secret key must be at least 4 characters");
+      }
+      if (args.newSecretKey.length > 32) {
+        throw new Error("Secret key must be less than 32 characters");
+      }
+      newSecret = args.newSecretKey;
+    } else {
+      newSecret = generateRandomSecret();
     }
 
-    // Validate new secret key
-    if (newSecretKey.length < 6) {
-      throw new Error("Secret key must be at least 6 characters");
-    }
-
-    // Update gig secret
-    await ctx.db.patch(gigId, {
-      secret: newSecretKey,
+    await ctx.db.patch(gig._id, {
+      secret: newSecret,
       updatedAt: Date.now(),
     });
 
-    // Mark reset as used
-    await ctx.db.patch(validReset._id, { used: true });
-
-    // Log successful reset
-    await ctx.db.insert("securityLogs", {
-      gigId,
-      userId: user._id,
-      clerkId: user.clerkId,
-      action: "secret_key_reset_success",
-      timestamp: Date.now(),
+    return {
       success: true,
-    });
-
-    return true;
+      newSecret,
+    };
   },
 });
 
-// Email sending function (no auth needed)
-export const sendSecretKeyResetEmail = mutation({
+export const verifyGigSecret = mutation({
   args: {
-    toEmail: v.string(),
-    gigTitle: v.string(),
-    resetToken: v.string(),
     gigId: v.id("gigs"),
+    secretKey: v.string(),
   },
   handler: async (ctx, args) => {
-    const { toEmail, gigTitle, resetToken, gigId } = args;
-
-    // Extract reset code from token
-    const resetCode = resetToken.split("-")[1];
-
-    // Example email content
-    const emailContent = {
-      to: toEmail,
-      subject: `Secret Key Reset for "${gigTitle}"`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Secret Key Reset Request</h2>
-          <p>You requested to reset the secret key for your gig: <strong>${gigTitle}</strong></p>
-          
-          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0; font-size: 18px; font-weight: bold;">Reset Code:</p>
-            <div style="font-size: 32px; font-weight: bold; letter-spacing: 4px; text-align: center; margin: 10px 0;">
-              ${resetCode}
-            </div>
-            <p style="margin: 10px 0 0 0; color: #666;">
-              Enter this code in the reset form to create a new secret key.
-            </p>
-          </div>
-          
-          <p style="color: #666; font-size: 14px;">
-            This code will expire in 15 minutes. If you didn't request this reset, please ignore this email.
-          </p>
-          
-          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-          
-          <p style="color: #999; font-size: 12px;">
-            This is an automated message from GigPlatform.
-          </p>
-        </div>
-      `,
-    };
-
-    // Log that email would be sent
-    await ctx.db.insert("emailLogs", {
-      toEmail,
-      subject: emailContent.subject,
-      gigId,
-      timestamp: Date.now(),
-      status: "sent",
-    });
-
-    console.log("Email would be sent to:", toEmail);
-    console.log("Reset code:", resetCode);
-
-    return { success: true, resetCode };
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) {
+      throw new Error("Gig not found");
+    }
+    return gig.secret === args.secretKey;
   },
 });

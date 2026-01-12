@@ -9,6 +9,7 @@ import {
   isUserDocument,
 } from "../createNotificationInternal";
 import { updateUserTrust } from "../trustHelper";
+import { normalizeSecurityAnswer } from "../verifyUtil";
 
 // Helper function to create type-safe user data with admin defaults
 const createUserData = (args: any, now: number) => {
@@ -1766,5 +1767,72 @@ export const getUserProfile = query({
       followers: user.followers,
       _creationTime: user._creationTime,
     };
+  },
+});
+// convex/controllers/users.ts
+export const checkSecurityQuestion = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    return !!user?.securityQuestion;
+  },
+});
+
+export const updateSecurityQuestion = mutation({
+  args: {
+    securityQuestion: v.string(),
+    securityAnswer: v.string(),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get user by clerkId
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Validate input
+    if (!args.securityQuestion.trim()) {
+      throw new Error("Security question is required");
+    }
+
+    if (!args.securityAnswer.trim()) {
+      throw new Error("Security answer is required");
+    }
+
+    // Use normalizeSecurityAnswer (or hashSecurityAnswer if using crypto)
+    const normalizedAnswer = normalizeSecurityAnswer(args.securityAnswer);
+
+    await ctx.db.patch(user._id, {
+      securityQuestion: args.securityQuestion.trim(),
+      securityAnswer: normalizedAnswer,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: "Security question set successfully",
+    };
+  },
+});
+
+// Optional: Check if user has security question
+export const hasSecurityQuestion = query({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    return !!(user?.securityQuestion && user?.securityAnswer);
   },
 });

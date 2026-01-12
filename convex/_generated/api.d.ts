@@ -24,7 +24,6 @@ import type * as controllers_chat from "../controllers/chat.js";
 import type * as controllers_comments from "../controllers/comments.js";
 import type * as controllers_debug from "../controllers/debug.js";
 import type * as controllers_deputies from "../controllers/deputies.js";
-import type * as controllers_email from "../controllers/email.js";
 import type * as controllers_featureFlags from "../controllers/featureFlags.js";
 import type * as controllers_gigs from "../controllers/gigs.js";
 import type * as controllers_instantGigs from "../controllers/instantGigs.js";
@@ -63,6 +62,7 @@ import type * as presence from "../presence.js";
 import type * as test from "../test.js";
 import type * as trustHelper from "../trustHelper.js";
 import type * as trustScore from "../trustScore.js";
+import type * as verifyUtil from "../verifyUtil.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -84,7 +84,6 @@ declare const fullApi: ApiFromModules<{
   "controllers/comments": typeof controllers_comments;
   "controllers/debug": typeof controllers_debug;
   "controllers/deputies": typeof controllers_deputies;
-  "controllers/email": typeof controllers_email;
   "controllers/featureFlags": typeof controllers_featureFlags;
   "controllers/gigs": typeof controllers_gigs;
   "controllers/instantGigs": typeof controllers_instantGigs;
@@ -123,6 +122,7 @@ declare const fullApi: ApiFromModules<{
   test: typeof test;
   trustHelper: typeof trustHelper;
   trustScore: typeof trustScore;
+  verifyUtil: typeof verifyUtil;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

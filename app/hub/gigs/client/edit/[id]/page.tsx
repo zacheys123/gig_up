@@ -5,9 +5,10 @@ import { useParams } from "next/navigation";
 import EditGigForm from "../_components/EditForm";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Lock } from "lucide-react";
-import { SecretKeyVerificationModal } from "../_components/ServerKeyModal";
+
 import { Id } from "@/convex/_generated/dataModel";
 import { useThemeColors } from "@/hooks/useTheme";
+import { SimpleForgotSecretModal } from "../_components/SimpleForgotSecretModal";
 
 export default function EditGigPage() {
   const params = useParams();
@@ -41,12 +42,11 @@ export default function EditGigPage() {
 
   return (
     <div className={colors.background}>
-      <SecretKeyVerificationModal
+      <SimpleForgotSecretModal
+        gigId={gigId as Id<"gigs">}
         isOpen={showVerification && !isVerified}
         onClose={() => window.history.back()}
         onSuccess={handleVerificationSuccess}
-        gigId={gigId as Id<"gigs">}
-        userId={user?._id!}
       />
 
       {isVerified && <EditGigForm />}

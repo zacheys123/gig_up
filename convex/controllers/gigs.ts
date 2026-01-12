@@ -2357,3 +2357,37 @@ export const updateGigVisibility = mutation({
     };
   },
 });
+
+// Keep it as a query (current implementation is correct)
+export const getGigBasicInfo = query({
+  args: {
+    gigId: v.id("gigs"),
+  },
+  handler: async (ctx, args) => {
+    const gig = await ctx.db.get(args.gigId);
+    if (!gig) {
+      throw new Error("Gig not found");
+    }
+
+    return {
+      title: gig.title,
+      date: gig.date,
+      time: gig.time,
+      location: gig.location,
+      price: gig.price,
+      currency: gig.currency,
+      bussinesscat: gig.bussinesscat,
+      isActive: gig.isActive,
+      isPublic: gig.isPublic,
+    };
+  },
+});
+
+// Then in your component, use it like this:
+const {
+  data: gigInfo,
+  isLoading,
+  error,
+} = useQuery(api.controllers.gigs.getGigBasicInfo, {
+  gigId: gigId, // Pass the gigId as an argument
+});

@@ -499,6 +499,11 @@ export const userModel = defineTable({
   updatedAt: v.optional(v.number()),
   openToBandWork: v.optional(v.boolean()),
   interestedInBands: v.optional(v.boolean()),
+  securityQuestion: v.optional(v.string()), // e.g., "What was your kindergarten teacher's name?"
+  securityAnswer: v.optional(v.string()), // Hashed answer
+
+  // Simple secret key backup
+  secretKeyBackup: v.optional(v.string()), // Encrypted/hashed backup of gig secrets
 })
   .index("by_clerkId", ["clerkId"])
   .index("by_email", ["email"])
