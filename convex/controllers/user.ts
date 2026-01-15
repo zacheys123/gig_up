@@ -1528,20 +1528,20 @@ export const deleteUserAccount = mutation({
       }
     }
 
-    if (user.bandMemberOf && user.bandMemberOf.length > 0) {
-      for (const bandId of user.bandMemberOf) {
-        const bandMembers = await ctx.db
-          .query("bandMembers")
-          .withIndex("by_band_user", (q) =>
-            q.eq("bandId", bandId).eq("userId", user._id)
-          )
-          .collect();
+    // if (user.bandMemberOf && user.bandMemberOf.length > 0) {
+    //   for (const bandId of user.bandMemberOf) {
+    //     const bandMembers = await ctx.db
+    //       .query("bands")
+    //       .withIndex("by_band_user", (q) =>
+    //         q.eq("bandId", bandId).eq("userId", user._id)
+    //       )
+    //       .collect();
 
-        for (const member of bandMembers) {
-          await ctx.db.delete(member._id);
-        }
-      }
-    }
+    //     for (const member of bandMembers) {
+    //       await ctx.db.delete(member._id);
+    //     }
+    //   }
+    // }
 
     // 16. Delete band gig applications
     const userBandApplications = await ctx.db
@@ -1699,7 +1699,19 @@ export const getUserById = query({
     return await ctx.db.get(args.userId);
   },
 });
+// In convex/controllers/user.ts
+export const getUsersByIds = query({
+  args: { userIds: v.array(v.id("users")) },
+  handler: async (ctx, args) => {
+    if (args.userIds.length === 0) return [];
 
+    const users = await Promise.all(
+      args.userIds.map((userId) => ctx.db.get(userId))
+    );
+
+    return users.filter(Boolean);
+  },
+});
 export const updateLastActive = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

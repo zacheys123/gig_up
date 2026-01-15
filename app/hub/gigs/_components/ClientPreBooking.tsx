@@ -1,4 +1,4 @@
-// components/gigs/ClientPreBooking.tsx (COMPLETE VERSION)
+// components/gigs/ClientPreBooking.tsx (UPDATED VERSION)
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -54,9 +54,8 @@ import {
 import { ChatIcon } from "@/components/chat/ChatIcon";
 
 // Tab Components
-
 import { BandRolesTab } from "@/components/booking/BandGigWithRoleTab";
-import { FullBandTab } from "@/components/booking/FullBandGig";
+
 import { HistoryTab } from "@/components/booking/History";
 import { RegularGigsTab } from "@/components/booking/RegularGigsTab";
 import { StatsCards } from "@/components/booking/StatsCards";
@@ -69,6 +68,8 @@ import {
 } from "@/types/bookings";
 import { ShortlistTab } from "@/components/booking/ShortlIstTab";
 import { GigInfoCard } from "@/components/booking/GigInfo";
+import { FullBandTab } from "@/components/booking/FullBandGig";
+import { BookingOptionsSection } from "./BookingOptions";
 
 interface ClientPreBookingProps {
   user: any;
@@ -93,9 +94,73 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const [selectedMusician, setSelectedMusician] = useState<{
     userId: Id<"users">;
     userName: string;
+    source?: "regular" | "band-role" | "full-band" | "shortlisted";
+    bandId?: Id<"bands">;
+    bandRoleIndex?: number;
+  } | null>(null);
+  const [selectedBand, setSelectedBand] = useState<{
+    bandId: Id<"bands">;
+    bandName: string;
   } | null>(null);
   const [bookingPrice, setBookingPrice] = useState<number | "">("");
 
+  const getTotalApplicants = () => {
+    if (!userGigs) return 0;
+
+    switch (activeGigTab) {
+      case "regular":
+        return userGigs.reduce((total, gig) => {
+          if (
+            !gig.isClientBand &&
+            gig.interestedUsers &&
+            gig.interestedUsers.length > 0
+          ) {
+            return total + gig.interestedUsers.length;
+          }
+          return total;
+        }, 0);
+
+      case "band-roles":
+        return userGigs.reduce((total, gig) => {
+          if (gig.isClientBand && gig.bandCategory) {
+            return (
+              total +
+              gig.bandCategory.reduce((roleTotal, role) => {
+                return roleTotal + (role.applicants?.length || 0);
+              }, 0)
+            );
+          }
+          return total;
+        }, 0);
+
+      case "full-band":
+        return userGigs.reduce((total, gig) => {
+          if (gig.isClientBand && gig.bookCount) {
+            return total + gig.bookCount.length;
+          }
+          return total;
+        }, 0);
+
+      case "shortlist":
+        return userGigs.reduce((total, gig) => {
+          if (gig.shortlistedUsers) {
+            return total + gig.shortlistedUsers.length;
+          }
+          return total;
+        }, 0);
+
+      default:
+        return 0;
+    }
+  };
+
+  // Calculate total shortlisted users
+  const getTotalShortlisted = () => {
+    if (!userGigs) return 0;
+    return userGigs.reduce((total, gig) => {
+      return total + (gig.shortlistedUsers?.length || 0);
+    }, 0);
+  };
   // Mutations
   const addToShortlist = useMutation(api.controllers.prebooking.addToShortlist);
   const removeFromShortlist = useMutation(
@@ -139,6 +204,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
           gig.interestedUsers && gig.interestedUsers.length > 0;
         const hasShortlisted =
           gig.shortlistedUsers && gig.shortlistedUsers.length > 0;
+        const hasBandApplications = gig.bookCount && gig.bookCount.length > 0;
         const isNotTaken = !gig.isTaken;
 
         // Filter based on active tab
@@ -152,13 +218,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             );
             return hasRoleApplicants && isNotTaken;
           case "full-band":
-            return (
-              gig.isClientBand &&
-              (gig.bussinesscat?.toLowerCase().includes("band") ||
-                (gig.bookCount && gig.bookCount.length > 0)) &&
-              hasInterested &&
-              isNotTaken
-            );
+            // Show gigs that have band applications in bookCount
+            return gig.isClientBand && hasBandApplications && isNotTaken;
           case "shortlist":
             return hasShortlisted && isNotTaken;
           default:
@@ -166,67 +227,84 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         }
       })
       .map((gig) => {
+        // Cast gig to avoid type errors
+        const typedGig = gig as any;
+
         let applicants: Applicant[] = [];
         let shortlisted: ShortlistedUser[] = [];
+
+        // Cast bookingHistory
+        const bookingHistory = typedGig.bookingHistory || [];
 
         switch (activeGigTab) {
           case "regular":
             // Process regular gig applicants
-            applicants = (gig.interestedUsers || []).map((userId) => {
-              const statusHistory =
-                gig.bookingHistory?.filter(
-                  (entry) => entry.userId === userId
-                ) || [];
+            applicants = (typedGig.interestedUsers || []).map(
+              (userId: Id<"users">) => {
+                const statusHistory = bookingHistory.filter(
+                  (entry: any) => entry.userId === userId
+                );
 
-              let status: Applicant["status"] = "pending";
-              if (statusHistory.some((entry) => entry.status === "booked")) {
-                status = "booked";
-              } else if (
-                gig.shortlistedUsers?.some((item) => item.userId === userId)
-              ) {
-                status = "shortlisted";
-              } else if (
-                statusHistory.some((entry) => entry.status === "rejected")
-              ) {
-                status = "rejected";
-              } else if (
-                statusHistory.some((entry) => entry.status === "updated") // Use "updated" instead of "viewed"
-              ) {
-                status = "viewed";
+                let status: Applicant["status"] = "pending";
+                if (
+                  statusHistory.some((entry: any) => entry.status === "booked")
+                ) {
+                  status = "booked";
+                } else if (
+                  typedGig.shortlistedUsers?.some(
+                    (item: any) => item.userId === userId
+                  )
+                ) {
+                  status = "shortlisted";
+                } else if (
+                  statusHistory.some(
+                    (entry: any) => entry.status === "rejected"
+                  )
+                ) {
+                  status = "rejected";
+                } else if (
+                  statusHistory.some(
+                    (entry: any) =>
+                      entry.status === "updated" || entry.status === "viewed"
+                  )
+                ) {
+                  status = "viewed";
+                }
+
+                return {
+                  userId,
+                  appliedAt: typedGig.createdAt,
+                  status,
+                  gigId: typedGig._id,
+                };
               }
-
-              return {
-                userId,
-                appliedAt: gig.createdAt,
-                status,
-                gigId: gig._id,
-              };
-            });
+            );
             break;
 
           case "band-roles":
             // Process band role applicants
-            if (gig.bandCategory) {
-              gig.bandCategory.forEach((role, roleIndex) => {
+            if (typedGig.bandCategory) {
+              typedGig.bandCategory.forEach((role: any, roleIndex: number) => {
                 // Applicants for this role
-                (role.applicants || []).forEach((userId) => {
-                  const statusHistory =
-                    gig.bookingHistory?.filter(
-                      (entry) =>
-                        entry.userId === userId &&
-                        entry.bandRoleIndex === roleIndex
-                    ) || [];
+                (role.applicants || []).forEach((userId: Id<"users">) => {
+                  const statusHistory = bookingHistory.filter(
+                    (entry: any) =>
+                      entry.userId === userId &&
+                      entry.bandRoleIndex === roleIndex
+                  );
 
                   let status: Applicant["status"] = "pending";
                   if (
-                    statusHistory.some((entry) => entry.status === "booked")
+                    statusHistory.some(
+                      (entry: any) => entry.status === "booked"
+                    )
                   ) {
                     status = "booked";
                   } else if (
-                    gig.shortlistedUsers?.some(
-                      (item) =>
+                    typedGig.shortlistedUsers?.some(
+                      (item: any) =>
                         item.userId === userId &&
-                        (item as any).bandRoleIndex === roleIndex // Type assertion
+                        item.bandRoleIndex === roleIndex
                     )
                   ) {
                     status = "shortlisted";
@@ -234,21 +312,21 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
 
                   applicants.push({
                     userId,
-                    appliedAt: gig.createdAt,
+                    appliedAt: typedGig.createdAt,
                     status,
-                    gigId: gig._id,
+                    gigId: typedGig._id,
                     bandRole: role.role,
                     bandRoleIndex: roleIndex,
                   });
                 });
 
                 // Booked users for this role
-                (role.bookedUsers || []).forEach((userId) => {
+                (role.bookedUsers || []).forEach((userId: Id<"users">) => {
                   applicants.push({
                     userId,
-                    appliedAt: gig.createdAt,
+                    appliedAt: typedGig.createdAt,
                     status: "booked",
-                    gigId: gig._id,
+                    gigId: typedGig._id,
                     bandRole: role.role,
                     bandRoleIndex: roleIndex,
                   });
@@ -258,65 +336,34 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             break;
 
           case "full-band":
-            // Process full band applicants
-            applicants = (gig.interestedUsers || []).map((userId) => {
-              const statusHistory =
-                gig.bookingHistory?.filter(
-                  (entry) => entry.userId === userId
-                ) || [];
-
-              let status: Applicant["status"] = "pending";
-              if (statusHistory.some((entry) => entry.status === "booked")) {
-                status = "booked";
-              } else if (
-                gig.shortlistedUsers?.some((item) => item.userId === userId)
-              ) {
-                status = "shortlisted";
-              }
-
-              return {
-                userId,
-                appliedAt: gig.createdAt,
-                status,
-                gigId: gig._id,
-              };
-            });
-
-            // Include existing band members
-            if (gig.bookCount) {
-              gig.bookCount.forEach((member) => {
-                applicants.push({
-                  userId: member.userId,
-                  appliedAt: member.joinedAt,
-                  status: "booked",
-                  gigId: gig._id,
-                  bandRole: member.role,
-                });
-              });
-            }
+            // For full-band tab, we don't need individual applicants
+            applicants = [];
             break;
         }
 
-        // Get shortlisted users for all gig types - use type assertion for bandRoleIndex
-        shortlisted = (gig.shortlistedUsers || []).map((item) => ({
+        // Get shortlisted users for all gig types
+        shortlisted = (typedGig.shortlistedUsers || []).map((item: any) => ({
           userId: item.userId,
           shortlistedAt: item.shortlistedAt,
           notes: item.notes,
-          status: item.status,
-          bandRole: (item as any).bandRole,
-          bandRoleIndex: (item as any).bandRoleIndex,
+          status: item.status || "active",
+          bandRole: item.bandRole,
+          bandRoleIndex: item.bandRoleIndex,
         }));
 
         return {
-          gig,
+          gig: typedGig,
           applicants,
           shortlisted,
           userDetails: userMap,
-        };
+        } as GigWithApplicants;
       })
       .filter((gigData) => {
         if (activeGigTab === "shortlist") {
           return gigData.shortlisted.length > 0;
+        } else if (activeGigTab === "full-band") {
+          // For full-band, check if gig has bookCount entries
+          return gigData.gig.bookCount && gigData.gig.bookCount.length > 0;
         }
         return gigData.applicants.length > 0 || gigData.shortlisted.length > 0;
       });
@@ -328,7 +375,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   };
 
   // Action handlers
-  // In your BandRolesTab component or ClientPreBooking.tsx
   const handleAddToShortlist = async (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
@@ -341,8 +387,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         applicantId,
         notes: bandRole ? `Interested for ${bandRole} role` : undefined,
         clerkId: userId!,
-        bandRole, // Pass band role
-        bandRoleIndex, // Pass band role index
+        bandRole,
+        bandRoleIndex,
       });
       toast.success(`Added to shortlist for ${bandRole || "gig"}!`);
       processGigsWithApplicants();
@@ -367,53 +413,92 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   };
 
-  const handleBookMusician = (userId: Id<"users">, userName: string) => {
-    setSelectedMusician({ userId, userName });
+  const handleBookMusician = (
+    userId: Id<"users">,
+    userName: string,
+    source?: "regular" | "band-role" | "full-band" | "shortlisted",
+    bandId?: Id<"bands">,
+    bandRoleIndex?: number
+  ) => {
+    setSelectedMusician({
+      userId,
+      userName,
+      source: source || "regular", // Default to regular if not specified
+      bandId,
+      bandRoleIndex,
+    });
+    setSelectedBand(null);
     setBookingPrice("");
     setShowBookDialog(true);
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedMusician || !selectedGig) {
-      toast.error("No musician or gig selected");
+    if (!selectedGig) {
+      toast.error("No gig selected");
       return;
     }
 
     try {
-      // Determine source based on active tab
-      let source:
-        | "interested"
-        | "shortlisted"
-        | "regular"
-        | "band-role"
-        | "full-band" = "regular";
+      // Determine source based on what's selected
+      let source: "regular" | "band-role" | "full-band" | "shortlisted" =
+        selectedMusician?.source || "regular";
 
-      // Update this mapping:
-      if (activeGigTab === "shortlist") {
+      // If we're in shortlist tab but the musician doesn't have source, set it
+      if (activeGigTab === "shortlist" && !selectedMusician?.source) {
         source = "shortlisted";
-      } else if (activeGigTab === "band-roles") {
-        source = "band-role"; // From bandCategory[].applicants
-      } else if (activeGigTab === "full-band") {
-        source = "full-band"; // From bookCount array
-      } else {
-        source = "regular"; // From interestedUsers array
       }
 
-      await bookMusician({
+      // Prepare booking data
+      const bookingData: any = {
         gigId: selectedGig,
-        musicianId: selectedMusician.userId,
         source: source,
         agreedPrice: bookingPrice ? Number(bookingPrice) : undefined,
         notes: `Booked from ${activeGigTab} tab`,
         clerkId: userId!,
-      });
+      };
 
-      toast.success(`Booked ${selectedMusician.userName}!`);
+      // Add musicianId or bandId based on what's selected
+      if (selectedMusician) {
+        bookingData.musicianId = selectedMusician.userId;
+
+        // Add bandId for full-band bookings
+        if (
+          selectedMusician.source === "full-band" &&
+          selectedMusician.bandId
+        ) {
+          bookingData.bandId = selectedMusician.bandId;
+        }
+
+        // Add bandRoleIndex for band-role bookings
+        if (
+          selectedMusician.source === "band-role" &&
+          selectedMusician.bandRoleIndex !== undefined
+        ) {
+          bookingData.bandRoleIndex = selectedMusician.bandRoleIndex;
+        }
+      } else if (selectedBand) {
+        // Fallback for backward compatibility
+        bookingData.source = "full-band";
+        bookingData.musicianId = selectedBand.bandId; // This will need to be a userId, not bandId
+        bookingData.bandId = selectedBand.bandId;
+      } else {
+        toast.error("No musician or band selected");
+        return;
+      }
+
+      await bookMusician(bookingData);
+
+      toast.success(
+        `Booked ${selectedMusician?.userName || selectedBand?.bandName || "Unknown"}!`
+      );
+
       setShowBookDialog(false);
+      setSelectedMusician(null);
+      setSelectedBand(null);
       processGigsWithApplicants();
     } catch (error: any) {
-      console.error("Failed to book musician:", error);
-      toast.error(error.message || "Failed to book musician");
+      console.error("Failed to book:", error);
+      toast.error(error.message || "Failed to book");
     }
   };
 
@@ -550,8 +635,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         };
       case "full-band":
         return {
-          title: "No Full Band Gigs",
-          description: "No full band applicants yet",
+          title: "No Bands Have Applied",
+          description: "No bands have applied to this gig yet",
         };
       default:
         return {
@@ -589,16 +674,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             </p>
           </div>
           <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1">
-            {activeGigTab === "shortlist"
-              ? gigsWithApplicants.reduce(
-                  (acc, gig) => acc + gig.shortlisted.length,
-                  0
-                )
-              : gigsWithApplicants.reduce(
-                  (acc, gig) => acc + gig.applicants.length,
-                  0
-                )}{" "}
-            Total
+            {getTotalApplicants()} Total
           </Badge>
         </div>
 
@@ -617,6 +693,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                 setActiveGigTab(v);
                 setSelectedGig(null);
                 setSearchTerm("");
+                setSelectedMusician(null);
+                setSelectedBand(null);
               }}
             >
               <TabsList className="grid grid-cols-2 md:grid-cols-4">
@@ -661,7 +739,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                       gigsWithApplicants.filter(
                         (g) =>
                           g.gig.isClientBand &&
-                          g.gig.bussinesscat?.toLowerCase().includes("band")
+                          g.gig.bookCount &&
+                          g.gig.bookCount.length > 0
                       ).length
                     }
                   </Badge>
@@ -698,6 +777,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                       setSelectedGig(
                         value === "" ? null : (value as Id<"gigs">)
                       );
+                      setSelectedMusician(null);
+                      setSelectedBand(null);
                     }}
                   >
                     <SelectTrigger>
@@ -717,6 +798,10 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                               {activeGigTab === "shortlist" ? (
                                 <Badge className="bg-orange-100 text-orange-800">
                                   {gigWithApps.shortlisted.length}
+                                </Badge>
+                              ) : activeGigTab === "full-band" ? (
+                                <Badge className="bg-purple-100 text-purple-800">
+                                  {gigWithApps.gig.bookCount?.length || 0}
                                 </Badge>
                               ) : (
                                 <>
@@ -742,7 +827,9 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                       placeholder={
                         activeGigTab === "shortlist"
                           ? "Search shortlisted musicians..."
-                          : "Search musicians..."
+                          : activeGigTab === "full-band"
+                            ? "Search bands..."
+                            : "Search musicians..."
                       }
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -751,7 +838,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   </div>
                 </div>
               </div>
-
               {selectedGigData && (
                 <>
                   {/* Gig Info Card */}
@@ -785,7 +871,9 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                           className="flex items-center gap-2"
                         >
                           <Users className="w-4 h-4" />
-                          Applicants ({filteredApplicants?.length || 0})
+                          {activeGigTab === "full-band"
+                            ? `Bands (${selectedGigData.gig.bookCount?.length || 0})`
+                            : `Applicants (${filteredApplicants?.length || 0})`}
                         </TabsTrigger>
                         <TabsTrigger
                           value="history"
@@ -827,13 +915,12 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                         {activeGigTab === "full-band" && (
                           <FullBandTab
                             selectedGigData={selectedGigData}
-                            filteredApplicants={filteredApplicants || []}
                             handleAddToShortlist={handleAddToShortlist}
                             handleRemoveFromShortlist={
                               handleRemoveFromShortlist
                             }
                             handleViewProfile={handleViewProfile}
-                            handleBookMusician={handleBookMusician}
+                            handleBookMusician={handleBookMusician} // Pass the enhanced function
                             getStatusColor={getStatusColor}
                           />
                         )}
@@ -850,6 +937,24 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   )}
                 </>
               )}
+
+              {/* Band Booking Options Section - Only show for client-created band gigs */}
+              {selectedGigData?.gig.isClientBand &&
+                selectedGigData?.gig.bandCategory &&
+                selectedGigData?.gig.bandCategory.length > 0 && (
+                  <div className="mt-8 border-t pt-8">
+                    <BookingOptionsSection
+                      gigId={selectedGigData.gig._id}
+                      clerkId={userId!}
+                      gig={selectedGigData.gig}
+                      musiciansCount={selectedGigData.gig.bandCategory.reduce(
+                        (total, role) =>
+                          total + (role.bookedUsers?.length || 0),
+                        0
+                      )}
+                    />
+                  </div>
+                )}
             </div>
           ) : (
             // Empty state
@@ -874,13 +979,16 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         </CardContent>
       </Card>
 
-      {/* Book Now Dialog - COMPLETE VERSION */}
+      {/* Book Now Dialog */}
       <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Book Musician</DialogTitle>
+            <DialogTitle>
+              {selectedBand ? "Book Band" : "Book Musician"}
+            </DialogTitle>
             <DialogDescription>
-              Confirm booking for {selectedMusician?.userName}
+              Confirm booking for{" "}
+              {selectedBand?.bandName || selectedMusician?.userName}
             </DialogDescription>
           </DialogHeader>
 
@@ -889,15 +997,18 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               <div className="flex items-center gap-3">
                 <Avatar className="w-12 h-12">
                   <AvatarFallback className="bg-green-100 text-green-800">
-                    {selectedMusician?.userName?.charAt(0) || "M"}
+                    {selectedBand?.bandName?.charAt(0) ||
+                      selectedMusician?.userName?.charAt(0) ||
+                      "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <h4 className="font-semibold">
-                    {selectedMusician?.userName}
+                    {selectedBand?.bandName || selectedMusician?.userName}
                   </h4>
                   <p className="text-sm text-gray-600">
-                    Ready to book for {selectedGigData?.gig.title}
+                    {selectedBand ? "Band" : "Musician"} ready to book for{" "}
+                    {selectedGigData?.gig.title}
                   </p>
                 </div>
               </div>
@@ -934,8 +1045,9 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                     Booking Confirmation
                   </p>
                   <p className="text-xs text-blue-600 mt-1">
-                    The musician will receive a notification and can confirm the
-                    booking.
+                    {selectedBand
+                      ? "The band members will receive notifications and can confirm the booking."
+                      : "The musician will receive a notification and can confirm the booking."}
                   </p>
                 </div>
               </div>
@@ -945,7 +1057,11 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
-              onClick={() => setShowBookDialog(false)}
+              onClick={() => {
+                setShowBookDialog(false);
+                setSelectedMusician(null);
+                setSelectedBand(null);
+              }}
               className="w-full sm:w-auto"
             >
               Cancel

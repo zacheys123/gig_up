@@ -22,6 +22,8 @@ import {
   Edit,
   MoreVertical,
   Sparkles,
+  Users2,
+  Building2,
 } from "lucide-react";
 
 // Convex imports
@@ -63,15 +65,27 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { getInterestWindowStatus } from "@/utils";
 
 // Types
-interface BandMember {
+
+interface PerformingMember {
   userId: Id<"users">;
   name: string;
   role: string;
-  joinedAt: number;
-  price?: number;
-  bookedBy?: Id<"users">;
+  instrument: string;
+}
+
+interface BandApplication {
+  bandId: Id<"bands">;
+  appliedAt: number;
+  appliedBy: Id<"users">;
+  performingMembers: PerformingMember[];
   status?: string;
+  proposedFee?: number;
   notes?: string;
+  bookedAt?: number;
+  contractSigned?: boolean;
+  agreedFee?: number;
+  shortlistedAt?: number;
+  shortlistNotes?: string;
 }
 
 interface BandRole {
@@ -105,7 +119,7 @@ interface GigCardProps {
     isPending?: boolean;
     isActive?: boolean;
     interestedUsers?: Id<"users">[];
-    bookCount?: BandMember[];
+    bookCount?: BandApplication[]; // Changed from BandMember[] to BandApplication[]
     maxSlots?: number;
     tags?: string[];
     category?: string;
@@ -119,11 +133,11 @@ interface GigCardProps {
     bandCategory?: BandRole[];
     createdAt: number;
     updatedAt: number;
-    // Add these styling fields:
+    // Styling fields
     font?: string;
     fontColor?: string;
     backgroundColor?: string;
-    fontFamily?: string; // You might have this too
+    fontFamily?: string;
   };
   onClick?: () => void;
   showActions?: boolean;
@@ -302,7 +316,9 @@ const GigCard: React.FC<GigCardProps> = ({
   const isClientBand = gig.isClientBand || false;
   const currentUserId = currentUser?._id;
 
-  // Regular gig stats
+  // ================================
+  // REGULAR GIG STATS
+  // ================================
   const regularInterestedUsers = gig.interestedUsers || [];
   const regularInterestCount = regularInterestedUsers.length;
   const regularMaxSlots = gig.maxSlots || 10;
@@ -312,30 +328,48 @@ const GigCard: React.FC<GigCardProps> = ({
     ? regularInterestedUsers.includes(currentUserId)
     : false;
 
-  // Band gig stats
-  const bandMembers = gig.bookCount || [];
-  const bandMemberCount = bandMembers.length;
-  const bandMaxSlots = gig.maxSlots || 5;
-  const bandAvailableSlots = bandMaxSlots - bandMemberCount;
-  const bandIsFull = bandMemberCount >= bandMaxSlots;
-  const userIsInBand = currentUserId
-    ? bandMembers.some((member) => member.userId === currentUserId)
-    : false;
-  const userBandRole = currentUserId
-    ? bandMembers.find((member) => member.userId === currentUserId)?.role
-    : null;
+  // ================================
+  // BAND GIG STATS
+  // ================================
+  const bandApplications = gig.bookCount || [];
+  const bandCount = bandApplications.length; // Number of BANDS that applied
+  const bandMaxSlots = gig.maxSlots || 5; // Max number of BANDS allowed
+  const bandAvailableSlots = Math.max(0, bandMaxSlots - bandCount);
+  const bandIsFull = bandCount >= bandMaxSlots;
 
-  // Common stats
-  const slotsUsed = isClientBand ? bandMemberCount : regularInterestCount;
+  // Calculate total band members across all applications (for informational purposes)
+  const totalBandMembers = bandApplications.reduce(
+    (total, band) => total + (band.performingMembers?.length || 0),
+    0
+  );
+
+  // Check if current user is in any band application (as a performing member)
+  const userIsInAnyBand = currentUserId
+    ? bandApplications.some((band) =>
+        band.performingMembers?.some(
+          (member) => member.userId === currentUserId
+        )
+      )
+    : false;
+
+  // Check if current user applied with a band (as the band leader)
+  const userAppliedWithBand = currentUserId
+    ? bandApplications.some((band) => band.appliedBy === currentUserId)
+    : false;
+
+  // ================================
+  // COMMON STATS
+  // ================================
+  const slotsUsed = isClientBand ? bandCount : regularInterestCount;
   const maxSlots = isClientBand ? bandMaxSlots : regularMaxSlots;
   const availableSlots = isClientBand
     ? bandAvailableSlots
     : regularAvailableSlots;
   const isFull = isClientBand ? bandIsFull : regularIsFull;
-  const userHasInterest = isClientBand ? userIsInBand : regularIsInterested;
+  const userHasInterest = isClientBand ? userIsInAnyBand : regularIsInterested;
   const progressPercentage = Math.min((slotsUsed / maxSlots) * 100, 100);
 
-  // User position in interested users list
+  // User position in interested users list (regular gigs only)
   const userPosition = regularIsInterested
     ? (gig.interestedUsers?.indexOf(currentUserId!) || 0) + 1
     : null;
@@ -446,9 +480,9 @@ const GigCard: React.FC<GigCardProps> = ({
               forClient: `/hub/gigs/client/edit/${gig._id}`,
               message: "Edit gig",
             },
-            icon: <Edit className="w-4 h-4" />, // Add icon prop
+            icon: <Edit className="w-4 h-4" />,
             className:
-              "border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20", // Add custom styling
+              "border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20",
           };
         }
       }
@@ -577,11 +611,10 @@ const GigCard: React.FC<GigCardProps> = ({
         });
         toast.success("Interest removed");
       } else {
-        // Pass notes to backend
         await showInterestInGig({
           gigId: gig._id,
           userId: currentUserId,
-          notes: notes || undefined, // Pass undefined if no notes
+          notes: notes || undefined,
         });
 
         toast.success(
@@ -603,7 +636,7 @@ const GigCard: React.FC<GigCardProps> = ({
     } finally {
       setLoading(false);
       setShowInterestModal(false);
-      setInterestNotes(""); // Clear notes
+      setInterestNotes("");
     }
   };
 
@@ -686,21 +719,14 @@ const GigCard: React.FC<GigCardProps> = ({
     if (roleLower.includes("trumpet")) return "🎺";
     if (roleLower.includes("mc")) return "🎤";
     return "🎵";
-  }; // Add this helper function near the other utility functions
+  };
 
   const getContrastColor = (hexColor: string) => {
-    // Remove the hash if present
     const hex = hexColor.replace("#", "");
-
-    // Convert hex to RGB
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
-
-    // Calculate relative luminance (WCAG formula)
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    // Return black for light colors, white for dark colors
     return luminance > 0.5 ? "#000000" : "#ffffff";
   };
 
@@ -708,25 +734,20 @@ const GigCard: React.FC<GigCardProps> = ({
     const bgColor = gig.backgroundColor;
     const fontColor = gig.fontColor;
 
-    // Use a vibrant color that contrasts well
     const badgeColor = fontColor || "#ef4444";
     const textColor = getContrastColor(badgeColor);
 
-    // If the badge color is too light/dark, adjust it
     const hex = badgeColor.replace("#", "");
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-    // Ensure minimum contrast
     let finalBadgeColor = badgeColor;
     if (luminance > 0.7) {
-      // Too light, darken it
-      finalBadgeColor = "#dc2626"; // Darker red
+      finalBadgeColor = "#dc2626";
     } else if (luminance < 0.3) {
-      // Too dark, lighten it
-      finalBadgeColor = "#f87171"; // Lighter red
+      finalBadgeColor = "#f87171";
     }
 
     return {
@@ -736,12 +757,12 @@ const GigCard: React.FC<GigCardProps> = ({
       boxShadow: "0 0 0 1px rgba(0,0,0,0.1)",
     };
   };
+
   const getCardStyles = () => {
     return {
       backgroundColor: gig.backgroundColor || undefined,
       color: gig.fontColor || undefined,
       fontFamily: gig.font || undefined,
-      // Preserve the border styling from the original
       borderColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
       "--button-bg": gig.backgroundColor
         ? `${gig.backgroundColor}40`
@@ -753,7 +774,6 @@ const GigCard: React.FC<GigCardProps> = ({
     } as React.CSSProperties;
   };
 
-  // Create a utility function for button styles
   const getButtonStyles = (
     variant: "default" | "outline" | "secondary" | "destructive" = "default"
   ) => {
@@ -794,6 +814,7 @@ const GigCard: React.FC<GigCardProps> = ({
         return baseStyle;
     }
   };
+
   // Get status badge
   const getStatusBadge = () => {
     if (gig.isTaken) {
@@ -856,6 +877,7 @@ const GigCard: React.FC<GigCardProps> = ({
             borderColor: gig.fontColor ? `${gig.fontColor}30` : "#8b5cf630",
           }}
         >
+          <Sparkles className="w-3 h-3 mr-1" />
           Band
         </Badge>
       );
@@ -876,45 +898,56 @@ const GigCard: React.FC<GigCardProps> = ({
     );
   };
 
-  // Render band members preview
-  const renderBandMembersPreview = () => {
-    if (!isClientBand || bandMembers.length === 0 || compact) return null;
+  // Render band applications preview
+  const renderBandApplicationsPreview = () => {
+    if (!isClientBand || bandApplications.length === 0 || compact) return null;
 
-    const displayMembers = bandMembers.slice(0, 3);
-    const remainingCount = bandMembers.length - 3;
+    const displayBands = bandApplications.slice(0, 3);
+    const remainingCount = bandApplications.length - 3;
 
     return (
       <div className="flex items-center gap-1 mt-2">
         <div className="flex -space-x-2">
-          {displayMembers.map((member, index) => (
-            <TooltipProvider key={index}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="relative">
-                    <Avatar className="w-6 h-6 border-2 border-white dark:border-gray-800">
-                      <AvatarFallback className="text-xs">
-                        {member.name?.charAt(0) || "M"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
-                      <span className="text-[8px] text-white">
-                        {getRoleIcon(member.role)}
-                      </span>
+          {displayBands.map((band, index) => {
+            const firstMember = band.performingMembers?.[0];
+            const bandName = firstMember?.name || `Band ${index + 1}`;
+            const memberCount = band.performingMembers?.length || 0;
+            const mainRole = firstMember?.role || "Member";
+
+            return (
+              <TooltipProvider key={band.bandId || index}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="relative">
+                      <Avatar className="w-6 h-6 border-2 border-white dark:border-gray-800">
+                        <AvatarFallback className="text-xs">
+                          {bandName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-[8px] text-white">
+                          {memberCount}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">
-                    {member.name} - {member.role}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-xs">
+                      <p className="font-medium">{bandName}'s Band</p>
+                      <p className="text-gray-600">{memberCount} members</p>
+                      <p className="text-gray-600 capitalize">
+                        {band.status || "Applied"}
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
         </div>
         {remainingCount > 0 && (
           <span className="text-xs text-gray-500 ml-1">
-            +{remainingCount} more
+            +{remainingCount} more bands
           </span>
         )}
       </div>
@@ -934,7 +967,6 @@ const GigCard: React.FC<GigCardProps> = ({
 
     const responsiveButtonClasses = "w-full sm:w-auto px-3 py-1.5 h-9";
 
-    // Helper to get button styles based on variant
     const getButtonStyle = (
       variant: "default" | "outline" | "secondary" | "destructive" = "default"
     ) => {
@@ -1026,12 +1058,10 @@ const GigCard: React.FC<GigCardProps> = ({
     // ===== REGULAR GIG =====
     if (!isClientBand) {
       if (isGigPoster) {
-        // Calculate number of interested users
         const interestedCount = regularInterestCount;
 
         return (
           <div className="flex items-center gap-2">
-            {/* Review Applicants Button with Badge */}
             {interestedCount > 0 && (
               <Button
                 onClick={(e) => {
@@ -1051,7 +1081,6 @@ const GigCard: React.FC<GigCardProps> = ({
                 <span className="hidden sm:inline">Review</span>
                 <span className="sm:hidden">Review</span>
 
-                {/* Badge showing count */}
                 {interestedCount > 0 && (
                   <Badge
                     className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px]"
@@ -1063,7 +1092,6 @@ const GigCard: React.FC<GigCardProps> = ({
               </Button>
             )}
 
-            {/* Edit Button */}
             <Button
               variant="outline"
               size="sm"
@@ -1128,13 +1156,12 @@ const GigCard: React.FC<GigCardProps> = ({
       }
 
       // Show interest button
-      // In your renderActionButton function, replace the regular interest section:
       if (regularIsInterested) {
         return (
           <Button
             onClick={(e) => {
               e.stopPropagation();
-              handleRegularInterest(); // This will remove interest
+              handleRegularInterest();
             }}
             disabled={loading}
             variant="outline"
@@ -1170,7 +1197,7 @@ const GigCard: React.FC<GigCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               if (isFull) return;
-              handleRegularInterest(); // Quick interest without notes
+              handleRegularInterest();
             }}
             disabled={loading || isFull}
             size="sm"
@@ -1203,7 +1230,6 @@ const GigCard: React.FC<GigCardProps> = ({
             )}
           </Button>
 
-          {/* Optional: Add a small button for notes (desktop only) */}
           {!isFull && (
             <TooltipProvider>
               <Tooltip>
@@ -1229,57 +1255,6 @@ const GigCard: React.FC<GigCardProps> = ({
           )}
         </div>
       );
-
-      return (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isFull) return;
-            handleRegularInterest();
-          }}
-          disabled={loading || isFull}
-          size="sm"
-          className={clsx(
-            responsiveButtonClasses,
-            "shadow-sm hover:shadow transition-all duration-200",
-            "text-xs sm:text-sm",
-            isFull && "opacity-50 cursor-not-allowed"
-          )}
-          style={getButtonStyle("default")}
-          onMouseEnter={(e) => {
-            if (gig.backgroundColor) {
-              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (gig.backgroundColor) {
-              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-            } else {
-              e.currentTarget.style.backgroundColor = "";
-            }
-          }}
-        >
-          {loading ? (
-            <>
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
-              <span className="hidden sm:inline">Processing</span>
-              <span className="sm:hidden">...</span>
-            </>
-          ) : isFull ? (
-            <>
-              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Full</span>
-              <span className="sm:hidden">Full</span>
-            </>
-          ) : (
-            <>
-              <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Interest</span>
-              <span className="sm:hidden">Join</span>
-            </>
-          )}
-        </Button>
-      );
     }
 
     // ===== BAND GIG =====
@@ -1291,7 +1266,6 @@ const GigCard: React.FC<GigCardProps> = ({
           gig.bandCategory?.some((role) => role.bookedUsers.length > 0) ||
           false;
 
-        // Calculate total applicants across all roles
         const totalApplicants =
           gig.bandCategory?.reduce(
             (total, role) => total + role.applicants.length,
@@ -1301,7 +1275,6 @@ const GigCard: React.FC<GigCardProps> = ({
         if (hasApplicants) {
           return (
             <div className="flex items-center gap-2">
-              {/* Review Applicants Button with Badge */}
               <Button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1319,7 +1292,6 @@ const GigCard: React.FC<GigCardProps> = ({
                 <span className="hidden sm:inline">Review</span>
                 <span className="sm:hidden">Review</span>
 
-                {/* Badge showing applicant count */}
                 {totalApplicants > 0 && (
                   <Badge
                     className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px]"
@@ -1333,7 +1305,6 @@ const GigCard: React.FC<GigCardProps> = ({
                 )}
               </Button>
 
-              {/* Edit Button */}
               <Button
                 variant="outline"
                 size="sm"
@@ -1384,7 +1355,6 @@ const GigCard: React.FC<GigCardProps> = ({
             </Button>
           );
         } else {
-          // Edit button for band gig with no applicants/bookings
           return (
             <Button
               onClick={(e) => {
@@ -1408,7 +1378,7 @@ const GigCard: React.FC<GigCardProps> = ({
         }
       }
 
-      if (userIsInBand) {
+      if (userAppliedWithBand || userIsInAnyBand) {
         return (
           <Button
             variant="outline"
@@ -1433,9 +1403,9 @@ const GigCard: React.FC<GigCardProps> = ({
               }
             }}
           >
-            <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">In Band</span>
-            <span className="sm:hidden">In Band</span>
+            <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Band Applied</span>
+            <span className="sm:hidden">Applied</span>
           </Button>
         );
       }
@@ -1549,9 +1519,9 @@ const GigCard: React.FC<GigCardProps> = ({
             </>
           ) : (
             <>
-              <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Join Band</span>
-              <span className="sm:hidden">Join</span>
+              <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Apply Band</span>
+              <span className="sm:hidden">Apply</span>
             </>
           )}
         </Button>
@@ -1573,15 +1543,18 @@ const GigCard: React.FC<GigCardProps> = ({
       </Button>
     );
   };
+
   const renderProgressBar = () => {
     if (compact) return null;
+
+    const unitLabel = isClientBand ? "bands" : "spots";
 
     return (
       <div className="mt-3">
         <div className="flex justify-between items-center mb-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              {slotsUsed}/{maxSlots} {isClientBand ? "members" : "spots"}
+              {slotsUsed}/{maxSlots} {unitLabel}
             </span>
             {userPosition && (
               <Badge
@@ -1613,6 +1586,15 @@ const GigCard: React.FC<GigCardProps> = ({
           />
         </div>
 
+        {isClientBand && totalBandMembers > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <Users2 className="w-3 h-3 text-purple-500" />
+            <span className="text-xs text-purple-600 dark:text-purple-400">
+              {totalBandMembers} total musicians across {bandCount} bands
+            </span>
+          </div>
+        )}
+
         {availableSlots <= 2 && availableSlots > 0 && (
           <div className="flex items-center gap-1 mt-1">
             <AlertCircle className="w-3 h-3 text-amber-500" />
@@ -1637,14 +1619,14 @@ const GigCard: React.FC<GigCardProps> = ({
           "group relative rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200",
           "cursor-pointer overflow-hidden w-full",
           {
-            "ring-1 ring-purple-500": isClientBand && userIsInBand,
+            "ring-1 ring-purple-500": isClientBand && userAppliedWithBand,
             "ring-1 ring-green-500": !isClientBand && regularIsInterested,
           }
         )}
         onClick={handleClick}
-        style={getCardStyles()} // Add this
+        style={getCardStyles()}
       >
-        {/* Status indicator - Keep original colors */}
+        {/* Status indicator */}
         <div
           className={clsx("absolute top-0 left-0 h-1 w-full", {
             "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
@@ -1764,8 +1746,8 @@ const GigCard: React.FC<GigCardProps> = ({
             </p>
           )}
 
-          {/* Band members */}
-          {renderBandMembersPreview()}
+          {/* Band applications preview */}
+          {renderBandApplicationsPreview()}
 
           {/* Progress bar */}
           {renderProgressBar()}
@@ -1812,7 +1794,6 @@ const GigCard: React.FC<GigCardProps> = ({
               borderTopColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
             }}
           >
-            {" "}
             {/* Poster info */}
             <div className="flex items-center gap-2 min-w-0">
               <Avatar className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0">
@@ -1837,6 +1818,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 )}
               </div>
             </div>
+
             {/* Actions */}
             {showActions && (
               <div className="flex items-center gap-2 self-stretch sm:self-center">
@@ -2053,9 +2035,9 @@ const GigCard: React.FC<GigCardProps> = ({
       <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Join Band</DialogTitle>
+            <DialogTitle>Apply with Band</DialogTitle>
             <DialogDescription>
-              Select your role and enter your name.
+              Select a role and apply with your band members.
             </DialogDescription>
           </DialogHeader>
 
@@ -2064,7 +2046,7 @@ const GigCard: React.FC<GigCardProps> = ({
             <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                  Available: {availableSlots}/{maxSlots}
+                  Available: {availableSlots}/{maxSlots} bands
                 </span>
                 {availableSlots <= 2 && (
                   <Badge variant="destructive" className="animate-pulse">
@@ -2072,27 +2054,34 @@ const GigCard: React.FC<GigCardProps> = ({
                   </Badge>
                 )}
               </div>
+              {bandCount > 0 && (
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                  {bandCount} bands applied • {totalBandMembers} total musicians
+                </p>
+              )}
             </div>
 
             {/* Name */}
             <div>
               <label className="text-sm font-medium mb-2 block">
-                Your Name
+                Band Name / Your Name
               </label>
               <Input
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder="Enter band name or your name"
               />
             </div>
 
             {/* Role selection */}
             {gig.bandCategory && gig.bandCategory.length > 0 && (
               <div>
-                <label className="text-sm font-medium mb-2 block">Role</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Band Role
+                </label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a role" />
+                    <SelectValue placeholder="Choose a role for your band" />
                   </SelectTrigger>
                   <SelectContent>
                     {gig.bandCategory.map((role, index) => {
@@ -2113,7 +2102,7 @@ const GigCard: React.FC<GigCardProps> = ({
                           <div className="flex items-center justify-between">
                             <span>{role.role}</span>
                             <span className="text-xs text-gray-500">
-                              {role.filledSlots}/{role.maxSlots}
+                              {role.filledSlots}/{role.maxSlots} bands
                               {isBooked && " • Booked"}
                               {hasApplied && !isBooked && " • Applied"}
                             </span>
@@ -2126,34 +2115,51 @@ const GigCard: React.FC<GigCardProps> = ({
               </div>
             )}
 
-            {/* Current members */}
-            {bandMembers.length > 0 && (
+            {/* Applied bands */}
+            {bandApplications.length > 0 && (
               <div>
                 <label className="text-sm font-medium mb-2 block">
-                  Current Members
+                  Applied Bands ({bandApplications.length})
                 </label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {bandMembers.map((member, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback>
-                            {member.name?.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">{member.name}</p>
-                          <p className="text-xs text-gray-500">{member.role}</p>
+                  {bandApplications.map((band, index) => {
+                    const firstMember = band.performingMembers?.[0];
+                    const bandName = firstMember?.name || `Band ${index + 1}`;
+                    const memberCount = band.performingMembers?.length || 0;
+                    const isCurrentUserBand = band.appliedBy === currentUserId;
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback>
+                              {bandName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">
+                                {bandName}'s Band
+                              </p>
+                              <Badge variant="outline" className="text-xs">
+                                {memberCount}{" "}
+                                {memberCount === 1 ? "member" : "members"}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Status: {band.status || "Applied"}
+                            </p>
+                          </div>
                         </div>
+                        {isCurrentUserBand && (
+                          <Badge variant="outline">Your Band</Badge>
+                        )}
                       </div>
-                      {member.userId === currentUserId && (
-                        <Badge variant="outline">You</Badge>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2195,8 +2201,8 @@ const GigCard: React.FC<GigCardProps> = ({
                 </>
               ) : (
                 <>
-                  <Music className="w-4 h-4 mr-2" />
-                  Apply
+                  <Building2 className="w-4 h-4 mr-2" />
+                  Apply with Band
                 </>
               )}
             </Button>

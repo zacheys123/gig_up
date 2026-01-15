@@ -138,7 +138,7 @@ export const showInterestInGig = mutation({
       timestamp: now,
       userId: userId,
       userRole: user.roleType || "musician",
-      isBandRole: false,
+
       status: "applied" as const, // Changed from "pending" to "applied"
       gigType: "regular" as const,
       actionBy: userId,
@@ -271,7 +271,7 @@ export const removeInterestFromGig = mutation({
       userId: musician._id,
       userRole: "musician",
       bandRole: musician.roleType || gig.category || "musician",
-      isBandRole: false,
+
       status: "cancelled" as const,
       gigType: "regular" as const,
       actionBy: musician._id,
@@ -393,7 +393,7 @@ export const selectMusicianFromInterested = mutation({
       userId: musicianId,
       userRole: "musician",
       bandRole: musician.roleType || gig.category || "musician",
-      isBandRole: false,
+
       status: "booked" as const,
       gigType: "regular" as const,
       proposedPrice: gig.price,

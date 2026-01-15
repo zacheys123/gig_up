@@ -1,14 +1,57 @@
+// types/bookings.ts
 import { Id } from "@/convex/_generated/dataModel";
-import { BandMember, BandRoleSchema, BookingHistoryEntry } from "./gig";
 
 export interface Applicant {
   userId: Id<"users">;
   appliedAt: number;
-  status: "pending" | "shortlisted" | "rejected" | "viewed" | "booked";
+  status:
+    | "pending"
+    | "shortlisted"
+    | "rejected"
+    | "viewed"
+    | "booked"
+    | "updated";
   notes?: string;
   gigId: Id<"gigs">;
   bandRole?: string;
-  bandRoleIndex?: number; // Add this for band role tracking
+  bandRoleIndex?: number;
+}
+
+// Update the BookingHistoryEntry interface
+export interface BookingHistoryEntry {
+  entryId: string;
+  timestamp: number;
+  userId: Id<"users">;
+  userRole?: string;
+  bandRole?: string;
+  bandRoleIndex?: number;
+
+  // ADD THE MISSING STATUSES HERE
+  status:
+    | "applied"
+    | "shortlisted"
+    | "interviewed"
+    | "offered"
+    | "booked"
+    | "confirmed"
+    | "completed"
+    | "cancelled"
+    | "rejected"
+    | "updated"
+    | "viewed"; // Add this
+
+  gigType: "regular" | "band";
+  proposedPrice?: number;
+  agreedPrice?: number;
+  currency?: string;
+  actionBy: Id<"users">;
+  actionFor?: Id<"users">;
+  notes?: string;
+  metadata?: any;
+  attachments?: string[];
+  reason?: string;
+  refundAmount?: number;
+  refundStatus?: string;
 }
 
 export interface ShortlistedUser {
@@ -16,11 +59,60 @@ export interface ShortlistedUser {
   shortlistedAt: number;
   notes?: string;
   status?: "active" | "booked" | "removed";
-  // Add these fields
   bandRole?: string;
   bandRoleIndex?: number;
   bookedAt?: number;
 }
+
+// Add these types based on your schema
+export interface BandRoleSchema {
+  role: string;
+  maxSlots: number;
+  filledSlots: number;
+  applicants: Id<"users">[];
+  bookedUsers: Id<"users">[];
+  requiredSkills?: string[];
+  description?: string;
+  isLocked?: boolean;
+  price?: number;
+  currency?: string;
+  negotiable?: boolean;
+  bookedPrice?: number;
+}
+
+// types/bookings.ts
+export interface BandMember {
+  bandId: Id<"bands">;
+  appliedAt: number;
+  status:
+    | "applied"
+    | "shortlisted"
+    | "interviewed"
+    | "offered"
+    | "booked"
+    | "confirmed"
+    | "completed"
+    | "cancelled"
+    | "rejected"
+    | "updated"
+    | "viewed"; // Add this
+  appliedBy: Id<"users">;
+  proposedFee?: number;
+  notes?: string;
+  // Add these fields that are actually in your data
+  bookedAt?: number;
+  contractSigned?: boolean;
+  agreedFee?: number;
+  shortlistedAt?: number;
+  shortlistNotes?: string;
+  performingMembers?: {
+    userId: Id<"users">;
+    name: string;
+    role: string;
+    instrument: string;
+  }[];
+}
+
 export interface GigWithApplicants {
   gig: {
     _id: Id<"gigs">;
@@ -30,16 +122,15 @@ export interface GigWithApplicants {
     date: number;
     price?: number;
     isClientBand?: boolean;
-    bandCategory?: BandRoleSchema[]; // Use imported type
+    bandCategory?: BandRoleSchema[];
     interestedUsers?: Id<"users">[];
     shortlistedUsers?: ShortlistedUser[];
     maxSlots?: number;
     isTaken?: boolean;
     isPending?: boolean;
-    bookingHistory?: BookingHistoryEntry[]; // Use imported type
+    bookingHistory?: BookingHistoryEntry[]; // Now matches
     bussinesscat?: string;
-    bookCount?: BandMember[]; // Use imported type
-    // Add other gig fields from your schema
+    bookCount?: BandMember[];
     tags?: string[];
     requirements?: string[];
     benefits?: string[];

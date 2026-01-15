@@ -10,7 +10,31 @@ import { videoModel } from "./models/videoModel";
 import { commentsModel } from "./models/commentsModel";
 import { instantGigs, instantGigsTemplate } from "./models/instanGigsModel";
 import { reports } from "./models/reportsModel";
-
+const BAND_ACTIVITY_TYPES = [
+  "band_created",
+  "member_invited",
+  "member_joined",
+  "member_left",
+  "member_removed",
+  "member_role_updated",
+  "gig_created",
+  "gig_booked",
+  "gig_completed",
+  "gig_cancelled",
+  "band_settings_updated",
+  "availability_updated",
+  "chat_created",
+  "chat_message",
+  "announcement_posted",
+  "profile_updated",
+  "social_link_added",
+  "media_uploaded",
+  "review_received",
+  "payment_processed",
+  "expense_logged",
+  "audition_scheduled",
+  "setlist_updated",
+] as const;
 export default defineSchema({
   users: userModel,
   gigs: gigModel,
@@ -53,19 +77,49 @@ export default defineSchema({
   }),
 
   chats: defineTable({
+    // Basic chat info
     participantIds: v.array(v.id("users")),
-    lastMessage: v.optional(v.string()),
-    lastMessageAt: v.optional(v.number()),
-    unreadCounts: v.optional(v.record(v.string(), v.number())), // ← Use document IDs
     type: v.union(v.literal("direct"), v.literal("group")),
-    isPinned: v.optional(v.boolean()),
-    isArchived: v.optional(v.boolean()),
     name: v.optional(v.string()),
     createdBy: v.id("users"),
+
+    // Message tracking
+    lastMessage: v.optional(v.string()),
+    lastMessageAt: v.optional(v.number()),
+
+    // Read status tracking
+    unreadCounts: v.optional(v.record(v.string(), v.number())),
+
+    // Chat state
+    isPinned: v.optional(v.boolean()),
+    isArchived: v.optional(v.boolean()),
+
+    // Metadata (as you defined)
+    metadata: v.optional(
+      v.object({
+        isCrewChat: v.optional(v.boolean()),
+        gigId: v.optional(v.id("gigs")),
+        clientRole: v.optional(
+          v.union(v.literal("admin"), v.literal("member"))
+        ),
+        permissions: v.optional(
+          v.object({
+            canSendMessages: v.optional(v.boolean()),
+            canAddMembers: v.optional(v.boolean()),
+            canRemoveMembers: v.optional(v.boolean()),
+            canEditChatInfo: v.optional(v.boolean()),
+          })
+        ),
+        lastUpdated: v.optional(v.number()),
+        chatPurpose: v.optional(v.string()),
+        gigTitle: v.optional(v.string()),
+        gigDate: v.optional(v.number()),
+      })
+    ),
   })
     .index("by_participants", ["participantIds"])
-    .index("by_lastMessageAt", ["lastMessageAt"]),
-
+    .index("by_lastMessageAt", ["lastMessageAt"])
+    .index("by_createdBy", ["createdBy"]),
   // In your convex/schema.ts - Make fields optional
   // convex/schema.ts - Update messages table
   messages: defineTable({
@@ -253,21 +307,6 @@ export default defineSchema({
     .index("by_genre", ["genre"])
     .index("by_status_location", ["status", "location"]),
 
-  crewMessages: defineTable({
-    bandId: v.id("bands"),
-    authorId: v.id("users"),
-    content: v.string(),
-    type: v.union(v.literal("message"), v.literal("system"), v.literal("file")),
-    fileUrl: v.optional(v.string()),
-    fileName: v.optional(v.string()),
-    repliedTo: v.optional(v.id("crewMessages")),
-    readBy: v.array(v.id("users")), // Track who has read it
-    createdAt: v.number(),
-  })
-    .index("by_band", ["bandId"])
-    .index("by_band_created", ["bandId", "createdAt"])
-    .index("by_author", ["authorId"]),
-
   bandGigApplications: defineTable({
     bandId: v.id("bands"),
     gigId: v.id("gigs"),
@@ -302,6 +341,20 @@ export default defineSchema({
     title: v.string(),
     createdAt: v.number(),
   }),
+  bandActivities: defineTable({
+    bandId: v.id("bands"),
+    userId: v.id("users"),
+    action: v.union(...(BAND_ACTIVITY_TYPES.map((t) => v.literal(t)) as any)),
+    details: v.any(),
+    metadata: v.optional(v.any()),
+    timestamp: v.number(),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_band_timestamp", ["bandId", "timestamp"])
+    .index("by_user", ["userId"])
+    .index("by_action", ["action"]),
+
+  reports: reports,
   // // Add this to track who can create bands
   // userBandEligibility: defineTable({
   //   userId: v.id("users"),
@@ -326,6 +379,4 @@ export default defineSchema({
   //   .index("by_user", ["userId"])
   //   .index("by_eligibility", ["canCreateBand"]),
   // In your Convex schema.ts
-
-  reports: reports,
 });

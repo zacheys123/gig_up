@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { createNotificationInternal } from "../createNotificationInternal";
+import { updateUserTrust } from "../trustHelper";
 
 // Helper function to provide improvement tips
 function getBandCreationImprovementTips(
@@ -241,9 +243,70 @@ function checkProfileCompleteness(user: any): boolean {
 
   return basicComplete && typeComplete;
 }
+
+// 1. CHECK IF USER CAN CREATE BAND (Query)
+export const checkUserCanCreateBand = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) {
+      return {
+        canCreateBand: false,
+        reason: "User not found",
+        requirements: {},
+      };
+    }
+
+    const userTrustScore = user.trustScore || 0;
+    const userCreatedAt = user._creationTime;
+    const now = Date.now();
+    const daysSinceCreation = (now - userCreatedAt) / (1000 * 60 * 60 * 24);
+
+    // Check all requirements
+    const requirements = {
+      isMusician: user.isMusician,
+      trustScore: userTrustScore,
+      trustScoreRequired: 70,
+      hasMinimumTrustScore: userTrustScore >= 70,
+      accountAgeDays: Math.floor(daysSinceCreation),
+      minimumAccountAgeDays: 30,
+      hasMinimumAccountAge: daysSinceCreation >= 30,
+      tier: user.tier,
+      tierValid: ["pro", "premium", "elite"].includes(user.tier),
+    };
+
+    // Determine if user can create band
+    const canCreateBand =
+      user.isMusician &&
+      userTrustScore >= 70 &&
+      daysSinceCreation >= 30 &&
+      ["pro", "premium", "elite"].includes(user.tier);
+
+    return {
+      canCreateBand,
+      reason: canCreateBand ? "" : "Does not meet all requirements",
+      requirements,
+      userDetails: {
+        firstname: user.firstname,
+        username: user.username,
+        tier: user.tier,
+        trustScore: userTrustScore,
+        accountAge: Math.floor(daysSinceCreation),
+        completedGigsCount: user.completedGigsCount || 0,
+        avgRating: user.avgRating || 0,
+      },
+    };
+  },
+});
+
 // 2. CREATE BAND MUTATION
 export const createBand = mutation({
   args: {
+    clerkId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
     genre: v.array(v.string()),
@@ -253,13 +316,8 @@ export const createBand = mutation({
       v.literal("ad-hoc"),
       v.literal("cover")
     ),
-    requiredInstruments: v.array(
-      v.object({
-        instrument: v.string(),
-        quantity: v.number(),
-      })
-    ),
     bandImageUrl: v.optional(v.string()),
+    bannerImageUrl: v.optional(v.string()),
     socialLinks: v.optional(
       v.array(
         v.object({
@@ -270,74 +328,344 @@ export const createBand = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const { clerkId, ...bandData } = args;
 
     // Get user from clerkId
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
       .first();
 
     if (!user) throw new Error("User not found");
 
-    // Check if user is a musician
+    // ==================== VALIDATION CHECKS ====================
+
+    // 1. Must be a musician
     if (!user.isMusician) {
-      throw new Error("Only musicians can create bands");
+      throw new Error(
+        "Only musicians can create bands. Please update your profile to musician first."
+      );
     }
 
-    if (!user.canCreateBand) throw new Error("Not eligible to create bands");
+    // 2. Trust score requirement (minimum 70)
+    const userTrustScore = user.trustScore || 0;
+    if (userTrustScore < 70) {
+      throw new Error(`You need a trust score of at least 70 to create a band. Your current trust score is ${userTrustScore}. 
+      Improve your score by: completing gigs, getting good ratings, and being active on the platform.`);
+    }
 
-    // Check if band name is unique
+    // 3. Account age requirement (minimum 30 days)
+    const userCreatedAt = user._creationTime;
+    const now = Date.now();
+    const daysSinceCreation = (now - userCreatedAt) / (1000 * 60 * 60 * 24);
+
+    if (daysSinceCreation < 30) {
+      throw new Error(`Your account needs to be at least 30 days old to create bands. 
+      Your account is ${Math.floor(daysSinceCreation)} days old. 
+      Please wait ${Math.ceil(30 - daysSinceCreation)} more days.`);
+    }
+
+    // 4. Tier requirement - no free tier allowed
+    if (user.tier === "free") {
+      throw new Error(
+        "Free tier users cannot create bands. Please upgrade to Pro, Premium, or Elite tier."
+      );
+    }
+
+    // 5. Check if user is on eligible tier
+    const eligibleTiers = ["pro", "premium", "elite"];
+    if (!eligibleTiers.includes(user.tier)) {
+      throw new Error(
+        `Band creation is only available for Pro, Premium, and Elite tier users. Your current tier is: ${user.tier}`
+      );
+    }
+
+    // 6. Check if user has reached band limit for their tier
+    const userBandsAsLeader = await ctx.db
+      .query("bands")
+      .withIndex("by_creator", (q) => q.eq("creatorId", user._id))
+      .collect();
+
+    // Tier-based limits
+    let maxBandsAllowed = 1;
+    switch (user.tier) {
+      case "pro":
+        maxBandsAllowed = 3;
+        break;
+      case "premium":
+        maxBandsAllowed = 5;
+        break;
+      case "elite":
+        maxBandsAllowed = 10;
+        break;
+    }
+
+    if (userBandsAsLeader.length >= maxBandsAllowed && user.tier !== "elite") {
+      throw new Error(`You have reached the maximum number of bands for your tier (${user.tier}). 
+      You can only create ${maxBandsAllowed} band(s). 
+      ${user.tier === "pro" ? "Upgrade to Premium for 5 bands or Elite for unlimited bands." : "Upgrade to Elite for unlimited bands."}`);
+    }
+
+    // 7. Check if band name is unique
     const existingBand = await ctx.db
       .query("bands")
-      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .withIndex("by_name", (q) => q.eq("name", bandData.name))
       .first();
 
-    if (existingBand) throw new Error("Band name already taken");
+    if (existingBand) {
+      throw new Error(
+        `Band name "${bandData.name}" is already taken. Please choose a different name.`
+      );
+    }
 
-    // Create the band
+    // ==================== CREATE BAND ====================
+    const nowTimestamp = Date.now();
+
+    // Create the band with proper schema structure
     const bandId = await ctx.db.insert("bands", {
-      ...args,
+      name: bandData.name,
+      description: bandData.description || "",
+      genre: bandData.genre,
+      location: bandData.location,
+      type: bandData.type,
       creatorId: user._id,
-      status: "forming",
-      requiredInstruments: args.requiredInstruments.map((instr) => ({
-        ...instr,
-        filled: 0, // Initially no positions filled
-      })),
-      createdAt: Date.now(),
+      status: "forming" as const,
+
+      // Band members - creator is the leader
+      members: [
+        {
+          userId: user._id,
+          role: "band_leader",
+          joinedAt: nowTimestamp,
+          isLeader: true,
+          status: "active" as const,
+        },
+      ],
+
+      // Band statistics
+      totalGigs: 0,
+      completedGigs: 0,
+      rating: 0,
+
+      // Images and links
+      bandImageUrl: bandData.bandImageUrl || "",
+      bannerImageUrl: bandData.bannerImageUrl || "",
+      socialLinks: bandData.socialLinks || [],
+
+      // Availability
+      isAvailable: true,
+      availabilitySchedule: {
+        weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        weekends: ["Saturday", "Sunday"],
+        timeSlots: ["Morning", "Afternoon", "Evening", "Night"],
+      },
+
+      // Timestamps
+      createdAt: nowTimestamp,
+      updatedAt: nowTimestamp,
+      lastActive: nowTimestamp,
     });
 
-    // Add creator as first member (leader)
-    await ctx.db.insert("bandMembers", {
-      bandId,
-      userId: user._id,
-      role: "band_leader", // Special role
-      status: "accepted",
-      isLeader: true,
-      invitedAt: Date.now(),
-      joinedAt: Date.now(),
-    });
-
-    // Update user's band leader list
-    const currentBands = user.bandLeaderOf || [];
+    // ==================== UPDATE USER ====================
     await ctx.db.patch(user._id, {
-      bandLeaderOf: [...currentBands, bandId],
+      bandLeaderOf: [...(user.bandLeaderOf || []), bandId],
+      bandMemberOf: [...(user.bandMemberOf || []), bandId],
+      canCreateBand: true, // Set flag since they've successfully created one
+      updatedAt: nowTimestamp,
     });
 
-    // Create initial crew chat message
-    await ctx.db.insert("crewMessages", {
+    // ==================== NOTIFICATIONS ====================
+
+    // Success notification for user
+    await createNotificationInternal(ctx, {
+      userDocumentId: user._id,
+      type: "band_created",
+      title: "🎸 Band Created Successfully!",
+      message: `Your band "${bandData.name}" has been created! You can now invite members, post band gigs, and start booking shows.`,
+      actionUrl: `/bands/${bandId}`,
+      relatedUserDocumentId: user._id,
+      metadata: {
+        bandId: bandId.toString(),
+        bandName: bandData.name,
+        bandType: bandData.type,
+        memberCount: 1,
+        creationDate: nowTimestamp,
+      },
+    });
+
+    // Admin notification for new band creation
+    const admins = await ctx.db
+      .query("users")
+      .withIndex("by_is_admin", (q) => q.eq("isAdmin", true))
+      .collect();
+
+    for (const admin of admins) {
+      await createNotificationInternal(ctx, {
+        userDocumentId: admin._id,
+        type: "admin_band_created",
+        title: "🎸 New Band Created",
+        message: `${user.firstname || user.username} (${user.tier} tier) created a new band: "${bandData.name}"`,
+        actionUrl: `/admin/bands/${bandId}`,
+        relatedUserDocumentId: user._id,
+        metadata: {
+          bandId: bandId.toString(),
+          bandName: bandData.name,
+          creatorId: user._id,
+          creatorTier: user.tier,
+          creatorTrustScore: userTrustScore,
+          creationDate: nowTimestamp,
+        },
+      });
+    }
+
+    // ==================== CREATE INITIAL ACTIVITY ====================
+    try {
+      await ctx.db.insert("bandActivities", {
+        bandId,
+        userId: user._id,
+        action: "band_created",
+        details: {
+          bandName: bandData.name,
+          creatorName: user.firstname || user.username,
+          bandType: bandData.type,
+          genre: bandData.genre,
+          location: bandData.location,
+        },
+        timestamp: nowTimestamp,
+      });
+    } catch (error) {
+      // Silent fail if bandActivities table doesn't exist
+      console.log("Band activities logging not available");
+    }
+
+    return {
+      success: true,
       bandId,
-      authorId: user._id,
-      content: `Band "${args.name}" was created! Start inviting members.`,
-      type: "system",
-      readBy: [user._id],
-      createdAt: Date.now(),
-    });
-
-    return { bandId, success: true };
+      bandName: bandData.name,
+      bandType: bandData.type,
+      memberCount: 1,
+      message: `Band "${bandData.name}" created successfully!`,
+      nextSteps: [
+        "Invite other musicians to join your band",
+        "Update band profile and add more details",
+        "Create your first band gig",
+        "Share your band profile to get more visibility",
+      ],
+      createdAt: nowTimestamp,
+    };
   },
 });
+
+// 3. GET USER'S BANDS (Helper Query)
+export const getUserBands = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) return [];
+
+    // Get bands where user is leader
+    const leaderBands = await ctx.db
+      .query("bands")
+      .withIndex("by_creator", (q) => q.eq("creatorId", user._id))
+      .collect();
+
+    // Get bands where user is a member (not leader)
+    const allBands = await ctx.db.query("bands").collect();
+    const memberBands = allBands.filter((band) =>
+      band.members.some(
+        (member: any) => member.userId === user._id && !member.isLeader
+      )
+    );
+
+    return {
+      leaderOf: leaderBands,
+      memberOf: memberBands,
+      totalBands: leaderBands.length + memberBands.length,
+      canCreateMoreBands: {
+        currentCount: leaderBands.length,
+        maxAllowed: user.tier === "pro" ? 3 : user.tier === "premium" ? 5 : 10,
+        tier: user.tier,
+      },
+    };
+  },
+});
+
+// 4. DELETE BAND (if needed)
+export const deleteBand = mutation({
+  args: {
+    clerkId: v.string(),
+    bandId: v.id("bands"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) throw new Error("User not found");
+
+    const band = await ctx.db.get(args.bandId);
+    if (!band) throw new Error("Band not found");
+
+    // Check if user is the band creator
+    if (band.creatorId !== user._id) {
+      throw new Error("Only the band creator can delete the band");
+    }
+
+    // Check if band has active gigs
+    const bandGigs = await ctx.db
+      .query("gigs")
+      .filter((q) => q.eq(q.field("bookedBandId"), args.bandId))
+      .collect();
+
+    if (bandGigs.length > 0) {
+      const activeGigs = bandGigs.filter((gig) => !gig.isTaken);
+      if (activeGigs.length > 0) {
+        throw new Error(
+          `Cannot delete band with ${activeGigs.length} active gig(s). Cancel or complete the gigs first.`
+        );
+      }
+    }
+
+    // Remove band from users' band lists
+    const allUsers = await ctx.db.query("users").collect();
+    for (const u of allUsers) {
+      const updates: any = {};
+
+      // Remove from bandLeaderOf
+      if (u.bandLeaderOf?.includes(args.bandId)) {
+        updates.bandLeaderOf = u.bandLeaderOf.filter(
+          (id: any) => id !== args.bandId
+        );
+      }
+
+      // Remove from bandMemberOf
+      if (u.bandMemberOf?.includes(args.bandId)) {
+        updates.bandMemberOf = u.bandMemberOf.filter(
+          (id: any) => id !== args.bandId
+        );
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(u._id, updates);
+      }
+    }
+
+    // Delete the band
+    await ctx.db.delete(args.bandId);
+
+    return {
+      success: true,
+      message: `Band "${band.name}" deleted successfully`,
+      deletedBandId: args.bandId,
+    };
+  },
+});
+
 // Search for musicians to invite
 export const searchMusiciansForBand = query({
   args: {
@@ -422,5 +750,23 @@ export const searchMusiciansForBand = query({
       }));
 
     return filteredMusicians;
+  },
+});
+
+export const getBandsByIds = query({
+  args: {
+    bandIds: v.array(v.id("bands")),
+  },
+  handler: async (ctx, args) => {
+    if (args.bandIds.length === 0) return [];
+
+    const bands = [];
+    for (const bandId of args.bandIds) {
+      const band = await ctx.db.get(bandId);
+      if (band) {
+        bands.push(band);
+      }
+    }
+    return bands;
   },
 });

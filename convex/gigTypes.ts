@@ -23,7 +23,6 @@ export interface UnifiedBookingEntry {
   // Band-specific fields
   bandRole?: string;
   bandRoleIndex?: number;
-  isBandRole: boolean;
 
   // Legacy fields (for backward compatibility)
   role?: string; // legacy
