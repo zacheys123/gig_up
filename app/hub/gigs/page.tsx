@@ -11,7 +11,6 @@ import {
   CrewManagement,
   MyGigs,
   PaymentHistory,
-  PendingGigs,
   ReviewedGigs,
   SavedGigs,
   InstantGigs,
@@ -39,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { UpgradeBanner } from "./_components/UpgradeBlock";
 import Link from "next/link";
+import { PendingGig } from "./_components/PendingGig";
 
 // Enhanced version with tier info
 const getUserSubtitle = (user: any) => {
@@ -129,7 +129,7 @@ const renderGigContent = (
   if (user.isMusician) {
     switch (activeTab) {
       case "pending":
-        return <PendingGigs user={user} />;
+        return <PendingGig user={user} />;
       case "booked":
         return <BookedGigs user={user} />;
       case "all":
@@ -162,7 +162,7 @@ const renderGigContent = (
       case "my-gigs":
         return <MyGigs user={user} />;
       case "pre-booking":
-        return <ClientPreBooking user={user} />;
+        return <PendingGig user={user} />;
       case "booked":
         return <BookedGigs user={user} />;
       case "reviewed":

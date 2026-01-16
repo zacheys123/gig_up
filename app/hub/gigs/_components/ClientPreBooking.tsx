@@ -70,6 +70,7 @@ import { ShortlistTab } from "@/components/booking/ShortlIstTab";
 import { GigInfoCard } from "@/components/booking/GigInfo";
 import { FullBandTab } from "@/components/booking/FullBandGig";
 import { BookingOptionsSection } from "./BookingOptions";
+import { PreBookingStats } from "./gigs/PreBookingStats";
 
 interface ClientPreBookingProps {
   user: any;
@@ -663,24 +664,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Pre-Booking Management
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Review, shortlist, and book musicians for your gigs
-            </p>
-          </div>
-          <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1">
-            {getTotalApplicants()} Total
-          </Badge>
-        </div>
-
-        {/* Stats Cards */}
-        <StatsCards userGigs={userGigs || []} />
-      </div>
+      <PreBookingStats userGigs={userGigs || []} activeTab={activeGigTab} />
 
       {/* Main Content */}
       <Card>

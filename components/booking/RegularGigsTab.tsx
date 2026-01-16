@@ -517,7 +517,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="flex-1 h-10 bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 text-rose-700 dark:text-rose-300 hover:from-rose-100 hover:to-pink-100 dark:hover:from-rose-800/30 dark:hover:to-pink-800/30 border-rose-200 dark:border-rose-800"
+                            className="flex-1 h-10 bg-gradient-to-r from-green-50 to-pink-500 "
                             onClick={() =>
                               handleRemoveFromShortlist(
                                 selectedGigData.gig._id,
@@ -526,7 +526,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                             }
                           >
                             <XCircle className="w-4 h-4 mr-2" />
-                            Remove
+                            Remove From Shortlist
                           </Button>
                         ) : (
                           <Button

@@ -1,7 +1,7 @@
 // components/gigs/index.ts
 export { AllGigs } from "./AllGigs";
 export { MyGigs } from "./MGigs";
-export { PendingGigs } from "./PendingGigs";
+export { MusicianPreBooking } from "./MusicianPendingGigs";
 export { BookedGigs } from "./BookedGigs";
 export { FavoriteGigs } from "./FavouriteGigs";
 export { SavedGigs } from "./SavedGigs";
