@@ -71,6 +71,7 @@ import { GigInfoCard } from "@/components/booking/GigInfo";
 import { FullBandTab } from "@/components/booking/FullBandGig";
 import { BookingOptionsSection } from "./BookingOptions";
 import { PreBookingStats } from "./gigs/PreBookingStats";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ClientPreBookingProps {
   user: any;
@@ -78,8 +79,15 @@ interface ClientPreBookingProps {
 
 export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const router = useRouter();
-  const { userId } = useAuth();
-
+  const { userId: clerkId } = useAuth();
+  const {
+    user: { clerkId: userId },
+  } = useCurrentUser();
+  // Queries
+  const userGigs = useQuery(
+    api.controllers.gigs.getGigsByUser,
+    clerkId ? { clerkId: clerkId } : "skip"
+  );
   // State
   const [activeTab, setActiveTab] = useState<"applicants" | "history">(
     "applicants"
@@ -154,7 +162,57 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         return 0;
     }
   };
+  // Add these helper functions to calculate tab counts from userGigs
+  const getTabCounts = () => {
+    if (!userGigs)
+      return { regular: 0, bandRoles: 0, fullBand: 0, shortlist: 0 };
 
+    const counts = {
+      regular: 0,
+      bandRoles: 0,
+      fullBand: 0,
+      shortlist: 0,
+    };
+
+    userGigs.forEach((gig) => {
+      const typedGig = gig as any;
+
+      // Check if gig is not taken
+      if (typedGig.isTaken) return;
+
+      // Regular gigs count
+      if (!typedGig.isClientBand) {
+        const hasInterested =
+          typedGig.interestedUsers && typedGig.interestedUsers.length > 0;
+        if (hasInterested) counts.regular++;
+      }
+
+      // Band roles count
+      if (typedGig.isClientBand && typedGig.bandCategory) {
+        const hasRoleApplicants = typedGig.bandCategory.some(
+          (role: any) => role.applicants && role.applicants.length > 0
+        );
+        if (hasRoleApplicants) counts.bandRoles++;
+      }
+
+      // Full band count
+      if (typedGig.isClientBand) {
+        const hasBandApplications =
+          typedGig.bookCount && typedGig.bookCount.length > 0;
+        if (hasBandApplications) counts.fullBand++;
+      }
+
+      // Shortlist count
+      const hasShortlisted =
+        typedGig.shortlistedUsers && typedGig.shortlistedUsers.length > 0;
+      if (hasShortlisted) counts.shortlist++;
+    });
+
+    return counts;
+  };
+
+  // Call this function in your component
+  const tabCounts = getTabCounts();
   // Calculate total shortlisted users
   const getTotalShortlisted = () => {
     if (!userGigs) return 0;
@@ -162,6 +220,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       return total + (gig.shortlistedUsers?.length || 0);
     }, 0);
   };
+  const allUsers = useQuery(api.controllers.user.getAllUsers);
+
   // Mutations
   const addToShortlist = useMutation(api.controllers.prebooking.addToShortlist);
   const removeFromShortlist = useMutation(
@@ -174,14 +234,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const markApplicantViewed = useMutation(
     api.controllers.prebooking.markApplicantViewed
   );
-
-  // Queries
-  const userGigs = useQuery(
-    api.controllers.gigs.getGigsByUser,
-    userId ? { clerkId: userId } : "skip"
-  );
-
-  const allUsers = useQuery(api.controllers.user.getAllUsers);
 
   // Effects
   useEffect(() => {
@@ -398,14 +450,23 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       toast.error("Failed to add to shortlist");
     }
   };
-
   const handleRemoveFromShortlist = async (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
     bandRoleIndex?: number
   ) => {
+    if (!clerkId) {
+      toast.error("Authentication required");
+      return;
+    }
+
     try {
-      await removeFromShortlist({ gigId, applicantId });
+      await removeFromShortlist({
+        gigId,
+        applicantId,
+        clerkId, // Add the clerkId here
+        bandRoleIndex, // This might be optional, check your mutation signature
+      });
       toast.success("Removed from shortlist");
       processGigsWithApplicants();
     } catch (error) {
@@ -689,10 +750,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   <User className="w-4 h-4" />
                   <span className="hidden sm:inline">Regular</span>
                   <Badge variant="secondary" className="ml-2">
-                    {
-                      gigsWithApplicants.filter((g) => !g.gig.isClientBand)
-                        .length
-                    }
+                    {tabCounts.regular}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
@@ -702,14 +760,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   <Users className="w-4 h-4" />
                   <span className="hidden sm:inline">Band Roles</span>
                   <Badge variant="secondary" className="ml-2">
-                    {
-                      gigsWithApplicants.filter(
-                        (g) =>
-                          g.gig.isClientBand &&
-                          g.gig.bandCategory &&
-                          g.gig.bandCategory.length > 0
-                      ).length
-                    }
+                    {tabCounts.bandRoles}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
@@ -719,14 +770,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   <Users2 className="w-4 h-4" />
                   <span className="hidden sm:inline">Full Band</span>
                   <Badge variant="secondary" className="ml-2">
-                    {
-                      gigsWithApplicants.filter(
-                        (g) =>
-                          g.gig.isClientBand &&
-                          g.gig.bookCount &&
-                          g.gig.bookCount.length > 0
-                      ).length
-                    }
+                    {tabCounts.fullBand}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
@@ -736,10 +780,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   <Bookmark className="w-4 h-4" />
                   <span className="hidden sm:inline">Shortlist</span>
                   <Badge variant="secondary" className="ml-2">
-                    {
-                      gigsWithApplicants.filter((g) => g.shortlisted.length > 0)
-                        .length
-                    }
+                    {tabCounts.shortlist}
                   </Badge>
                 </TabsTrigger>
               </TabsList>

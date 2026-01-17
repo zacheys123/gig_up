@@ -1470,6 +1470,10 @@ export default function NormalGigsForm() {
       if (!bandRoles || bandRoles.length === 0) {
         errors.bandRoles = "At least one band role is required";
       }
+    } // 🔐 ADD THIS: Secret is required
+    if (!formValues.secret?.trim() || formValues.secret.length < 4) {
+      errors.secret = "Secret passphrase is required (minimum 4 characters)";
+      errorMessages.push("Secret passphrase is required");
     }
 
     // Timeline validations
@@ -1503,6 +1507,7 @@ export default function NormalGigsForm() {
         "phoneNo",
         "gigtimeline",
         "bussinesscat",
+        "secret", // 🔐 ADD SECRET HERE
       ];
 
       const categoryRequirements: Record<string, string[]> = {
@@ -1634,11 +1639,22 @@ export default function NormalGigsForm() {
     },
     []
   );
-
+  const getPasswordStrength = (password: string) => {
+    if (!password) return { score: 0, text: "Empty", color: "text-gray-400" };
+    if (password.length < 4)
+      return { score: 1, text: "Weak", color: "text-red-500" };
+    if (password.length < 8)
+      return { score: 2, text: "Fair", color: "text-amber-500" };
+    if (password.length < 12)
+      return { score: 3, text: "Good", color: "text-blue-500" };
+    return { score: 4, text: "Strong", color: "text-green-500" };
+  };
+  const passwordStrength = getPasswordStrength(formValues.secret);
   // Handle input blur
   const handleInputBlur = useCallback(
     (fieldName: string) => {
       const value = formValues[fieldName as keyof LocalGigInputs];
+
       if (!value && fieldName === "title") {
         fieldErrorsRef.current[fieldName] = "Title is required";
         setFieldErrors((prev) => ({
@@ -1646,10 +1662,33 @@ export default function NormalGigsForm() {
           [fieldName]: "Title is required",
         }));
       }
+
+      // 🔐 ADD SECRET VALIDATION
+      if (fieldName === "secret") {
+        // Type-safe check: ensure value is a string before calling trim
+        if (typeof value === "string") {
+          if (!value.trim() || value.trim().length < 4) {
+            fieldErrorsRef.current[fieldName] =
+              "Secret passphrase is required (minimum 4 characters)";
+            setFieldErrors((prev) => ({
+              ...prev,
+              [fieldName]:
+                "Secret passphrase is required (minimum 4 characters)",
+            }));
+          }
+        } else {
+          // Handle non-string case (though secret should always be string)
+          fieldErrorsRef.current[fieldName] =
+            "Secret passphrase is required (minimum 4 characters)";
+          setFieldErrors((prev) => ({
+            ...prev,
+            [fieldName]: "Secret passphrase is required (minimum 4 characters)",
+          }));
+        }
+      }
     },
     [formValues]
   );
-
   // Handle select change
   const handleSelectChange = useCallback((name: string, value: string) => {
     setFormValues((prev) => ({
@@ -2521,12 +2560,20 @@ export default function NormalGigsForm() {
                   Step 1 of 3
                 </Badge>
                 <Button
+                  type="button"
                   variant="outline"
-                  onClick={() => setShowDraftsModal(true)}
-                  className="gap-2"
+                  onClick={saveAsDraft}
+                  disabled={isSavingDraft}
+                  className="py-6 rounded-xl font-medium"
                 >
-                  <FileText className="w-4 h-4" />
-                  View Drafts
+                  {isSavingDraft ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 mr-2" />
+                      Save Draft
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -3077,6 +3124,7 @@ export default function NormalGigsForm() {
                 <CardContent className="p-6">
                   <div className="space-y-6">
                     {/* Secret Passphrase */}
+                    {/* Secret Passphrase - NOW REQUIRED */}
                     <div>
                       <Label
                         htmlFor="secret"
@@ -3085,10 +3133,11 @@ export default function NormalGigsForm() {
                           colors.text
                         )}
                       >
-                        Secret Passphrase
+                        Secret Passphrase *
                       </Label>
                       <p className={cn("text-sm mb-4", colors.textMuted)}>
-                        Add a secret word for exclusive access (optional)
+                        Required for gig security. This password protects access
+                        to your gig details.
                       </p>
                       <div className="relative">
                         <MemoizedInput
@@ -3096,8 +3145,11 @@ export default function NormalGigsForm() {
                           type={secretpass ? "text" : "password"}
                           value={formValues.secret}
                           onChange={handleInputChange}
+                          onBlur={() => handleInputBlur("secret")} // Add blur validation
                           name="secret"
-                          placeholder="Enter secret passphrase"
+                          placeholder="Create a secure passphrase (minimum 4 characters)"
+                          required={true}
+                          error={fieldErrors.secret} // Show error if empty
                         />
                         <button
                           type="button"
@@ -3109,8 +3161,45 @@ export default function NormalGigsForm() {
                           ) : (
                             <Eye className="w-4 h-4" />
                           )}
-                        </button>
+                        </button>{" "}
+                        {/* Password Strength Indicator */}
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={cn("text-xs", colors.textMuted)}>
+                              Password strength
+                            </span>
+                            <span
+                              className={`text-xs font-medium ${passwordStrength.color}`}
+                            >
+                              {passwordStrength.text}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                passwordStrength.score === 1
+                                  ? "w-1/4 bg-red-500"
+                                  : passwordStrength.score === 2
+                                    ? "w-1/2 bg-amber-500"
+                                    : passwordStrength.score === 3
+                                      ? "w-3/4 bg-blue-500"
+                                      : passwordStrength.score === 4
+                                        ? "w-full bg-green-500"
+                                        : "w-0"
+                              }`}
+                            />
+                          </div>
+                          <p className={cn("text-xs mt-1", colors.textMuted)}>
+                            Use at least 4 characters. Longer is better.
+                          </p>
+                        </div>
                       </div>
+                      {!fieldErrors.secret && (
+                        <p className={cn("text-xs mt-2", colors.textMuted)}>
+                          🔒 Keep this safe - needed for editing and managing
+                          your gig
+                        </p>
+                      )}
                     </div>
 
                     {/* Negotiable Switch */}
@@ -3164,20 +3253,12 @@ export default function NormalGigsForm() {
                 </Button>
 
                 <Button
-                  type="button"
                   variant="outline"
-                  onClick={saveAsDraft}
-                  disabled={isSavingDraft}
-                  className="py-6 rounded-xl font-medium"
+                  onClick={() => setShowDraftsModal(true)}
+                  className="gap-2"
                 >
-                  {isSavingDraft ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5 mr-2" />
-                      Save Draft
-                    </>
-                  )}
+                  <FileText className="w-4 h-4" />
+                  Choose Drafts
                 </Button>
               </div>
 

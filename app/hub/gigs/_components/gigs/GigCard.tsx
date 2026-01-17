@@ -63,6 +63,7 @@ import {
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useThemeColors } from "@/hooks/useTheme";
 import { getInterestWindowStatus } from "@/utils";
+import { cn } from "@/lib/utils";
 
 // Types
 
@@ -2031,31 +2032,59 @@ const GigCard: React.FC<GigCardProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Band Join Modal */}
       <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Apply with Band</DialogTitle>
-            <DialogDescription>
+        <DialogContent
+          className={cn(
+            "sm:max-w-md",
+            colors.background,
+            colors.border,
+            "rounded-xl shadow-xl"
+          )}
+        >
+          <DialogHeader className={cn("pb-3", colors.border)}>
+            <DialogTitle className={cn("text-xl font-bold", colors.text)}>
+              Apply with Band
+            </DialogTitle>
+            <DialogDescription className={cn(colors.textMuted)}>
               Select a role and apply with your band members.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* Available slots */}
-            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div
+              className={cn(
+                "p-3 rounded-lg",
+                isDarkMode
+                  ? "bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-800/30"
+                  : "bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200"
+              )}
+            >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                <span
+                  className={cn(
+                    "text-sm font-medium",
+                    isDarkMode ? "text-purple-300" : "text-purple-700"
+                  )}
+                >
                   Available: {availableSlots}/{maxSlots} bands
                 </span>
                 {availableSlots <= 2 && (
-                  <Badge variant="destructive" className="animate-pulse">
+                  <Badge
+                    variant="destructive"
+                    className="animate-pulse bg-gradient-to-r from-red-500 to-orange-500"
+                  >
                     Almost Full!
                   </Badge>
                 )}
               </div>
               {bandCount > 0 && (
-                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                <p
+                  className={cn(
+                    "text-xs mt-1",
+                    isDarkMode ? "text-purple-400" : "text-purple-600"
+                  )}
+                >
                   {bandCount} bands applied • {totalBandMembers} total musicians
                 </p>
               )}
@@ -2063,27 +2092,50 @@ const GigCard: React.FC<GigCardProps> = ({
 
             {/* Name */}
             <div>
-              <label className="text-sm font-medium mb-2 block">
+              <label
+                className={cn("text-sm font-medium mb-2 block", colors.text)}
+              >
                 Band Name / Your Name
               </label>
               <Input
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="Enter band name or your name"
+                className={cn(
+                  "rounded-xl border-2 transition-all",
+                  colors.border,
+                  "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
+                  colors.background
+                )}
               />
             </div>
 
             {/* Role selection */}
             {gig.bandCategory && gig.bandCategory.length > 0 && (
               <div>
-                <label className="text-sm font-medium mb-2 block">
+                <label
+                  className={cn("text-sm font-medium mb-2 block", colors.text)}
+                >
                   Band Role
                 </label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger>
+                  <SelectTrigger
+                    className={cn(
+                      "rounded-xl border-2",
+                      colors.border,
+                      colors.background,
+                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                    )}
+                  >
                     <SelectValue placeholder="Choose a role for your band" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    className={cn(
+                      colors.background,
+                      colors.border,
+                      "rounded-xl shadow-lg"
+                    )}
+                  >
                     {gig.bandCategory.map((role, index) => {
                       const isFull = role.filledSlots >= role.maxSlots;
                       const isBooked = role.bookedUsers.includes(
@@ -2098,13 +2150,37 @@ const GigCard: React.FC<GigCardProps> = ({
                           key={index}
                           value={role.role}
                           disabled={isFull || isBooked || hasApplied}
+                          className={cn(
+                            "py-3 px-4 rounded-lg my-1",
+                            colors.hoverBg,
+                            isFull && "opacity-50 cursor-not-allowed",
+                            hasApplied && !isBooked && isDarkMode
+                              ? "bg-blue-900/20 text-blue-300"
+                              : hasApplied && !isBooked
+                                ? "bg-blue-50 text-blue-700"
+                                : ""
+                          )}
                         >
                           <div className="flex items-center justify-between">
                             <span>{role.role}</span>
-                            <span className="text-xs text-gray-500">
+                            <span className={cn("text-xs", colors.textMuted)}>
                               {role.filledSlots}/{role.maxSlots} bands
-                              {isBooked && " • Booked"}
-                              {hasApplied && !isBooked && " • Applied"}
+                              {isBooked && (
+                                <Badge
+                                  variant="outline"
+                                  className="ml-2 text-xs bg-green-500/10"
+                                >
+                                  Booked
+                                </Badge>
+                              )}
+                              {hasApplied && !isBooked && (
+                                <Badge
+                                  variant="outline"
+                                  className="ml-2 text-xs bg-blue-500/10"
+                                >
+                                  Applied
+                                </Badge>
+                              )}
                             </span>
                           </div>
                         </SelectItem>
@@ -2118,10 +2194,12 @@ const GigCard: React.FC<GigCardProps> = ({
             {/* Applied bands */}
             {bandApplications.length > 0 && (
               <div>
-                <label className="text-sm font-medium mb-2 block">
+                <label
+                  className={cn("text-sm font-medium mb-2 block", colors.text)}
+                >
                   Applied Bands ({bandApplications.length})
                 </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
+                <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
                   {bandApplications.map((band, index) => {
                     const firstMember = band.performingMembers?.[0];
                     const bandName = firstMember?.name || `Band ${index + 1}`;
@@ -2131,31 +2209,72 @@ const GigCard: React.FC<GigCardProps> = ({
                     return (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                        className={cn(
+                          "flex items-center justify-between p-3 rounded-xl",
+                          colors.backgroundMuted,
+                          colors.border,
+                          "border"
+                        )}
                       >
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback>
+                        <div className="flex items-center gap-3">
+                          <Avatar
+                            className={cn(
+                              "w-9 h-9",
+                              isDarkMode
+                                ? "bg-gradient-to-br from-purple-700/30 to-pink-700/30"
+                                : "bg-gradient-to-br from-purple-100 to-pink-100"
+                            )}
+                          >
+                            <AvatarFallback
+                              className={cn(
+                                "font-semibold",
+                                isDarkMode
+                                  ? "text-purple-300"
+                                  : "text-purple-600"
+                              )}
+                            >
                               {bandName.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium">
+                              <p
+                                className={cn(
+                                  "text-sm font-medium",
+                                  colors.text
+                                )}
+                              >
                                 {bandName}'s Band
                               </p>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-xs",
+                                  isDarkMode
+                                    ? "border-purple-700 text-purple-300"
+                                    : "border-purple-300 text-purple-700"
+                                )}
+                              >
                                 {memberCount}{" "}
                                 {memberCount === 1 ? "member" : "members"}
                               </Badge>
                             </div>
-                            <p className="text-xs text-gray-500">
+                            <p className={cn("text-xs", colors.textMuted)}>
                               Status: {band.status || "Applied"}
                             </p>
                           </div>
                         </div>
                         {isCurrentUserBand && (
-                          <Badge variant="outline">Your Band</Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              isDarkMode
+                                ? "border-orange-500 text-orange-300"
+                                : "border-orange-300 text-orange-700"
+                            )}
+                          >
+                            Your Band
+                          </Badge>
                         )}
                       </div>
                     );
@@ -2165,12 +2284,23 @@ const GigCard: React.FC<GigCardProps> = ({
             )}
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter
+            className={cn(
+              "flex-col sm:flex-row gap-3 pt-4",
+              colors.border,
+              "border-t"
+            )}
+          >
             <Button
               variant="outline"
               onClick={() => setShowBandJoinModal(false)}
               disabled={loading}
-              className="w-full sm:w-auto"
+              className={cn(
+                "w-full sm:w-auto rounded-xl",
+                colors.border,
+                colors.hoverBg,
+                colors.text
+              )}
             >
               Cancel
             </Button>
@@ -2191,19 +2321,23 @@ const GigCard: React.FC<GigCardProps> = ({
               disabled={
                 loading || !selectedRole || !memberName.trim() || bandIsFull
               }
-              className="w-full sm:w-auto"
-              style={getButtonStyles("default")}
+              className={cn(
+                "w-full sm:w-auto rounded-xl font-semibold",
+                "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
+                "text-white shadow-lg",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
             >
               {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Applying...
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span>Applying...</span>
+                </div>
               ) : (
-                <>
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Apply with Band
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  <span>Apply with Band</span>
+                </div>
               )}
             </Button>
           </DialogFooter>

@@ -51,6 +51,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { useAllUsers } from "@/hooks/useAllUsers";
 import { useThemeColors } from "@/hooks/useTheme";
+import { MusicianPreBookingStats } from "./MusicianPreBookingStats";
 
 // Types
 type GigTabType = "regular" | "band-roles" | "full-band" | "shortlisted";
@@ -121,20 +122,42 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       let shortlistedAt: number | undefined;
       let notes: string | undefined;
 
-      // 1. Check regular gig interest
-      if (gig.interestedUsers?.includes(userData._id)) {
-        status = "interested";
-        appliedAt = gig.createdAt;
+      // 1. Check regular gig interest - UPDATE THIS PART
+      if (gig.interestedUsers && Array.isArray(gig.interestedUsers)) {
+        // Convert both to strings for comparison
+        const userInterested = gig.interestedUsers.some((userId: any) => {
+          // Handle both string and Id object comparisons
+          const userIdStr =
+            typeof userId === "object" ? userId.toString() : userId;
+          const currentUserIdStr = userData._id.toString();
+          return userIdStr === currentUserIdStr;
+        });
+
+        if (userInterested) {
+          status = "interested";
+          appliedAt = gig.createdAt;
+        }
       }
 
-      // 2. Check band role applications
+      // 2. Check band role applications - ALSO UPDATE
       if (gig.bandCategory && gig.isClientBand) {
         gig.bandCategory.forEach((role: any, index: number) => {
-          if (role.applicants?.includes(userData._id)) {
-            status = "applied";
-            appliedAt = gig.createdAt;
-            bandRole = role.role;
-            bandRoleIndex = index;
+          if (role.applicants && Array.isArray(role.applicants)) {
+            const appliedToRole = role.applicants.some((applicantId: any) => {
+              const applicantIdStr =
+                typeof applicantId === "object"
+                  ? applicantId.toString()
+                  : applicantId;
+              const currentUserIdStr = userData._id.toString();
+              return applicantIdStr === currentUserIdStr;
+            });
+
+            if (appliedToRole) {
+              status = "applied";
+              appliedAt = gig.createdAt;
+              bandRole = role.role;
+              bandRoleIndex = index;
+            }
           }
         });
       }
@@ -142,7 +165,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // 3. Check full-band applications
       if (gig.bookCount) {
         const bandApplication = gig.bookCount.find(
-          (app: any) => app.appliedBy === userData._id
+          (app: any) => app.appliedBy.toString() === userData._id.toString()
         );
         if (bandApplication) {
           status = "applied";
@@ -153,7 +176,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // 4. Check shortlisted status
       if (gig.shortlistedUsers) {
         const shortlistEntry = gig.shortlistedUsers.find(
-          (item: any) => item.userId === userData._id
+          (item: any) => item.userId.toString() === userData._id.toString()
         );
         if (shortlistEntry) {
           status = "shortlisted";
@@ -167,7 +190,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // 5. Check booking history for status updates
       if (gig.bookingHistory) {
         gig.bookingHistory.forEach((entry: any) => {
-          if (entry.userId === userData._id) {
+          if (entry.userId.toString() === userData._id.toString()) {
             if (entry.status === "booked") status = "booked";
             if (entry.status === "rejected") status = "rejected";
             if (entry.status === "viewed") status = "viewed";
@@ -176,13 +199,12 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       }
 
       // 6. Check if actually booked
-      if (gig.bookedBy === userData._id) {
+      if (gig.bookedBy && gig.bookedBy.toString() === userData._id.toString()) {
         status = "booked";
       }
 
       if (status) {
         const clientDetails = userMap.get(gig.postedBy);
-
         musicianGigsData.push({
           gig,
           status,
@@ -237,6 +259,8 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
     : musicianGigs[0];
 
   // Calculate stats
+  // Add this calculateStats function back to your component:
+
   const calculateStats = () => {
     if (!allGigs || !userData) return null;
 
@@ -250,27 +274,38 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
     };
 
     allGigs.forEach((gig: any) => {
-      // Regular gig interest
-      if (gig.interestedUsers?.includes(userData._id)) {
-        stats.regular++;
-        stats.totalPending++;
+      // Regular gig interest - UPDATE
+      if (gig.interestedUsers && Array.isArray(gig.interestedUsers)) {
+        const userInterested = gig.interestedUsers.some(
+          (userId: any) => userId.toString() === userData._id.toString()
+        );
+        if (userInterested) {
+          stats.regular++;
+          stats.totalPending++;
+        }
       }
 
-      // Band role applications
+      // Band role applications - UPDATE
       if (gig.bandCategory) {
-        const appliedToRole = gig.bandCategory.some((role: any) =>
-          role.applicants?.includes(userData._id)
-        );
+        const appliedToRole = gig.bandCategory.some((role: any) => {
+          if (role.applicants && Array.isArray(role.applicants)) {
+            return role.applicants.some(
+              (applicantId: any) =>
+                applicantId.toString() === userData._id.toString()
+            );
+          }
+          return false;
+        });
         if (appliedToRole) {
           stats.bandRoles++;
           stats.totalPending++;
         }
       }
 
-      // Full band applications - COUNT BANDS AS LEADER
+      // Full band applications - UPDATE
       if (gig.bookCount) {
         const userBandApplications = gig.bookCount.filter(
-          (app: any) => app.appliedBy === userData._id
+          (app: any) => app.appliedBy.toString() === userData._id.toString()
         );
         if (userBandApplications.length > 0) {
           stats.fullBand += userBandApplications.length;
@@ -279,11 +314,14 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
         }
       }
 
-      // Shortlisted
-      if (
-        gig.shortlistedUsers?.some((item: any) => item.userId === userData._id)
-      ) {
-        stats.shortlisted++;
+      // Shortlisted - UPDATE
+      if (gig.shortlistedUsers) {
+        const isShortlisted = gig.shortlistedUsers.some(
+          (item: any) => item.userId.toString() === userData._id.toString()
+        );
+        if (isShortlisted) {
+          stats.shortlisted++;
+        }
       }
     });
 
@@ -387,92 +425,20 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-neutral400">
               🎵 Your Gig Applications
             </h1>
             <p className="text-gray-600 mt-2">
               Track and manage your gig applications
             </p>
           </div>
-          {stats && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1">
-              {musicianGigs.length} Pending Applications
-            </Badge>
-          )}
         </div>
 
-        {/* Stats Cards - Updated with theme colors */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className={`${colors.card} ${colors.border}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-sm ${colors.musicianText} mb-1`}>
-                      Regular Gigs
-                    </p>
-                    <p
-                      className={`text-2xl font-bold ${colors.musicianPrimary}`}
-                    >
-                      {stats.regular}
-                    </p>
-                  </div>
-                  <User className={`w-8 h-8 ${colors.musicianPrimary}`} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className={`${colors.card} ${colors.border}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-sm ${colors.djText} mb-1`}>
-                      Band Roles
-                    </p>
-                    <p className={`text-2xl font-bold ${colors.djPrimary}`}>
-                      {stats.bandRoles}
-                    </p>
-                  </div>
-                  <Users className={`w-8 h-8 ${colors.djPrimary}`} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className={`${colors.card} ${colors.border}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-sm ${colors.vocalistText} mb-1`}>
-                      Full Bands
-                    </p>
-                    <p
-                      className={`text-2xl font-bold ${colors.vocalistPrimary}`}
-                    >
-                      {stats.fullBand}
-                    </p>
-                  </div>
-                  <Users2 className={`w-8 h-8 ${colors.vocalistPrimary}`} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className={`${colors.card} ${colors.border}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-sm ${colors.bookerText} mb-1`}>
-                      Shortlisted
-                    </p>
-                    <p className={`text-2xl font-bold ${colors.bookerPrimary}`}>
-                      {stats.shortlisted}
-                    </p>
-                  </div>
-                  <Bookmark className={`w-8 h-8 ${colors.bookerPrimary}`} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <MusicianPreBookingStats
+          allGigs={allGigs}
+          userData={userData}
+          activeTab={activeTab}
+        />
 
         {/* Band Leader Status Card - Using indigo colors from your theme */}
         {stats && stats.bandsAsLeader > 0 && (
@@ -509,6 +475,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       <Card className={`${colors.card} ${colors.border}`}>
         <CardContent className="p-4">
           {/* 4-Tab Gig Type Selector */}
+
           <div className="mb-6">
             <Tabs
               value={activeTab}

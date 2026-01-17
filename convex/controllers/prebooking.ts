@@ -239,14 +239,12 @@ export const removeFromShortlist = mutation({
   args: {
     gigId: v.id("gigs"),
     applicantId: v.id("users"),
+    clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
     if (!user) throw new Error("User not found");
 
@@ -966,225 +964,6 @@ export const addBandToGig = mutation({
   },
 });
 
-// Book gig and create crew chat
-export const bookAndCreateCrewChat = mutation({
-  args: {
-    gigId: v.id("gigs"),
-    clerkId: v.string(),
-    clientRole: v.union(v.literal("admin"), v.literal("member")),
-  },
-  handler: async (ctx, args) => {
-    const client = await getUserByClerkId(ctx, args.clerkId);
-    const gig = await ctx.db.get(args.gigId);
-
-    if (!gig) throw new Error("Gig not found");
-    if (!gig.isClientBand) throw new Error("Not a band gig");
-    if (gig.postedBy !== client._id) {
-      throw new Error("Only band creator can book and create crew chat");
-    }
-
-    // 1. Verify all roles are filled
-    if (!gig.bandCategory || gig.bandCategory.length === 0) {
-      throw new Error("No band roles defined");
-    }
-
-    const allRolesFilled = gig.bandCategory.every(
-      (role: any) => role.filledSlots >= role.maxSlots
-    );
-
-    if (!allRolesFilled) {
-      const unfilledRoles = gig.bandCategory
-        .filter((role: any) => role.filledSlots < role.maxSlots)
-        .map(
-          (role: any) => `${role.role} (${role.filledSlots}/${role.maxSlots})`
-        );
-
-      throw new Error(
-        `All roles must be filled. Still need: ${unfilledRoles.join(", ")}`
-      );
-    }
-
-    // 2. Ensure gig is marked as booked
-    if (!gig.isTaken) {
-      await ctx.db.patch(args.gigId, {
-        isTaken: true,
-        isPending: false,
-        isActive: true,
-        updatedAt: Date.now(),
-      });
-    }
-
-    // 3. Create crew chat DIRECTLY
-    if (gig.bandChatId) {
-      const existingChat = await ctx.db.get(gig.bandChatId);
-      if (existingChat) {
-        // Update settings if already exists
-        await ctx.db.patch(gig._id, {
-          crewChatSettings: {
-            clientRole: args.clientRole,
-            chatPermissions: {
-              canSendMessages: true,
-              canAddMembers: args.clientRole === "admin",
-              canRemoveMembers: args.clientRole === "admin",
-              canEditChatInfo: args.clientRole === "admin",
-            },
-            createdBy: client._id,
-            createdAt: Date.now(),
-          },
-        });
-
-        return {
-          success: true,
-          message: "Gig already booked - crew chat settings updated",
-          chatId: gig.bandChatId,
-          clientRole: args.clientRole,
-          alreadyExists: true,
-        };
-      }
-    }
-
-    // Get all booked musicians from band roles
-    const participants = new Set<Id<"users">>();
-    participants.add(gig.postedBy); // Add client
-
-    if (gig.bandCategory) {
-      gig.bandCategory.forEach((role: any) => {
-        role.bookedUsers?.forEach((userId: Id<"users">) => {
-          participants.add(userId);
-        });
-      });
-    }
-
-    const participantArray = Array.from(participants);
-
-    // Create the crew chat - USING participantIds FIELD
-    const chatId = await ctx.db.insert("chats", {
-      participantIds: participantArray, // Correct field name
-      type: "group",
-      name: `🎵 Crew: ${gig.title}`,
-      createdBy: gig.postedBy,
-      lastMessage: "Crew chat created!",
-      lastMessageAt: Date.now(),
-      unreadCounts: {},
-      metadata: {
-        isCrewChat: true,
-        gigId: gig._id,
-        clientRole: args.clientRole,
-        permissions: {
-          canSendMessages: true,
-          canAddMembers: args.clientRole === "admin",
-          canRemoveMembers: args.clientRole === "admin",
-          canEditChatInfo: args.clientRole === "admin",
-        },
-      },
-    });
-
-    // Link chat to gig with settings
-    await ctx.db.patch(gig._id, {
-      bandChatId: chatId,
-      crewChatSettings: {
-        clientRole: args.clientRole,
-        chatPermissions: {
-          canSendMessages: true,
-          canAddMembers: args.clientRole === "admin",
-          canRemoveMembers: args.clientRole === "admin",
-          canEditChatInfo: args.clientRole === "admin",
-        },
-        createdBy: client._id,
-        createdAt: Date.now(),
-      },
-      updatedAt: Date.now(),
-    });
-
-    // Add welcome message
-    await ctx.db.insert("messages", {
-      chatId,
-      senderId: client._id,
-      content:
-        args.clientRole === "admin"
-          ? `🚀 Crew chat created! I'm the admin. All ${participantArray.length - 1} musicians can read and write here.`
-          : `🚀 Crew chat created! I'm joining as a member. All ${participantArray.length} of us can read and write here.`,
-      messageType: "text",
-      attachments: [],
-      readBy: [],
-      deliveredTo: participantArray,
-      status: "sent",
-      isDeleted: false,
-    });
-
-    // 4. Create booking history entry for this action
-    const bookingEntry = {
-      entryId: `${args.gigId}_booked_with_chat_${Date.now()}`,
-      timestamp: Date.now(),
-      userId: client._id,
-      userRole: "client",
-      status: "confirmed" as const,
-      gigType: "band" as const,
-      actionBy: client._id,
-      actionFor: client._id,
-      notes: `Gig booked and crew chat created. Client role: ${args.clientRole}`,
-      reason: "Booked gig with crew chat creation",
-      metadata: {
-        chatId,
-        clientRole: args.clientRole,
-        action: "book_and_create_chat",
-      },
-    };
-
-    await ctx.db.patch(args.gigId, {
-      bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
-      updatedAt: Date.now(),
-    });
-
-    // For crew chat creation notifications, use "band_setup_info" or "band_joined"
-    for (const participantId of participantArray) {
-      if (participantId === client._id) continue;
-
-      await createNotificationInternal(ctx, {
-        userDocumentId: participantId,
-        type: "band_setup_info",
-        title: "💬 New Crew Chat Created",
-        message: `${client.firstname || client.username} created a crew chat for "${gig.title}"`,
-        actionUrl: `/chat/${chatId}`,
-        relatedUserDocumentId: client._id,
-        metadata: {
-          gigId: gig._id,
-          gigTitle: gig.title,
-          chatId: chatId,
-          clientRole: args.clientRole,
-        },
-      });
-    }
-
-    // For gig booking notifications, keep using "gig_approved"
-    for (const participantId of participantArray) {
-      if (participantId === client._id) continue;
-
-      await createNotificationInternal(ctx, {
-        userDocumentId: participantId,
-        type: "gig_approved",
-        title: "✅ Gig Officially Booked!",
-        message: `${client.firstname || client.username} has officially booked the gig "${gig.title}" and created a crew chat.`,
-        actionUrl: `/gigs/${gig._id}`,
-        relatedUserDocumentId: client._id,
-      });
-    }
-
-    return {
-      success: true,
-      message: "Gig booked and crew chat created successfully",
-      chatId,
-      clientRole: args.clientRole,
-      participantCount: participantArray.length,
-      gigStatus: {
-        isTaken: true,
-        isPending: false,
-        isActive: true,
-      },
-    };
-  },
-});
-
 // Band chat functions section - UPDATED
 export const getBandChat = query({
   args: { gigId: v.id("gigs") },
@@ -1647,6 +1426,224 @@ export const canCreateCrewChat = query({
         (total: number, role: any) => total + (role.bookedUsers?.length || 0),
         0
       ),
+    };
+  },
+});
+// Book gig and create crew chat
+export const bookAndCreateCrewChat = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    clerkId: v.string(),
+    clientRole: v.union(v.literal("admin"), v.literal("member")),
+  },
+  handler: async (ctx, args) => {
+    const client = await getUserByClerkId(ctx, args.clerkId);
+    const gig = await ctx.db.get(args.gigId);
+
+    if (!gig) throw new Error("Gig not found");
+    if (!gig.isClientBand) throw new Error("Not a band gig");
+    if (gig.postedBy !== client._id) {
+      throw new Error("Only band creator can book and create crew chat");
+    }
+
+    // 1. Verify all roles are filled
+    if (!gig.bandCategory || gig.bandCategory.length === 0) {
+      throw new Error("No band roles defined");
+    }
+
+    const allRolesFilled = gig.bandCategory.every(
+      (role: any) => role.filledSlots >= role.maxSlots
+    );
+
+    if (!allRolesFilled) {
+      const unfilledRoles = gig.bandCategory
+        .filter((role: any) => role.filledSlots < role.maxSlots)
+        .map(
+          (role: any) => `${role.role} (${role.filledSlots}/${role.maxSlots})`
+        );
+
+      throw new Error(
+        `All roles must be filled. Still need: ${unfilledRoles.join(", ")}`
+      );
+    }
+
+    // 2. Ensure gig is marked as booked
+    if (!gig.isTaken) {
+      await ctx.db.patch(args.gigId, {
+        isTaken: true,
+        isPending: false,
+        isActive: true,
+        updatedAt: Date.now(),
+      });
+    }
+
+    // 3. Create crew chat DIRECTLY
+    if (gig.bandChatId) {
+      const existingChat = await ctx.db.get(gig.bandChatId);
+      if (existingChat) {
+        // Update settings if already exists
+        await ctx.db.patch(gig._id, {
+          crewChatSettings: {
+            clientRole: args.clientRole,
+            chatPermissions: {
+              canSendMessages: true,
+              canAddMembers: args.clientRole === "admin",
+              canRemoveMembers: args.clientRole === "admin",
+              canEditChatInfo: args.clientRole === "admin",
+            },
+            createdBy: client._id,
+            createdAt: Date.now(),
+          },
+        });
+
+        return {
+          success: true,
+          message: "Gig already booked - crew chat settings updated",
+          chatId: gig.bandChatId,
+          clientRole: args.clientRole,
+          alreadyExists: true,
+        };
+      }
+    }
+
+    // Get all booked musicians from band roles
+    const participants = new Set<Id<"users">>();
+    participants.add(gig.postedBy); // Add client
+
+    if (gig.bandCategory) {
+      gig.bandCategory.forEach((role: any) => {
+        role.bookedUsers?.forEach((userId: Id<"users">) => {
+          participants.add(userId);
+        });
+      });
+    }
+
+    const participantArray = Array.from(participants);
+
+    // Create the crew chat - USING participantIds FIELD
+    const chatId = await ctx.db.insert("chats", {
+      participantIds: participantArray, // Correct field name
+      type: "group",
+      name: `🎵 Crew: ${gig.title}`,
+      createdBy: gig.postedBy,
+      lastMessage: "Crew chat created!",
+      lastMessageAt: Date.now(),
+      unreadCounts: {},
+      metadata: {
+        isCrewChat: true,
+        gigId: gig._id,
+        clientRole: args.clientRole,
+        permissions: {
+          canSendMessages: true,
+          canAddMembers: args.clientRole === "admin",
+          canRemoveMembers: args.clientRole === "admin",
+          canEditChatInfo: args.clientRole === "admin",
+        },
+      },
+    });
+
+    // Link chat to gig with settings
+    await ctx.db.patch(gig._id, {
+      bandChatId: chatId,
+      crewChatSettings: {
+        clientRole: args.clientRole,
+        chatPermissions: {
+          canSendMessages: true,
+          canAddMembers: args.clientRole === "admin",
+          canRemoveMembers: args.clientRole === "admin",
+          canEditChatInfo: args.clientRole === "admin",
+        },
+        createdBy: client._id,
+        createdAt: Date.now(),
+      },
+      updatedAt: Date.now(),
+    });
+
+    // Add welcome message
+    await ctx.db.insert("messages", {
+      chatId,
+      senderId: client._id,
+      content:
+        args.clientRole === "admin"
+          ? `🚀 Crew chat created! I'm the admin. All ${participantArray.length - 1} musicians can read and write here.`
+          : `🚀 Crew chat created! I'm joining as a member. All ${participantArray.length} of us can read and write here.`,
+      messageType: "text",
+      attachments: [],
+      readBy: [],
+      deliveredTo: participantArray,
+      status: "sent",
+      isDeleted: false,
+    });
+
+    // 4. Create booking history entry for this action
+    const bookingEntry = {
+      entryId: `${args.gigId}_booked_with_chat_${Date.now()}`,
+      timestamp: Date.now(),
+      userId: client._id,
+      userRole: "client",
+      status: "confirmed" as const,
+      gigType: "band" as const,
+      actionBy: client._id,
+      actionFor: client._id,
+      notes: `Gig booked and crew chat created. Client role: ${args.clientRole}`,
+      reason: "Booked gig with crew chat creation",
+      metadata: {
+        chatId,
+        clientRole: args.clientRole,
+        action: "book_and_create_chat",
+      },
+    };
+
+    await ctx.db.patch(args.gigId, {
+      bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+      updatedAt: Date.now(),
+    });
+
+    // For crew chat creation notifications, use "band_setup_info" or "band_joined"
+    for (const participantId of participantArray) {
+      if (participantId === client._id) continue;
+
+      await createNotificationInternal(ctx, {
+        userDocumentId: participantId,
+        type: "band_setup_info",
+        title: "💬 New Crew Chat Created",
+        message: `${client.firstname || client.username} created a crew chat for "${gig.title}"`,
+        actionUrl: `/chat/${chatId}`,
+        relatedUserDocumentId: client._id,
+        metadata: {
+          gigId: gig._id,
+          gigTitle: gig.title,
+          chatId: chatId,
+          clientRole: args.clientRole,
+        },
+      });
+    }
+
+    // For gig booking notifications, keep using "gig_approved"
+    for (const participantId of participantArray) {
+      if (participantId === client._id) continue;
+
+      await createNotificationInternal(ctx, {
+        userDocumentId: participantId,
+        type: "gig_approved",
+        title: "✅ Gig Officially Booked!",
+        message: `${client.firstname || client.username} has officially booked the gig "${gig.title}" and created a crew chat.`,
+        actionUrl: `/gigs/${gig._id}`,
+        relatedUserDocumentId: client._id,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Gig booked and crew chat created successfully",
+      chatId,
+      clientRole: args.clientRole,
+      participantCount: participantArray.length,
+      gigStatus: {
+        isTaken: true,
+        isPending: false,
+        isActive: true,
+      },
     };
   },
 });

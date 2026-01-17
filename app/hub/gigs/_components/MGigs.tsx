@@ -61,12 +61,100 @@ export const MyGigs = ({ user }: { user: any }) => {
 
   // Get user's gigs
   const { gigs, isLoading } = useGigs(user?._id);
+  const gigCounts = useMemo(() => {
+    if (!gigs)
+      return {
+        total: 0,
+        available: 0,
+        withInterests: 0,
+        withApplications: 0,
+        taken: 0,
+        pending: 0,
+        draft: 0,
+      };
 
-  // Filter gigs based on search and status
+    return {
+      total: gigs.length,
+      available: gigs.filter((gig) => {
+        const isAvailable = gig.isActive && !gig.isTaken && !gig.isPending;
+        const noInterests =
+          !gig.interestedUsers || gig.interestedUsers.length === 0;
+        const noApplications =
+          !gig.appliedUsers || gig.appliedUsers.length === 0;
+        const noBookCount = !gig.bookCount || gig.bookCount.length === 0;
+
+        let noBandBookings = true;
+        if (gig.bandCategory && gig.bandCategory.length > 0) {
+          noBandBookings = gig.bandCategory.every(
+            (role) =>
+              role.filledSlots === 0 &&
+              (!role.applicants || role.applicants.length === 0)
+          );
+        }
+
+        return (
+          isAvailable &&
+          noInterests &&
+          noApplications &&
+          noBookCount &&
+          noBandBookings
+        );
+      }).length,
+
+      withInterests: gigs.filter((gig) => {
+        const isAvailable = gig.isActive && !gig.isTaken && !gig.isPending;
+        const hasInterests =
+          gig.interestedUsers && gig.interestedUsers.length > 0;
+        const noApplications =
+          !gig.appliedUsers || gig.appliedUsers.length === 0;
+
+        return isAvailable && hasInterests && noApplications;
+      }).length,
+
+      withApplications: gigs.filter((gig) => {
+        const isAvailable = gig.isActive && !gig.isTaken && !gig.isPending;
+        const hasApplications = gig.appliedUsers && gig.appliedUsers.length > 0;
+
+        return isAvailable && hasApplications;
+      }).length,
+
+      taken: gigs.filter((gig) => gig.isTaken).length,
+      pending: gigs.filter((gig) => gig.isPending).length,
+      draft: gigs.filter((gig) => !gig.isActive).length,
+    };
+  }, [gigs]);
+  // Filter gigs based on search, status, and availability conditions
   const filteredGigs = useMemo(() => {
     if (!gigs) return [];
 
     let filtered = gigs;
+
+    // First apply the availability filter - only show gigs that are available for new applications
+    filtered = filtered.filter((gig) => {
+      // Check if gig is available (not taken, not pending)
+      const isAvailable = gig.isActive && !gig.isTaken && !gig.isPending;
+
+      // Check if there are no interests or applications
+      const noInterests =
+        !gig.interestedUsers || gig.interestedUsers.length === 0;
+      const noApplications = !gig.appliedUsers || gig.appliedUsers.length === 0;
+      const noBookCount = !gig.bookCount || gig.bookCount.length === 0;
+
+      // Check if this is a band gig and has no band bookings
+      const noBandBookings =
+        !gig.bandCategory ||
+        gig.bandCategory.every(
+          (role) => role.filledSlots === 0 && role.applicants.length === 0
+        );
+
+      return (
+        isAvailable &&
+        noInterests &&
+        noApplications &&
+        noBookCount &&
+        noBandBookings
+      );
+    });
 
     // Search filter
     if (searchQuery) {
@@ -80,19 +168,22 @@ export const MyGigs = ({ user }: { user: any }) => {
       );
     }
 
-    // Status filter
+    // Status filter (now only showing "available" gigs, but we can still have other filters)
     if (statusFilter !== "all") {
       switch (statusFilter) {
         case "active":
-          filtered = filtered.filter((gig) => gig.isActive && !gig.isTaken);
+          // Already filtered for active, but we can add additional logic if needed
           break;
         case "taken":
-          filtered = filtered.filter((gig) => gig.isTaken);
+          // We won't have taken gigs since we filtered them out
+          filtered = [];
           break;
         case "pending":
-          filtered = filtered.filter((gig) => gig.isPending);
+          // We won't have pending gigs since we filtered them out
+          filtered = [];
           break;
         case "draft":
+          // Draft gigs are those not active
           filtered = filtered.filter((gig) => !gig.isActive);
           break;
       }
@@ -118,7 +209,6 @@ export const MyGigs = ({ user }: { user: any }) => {
 
     return filtered;
   }, [gigs, searchQuery, statusFilter, sortBy]);
-
   // Calculate stats
   const stats = useMemo(() => {
     if (!gigs) {
@@ -170,7 +260,106 @@ export const MyGigs = ({ user }: { user: any }) => {
     setStatusFilter("all");
     toast.info("Filters cleared");
   };
+  // Helper functions for messaging
+  const getNoGigsMessage = (
+    searchQuery: string,
+    statusFilter: string,
+    counts: typeof gigCounts
+  ): string => {
+    if (searchQuery) {
+      return "No matching gigs found";
+    }
 
+    switch (statusFilter) {
+      case "all":
+        if (counts.total === 0) return "No gigs posted yet";
+        if (counts.available === 0) return "All gigs have activity";
+        return "No gigs found";
+
+      case "active":
+        if (counts.available === 0 && counts.total > 0) {
+          return "No fresh gigs available";
+        }
+        return "No active gigs found";
+
+      case "taken":
+        if (counts.taken === 0 && counts.total > 0) {
+          return "No completed gigs yet";
+        }
+        return "No completed gigs found";
+
+      case "pending":
+        if (counts.pending === 0 && counts.total > 0) {
+          return "No pending gigs";
+        }
+        return "No pending gigs found";
+
+      case "draft":
+        if (counts.draft === 0 && counts.total > 0) {
+          return "No draft gigs";
+        }
+        return "No drafts found";
+
+      default:
+        return "No gigs found";
+    }
+  };
+
+  const getNoGigsDescription = (
+    searchQuery: string,
+    statusFilter: string,
+    counts: typeof gigCounts
+  ): string => {
+    if (searchQuery) {
+      return "Try adjusting your search terms to find what you're looking for.";
+    }
+
+    switch (statusFilter) {
+      case "all":
+        if (counts.total === 0) {
+          return "Start by creating your first gig to connect with amazing musicians!";
+        }
+        if (counts.available === 0) {
+          return "All your current gigs have received interest or applications. Create a new gig to get fresh responses.";
+        }
+        return "Try adjusting your filters to find what you're looking for.";
+
+      case "active":
+        if (counts.available === 0 && counts.total > 0) {
+          if (counts.withInterests > 0 && counts.withApplications > 0) {
+            return "All your gigs have received interest or applications. Check those sections or create a new gig.";
+          } else if (counts.withInterests > 0) {
+            return "All your gigs have received interest. Check 'With Interest' section or create a new gig.";
+          } else if (counts.withApplications > 0) {
+            return "All your gigs have received applications. Check 'With Applications' section or create a new gig.";
+          } else if (counts.taken > 0) {
+            return "All your gigs are completed. Create a new gig to get fresh responses.";
+          }
+        }
+        return "Create a new gig or check other status filters.";
+
+      case "taken":
+        if (counts.taken === 0 && counts.total > 0) {
+          return "You haven't completed any gigs yet. Your active gigs will appear here once completed.";
+        }
+        return "You'll see completed gigs here once they're finished.";
+
+      case "pending":
+        if (counts.pending === 0 && counts.total > 0) {
+          return "You don't have any pending gigs. All your gigs are either active or completed.";
+        }
+        return "Pending gigs will appear here once they're in the review process.";
+
+      case "draft":
+        if (counts.draft === 0 && counts.total > 0) {
+          return "You don't have any draft gigs. All your gigs are published and active.";
+        }
+        return "Save gigs as drafts while you're working on them.";
+
+      default:
+        return "Try adjusting your filters or create a new gig.";
+    }
+  };
   // Loading skeleton
   if (isLoading.gigs) {
     return (
@@ -263,36 +452,37 @@ export const MyGigs = ({ user }: { user: any }) => {
                 gradientTo: isDarkMode ? "#60a5fa" : "#3b82f6",
               },
               {
-                value: stats.active,
-                label: "Active",
+                value: gigCounts.available,
+                label: "Fresh",
                 icon: Zap,
                 color: "green",
                 gradientFrom: isDarkMode ? "#10b981" : "#047857",
                 gradientTo: isDarkMode ? "#34d399" : "#10b981",
+                description: "No interest/applications",
               },
               {
-                value: stats.completed,
-                label: "Completed",
+                value: gigCounts.withInterests,
+                label: "With Interest",
+                icon: Users,
+                color: "purple",
+                gradientFrom: isDarkMode ? "#8b5cf6" : "#6d28d9",
+                gradientTo: isDarkMode ? "#a78bfa" : "#8b5cf6",
+              },
+              {
+                value: gigCounts.withApplications,
+                label: "With Apps",
                 icon: CheckCircle,
                 color: "emerald",
                 gradientFrom: isDarkMode ? "#059669" : "#047857",
                 gradientTo: isDarkMode ? "#10b981" : "#059669",
               },
               {
-                value: stats.pending,
-                label: "Pending",
-                icon: Clock,
-                color: "amber",
-                gradientFrom: isDarkMode ? "#f59e0b" : "#b45309",
-                gradientTo: isDarkMode ? "#fbbf24" : "#f59e0b",
-              },
-              {
-                value: `$${stats.totalEarnings.toLocaleString()}`,
-                label: "Total Earnings",
-                icon: DollarSign,
-                color: "purple",
-                gradientFrom: isDarkMode ? "#8b5cf6" : "#6d28d9",
-                gradientTo: isDarkMode ? "#a78bfa" : "#8b5cf6",
+                value: gigCounts.taken,
+                label: "Completed",
+                icon: CheckCircle,
+                color: "gray",
+                gradientFrom: isDarkMode ? "#6b7280" : "#4b5563",
+                gradientTo: isDarkMode ? "#9ca3af" : "#6b7280",
               },
               {
                 value: `${stats.averageRating}/5`,
@@ -326,6 +516,11 @@ export const MyGigs = ({ user }: { user: any }) => {
                       >
                         {stat.value}
                       </p>
+                      {stat.description && (
+                        <p className={clsx("text-xs mt-1", colors.textMuted)}>
+                          {stat.description}
+                        </p>
+                      )}
                     </div>
                     <div
                       className="p-2 rounded-lg"
@@ -340,7 +535,6 @@ export const MyGigs = ({ user }: { user: any }) => {
               </Card>
             ))}
           </div>
-
           {/* Search and Filter Bar */}
           <div className="space-y-4">
             <div className="relative">
@@ -573,16 +767,15 @@ export const MyGigs = ({ user }: { user: any }) => {
                   </div>
                 </div>
               </div>
+
               <h3 className={clsx("text-2xl font-bold mb-3", colors.text)}>
-                {searchQuery || statusFilter !== "all"
-                  ? "No matching gigs found"
-                  : "No gigs posted yet"}
+                {getNoGigsMessage(searchQuery, statusFilter, gigCounts)}
               </h3>
+
               <p className={clsx("max-w-md mb-8", colors.textMuted)}>
-                {searchQuery || statusFilter !== "all"
-                  ? "Try adjusting your search or filters to find what you're looking for."
-                  : "Start by creating your first gig to connect with amazing musicians!"}
+                {getNoGigsDescription(searchQuery, statusFilter, gigCounts)}
               </p>
+
               <div className="flex flex-col sm:flex-row gap-3">
                 {(searchQuery || statusFilter !== "all") && (
                   <Button
@@ -602,9 +795,80 @@ export const MyGigs = ({ user }: { user: any }) => {
                   )}
                 >
                   <Plus className="w-4 h-4" />
-                  Create Your First Gig
+                  Create New Gig
                 </Button>
               </div>
+
+              {/* Show available gigs in other categories */}
+              {statusFilter === "all" && gigCounts.total > 0 && (
+                <div className="mt-8 pt-6 border-t w-full max-w-md">
+                  <h4 className={clsx("font-medium mb-3", colors.text)}>
+                    You have gigs in other categories:
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {gigCounts.withInterests > 0 && (
+                      <div
+                        className={clsx(
+                          "p-3 rounded-lg text-center",
+                          colors.backgroundMuted
+                        )}
+                      >
+                        <div className={clsx("text-lg font-bold", colors.text)}>
+                          {gigCounts.withInterests}
+                        </div>
+                        <div className={clsx("text-xs", colors.textMuted)}>
+                          With Interest
+                        </div>
+                      </div>
+                    )}
+                    {gigCounts.withApplications > 0 && (
+                      <div
+                        className={clsx(
+                          "p-3 rounded-lg text-center",
+                          colors.backgroundMuted
+                        )}
+                      >
+                        <div className={clsx("text-lg font-bold", colors.text)}>
+                          {gigCounts.withApplications}
+                        </div>
+                        <div className={clsx("text-xs", colors.textMuted)}>
+                          With Applications
+                        </div>
+                      </div>
+                    )}
+                    {gigCounts.taken > 0 && (
+                      <div
+                        className={clsx(
+                          "p-3 rounded-lg text-center",
+                          colors.backgroundMuted
+                        )}
+                      >
+                        <div className={clsx("text-lg font-bold", colors.text)}>
+                          {gigCounts.taken}
+                        </div>
+                        <div className={clsx("text-xs", colors.textMuted)}>
+                          Completed
+                        </div>
+                      </div>
+                    )}
+                    {gigCounts.draft > 0 && (
+                      <div
+                        className={clsx(
+                          "p-3 rounded-lg text-center",
+                          colors.backgroundMuted
+                        )}
+                      >
+                        <div className={clsx("text-lg font-bold", colors.text)}>
+                          {gigCounts.draft}
+                        </div>
+                        <div className={clsx("text-xs", colors.textMuted)}>
+                          Drafts
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </motion.div>
           ) : (
             filteredGigs.map((gig, index) => (

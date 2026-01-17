@@ -128,9 +128,7 @@ const calculateProgress = (data: GigDraftData): number => {
       if (hasRequiredSkills) completed++;
 
       // Check if price is set for at least one role
-      const hasPrice = bandRoles.some(
-        (role) => role.price && parseFloat(role.price) > 0
-      );
+      const hasPrice = bandRoles.some((role) => role.price && role.price > 0);
       if (hasPrice) completed++;
     }
   }
@@ -168,7 +166,7 @@ export const saveGigDraft = (
   // Calculate estimated budget for band gigs
   const estimatedBudget = isBandGig
     ? draftData.bandRoles?.reduce((sum, role) => {
-        const price = parseFloat(role.price || "0");
+        const price = role.price ? role.price : 0;
         return sum + price * role.maxSlots;
       }, 0) || 0
     : 0;
@@ -336,7 +334,7 @@ export const getGigDrafts = (): GigDraft[] => {
 
       const estimatedBudget = isBandGig
         ? migratedData.bandRoles?.reduce((sum, role) => {
-            const price = parseFloat(role.price || "0");
+            const price = role.price ? role.price : 0;
             return sum + price * role.maxSlots;
           }, 0) || 0
         : 0;
@@ -541,7 +539,7 @@ export const updateDraftBandRoles = (
 
   // Calculate estimated budget
   const estimatedBudget = bandRoles.reduce((sum, role) => {
-    const price = parseFloat(role.price || "0");
+    const price = role.price ? role.price : 0;
     return sum + price * role.maxSlots;
   }, 0);
 

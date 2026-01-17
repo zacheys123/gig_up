@@ -230,7 +230,7 @@ const SchedulerComponent = ({
   const [activeOption, setActiveOption] = useState<
     "automatic" | "regular" | "create" | null
   >(null);
-
+  const { isDarkMode } = useThemeColors();
   const [currentStep, setCurrentStep] = useState<
     "eligibility" | "selection" | "confirmation"
   >("eligibility");
@@ -905,7 +905,7 @@ const SchedulerComponent = ({
         </div>
 
         {/* Clean Cards */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="grid grid-cols-3 gap-2 mb-3 mx-1">
           {options.map((option) => (
             <button
               key={option.id}
@@ -952,11 +952,11 @@ const SchedulerComponent = ({
                       "text-xs px-2 py-0.5 rounded",
                       option.badge === "Free"
                         ? option.available
-                          ? "bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-300"
-                          : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
+                          ? "bg-orange-100 text-green-600 dark:bg-blue-900/20 dark:text-orange-900"
+                          : "bg-gray-100 text-gray-100 dark:bg-green-600 dark:text-gray-500"
                         : option.available
                           ? "bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300"
-                          : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
+                          : "bg-gray-100 text-gray-400 dark:bg-gray-300 dark:text-gray-500"
                     )}
                   >
                     {option.badge}
@@ -1102,7 +1102,15 @@ const SchedulerComponent = ({
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-md mx-auto w-full px-2">
             {/* Main Card */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+            <div
+              className={cn(
+                "rounded-lg border p-4",
+                isDarkMode
+                  ? "bg-gray-900 border-gray-700"
+                  : "bg-white border-gray-200",
+                "shadow-sm"
+              )}
+            >
               {/* Header Row */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -1112,12 +1120,22 @@ const SchedulerComponent = ({
                     {option.icon}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
+                    <h4
+                      className={cn(
+                        "font-semibold text-sm",
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      )}
+                    >
                       {option.title}
                     </h4>
                     <div className="flex items-center gap-1 mt-0.5">
                       <CheckCircle className="w-3 h-3 text-green-500" />
-                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                      <span
+                        className={cn(
+                          "text-xs",
+                          isDarkMode ? "text-gray-400" : "text-gray-600"
+                        )}
+                      >
                         Ready to go
                       </span>
                     </div>
@@ -1126,8 +1144,12 @@ const SchedulerComponent = ({
                 <div
                   className={`px-2 py-0.5 rounded text-xs font-medium ${
                     option.badge === "Free"
-                      ? "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300"
-                      : "bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300"
+                      ? isDarkMode
+                        ? "bg-orange-900/20 text-orange-300"
+                        : "bg-orange-100 text-orange-700"
+                      : isDarkMode
+                        ? "bg-purple-900/20 text-purple-300"
+                        : "bg-purple-100 text-purple-700"
                   }`}
                 >
                   {option.badge}
@@ -1137,30 +1159,67 @@ const SchedulerComponent = ({
               {/* Details Section */}
               <div className="space-y-2">
                 {/* Method Info */}
-                <div className="p-2 rounded bg-gray-50 dark:bg-gray-800">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                <div
+                  className={cn(
+                    "p-2 rounded",
+                    isDarkMode ? "bg-gray-800" : "bg-gray-50"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "text-xs mb-0.5",
+                      isDarkMode ? "text-gray-400" : "text-gray-500"
+                    )}
+                  >
                     Publishing Method
                   </div>
-                  <div className="font-medium text-gray-900 dark:text-white text-xs">
+                  <div
+                    className={cn(
+                      "font-medium text-xs",
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    )}
+                  >
                     {option.description}
                   </div>
                 </div>
 
                 {/* Schedule Info (if auto) */}
                 {activeOption === "automatic" && selectedDate && (
-                  <div className="p-2 rounded bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10 border border-purple-100 dark:border-purple-800">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                  <div
+                    className={cn(
+                      "p-2 rounded border",
+                      isDarkMode
+                        ? "bg-gradient-to-r from-purple-900/10 to-violet-900/10 border-purple-800"
+                        : "bg-gradient-to-r from-purple-50 to-violet-50 border-purple-100"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "text-xs mb-0.5",
+                        isDarkMode ? "text-gray-400" : "text-gray-500"
+                      )}
+                    >
                       Scheduled For
                     </div>
                     <div className="space-y-0.5">
-                      <div className="font-medium text-gray-900 dark:text-white text-xs">
+                      <div
+                        className={cn(
+                          "font-medium text-xs",
+                          isDarkMode ? "text-white" : "text-gray-900"
+                        )}
+                      >
                         {selectedDate.toLocaleDateString("en-US", {
                           weekday: "short",
                           month: "short",
                           day: "numeric",
                         })}
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                      <div
+                        className={cn(
+                          "text-xs",
+                          isDarkMode ? "text-gray-400" : "text-gray-600"
+                        )}
+                      >
                         {selectedDate.toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -1172,11 +1231,16 @@ const SchedulerComponent = ({
 
                 {/* Validation Status */}
                 <div
-                  className={`p-2 rounded border ${
+                  className={cn(
+                    "p-2 rounded border",
                     validation.isValid
-                      ? "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 border-green-200 dark:border-green-800"
-                      : "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border-amber-200 dark:border-amber-800"
-                  }`}
+                      ? isDarkMode
+                        ? "bg-gradient-to-r from-green-900/10 to-emerald-900/10 border-green-800"
+                        : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
+                      : isDarkMode
+                        ? "bg-gradient-to-r from-amber-900/10 to-orange-900/10 border-amber-800"
+                        : "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"
+                  )}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
@@ -1188,11 +1252,16 @@ const SchedulerComponent = ({
                         }`}
                       />
                       <span
-                        className={`text-xs font-medium ${
+                        className={cn(
+                          "text-xs font-medium",
                           validation.isValid
-                            ? "text-green-700 dark:text-green-300"
-                            : "text-amber-700 dark:text-amber-300"
-                        }`}
+                            ? isDarkMode
+                              ? "text-green-300"
+                              : "text-green-700"
+                            : isDarkMode
+                              ? "text-amber-300"
+                              : "text-amber-700"
+                        )}
                       >
                         {validation.isValid
                           ? "All checks passed"
@@ -1208,12 +1277,20 @@ const SchedulerComponent = ({
 
                   {/* Show errors if any */}
                   {!validation.isValid && (
-                    <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800">
+                    <div
+                      className={cn(
+                        "mt-2 pt-2 border-t",
+                        isDarkMode ? "border-amber-800" : "border-amber-200"
+                      )}
+                    >
                       <ul className="space-y-1">
                         {validation.errors.map((error, index) => (
                           <li
                             key={index}
-                            className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300"
+                            className={cn(
+                              "flex items-start gap-1.5 text-xs",
+                              isDarkMode ? "text-amber-300" : "text-amber-700"
+                            )}
                           >
                             <X className="w-3 h-3 mt-0.5 flex-shrink-0" />
                             <span>{error}</span>
@@ -1313,11 +1390,17 @@ const SchedulerComponent = ({
       onClose={() => !isLoading && setisSchedulerOpen(false)}
       title="Schedule Your Gig"
       description="Choose how to publish your gig"
-      className="max-w-8xl" // Smaller max width
+      className="max-w-8xl"
     >
-      <div className="h-[calc(80vh-80px)] flex flex-col overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div
+        className={cn(
+          "h-[calc(80vh-80px)] flex flex-col overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
+          colors.background
+        )}
+      >
         {/* Stepper */}
         <Stepper />
+
         {/* Current Step Content */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -1334,22 +1417,39 @@ const SchedulerComponent = ({
 
                 {/* Overlays */}
                 {showVerificationOverlay && (
-                  <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4">
+                  <div
+                    className={cn(
+                      "rounded-xl border p-4",
+                      isDarkMode
+                        ? "border-amber-700 bg-gradient-to-br from-amber-900/20 to-gray-900"
+                        : "border-amber-200 bg-gradient-to-br from-amber-50 to-white"
+                    )}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
                         <Shield className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-amber-900">
+                        <h4
+                          className={cn(
+                            "text-sm font-semibold",
+                            isDarkMode ? "text-amber-200" : "text-amber-900"
+                          )}
+                        >
                           Verification Required
                         </h4>
-                        <p className="text-xs text-amber-700">
+                        <p
+                          className={cn(
+                            "text-xs",
+                            isDarkMode ? "text-amber-300" : "text-amber-700"
+                          )}
+                        >
                           Verify your account to create gigs
                         </p>
                       </div>
                       <button
                         onClick={() => window.open("/verify", "_blank")}
-                        className="px-3 py-1.5 text-xs bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-medium"
+                        className="px-3 py-1.5 text-xs bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-medium hover:from-amber-700 hover:to-orange-700 transition-all"
                       >
                         Verify
                       </button>
@@ -1358,22 +1458,39 @@ const SchedulerComponent = ({
                 )}
 
                 {showProfileIncompleteOverlay && (
-                  <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-white p-4">
+                  <div
+                    className={cn(
+                      "rounded-xl border p-4",
+                      isDarkMode
+                        ? "border-red-700 bg-gradient-to-br from-red-900/20 to-gray-900"
+                        : "border-red-200 bg-gradient-to-br from-red-50 to-white"
+                    )}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
                         <UserCheck className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-red-900">
+                        <h4
+                          className={cn(
+                            "text-sm font-semibold",
+                            isDarkMode ? "text-red-200" : "text-red-900"
+                          )}
+                        >
                           Profile Incomplete
                         </h4>
-                        <p className="text-xs text-red-700">
+                        <p
+                          className={cn(
+                            "text-xs",
+                            isDarkMode ? "text-red-300" : "text-red-700"
+                          )}
+                        >
                           Complete your profile before creating gigs
                         </p>
                       </div>
                       <button
                         onClick={() => window.open("/profile/edit", "_blank")}
-                        className="px-3 py-1.5 text-xs bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-medium"
+                        className="px-3 py-1.5 text-xs bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-medium hover:from-red-700 hover:to-red-800 transition-all"
                       >
                         Complete
                       </button>
@@ -1400,7 +1517,7 @@ const SchedulerComponent = ({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setCurrentStep("selection")}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:from-blue-700 hover:to-blue-800 transition-all"
                   >
                     Continue to Options
                     <ArrowRight className="w-4 h-4" />
@@ -1413,12 +1530,22 @@ const SchedulerComponent = ({
               <>
                 <SchedulingOptions />
 
-                <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 border-t border-gray-100">
+                <div
+                  className={cn(
+                    "flex flex-col sm:flex-row justify-between gap-3 pt-6 border-t",
+                    isDarkMode ? "border-gray-700" : "border-gray-100"
+                  )}
+                >
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setCurrentStep("eligibility")}
-                    className="px-5 py-3 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                    className={cn(
+                      "px-5 py-3 rounded-lg text-sm font-medium transition-all",
+                      isDarkMode
+                        ? "border-gray-700 text-gray-300 hover:bg-gray-800"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    )}
                   >
                     Back to Status
                   </motion.button>
@@ -1443,8 +1570,9 @@ const SchedulerComponent = ({
                     }}
                     disabled={!activeOption}
                     className={cn(
-                      "px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2",
-                      !activeOption && "opacity-50 cursor-not-allowed"
+                      "px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all",
+                      !activeOption && "opacity-50 cursor-not-allowed",
+                      "hover:from-blue-700 hover:to-blue-800"
                     )}
                   >
                     Review & Confirm

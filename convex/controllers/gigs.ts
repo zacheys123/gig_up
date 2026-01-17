@@ -164,6 +164,7 @@ export const showInterestInGig = mutation({
       interestedUsers: updatedInterestedUsers,
       bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
       updatedAt: now,
+      isPending: true,
       // IMPORTANT: Don't set isTaken here! isTaken is only set when someone is actually booked
       // isTaken will be set in selectMusicianFromInterested when bookedBy is assigned
     });
@@ -292,6 +293,7 @@ export const removeInterestFromGig = mutation({
       interestedUsers: updatedInterestedUsers,
       bookingHistory: [...(gig.bookingHistory || []), cancellationEntry],
       updatedAt: Date.now(),
+      isPending: false,
       // Only reset taken status if the gig was actually taken
       ...(gig.isTaken && { isTaken: false }),
     });
@@ -417,6 +419,7 @@ export const selectMusicianFromInterested = mutation({
       isTaken: true, // FINAL BOSS: gig is now taken
       isPending: false,
       bookedBy: musicianId,
+      isActive: true,
       interestedUsers: [], // Clear interested users since gig is taken
       bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
       updatedAt: Date.now(),
@@ -1262,9 +1265,10 @@ export const createGig = mutation({
       !time ||
       !logo
     ) {
+      console.log(postedBy, title, secret, bussinesscat, date, time, logo);
       throw new Error("Missing required fields");
     }
-
+    console.log(postedBy, title, secret, bussinesscat, date, time, logo);
     const user = await ctx.db.get(postedBy);
     if (!user) {
       throw new Error("User not found");

@@ -40,7 +40,7 @@ export const BookingOptionsSection: React.FC<BookingOptionsSectionProps> = ({
   const [clientRole, setClientRole] = useState<"admin" | "member">("admin");
 
   // Queries
-  const canCreateChat = useQuery(api.controllers.bandChats.canCreateCrewChat, {
+  const canCreateChat = useQuery(api.controllers.bandChat.canCreateCrewChat, {
     gigId,
     clerkId,
   });

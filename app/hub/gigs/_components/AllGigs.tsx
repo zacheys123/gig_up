@@ -3,7 +3,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
 // Components
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 // Icons
 import {
   Music,
@@ -35,16 +33,13 @@ import {
   MapPin,
   DollarSign,
 } from "lucide-react";
-
 // Hooks
 import { useThemeColors } from "@/hooks/useTheme";
 import { useGigs } from "@/hooks/useAllGigs";
-
 // Convex
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-
 // Types & Components
 import { GigProps } from "@/types/gig";
 import GigDescription from "./gigs/GigDescription";
@@ -439,107 +434,109 @@ export const AllGigs = ({ user }: { user: any }) => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6 md:p-8 border border-blue-100 dark:border-gray-700"
+        className={`
+    relative overflow-hidden rounded-2xl p-6 md:p-8 border
+    ${
+      isDarkMode
+        ? "bg-gradient-to-br from-gray-900 via-gray-800 to-black border-gray-700"
+        : "bg-gradient-to-br from-orange-50 via-white to-gray-100 border-gray-200"
+    }
+  `}
       >
         <div className="relative z-10">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
             <div className="space-y-2">
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
                 Discover Amazing Gigs
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
+              <p
+                className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} max-w-2xl`}
+              >
                 Find the perfect gig opportunity or talent for your next event.
                 {filteredGigs.length > 0 &&
                   ` ${filteredGigs.length} amazing opportunities available now!`}
               </p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => router.push("/post-gig")}
-                size="sm"
-                className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <Zap className="w-4 h-4" />
-                <span className="hidden sm:inline">Post a Gig</span>
-                <span className="sm:hidden">Post</span>
-              </Button>
-            </div>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Available
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {stats.available}
-                    </p>
+            {[
+              {
+                label: "Available",
+                value: stats.available,
+                icon: Sparkles,
+                color: "green",
+              },
+              {
+                label: "Booked",
+                value: stats.booked,
+                icon: Calendar,
+                color: "blue",
+              },
+              {
+                label: "Avg. Price",
+                value: `$${stats.avgPrice}`,
+                icon: DollarSign,
+                color: "purple",
+              },
+              {
+                label: "Locations",
+                value: locations.length,
+                icon: MapPin,
+                color: "amber",
+              },
+            ].map((item) => (
+              <Card
+                key={item.label}
+                className={`
+            backdrop-blur-sm
+            ${
+              isDarkMode
+                ? "bg-gray-800/80 border-gray-700"
+                : "bg-white/80 border-gray-200"
+            }
+          `}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p
+                        className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        {item.label}
+                      </p>
+                      <p
+                        className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}
+                      >
+                        {item.value}
+                      </p>
+                    </div>
+                    <div
+                      className={`
+                p-2 rounded-lg
+                ${
+                  isDarkMode
+                    ? `bg-${item.color}-900/20`
+                    : `bg-${item.color}-100`
+                }
+              `}
+                    >
+                      <item.icon
+                        className={`
+                  w-5 h-5
+                  ${
+                    isDarkMode
+                      ? `text-${item.color}-400`
+                      : `text-${item.color}-600`
+                  }
+                `}
+                      />
+                    </div>
                   </div>
-                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                    <Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Booked
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {stats.booked}
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                    <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Avg. Price
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      ${stats.avgPrice}
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                    <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-blue-100 dark:border-gray-700">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Locations
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {locations.length}
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                    <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Search Bar with Advanced Options */}
@@ -550,12 +547,22 @@ export const AllGigs = ({ user }: { user: any }) => {
                 placeholder="Search gigs by title, description, location, or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 pr-12 h-12 rounded-xl border-blue-200 dark:border-gray-600 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-lg"
+                className={`
+            pl-12 pr-12 h-12 rounded-xl text-lg backdrop-blur-sm
+            ${
+              isDarkMode
+                ? "border-gray-600 bg-gray-800/90 text-white"
+                : "border-gray-300 bg-white/90 text-gray-900"
+            }
+          `}
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className={`
+              absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full
+              ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}
+            `}
                 >
                   <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
@@ -568,19 +575,35 @@ export const AllGigs = ({ user }: { user: any }) => {
                 onClick={() => setShowFiltersPanel(true)}
                 variant="outline"
                 size="sm"
-                className="gap-2 border-blue-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800"
+                className={`
+            gap-2
+            ${
+              isDarkMode
+                ? "border-gray-700 hover:bg-gray-800 text-gray-300"
+                : "border-gray-300 hover:bg-gray-50 text-gray-700"
+            }
+          `}
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>Filters</span>
                 {activeFiltersCount > 0 && (
-                  <Badge className="ml-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                  <Badge className="ml-1 px-2 py-0.5 bg-gradient-to-r from-orange-500 to-red-500 text-white">
                     {activeFiltersCount}
                   </Badge>
                 )}
               </Button>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] border-blue-200 dark:border-gray-700">
+                <SelectTrigger
+                  className={`
+            w-[180px]
+            ${
+              isDarkMode
+                ? "border-gray-700 bg-gray-800 text-white"
+                : "border-gray-300 bg-white text-gray-900"
+            }
+          `}
+                >
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
@@ -597,7 +620,14 @@ export const AllGigs = ({ user }: { user: any }) => {
                 disabled={isRefreshing}
                 variant="ghost"
                 size="sm"
-                className="gap-2"
+                className={`
+            gap-2
+            ${
+              isDarkMode
+                ? "text-gray-300 hover:bg-gray-800"
+                : "text-gray-700 hover:bg-gray-100"
+            }
+          `}
               >
                 <RefreshCw
                   className={cn("w-4 h-4", isRefreshing && "animate-spin")}
@@ -610,7 +640,14 @@ export const AllGigs = ({ user }: { user: any }) => {
                   onClick={handleClearAll}
                   variant="ghost"
                   size="sm"
-                  className="gap-2 text-red-500 hover:text-red-600"
+                  className={`
+              gap-2
+              ${
+                isDarkMode
+                  ? "text-red-400 hover:text-red-300 hover:bg-gray-800"
+                  : "text-red-500 hover:text-red-600 hover:bg-gray-100"
+              }
+            `}
                 >
                   <X className="w-4 h-4" />
                   Clear All
@@ -620,7 +657,6 @@ export const AllGigs = ({ user }: { user: any }) => {
           </div>
         </div>
       </motion.div>
-
       {/* Active Filters Display */}
       {(searchQuery || activeFiltersCount > 0) && (
         <motion.div
@@ -706,24 +742,47 @@ export const AllGigs = ({ user }: { user: any }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              View:
+            <span
+              className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+            >
+              &nbsp;&nbsp; View:
             </span>
             <Tabs
               value={viewMode}
               onValueChange={(v) => setViewMode(v as any)}
               className="w-auto"
             >
-              <TabsList className="p-1 bg-gray-100 dark:bg-gray-800">
+              <TabsList
+                className={`
+          p-1 
+          ${isDarkMode ? "bg-gray-800" : "bg-gray-100"}
+        `}
+              >
                 <TabsTrigger
                   value="grid"
-                  className="px-4 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded-lg"
+                  className={`
+              px-4 py-2 rounded-lg
+              ${
+                isDarkMode
+                  ? "data-[state=active]:bg-gray-900"
+                  : "data-[state=active]:bg-white"
+              }
+              data-[state=active]:shadow-sm
+            `}
                 >
                   <Grid3x3 className="w-4 h-4" />
                 </TabsTrigger>
                 <TabsTrigger
                   value="list"
-                  className="px-4 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm rounded-lg"
+                  className={`
+              px-4 py-2 rounded-lg
+              ${
+                isDarkMode
+                  ? "data-[state=active]:bg-gray-900"
+                  : "data-[state=active]:bg-white"
+              }
+              data-[state=active]:shadow-sm
+            `}
                 >
                   <List className="w-4 h-4" />
                 </TabsTrigger>
@@ -731,12 +790,18 @@ export const AllGigs = ({ user }: { user: any }) => {
             </Tabs>
           </div>
 
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-semibold text-gray-900 dark:text-white">
+          <div
+            className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+          >
+            <span
+              className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}
+            >
               {filteredGigs.length}
             </span>{" "}
             of{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
+            <span
+              className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}
+            >
               {allGigs.length}
             </span>{" "}
             gigs
@@ -744,37 +809,105 @@ export const AllGigs = ({ user }: { user: any }) => {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">
+          <span
+            className={`text-sm hidden sm:inline ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+          >
             Sort by:
           </span>
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[160px] border-gray-200 dark:border-gray-700">
+            <SelectTrigger
+              className={`
+        w-[160px]
+        ${
+          isDarkMode
+            ? "border-gray-700 bg-gray-800 text-white"
+            : "border-gray-200 bg-white text-gray-900"
+        }
+      `}
+            >
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 <SelectValue placeholder="Sort by" />
               </div>
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">
+            <SelectContent
+              className={`
+        ${
+          isDarkMode
+            ? "bg-gray-800 border-gray-700 text-white"
+            : "bg-white border-gray-200"
+        }
+      `}
+            >
+              <SelectItem
+                value="newest"
+                className={`
+          ${
+            isDarkMode
+              ? "hover:bg-gray-700 focus:bg-gray-700"
+              : "hover:bg-gray-100 focus:bg-gray-100"
+          }
+        `}
+              >
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-3 h-3" />
                   Newest First
                 </div>
               </SelectItem>
-              <SelectItem value="oldest">Oldest First</SelectItem>
-              <SelectItem value="price-high">
+              <SelectItem
+                value="oldest"
+                className={`
+          ${
+            isDarkMode
+              ? "hover:bg-gray-700 focus:bg-gray-700"
+              : "hover:bg-gray-100 focus:bg-gray-100"
+          }
+        `}
+              >
+                Oldest First
+              </SelectItem>
+              <SelectItem
+                value="price-high"
+                className={`
+          ${
+            isDarkMode
+              ? "hover:bg-gray-700 focus:bg-gray-700"
+              : "hover:bg-gray-100 focus:bg-gray-100"
+          }
+        `}
+              >
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-3 h-3" />
                   Price: High to Low
                 </div>
               </SelectItem>
-              <SelectItem value="price-low">
+              <SelectItem
+                value="price-low"
+                className={`
+          ${
+            isDarkMode
+              ? "hover:bg-gray-700 focus:bg-gray-700"
+              : "hover:bg-gray-100 focus:bg-gray-100"
+          }
+        `}
+              >
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-3 h-3" />
                   Price: Low to High
                 </div>
               </SelectItem>
-              <SelectItem value="popular">Most Popular</SelectItem>
+              <SelectItem
+                value="popular"
+                className={`
+          ${
+            isDarkMode
+              ? "hover:bg-gray-700 focus:bg-gray-700"
+              : "hover:bg-gray-100 focus:bg-gray-100"
+          }
+        `}
+              >
+                Most Popular
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

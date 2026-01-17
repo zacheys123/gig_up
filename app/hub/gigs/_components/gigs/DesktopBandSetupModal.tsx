@@ -37,8 +37,7 @@ import {
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BandRoleInput ,BandSetupRole} from "@/types/gig";
-
+import { BandRoleInput, BandSetupRole } from "@/types/gig";
 import { useThemeColors } from "@/hooks/useTheme";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -124,7 +123,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
   onSubmit,
   initialRoles = [],
 }) => {
-  const { colors } = useThemeColors();
+  const { colors, isDarkMode } = useThemeColors();
   const [selectedRoles, setSelectedRoles] = useState<BandSetupRole[]>(
     initialRoles.map((role) => ({
       ...role,
@@ -271,28 +270,48 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     }
   }, [selectedRoles, prepareForSubmission, onSubmit, onClose]);
 
+  const getModalStyles = useCallback(() => {
+    return {
+      background: isDarkMode ? colors.background : "bg-white",
+      border: isDarkMode ? colors.border : "border-gray-200",
+      text: isDarkMode ? colors.text : "text-gray-900",
+      textMuted: isDarkMode ? colors.textMuted : "text-gray-600",
+      hoverBg: isDarkMode ? colors.hoverBg : "hover:bg-gray-50",
+      backgroundMuted: isDarkMode ? colors.backgroundMuted : "bg-gray-50",
+      borderSecondary: isDarkMode ? colors.borderSecondary : "border-gray-300",
+    };
+  }, [isDarkMode, colors]);
+
+  const styles = getModalStyles();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent
+        className={cn(
+          "max-w-7xl max-h-[90vh] overflow-hidden p-0",
+          styles.background,
+          styles.border
+        )}
+      >
         <div className="flex h-[90vh] w-full">
           {/* Left Panel - Role Selection */}
           <div className="w-2/5 border-r flex flex-col">
-            <DialogHeader className="p-6 border-b">
+            <DialogHeader className={cn("p-6 border-b", styles.border)}>
               <div className="flex items-center justify-between">
                 <div>
                   <DialogTitle
-                    className={cn("text-2xl font-bold", colors.text)}
+                    className={cn("text-2xl font-bold", styles.text)}
                   >
                     Band Setup Studio
                   </DialogTitle>
-                  <DialogDescription className={cn("mt-1", colors.textMuted)}>
+                  <DialogDescription className={cn("mt-1", styles.textMuted)}>
                     Build your dream band. Select roles and customize
                     requirements.
                   </DialogDescription>
                 </div>
                 <Badge
                   variant="outline"
-                  className={cn("gap-1", colors.borderSecondary)}
+                  className={cn("gap-1", styles.borderSecondary)}
                 >
                   <Sparkles className="w-3 h-3" />
                   Pro Setup
@@ -302,14 +321,20 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
               {/* Progress Bar */}
               <div className="mt-6">
                 <div className="flex justify-between items-center mb-2">
-                  <span className={cn("text-sm font-medium", colors.text)}>
+                  <span className={cn("text-sm font-medium", styles.text)}>
                     Setup Progress
                   </span>
-                  <span className={cn("text-sm font-bold", colors.primary)}>
+                  <span className="text-sm font-bold text-orange-500">
                     {progressPercentage}%
                   </span>
                 </div>
-                <Progress value={progressPercentage} className="h-2" />
+                <Progress
+                  value={progressPercentage}
+                  className={cn(
+                    "h-2",
+                    isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                  )}
+                />
               </div>
 
               {/* Search and Filter */}
@@ -320,7 +345,12 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                     placeholder="Search roles..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 rounded-full"
+                    className={cn(
+                      "pl-10 rounded-full",
+                      isDarkMode
+                        ? "bg-gray-800 border-gray-700 text-white"
+                        : "bg-white border-gray-200"
+                    )}
                   />
                 </div>
 
@@ -336,7 +366,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                             "flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all shrink-0",
                             selectedCategory === category.value
                               ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                              : cn(colors.hoverBg, colors.border)
+                              : cn(styles.hoverBg, styles.borderSecondary)
                           )}
                         >
                           <Icon className="w-4 h-4" />
@@ -366,10 +396,10 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                         whileTap={{ scale: 0.98 }}
                         className={cn(
                           "relative p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all group",
-                          colors.border,
+                          styles.border,
                           isSelected
                             ? "bg-gradient-to-br from-orange-500/10 to-red-500/10 ring-2 ring-orange-500/50"
-                            : cn("hover:shadow-lg", colors.hoverBg)
+                            : cn("hover:shadow-lg", styles.hoverBg)
                         )}
                       >
                         {isSelected && (
@@ -382,7 +412,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                             "p-3 rounded-xl transition-transform group-hover:scale-110",
                             isSelected
                               ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                              : cn(colors.backgroundMuted, colors.primary)
+                              : cn(styles.backgroundMuted, "text-orange-500")
                           )}
                         >
                           <Icon className="w-6 h-6" />
@@ -390,7 +420,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                         <span
                           className={cn(
                             "text-sm font-medium text-center",
-                            colors.text
+                            styles.text
                           )}
                         >
                           {role.value}
@@ -399,8 +429,8 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                           variant="outline"
                           className={cn(
                             "text-xs mt-1",
-                            colors.borderSecondary,
-                            colors.textSecondary
+                            styles.borderSecondary,
+                            isDarkMode ? "text-gray-400" : "text-gray-600"
                           )}
                         >
                           {role.category}
@@ -412,13 +442,13 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
 
                 {/* Custom Role Section */}
                 <div className="mt-8">
-                  <div className={cn("p-4 rounded-2xl border", colors.border)}>
+                  <div className={cn("p-4 rounded-2xl border", styles.border)}>
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h3 className={cn("font-semibold", colors.text)}>
+                        <h3 className={cn("font-semibold", styles.text)}>
                           Custom Role
                         </h3>
-                        <p className={cn("text-sm", colors.textMuted)}>
+                        <p className={cn("text-sm", styles.textMuted)}>
                           Need a unique role? Add it here.
                         </p>
                       </div>
@@ -426,7 +456,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowCustomForm(!showCustomForm)}
-                        className="rounded-full gap-2"
+                        className={cn("rounded-full gap-2", styles.border)}
                       >
                         {showCustomForm ? (
                           <>
@@ -455,12 +485,17 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                               value={customRole}
                               onChange={(e) => setCustomRole(e.target.value)}
                               placeholder="e.g., 'Harpist', 'Beatboxer', 'Turntablist'"
-                              className="w-full"
+                              className={cn(
+                                "w-full",
+                                isDarkMode
+                                  ? "bg-gray-800 border-gray-700 text-white"
+                                  : "bg-white border-gray-200"
+                              )}
                             />
                             <Button
                               onClick={addCustomRole}
                               disabled={!customRole.trim()}
-                              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                              className="w-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
                             >
                               <Plus className="w-4 h-4 mr-2" />
                               Add Custom Role
@@ -477,22 +512,31 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
 
           {/* Right Panel - Role Configuration */}
           <div className="w-3/5 flex flex-col">
-            <DialogHeader className="p-6 border-b">
+            <DialogHeader className={cn("p-6 border-b", styles.border)}>
               <div className="flex items-center justify-between">
                 <div>
-                  <DialogTitle className={cn("text-xl font-bold", colors.text)}>
+                  <DialogTitle className={cn("text-xl font-bold", styles.text)}>
                     Role Configuration
                   </DialogTitle>
-                  <DialogDescription className={cn("mt-1", colors.textMuted)}>
+                  <DialogDescription className={cn("mt-1", styles.textMuted)}>
                     Customize each role's requirements, skills, and pricing
                   </DialogDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="gap-1">
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "gap-1",
+                      isDarkMode ? "bg-gray-800" : "bg-gray-100"
+                    )}
+                  >
                     <Users className="w-3 h-3" />
                     {selectedRoles.length} Roles
                   </Badge>
-                  <Badge variant="outline" className="gap-1">
+                  <Badge
+                    variant="outline"
+                    className={cn("gap-1", styles.borderSecondary)}
+                  >
                     <UserPlus className="w-3 h-3" />
                     {totalPositions} Positions
                   </Badge>
@@ -516,7 +560,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                             budget:
                               "bg-gradient-to-r from-green-500 to-emerald-500",
                           }[tab] + " text-white"
-                        : cn(colors.hoverBg, colors.text)
+                        : cn(styles.hoverBg, styles.text)
                     )}
                   >
                     {tab === "roles" && (
@@ -553,12 +597,12 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                           <h3
                             className={cn(
                               "text-lg font-semibold mb-2",
-                              colors.text
+                              styles.text
                             )}
                           >
                             No Roles Selected
                           </h3>
-                          <p className={cn("text-sm", colors.textMuted)}>
+                          <p className={cn("text-sm", styles.textMuted)}>
                             Select roles from the left panel to start
                             configuring your band.
                           </p>
@@ -575,7 +619,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                               key={role.role}
                               className={cn(
                                 "rounded-2xl border p-5",
-                                colors.border
+                                styles.border
                               )}
                             >
                               <div className="flex justify-between items-start mb-4">
@@ -587,7 +631,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                     <h4
                                       className={cn(
                                         "font-bold text-lg",
-                                        colors.text
+                                        styles.text
                                       )}
                                     >
                                       {role.role}
@@ -595,7 +639,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                     <p
                                       className={cn(
                                         "text-sm",
-                                        colors.textMuted
+                                        styles.textMuted
                                       )}
                                     >
                                       Configure requirements and pricing
@@ -619,7 +663,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                     <Label
                                       className={cn(
                                         "text-sm font-medium mb-2 block",
-                                        colors.text
+                                        styles.text
                                       )}
                                     >
                                       Positions Needed
@@ -636,7 +680,10 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                             ),
                                           })
                                         }
-                                        className="p-2 rounded-full"
+                                        className={cn(
+                                          "p-2 rounded-full",
+                                          styles.border
+                                        )}
                                       >
                                         <Minus className="w-4 h-4" />
                                       </Button>
@@ -653,7 +700,10 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                             maxSlots: role.maxSlots + 1,
                                           })
                                         }
-                                        className="p-2 rounded-full"
+                                        className={cn(
+                                          "p-2 rounded-full",
+                                          styles.border
+                                        )}
                                       >
                                         <Plus className="w-4 h-4" />
                                       </Button>
@@ -664,7 +714,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                     <Label
                                       className={cn(
                                         "text-sm font-medium mb-2 block",
-                                        colors.text
+                                        styles.text
                                       )}
                                     >
                                       Role Description
@@ -678,7 +728,12 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                         })
                                       }
                                       rows={3}
-                                      className="resize-none"
+                                      className={cn(
+                                        "resize-none",
+                                        isDarkMode
+                                          ? "bg-gray-800 border-gray-700 text-white"
+                                          : "bg-white border-gray-200"
+                                      )}
                                     />
                                   </div>
                                 </div>
@@ -689,7 +744,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                     <Label
                                       className={cn(
                                         "text-sm font-medium mb-2 block",
-                                        colors.text
+                                        styles.text
                                       )}
                                     >
                                       Pricing & Budget
@@ -704,10 +759,21 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                             })
                                           }
                                         >
-                                          <SelectTrigger className="col-span-1">
+                                          <SelectTrigger
+                                            className={cn(
+                                              "col-span-1",
+                                              styles.border
+                                            )}
+                                          >
                                             <SelectValue />
                                           </SelectTrigger>
-                                          <SelectContent>
+                                          <SelectContent
+                                            className={cn(
+                                              isDarkMode
+                                                ? "bg-gray-800"
+                                                : "bg-white"
+                                            )}
+                                          >
                                             <SelectItem value="KES">
                                               KES
                                             </SelectItem>
@@ -732,7 +798,12 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                             })
                                           }
                                           min="0"
-                                          className="col-span-2"
+                                          className={cn(
+                                            "col-span-2",
+                                            isDarkMode
+                                              ? "bg-gray-800 border-gray-700 text-white"
+                                              : "bg-white border-gray-200"
+                                          )}
                                         />
                                       </div>
 
@@ -741,8 +812,12 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                           "relative overflow-hidden p-5 rounded-2xl cursor-pointer transition-all duration-300",
                                           "border hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
                                           role.negotiable
-                                            ? "bg-gradient-to-br from-green-50 via-white to-emerald-50/70 border-green-300/50 dark:from-green-900/20 dark:via-gray-900 dark:to-emerald-900/20 dark:border-green-700/30 hover:shadow-green-200/50 dark:hover:shadow-green-900/20"
-                                            : "bg-gradient-to-br from-gray-50 via-white to-gray-100/50 border-gray-300/50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/50 dark:border-gray-700/50 hover:shadow-gray-200/30 dark:hover:shadow-gray-800/20"
+                                            ? isDarkMode
+                                              ? "bg-gradient-to-br from-green-900/20 via-gray-900 to-emerald-900/20 border-green-700/30"
+                                              : "bg-gradient-to-br from-green-50 via-white to-emerald-50/70 border-green-300/50"
+                                            : isDarkMode
+                                              ? "bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800/50 border-gray-700/50"
+                                              : "bg-gradient-to-br from-gray-50 via-white to-gray-100/50 border-gray-300/50"
                                         )}
                                         onClick={() =>
                                           updateRole(role.role, {
@@ -750,18 +825,70 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                           })
                                         }
                                       >
-                                        {/* ... Negotiable toggle UI remains the same ... */}
+                                        {/* Negotiable toggle content remains the same */}
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                              <div className="w-10 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-1 transition-transform duration-300">
+                                                <div
+                                                  className={cn(
+                                                    "w-4 h-4 bg-white rounded-full transform transition-transform duration-300",
+                                                    role.negotiable
+                                                      ? "translate-x-4"
+                                                      : "translate-x-0"
+                                                  )}
+                                                />
+                                              </div>
+                                            </div>
+                                            <div>
+                                              <div
+                                                className={cn(
+                                                  "font-medium",
+                                                  styles.text
+                                                )}
+                                              >
+                                                Price Negotiable
+                                              </div>
+                                              <div
+                                                className={cn(
+                                                  "text-sm",
+                                                  styles.textMuted
+                                                )}
+                                              >
+                                                Allow applicants to negotiate
+                                                the price
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div
+                                            className={cn(
+                                              "text-sm font-medium",
+                                              role.negotiable
+                                                ? "text-green-600"
+                                                : "text-gray-500"
+                                            )}
+                                          >
+                                            {role.negotiable ? "ON" : "OFF"}
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
 
                                   {isValidPrice && rolePrice > 0 && (
-                                    <div className="p-3 rounded-lg bg-gradient-to-r from-orange-50 to-red-50">
+                                    <div
+                                      className={cn(
+                                        "p-3 rounded-lg",
+                                        isDarkMode
+                                          ? "bg-gradient-to-r from-orange-900/20 to-red-900/20"
+                                          : "bg-gradient-to-r from-orange-50 to-red-50"
+                                      )}
+                                    >
                                       <div className="flex justify-between items-center">
                                         <span
                                           className={cn(
                                             "text-sm font-medium",
-                                            colors.text
+                                            styles.text
                                           )}
                                         >
                                           Total for this role:
@@ -776,7 +903,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                           <div
                                             className={cn(
                                               "text-xs",
-                                              colors.textMuted
+                                              styles.textMuted
                                             )}
                                           >
                                             {role.currency || "KES"}{" "}
@@ -814,12 +941,12 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                           <h3
                             className={cn(
                               "text-lg font-semibold mb-2",
-                              colors.text
+                              styles.text
                             )}
                           >
                             Select Roles First
                           </h3>
-                          <p className={cn("text-sm", colors.textMuted)}>
+                          <p className={cn("text-sm", styles.textMuted)}>
                             Choose roles to configure their required skills.
                           </p>
                         </div>
@@ -829,7 +956,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                             key={role.role}
                             className={cn(
                               "rounded-2xl border p-5",
-                              colors.border
+                              styles.border
                             )}
                           >
                             <div className="flex items-center gap-3 mb-4">
@@ -837,10 +964,10 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                 <Target className="w-5 h-5 text-blue-500" />
                               </div>
                               <div>
-                                <h4 className={cn("font-bold", colors.text)}>
+                                <h4 className={cn("font-bold", styles.text)}>
                                   {role.role}
                                 </h4>
-                                <p className={cn("text-sm", colors.textMuted)}>
+                                <p className={cn("text-sm", styles.textMuted)}>
                                   Select required skills and genres
                                 </p>
                               </div>
@@ -851,7 +978,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                 <Label
                                   className={cn(
                                     "text-sm font-medium mb-3 block",
-                                    colors.text
+                                    styles.text
                                   )}
                                 >
                                   Required Skills & Genres
@@ -887,13 +1014,19 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                 <Label
                                   className={cn(
                                     "text-sm font-medium mb-2 block",
-                                    colors.text
+                                    styles.text
                                   )}
                                 >
                                   Add Custom Skill
                                 </Label>
                                 <Input
                                   placeholder="Type a custom skill and press Enter"
+                                  className={cn(
+                                    "w-full",
+                                    isDarkMode
+                                      ? "bg-gray-800 border-gray-700 text-white"
+                                      : "bg-white border-gray-200"
+                                  )}
                                   onKeyDown={(e) => {
                                     if (
                                       e.key === "Enter" &&
@@ -914,7 +1047,6 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                       e.currentTarget.value = "";
                                     }
                                   }}
-                                  className="w-full"
                                 />
                               </div>
                             </div>
@@ -934,7 +1066,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                     >
                       {/* Budget Summary */}
                       <div
-                        className={cn("rounded-xl border p-6", colors.border)}
+                        className={cn("rounded-xl border p-6", styles.border)}
                       >
                         <div className="flex items-center gap-3 mb-6">
                           <div className="p-3 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white">
@@ -942,28 +1074,33 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                           </div>
                           <div>
                             <h3
-                              className={cn("text-xl font-bold", colors.text)}
+                              className={cn("text-xl font-bold", styles.text)}
                             >
                               Band Budget Summary
                             </h3>
-                            <p className={cn("text-sm", colors.textMuted)}>
+                            <p className={cn("text-sm", styles.textMuted)}>
                               Total estimated cost for your band setup
                             </p>
                           </div>
                         </div>
 
                         <div className="space-y-4">
-                          <div className="flex justify-between items-center py-4 border-b">
+                          <div
+                            className={cn(
+                              "flex justify-between items-center py-4 border-b",
+                              styles.borderSecondary
+                            )}
+                          >
                             <div>
                               <div
                                 className={cn(
                                   "text-lg font-semibold",
-                                  colors.text
+                                  styles.text
                                 )}
                               >
                                 Total Positions
                               </div>
-                              <div className={cn("text-sm", colors.textMuted)}>
+                              <div className={cn("text-sm", styles.textMuted)}>
                                 Across all roles
                               </div>
                             </div>
@@ -971,23 +1108,28 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                               <div className="text-2xl font-bold text-orange-600">
                                 {totalPositions}
                               </div>
-                              <div className={cn("text-sm", colors.textMuted)}>
+                              <div className={cn("text-sm", styles.textMuted)}>
                                 positions needed
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex justify-between items-center py-4 border-b">
+                          <div
+                            className={cn(
+                              "flex justify-between items-center py-4 border-b",
+                              styles.borderSecondary
+                            )}
+                          >
                             <div>
                               <div
                                 className={cn(
                                   "text-lg font-semibold",
-                                  colors.text
+                                  styles.text
                                 )}
                               >
                                 Estimated Budget
                               </div>
-                              <div className={cn("text-sm", colors.textMuted)}>
+                              <div className={cn("text-sm", styles.textMuted)}>
                                 Based on current pricing
                               </div>
                             </div>
@@ -997,7 +1139,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                   "KES"}{" "}
                                 {totalBudget.toLocaleString()}
                               </div>
-                              <div className={cn("text-sm", colors.textMuted)}>
+                              <div className={cn("text-sm", styles.textMuted)}>
                                 {
                                   selectedRoles.filter(
                                     (r) => r.price && parseFloat(r.price) > 0
@@ -1009,13 +1151,18 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                           </div>
 
                           <div className="grid grid-cols-2 gap-4 pt-4">
-                            <div className="p-3 rounded-lg bg-white/50">
+                            <div
+                              className={cn(
+                                "p-3 rounded-lg",
+                                isDarkMode ? "bg-gray-800" : "bg-white/50"
+                              )}
+                            >
                               <div className="flex items-center gap-2 mb-1">
                                 <Zap className="w-4 h-4 text-blue-500" />
                                 <span
                                   className={cn(
                                     "text-sm font-medium",
-                                    colors.text
+                                    styles.text
                                   )}
                                 >
                                   Priced Roles
@@ -1029,13 +1176,18 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                 }
                               </div>
                             </div>
-                            <div className="p-3 rounded-lg bg-white/50">
+                            <div
+                              className={cn(
+                                "p-3 rounded-lg",
+                                isDarkMode ? "bg-gray-800" : "bg-white/50"
+                              )}
+                            >
                               <div className="flex items-center gap-2 mb-1">
                                 <TrendingUp className="w-4 h-4 text-green-500" />
                                 <span
                                   className={cn(
                                     "text-sm font-medium",
-                                    colors.text
+                                    styles.text
                                   )}
                                 >
                                   Negotiable
@@ -1057,12 +1209,12 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                         (r) => r.price && parseFloat(r.price) > 0
                       ).length > 0 && (
                         <div
-                          className={cn("rounded-xl border p-6", colors.border)}
+                          className={cn("rounded-xl border p-6", styles.border)}
                         >
                           <h4
                             className={cn(
                               "text-lg font-semibold mb-4",
-                              colors.text
+                              styles.text
                             )}
                           >
                             Detailed Budget Breakdown
@@ -1078,7 +1230,10 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                 return (
                                   <div
                                     key={role.role}
-                                    className="flex items-center justify-between p-3 rounded-lg bg-white"
+                                    className={cn(
+                                      "flex items-center justify-between p-3 rounded-lg",
+                                      isDarkMode ? "bg-gray-800" : "bg-white"
+                                    )}
                                   >
                                     <div className="flex items-center gap-3">
                                       <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
@@ -1088,7 +1243,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                         <div
                                           className={cn(
                                             "font-medium",
-                                            colors.text
+                                            styles.text
                                           )}
                                         >
                                           {role.role}
@@ -1121,7 +1276,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                                       <div
                                         className={cn(
                                           "text-xs",
-                                          colors.textMuted
+                                          styles.textMuted
                                         )}
                                       >
                                         {role.currency || "KES"}{" "}
@@ -1141,20 +1296,20 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
             </ScrollArea>
 
             {/* Footer */}
-            <DialogFooter className="p-6 border-t">
+            <DialogFooter className={cn("p-6 border-t", styles.border)}>
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-4">
                   <Button
                     variant="outline"
                     onClick={onClose}
-                    className="gap-2 rounded-full"
+                    className={cn("gap-2 rounded-full", styles.border)}
                   >
                     <X className="w-4 h-4" />
                     Cancel
                   </Button>
                   <div className="flex items-center gap-2">
                     <Star className="w-4 h-4 text-yellow-500" />
-                    <span className={cn("text-sm", colors.textMuted)}>
+                    <span className={cn("text-sm", styles.textMuted)}>
                       {selectedRoles.length} roles • {totalPositions} positions
                     </span>
                   </div>
