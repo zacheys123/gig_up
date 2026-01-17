@@ -146,14 +146,15 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
       y: 0,
       transition: {
         duration: 0.3,
-        ease: "easeOut", // Use string literal
+        // Remove easing or use a simple string
+        ease: "easeOut",
       },
     },
     hover: {
       y: -6,
       transition: {
         duration: 0.2,
-        ease: "easeInOut", // Use string literal
+        ease: "easeInOut",
       },
     },
   };
