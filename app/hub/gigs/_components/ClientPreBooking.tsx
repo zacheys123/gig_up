@@ -465,7 +465,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         gigId,
         applicantId,
         clerkId, // Add the clerkId here
-        bandRoleIndex, // This might be optional, check your mutation signature
       });
       toast.success("Removed from shortlist");
       processGigsWithApplicants();
