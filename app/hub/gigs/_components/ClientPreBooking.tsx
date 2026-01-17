@@ -80,9 +80,8 @@ interface ClientPreBookingProps {
 export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
-  const {
-    user: { clerkId: userId },
-  } = useCurrentUser();
+
+  const userId = user?.clerkId || {};
   // Queries
   const userGigs = useQuery(
     api.controllers.gigs.getGigsByUser,
@@ -969,7 +968,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   <div className="mt-8 border-t pt-8">
                     <BookingOptionsSection
                       gigId={selectedGigData.gig._id}
-                      clerkId={userId!}
+                      clerkId={clerkId!} // Use clerkId
                       gig={selectedGigData.gig}
                       musiciansCount={selectedGigData.gig.bandCategory.reduce(
                         (total, role) =>

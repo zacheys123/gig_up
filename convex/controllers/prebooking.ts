@@ -1354,6 +1354,7 @@ export const getUserCrewChats = query({
 });
 
 // Check if crew chat can be created for a gig
+
 export const canCreateCrewChat = query({
   args: { gigId: v.id("gigs"), clerkId: v.string() },
   handler: async (ctx, args) => {
@@ -1361,71 +1362,139 @@ export const canCreateCrewChat = query({
     const gig = await ctx.db.get(args.gigId);
 
     if (!gig || !user) {
-      return { canCreate: false, reason: "Gig or user not found" };
-    }
-
-    // Check if user is gig creator
-    if (gig.postedBy !== user._id) {
       return {
         canCreate: false,
-        reason: "Only gig creator can create crew chat",
+        reason: "Gig or user not found",
+        score: 0,
+        maxScore: 7,
+        requirements: [],
       };
     }
 
-    // Check if it's a band gig
-    if (!gig.isClientBand) {
-      return { canCreate: false, reason: "Not a band gig" };
-    }
+    // Initialize score tracking with all booleans explicitly set
+    let score = 0;
+    const maxScore = 7;
+    const requirements: Array<{
+      requirement: string;
+      met: boolean;
+      points: number;
+      description: string;
+    }> = [];
 
-    // Check if chat already exists
+    // 1. Check if user is gig creator (1 point)
+    const isCreator = gig.postedBy === user._id;
+    score += isCreator ? 1 : 0;
+    requirements.push({
+      requirement: "Gig Creator",
+      met: isCreator,
+      points: 1,
+      description: "You must be the creator of this gig",
+    });
+
+    // 2. Check if it's a band gig (1 point)
+    const isBandGig = Boolean(gig.isClientBand); // Explicitly convert to boolean
+    score += isBandGig ? 1 : 0;
+    requirements.push({
+      requirement: "Band Gig",
+      met: isBandGig,
+      points: 1,
+      description: "Must be a band gig with roles",
+    });
+
+    // 3. Check if chat already exists (1 point)
+    let noExistingChat = true;
     if (gig.bandChatId) {
       const existingChat = await ctx.db.get(gig.bandChatId);
-      if (existingChat) {
-        return {
-          canCreate: false,
-          reason: "Crew chat already exists",
-          chatId: gig.bandChatId,
-          alreadyExists: true,
-        };
+      noExistingChat = !existingChat; // Will be false if chat exists
+    }
+    score += noExistingChat ? 1 : 0;
+    requirements.push({
+      requirement: "No Existing Chat",
+      met: noExistingChat,
+      points: 1,
+      description: "A crew chat doesn't already exist",
+    });
+
+    // 4. Check if band roles are defined (1 point)
+    const hasBandRoles = Boolean(
+      gig.bandCategory && gig.bandCategory.length > 0
+    ); // Explicit boolean
+    score += hasBandRoles ? 1 : 0;
+    requirements.push({
+      requirement: "Roles Defined",
+      met: hasBandRoles,
+      points: 1,
+      description: hasBandRoles
+        ? "Band roles are properly defined"
+        : "No band roles defined",
+    });
+
+    // 5. Check if all roles are filled (2 points - weighted more important)
+    let allRolesFilled = false;
+    let unfilledRoles: string[] = [];
+
+    if (hasBandRoles && gig.bandCategory) {
+      allRolesFilled = gig.bandCategory.every(
+        (role: any) => (role.filledSlots || 0) >= (role.maxSlots || 1)
+      );
+
+      if (!allRolesFilled) {
+        unfilledRoles = gig.bandCategory
+          .filter((role: any) => (role.filledSlots || 0) < (role.maxSlots || 1))
+          .map((role: any) => role.role || "Unknown Role");
       }
     }
 
-    // Check if all roles are filled
-    if (!gig.bandCategory || gig.bandCategory.length === 0) {
-      return { canCreate: false, reason: "No band roles defined" };
+    score += allRolesFilled ? 2 : 0;
+    requirements.push({
+      requirement: "All Roles Filled",
+      met: allRolesFilled,
+      points: 2,
+      description: allRolesFilled
+        ? "All band positions are filled"
+        : unfilledRoles.length > 0
+          ? `Still need: ${unfilledRoles.join(", ")}`
+          : "No roles to fill",
+    });
+
+    // 6. Check if there are booked musicians (1 point)
+    let hasBookedMusicians = false;
+    if (hasBandRoles && gig.bandCategory) {
+      hasBookedMusicians = gig.bandCategory.some(
+        (role: any) => role.bookedUsers && role.bookedUsers.length > 0
+      );
     }
+    score += hasBookedMusicians ? 1 : 0;
+    requirements.push({
+      requirement: "Musicians Booked",
+      met: hasBookedMusicians,
+      points: 1,
+      description: hasBookedMusicians
+        ? "At least one musician is booked"
+        : "No musicians booked yet",
+    });
 
-    const allRolesFilled = gig.bandCategory.every(
-      (role: any) => role.filledSlots >= role.maxSlots
-    );
-
-    if (!allRolesFilled) {
-      const unfilledRoles = gig.bandCategory
-        .filter((role: any) => role.filledSlots < role.maxSlots)
-        .map((role: any) => role.role);
-
-      return {
-        canCreate: false,
-        reason: "All roles must be filled",
-        unfilledRoles,
-      };
-    }
-
-    // Check if there are any booked musicians
-    const hasBookedMusicians = gig.bandCategory.some(
-      (role: any) => role.bookedUsers && role.bookedUsers.length > 0
-    );
-
-    if (!hasBookedMusicians) {
-      return { canCreate: false, reason: "No musicians booked yet" };
-    }
+    // Determine if can create (need at least 6/7 points)
+    const canCreate = score >= 6 && allRolesFilled;
 
     return {
-      canCreate: true,
-      musicianCount: gig.bandCategory.reduce(
-        (total: number, role: any) => total + (role.bookedUsers?.length || 0),
-        0
-      ),
+      canCreate,
+      reason: canCreate
+        ? "Ready to book and create crew chat!"
+        : `Need ${6 - score} more requirements met`,
+      score,
+      maxScore,
+      requirements, // This is guaranteed to be an array with proper booleans
+      details: {
+        isCreator,
+        isBandGig,
+        hasExistingChat: !noExistingChat,
+        hasBandRoles,
+        allRolesFilled,
+        unfilledRoles,
+        hasBookedMusicians,
+        ...(gig.bandChatId && { existingChatId: gig.bandChatId }),
+      },
     };
   },
 });
