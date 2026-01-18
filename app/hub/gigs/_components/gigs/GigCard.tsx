@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react"; // Added useMemo
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
@@ -64,9 +64,9 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useThemeColors } from "@/hooks/useTheme";
 import { getInterestWindowStatus } from "@/utils";
 import { cn } from "@/lib/utils";
+import { getUserGigStatus, type GigUserStatus } from "@/utils";
 
 // Types
-
 interface PerformingMember {
   userId: Id<"users">;
   name: string;
@@ -120,7 +120,7 @@ interface GigCardProps {
     isPending?: boolean;
     isActive?: boolean;
     interestedUsers?: Id<"users">[];
-    bookCount?: BandApplication[]; // Changed from BandMember[] to BandApplication[]
+    bookCount?: BandApplication[];
     maxSlots?: number;
     tags?: string[];
     category?: string;
@@ -134,7 +134,6 @@ interface GigCardProps {
     bandCategory?: BandRole[];
     createdAt: number;
     updatedAt: number;
-    // Styling fields
     font?: string;
     fontColor?: string;
     backgroundColor?: string;
@@ -143,6 +142,7 @@ interface GigCardProps {
   onClick?: () => void;
   showActions?: boolean;
   compact?: boolean;
+  userStatus?: GigUserStatus;
 }
 
 type BandActionType =
@@ -169,6 +169,16 @@ interface BandAction {
   icon?: React.ReactNode;
   className?: string;
 }
+
+// Add this ActionButtonConfig type
+type ActionButtonConfig = {
+  label: string;
+  variant: "default" | "outline" | "secondary" | "destructive";
+  icon: React.ReactNode;
+  action: "apply" | "withdraw" | "manage" | "none";
+  disabled: boolean;
+  className?: string;
+};
 
 const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
   const status = getInterestWindowStatus(gig);
@@ -263,11 +273,72 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
   );
 };
 
+// Add this helper function for action button configuration
+const getActionButtonConfig = (
+  status: GigUserStatus,
+  gig: { isClientBand?: boolean; isTaken?: boolean }
+): ActionButtonConfig => {
+  const isClientBand = gig.isClientBand || false;
+
+  if (status.isGigPoster) {
+    return {
+      label: gig.isTaken ? "Manage" : "Review",
+      variant: "default" as const,
+      icon: <Sparkles className="w-4 h-4" />,
+      action: "manage",
+      disabled: false,
+    };
+  }
+
+  if (status.isBooked) {
+    return {
+      label: "Booked",
+      variant: "secondary" as const,
+      icon: <CheckCircle className="w-4 h-4" />,
+      action: "none",
+      disabled: true,
+    };
+  }
+
+  if (status.isPending || status.isInApplicants) {
+    return {
+      label: isClientBand ? "Pending" : "Applied",
+      variant: "outline" as const,
+      icon: <Clock className="w-4 h-4" />,
+      action: "withdraw",
+      disabled: false,
+    };
+  }
+
+  if (status.canApply) {
+    return {
+      label: isClientBand ? "Apply with Band" : "Show Interest",
+      variant: "default" as const,
+      icon: isClientBand ? (
+        <Building2 className="w-4 h-4" />
+      ) : (
+        <UserPlus className="w-4 h-4" />
+      ),
+      action: "apply",
+      disabled: false,
+    };
+  }
+
+  return {
+    label: "Unavailable",
+    variant: "secondary" as const,
+    icon: <AlertCircle className="w-4 h-4" />,
+    action: "none",
+    disabled: true,
+  };
+};
+
 const GigCard: React.FC<GigCardProps> = ({
   gig,
   onClick,
   showActions = true,
   compact = false,
+  userStatus: propUserStatus,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -313,67 +384,91 @@ const GigCard: React.FC<GigCardProps> = ({
     userId ? { clerkId: userId } : "skip"
   );
 
-  // Derived state
-  const isClientBand = gig.isClientBand || false;
   const currentUserId = currentUser?._id;
 
-  // ================================
-  // REGULAR GIG STATS
-  // ================================
-  const regularInterestedUsers = gig.interestedUsers || [];
-  const regularInterestCount = regularInterestedUsers.length;
-  const regularMaxSlots = gig.maxSlots || 10;
-  const regularAvailableSlots = regularMaxSlots - regularInterestCount;
-  const regularIsFull = regularInterestCount >= regularMaxSlots;
-  const regularIsInterested = currentUserId
-    ? regularInterestedUsers.includes(currentUserId)
-    : false;
+  // Compute user status using the utility function
+  const userStatus = useMemo(() => {
+    return getUserGigStatus(gig as any, currentUserId as Id<"users">);
+  }, [gig, currentUserId]);
 
-  // ================================
-  // BAND GIG STATS
-  // ================================
+  // Use the status to derive values
+  const isClientBand = gig.isClientBand || false;
+  const isGigPoster = userStatus.isGigPoster;
+  const userHasInterest =
+    userStatus.hasShownInterest ||
+    userStatus.isInApplicants ||
+    userStatus.isInBandApplication;
+  const userPosition = userStatus.position;
+
+  // Calculate if the gig is full
+  const isFull = useMemo(() => {
+    if (isClientBand) {
+      return userStatus.roleDetails?.isRoleFull || false;
+    } else {
+      const interestedCount = gig.interestedUsers?.length || 0;
+      const maxSlots = gig.maxSlots || 10;
+      return interestedCount >= maxSlots;
+    }
+  }, [isClientBand, userStatus.roleDetails, gig.interestedUsers, gig.maxSlots]);
+
+  // Calculate progress percentage
+  const progressPercentage = useMemo(() => {
+    if (isClientBand) {
+      const roleDetails = userStatus.roleDetails;
+      if (roleDetails) {
+        return Math.min(
+          (roleDetails.filledSlots / roleDetails.maxSlots) * 100,
+          100
+        );
+      }
+      return 0;
+    } else {
+      const interestedCount = gig.interestedUsers?.length || 0;
+      const maxSlots = gig.maxSlots || 10;
+      return Math.min((interestedCount / maxSlots) * 100, 100);
+    }
+  }, [isClientBand, userStatus.roleDetails, gig.interestedUsers, gig.maxSlots]);
+
+  // Get available slots count
+  const availableSlots = useMemo(() => {
+    if (isClientBand) {
+      const roleDetails = userStatus.roleDetails;
+      if (roleDetails) {
+        return Math.max(0, roleDetails.maxSlots - roleDetails.filledSlots);
+      }
+      return 0;
+    } else {
+      const interestedCount = gig.interestedUsers?.length || 0;
+      const maxSlots = gig.maxSlots || 10;
+      return Math.max(0, maxSlots - interestedCount);
+    }
+  }, [isClientBand, userStatus.roleDetails, gig.interestedUsers, gig.maxSlots]);
+
+  // Get slots used count
+  const slotsUsed = useMemo(() => {
+    if (isClientBand) {
+      return userStatus.roleDetails?.filledSlots || 0;
+    } else {
+      return gig.interestedUsers?.length || 0;
+    }
+  }, [isClientBand, userStatus.roleDetails, gig.interestedUsers]);
+
+  const maxSlots = useMemo(() => {
+    if (isClientBand) {
+      return userStatus.roleDetails?.maxSlots || 10;
+    } else {
+      return gig.maxSlots || 10;
+    }
+  }, [isClientBand, userStatus.roleDetails, gig.maxSlots]);
+
+  // Band applications info
   const bandApplications = gig.bookCount || [];
-  const bandCount = bandApplications.length; // Number of BANDS that applied
-  const bandMaxSlots = gig.maxSlots || 5; // Max number of BANDS allowed
-  const bandAvailableSlots = Math.max(0, bandMaxSlots - bandCount);
-  const bandIsFull = bandCount >= bandMaxSlots;
-
-  // Calculate total band members across all applications (for informational purposes)
+  const bandCount = bandApplications.length;
+  const bandIsFull = bandCount >= (gig.maxSlots || 5);
   const totalBandMembers = bandApplications.reduce(
     (total, band) => total + (band.performingMembers?.length || 0),
     0
   );
-
-  // Check if current user is in any band application (as a performing member)
-  const userIsInAnyBand = currentUserId
-    ? bandApplications.some((band) =>
-        band.performingMembers?.some(
-          (member) => member.userId === currentUserId
-        )
-      )
-    : false;
-
-  // Check if current user applied with a band (as the band leader)
-  const userAppliedWithBand = currentUserId
-    ? bandApplications.some((band) => band.appliedBy === currentUserId)
-    : false;
-
-  // ================================
-  // COMMON STATS
-  // ================================
-  const slotsUsed = isClientBand ? bandCount : regularInterestCount;
-  const maxSlots = isClientBand ? bandMaxSlots : regularMaxSlots;
-  const availableSlots = isClientBand
-    ? bandAvailableSlots
-    : regularAvailableSlots;
-  const isFull = isClientBand ? bandIsFull : regularIsFull;
-  const userHasInterest = isClientBand ? userIsInAnyBand : regularIsInterested;
-  const progressPercentage = Math.min((slotsUsed / maxSlots) * 100, 100);
-
-  // User position in interested users list (regular gigs only)
-  const userPosition = regularIsInterested
-    ? (gig.interestedUsers?.indexOf(currentUserId!) || 0) + 1
-    : null;
 
   // Format date and time
   const formattedDate = new Date(gig.date).toLocaleDateString("en-US", {
@@ -585,7 +680,7 @@ const GigCard: React.FC<GigCardProps> = ({
     [gig, currentUser, userId, interestNotes]
   );
 
-  // Regular gig interest handler
+  // Regular gig interest handler - FIXED: Using userStatus instead of regularIsInterested
   const handleRegularInterest = async (notes?: string) => {
     if (!currentUserId) {
       toast.error("Sign in to show interest");
@@ -604,7 +699,8 @@ const GigCard: React.FC<GigCardProps> = ({
 
     setLoading(true);
     try {
-      if (regularIsInterested) {
+      if (userStatus.hasShownInterest) {
+        // Changed from regularIsInterested
         await removeInterestFromGig({
           gigId: gig._id,
           clerkId: userId!,
@@ -955,592 +1051,120 @@ const GigCard: React.FC<GigCardProps> = ({
     );
   };
 
-  // Check if current user is the gig poster
-  const isGigPoster = currentUserId === gig.postedBy;
-
   // Check interest window status
   const interestWindowStatus = getInterestWindowStatus(gig);
   const isInterestWindowOpen = interestWindowStatus.status === "open";
 
-  // Render action button
   const renderActionButton = () => {
     if (!showActions) return null;
 
     const responsiveButtonClasses = "w-full sm:w-auto px-3 py-1.5 h-9";
 
-    const getButtonStyle = (
-      variant: "default" | "outline" | "secondary" | "destructive" = "default"
-    ) => {
-      const baseStyle = {
-        color: gig.fontColor || undefined,
-      };
+    // Get button config based on user status
+    const buttonConfig = getActionButtonConfig(userStatus, {
+      isClientBand: gig.isClientBand || false,
+      isTaken: gig.isTaken || false,
+    });
 
-      switch (variant) {
-        case "default":
-          return {
-            ...baseStyle,
-            backgroundColor: gig.backgroundColor
-              ? `${gig.backgroundColor}40`
-              : undefined,
-            borderColor: gig.fontColor ? `${gig.fontColor}30` : undefined,
-          };
-        case "outline":
-          return {
-            ...baseStyle,
-            backgroundColor: "transparent",
-            borderColor: gig.fontColor ? `${gig.fontColor}40` : undefined,
-          };
-        case "secondary":
-          return {
-            ...baseStyle,
-            backgroundColor: gig.backgroundColor
-              ? `${gig.backgroundColor}20`
-              : undefined,
-            borderColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
-          };
-        case "destructive":
-          return {
-            ...baseStyle,
-            backgroundColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
-            borderColor: gig.fontColor ? `${gig.fontColor}30` : undefined,
-            color: gig.fontColor || "#ef4444",
-          };
+    // If no action needed
+    if (buttonConfig.action === "none") {
+      return (
+        <Button
+          variant={buttonConfig.variant}
+          size="sm"
+          disabled={buttonConfig.disabled}
+          className={clsx(responsiveButtonClasses, buttonConfig.className)}
+          style={getButtonStyles(buttonConfig.variant)}
+        >
+          {buttonConfig.icon}
+          <span className="ml-2">{buttonConfig.label}</span>
+        </Button>
+      );
+    }
+
+    // Handle different actions
+    const handleAction = async () => {
+      if (!currentUserId) {
+        toast.error("Please sign in first");
+        return;
+      }
+
+      switch (buttonConfig.action) {
+        case "apply":
+          if (isClientBand) {
+            setShowBandJoinModal(true);
+          } else {
+            setShowInterestModal(true);
+          }
+          break;
+
+        case "withdraw":
+          if (isClientBand && userStatus.isInBandApplication) {
+            // Withdraw band application
+            const bandApp = gig.bookCount?.find(
+              (app) => app.appliedBy === currentUserId
+            );
+            if (bandApp) {
+              try {
+                await withdrawFromBandRole({
+                  gigId: gig._id,
+                  bandRoleIndex: 0, // You might need to find the correct index
+                  clerkId: userId!,
+                  reason: "Withdrawn by user",
+                });
+                toast.success("Application withdrawn");
+              } catch (error) {
+                toast.error("Failed to withdraw application");
+              }
+            }
+          } else if (!isClientBand && userStatus.hasShownInterest) {
+            // Remove interest from regular gig
+            try {
+              await removeInterestFromGig({
+                gigId: gig._id,
+                clerkId: userId!,
+                reason: "Withdrawn by user",
+              });
+              toast.success("Interest removed");
+            } catch (error) {
+              toast.error("Failed to remove interest");
+            }
+          }
+          break;
+
+        case "manage":
+          if (isGigPoster) {
+            router.push(`/gigs/${gig._id}/manage`);
+          }
+          break;
+
         default:
-          return baseStyle;
+          break;
       }
     };
 
-    // Gig is taken
-    if (gig.isTaken) {
-      if (isGigPoster) {
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/gigs/${gig._id}/manage`);
-            }}
-            className={clsx(
-              responsiveButtonClasses,
-              "shadow-sm hover:shadow transition-all duration-200",
-              "text-xs sm:text-sm"
-            )}
-            style={getButtonStyle("outline")}
-            onMouseEnter={(e) => {
-              if (gig.backgroundColor) {
-                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-          >
-            <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Manage</span>
-            <span className="sm:hidden">Manage</span>
-          </Button>
-        );
-      }
-      return (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled
-          className={clsx(responsiveButtonClasses, "opacity-50 text-xs")}
-          style={getButtonStyle("secondary")}
-        >
-          <UserCheck className="w-4 h-4 mr-2" />
-          Booked
-        </Button>
-      );
-    }
-
-    // ===== REGULAR GIG =====
-    if (!isClientBand) {
-      if (isGigPoster) {
-        const interestedCount = regularInterestCount;
-
-        return (
-          <div className="flex items-center gap-2">
-            {interestedCount > 0 && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/gigs/${gig._id}/review-applicants`);
-                }}
-                variant="default"
-                size="sm"
-                className={clsx(
-                  responsiveButtonClasses,
-                  "shadow-sm hover:shadow transition-all duration-200 relative",
-                  "text-xs sm:text-sm"
-                )}
-                style={getButtonStyle("default")}
-              >
-                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Review</span>
-                <span className="sm:hidden">Review</span>
-
-                {interestedCount > 0 && (
-                  <Badge
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px]"
-                    style={getBadgeStyle()}
-                  >
-                    {interestedCount > 99 ? "99+" : interestedCount}
-                  </Badge>
-                )}
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/hub/gigs/client/edit/${gig._id}`);
-              }}
-              className={clsx(
-                responsiveButtonClasses,
-                "shadow-sm hover:shadow transition-all duration-200",
-                "text-xs sm:text-sm"
-              )}
-              style={getButtonStyle("outline")}
-            >
-              <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Edit</span>
-              <span className="sm:hidden">Edit</span>
-            </Button>
-          </div>
-        );
-      }
-
-      // Check interest window
-      if (gig.acceptInterestStartTime || gig.acceptInterestEndTime) {
-        switch (interestWindowStatus.status) {
-          case "not_open":
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled
-                className={clsx(
-                  responsiveButtonClasses,
-                  "opacity-50 cursor-not-allowed text-xs"
-                )}
-                style={getButtonStyle("secondary")}
-              >
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Opens Soon</span>
-                <span className="sm:hidden">Soon</span>
-              </Button>
-            );
-
-          case "closed":
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled
-                className={clsx(
-                  responsiveButtonClasses,
-                  "opacity-50 cursor-not-allowed text-xs"
-                )}
-                style={getButtonStyle("secondary")}
-              >
-                <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Closed</span>
-                <span className="sm:hidden">Closed</span>
-              </Button>
-            );
-        }
-      }
-
-      // Show interest button
-      if (regularIsInterested) {
-        return (
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRegularInterest();
-            }}
-            disabled={loading}
-            variant="outline"
-            size="sm"
-            className={clsx(
-              responsiveButtonClasses,
-              "shadow-sm hover:shadow transition-all duration-200",
-              "text-xs sm:text-sm"
-            )}
-            style={getButtonStyle("outline")}
-          >
-            {loading ? (
-              <>
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
-                <span className="hidden sm:inline">Removing</span>
-                <span className="sm:hidden">...</span>
-              </>
-            ) : (
-              <>
-                <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Interested</span>
-                <span className="sm:hidden">✓</span>
-              </>
-            )}
-          </Button>
-        );
-      }
-
-      // For showing interest - QUICK BY DEFAULT
-      return (
-        <div className="flex items-center gap-1">
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isFull) return;
-              handleRegularInterest();
-            }}
-            disabled={loading || isFull}
-            size="sm"
-            className={clsx(
-              responsiveButtonClasses,
-              "shadow-sm hover:shadow transition-all duration-200",
-              "text-xs sm:text-sm",
-              isFull && "opacity-50 cursor-not-allowed"
-            )}
-            style={getButtonStyle("default")}
-          >
-            {loading ? (
-              <>
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
-                <span className="hidden sm:inline">...</span>
-                <span className="sm:hidden">...</span>
-              </>
-            ) : isFull ? (
-              <>
-                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Full</span>
-                <span className="sm:hidden">Full</span>
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Interest</span>
-                <span className="sm:hidden">Join</span>
-              </>
-            )}
-          </Button>
-
-          {!isFull && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowInterestModal(true);
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="hidden sm:flex h-9 w-9 p-0"
-                    style={getButtonStyle("outline")}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Interest with notes</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      );
-    }
-
-    // ===== BAND GIG =====
-    if (isClientBand) {
-      if (isGigPoster) {
-        const hasApplicants =
-          gig.bandCategory?.some((role) => role.applicants.length > 0) || false;
-        const hasBookedUsers =
-          gig.bandCategory?.some((role) => role.bookedUsers.length > 0) ||
-          false;
-
-        const totalApplicants =
-          gig.bandCategory?.reduce(
-            (total, role) => total + role.applicants.length,
-            0
-          ) || 0;
-
-        if (hasApplicants) {
-          return (
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/gigs/${gig._id}/review`);
-                }}
-                size="sm"
-                className={clsx(
-                  responsiveButtonClasses,
-                  "shadow-sm hover:shadow transition-all duration-200 relative",
-                  "text-xs sm:text-sm"
-                )}
-                style={getButtonStyle("default")}
-              >
-                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Review</span>
-                <span className="sm:hidden">Review</span>
-
-                {totalApplicants > 0 && (
-                  <Badge
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px]"
-                    style={{
-                      backgroundColor: gig.fontColor || "#ef4444",
-                      color: gig.backgroundColor || "#ffffff",
-                    }}
-                  >
-                    {totalApplicants > 99 ? "99+" : totalApplicants}
-                  </Badge>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/hub/gigs/client/edit/${gig._id}`);
-                }}
-                className={clsx(
-                  responsiveButtonClasses,
-                  "shadow-sm hover:shadow transition-all duration-200",
-                  "text-xs sm:text-sm"
-                )}
-                style={getButtonStyle("outline")}
-              >
-                <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Edit</span>
-                <span className="sm:hidden">Edit</span>
-              </Button>
-            </div>
-          );
-        } else if (hasBookedUsers) {
-          return (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/gigs/${gig._id}/manage`);
-              }}
-              variant="outline"
-              size="sm"
-              className={clsx(
-                responsiveButtonClasses,
-                "shadow-sm hover:shadow transition-all duration-200",
-                "text-xs sm:text-sm"
-              )}
-              style={getButtonStyle("outline")}
-              onMouseEnter={(e) => {
-                if (gig.backgroundColor) {
-                  e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }}
-            >
-              <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Manage</span>
-              <span className="sm:hidden">Manage</span>
-            </Button>
-          );
-        } else {
-          return (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/hub/gigs/client/edit/${gig._id}`);
-              }}
-              variant="outline"
-              size="sm"
-              className={clsx(
-                responsiveButtonClasses,
-                "shadow-sm hover:shadow transition-all duration-200",
-                "text-xs sm:text-sm"
-              )}
-              style={getButtonStyle("outline")}
-            >
-              <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Edit</span>
-              <span className="sm:hidden">Edit</span>
-            </Button>
-          );
-        }
-      }
-
-      if (userAppliedWithBand || userIsInAnyBand) {
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            className={clsx(
-              responsiveButtonClasses,
-              "shadow-sm hover:shadow transition-all duration-200",
-              "text-xs sm:text-sm"
-            )}
-            disabled={loading}
-            style={getButtonStyle("secondary")}
-            onMouseEnter={(e) => {
-              if (gig.backgroundColor) {
-                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (gig.backgroundColor) {
-                e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-              } else {
-                e.currentTarget.style.backgroundColor = "";
-              }
-            }}
-          >
-            <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Band Applied</span>
-            <span className="sm:hidden">Applied</span>
-          </Button>
-        );
-      }
-
-      // Check interest window for band
-      if (gig.acceptInterestStartTime || gig.acceptInterestEndTime) {
-        switch (interestWindowStatus.status) {
-          case "not_open":
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled
-                className={clsx(
-                  responsiveButtonClasses,
-                  "opacity-50 cursor-not-allowed text-xs"
-                )}
-                style={getButtonStyle("secondary")}
-              >
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Soon</span>
-                <span className="sm:hidden">Soon</span>
-              </Button>
-            );
-
-          case "closed":
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled
-                className={clsx(
-                  responsiveButtonClasses,
-                  "opacity-50 cursor-not-allowed text-xs"
-                )}
-                style={getButtonStyle("secondary")}
-              >
-                <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Closed</span>
-                <span className="sm:hidden">Closed</span>
-              </Button>
-            );
-        }
-      }
-
-      if (bandIsFull) {
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className={clsx(
-              responsiveButtonClasses,
-              "opacity-50 cursor-not-allowed text-xs"
-            )}
-            style={getButtonStyle("secondary")}
-          >
-            <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Full</span>
-            <span className="sm:hidden">Full</span>
-          </Button>
-        );
-      }
-
-      return (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (gig.bandCategory && gig.bandCategory.length === 1) {
-              const roleAction = handleBandAction(0);
-              if (roleAction?.action) {
-                roleAction.action();
-              } else {
-                setShowBandJoinModal(true);
-              }
-            } else {
-              setShowBandJoinModal(true);
-            }
-          }}
-          disabled={loading || bandIsFull}
-          size="sm"
-          className={clsx(
-            responsiveButtonClasses,
-            "shadow-sm hover:shadow transition-all duration-200",
-            "text-xs sm:text-sm",
-            bandIsFull && "opacity-50 cursor-not-allowed"
-          )}
-          style={getButtonStyle("default")}
-          onMouseEnter={(e) => {
-            if (!loading && !bandIsFull && gig.backgroundColor) {
-              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}60`;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading && !bandIsFull && gig.backgroundColor) {
-              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
-            }
-          }}
-        >
-          {loading ? (
-            <>
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
-              <span className="hidden sm:inline">...</span>
-              <span className="sm:hidden">...</span>
-            </>
-          ) : bandIsFull ? (
-            <>
-              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Full</span>
-              <span className="sm:hidden">Full</span>
-            </>
-          ) : (
-            <>
-              <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Apply Band</span>
-              <span className="sm:hidden">Apply</span>
-            </>
-          )}
-        </Button>
-      );
-    }
-
-    // Fallback
     return (
       <Button
-        variant="outline"
+        variant={buttonConfig.variant}
         size="sm"
-        disabled
-        className={clsx(responsiveButtonClasses, "text-xs")}
-        style={getButtonStyle("secondary")}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleAction();
+        }}
+        disabled={buttonConfig.disabled || loading}
+        className={clsx(
+          responsiveButtonClasses,
+          "shadow-sm hover:shadow transition-all duration-200",
+          buttonConfig.className
+        )}
+        style={getButtonStyles(buttonConfig.variant)}
       >
-        <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-        <span className="hidden sm:inline">N/A</span>
-        <span className="sm:hidden">N/A</span>
+        {loading ? (
+          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+        ) : (
+          buttonConfig.icon
+        )}
+        <span className="ml-2">{buttonConfig.label}</span>
       </Button>
     );
   };
@@ -1620,8 +1244,10 @@ const GigCard: React.FC<GigCardProps> = ({
           "group relative rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200",
           "cursor-pointer overflow-hidden w-full",
           {
-            "ring-1 ring-purple-500": isClientBand && userAppliedWithBand,
-            "ring-1 ring-green-500": !isClientBand && regularIsInterested,
+            "ring-1 ring-purple-500":
+              isClientBand && userStatus.isInBandApplication,
+            "ring-1 ring-green-500":
+              !isClientBand && userStatus.hasShownInterest,
           }
         )}
         onClick={handleClick}

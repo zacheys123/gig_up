@@ -140,6 +140,12 @@ export interface GigWithApplicants {
     logo?: string;
     createdAt?: number;
     updatedAt?: number;
+    time?: {
+      start: string;
+      end: string;
+      durationFrom?: string;
+      durationTo?: string;
+    };
   };
   applicants: Applicant[];
   shortlisted: ShortlistedUser[];

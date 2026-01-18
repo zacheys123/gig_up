@@ -925,14 +925,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                           <BandRolesTab
                             selectedGigData={selectedGigData}
                             filteredApplicants={filteredApplicants || []}
-                            handleAddToShortlist={handleAddToShortlist}
-                            handleRemoveFromShortlist={
-                              handleRemoveFromShortlist
-                            }
-                            handleViewProfile={handleViewProfile}
-                            handleBookMusician={handleBookMusician}
-                            getStatusColor={getStatusColor}
-                            getRoleIcon={getRoleIcon}
+                            clerkId={clerkId!}
                           />
                         )}
                         {activeGigTab === "full-band" && (

@@ -955,7 +955,66 @@ export const getGigTypeInfo = query({
     }
   },
 });
+// In your Convex query (controllers/gigs.ts)
+export const getGigWithApplicants = query({
+  args: { gigId: v.id("gigs") },
+  handler: async (ctx, { gigId }) => {
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
 
+    const applicants: any[] = [];
+    const userDetails = new Map();
+
+    // Get applicants from bandBookingHistory with your specific statuses
+    if (gig.bandBookingHistory) {
+      for (const application of gig.bandBookingHistory) {
+        // Filter out completed/cancelled applications if needed
+        // Keep all statuses or filter specific ones
+        const isActiveApplicant = [
+          "pending_review",
+          "under_review",
+          "interview_scheduled",
+          "interview_completed",
+        ].includes(application.applicationStatus || "pending_review");
+
+        if (isActiveApplicant) {
+          const user = await ctx.db.get(application.userId);
+          if (user) {
+            applicants.push({
+              _id: application.userId,
+              userId: application.userId,
+              userName:
+                application.userName || user.name || user.username || "Unknown",
+              bandRoleIndex: application.bandRoleIndex,
+              bandRole: application.bandRole,
+              appliedAt: application.appliedAt,
+              applicationNotes: application.applicationNotes,
+              applicationStatus:
+                application.applicationStatus || "pending_review",
+              bookedAt: application.bookedAt,
+              bookedPrice: application.bookedPrice,
+              contractSigned: application.contractSigned,
+              paymentStatus: application.paymentStatus,
+              // Add any other fields from bandBookingEntry
+            });
+
+            userDetails.set(application.userId, user);
+          }
+        }
+      }
+    }
+
+    // Get shortlisted users
+    const shortlisted = gig.shortlistedUsers || [];
+
+    return {
+      gig,
+      applicants, // Now contains active applicants with proper status
+      userDetails,
+      shortlisted,
+    };
+  },
+});
 // // Check if user can join band (available roles)
 // export const getAvailableBandRoles = query({
 //   args: { gigId: v.id("gigs") },

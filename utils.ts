@@ -2,12 +2,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { UserProps } from "./types/userTypes";
 import { Notification, NotificationType } from "./convex/notificationsTypes";
 import { GigType } from "./convex/gigTypes";
-import {
-  BandRoleInput,
-  BandRoleSchema,
-  CustomProps,
-  GigFormInputs,
-} from "./types/gig";
+import { BandRoleInput, CustomProps, GigFormInputs } from "./types/gig";
 import { LocalGigInputs } from "./drafts";
 
 export const toUserId = (id: string): Id<"users"> => {
@@ -1803,7 +1798,7 @@ export const validateGigForm = (
       errors.bussinesscat = "Please select a business category";
     }
 
-    if (formData?.phoneNo && !formData.phoneNo.trim()) {
+    if (formData?.phone && !formData.phone.trim()) {
       errors.phoneNo = "Phone number is required";
     }
 
@@ -2001,4 +1996,255 @@ export const getInterestWindowStatus = (gig: {
     status: "open",
     message: `Interest window open! Closes in ${Math.ceil((endTime - now) / (1000 * 60 * 60))} hours`,
   };
+};
+
+export type GigUserStatus = {
+  // Basic status
+  isGigPoster: boolean;
+  hasShownInterest: boolean;
+  isInApplicants: boolean;
+  isInBookedUsers: boolean;
+  isInBandApplication: boolean;
+
+  // Position info
+  position: number | null; // Position in interestedUsers
+  bandRoleApplied: string | null; // Which band role user applied for
+  bandApplicationId: Id<"bands"> | null;
+
+  // Derived messages
+  statusMessage: string;
+  statusBadgeVariant: "default" | "outline" | "secondary" | "destructive";
+
+  // Action info
+  canApply: boolean;
+  canWithdraw: boolean;
+  canManage: boolean;
+  isPending: boolean;
+  isBooked: boolean;
+
+  // Role-specific info (for band gigs)
+  roleDetails?: {
+    role: string;
+    maxSlots: number;
+    filledSlots: number;
+    isRoleFull: boolean;
+    applicantsCount: number;
+    bookedCount: number;
+  };
+};
+
+interface GigForStatusCheck {
+  _id: Id<"gigs">;
+  postedBy: Id<"users">;
+  interestedUsers?: Id<"users">[];
+  bandCategory?: Array<{
+    role: string;
+    maxSlots: number;
+    filledSlots: number;
+    applicants: Id<"users">[];
+    bookedUsers: Id<"users">[];
+  }>;
+  bookCount?: Array<{
+    bandId: Id<"bands">;
+    appliedBy: Id<"users">;
+    performingMembers: Array<{ userId: Id<"users"> }>;
+    status?: string;
+  }>;
+  isClientBand?: boolean;
+  isTaken?: boolean;
+  isPending?: boolean;
+}
+
+export const getUserGigStatus = (
+  gig: GigForStatusCheck,
+  currentUserId: Id<"users"> | null
+): GigUserStatus => {
+  if (!currentUserId) {
+    return {
+      isGigPoster: false,
+      hasShownInterest: false,
+      isInApplicants: false,
+      isInBookedUsers: false,
+      isInBandApplication: false,
+      position: null,
+      bandRoleApplied: null,
+      bandApplicationId: null,
+      statusMessage: "Sign in to interact",
+      statusBadgeVariant: "secondary",
+      canApply: false,
+      canWithdraw: false,
+      canManage: false,
+      isPending: false,
+      isBooked: false,
+    };
+  }
+
+  const isGigPoster = gig.postedBy === currentUserId;
+  const isClientBand = gig.isClientBand || false;
+
+  // Initialize base status
+  const baseStatus: GigUserStatus = {
+    isGigPoster,
+    hasShownInterest: false,
+    isInApplicants: false,
+    isInBookedUsers: false,
+    isInBandApplication: false,
+    position: null,
+    bandRoleApplied: null,
+    bandApplicationId: null,
+    statusMessage: "",
+    statusBadgeVariant: "default",
+    canApply: false,
+    canWithdraw: false,
+    canManage: false,
+    isPending: false,
+    isBooked: false,
+  };
+
+  // ========== REGULAR GIG LOGIC ==========
+  if (!isClientBand) {
+    const interestedUsers = gig.interestedUsers || [];
+    const hasShownInterest = interestedUsers.includes(currentUserId);
+    const position = hasShownInterest
+      ? interestedUsers.indexOf(currentUserId) + 1
+      : null;
+
+    baseStatus.hasShownInterest = hasShownInterest;
+    baseStatus.position = position;
+
+    if (isGigPoster) {
+      baseStatus.statusMessage = gig.isTaken
+        ? "Your gig (Booked)"
+        : "Your gig (Manage)";
+      baseStatus.statusBadgeVariant = "default";
+      baseStatus.canManage = true;
+    } else if (gig.isTaken) {
+      baseStatus.statusMessage = "Gig is booked";
+      baseStatus.statusBadgeVariant = "secondary";
+    } else if (hasShownInterest) {
+      baseStatus.statusMessage = `Interested (#${position})`;
+      baseStatus.statusBadgeVariant = "default";
+      baseStatus.canWithdraw = true;
+      baseStatus.isPending = gig.isPending || false;
+    } else {
+      baseStatus.statusMessage = "Available";
+      baseStatus.statusBadgeVariant = "outline";
+      baseStatus.canApply = !gig.isTaken;
+    }
+
+    return baseStatus;
+  }
+
+  // ========== BAND GIG LOGIC ==========
+  if (isClientBand) {
+    // Check if user is in any band application
+    const bandApplications = gig.bookCount || [];
+    const userBandApplication = bandApplications.find(
+      (app) =>
+        app.appliedBy === currentUserId ||
+        app.performingMembers?.some((member) => member.userId === currentUserId)
+    );
+
+    // Check band roles
+    const bandRoles = gig.bandCategory || [];
+    let userRoleDetails = null;
+
+    for (const role of bandRoles) {
+      const isApplicant = role.applicants.includes(currentUserId);
+      const isBooked = role.bookedUsers.includes(currentUserId);
+
+      if (isApplicant || isBooked) {
+        baseStatus.isInApplicants = isApplicant;
+        baseStatus.isInBookedUsers = isBooked;
+        baseStatus.bandRoleApplied = role.role;
+
+        userRoleDetails = {
+          role: role.role,
+          maxSlots: role.maxSlots,
+          filledSlots: role.filledSlots,
+          isRoleFull: role.filledSlots >= role.maxSlots,
+          applicantsCount: role.applicants.length,
+          bookedCount: role.bookedUsers.length,
+        };
+        break;
+      }
+    }
+
+    if (userBandApplication) {
+      baseStatus.isInBandApplication = true;
+      baseStatus.bandApplicationId = userBandApplication.bandId;
+      baseStatus.isPending =
+        userBandApplication.status === "pending" ||
+        userBandApplication.status === "applied";
+      baseStatus.isBooked =
+        userBandApplication.status === "booked" ||
+        userBandApplication.status === "confirmed";
+    }
+
+    // Determine status message
+    if (isGigPoster) {
+      baseStatus.statusMessage = "Your band gig";
+      baseStatus.statusBadgeVariant = "default";
+      baseStatus.canManage = true;
+    } else if (baseStatus.isBooked) {
+      baseStatus.statusMessage = `Booked as ${baseStatus.bandRoleApplied || "band member"}`;
+      baseStatus.statusBadgeVariant = "default";
+    } else if (baseStatus.isPending) {
+      baseStatus.statusMessage = `Pending as ${baseStatus.bandRoleApplied || "band"}`;
+      baseStatus.statusBadgeVariant = "outline";
+      baseStatus.canWithdraw = true;
+    } else if (baseStatus.isInApplicants) {
+      baseStatus.statusMessage = `Applied as ${baseStatus.bandRoleApplied}`;
+      baseStatus.statusBadgeVariant = "outline";
+      baseStatus.canWithdraw = true;
+    } else if (userRoleDetails?.isRoleFull) {
+      baseStatus.statusMessage = "Role full";
+      baseStatus.statusBadgeVariant = "secondary";
+    } else {
+      baseStatus.statusMessage = "Available for bands";
+      baseStatus.statusBadgeVariant = "outline";
+      baseStatus.canApply = true;
+    }
+
+    if (userRoleDetails) {
+      baseStatus.roleDetails = userRoleDetails;
+    }
+
+    return baseStatus;
+  }
+
+  return baseStatus;
+};
+
+// Helper function to get action button configuration
+export type ActionButtonConfig = {
+  label: string;
+  variant: "default" | "outline" | "secondary" | "destructive";
+  icon: React.ReactNode;
+  action: "apply" | "withdraw" | "manage" | "none";
+  disabled: boolean;
+  className?: string;
+};
+
+// Helper to get stats for user across all gigs
+export const getUserGigStats = (
+  gigs: GigForStatusCheck[],
+  userId: Id<"users"> | null
+) => {
+  const stats = {
+    posted: 0,
+    interested: 0,
+    applied: 0,
+    booked: 0,
+  };
+
+  gigs.forEach((gig) => {
+    const status = getUserGigStatus(gig, userId);
+    if (status.isGigPoster) stats.posted++;
+    if (status.hasShownInterest) stats.interested++;
+    if (status.isInApplicants || status.isInBandApplication) stats.applied++;
+    if (status.isBooked) stats.booked++;
+  });
+
+  return stats;
 };

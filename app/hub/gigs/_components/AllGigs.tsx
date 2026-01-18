@@ -32,6 +32,13 @@ import {
   Calendar,
   MapPin,
   DollarSign,
+  CheckCircle,
+  Clock,
+  User,
+  UserCheck,
+  UserPlus,
+  AlertCircle,
+  Building2,
 } from "lucide-react";
 // Hooks
 import { useThemeColors } from "@/hooks/useTheme";
@@ -47,6 +54,87 @@ import GigCard from "./gigs/GigCard";
 import FiltersPanel from "./gigs/FilterPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { ActionButtonConfig, getUserGigStatus, GigUserStatus } from "@/utils";
+
+// Helper function to get status icon
+export const getStatusIcon = (status: GigUserStatus) => {
+  if (status.isGigPoster) {
+    return <Sparkles className="w-4 h-4" />;
+  }
+  if (status.isBooked) {
+    return <CheckCircle className="w-4 h-4" />;
+  }
+  if (status.isPending) {
+    return <Clock className="w-4 h-4" />;
+  }
+  if (status.isInApplicants) {
+    return <UserCheck className="w-4 h-4" />;
+  }
+  if (status.hasShownInterest) {
+    return <User className="w-4 h-4" />;
+  }
+  return <UserPlus className="w-4 h-4" />;
+};
+
+// Helper function to get action button configuration
+export const getActionButtonConfig = (
+  status: GigUserStatus,
+  gig: { isClientBand?: boolean; isTaken?: boolean }
+): ActionButtonConfig => {
+  const isClientBand = gig.isClientBand || false;
+
+  if (status.isGigPoster) {
+    return {
+      label: gig.isTaken ? "Manage" : "Review",
+      variant: "default" as const,
+      icon: <Sparkles className="w-4 h-4" />,
+      action: "manage",
+      disabled: false,
+    };
+  }
+
+  if (status.isBooked) {
+    return {
+      label: "Booked",
+      variant: "secondary" as const,
+      icon: <CheckCircle className="w-4 h-4" />,
+      action: "none",
+      disabled: true,
+    };
+  }
+
+  if (status.isPending || status.isInApplicants) {
+    return {
+      label: isClientBand ? "Pending" : "Applied",
+      variant: "outline" as const,
+      icon: <Clock className="w-4 h-4" />,
+      action: "withdraw",
+      disabled: false,
+    };
+  }
+
+  if (status.canApply) {
+    return {
+      label: isClientBand ? "Apply with Band" : "Show Interest",
+      variant: "default" as const,
+      icon: isClientBand ? (
+        <Building2 className="w-4 h-4" />
+      ) : (
+        <UserPlus className="w-4 h-4" />
+      ),
+      action: "apply",
+      disabled: false,
+    };
+  }
+
+  return {
+    label: "Unavailable",
+    variant: "secondary" as const,
+    icon: <AlertCircle className="w-4 h-4" />,
+    action: "none",
+    disabled: true,
+  };
+};
 
 // Main Component
 export const AllGigs = ({ user }: { user: any }) => {
@@ -373,7 +461,49 @@ export const AllGigs = ({ user }: { user: any }) => {
       toast.error(errorMessage);
     }
   };
+  // In AllGigs.tsx, add this converter:
+  const convertGigToGigProps = (gig: any): GigProps => {
+    // Cast the bookingHistory entries to fix status types
+    const convertedBookingHistory = gig.bookingHistory?.map((entry: any) => ({
+      ...entry,
+      // TypeScript will accept this as it's a superset of the required values
+      status: entry.status as any,
+    }));
 
+    // Also convert bandBookingHistory if needed
+    const convertedBandBookingHistory = gig.bandBookingHistory?.map(
+      (entry: any) => ({
+        ...entry,
+        // Handle any type mismatches here
+      })
+    );
+
+    // Convert bookCount to BandMember[] if needed
+    const convertedBookCount = gig.bookCount?.map((entry: any) => ({
+      ...entry,
+      // Map to BandMember structure
+      userId: entry.appliedBy || entry.bandId,
+      name: entry.performingMembers?.[0]?.name || "",
+      role: entry.performingMembers?.[0]?.role || "",
+      joinedAt: entry.appliedAt || Date.now(),
+      status: entry.status || "pending",
+    }));
+
+    return {
+      ...gig,
+      bookingHistory: convertedBookingHistory,
+      bandBookingHistory: convertedBandBookingHistory,
+      bookCount: convertedBookCount,
+      // Cast other problematic fields
+      paymentStatus: gig.paymentStatus as any,
+    };
+  };
+
+  // Then use it:
+  const getUserStatusForGig = (gig: any) => {
+    const convertedGig = convertGigToGigProps(gig);
+    return getUserGigStatus(convertedGig, user?._id);
+  };
   // Loading skeleton with gradient animation
   if (isLoading.gigs || isLoading.explore) {
     return (
@@ -972,21 +1102,25 @@ export const AllGigs = ({ user }: { user: any }) => {
               )}
             </motion.div>
           ) : (
-            filteredGigs.map((gig, index) => (
-              <motion.div
-                key={gig._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                className={viewMode === "list" ? "w-full" : ""}
-                whileHover={{ scale: viewMode === "grid" ? 1.02 : 1 }}
-              >
-                <GigCard
-                  gig={gig}
-                  onClick={() => handleOpenGigDescription(gig)}
-                />
-              </motion.div>
-            ))
+            filteredGigs.map((gig, index) => {
+              const userStatus = getUserStatusForGig(gig);
+              return (
+                <motion.div
+                  key={gig._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className={viewMode === "list" ? "w-full" : ""}
+                  whileHover={{ scale: viewMode === "grid" ? 1.02 : 1 }}
+                >
+                  <GigCard
+                    gig={gig}
+                    userStatus={userStatus} // Pass user status as prop
+                    onClick={() => handleOpenGigDescription(gig)}
+                  />
+                </motion.div>
+              );
+            })
           )}
         </motion.div>
       </AnimatePresence>
