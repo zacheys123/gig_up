@@ -1438,7 +1438,8 @@ export default function NormalGigsForm() {
   const isOnline = useNetworkStatus();
   const [drafts, setDrafts] = useState<GigDraft[]>([]);
   const [activeTab, setActiveTab] = useState<string>("basic");
-
+  const [isInstrumentDropdownOpen, setIsInstrumentDropdownOpen] =
+    useState(false);
   // Function to refresh drafts
   const refreshDrafts = useCallback(() => {
     const loadedDrafts = getGigDrafts();
@@ -1488,7 +1489,7 @@ export default function NormalGigsForm() {
   const [secretpass, setSecretPass] = useState<boolean>(false);
   const [showcustomization, setShowCustomization] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [imageUrl, setUrl] = useState<string>("");
+  const [imageUrl, setUrl] = useState<string>("/default-gig-logo.png"); // Default image
   const [fileUrl, setFileUrl] = useState<string>("");
   const [editMessage, setEditMessage] = useState("");
   const [error, setError] = useState(false);
@@ -2213,9 +2214,20 @@ export default function NormalGigsForm() {
           formValues.durationto
         );
 
-        if (!submissionData.bussinesscat) {
-          throw new Error("Business category is required");
-        }
+        // 🔴 DEBUG: Check what's being sent
+        console.log("Submitting to Convex:", {
+          hasPostedBy: !!submissionData.postedBy,
+          hasTitle: !!submissionData.title,
+          hasSecret: !!submissionData.secret,
+          hasBussinesscat: !!submissionData.bussinesscat,
+          hasDate: !!submissionData.date,
+          hasTime: !!submissionData.time,
+          hasLogo:
+            !!submissionData.logo && submissionData.logo.trim().length > 0,
+          logoValue: submissionData.logo,
+          timeObject: submissionData.time,
+          fullData: submissionData,
+        });
 
         await createGig(submissionData);
 
@@ -3230,7 +3242,6 @@ export default function NormalGigsForm() {
                     {/* Slots Configuration */}
                     <SlotsConfiguration />
 
-                    {/* Individual Instrument Selection */}
                     {shouldShowField("individualInstrument") && (
                       <div>
                         <Label
@@ -3241,46 +3252,81 @@ export default function NormalGigsForm() {
                         >
                           Instrument Selection
                         </Label>
+
                         <div className="relative">
                           <Guitar
                             className={cn(
-                              "absolute left-3 top-1/2 transform -translate-y-1/2",
+                              "absolute left-3 top-1/2 transform -translate-y-1/2 z-10",
                               colors.textMuted
                             )}
                           />
-                          <Select
-                            value={formValues.category}
-                            onValueChange={(value) =>
-                              handleSelectChange("category", value)
-                            }
-                          >
-                            <SelectTrigger
+
+                          {/* Custom dropdown implementation */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setIsInstrumentDropdownOpen(
+                                  !isInstrumentDropdownOpen
+                                )
+                              }
                               className={cn(
-                                "pl-12 py-3 rounded-xl transition-all duration-200",
+                                "w-full pl-12 pr-10 py-3 text-left rounded-xl border transition-all duration-200",
                                 colors.border,
                                 colors.background,
                                 colors.text,
                                 "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                               )}
                             >
-                              <SelectValue placeholder="Select your instrument" />
-                            </SelectTrigger>
-                            <SelectContent
-                              className={cn(
-                                colors.backgroundMuted,
-                                colors.border,
-                                "backdrop-blur-sm"
-                              )}
-                            >
-                              {individualInstruments.map((instrument) => (
-                                <SelectItem key={instrument} value={instrument}>
-                                  {instrument.charAt(0).toUpperCase() +
-                                    instrument.slice(1)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                              {formValues.category
+                                ? formValues.category.charAt(0).toUpperCase() +
+                                  formValues.category.slice(1)
+                                : "Select your instrument"}
+                              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
+                            </button>
+
+                            {/* Dropdown menu */}
+                            {isInstrumentDropdownOpen && (
+                              <div className="absolute z-50 mt-1 w-full rounded-xl border shadow-lg max-h-60 overflow-auto">
+                                <div
+                                  className={cn("p-2", colors.backgroundMuted)}
+                                >
+                                  {individualInstruments.map((instrument) => (
+                                    <button
+                                      key={instrument}
+                                      type="button"
+                                      onClick={() => {
+                                        handleSelectChange(
+                                          "category",
+                                          instrument
+                                        );
+                                        setIsInstrumentDropdownOpen(false);
+                                      }}
+                                      className={cn(
+                                        "w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors",
+                                        formValues.category === instrument
+                                          ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
+                                          : colors.text
+                                      )}
+                                    >
+                                      {instrument.charAt(0).toUpperCase() +
+                                        instrument.slice(1)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Show error if required */}
+                        {isFieldRequired("category") &&
+                          !formValues.category && (
+                            <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" />
+                              Please select an instrument
+                            </p>
+                          )}
                       </div>
                     )}
                   </div>

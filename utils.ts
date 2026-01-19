@@ -1519,24 +1519,33 @@ export const prepareGigDataForConvex = (
   durationFrom?: string,
   durationTo?: string
 ) => {
-  // Validate bussinesscat
+  // 1. VALIDATE REQUIRED FIELDS FIRST
   if (!formValues.bussinesscat) {
     throw new Error("Business category is required");
   }
+  if (!formValues.title?.trim()) {
+    throw new Error("Title is required");
+  }
+  if (!formValues.secret?.trim() || formValues.secret.length < 4) {
+    throw new Error("Secret passphrase is required (minimum 4 characters)");
+  }
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
 
-  // FIX: Handle scheduling date based on procedure type
+  // 2. FIX LOGO - NEVER PASS EMPTY STRING
+  const logoUrl = imageUrl?.trim() ? imageUrl : "/default-gig-logo.png";
+
+  // 3. FIX DATE HANDLING - ENSURE IT'S A TIMESTAMP
   let scheduleDate: number;
   let publishType: string;
 
-  // Determine publish type and date based on scheduling procedure
   if (!schedulingProcedure || !schedulingProcedure.type) {
-    // Default to immediate publish
     publishType = "create";
     scheduleDate = Date.now();
   } else {
     publishType = schedulingProcedure.type;
 
-    // Only set future date for "automatic" scheduling
     if (schedulingProcedure.type === "automatic" && schedulingProcedure.date) {
       try {
         const dateObj =
@@ -1544,29 +1553,32 @@ export const prepareGigDataForConvex = (
             ? schedulingProcedure.date
             : new Date(schedulingProcedure.date);
 
-        // Validate it's a future date
-        if (isNaN(dateObj.getTime()) || dateObj.getTime() <= Date.now()) {
-          // Invalid or past date, use current time
+        scheduleDate = dateObj.getTime();
+
+        // Validate it's a valid date
+        if (isNaN(scheduleDate) || scheduleDate <= Date.now()) {
+          console.warn("Invalid schedule date, using current time");
           scheduleDate = Date.now();
-          console.warn(
-            "Invalid or past date for scheduling, using current time"
-          );
-        } else {
-          scheduleDate = dateObj.getTime();
         }
       } catch (error) {
         console.warn("Error parsing schedule date, using current time:", error);
         scheduleDate = Date.now();
       }
     } else {
-      // For "create" (publish now) or "regular" (save as draft), use current time
       scheduleDate = Date.now();
     }
   }
 
-  // Calculate total slots based on business category
-  let totalSlots = 1; // Default for individual gigs
+  // 4. FIX TIME OBJECT - MUST HAVE ALL REQUIRED PROPERTIES
+  const time = {
+    start: formValues.start?.trim() || "19:00",
+    end: formValues.end?.trim() || "22:00",
+    durationFrom: durationFrom || formValues.durationfrom || "pm",
+    durationTo: durationTo || formValues.durationto || "pm",
+  };
 
+  // 5. CALCULATE TOTAL SLOTS
+  let totalSlots = 1;
   if (formValues.bussinesscat === "full") {
     totalSlots = formValues.maxSlots || 5;
   } else if (formValues.bussinesscat === "other") {
@@ -1575,12 +1587,11 @@ export const prepareGigDataForConvex = (
     totalSlots = formValues.maxSlots || 1;
   }
 
-  // Process interest window - IMPORTANT: Only process if enabled
+  // 6. PROCESS INTEREST WINDOW
   let acceptInterestStartTime: number | undefined;
   let acceptInterestEndTime: number | undefined;
 
   if (formValues.enableInterestWindow) {
-    // If user provided specific start time
     if (formValues.acceptInterestStartTime) {
       try {
         const startDate = new Date(formValues.acceptInterestStartTime);
@@ -1592,7 +1603,6 @@ export const prepareGigDataForConvex = (
       }
     }
 
-    // If user provided specific end time
     if (formValues.acceptInterestEndTime) {
       try {
         const endDate = new Date(formValues.acceptInterestEndTime);
@@ -1604,28 +1614,24 @@ export const prepareGigDataForConvex = (
       }
     }
 
-    // If using days duration (and no specific end time)
     if (formValues.interestWindowDays && !acceptInterestEndTime) {
       const startTime = acceptInterestStartTime || Date.now();
       acceptInterestEndTime =
         startTime + formValues.interestWindowDays * 24 * 60 * 60 * 1000;
     }
 
-    // Validate: end time should be after start time
     if (
       acceptInterestStartTime &&
       acceptInterestEndTime &&
       acceptInterestEndTime <= acceptInterestStartTime
     ) {
-      console.warn(
-        "Interest end time must be after start time, ignoring interest window"
-      );
+      console.warn("Invalid interest window times");
       acceptInterestStartTime = undefined;
       acceptInterestEndTime = undefined;
     }
   }
 
-  // Build band category array (only for "other" business category)
+  // 7. BUILD BAND CATEGORY
   const bandCategory =
     formValues.bussinesscat === "other"
       ? bandRoles.map((role) => ({
@@ -1636,82 +1642,68 @@ export const prepareGigDataForConvex = (
           bookedUsers: [],
           requiredSkills: role.requiredSkills || [],
           description: role.description || "",
-          price: role.price ? role.price : undefined,
+          price: role.price || undefined,
           currency: role.currency || formValues.currency || "KES",
           negotiable: role.negotiable ?? formValues.negotiable ?? false,
           maxApplicants: role.maxApplicants || 20,
           currentApplicants: 0,
+          isLocked: false,
         }))
       : [];
 
+  // 8. RETURN COMPLETE DATA WITH ALL REQUIRED FIELDS
   return {
-    // Basic info
+    // 🔴 REQUIRED FIELDS (Convex checks these)
     postedBy: userId,
-    title: formValues.title,
-    secret: formValues.secret || "",
+    title: formValues.title.trim(),
+    secret: formValues.secret.trim(), // Must be non-empty
     bussinesscat: formValues.bussinesscat,
+    date: scheduleDate, // Must be number timestamp
+    time: time, // Must have start, end, durationFrom, durationTo
+    logo: logoUrl, // Must be non-empty string
 
-    // Dates and times
-    date: scheduleDate, // Use the calculated schedule date
-    time: {
-      start: formValues.start || "10:00",
-      end: formValues.end || "12:00",
-      durationFrom: durationFrom || "am",
-      durationTo: durationTo || "pm",
-    },
-
-    // Interest window - only include if enabled and valid
-    ...(acceptInterestStartTime && { acceptInterestStartTime }),
-    ...(acceptInterestEndTime && { acceptInterestEndTime }),
-
-    // Design and branding
-    logo: imageUrl || "",
-    font: gigcustom.font || "Arial, sans-serif",
-    fontColor: gigcustom.fontColor || "#000000",
-    backgroundColor: gigcustom.backgroundColor || "#FFFFFF",
-
-    // Description
-    description: formValues.description || "",
-
-    // Contact and location
-    phone: formValues.phoneNo || "", // Keep using phoneNo
-    location: formValues.location || "",
-
-    // Price information
+    // Optional fields with defaults
+    description: formValues.description?.trim() || "",
+    phone: formValues.phoneNo?.trim() || "", // Note: Convex expects 'phone' not 'phoneNo'
+    phoneNo: formValues.phoneNo?.trim() || "", // For compatibility
     price: parseFloat(formValues.price) || 0,
-    currency: formValues.currency || "KES",
-    pricerange: formValues.pricerange || "",
-    negotiable: formValues.negotiable || false,
-
-    // Category and type
-    category: formValues.category || "",
-    gigtimeline: formValues.gigtimeline || "",
-    otherTimeline: formValues.otherTimeline || "",
-    day: formValues.day || "",
+    category: formValues.category?.trim() || "",
+    location: formValues.location?.trim() || "",
+    font: gigcustom.font?.trim() || "Arial, sans-serif",
+    fontColor: gigcustom.fontColor?.trim() || "#000000",
+    backgroundColor: gigcustom.backgroundColor?.trim() || "#FFFFFF",
+    gigtimeline: formValues.gigtimeline?.trim() || "",
+    otherTimeline: formValues.otherTimeline?.trim() || "",
+    day: formValues.day?.trim() || "",
 
     // Talent-specific fields
-    mcType: formValues.mcType || "",
-    mcLanguages: formValues.mcLanguages || "",
-    djGenre: formValues.djGenre || "",
-    djEquipment: formValues.djEquipment || "",
+    mcType: formValues.mcType?.trim() || "",
+    mcLanguages: formValues.mcLanguages?.trim() || "",
+    djGenre: formValues.djGenre?.trim() || "",
+    djEquipment: formValues.djEquipment?.trim() || "",
     vocalistGenre: formValues.vocalistGenre || [],
 
-    // Scheduling
+    // Other fields
+    pricerange: formValues.pricerange?.trim() || "",
+    currency: formValues.currency?.trim() || "KES",
     scheduleDate: scheduleDate,
     schedulingProcedure: publishType,
 
-    // Band/roles information
-    maxSlots: formValues.maxSlots || totalSlots,
+    // Interest window
+    ...(acceptInterestStartTime && { acceptInterestStartTime }),
+    ...(acceptInterestEndTime && { acceptInterestEndTime }),
+
+    // Band setup
     isClientBand: formValues.bussinesscat === "other",
+    maxSlots: formValues.maxSlots || totalSlots,
     bandCategory: bandCategory,
 
-    //   // Status
-    //   status:
-    //     publishType === "create"
-    //       ? "published"
-    //       : publishType === "automatic"
-    //         ? "scheduled"
-    //         : "draft",
+    // Negotiable
+    negotiable: formValues.negotiable || false,
+
+    // Duration fields (for Convex schema)
+    durationFrom: durationFrom || formValues.durationfrom || "pm",
+    durationTo: durationTo || formValues.durationto || "pm",
   };
 };
 

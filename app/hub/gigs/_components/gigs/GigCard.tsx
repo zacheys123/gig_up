@@ -1812,12 +1812,20 @@ const GigCard: React.FC<GigCardProps> = ({
           )}
         </div>
       </motion.div>
-      {/* Show Interest Modal */}
       <Dialog open={showInterestModal} onOpenChange={setShowInterestModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Show Interest in "{gig.title}"</DialogTitle>
-            <DialogDescription>
+        <DialogContent
+          className={cn(
+            "sm:max-w-md rounded-xl shadow-xl",
+            colors.background,
+            colors.border,
+            "border-2"
+          )}
+        >
+          <DialogHeader className={cn("pb-3", colors.border)}>
+            <DialogTitle className={cn("text-xl font-bold", colors.text)}>
+              Show Interest in "{gig.title}"
+            </DialogTitle>
+            <DialogDescription className={cn(colors.textMuted)}>
               Add an optional note to introduce yourself.
             </DialogDescription>
           </DialogHeader>
@@ -1826,31 +1834,79 @@ const GigCard: React.FC<GigCardProps> = ({
             {/* Interest Window Info */}
             {(gig.acceptInterestStartTime || gig.acceptInterestEndTime) && (
               <div
-                className={clsx(
+                className={cn(
                   "p-3 rounded-lg border",
                   interestWindowStatus.status === "open"
-                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                    : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                    ? cn(
+                        colors.successBg,
+                        colors.successBorder,
+                        "border",
+                        colors.text
+                      )
+                    : cn(
+                        colors.infoBg,
+                        colors.infoBorder,
+                        "border",
+                        colors.text
+                      )
                 )}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-medium">Interest Window</span>
+                  <Clock
+                    className={cn(
+                      "w-4 h-4",
+                      interestWindowStatus.status === "open"
+                        ? colors.successText
+                        : colors.infoText
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "font-medium",
+                      interestWindowStatus.status === "open"
+                        ? colors.successText
+                        : colors.infoText
+                    )}
+                  >
+                    Interest Window
+                  </span>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p
+                  className={cn(
+                    "text-sm",
+                    interestWindowStatus.status === "open"
+                      ? colors.successText
+                      : colors.infoText
+                  )}
+                >
                   {interestWindowStatus.message}
                 </p>
               </div>
             )}
 
             {/* Available slots */}
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div
+              className={cn(
+                "p-3 rounded-lg border",
+                isDarkMode
+                  ? "bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-800/30"
+                  : "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200"
+              )}
+            >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                <span
+                  className={cn(
+                    "text-sm font-medium",
+                    isDarkMode ? "text-blue-300" : "text-blue-700"
+                  )}
+                >
                   Available: {availableSlots}/{maxSlots}
                 </span>
                 {availableSlots <= 2 && (
-                  <Badge variant="destructive" className="animate-pulse">
+                  <Badge
+                    variant="destructive"
+                    className="animate-pulse bg-gradient-to-r from-red-500 to-orange-500"
+                  >
                     Almost Full!
                   </Badge>
                 )}
@@ -1859,53 +1915,80 @@ const GigCard: React.FC<GigCardProps> = ({
 
             {/* Notes */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Notes</label>
+              <label
+                className={cn("text-sm font-medium mb-2 block", colors.text)}
+              >
+                Notes
+              </label>
               <Textarea
                 value={interestNotes}
                 onChange={(e) => setInterestNotes(e.target.value)}
                 placeholder="Tell the client why you're interested..."
-                className="min-h-[80px]"
+                className={cn(
+                  "min-h-[80px] rounded-xl border-2 transition-all",
+                  colors.border,
+                  colors.background,
+                  "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
+                  colors.text
+                )}
               />
             </div>
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter
+            className={cn(
+              "flex-col sm:flex-row gap-3 pt-4",
+              colors.border,
+              "border-t"
+            )}
+          >
             <Button
               variant="outline"
               onClick={() => setShowInterestModal(false)}
               disabled={loading}
-              className="w-full sm:w-auto"
+              className={cn(
+                "w-full sm:w-auto rounded-xl",
+                colors.border,
+                colors.hoverBg,
+                colors.text
+              )}
             >
               Cancel
             </Button>
             <Button
               onClick={() => handleRegularInterest(interestNotes)}
               disabled={loading}
-              className="w-full sm:w-auto"
-              style={getButtonStyles("default")}
+              className={cn(
+                "w-full sm:w-auto rounded-xl font-semibold",
+                colors.gradientPrimary,
+                "text-white shadow-lg",
+                colors.primaryBgHover,
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
             >
               {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Sending...
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span>Sending...</span>
+                </div>
               ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Show Interest
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  <span>Show Interest</span>
+                </div>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
         <DialogContent
           className={cn(
-            "sm:max-w-md",
+            "sm:max-w-md rounded-xl shadow-xl",
             colors.background,
             colors.border,
-            "rounded-xl shadow-xl"
+            "border-2"
           )}
         >
           <DialogHeader className={cn("pb-3", colors.border)}>
@@ -1921,7 +2004,7 @@ const GigCard: React.FC<GigCardProps> = ({
             {/* Available slots */}
             <div
               className={cn(
-                "p-3 rounded-lg",
+                "p-3 rounded-lg border",
                 isDarkMode
                   ? "bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-800/30"
                   : "bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200"
@@ -1972,7 +2055,8 @@ const GigCard: React.FC<GigCardProps> = ({
                   "rounded-xl border-2 transition-all",
                   colors.border,
                   "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                  colors.background
+                  colors.background,
+                  colors.text
                 )}
               />
             </div>
@@ -1988,9 +2072,10 @@ const GigCard: React.FC<GigCardProps> = ({
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger
                     className={cn(
-                      "rounded-xl border-2",
+                      "rounded-xl border-2 transition-all",
                       colors.border,
                       colors.background,
+                      colors.text,
                       "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                     )}
                   >
@@ -2000,7 +2085,7 @@ const GigCard: React.FC<GigCardProps> = ({
                     className={cn(
                       colors.background,
                       colors.border,
-                      "rounded-xl shadow-lg"
+                      "rounded-xl shadow-lg border-2"
                     )}
                   >
                     {gig.bandCategory.map((role, index) => {
@@ -2018,24 +2103,37 @@ const GigCard: React.FC<GigCardProps> = ({
                           value={role.role}
                           disabled={isFull || isBooked || hasApplied}
                           className={cn(
-                            "py-3 px-4 rounded-lg my-1",
+                            "py-3 px-4 rounded-lg my-1 transition-colors",
                             colors.hoverBg,
+                            colors.text,
                             isFull && "opacity-50 cursor-not-allowed",
-                            hasApplied && !isBooked && isDarkMode
-                              ? "bg-blue-900/20 text-blue-300"
-                              : hasApplied && !isBooked
-                                ? "bg-blue-50 text-blue-700"
-                                : ""
+                            hasApplied &&
+                              !isBooked &&
+                              cn(colors.infoBg, colors.infoText)
                           )}
                         >
                           <div className="flex items-center justify-between">
-                            <span>{role.role}</span>
-                            <span className={cn("text-xs", colors.textMuted)}>
-                              {role.filledSlots}/{role.maxSlots} bands
+                            <span className="font-medium">{role.role}</span>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={cn(
+                                  "text-xs px-2 py-1 rounded-full",
+                                  isDarkMode
+                                    ? "bg-gray-800 text-gray-300"
+                                    : "bg-gray-100 text-gray-700"
+                                )}
+                              >
+                                {role.filledSlots}/{role.maxSlots}
+                              </span>
                               {isBooked && (
                                 <Badge
                                   variant="outline"
-                                  className="ml-2 text-xs bg-green-500/10"
+                                  className={cn(
+                                    "text-xs",
+                                    colors.successBg,
+                                    colors.successBorder,
+                                    colors.successText
+                                  )}
                                 >
                                   Booked
                                 </Badge>
@@ -2043,12 +2141,17 @@ const GigCard: React.FC<GigCardProps> = ({
                               {hasApplied && !isBooked && (
                                 <Badge
                                   variant="outline"
-                                  className="ml-2 text-xs bg-blue-500/10"
+                                  className={cn(
+                                    "text-xs",
+                                    colors.infoBg,
+                                    colors.infoBorder,
+                                    colors.infoText
+                                  )}
                                 >
                                   Applied
                                 </Badge>
                               )}
-                            </span>
+                            </div>
                           </div>
                         </SelectItem>
                       );
@@ -2077,19 +2180,20 @@ const GigCard: React.FC<GigCardProps> = ({
                       <div
                         key={index}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-xl",
+                          "flex items-center justify-between p-3 rounded-xl border transition-all",
                           colors.backgroundMuted,
                           colors.border,
-                          "border"
+                          colors.text,
+                          "hover:shadow-md"
                         )}
                       >
                         <div className="flex items-center gap-3">
                           <Avatar
                             className={cn(
-                              "w-9 h-9",
+                              "w-9 h-9 border-2",
                               isDarkMode
-                                ? "bg-gradient-to-br from-purple-700/30 to-pink-700/30"
-                                : "bg-gradient-to-br from-purple-100 to-pink-100"
+                                ? "bg-gradient-to-br from-purple-700/30 to-pink-700/30 border-purple-600/30"
+                                : "bg-gradient-to-br from-purple-100 to-pink-100 border-purple-200"
                             )}
                           >
                             <AvatarFallback
@@ -2118,8 +2222,8 @@ const GigCard: React.FC<GigCardProps> = ({
                                 className={cn(
                                   "text-xs",
                                   isDarkMode
-                                    ? "border-purple-700 text-purple-300"
-                                    : "border-purple-300 text-purple-700"
+                                    ? "border-purple-700 text-purple-300 bg-purple-900/20"
+                                    : "border-purple-300 text-purple-700 bg-purple-50"
                                 )}
                               >
                                 {memberCount}{" "}
@@ -2135,9 +2239,10 @@ const GigCard: React.FC<GigCardProps> = ({
                           <Badge
                             variant="outline"
                             className={cn(
-                              isDarkMode
-                                ? "border-orange-500 text-orange-300"
-                                : "border-orange-300 text-orange-700"
+                              "text-xs",
+                              colors.primary,
+                              colors.border,
+                              isDarkMode ? "bg-orange-900/20" : "bg-orange-50"
                             )}
                           >
                             Your Band
@@ -2190,8 +2295,9 @@ const GigCard: React.FC<GigCardProps> = ({
               }
               className={cn(
                 "w-full sm:w-auto rounded-xl font-semibold",
-                "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                "text-white shadow-lg",
+                colors.gradientPrimary,
+                "text-white shadow-lg hover:shadow-xl transition-all duration-200",
+                colors.primaryBgHover,
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >

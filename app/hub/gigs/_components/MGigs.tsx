@@ -415,7 +415,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                     : "bg-gradient-to-r from-orange-600 to-red-600"
                 )}
               >
-                My Blueprint
+                My Posted Gigs
               </h1>
               <p className={clsx("max-w-2xl", colors.textMuted)}>
                 Manage and track all gigs you've posted as a client.
