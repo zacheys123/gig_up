@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
@@ -25,26 +25,163 @@ import {
   Eye,
   Bookmark,
   XCircle,
-  ShoppingBag,
   Calendar,
-  Clock,
-  DollarSign,
   Filter,
-  User,
   X,
   Send,
-  ChevronRight,
-  Sparkles,
-  Building2,
+  ChevronDown,
+  Search,
+  DollarSign,
+  AlertCircle,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@clerk/nextjs";
+
+// Helper function to convert Tailwind color classes to CSS values
+const getColorValue = (colorClass: string): string => {
+  // If it's already a hex/rgb value, return it
+  if (colorClass?.startsWith("#") || colorClass?.startsWith("rgb")) {
+    return colorClass;
+  }
+
+  // Map Tailwind colors to hex values
+  const colorMap: Record<string, string> = {
+    // Background colors
+    "bg-white": "#ffffff",
+    "bg-gray-50": "#f9fafb",
+    "bg-gray-100": "#f3f4f6",
+    "bg-gray-200": "#e5e7eb",
+    "bg-gray-300": "#d1d5db",
+    "bg-gray-400": "#9ca3af",
+    "bg-gray-500": "#6b7280",
+    "bg-gray-600": "#4b5563",
+    "bg-gray-700": "#374151",
+    "bg-gray-800": "#1f2937",
+    "bg-gray-900": "#111827",
+    "bg-black": "#000000",
+
+    // Text colors
+    "text-white": "#ffffff",
+    "text-gray-100": "#f3f4f6",
+    "text-gray-200": "#e5e7eb",
+    "text-gray-300": "#d1d5db",
+    "text-gray-400": "#9ca3af",
+    "text-gray-500": "#6b7280",
+    "text-gray-600": "#4b5563",
+    "text-gray-700": "#374151",
+    "text-gray-800": "#1f2937",
+    "text-gray-900": "#111827",
+
+    // Primary colors
+    "text-orange-400": "#fb923c",
+    "text-orange-500": "#f97316",
+    "text-orange-600": "#ea580c",
+    "bg-orange-50": "#fff7ed",
+    "bg-orange-100": "#ffedd5",
+    "bg-orange-200": "#fed7aa",
+    "bg-orange-300": "#fdba74",
+    "bg-orange-400": "#fb923c",
+    "bg-orange-500": "#f97316",
+    "bg-orange-600": "#ea580c",
+
+    // Success colors
+    "text-green-400": "#34d399",
+    "text-green-500": "#10b981",
+    "text-green-600": "#059669",
+    "bg-green-50": "#f0fdf4",
+    "bg-green-100": "#dcfce7",
+    "bg-green-200": "#bbf7d0",
+    "bg-green-300": "#86efac",
+    "bg-green-400": "#4ade80",
+    "bg-green-500": "#22c55e",
+    "bg-green-600": "#16a34a",
+
+    // Blue colors
+    "text-blue-400": "#60a5fa",
+    "text-blue-500": "#3b82f6",
+    "text-blue-600": "#2563eb",
+    "bg-blue-50": "#eff6ff",
+    "bg-blue-100": "#dbeafe",
+    "bg-blue-200": "#bfdbfe",
+    "bg-blue-300": "#93c5fd",
+    "bg-blue-400": "#60a5fa",
+    "bg-blue-500": "#3b82f6",
+    "bg-blue-600": "#2563eb",
+
+    // Purple colors
+    "text-purple-400": "#a78bfa",
+    "text-purple-500": "#8b5cf6",
+    "text-purple-600": "#7c3aed",
+    "bg-purple-50": "#faf5ff",
+    "bg-purple-100": "#f3e8ff",
+    "bg-purple-200": "#e9d5ff",
+    "bg-purple-300": "#d8b4fe",
+    "bg-purple-400": "#c084fc",
+    "bg-purple-500": "#a855f7",
+    "bg-purple-600": "#9333ea",
+
+    // Pink colors
+    "text-pink-400": "#f472b6",
+    "text-pink-500": "#ec4899",
+    "text-pink-600": "#db2777",
+    "bg-pink-50": "#fdf2f8",
+    "bg-pink-100": "#fce7f3",
+    "bg-pink-200": "#fbcfe8",
+    "bg-pink-300": "#f9a8d4",
+    "bg-pink-400": "#f472b6",
+    "bg-pink-500": "#ec4899",
+    "bg-pink-600": "#db2777",
+
+    // Red/destructive
+    "text-red-400": "#f87171",
+    "text-red-500": "#ef4444",
+    "text-red-600": "#dc2626",
+    "bg-red-50": "#fef2f2",
+    "bg-red-100": "#fee2e2",
+    "bg-red-200": "#fecaca",
+    "bg-red-300": "#fca5a5",
+    "bg-red-400": "#f87171",
+    "bg-red-500": "#ef4444",
+    "bg-red-600": "#dc2626",
+  };
+
+  return colorMap[colorClass] || colorClass || "#000000";
+};
+
+// Helper to extract Tailwind class from color property
+const extractColorClass = (colorProp: string): string => {
+  if (!colorProp) return "";
+
+  // If it's already a CSS value, return it
+  if (colorProp.startsWith("#") || colorProp.startsWith("rgb")) {
+    return colorProp;
+  }
+
+  // If it's a Tailwind class with opacity, handle it
+  if (colorProp.includes("/")) {
+    const [baseClass, opacity] = colorProp.split("/");
+    const baseColor = getColorValue(baseClass);
+
+    // Convert hex to rgba with opacity
+    if (baseColor.startsWith("#")) {
+      const r = parseInt(baseColor.slice(1, 3), 16);
+      const g = parseInt(baseColor.slice(3, 5), 16);
+      const b = parseInt(baseColor.slice(5, 7), 16);
+      const alpha = parseFloat(opacity) / 100;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+  }
+
+  return getColorValue(colorProp);
+};
 
 export default function BandApplicantsPage() {
   const params = useParams();
   const router = useRouter();
   const { colors, isDarkMode, mounted } = useThemeColors();
-  const { userId: clerkId } = useAuth(); // Extract clerkId from useAuth
+  const { userId: clerkId } = useAuth();
   const gigId = params.gigId as Id<"gigs">;
 
   const [selectedRole, setSelectedRole] = useState<string>("all");
@@ -52,18 +189,18 @@ export default function BandApplicantsPage() {
   const [loadingBooking, setLoadingBooking] = useState(false);
   const [loadingUnbooking, setLoadingUnbooking] = useState(false);
   const [loadingRemoval, setLoadingRemoval] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Fetch gig data with applicants AND booked users
+  // Fetch gig data
   const gigData = useQuery(api.controllers.gigs.getGigWithApplicants, {
     gigId,
   });
 
-  // Extract data from gigData
-  const { gig, applicants, bookedUsers, userDetails, shortlisted } =
-    gigData || {};
+  const { gig, applicants, bookedUsers, userDetails } = gigData || {};
   const roles = gig?.bandCategory || [];
 
-  // Combine applicants and booked users for display
+  // Combine users
   const allUsers = useMemo(() => {
     if (!applicants || !bookedUsers) return [];
 
@@ -72,13 +209,9 @@ export default function BandApplicantsPage() {
       ...(bookedUsers || []).map((b: any) => ({ ...b, isBooked: true })),
     ];
 
-    // Sort by: booked users first, then by date (newest first)
     return combined.sort((a, b) => {
-      // Booked users first
       if (a.isBooked && !b.isBooked) return -1;
       if (!a.isBooked && b.isBooked) return 1;
-
-      // Then by date (newest first)
       const aDate = a.bookedAt || a.appliedAt || 0;
       const bDate = b.bookedAt || b.appliedAt || 0;
       return bDate - aDate;
@@ -93,7 +226,7 @@ export default function BandApplicantsPage() {
     api.controllers.bookings.unbookFromBandRole
   );
 
-  // Handle book for role
+  // Action handlers
   const handleBookForRole = async (
     applicantUserId: Id<"users">,
     bandRoleIndex: number,
@@ -107,44 +240,21 @@ export default function BandApplicantsPage() {
 
     setLoadingBooking(true);
     try {
-      const result = await bookForRole({
+      await bookForRole({
         gigId,
         userId: applicantUserId,
         bandRoleIndex,
         clerkId,
         reason: `Booked as ${bandRole}`,
       });
-
-      toast.success(
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-            <CheckCircle className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="font-semibold">Successfully Booked!</p>
-            <p className="text-sm opacity-90">
-              {applicantName} is now booked as {bandRole}
-            </p>
-          </div>
-        </div>
-      );
+      toast.success(`Booked ${applicantName} as ${bandRole}`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to book musician",
-        {
-          style: {
-            background: colors.destructiveBg,
-            color: colors.destructive,
-            borderColor: colors.destructive,
-          },
-        }
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to book");
     } finally {
       setLoadingBooking(false);
     }
   };
 
-  // Handle unbook from role
   const handleUnbookFromRole = async (
     userId: Id<"users">,
     bandRoleIndex: number,
@@ -164,17 +274,14 @@ export default function BandApplicantsPage() {
         clerkId,
         reason: "Unbooked by band leader",
       });
-      toast.success(`${userName} has been unbooked from the role`);
+      toast.success(`${userName} has been unbooked`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to unbook musician"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to unbook");
     } finally {
       setLoadingUnbooking(false);
     }
   };
 
-  // Handle remove from applicants
   const handleRemoveFromRole = async (
     applicantId: string,
     bandRoleIndex: number,
@@ -188,40 +295,163 @@ export default function BandApplicantsPage() {
         userId,
         reason: "Removed by band leader",
       });
-      toast.success("Applicant removed from role");
+      toast.success("Applicant removed");
     } catch (error) {
-      toast.error("Failed to remove from role");
-      console.error("Error removing from role:", error);
+      toast.error("Failed to remove applicant");
     } finally {
       setLoadingRemoval(false);
     }
   };
 
+  // Role colors using theme colors
+  const getRoleColors = (roleIndex: number) => {
+    const rolePalette = [
+      {
+        bg:
+          colors.clientBg ||
+          (isDarkMode ? "rgba(96, 165, 250, 0.15)" : "rgba(59, 130, 246, 0.1)"),
+        text: colors.clientText || (isDarkMode ? "#93c5fd" : "#1d4ed8"),
+        border:
+          colors.clientBorder ||
+          (isDarkMode ? "rgba(96, 165, 250, 0.3)" : "rgba(59, 130, 246, 0.3)"),
+      },
+      {
+        bg:
+          colors.bookerBg ||
+          (isDarkMode ? "rgba(52, 211, 153, 0.15)" : "rgba(16, 185, 129, 0.1)"),
+        text: colors.bookerText || (isDarkMode ? "#a7f3d0" : "#047857"),
+        border:
+          colors.bookerBorder ||
+          (isDarkMode ? "rgba(52, 211, 153, 0.3)" : "rgba(16, 185, 129, 0.3)"),
+      },
+      {
+        bg:
+          colors.vocalistBg ||
+          (isDarkMode
+            ? "rgba(244, 114, 182, 0.15)"
+            : "rgba(236, 72, 153, 0.1)"),
+        text: colors.vocalistText || (isDarkMode ? "#fbcfe8" : "#be185d"),
+        border:
+          colors.vocalistBorder ||
+          (isDarkMode ? "rgba(244, 114, 182, 0.3)" : "rgba(236, 72, 153, 0.3)"),
+      },
+      {
+        bg:
+          colors.djBg ||
+          (isDarkMode
+            ? "rgba(167, 139, 250, 0.15)"
+            : "rgba(139, 92, 246, 0.1)"),
+        text: colors.djText || (isDarkMode ? "#ddd6fe" : "#6d28d9"),
+        border:
+          colors.djBorder ||
+          (isDarkMode ? "rgba(167, 139, 250, 0.3)" : "rgba(139, 92, 246, 0.3)"),
+      },
+      {
+        bg:
+          colors.mcBg ||
+          (isDarkMode ? "rgba(251, 146, 60, 0.15)" : "rgba(249, 115, 22, 0.1)"),
+        text: colors.mcText || (isDarkMode ? "#fed7aa" : "#c2410c"),
+        border:
+          colors.mcBorder ||
+          (isDarkMode ? "rgba(251, 146, 60, 0.3)" : "rgba(249, 115, 22, 0.3)"),
+      },
+    ];
+    return rolePalette[roleIndex % rolePalette.length] || rolePalette[0];
+  };
+
+  // Get CSS values from theme colors
+  const themeColors = useMemo(() => {
+    return {
+      background: extractColorClass(
+        colors.background || (isDarkMode ? "bg-gray-900" : "bg-white")
+      ),
+      text: extractColorClass(
+        colors.text || (isDarkMode ? "text-gray-100" : "text-gray-900")
+      ),
+      textMuted: extractColorClass(
+        colors.textMuted || (isDarkMode ? "text-gray-400" : "text-gray-600")
+      ),
+      primary: extractColorClass(colors.primary || "text-orange-500"),
+      primaryBg: extractColorClass(colors.primaryBg || "bg-orange-500"),
+      primaryContrast: extractColorClass(colors.primaryContrast || "#ffffff"),
+      border: extractColorClass(
+        colors.border || (isDarkMode ? "border-gray-700" : "border-gray-200")
+      ),
+      card: extractColorClass(
+        colors.card || (isDarkMode ? "bg-gray-800" : "bg-white")
+      ),
+      destructive: extractColorClass(colors.destructive || "text-red-500"),
+      success: extractColorClass(colors.success || "text-green-500"),
+      info: extractColorClass(colors.infoText || "text-blue-500"),
+      warning: extractColorClass(colors.warningText || "text-amber-500"),
+    };
+  }, [colors, isDarkMode]);
+
+  // Filter and sort users
+  const filteredUsers = useMemo(() => {
+    if (!allUsers.length) return [];
+
+    return allUsers
+      .filter((user: any) => {
+        if (selectedRole === "all") return true;
+        return user.bandRole === selectedRole;
+      })
+      .filter((user: any) => {
+        if (!searchQuery) return true;
+        const userInfo = userDetails?.[user.userId];
+        const name = userInfo?.firstname?.toLowerCase() || "";
+        const username = userInfo?.username?.toLowerCase() || "";
+        const role = user.bandRole?.toLowerCase() || "";
+        const query = searchQuery.toLowerCase();
+        return (
+          name.includes(query) ||
+          username.includes(query) ||
+          role.includes(query)
+        );
+      })
+      .sort((a: any, b: any) => {
+        const aUser = userDetails?.[a.userId];
+        const bUser = userDetails?.[b.userId];
+
+        switch (sortBy) {
+          case "rating":
+            return (bUser?.avgRating || 0) - (aUser?.avgRating || 0);
+          case "experience":
+            return (
+              (bUser?.completedGigsCount || 0) -
+              (aUser?.completedGigsCount || 0)
+            );
+          case "newest":
+          default:
+            const aDate = a.bookedAt || a.appliedAt || 0;
+            const bDate = b.bookedAt || b.appliedAt || 0;
+            return bDate - aDate;
+        }
+      });
+  }, [allUsers, selectedRole, sortBy, searchQuery, userDetails]);
+
+  // Loading state
   if (!mounted || !gigData || !gig) {
     return (
       <div
-        className="min-h-screen p-4 md:p-8"
-        style={{ backgroundColor: isDarkMode ? "#111827" : "#ffffff" }}
+        className="min-h-screen p-4 md:p-6 lg:p-8"
+        style={{ backgroundColor: themeColors.background }}
       >
-        <div className="animate-pulse space-y-6">
-          <div
-            className="h-12 w-64 rounded"
-            style={{
-              backgroundColor: isDarkMode
-                ? colors.borderSecondary
-                : colors.borderLight,
-            }}
-          ></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
+        <div className="animate-pulse space-y-6 max-w-7xl mx-auto">
+          <div className="h-8 w-48 rounded-lg bg-gray-200 dark:bg-gray-800"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="h-80 rounded-lg"
-                style={{
-                  backgroundColor: isDarkMode
-                    ? colors.cardBgStart
-                    : colors.cardBgStart,
-                }}
+                className="h-32 rounded-lg bg-gray-100 dark:bg-gray-800"
+              ></div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="h-64 rounded-xl bg-gray-100 dark:bg-gray-800"
               ></div>
             ))}
           </div>
@@ -230,427 +460,328 @@ export default function BandApplicantsPage() {
     );
   }
 
-  // Filter users based on selected role and sort
-  const filteredUsers = allUsers
-    .filter((user: any) => {
-      if (selectedRole === "all") return true;
-      return user.bandRole === selectedRole;
-    })
-    .sort((a: any, b: any) => {
-      const aUserId = a.userId;
-      const bUserId = b.userId;
-      const aUser = userDetails?.[aUserId];
-      const bUser = userDetails?.[bUserId];
-
-      switch (sortBy) {
-        case "newest":
-          const aDate = a.bookedAt || a.appliedAt || 0;
-          const bDate = b.bookedAt || b.appliedAt || 0;
-          return bDate - aDate;
-
-        case "rating":
-          const aRating = aUser?.avgRating || 0;
-          const bRating = bUser?.avgRating || 0;
-          return bRating - aRating;
-
-        case "experience":
-          const aExp = aUser?.completedGigsCount || 0;
-          const bExp = bUser?.completedGigsCount || 0;
-          return bExp - aExp;
-
-        default:
-          return 0;
-      }
-    });
-
-  // Helper function for role colors
-  const getRoleColors = (roleIndex: number) => {
-    const rolePalette = [
-      {
-        bg: "rgba(59, 130, 246, 0.1)",
-        text: "#1d4ed8",
-        border: "rgba(59, 130, 246, 0.3)",
-      },
-      {
-        bg: "rgba(16, 185, 129, 0.1)",
-        text: "#047857",
-        border: "rgba(16, 185, 129, 0.3)",
-      },
-      {
-        bg: "rgba(236, 72, 153, 0.1)",
-        text: "#be185d",
-        border: "rgba(236, 72, 153, 0.3)",
-      },
-      {
-        bg: "rgba(139, 92, 246, 0.1)",
-        text: "#6d28d9",
-        border: "rgba(139, 92, 246, 0.3)",
-      },
-      {
-        bg: "rgba(249, 115, 22, 0.1)",
-        text: "#c2410c",
-        border: "rgba(249, 115, 22, 0.3)",
-      },
-      {
-        bg: "rgba(245, 158, 11, 0.1)",
-        text: "#b45309",
-        border: "rgba(245, 158, 11, 0.3)",
-      },
-    ];
-
-    const darkModePalette = [
-      {
-        bg: "rgba(96, 165, 250, 0.15)",
-        text: "#93c5fd",
-        border: "rgba(96, 165, 250, 0.3)",
-      },
-      {
-        bg: "rgba(52, 211, 153, 0.15)",
-        text: "#a7f3d0",
-        border: "rgba(52, 211, 153, 0.3)",
-      },
-      {
-        bg: "rgba(244, 114, 182, 0.15)",
-        text: "#fbcfe8",
-        border: "rgba(244, 114, 182, 0.3)",
-      },
-      {
-        bg: "rgba(167, 139, 250, 0.15)",
-        text: "#ddd6fe",
-        border: "rgba(167, 139, 250, 0.3)",
-      },
-      {
-        bg: "rgba(251, 146, 60, 0.15)",
-        text: "#fed7aa",
-        border: "rgba(251, 146, 60, 0.3)",
-      },
-      {
-        bg: "rgba(251, 191, 36, 0.15)",
-        text: "#fde68a",
-        border: "rgba(251, 191, 36, 0.3)",
-      },
-    ];
-
-    const palette = isDarkMode ? darkModePalette : rolePalette;
-    return palette[roleIndex % palette.length] || palette[0];
-  };
-
   return (
     <div
-      className="min-h-screen p-4 md:p-8 transition-colors duration-200"
+      className="min-h-screen p-4 md:p-6 lg:p-8 transition-colors duration-200"
       style={{
-        backgroundColor: isDarkMode ? colors.background : colors.background,
-        color: isDarkMode ? colors.text : colors.text,
+        backgroundColor: themeColors.background,
+        color: themeColors.text,
       }}
     >
-      {/* Header */}
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          className="mb-6 gap-2"
-          style={{
-            backgroundColor: isDarkMode
-              ? colors.secondaryBackground
-              : colors.secondaryBackground,
-            color: isDarkMode ? colors.text : colors.text,
-          }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Gig
-        </Button>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1
-              className="text-3xl font-bold mb-2"
-              style={{ color: isDarkMode ? colors.text : colors.text }}
-            >
-              {gig.title}
-            </h1>
-            <p
-              className="text-lg"
-              style={{
-                color: isDarkMode ? colors.textMuted : colors.textMuted,
-              }}
-            >
-              Band Members • {allUsers.length} Total ({applicants?.length || 0}{" "}
-              applicants, {bookedUsers?.length || 0} booked)
-            </p>
-          </div>
-          <Badge
-            className="px-4 py-2 text-lg font-semibold"
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mb-6 gap-2 hover:scale-105 transition-transform"
             style={{
-              backgroundColor: isDarkMode ? colors.primaryBg : colors.primaryBg,
-              color: colors.primaryContrast,
+              backgroundColor: isDarkMode ? "#1f2937" : "#f9fafb",
+              color: themeColors.text,
             }}
           >
-            <Music className="w-4 h-4 mr-2" />
-            {roles.length} Band Roles
-          </Badge>
-        </div>
-      </div>
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
 
-      {/* Filters and Tabs */}
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <Tabs value={selectedRole} onValueChange={setSelectedRole}>
-              <TabsList
-                className="w-full md:w-auto"
-                style={{
-                  backgroundColor: isDarkMode
-                    ? colors.backgroundMuted
-                    : colors.backgroundMuted,
-                  borderColor: isDarkMode ? colors.border : colors.border,
-                }}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                {gig.title}
+              </h1>
+              <p
+                className="text-sm md:text-base"
+                style={{ color: themeColors.textMuted }}
               >
-                <TabsTrigger
-                  value="all"
-                  className="flex-1 md:flex-none"
-                  style={{
-                    backgroundColor:
-                      selectedRole === "all" ? colors.primaryBg : "transparent",
-                    color:
-                      selectedRole === "all"
-                        ? colors.primaryContrast
-                        : colors.text,
-                  }}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  All ({allUsers.length})
-                </TabsTrigger>
-                {roles.map((role: any, index: number) => {
-                  const roleApplicants =
-                    applicants?.filter((a: any) => a.bandRoleIndex === index) ||
-                    [];
-                  const roleBooked =
-                    bookedUsers?.filter(
-                      (b: any) => b.bandRoleIndex === index
-                    ) || [];
-                  const totalUsers = roleApplicants.length + roleBooked.length;
-                  const roleColors = getRoleColors(index);
-
-                  return (
-                    <TabsTrigger
-                      key={index}
-                      value={role.role}
-                      className="flex-1 md:flex-none"
-                      style={{
-                        backgroundColor:
-                          selectedRole === role.role
-                            ? roleColors.bg
-                            : "transparent",
-                        color:
-                          selectedRole === role.role
-                            ? roleColors.text
-                            : colors.text,
-                        borderColor: roleColors.border,
-                      }}
-                    >
-                      {role.role} ({totalUsers})
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          </div>
-
-          <div className="flex gap-2">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 rounded-lg border transition-colors"
+                Band Applicants • {allUsers.length} Total
+              </p>
+            </div>
+            <Badge
+              className="px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base font-semibold"
               style={{
-                backgroundColor: isDarkMode ? colors.card : colors.card,
-                borderColor: isDarkMode ? colors.border : colors.border,
-                color: isDarkMode ? colors.text : colors.text,
+                backgroundColor: themeColors.primaryBg,
+                color: themeColors.primaryContrast,
               }}
             >
-              <option value="newest">Newest First</option>
-              <option value="rating">Highest Rating</option>
-              <option value="experience">Most Experienced</option>
-              <option value="status">Status (Booked First)</option>
-            </select>
+              <Music className="w-3.5 h-3.5 md:w-4 md:h-4 mr-2" />
+              {roles.length} Roles
+            </Badge>
+          </div>
+        </div>
+
+        {/* Filters and Controls */}
+        <div className="mb-8">
+          {/* Mobile Menu Button */}
+          <div className="md:hidden mb-4">
             <Button
               variant="outline"
-              size="icon"
+              className="w-full justify-between"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               style={{
-                backgroundColor: isDarkMode ? colors.card : colors.card,
-                borderColor: isDarkMode ? colors.border : colors.border,
-                color: isDarkMode ? colors.text : colors.text,
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+                color: themeColors.text,
               }}
             >
-              <Filter className="w-4 h-4" />
+              <span>Filters & Sort</span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${mobileMenuOpen ? "rotate-180" : ""}`}
+              />
             </Button>
+          </div>
+
+          <div className={`${mobileMenuOpen ? "block" : "hidden"} md:block`}>
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                  style={{ color: themeColors.textMuted }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search applicants..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border transition-all duration-200 focus:outline-none focus:ring-2"
+                  style={{
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                    color: themeColors.text,
+                  }}
+                />
+              </div>
+
+              {/* Role Tabs */}
+              <div className="flex-1 md:flex-2">
+                <Tabs value={selectedRole} onValueChange={setSelectedRole}>
+                  <TabsList
+                    className="w-full flex flex-wrap h-auto rounded-lg p-1"
+                    style={{
+                      backgroundColor: isDarkMode ? "#1f2937" : "#f9fafb",
+                      border: `1px solid ${themeColors.border}`,
+                    }}
+                  >
+                    <TabsTrigger
+                      value="all"
+                      className="flex-1 min-w-[120px] rounded-md px-3 py-2 text-sm transition-all"
+                      style={{
+                        backgroundColor:
+                          selectedRole === "all"
+                            ? themeColors.primaryBg
+                            : "transparent",
+                        color:
+                          selectedRole === "all"
+                            ? themeColors.primaryContrast
+                            : themeColors.text,
+                      }}
+                    >
+                      <Users className="w-3.5 h-3.5 mr-2 hidden sm:inline" />
+                      All ({allUsers.length})
+                    </TabsTrigger>
+                    {roles.map((role: any, index: number) => {
+                      const roleApplicants =
+                        applicants?.filter(
+                          (a: any) => a.bandRoleIndex === index
+                        ) || [];
+                      const roleBooked =
+                        bookedUsers?.filter(
+                          (b: any) => b.bandRoleIndex === index
+                        ) || [];
+                      const totalUsers =
+                        roleApplicants.length + roleBooked.length;
+                      const currentApplicants = roleApplicants.length;
+                      const maxApplicants = role.maxApplicants || 20; // Default to 20 if not set
+                      const roleColors = getRoleColors(index);
+
+                      return (
+                        <TabsTrigger
+                          key={index}
+                          value={role.role}
+                          className="flex-1 min-w-[120px] rounded-md px-3 py-2 text-sm transition-all"
+                          style={{
+                            backgroundColor:
+                              selectedRole === role.role
+                                ? roleColors.bg
+                                : "transparent",
+                            color:
+                              selectedRole === role.role
+                                ? roleColors.text
+                                : themeColors.text,
+                            border:
+                              selectedRole === role.role
+                                ? `1px solid ${roleColors.border}`
+                                : "none",
+                          }}
+                        >
+                          <div className="flex flex-col items-center">
+                            <span>{role.role}</span>
+                            <span className="text-xs opacity-75">
+                              {currentApplicants}/{maxApplicants}
+                            </span>
+                          </div>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Sort & Filter */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border transition-all appearance-none cursor-pointer focus:outline-none"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                      color: themeColors.text,
+                    }}
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="rating">Highest Rating</option>
+                    <option value="experience">Most Experience</option>
+                  </select>
+                  <ChevronDown
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none"
+                    style={{ color: themeColors.textMuted }}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-lg"
+                  style={{
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                    color: themeColors.text,
+                  }}
+                >
+                  <Filter className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Role Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {roles.map((role: any, index: number) => {
             const roleApplicants =
               applicants?.filter((a: any) => a.bandRoleIndex === index) || [];
             const roleBooked =
               bookedUsers?.filter((b: any) => b.bandRoleIndex === index) || [];
             const roleColors = getRoleColors(index);
+            const isSelected = selectedRole === role.role;
+            const currentApplicants = roleApplicants.length;
+            const maxApplicants = role.maxApplicants || 20;
+            const applicantPercentage =
+              maxApplicants > 0
+                ? Math.min((currentApplicants / maxApplicants) * 100, 100)
+                : 0;
 
             return (
               <Card
                 key={index}
-                className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md"
                 onClick={() => setSelectedRole(role.role)}
                 style={{
-                  backgroundColor: isDarkMode ? colors.card : colors.card,
-                  borderColor: isDarkMode ? colors.border : colors.border,
-                  borderWidth: selectedRole === role.role ? "2px" : "1px",
+                  backgroundColor: themeColors.card,
+                  borderColor: isSelected
+                    ? roleColors.border
+                    : themeColors.border,
                   borderLeftColor: roleColors.border,
                   borderLeftWidth: "4px",
                 }}
               >
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{
-                          backgroundColor: roleColors.bg,
-                          color: roleColors.text,
-                        }}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4
+                        className="font-semibold text-sm"
+                        style={{ color: themeColors.text }}
                       >
-                        <Music className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4
-                          className="font-bold"
-                          style={{
-                            color: isDarkMode ? colors.text : colors.text,
-                          }}
-                        >
-                          {role.role}
-                        </h4>
-                        <p
-                          className="text-xs"
-                          style={{
-                            color: isDarkMode
-                              ? colors.textMuted
-                              : colors.textMuted,
-                          }}
-                        >
-                          {roleBooked.length}/{role.maxSlots} booked
-                        </p>
-                      </div>
+                        {role.role}
+                      </h4>
+                      <p
+                        className="text-xs mt-1"
+                        style={{ color: themeColors.textMuted }}
+                      >
+                        {roleBooked.length}/{role.maxSlots} booked
+                      </p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge
-                        className="text-xs"
-                        style={{
-                          backgroundColor: colors.infoBg,
-                          color: colors.infoText,
-                          borderColor: colors.infoBorder,
-                        }}
-                      >
-                        {roleApplicants.length} applicants
-                      </Badge>
-                      <Badge
-                        className="text-xs"
-                        style={{
-                          backgroundColor: colors.successBg,
-                          color: colors.successText,
-                          borderColor: colors.successBorder,
-                        }}
-                      >
-                        {roleBooked.length} booked
-                      </Badge>
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{
+                        backgroundColor: roleColors.bg,
+                        color: roleColors.text,
+                      }}
+                    >
+                      <Music className="w-5 h-5" />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span
-                        style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
-                        }}
-                      >
-                        Max Apps:
-                      </span>
-                      <span
-                        className="font-semibold"
-                        style={{ color: colors.infoText }}
-                      >
-                        {role.maxApplicants || 20}
-                      </span>
-                    </div>
 
-                    <div className="flex justify-between text-sm">
-                      <span
-                        style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
-                        }}
-                      >
-                        Applicants:
+                  {/* Applicant Capacity Progress Bar */}
+                  <div className="mt-3 mb-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span style={{ color: themeColors.textMuted }}>
+                        Applications:
                       </span>
                       <span
-                        className="font-semibold"
                         style={{
-                          color: isDarkMode ? colors.text : colors.text,
+                          color:
+                            applicantPercentage >= 100
+                              ? themeColors.destructive
+                              : applicantPercentage >= 80
+                                ? themeColors.warning
+                                : themeColors.success,
                         }}
                       >
-                        {roleApplicants.length}/{role.maxApplicants || 20}
+                        {currentApplicants}/{maxApplicants}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span
+                    <div className="h-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
                         style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
+                          width: `${applicantPercentage}%`,
+                          backgroundColor:
+                            applicantPercentage >= 100
+                              ? themeColors.destructive
+                              : applicantPercentage >= 80
+                                ? themeColors.warning
+                                : themeColors.success,
                         }}
-                      >
-                        Booked:
-                      </span>
-                      <span
-                        className="font-semibold"
-                        style={{ color: colors.successText }}
-                      >
-                        {roleBooked.length}
-                      </span>
+                      />
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span
-                        style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
-                        }}
+                    {applicantPercentage >= 100 && (
+                      <div
+                        className="text-xs text-center mt-1"
+                        style={{ color: themeColors.destructive }}
                       >
-                        Available:
+                        <AlertCircle className="w-3 h-3 inline mr-1" />
+                        Full
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: themeColors.textMuted }}>
+                        Available Slots:
                       </span>
-                      <span
-                        className="font-semibold"
-                        style={{ color: colors.infoText }}
-                      >
+                      <span style={{ color: themeColors.success }}>
                         {Math.max(0, role.maxSlots - roleBooked.length)}
                       </span>
                     </div>
                     {role.price && (
-                      <div className="flex justify-between text-sm">
-                        <span
-                          style={{
-                            color: isDarkMode
-                              ? colors.textMuted
-                              : colors.textMuted,
-                          }}
-                        >
+                      <div className="flex justify-between text-xs">
+                        <span style={{ color: themeColors.textMuted }}>
                           Rate:
                         </span>
-                        <span
-                          className="font-semibold"
-                          style={{ color: colors.primary }}
-                        >
+                        <span style={{ color: themeColors.primary }}>
                           ${role.price}
                         </span>
                       </div>
@@ -661,721 +792,478 @@ export default function BandApplicantsPage() {
             );
           })}
         </div>
-      </div>
 
-      {/* Users Grid (Applicants + Booked Users) */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
-      >
-        {filteredUsers.map((user: any) => {
-          const userInfo = userDetails?.[user.userId];
-          if (!userInfo) return null;
+        {/* Applicants Grid */}
+        <AnimatePresence>
+          <motion.div
+            layout
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
+          >
+            {filteredUsers.map((user: any) => {
+              const userInfo = userDetails?.[user.userId];
+              if (!userInfo) return null;
 
-          const role = roles[user.bandRoleIndex];
-          const isBookedForThisRole = user.isBooked;
-          const roleColors = getRoleColors(user.bandRoleIndex);
+              const role = roles[user.bandRoleIndex];
+              const isBooked = user.isBooked;
+              const roleColors = getRoleColors(user.bandRoleIndex);
 
-          return (
-            <motion.div
-              key={user._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="group"
-            >
-              <Card
-                className="h-full overflow-hidden hover:shadow-xl transition-all duration-300"
-                style={{
-                  backgroundColor: isDarkMode ? colors.card : colors.card,
-                  borderColor: isDarkMode ? colors.border : colors.border,
-                  backgroundImage: isDarkMode
-                    ? `linear-gradient(135deg, ${colors.cardBgStart}, ${colors.cardBgEnd})`
-                    : `linear-gradient(135deg, ${colors.cardBgStart}, ${colors.cardBgEnd})`,
-                }}
-              >
-                <CardContent className="p-6">
-                  {/* User Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={userInfo.picture} />
-                        <AvatarFallback
-                          style={{
-                            background: isDarkMode
-                              ? colors.gradientSecondary
-                              : colors.gradientSecondary,
-                            color: colors.primaryContrast,
-                          }}
-                        >
-                          {userInfo.firstname?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4
-                            className="font-bold"
-                            style={{
-                              color: isDarkMode ? colors.text : colors.text,
-                            }}
-                          >
-                            {userInfo.firstname || userInfo.username}
-                          </h4>
-                          {userInfo.verifiedIdentity && (
-                            <CheckCircle
-                              className="w-4 h-4"
-                              style={{ color: colors.successText }}
-                            />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge
-                            variant="outline"
-                            className="text-xs"
-                            style={{
-                              backgroundColor: roleColors.bg,
-                              color: roleColors.text,
-                              borderColor: roleColors.border,
-                            }}
-                          >
-                            {user.bandRole || "Band Member"}
-                            {isBookedForThisRole && (
-                              <CheckCircle className="w-3 h-3 ml-1" />
-                            )}
-                          </Badge>
-                          {userInfo.trustTier &&
-                            userInfo.trustTier !== "new" && (
-                              <Badge
-                                variant="secondary"
-                                className="text-xs"
-                                style={{
-                                  backgroundColor: colors.warningBg,
-                                  color: colors.warningText,
-                                  borderColor: colors.warningBorder,
-                                }}
-                              >
-                                <Award className="w-3 h-3 mr-1" />
-                                {userInfo.trustTier}
-                              </Badge>
-                            )}
-                          {isBookedForThisRole && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs"
+              // Calculate capacity for this specific role - ADD THIS
+              const roleApplicants =
+                applicants?.filter(
+                  (a: any) => a.bandRoleIndex === user.bandRoleIndex
+                ) || [];
+              const currentApplicants = roleApplicants.length;
+              const maxApplicants = role?.maxApplicants || 20;
+
+              return (
+                <motion.div
+                  key={user._id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                  className="group"
+                >
+                  <Card
+                    className="h-full overflow-hidden hover:shadow-lg transition-shadow"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <CardContent className="p-4 md:p-5">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={userInfo.picture} />
+                            <AvatarFallback
                               style={{
-                                backgroundColor: colors.successBg,
-                                color: colors.successText,
-                                borderColor: colors.successBorder,
+                                backgroundColor: roleColors.bg,
+                                color: roleColors.text,
                               }}
                             >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Booked
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Badge
-                      className="px-3 py-1"
-                      style={{
-                        backgroundColor: isBookedForThisRole
-                          ? colors.successBg
-                          : colors.infoBg,
-                        color: isBookedForThisRole
-                          ? colors.successText
-                          : colors.infoText,
-                        borderColor: isBookedForThisRole
-                          ? colors.successBorder
-                          : colors.infoBorder,
-                      }}
-                    >
-                      {isBookedForThisRole ? "Booked" : "Applied"}
-                    </Badge>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3 mb-6">
-                    <div
-                      className="text-center p-3 rounded-lg"
-                      style={{
-                        backgroundColor: isDarkMode
-                          ? colors.backgroundMuted
-                          : colors.backgroundMuted,
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <Star
-                          className="w-4 h-4"
-                          style={{ color: colors.warningText }}
-                        />
-                        <span
-                          className="text-xs"
-                          style={{
-                            color: isDarkMode
-                              ? colors.textMuted
-                              : colors.textMuted,
-                          }}
-                        >
-                          Rating
-                        </span>
-                      </div>
-                      <p
-                        className="text-lg font-bold"
-                        style={{
-                          color: isDarkMode ? colors.text : colors.text,
-                        }}
-                      >
-                        {userInfo.avgRating?.toFixed(1) || "4.5"}
-                      </p>
-                    </div>
-                    <div
-                      className="text-center p-3 rounded-lg"
-                      style={{
-                        backgroundColor: isDarkMode
-                          ? colors.backgroundMuted
-                          : colors.backgroundMuted,
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <Users
-                          className="w-4 h-4"
-                          style={{ color: colors.infoText }}
-                        />
-                        <span
-                          className="text-xs"
-                          style={{
-                            color: isDarkMode
-                              ? colors.textMuted
-                              : colors.textMuted,
-                          }}
-                        >
-                          Gigs
-                        </span>
-                      </div>
-                      <p
-                        className="text-lg font-bold"
-                        style={{
-                          color: isDarkMode ? colors.text : colors.text,
-                        }}
-                      >
-                        {userInfo.completedGigsCount || 0}
-                      </p>
-                    </div>
-                    <div
-                      className="text-center p-3 rounded-lg"
-                      style={{
-                        backgroundColor: isDarkMode
-                          ? colors.backgroundMuted
-                          : colors.backgroundMuted,
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <DollarSign
-                          className="w-4 h-4"
-                          style={{ color: colors.successText }}
-                        />
-                        <span
-                          className="text-xs"
-                          style={{
-                            color: isDarkMode
-                              ? colors.textMuted
-                              : colors.textMuted,
-                          }}
-                        >
-                          Rate
-                        </span>
-                      </div>
-                      <p
-                        className="text-lg font-bold"
-                        style={{
-                          color: isDarkMode ? colors.text : colors.text,
-                        }}
-                      >
-                        ${userInfo.rate?.baseRate || role?.price || "Contact"}
-                      </p>
-                    </div>
-                    {role && (
-                      <div className="mt-2">
-                        {(() => {
-                          const roleApplicantsForThisRole =
-                            applicants?.filter(
-                              (a: any) => a.bandRoleIndex === user.bandRoleIndex
-                            ) || [];
-                          const applicantCount =
-                            roleApplicantsForThisRole.length;
-                          const maxApplicants = role.maxApplicants || 20;
-                          const percentage = Math.min(
-                            (applicantCount / maxApplicants) * 100,
-                            100
-                          );
-
-                          return (
-                            <>
-                              <div className="flex justify-between text-xs mb-1">
-                                <span>Application Capacity</span>
-                                <span>{Math.round(percentage)}%</span>
-                              </div>
-                              <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-300"
-                                  style={{
-                                    width: `${percentage}%`,
-                                    backgroundColor:
-                                      percentage >= 100
-                                        ? colors.destructive
-                                        : percentage >= 80
-                                          ? colors.warningText
-                                          : colors.successText,
-                                  }}
+                              {userInfo.firstname?.charAt(0) || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="flex items-center gap-1">
+                              <h4
+                                className="font-semibold text-sm"
+                                style={{ color: themeColors.text }}
+                              >
+                                {userInfo.firstname || userInfo.username}
+                              </h4>
+                              {userInfo.verifiedIdentity && (
+                                <CheckCircle
+                                  className="w-3 h-3"
+                                  style={{ color: themeColors.success }}
                                 />
-                              </div>
-                              <div className="text-xs text-center mt-1 text-gray-500">
-                                {applicantCount}/{maxApplicants} applicants
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Location & Time */}
-                  <div className="flex items-center justify-between text-sm mb-6">
-                    <div className="flex items-center gap-2">
-                      <MapPin
-                        className="w-4 h-4"
-                        style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
-                        }}
-                      />
-                      <span
-                        style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
-                        }}
-                      >
-                        {userInfo.city || "Remote"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar
-                        className="w-4 h-4"
-                        style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
-                        }}
-                      />
-                      <span
-                        style={{
-                          color: isDarkMode
-                            ? colors.textMuted
-                            : colors.textMuted,
-                        }}
-                      >
-                        {isBookedForThisRole ? "Booked " : "Applied "}
-                        {new Date(
-                          user.bookedAt || user.appliedAt
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Role Details */}
-                  {role && (
-                    <div
-                      className="mb-6 p-3 rounded-lg"
-                      style={{
-                        backgroundColor: roleColors.bg,
-                        borderColor: roleColors.border,
-                        borderWidth: "1px",
-                      }}
-                    >
-                      <h5
-                        className="font-bold mb-2"
-                        style={{
-                          color: isDarkMode ? colors.text : colors.text,
-                        }}
-                      >
-                        Role Details
-                      </h5>
-                      <div className="space-y-1 text-sm">
-                        {role.description && (
-                          <p
-                            style={{
-                              color: isDarkMode
-                                ? colors.textMuted
-                                : colors.textMuted,
-                            }}
-                          >
-                            {role.description}
-                          </p>
-                        )}
-                        {role.requiredSkills &&
-                          role.requiredSkills.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {role.requiredSkills.map(
-                                (skill: string, i: number) => (
-                                  <Badge
-                                    key={i}
-                                    variant="secondary"
-                                    className="text-xs"
-                                    style={{
-                                      backgroundColor: isDarkMode
-                                        ? colors.background
-                                        : colors.background,
-                                      color: isDarkMode
-                                        ? colors.text
-                                        : colors.text,
-                                      borderColor: isDarkMode
-                                        ? colors.border
-                                        : colors.border,
-                                    }}
-                                  >
-                                    {skill}
-                                  </Badge>
-                                )
                               )}
                             </div>
-                          )}
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      {/* Profile Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 group hover:scale-[1.02] transition-all duration-200"
-                        onClick={() => {
-                          router.push(`/profile/${user.userId}`);
-                        }}
-                        style={{
-                          backgroundColor: isDarkMode
-                            ? colors.backgroundMuted
-                            : colors.backgroundMuted,
-                          borderColor: colors.border,
-                          color: colors.text,
-                          borderWidth: "1px",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = colors.primary;
-                          e.currentTarget.style.color = colors.primary;
-                          e.currentTarget.style.backgroundColor = isDarkMode
-                            ? colors.background
-                            : colors.background;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                          e.currentTarget.style.color = colors.text;
-                          e.currentTarget.style.backgroundColor = isDarkMode
-                            ? colors.backgroundMuted
-                            : colors.backgroundMuted;
-                        }}
-                      >
-                        <Eye className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                        <span>View Profile</span>
-                      </Button>
-
-                      {/* Book/Status Button */}
-                      {isBookedForThisRole ? (
-                        <Button
-                          size="sm"
-                          className="flex-1 cursor-default hover:scale-[1.02] transition-all duration-200"
-                          style={{
-                            background: `linear-gradient(135deg, ${colors.successBg} 0%, ${colors.success} 20%, ${colors.successBg} 100%)`,
-                            color: colors.successText,
-                            borderColor: colors.successBorder,
-                            borderWidth: "1px",
-                            fontWeight: "600",
-                            boxShadow:
-                              "0 2px 10px -2px rgba(var(--success-rgb), 0.2)",
-                            backgroundSize: "200% 100%",
-                            animation: "pulse 2s infinite",
-                          }}
-                          disabled={true}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          <span>Booked ✓</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="flex-1 group relative overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                          onClick={() =>
-                            handleBookForRole(
-                              user.userId,
-                              user.bandRoleIndex,
-                              user.bandRole,
-                              userInfo.firstname || userInfo.username
-                            )
-                          }
-                          disabled={loadingBooking}
-                          style={{
-                            background: loadingBooking
-                              ? colors.primaryBg
-                              : colors.successBg,
-                            color: "white",
-                            border: "none",
-                            fontWeight: "600",
-                            letterSpacing: "0.025em",
-                            boxShadow: "0 4px 14px 0 rgba(59, 130, 246, 0.3)",
-                            position: "relative",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {/* Background overlay for better text visibility */}
-                          <div
-                            className="absolute inset-0"
-                            style={{
-                              background:
-                                "linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.2))",
-                            }}
-                          />
-
-                          {/* Shimmer effect on hover */}
-                          {!loadingBooking && (
-                            <div
-                              className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
+                            <Badge
+                              className="mt-1 text-xs"
                               style={{
-                                background:
-                                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+                                backgroundColor: roleColors.bg,
+                                color: roleColors.text,
+                                borderColor: roleColors.border,
+                              }}
+                            >
+                              {role?.role || user.bandRole}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Badge
+                          className="text-xs"
+                          style={{
+                            backgroundColor: isBooked
+                              ? themeColors.success
+                              : themeColors.info,
+                            color: themeColors.primaryContrast,
+                          }}
+                        >
+                          {isBooked ? "Booked" : "Applied"}
+                        </Badge>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Star
+                              className="w-3 h-3"
+                              style={{ color: themeColors.warning }}
+                            />
+                            <span
+                              className="text-xs"
+                              style={{ color: themeColors.textMuted }}
+                            >
+                              Rating
+                            </span>
+                          </div>
+                          <p
+                            className="text-lg font-bold mt-1"
+                            style={{ color: themeColors.text }}
+                          >
+                            {userInfo.avgRating?.toFixed(1) || "—"}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Users
+                              className="w-3 h-3"
+                              style={{ color: themeColors.info }}
+                            />
+                            <span
+                              className="text-xs"
+                              style={{ color: themeColors.textMuted }}
+                            >
+                              Gigs
+                            </span>
+                          </div>
+                          <p
+                            className="text-lg font-bold mt-1"
+                            style={{ color: themeColors.text }}
+                          >
+                            {userInfo.completedGigsCount || 0}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <DollarSign
+                              className="w-3 h-3"
+                              style={{ color: themeColors.success }}
+                            />
+                            <span
+                              className="text-xs"
+                              style={{ color: themeColors.textMuted }}
+                            >
+                              Rate
+                            </span>
+                          </div>
+                          <p
+                            className="text-lg font-bold mt-1"
+                            style={{ color: themeColors.text }}
+                          >
+                            ${role?.price || userInfo.rate?.baseRate || "—"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Role Capacity - ADD THIS SECTION HERE */}
+                      {role && (
+                        <div
+                          className="mb-4 p-3 rounded-lg border"
+                          style={{
+                            backgroundColor: `${roleColors.bg}20`,
+                            borderColor: roleColors.border,
+                          }}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="text-xs font-semibold"
+                                style={{ color: themeColors.text }}
+                              >
+                                Role Capacity
+                              </span>
+                              <Badge
+                                className="text-xs px-2 py-0.5"
+                                style={{
+                                  backgroundColor:
+                                    currentApplicants >= maxApplicants
+                                      ? themeColors.destructive
+                                      : currentApplicants / maxApplicants >= 0.8
+                                        ? themeColors.warning
+                                        : themeColors.success,
+                                  color: themeColors.primaryContrast,
+                                }}
+                              >
+                                {currentApplicants >= maxApplicants
+                                  ? "Full"
+                                  : "Open"}
+                              </Badge>
+                            </div>
+                            <span
+                              className="text-xs font-medium"
+                              style={{
+                                color:
+                                  currentApplicants >= maxApplicants
+                                    ? themeColors.destructive
+                                    : currentApplicants / maxApplicants >= 0.8
+                                      ? themeColors.warning
+                                      : themeColors.success,
+                              }}
+                            >
+                              {currentApplicants}/{maxApplicants}
+                            </span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div
+                            className="h-2 rounded-full overflow-hidden mb-2"
+                            style={{
+                              backgroundColor: `${themeColors.textMuted}20`,
+                            }}
+                          >
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
+                                width: `${Math.min((currentApplicants / maxApplicants) * 100, 100)}%`,
+                                backgroundColor:
+                                  currentApplicants >= maxApplicants
+                                    ? themeColors.destructive
+                                    : currentApplicants / maxApplicants >= 0.8
+                                      ? themeColors.warning
+                                      : themeColors.success,
                               }}
                             />
-                          )}
-
-                          {/* Content */}
-                          <div className="relative flex items-center justify-center gap-2">
-                            {loadingBooking ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                <span className="text-white font-medium">
-                                  Booking...
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4 text-white" />
-                                <span className="text-white font-semibold">
-                                  Book Now
-                                </span>
-                                <ChevronRight className="w-3 h-3 text-white opacity-70" />
-                              </>
-                            )}
                           </div>
-                        </Button>
-                      )}
-                    </div>
 
-                    {/* Action Button (Unbook/Remove) */}
-                    <Button
-                      className="w-full group transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                      onClick={() =>
-                        isBookedForThisRole
-                          ? handleUnbookFromRole(
-                              user.userId,
-                              user.bandRoleIndex,
-                              userInfo.firstname || userInfo.username
-                            )
-                          : handleRemoveFromRole(
-                              user._id,
-                              user.bandRoleIndex,
-                              user.userId
-                            )
-                      }
-                      disabled={
-                        isBookedForThisRole ? loadingUnbooking : loadingRemoval
-                      }
-                      style={{
-                        background: isBookedForThisRole
-                          ? `linear-gradient(135deg, ${colors.destructiveBg} 0%, rgba(var(--destructive-rgb), 0.1) 100%)`
-                          : `linear-gradient(135deg, ${colors.destructiveBg} 0%, rgba(var(--destructive-rgb), 0.1) 100%)`,
-                        color: colors.destructive,
-                        border: `1px solid ${colors.destructive || colors.destructive}`,
-                        fontWeight: "500",
-                        position: "relative",
-                        overflow: "hidden",
-                        transition: "all 0.3s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (
-                          !(isBookedForThisRole
-                            ? loadingUnbooking
-                            : loadingRemoval)
-                        ) {
-                          e.currentTarget.style.background = `linear-gradient(135deg, rgba(var(--destructive-rgb), 0.2) 0%, rgba(var(--destructive-rgb), 0.1) 100%)`;
-                          e.currentTarget.style.boxShadow = `0 4px 12px -2px rgba(var(--destructive-rgb), 0.3)`;
-                          e.currentTarget.style.color =
-                            colors.destructive || colors.destructive;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (
-                          !(isBookedForThisRole
-                            ? loadingUnbooking
-                            : loadingRemoval)
-                        ) {
-                          e.currentTarget.style.background = `linear-gradient(135deg, ${colors.destructiveBg} 0%, rgba(var(--destructive-rgb), 0.1) 100%)`;
-                          e.currentTarget.style.boxShadow = "none";
-                          e.currentTarget.style.color = colors.destructive;
-                        }
-                      }}
-                    >
-                      {/* Loading State */}
-                      {isBookedForThisRole && loadingUnbooking ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          <span>Unbooking...</span>
+                          <div className="flex justify-between text-xs">
+                            <div
+                              className="flex items-center gap-1"
+                              style={{ color: themeColors.textMuted }}
+                            >
+                              {currentApplicants >= maxApplicants ? (
+                                <>
+                                  <UserMinus className="w-3 h-3" />
+                                  <span>No more spots</span>
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlus className="w-3 h-3" />
+                                  <span>
+                                    {maxApplicants - currentApplicants} spots
+                                    left
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <span style={{ color: themeColors.textMuted }}>
+                              {Math.round(
+                                (currentApplicants / maxApplicants) * 100
+                              )}
+                              % filled
+                            </span>
+                          </div>
                         </div>
-                      ) : !isBookedForThisRole && loadingRemoval ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          <span>Removing...</span>
+                      )}
+
+                      {/* Location & Date */}
+                      <div className="flex items-center justify-between text-xs mb-5">
+                        <div
+                          className="flex items-center gap-1"
+                          style={{ color: themeColors.textMuted }}
+                        >
+                          <MapPin className="w-3 h-3" />
+                          <span>{userInfo.city || "Remote"}</span>
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-2 group-hover:gap-3 transition-all duration-200">
-                          {isBookedForThisRole ? (
+                        <div
+                          className="flex items-center gap-1"
+                          style={{ color: themeColors.textMuted }}
+                        >
+                          <Calendar className="w-3 h-3" />
+                          <span>
+                            {new Date(
+                              user.bookedAt || user.appliedAt
+                            ).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-2">
+                        <Button
+                          size="sm"
+                          className="w-full group transition-all"
+                          onClick={() => {
+                            if (!isBooked) {
+                              handleBookForRole(
+                                user.userId,
+                                user.bandRoleIndex,
+                                role?.role || user.bandRole,
+                                userInfo.firstname || userInfo.username
+                              );
+                            }
+                          }}
+                          disabled={isBooked || loadingBooking}
+                          style={{
+                            backgroundColor: themeColors.primaryBg,
+                            color: themeColors.primaryContrast,
+                            opacity: isBooked ? 0.7 : 1,
+                          }}
+                        >
+                          {isBooked ? (
                             <>
-                              <XCircle className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-                              <span>Cancel Booking</span>
+                              <CheckCircle className="w-3.5 h-3.5 mr-2" />
+                              Booked
                             </>
                           ) : (
                             <>
-                              <X className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
-                              <span>Remove Applicant</span>
+                              {loadingBooking ? (
+                                <>
+                                  <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                                  Booking...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3.5 h-3.5 mr-2" />
+                                  Book Now
+                                </>
+                              )}
                             </>
                           )}
+                        </Button>
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() =>
+                              router.push(`/profile/${user.userId}`)
+                            }
+                            style={{
+                              backgroundColor: "transparent",
+                              borderColor: themeColors.border,
+                              color: themeColors.text,
+                            }}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() =>
+                              isBooked
+                                ? handleUnbookFromRole(
+                                    user.userId,
+                                    user.bandRoleIndex,
+                                    userInfo.firstname || userInfo.username
+                                  )
+                                : handleRemoveFromRole(
+                                    user._id,
+                                    user.bandRoleIndex,
+                                    user.userId
+                                  )
+                            }
+                            disabled={
+                              isBooked ? loadingUnbooking : loadingRemoval
+                            }
+                            style={{
+                              backgroundColor: "transparent",
+                              borderColor: themeColors.destructive,
+                              color: themeColors.destructive,
+                            }}
+                          >
+                            {isBooked ? (
+                              loadingUnbooking ? (
+                                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5" />
+                              )
+                            ) : loadingRemoval ? (
+                              <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <X className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
                         </div>
-                      )}
-                    </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
 
-                    {/* Additional Action: Shortlist/Message */}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1 text-xs group"
-                        onClick={() => {
-                          // Add shortlist functionality
-                          toast.info("Added to shortlist");
-                        }}
-                        style={{
-                          backgroundColor: isDarkMode
-                            ? colors.backgroundMuted
-                            : colors.backgroundMuted,
-                          color: colors.textMuted,
-                          border: `1px solid ${colors.border}`,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor =
-                            colors.warningBg;
-                          e.currentTarget.style.color = colors.warningText;
-                          e.currentTarget.style.borderColor =
-                            colors.warningBorder;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = isDarkMode
-                            ? colors.backgroundMuted
-                            : colors.backgroundMuted;
-                          e.currentTarget.style.color = colors.textMuted;
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
-                      >
-                        <Bookmark className="w-3 h-3 mr-1 group-hover:fill-current" />
-                        Shortlist
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1 text-xs group"
-                        onClick={() => {
-                          // Add message functionality
-                          router.push(`/messages?user=${user.userId}`);
-                        }}
-                        style={{
-                          backgroundColor: isDarkMode
-                            ? colors.backgroundMuted
-                            : colors.backgroundMuted,
-                          color: colors.textMuted,
-                          border: `1px solid ${colors.border}`,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = colors.infoBg;
-                          e.currentTarget.style.color = colors.infoText;
-                          e.currentTarget.style.borderColor = colors.infoBorder;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = isDarkMode
-                            ? colors.backgroundMuted
-                            : colors.backgroundMuted;
-                          e.currentTarget.style.color = colors.textMuted;
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
-                      >
-                        <Send className="w-3 h-3 mr-1" />
-                        Message
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </motion.div>
-
-      {/* Empty State */}
-      {filteredUsers.length === 0 && (
-        <div className="text-center py-16">
-          <div
-            className="w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-6"
-            style={{
-              backgroundColor: isDarkMode
-                ? colors.backgroundMuted
-                : colors.backgroundMuted,
-            }}
-          >
-            <Users
-              className="w-12 h-12"
-              style={{
-                color: isDarkMode ? colors.textMuted : colors.textMuted,
-              }}
-            />
+        {/* Empty State */}
+        {filteredUsers.length === 0 && (
+          <div className="text-center py-12 md:py-16">
+            <div
+              className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6"
+              style={{ backgroundColor: themeColors.textMuted + "20" }}
+            >
+              <Users
+                className="w-10 h-10"
+                style={{ color: themeColors.textMuted }}
+              />
+            </div>
+            <h3
+              className="text-lg md:text-xl font-semibold mb-2"
+              style={{ color: themeColors.text }}
+            >
+              No applicants found
+            </h3>
+            <p
+              className="text-sm md:text-base max-w-md mx-auto mb-6"
+              style={{ color: themeColors.textMuted }}
+            >
+              {searchQuery
+                ? "No results matching your search"
+                : selectedRole === "all"
+                  ? "No one has applied or been booked yet"
+                  : `No ${selectedRole} applicants found`}
+            </p>
+            {searchQuery && (
+              <Button
+                variant="outline"
+                onClick={() => setSearchQuery("")}
+                className="gap-2"
+                style={{
+                  backgroundColor: "transparent",
+                  borderColor: themeColors.border,
+                  color: themeColors.text,
+                }}
+              >
+                <X className="w-4 h-4" />
+                Clear Search
+              </Button>
+            )}
           </div>
-          <h3
-            className="text-xl font-bold mb-2"
-            style={{ color: isDarkMode ? colors.text : colors.text }}
-          >
-            No users found
-          </h3>
-          <p
-            className="max-w-md mx-auto mb-6"
-            style={{ color: isDarkMode ? colors.textMuted : colors.textMuted }}
-          >
-            {selectedRole === "all"
-              ? "No one has applied or been booked for this gig yet."
-              : `No users for the ${selectedRole} role.`}
-          </p>
+        )}
+      </div>
+
+      {/* Mobile Action Bar */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 p-4 border-t"
+        style={{
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p
+              className="text-sm font-semibold"
+              style={{ color: themeColors.text }}
+            >
+              {filteredUsers.length}{" "}
+              {filteredUsers.length === 1 ? "applicant" : "applicants"}
+            </p>
+            <p className="text-xs" style={{ color: themeColors.textMuted }}>
+              {roles.length} roles
+            </p>
+          </div>
           <Button
-            onClick={() => router.back()}
-            variant="outline"
-            className="gap-2"
+            size="sm"
             style={{
-              backgroundColor: isDarkMode ? colors.card : colors.card,
-              borderColor: isDarkMode ? colors.border : colors.border,
-              color: isDarkMode ? colors.text : colors.text,
+              backgroundColor: themeColors.primaryBg,
+              color: themeColors.primaryContrast,
             }}
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Gig Overview
+            <Filter className="w-4 h-4 mr-2" />
+            Filters
           </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
