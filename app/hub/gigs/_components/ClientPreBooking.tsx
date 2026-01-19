@@ -663,8 +663,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     if (gig.bookCount?.length > 0) return "bg-purple-100 text-purple-800";
     return "bg-green-100 text-green-800";
   };
-
-  // Animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
