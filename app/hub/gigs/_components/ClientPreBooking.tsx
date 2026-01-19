@@ -1,5 +1,5 @@
-// components/gigs/ClientPreBooking.tsx (UPDATED VERSION)
-import React, { useState, useEffect } from "react";
+// components/gigs/ClientPreBooking.tsx (HORIZONTAL NAVIGATION VERSION)
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -14,13 +14,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 // Icons
 import {
@@ -48,6 +42,20 @@ import {
   Bookmark as BookmarkIcon,
   Star,
   XCircle,
+  Clock,
+  Music,
+  Sparkles,
+  TrendingUp,
+  ArrowRight,
+  ChevronRight,
+  Filter,
+  MoreVertical,
+  Zap,
+  Mic,
+  Volume2,
+  Briefcase,
+  Target,
+  Award,
 } from "lucide-react";
 
 // Custom Components
@@ -55,10 +63,8 @@ import { ChatIcon } from "@/components/chat/ChatIcon";
 
 // Tab Components
 import { BandRolesTab } from "@/components/booking/BandGigWithRoleTab";
-
 import { HistoryTab } from "@/components/booking/History";
 import { RegularGigsTab } from "@/components/booking/RegularGigsTab";
-import { StatsCards } from "@/components/booking/StatsCards";
 // Types
 import {
   Applicant,
@@ -67,11 +73,13 @@ import {
   GigTabType,
 } from "@/types/bookings";
 import { ShortlistTab } from "@/components/booking/ShortlIstTab";
-import { GigInfoCard } from "@/components/booking/GigInfo";
 import { FullBandTab } from "@/components/booking/FullBandGig";
 import { BookingOptionsSection } from "./BookingOptions";
 import { PreBookingStats } from "./gigs/PreBookingStats";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useThemeColors } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface ClientPreBookingProps {
   user: any;
@@ -80,6 +88,8 @@ interface ClientPreBookingProps {
 export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
+  const { colors, isDarkMode } = useThemeColors();
+  const isMobile = useMediaQuery("(max-width: 768px)"); // 768px for mobile
 
   const userId = user?.clerkId || {};
   // Queries
@@ -87,6 +97,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     api.controllers.gigs.getGigsByUser,
     clerkId ? { clerkId: clerkId } : "skip"
   );
+
   // State
   const [activeTab, setActiveTab] = useState<"applicants" | "history">(
     "applicants"
@@ -112,56 +123,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   } | null>(null);
   const [bookingPrice, setBookingPrice] = useState<number | "">("");
 
-  const getTotalApplicants = () => {
-    if (!userGigs) return 0;
-
-    switch (activeGigTab) {
-      case "regular":
-        return userGigs.reduce((total, gig) => {
-          if (
-            !gig.isClientBand &&
-            gig.interestedUsers &&
-            gig.interestedUsers.length > 0
-          ) {
-            return total + gig.interestedUsers.length;
-          }
-          return total;
-        }, 0);
-
-      case "band-roles":
-        return userGigs.reduce((total, gig) => {
-          if (gig.isClientBand && gig.bandCategory) {
-            return (
-              total +
-              gig.bandCategory.reduce((roleTotal, role) => {
-                return roleTotal + (role.applicants?.length || 0);
-              }, 0)
-            );
-          }
-          return total;
-        }, 0);
-
-      case "full-band":
-        return userGigs.reduce((total, gig) => {
-          if (gig.isClientBand && gig.bookCount) {
-            return total + gig.bookCount.length;
-          }
-          return total;
-        }, 0);
-
-      case "shortlist":
-        return userGigs.reduce((total, gig) => {
-          if (gig.shortlistedUsers) {
-            return total + gig.shortlistedUsers.length;
-          }
-          return total;
-        }, 0);
-
-      default:
-        return 0;
-    }
-  };
-  // Add these helper functions to calculate tab counts from userGigs
   const getTabCounts = () => {
     if (!userGigs)
       return { regular: 0, bandRoles: 0, fullBand: 0, shortlist: 0 };
@@ -210,15 +171,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     return counts;
   };
 
-  // Call this function in your component
   const tabCounts = getTabCounts();
-  // Calculate total shortlisted users
-  const getTotalShortlisted = () => {
-    if (!userGigs) return 0;
-    return userGigs.reduce((total, gig) => {
-      return total + (gig.shortlistedUsers?.length || 0);
-    }, 0);
-  };
   const allUsers = useQuery(api.controllers.user.getAllUsers);
 
   // Mutations
@@ -242,6 +195,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   }, [userGigs, allUsers, activeGigTab]);
 
+  // Process gigs data
   const processGigsWithApplicants = () => {
     if (!userGigs || !allUsers) return;
 
@@ -259,7 +213,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         const hasBandApplications = gig.bookCount && gig.bookCount.length > 0;
         const isNotTaken = !gig.isTaken;
 
-        // Filter based on active tab
         switch (activeGigTab) {
           case "regular":
             return !gig.isClientBand && hasInterested && isNotTaken;
@@ -270,7 +223,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             );
             return hasRoleApplicants && isNotTaken;
           case "full-band":
-            // Show gigs that have band applications in bookCount
             return gig.isClientBand && hasBandApplications && isNotTaken;
           case "shortlist":
             return hasShortlisted && isNotTaken;
@@ -279,18 +231,14 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         }
       })
       .map((gig) => {
-        // Cast gig to avoid type errors
         const typedGig = gig as any;
 
         let applicants: Applicant[] = [];
         let shortlisted: ShortlistedUser[] = [];
-
-        // Cast bookingHistory
         const bookingHistory = typedGig.bookingHistory || [];
 
         switch (activeGigTab) {
           case "regular":
-            // Process regular gig applicants
             applicants = (typedGig.interestedUsers || []).map(
               (userId: Id<"users">) => {
                 const statusHistory = bookingHistory.filter(
@@ -334,10 +282,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             break;
 
           case "band-roles":
-            // Process band role applicants
             if (typedGig.bandCategory) {
               typedGig.bandCategory.forEach((role: any, roleIndex: number) => {
-                // Applicants for this role
                 (role.applicants || []).forEach((userId: Id<"users">) => {
                   const statusHistory = bookingHistory.filter(
                     (entry: any) =>
@@ -372,7 +318,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   });
                 });
 
-                // Booked users for this role
                 (role.bookedUsers || []).forEach((userId: Id<"users">) => {
                   applicants.push({
                     userId,
@@ -386,14 +331,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               });
             }
             break;
-
-          case "full-band":
-            // For full-band tab, we don't need individual applicants
-            applicants = [];
-            break;
         }
 
-        // Get shortlisted users for all gig types
         shortlisted = (typedGig.shortlistedUsers || []).map((item: any) => ({
           userId: item.userId,
           shortlistedAt: item.shortlistedAt,
@@ -414,7 +353,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         if (activeGigTab === "shortlist") {
           return gigData.shortlisted.length > 0;
         } else if (activeGigTab === "full-band") {
-          // For full-band, check if gig has bookCount entries
           return gigData.gig.bookCount && gigData.gig.bookCount.length > 0;
         }
         return gigData.applicants.length > 0 || gigData.shortlisted.length > 0;
@@ -449,6 +387,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       toast.error("Failed to add to shortlist");
     }
   };
+
   const handleRemoveFromShortlist = async (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
@@ -463,7 +402,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       await removeFromShortlist({
         gigId,
         applicantId,
-        clerkId, // Add the clerkId here
+        clerkId,
       });
       toast.success("Removed from shortlist");
       processGigsWithApplicants();
@@ -483,7 +422,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     setSelectedMusician({
       userId,
       userName,
-      source: source || "regular", // Default to regular if not specified
+      source: source || "regular",
       bandId,
       bandRoleIndex,
     });
@@ -499,16 +438,13 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
 
     try {
-      // Determine source based on what's selected
       let source: "regular" | "band-role" | "full-band" | "shortlisted" =
         selectedMusician?.source || "regular";
 
-      // If we're in shortlist tab but the musician doesn't have source, set it
       if (activeGigTab === "shortlist" && !selectedMusician?.source) {
         source = "shortlisted";
       }
 
-      // Prepare booking data
       const bookingData: any = {
         gigId: selectedGig,
         source: source,
@@ -517,11 +453,9 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         clerkId: userId!,
       };
 
-      // Add musicianId or bandId based on what's selected
       if (selectedMusician) {
         bookingData.musicianId = selectedMusician.userId;
 
-        // Add bandId for full-band bookings
         if (
           selectedMusician.source === "full-band" &&
           selectedMusician.bandId
@@ -529,7 +463,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
           bookingData.bandId = selectedMusician.bandId;
         }
 
-        // Add bandRoleIndex for band-role bookings
         if (
           selectedMusician.source === "band-role" &&
           selectedMusician.bandRoleIndex !== undefined
@@ -537,9 +470,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
           bookingData.bandRoleIndex = selectedMusician.bandRoleIndex;
         }
       } else if (selectedBand) {
-        // Fallback for backward compatibility
         bookingData.source = "full-band";
-        bookingData.musicianId = selectedBand.bandId; // This will need to be a userId, not bandId
+        bookingData.musicianId = selectedBand.bandId;
         bookingData.bandId = selectedBand.bandId;
       } else {
         toast.error("No musician or band selected");
@@ -559,19 +491,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     } catch (error: any) {
       console.error("Failed to book:", error);
       toast.error(error.message || "Failed to book");
-    }
-  };
-
-  const handleRemove = async (gigId: Id<"gigs">, applicantId: Id<"users">) => {
-    if (!confirm("Are you sure you want to remove this applicant?")) return;
-
-    try {
-      await removeApplicant({ gigId, applicantId });
-      toast.success("Musician removed");
-      processGigsWithApplicants();
-    } catch (error) {
-      console.error("Failed to remove applicant:", error);
-      toast.error("Failed to remove");
     }
   };
 
@@ -619,17 +538,78 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   };
 
-  const getRoleIcon = (roleType: string) => {
-    if (!roleType) return "🎵";
-    const role = roleType.toLowerCase();
-    if (role.includes("vocal")) return "🎤";
-    if (role.includes("guitar")) return "🎸";
-    if (role.includes("piano") || role.includes("keyboard")) return "🎹";
-    if (role.includes("drum")) return "🥁";
-    if (role.includes("bass")) return "🎸";
-    if (role.includes("dj")) return "🎧";
-    if (role.includes("mc")) return "🎤";
-    return "🎵";
+  // Get gig icon based on category
+  const getGigIcon = (gig: any) => {
+    if (gig.isClientBand) {
+      if (gig.bandCategory?.length > 0) {
+        return <Users className="w-5 h-5 text-purple-500" />;
+      }
+      return <Users2 className="w-5 h-5 text-blue-500" />;
+    }
+
+    // Check for specific talent types
+    if (gig.bussinesscat === "mc") {
+      return <Mic className="w-5 h-5 text-red-500" />;
+    }
+    if (gig.bussinesscat === "dj") {
+      return <Volume2 className="w-5 h-5 text-pink-500" />;
+    }
+    if (gig.bussinesscat === "vocalist") {
+      return <Music className="w-5 h-5 text-green-500" />;
+    }
+    if (gig.bussinesscat === "full") {
+      return <Users className="w-5 h-5 text-orange-500" />;
+    }
+
+    return <Music className="w-5 h-5 text-orange-500" />;
+  };
+
+  const getGigCategoryLabel = (gig: any) => {
+    if (gig.isClientBand) {
+      if (gig.bandCategory?.length > 0) {
+        return "Band Creation";
+      }
+      return "Full Band";
+    }
+
+    switch (gig.bussinesscat) {
+      case "mc":
+        return "MC";
+      case "dj":
+        return "DJ";
+      case "vocalist":
+        return "Vocalist";
+      case "full":
+        return "Full Band";
+      case "personal":
+        return "Individual";
+      default:
+        return "Gig";
+    }
+  };
+
+  const getGigCategoryColor = (gig: any) => {
+    if (gig.isClientBand) {
+      if (gig.bandCategory?.length > 0) {
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      }
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    }
+
+    switch (gig.bussinesscat) {
+      case "mc":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "dj":
+        return "bg-pink-100 text-pink-800 border-pink-200";
+      case "vocalist":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "full":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "personal":
+        return "bg-cyan-100 text-cyan-800 border-cyan-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
   };
 
   // Get selected gig data
@@ -664,57 +644,66 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   );
 
-  // Empty state content
-  const getEmptyStateIcon = () => {
+  // Get applicant count for gig card
+  const getGigApplicantCount = (gigData: GigWithApplicants) => {
     switch (activeGigTab) {
       case "shortlist":
-        return (
-          <BookmarkIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        );
-      case "band-roles":
-        return <Users className="w-16 h-16 mx-auto text-gray-400 mb-4" />;
+        return gigData.shortlisted.length;
       case "full-band":
-        return <Users2 className="w-16 h-16 mx-auto text-gray-400 mb-4" />;
+        return gigData.gig.bookCount?.length || 0;
       default:
-        return <User className="w-16 h-16 mx-auto text-gray-400 mb-4" />;
+        return gigData.applicants.length;
     }
   };
 
-  const getEmptyStateMessage = () => {
-    switch (activeGigTab) {
-      case "shortlist":
-        return {
-          title: "No Shortlisted Gigs",
-          description:
-            "Shortlist musicians from other tabs to compare and book them here.",
-        };
-      case "band-roles":
-        return {
-          title: "No Band Roles with Applicants",
-          description: "No band role applicants yet",
-        };
-      case "full-band":
-        return {
-          title: "No Bands Have Applied",
-          description: "No bands have applied to this gig yet",
-        };
-      default:
-        return {
-          title: "No Regular Gigs with Applicants",
-          description: "No applicants for regular gigs yet",
-        };
-    }
+  // Get gig status color
+  const getGigStatusColor = (gig: any) => {
+    if (gig.isTaken) return "bg-red-100 text-red-800";
+    if (gig.isPending) return "bg-yellow-100 text-yellow-800";
+    if (gig.bookCount?.length > 0) return "bg-purple-100 text-purple-800";
+    return "bg-green-100 text-green-800";
+  };
+
+  // Animation variants
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut",
+      },
+    },
+    hover: {
+      y: -4,
+      scale: 1.02,
+      transition: {
+        duration: 0.2,
+        ease: "easeInOut",
+      },
+    },
   };
 
   // Loading state
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[300px] rounded-lg" />
-          ))}
+        <div className="space-y-6">
+          {/* Horizontal cards skeleton */}
+          <ScrollArea>
+            <div className="flex gap-3 pb-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton
+                  key={i}
+                  className="h-32 w-64 rounded-xl flex-shrink-0"
+                />
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+          <Skeleton className="h-[400px] rounded-xl" />
         </div>
       </div>
     );
@@ -722,278 +711,433 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
+      {/* Header Stats */}
       <PreBookingStats userGigs={userGigs || []} activeTab={activeGigTab} />
 
-      {/* Main Content */}
-      <Card>
-        <CardContent className="p-4">
-          {/* 4-Tab Gig Type Selector */}
-          <div className="mb-6">
-            <Tabs
-              value={activeGigTab}
-              onValueChange={(v: any) => {
-                setActiveGigTab(v);
-                setSelectedGig(null);
-                setSearchTerm("");
-                setSelectedMusician(null);
-                setSelectedBand(null);
-              }}
-            >
-              <TabsList className="grid grid-cols-2 md:grid-cols-4">
-                <TabsTrigger
-                  value="regular"
-                  className="flex items-center gap-2"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="hidden sm:inline">Regular</span>
-                  <Badge variant="secondary" className="ml-2">
-                    {tabCounts.regular}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="band-roles"
-                  className="flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  <span className="hidden sm:inline">Band Roles</span>
-                  <Badge variant="secondary" className="ml-2">
-                    {tabCounts.bandRoles}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="full-band"
-                  className="flex items-center gap-2"
-                >
-                  <Users2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Full Band</span>
-                  <Badge variant="secondary" className="ml-2">
-                    {tabCounts.fullBand}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="shortlist"
-                  className="flex items-center gap-2"
-                >
-                  <Bookmark className="w-4 h-4" />
-                  <span className="hidden sm:inline">Shortlist</span>
-                  <Badge variant="secondary" className="ml-2">
-                    {tabCounts.shortlist}
-                  </Badge>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+      {/* HORIZONTAL GIG NAVIGATION CARDS */}
+      <div className="space-y-4">
+        {/* Tabs for gig types */}
+        <div className="flex items-center justify-between">
+          <Tabs
+            value={activeGigTab}
+            onValueChange={(v: any) => {
+              setActiveGigTab(v);
+              setSelectedGig(null);
+              setSearchTerm("");
+            }}
+            className="w-full"
+          >
+            <TabsList className="grid grid-cols-4">
+              <TabsTrigger value="regular" className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">Regular</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="band-roles"
+                className="flex items-center gap-2"
+              >
+                <Briefcase className="w-4 h-4" />
+                <span className="hidden sm:inline">Band Roles</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="full-band"
+                className="flex items-center gap-2"
+              >
+                <Users2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Full Band</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="shortlist"
+                className="flex items-center gap-2"
+              >
+                <Bookmark className="w-4 h-4" />
+                <span className="hidden sm:inline">Shortlist</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {/* Gig Selection */}
-          {gigsWithApplicants.length > 0 ? (
-            <div className="space-y-6">
-              {/* Gig Selector and Search */}
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <label className="text-sm font-medium mb-2 block">
-                    Select Gig
-                  </label>
-                  <Select
-                    value={selectedGig || ""}
-                    onValueChange={(value) => {
-                      setSelectedGig(
-                        value === "" ? null : (value as Id<"gigs">)
-                      );
-                      setSelectedMusician(null);
-                      setSelectedBand(null);
-                    }}
+          {/* Search */}
+          <div className="hidden md:block w-64">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search gigs..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile search */}
+        <div className="md:hidden">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search gigs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
+        {/* Horizontal Gig Cards */}
+        {gigsWithApplicants.length > 0 ? (
+          <ScrollArea className="w-full">
+            <div className="flex gap-4 pb-4">
+              {gigsWithApplicants.map((gigData) => {
+                const isSelected = selectedGig === gigData.gig._id;
+                const applicantCount = getGigApplicantCount(gigData);
+                const shortlistedCount = gigData.shortlisted.length;
+                const hasShortlisted = shortlistedCount > 0;
+                const category = getGigCategoryLabel(gigData.gig);
+                const categoryColor = getGigCategoryColor(gigData.gig);
+
+                return (
+                  <motion.div
+                    key={gigData.gig._id}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    whileHover="hover"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedGig(gigData.gig._id)}
+                    className="flex-shrink-0 w-72 md:w-80"
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a gig" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gigsWithApplicants.map((gigWithApps) => (
-                        <SelectItem
-                          key={gigWithApps.gig._id}
-                          value={gigWithApps.gig._id}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="truncate">
-                              {gigWithApps.gig.title}
-                            </span>
-                            <div className="flex gap-1">
-                              {activeGigTab === "shortlist" ? (
-                                <Badge className="bg-orange-100 text-orange-800">
-                                  {gigWithApps.shortlisted.length}
-                                </Badge>
-                              ) : activeGigTab === "full-band" ? (
-                                <Badge className="bg-purple-100 text-purple-800">
-                                  {gigWithApps.gig.bookCount?.length || 0}
-                                </Badge>
-                              ) : (
-                                <>
-                                  <Badge className="bg-blue-100 text-blue-800">
-                                    {gigWithApps.applicants.length}
-                                  </Badge>
-                                  <Badge className="bg-green-100 text-green-800">
-                                    {gigWithApps.shortlisted.length}
-                                  </Badge>
-                                </>
+                    <Card
+                      className={cn(
+                        "cursor-pointer transition-all duration-300 group h-full",
+                        colors.border,
+                        isSelected
+                          ? "ring-2 ring-orange-500 shadow-xl"
+                          : "shadow-md hover:shadow-lg",
+                        "overflow-hidden"
+                      )}
+                    >
+                      <CardContent className="p-4">
+                        {/* Header with icon and category */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={cn(
+                                "p-2 rounded-lg",
+                                isSelected
+                                  ? "bg-gradient-to-r from-orange-500 to-amber-500"
+                                  : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900"
                               )}
+                            >
+                              {getGigIcon(gigData.gig)}
+                            </div>
+                            <div>
+                              <Badge
+                                className={cn(
+                                  "text-xs font-medium",
+                                  categoryColor
+                                )}
+                              >
+                                {category}
+                              </Badge>
                             </div>
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder={
-                        activeGigTab === "shortlist"
-                          ? "Search shortlisted musicians..."
-                          : activeGigTab === "full-band"
-                            ? "Search bands..."
-                            : "Search musicians..."
-                      }
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs",
+                              getGigStatusColor(gigData.gig)
+                            )}
+                          >
+                            {gigData.gig.isTaken ? "Booked" : "Active"}
+                          </Badge>
+                        </div>
+
+                        {/* Gig Title */}
+                        <h3 className="font-bold text-lg mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">
+                          {gigData.gig.title}
+                        </h3>
+
+                        {/* Stats row */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1">
+                              <Users className="w-4 h-4 text-blue-500" />
+                              <span className="font-semibold text-sm">
+                                {applicantCount}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                applied
+                              </span>
+                            </div>
+                            {hasShortlisted && (
+                              <div className="flex items-center gap-1">
+                                <Bookmark className="w-4 h-4 text-green-500" />
+                                <span className="font-semibold text-sm">
+                                  {shortlistedCount}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  shortlisted
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                          )}
+                        </div>
+
+                        {/* Date and Location */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-600">
+                              {formatDate(gigData.gig.date)}
+                            </span>
+                            {gigData.gig.time?.start && (
+                              <>
+                                <Clock className="w-4 h-4 text-gray-400" />
+                                <span className="text-gray-600">
+                                  {gigData.gig.time.start}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          {gigData.gig.location && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <MapPin className="w-4 h-4 text-gray-400" />
+                              <span className="text-gray-600 truncate">
+                                {gigData.gig.location.split(",")[0]}
+                              </span>
+                            </div>
+                          )}
+                          {gigData.gig.price && gigData.gig.price > 0 && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <DollarSign className="w-4 h-4 text-green-500" />
+                              <span className="font-semibold text-green-600">
+                                ${gigData.gig.price}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Bottom gradient bar */}
+                        <div
+                          className={cn(
+                            "absolute bottom-0 left-0 right-0 h-1 rounded-b-lg transition-all duration-300",
+                            isSelected
+                              ? "bg-gradient-to-r from-orange-500 to-amber-500"
+                              : "bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 group-hover:bg-gradient-to-r group-hover:from-orange-400 group-hover:to-amber-400"
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        ) : (
+          <Card className="text-center p-8">
+            <CardContent className="space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                <Sparkles className="w-8 h-8 text-gray-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg mb-2">No Gigs Found</h3>
+                <p className="text-gray-500 text-sm">
+                  Share your gigs or check back later for applications.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* MAIN CONTENT AREA */}
+      {selectedGigData ? (
+        <Card>
+          <CardContent className="p-4 md:p-6">
+            <div className="space-y-6">
+              {/* Gig Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    {getGigIcon(selectedGigData.gig)}
+                    <div>
+                      <h1 className="text-xl md:text-2xl font-bold">
+                        {selectedGigData.gig.title}
+                      </h1>
+                      <div className="flex items-center gap-3 mt-1">
+                        <Badge
+                          className={getGigStatusColor(selectedGigData.gig)}
+                        >
+                          {selectedGigData.gig.isTaken ? "Booked" : "Active"}
+                        </Badge>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(selectedGigData.gig.date)}
+                          {selectedGigData.gig.time?.start && (
+                            <>
+                              <Clock className="w-4 h-4 ml-2" />
+                              {selectedGigData.gig.time.start}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              {selectedGigData && (
-                <>
-                  {/* Gig Info Card */}
-                  <GigInfoCard
-                    gig={selectedGigData.gig}
-                    activeGigTab={activeGigTab}
-                    applicantsCount={selectedGigData.applicants.length}
-                    shortlistedCount={selectedGigData.shortlisted.length}
-                    formatDate={formatDate}
-                    getRoleIcon={getRoleIcon}
-                  />
 
-                  {/* Render Tab Content */}
-                  {activeGigTab === "shortlist" ? (
-                    <ShortlistTab
-                      selectedGigData={selectedGigData}
-                      filteredShortlist={filteredShortlist || []}
-                      handleRemoveFromShortlist={handleRemoveFromShortlist}
-                      handleViewProfile={handleViewProfile}
-                      handleBookMusician={handleBookMusician}
-                      formatTime={formatTime}
-                    />
-                  ) : (
-                    <Tabs
-                      value={activeTab}
-                      onValueChange={(v: any) => setActiveTab(v)}
-                    >
-                      <TabsList className="grid grid-cols-2 mb-6">
-                        <TabsTrigger
-                          value="applicants"
-                          className="flex items-center gap-2"
-                        >
-                          <Users className="w-4 h-4" />
-                          {activeGigTab === "full-band"
-                            ? `Bands (${selectedGigData.gig.bookCount?.length || 0})`
-                            : `Applicants (${filteredApplicants?.length || 0})`}
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="history"
-                          className="flex items-center gap-2"
-                        >
-                          <History className="w-4 h-4" />
-                          History
-                        </TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="applicants" className="space-y-4">
-                        {activeGigTab === "regular" && (
-                          <RegularGigsTab
-                            selectedGigData={selectedGigData}
-                            filteredApplicants={filteredApplicants || []}
-                            handleAddToShortlist={handleAddToShortlist}
-                            handleRemoveFromShortlist={
-                              handleRemoveFromShortlist
-                            }
-                            handleViewProfile={handleViewProfile}
-                            handleBookMusician={handleBookMusician}
-                            getStatusColor={getStatusColor}
-                          />
-                        )}
-                        {activeGigTab === "band-roles" && (
-                          <BandRolesTab
-                            selectedGigData={selectedGigData}
-                            filteredApplicants={filteredApplicants || []}
-                            clerkId={clerkId!}
-                          />
-                        )}
-                        {activeGigTab === "full-band" && (
-                          <FullBandTab
-                            selectedGigData={selectedGigData}
-                            handleAddToShortlist={handleAddToShortlist}
-                            handleRemoveFromShortlist={
-                              handleRemoveFromShortlist
-                            }
-                            handleViewProfile={handleViewProfile}
-                            handleBookMusician={handleBookMusician} // Pass the enhanced function
-                            getStatusColor={getStatusColor}
-                          />
-                        )}
-                      </TabsContent>
-
-                      <TabsContent value="history">
-                        <HistoryTab
-                          selectedGigData={selectedGigData}
-                          formatTime={formatTime}
-                          getStatusColor={getStatusColor}
-                        />
-                      </TabsContent>
-                    </Tabs>
-                  )}
-                </>
-              )}
-
-              {/* Band Booking Options Section - Only show for client-created band gigs */}
-              {selectedGigData?.gig.isClientBand &&
-                selectedGigData?.gig.bandCategory &&
-                selectedGigData?.gig.bandCategory.length > 0 && (
-                  <div className="mt-8 border-t pt-8">
-                    <BookingOptionsSection
-                      gigId={selectedGigData.gig._id}
-                      clerkId={clerkId!} // Use clerkId
-                      gig={selectedGigData.gig}
-                      musiciansCount={selectedGigData.gig.bandCategory.reduce(
-                        (total, role) =>
-                          total + (role.bookedUsers?.length || 0),
-                        0
-                      )}
-                    />
+              {/* Gig Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Users className="w-5 h-5 text-blue-500" />
+                    <span className="text-lg font-bold">
+                      {selectedGigData.applicants.length}
+                    </span>
                   </div>
-                )}
-            </div>
-          ) : (
-            // Empty state
-            <Card className="text-center py-12">
-              <CardContent>
-                {getEmptyStateIcon()}
-                <h3 className="text-xl font-semibold mb-2">
-                  {getEmptyStateMessage().title}
-                </h3>
-                <p className="text-gray-500 mb-6">
-                  {getEmptyStateMessage().description}
-                </p>
-                <Button
-                  onClick={() => router.push("/hub/gigs")}
-                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Applicants
+                  </span>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Bookmark className="w-5 h-5 text-green-500" />
+                    <span className="text-lg font-bold">
+                      {selectedGigData.shortlisted.length}
+                    </span>
+                  </div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Shortlisted
+                  </span>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <DollarSign className="w-5 h-5 text-purple-500" />
+                    <span className="text-lg font-bold">
+                      ${selectedGigData.gig.price || "0"}
+                    </span>
+                  </div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Budget
+                  </span>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <MapPin className="w-5 h-5 text-orange-500" />
+                    <span className="text-lg font-bold truncate">
+                      {selectedGigData.gig.location?.split(",")[0] || "Remote"}
+                    </span>
+                  </div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Location
+                  </span>
+                </div>
+              </div>
+
+              {/* Tab Content */}
+              {activeGigTab === "shortlist" ? (
+                <ShortlistTab
+                  selectedGigData={selectedGigData}
+                  filteredShortlist={filteredShortlist || []}
+                  handleRemoveFromShortlist={handleRemoveFromShortlist}
+                  handleViewProfile={handleViewProfile}
+                  handleBookMusician={handleBookMusician}
+                  formatTime={formatTime}
+                />
+              ) : (
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(v: any) => setActiveTab(v)}
+                  className="mt-6"
                 >
-                  View Your Gigs
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </CardContent>
-      </Card>
+                  <TabsList className="grid grid-cols-2">
+                    <TabsTrigger value="applicants">
+                      <Users className="w-4 h-4 mr-2" />
+                      {activeGigTab === "full-band"
+                        ? `Bands (${selectedGigData.gig.bookCount?.length || 0})`
+                        : `Applicants (${filteredApplicants?.length || 0})`}
+                    </TabsTrigger>
+                    <TabsTrigger value="history">
+                      <History className="w-4 h-4 mr-2" />
+                      History
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="applicants" className="space-y-4">
+                    {activeGigTab === "regular" && (
+                      <RegularGigsTab
+                        selectedGigData={selectedGigData}
+                        filteredApplicants={filteredApplicants || []}
+                        handleAddToShortlist={handleAddToShortlist}
+                        handleRemoveFromShortlist={handleRemoveFromShortlist}
+                        handleViewProfile={handleViewProfile}
+                        handleBookMusician={handleBookMusician}
+                        getStatusColor={getStatusColor}
+                      />
+                    )}
+                    {activeGigTab === "band-roles" && (
+                      <BandRolesTab
+                        selectedGigData={selectedGigData}
+                        filteredApplicants={filteredApplicants || []}
+                        clerkId={clerkId!}
+                      />
+                    )}
+                    {activeGigTab === "full-band" && (
+                      <FullBandTab
+                        selectedGigData={selectedGigData}
+                        handleAddToShortlist={handleAddToShortlist}
+                        handleRemoveFromShortlist={handleRemoveFromShortlist}
+                        handleViewProfile={handleViewProfile}
+                        handleBookMusician={handleBookMusician}
+                        getStatusColor={getStatusColor}
+                      />
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="history">
+                    <HistoryTab
+                      selectedGigData={selectedGigData}
+                      formatTime={formatTime}
+                      getStatusColor={getStatusColor}
+                    />
+                  </TabsContent>
+                </Tabs>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        // Empty State when no gig selected
+        <Card className="text-center py-16">
+          <CardContent className="space-y-6">
+            <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20">
+              <Target className="w-12 h-12 text-orange-500" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-3">Select a Gig</h3>
+              <p className="text-gray-500 text-lg max-w-md mx-auto">
+                Choose a gig from the cards above to view applicants and manage
+                bookings.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              <Award className="w-5 h-5 text-orange-500" />
+              <span className="text-sm font-medium text-gray-600">
+                {gigsWithApplicants.length} gigs available •{" "}
+                {gigsWithApplicants.reduce(
+                  (acc, gig) => acc + gig.applicants.length,
+                  0
+                )}{" "}
+                total applicants
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Book Now Dialog */}
       <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
@@ -1009,10 +1153,10 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
               <div className="flex items-center gap-3">
-                <Avatar className="w-12 h-12">
-                  <AvatarFallback className="bg-green-100 text-green-800">
+                <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
+                  <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-500 text-white">
                     {selectedBand?.bandName?.charAt(0) ||
                       selectedMusician?.userName?.charAt(0) ||
                       "U"}
@@ -1053,7 +1197,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               </p>
             </div>
 
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div>
@@ -1084,7 +1228,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             </Button>
             <Button
               onClick={handleConfirmBooking}
-              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
             >
               <ShoppingBag className="w-4 h-4 mr-2" />
               Confirm Booking
@@ -1092,6 +1236,23 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Band Booking Options Section - Only show for client-created band gigs */}
+      {selectedGigData?.gig.isClientBand &&
+        selectedGigData?.gig.bandCategory &&
+        selectedGigData?.gig.bandCategory.length > 0 && (
+          <div className="mt-8 border-t pt-8">
+            <BookingOptionsSection
+              gigId={selectedGigData.gig._id}
+              clerkId={clerkId!} // Use clerkId
+              gig={selectedGigData.gig}
+              musiciansCount={selectedGigData.gig.bandCategory.reduce(
+                (total, role) => total + (role.bookedUsers?.length || 0),
+                0
+              )}
+            />
+          </div>
+        )}
     </div>
   );
 };
