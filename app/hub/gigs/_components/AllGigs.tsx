@@ -209,6 +209,9 @@ export const AllGigs = ({ user }: { user: any }) => {
   const filteredGigs = useMemo(() => {
     let result = allGigs.filter((gig) => {
       // Apply search filter
+      if (gig.isPending) {
+        return false;
+      }
       const matchesSearch =
         !searchQuery ||
         gig.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1115,8 +1118,9 @@ export const AllGigs = ({ user }: { user: any }) => {
                 >
                   <GigCard
                     gig={gig}
-                    userStatus={userStatus} // Pass user status as prop
+                    userStatus={userStatus}
                     onClick={() => handleOpenGigDescription(gig)}
+                    showFullGigs={false} // Or true if you want to show fully booked gigs
                   />
                 </motion.div>
               );

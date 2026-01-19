@@ -69,15 +69,17 @@ export interface BandRoleSchema {
   role: string;
   maxSlots: number;
   filledSlots: number;
-  applicants: Id<"users">[];
-  bookedUsers: Id<"users">[];
+  // ADD THESE:
+  maxApplicants: number;
+  currentApplicants: number;
   requiredSkills?: string[];
   description?: string;
-  isLocked?: boolean;
   price?: number;
   currency?: string;
   negotiable?: boolean;
-  bookedPrice?: number;
+  isLocked?: boolean;
+  applicants?: Id<"users">[];
+  bookedUsers?: Id<"users">[];
 }
 
 // types/bookings.ts

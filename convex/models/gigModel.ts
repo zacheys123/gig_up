@@ -12,6 +12,8 @@ const bandRoleSchema = v.object({
   role: v.string(),
   maxSlots: v.number(),
   filledSlots: v.number(),
+  maxApplicants: v.optional(v.number()), // NEW: Maximum number of applicants allowed
+  currentApplicants: v.optional(v.number()), // NEW: Count of current applicants
   applicants: v.array(v.id("users")),
   bookedUsers: v.array(v.id("users")),
   requiredSkills: v.optional(v.array(v.string())),
@@ -24,6 +26,7 @@ const bandRoleSchema = v.object({
   bookedPrice: v.optional(v.number()), // Actual price agreed upon
 });
 
+// In your gigs schema file (where you define the table)
 const bandBookingEntry = v.object({
   bandRole: v.string(),
   bandRoleIndex: v.number(),
@@ -37,7 +40,10 @@ const bandBookingEntry = v.object({
     v.literal("pending_review"),
     v.literal("under_review"),
     v.literal("interview_scheduled"),
-    v.literal("interview_completed")
+    v.literal("interview_completed"),
+    v.literal("withdrawn"), // ADD THIS
+    v.literal("rejected"), // Optionally add this too
+    v.literal("accepted") // Optionally add this too
   ),
 
   // Booking phase
@@ -58,7 +64,8 @@ const bandBookingEntry = v.object({
       v.literal("partial"),
       v.literal("paid"),
       v.literal("disputed"),
-      v.literal("cancelled")
+      v.literal("cancelled"),
+      v.literal("refunded") // Consider adding this too
     )
   ),
   paymentAmount: v.optional(v.number()),

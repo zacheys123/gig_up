@@ -9,6 +9,7 @@ import { applyFirstGigBonusInternal } from "./trustScore";
 import { Doc, Id } from "../_generated/dataModel";
 import { checkGigLimit, updateWeeklyGigCount } from "../gigsLimit";
 import { getUserByClerkId } from "./bookings";
+import { updateUserTrust } from "../trustHelper";
 interface ProcessedBandRole {
   role: string;
   maxSlots: number;
@@ -160,13 +161,15 @@ export const showInterestInGig = mutation({
       currency: gig.currency,
     };
 
+    // Check if adding this user will fill all slots
+    const willBeFull = currentInterestedUsers.length + 1 >= maxSlots;
+
     await ctx.db.patch(gigId, {
       interestedUsers: updatedInterestedUsers,
       bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
       updatedAt: now,
-      isPending: true,
-      // IMPORTANT: Don't set isTaken here! isTaken is only set when someone is actually booked
-      // isTaken will be set in selectMusicianFromInterested when bookedBy is assigned
+      // Set isPending to true if gig is now full
+      isPending: willBeFull,
     });
 
     // Create notification for gig poster
@@ -260,12 +263,14 @@ export const removeInterestFromGig = mutation({
       throw new Error("You haven't shown interest in this gig");
     }
 
-    // Remove from interestedUsers
     const updatedInterestedUsers = currentInterestedUsers.filter(
       (id) => id !== musician._id
     );
+    // Get max slots from gig (with default)
+    const maxSlots = gig.maxSlots || 10;
 
-    // Create enhanced booking history entry
+    // Check if gig is no longer full
+    const isStillFull = updatedInterestedUsers.length >= maxSlots;
     const cancellationEntry = {
       entryId: `${gigId}_${musician._id}_${Date.now()}`,
       timestamp: Date.now(),
@@ -286,6 +291,8 @@ export const removeInterestFromGig = mutation({
         remainingInterestedCount: updatedInterestedUsers.length,
         gigPrice: gig.price,
         gigCurrency: gig.currency,
+        wasFull: currentInterestedUsers.length >= maxSlots,
+        isStillFull: isStillFull,
       },
     };
 
@@ -293,7 +300,7 @@ export const removeInterestFromGig = mutation({
       interestedUsers: updatedInterestedUsers,
       bookingHistory: [...(gig.bookingHistory || []), cancellationEntry],
       updatedAt: Date.now(),
-      isPending: false,
+      isPending: isStillFull, // Update isPending based on fullness
       // Only reset taken status if the gig was actually taken
       ...(gig.isTaken && { isTaken: false }),
     });
@@ -417,7 +424,7 @@ export const selectMusicianFromInterested = mutation({
     // Update gig status - SET isTaken = true because gig is now booked!
     await ctx.db.patch(gigId, {
       isTaken: true, // FINAL BOSS: gig is now taken
-      isPending: false,
+      isPending: false, // Change this to true when slots are filled
       bookedBy: musicianId,
       isActive: true,
       interestedUsers: [], // Clear interested users since gig is taken
@@ -472,6 +479,16 @@ export const selectMusicianFromInterested = mutation({
         }
       })
     );
+    // Update trust scores for both parties
+    try {
+      // Update musician's trust score (completed gig)
+      await updateUserTrust(ctx, musicianId);
+
+      // Update client's trust score (successful booking)
+      await updateUserTrust(ctx, clientUser._id);
+    } catch (error) {
+      console.error("Failed to update trust scores:", error);
+    }
 
     return { success: true };
   },
@@ -955,7 +972,7 @@ export const getGigTypeInfo = query({
     }
   },
 });
-// In your Convex query (controllers/gigs.ts)
+// In convex/controllers/gigs.ts
 export const getGigWithApplicants = query({
   args: { gigId: v.id("gigs") },
   handler: async (ctx, { gigId }) => {
@@ -963,58 +980,112 @@ export const getGigWithApplicants = query({
     if (!gig) throw new Error("Gig not found");
 
     const applicants: any[] = [];
-    const userDetails = new Map();
+    const bookedUsers: any[] = []; // NEW: Separate array for booked users
+    const userDetails: Record<string, any> = {};
+    const shortlisted: any[] = [];
 
-    // Get applicants from bandBookingHistory with your specific statuses
-    if (gig.bandBookingHistory) {
-      for (const application of gig.bandBookingHistory) {
-        // Filter out completed/cancelled applications if needed
-        // Keep all statuses or filter specific ones
-        const isActiveApplicant = [
-          "pending_review",
-          "under_review",
-          "interview_scheduled",
-          "interview_completed",
-        ].includes(application.applicationStatus || "pending_review");
+    // Get applicants AND booked users directly from bandCategory
+    if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
+      for (
+        let bandRoleIndex = 0;
+        bandRoleIndex < gig.bandCategory.length;
+        bandRoleIndex++
+      ) {
+        const role = gig.bandCategory[bandRoleIndex];
 
-        if (isActiveApplicant) {
-          const user = await ctx.db.get(application.userId);
-          if (user) {
-            applicants.push({
-              _id: application.userId,
-              userId: application.userId,
-              userName:
-                application.userName || user.name || user.username || "Unknown",
-              bandRoleIndex: application.bandRoleIndex,
-              bandRole: application.bandRole,
-              appliedAt: application.appliedAt,
-              applicationNotes: application.applicationNotes,
-              applicationStatus:
-                application.applicationStatus || "pending_review",
-              bookedAt: application.bookedAt,
-              bookedPrice: application.bookedPrice,
-              contractSigned: application.contractSigned,
-              paymentStatus: application.paymentStatus,
-              // Add any other fields from bandBookingEntry
-            });
+        // Get APPLICANTS for this role (not yet booked)
+        if (role.applicants && Array.isArray(role.applicants)) {
+          for (const userId of role.applicants) {
+            // Skip if user is already in bookedUsers (shouldn't happen, but just in case)
+            if (role.bookedUsers && role.bookedUsers.includes(userId)) {
+              continue;
+            }
 
-            userDetails.set(application.userId, user);
+            try {
+              const user = await ctx.db.get(userId);
+              if (user) {
+                applicants.push({
+                  _id: `${userId}_${bandRoleIndex}`,
+                  userId: userId,
+                  bandRoleIndex: bandRoleIndex,
+                  bandRole: role.role,
+                  appliedAt: Date.now(), // You might want to track this from bookingHistory
+                  applicationStatus: "applied",
+                  type: "applicant",
+                  isBooked: false,
+                });
+
+                userDetails[userId] = getUserDetails(user);
+              }
+            } catch (error) {
+              console.error("Error fetching applicant:", userId, error);
+            }
+          }
+        }
+
+        // Get BOOKED USERS for this role
+        if (role.bookedUsers && Array.isArray(role.bookedUsers)) {
+          for (const userId of role.bookedUsers) {
+            try {
+              const user = await ctx.db.get(userId);
+              if (user) {
+                bookedUsers.push({
+                  _id: `${userId}_${bandRoleIndex}_booked`,
+                  userId: userId,
+                  bandRoleIndex: bandRoleIndex,
+                  bandRole: role.role,
+                  bookedAt: Date.now(), // You might want to get this from bookingHistory
+                  bookedPrice: role.bookedPrice || role.price,
+                  type: "booked",
+                  isBooked: true,
+                });
+
+                if (!userDetails[userId]) {
+                  userDetails[userId] = getUserDetails(user);
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching booked user:", userId, error);
+            }
           }
         }
       }
     }
 
     // Get shortlisted users
-    const shortlisted = gig.shortlistedUsers || [];
+    if (gig.shortlistedUsers && Array.isArray(gig.shortlistedUsers)) {
+      for (const shortlistEntry of gig.shortlistedUsers) {
+        if (shortlistEntry.status !== "removed") {
+          shortlisted.push(shortlistEntry);
+        }
+      }
+    }
 
     return {
       gig,
-      applicants, // Now contains active applicants with proper status
+      applicants, // Users who applied but not booked yet
+      bookedUsers, // Users who are already booked
       userDetails,
       shortlisted,
     };
   },
 });
+
+// Helper function to get user details
+function getUserDetails(user: any) {
+  return {
+    ...user,
+    avgRating: user.avgRating || 0,
+    completedGigsCount: user.completedGigsCount || 0,
+    rate: user.rate || { baseRate: "Contact" },
+    firstname: user.firstname || user.username,
+    username: user.username,
+    picture: user.picture,
+    city: user.city,
+    verifiedIdentity: user.verifiedIdentity,
+    trustTier: user.trustTier,
+  };
+}
 // // Check if user can join band (available roles)
 // export const getAvailableBandRoles = query({
 //   args: { gigId: v.id("gigs") },
@@ -1256,6 +1327,8 @@ export const createGig = mutation({
           price: v.optional(v.number()),
           currency: v.optional(v.string()),
           negotiable: v.optional(v.boolean()),
+          maxApplicants: v.optional(v.number()),
+          currentApplicants: v.optional(v.number()),
         })
       )
     ),
@@ -1369,7 +1442,7 @@ export const createGig = mutation({
         processedCategory = category || "individual";
         break;
 
-      case "other": // Create Band - This is where we create band setup
+      case "other": // Create Band
         processedIsClientBand = true;
         processedBandCategory = (bandCategory || []).map((role: any) => ({
           role: role.role,
@@ -1383,6 +1456,9 @@ export const createGig = mutation({
           price: role.price || undefined,
           currency: role.currency || currency || "KES",
           negotiable: role.negotiable ?? negotiable ?? true,
+          // ADD THESE:
+          maxApplicants: role.maxApplicants || 20, // Default 20
+          currentApplicants: 0, // Start at 0
         }));
         const totalBandSlots = processedBandCategory.reduce(
           (sum: number, role: any) => sum + role.maxSlots,
@@ -1718,7 +1794,11 @@ export const createGig = mutation({
     } catch (error) {
       console.error("Error creating notifications:", error);
     }
-
+    try {
+      await updateUserTrust(ctx, postedBy);
+    } catch (error) {
+      console.error("Failed to update trust score:", error);
+    }
     return gigId;
   },
 });

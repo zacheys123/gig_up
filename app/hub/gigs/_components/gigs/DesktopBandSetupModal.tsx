@@ -1,12 +1,9 @@
-// app/gigs/_components/DesktopBandSetupModal.tsx
 import React, { useState, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,16 +22,27 @@ import {
   Users,
   Search,
   Sparkles,
-  ArrowRight,
   Check,
   DollarSign,
   Settings,
   Target,
+  ChevronLeft,
+  ChevronRight,
+  Star,
   TrendingUp,
   Zap,
   Layers,
   UserPlus,
-  Star,
+  Users as UsersIcon,
+  Info,
+  AlertCircle,
+  Grid,
+  List,
+  Filter,
+  Eye,
+  EyeOff,
+  Clock,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BandRoleInput, BandSetupRole } from "@/types/gig";
@@ -48,9 +56,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
-import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface DesktopBandSetupModalProps {
   isOpen: boolean;
@@ -60,28 +78,90 @@ interface DesktopBandSetupModalProps {
 }
 
 const commonRoles = [
-  { value: "Lead Vocalist", icon: Mic, color: "red", category: "vocal" },
-  { value: "Guitarist", icon: Guitar, color: "blue", category: "strings" },
-  { value: "Bassist", icon: Music, color: "green", category: "strings" },
-  { value: "Drummer", icon: Drum, color: "amber", category: "percussion" },
+  {
+    value: "Lead Vocalist",
+    icon: Mic,
+    color: "red",
+    category: "vocal",
+    popularity: 95,
+  },
+  {
+    value: "Guitarist",
+    icon: Guitar,
+    color: "blue",
+    category: "strings",
+    popularity: 90,
+  },
+  {
+    value: "Bassist",
+    icon: Music,
+    color: "green",
+    category: "strings",
+    popularity: 85,
+  },
+  {
+    value: "Drummer",
+    icon: Drum,
+    color: "amber",
+    category: "percussion",
+    popularity: 88,
+  },
   {
     value: "Pianist/Keyboardist",
     icon: Piano,
     color: "purple",
     category: "keys",
+    popularity: 80,
   },
-  { value: "Saxophonist", icon: Music, color: "pink", category: "brass" },
-  { value: "Trumpeter", icon: Music, color: "cyan", category: "brass" },
-  { value: "Violinist", icon: Music, color: "indigo", category: "strings" },
-  { value: "Backup Vocalist", icon: Mic, color: "rose", category: "vocal" },
+  {
+    value: "Saxophonist",
+    icon: Music,
+    color: "pink",
+    category: "brass",
+    popularity: 70,
+  },
+  {
+    value: "Trumpeter",
+    icon: Music,
+    color: "cyan",
+    category: "brass",
+    popularity: 65,
+  },
+  {
+    value: "Violinist",
+    icon: Music,
+    color: "indigo",
+    category: "strings",
+    popularity: 75,
+  },
+  {
+    value: "Backup Vocalist",
+    icon: Mic,
+    color: "rose",
+    category: "vocal",
+    popularity: 82,
+  },
   {
     value: "Percussionist",
     icon: Drum,
     color: "orange",
     category: "percussion",
+    popularity: 72,
   },
-  { value: "DJ", icon: Volume2, color: "violet", category: "electronic" },
-  { value: "MC/Host", icon: Mic, color: "teal", category: "vocal" },
+  {
+    value: "DJ",
+    icon: Volume2,
+    color: "violet",
+    category: "electronic",
+    popularity: 88,
+  },
+  {
+    value: "MC/Host",
+    icon: Mic,
+    color: "teal",
+    category: "vocal",
+    popularity: 78,
+  },
 ];
 
 const roleCategories = [
@@ -115,7 +195,12 @@ const commonSkills = [
   "EDM",
   "House",
   "Techno",
+  "Acoustic",
+  "Orchestral",
+  "Experimental",
 ];
+
+const maxApplicantsPresets = [10, 15, 20, 30, 50, 75, 100, 150, 200];
 
 const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
   isOpen,
@@ -127,6 +212,8 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
   const [selectedRoles, setSelectedRoles] = useState<BandSetupRole[]>(
     initialRoles.map((role) => ({
       ...role,
+      maxApplicants: role.maxApplicants || 20,
+      currentApplicants: role.currentApplicants || 0,
       requiredSkills: role.requiredSkills || [],
       price: role.price || "",
       currency: role.currency || "KES",
@@ -134,25 +221,38 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     }))
   );
   const [customRole, setCustomRole] = useState("");
-  const [showCustomForm, setShowCustomForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [activeTab, setActiveTab] = useState<"roles" | "skills" | "budget">(
-    "roles"
-  );
+  const [activeTab, setActiveTab] = useState<"select" | "configure">("select");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showMaxApplicantsInfo, setShowMaxApplicantsInfo] = useState(false);
 
-  // Memoized calculations
-  const { totalPositions, totalBudget } = useMemo(() => {
-    const positions = selectedRoles.reduce(
-      (sum, role) => sum + role.maxSlots,
-      0
-    );
-    const budget = selectedRoles.reduce((total, role) => {
-      const price = role.price ? parseFloat(role.price) : 0;
-      return total + (isNaN(price) ? 0 : price) * role.maxSlots;
-    }, 0);
-    return { totalPositions: positions, totalBudget: budget };
-  }, [selectedRoles]);
+  const { totalPositions, totalBudget, totalMaxApplicants, totalPricedRoles } =
+    useMemo(() => {
+      const positions = selectedRoles.reduce(
+        (sum, role) => sum + role.maxSlots,
+        0
+      );
+      const budget = selectedRoles.reduce((total, role) => {
+        const price = role.price ? parseFloat(role.price) : 0;
+        return total + (isNaN(price) ? 0 : price) * role.maxSlots;
+      }, 0);
+      const maxApplicants = selectedRoles.reduce(
+        (sum, role) => sum + (role.maxApplicants || 20),
+        0
+      );
+      const pricedRoles = selectedRoles.filter(
+        (r) => r.price && parseFloat(r.price) > 0
+      ).length;
+
+      return {
+        totalPositions: positions,
+        totalBudget: budget,
+        totalMaxApplicants: maxApplicants,
+        totalPricedRoles: pricedRoles,
+      };
+    }, [selectedRoles]);
 
   const filteredRoles = useMemo(() => {
     return commonRoles.filter((role) => {
@@ -165,15 +265,6 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     });
   }, [searchQuery, selectedCategory]);
 
-  const progressPercentage = useMemo(() => {
-    const baseProgress = Math.min(selectedRoles.length * 15, 60);
-    const configuredProgress =
-      selectedRoles.filter(
-        (role) => role.maxSlots > 0 && role.requiredSkills.length > 0
-      ).length * 5;
-    return Math.min(baseProgress + configuredProgress, 100);
-  }, [selectedRoles]);
-
   const toggleRole = useCallback((roleName: string) => {
     setSelectedRoles((prev) => {
       const existing = prev.find((r) => r.role === roleName);
@@ -185,10 +276,13 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
           {
             role: roleName,
             maxSlots: 1,
+            maxApplicants: 20,
+            currentApplicants: 0,
             requiredSkills: [],
             description: "",
             currency: "KES",
             negotiable: true,
+            isLocked: false,
           },
         ];
       }
@@ -213,14 +307,16 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
         {
           role: customRole.trim(),
           maxSlots: 1,
+          maxApplicants: 20,
+          currentApplicants: 0,
           requiredSkills: [],
           description: "",
           currency: "KES",
           negotiable: true,
+          isLocked: false,
         },
       ]);
       setCustomRole("");
-      setShowCustomForm(false);
     }
   }, [customRole]);
 
@@ -251,12 +347,15 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
       return {
         role: role.role,
         maxSlots: role.maxSlots,
+        maxApplicants: role.maxApplicants || 20,
+        currentApplicants: role.currentApplicants || 0,
         requiredSkills:
           role.requiredSkills.length > 0 ? role.requiredSkills : undefined,
         description: role.description || undefined,
         price: price && !isNaN(price) ? price : undefined,
         currency: role.currency,
         negotiable: role.negotiable,
+        isLocked: role.isLocked || false,
       };
     },
     []
@@ -270,117 +369,505 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     }
   }, [selectedRoles, prepareForSubmission, onSubmit, onClose]);
 
-  const getModalStyles = useCallback(() => {
-    return {
-      background: isDarkMode ? colors.background : "bg-white",
-      border: isDarkMode ? colors.border : "border-gray-200",
-      text: isDarkMode ? colors.text : "text-gray-900",
-      textMuted: isDarkMode ? colors.textMuted : "text-gray-600",
-      hoverBg: isDarkMode ? colors.hoverBg : "hover:bg-gray-50",
-      backgroundMuted: isDarkMode ? colors.backgroundMuted : "bg-gray-50",
-      borderSecondary: isDarkMode ? colors.borderSecondary : "border-gray-300",
-    };
-  }, [isDarkMode, colors]);
+  // Role Configuration Card Component
+  const RoleConfigCard = ({ role }: { role: BandSetupRole }) => {
+    const maxApplicants = role.maxApplicants || 20;
 
-  const styles = getModalStyles();
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className={cn(
-          "max-w-7xl max-h-[90vh] overflow-hidden p-0",
-          styles.background,
-          styles.border
-        )}
-      >
-        <div className="flex h-[90vh] w-full">
-          {/* Left Panel - Role Selection */}
-          <div className="w-2/5 border-r flex flex-col">
-            <DialogHeader className={cn("p-6 border-b", styles.border)}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle
-                    className={cn("text-2xl font-bold", styles.text)}
-                  >
-                    Band Setup Studio
-                  </DialogTitle>
-                  <DialogDescription className={cn("mt-1", styles.textMuted)}>
-                    Build your dream band. Select roles and customize
-                    requirements.
-                  </DialogDescription>
+    return (
+      <Card className={cn("overflow-hidden", colors.border)}>
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className={cn("p-2 rounded-lg", colors.backgroundMuted)}>
+                  {commonRoles.find((r) => r.value === role.role)?.icon ? (
+                    React.createElement(
+                      commonRoles.find((r) => r.value === role.role)!.icon,
+                      {
+                        className: "w-5 h-5",
+                      }
+                    )
+                  ) : (
+                    <Music className="w-5 h-5" />
+                  )}
                 </div>
-                <Badge
+                <div>
+                  <h4 className={cn("font-bold text-lg", colors.text)}>
+                    {role.role}
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {role.maxSlots} position{role.maxSlots > 1 ? "s" : ""}
+                    </Badge>
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-blue-100 text-blue-700"
+                    >
+                      {maxApplicants} max apps
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeRole(role.role)}
+              className="text-gray-400 hover:text-red-500"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            {/* Positions */}
+            <div>
+              <Label
+                className={cn("text-sm font-medium mb-3 block", colors.text)}
+              >
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Positions Needed
+                </div>
+              </Label>
+              <div className="flex items-center gap-3">
+                <Button
                   variant="outline"
-                  className={cn("gap-1", styles.borderSecondary)}
+                  size="icon"
+                  onClick={() =>
+                    updateRole(role.role, {
+                      maxSlots: Math.max(1, role.maxSlots - 1),
+                    })
+                  }
+                  className={cn("rounded-lg", colors.border)}
+                  disabled={role.maxSlots <= 1}
                 >
-                  <Sparkles className="w-3 h-3" />
-                  Pro Setup
-                </Badge>
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <div className="flex-1 text-center">
+                  <div className="text-4xl font-bold text-orange-600">
+                    {role.maxSlots}
+                  </div>
+                  <div className={cn("text-xs", colors.textMuted)}>
+                    Position{role.maxSlots > 1 ? "s" : ""}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    updateRole(role.role, { maxSlots: role.maxSlots + 1 })
+                  }
+                  className={cn("rounded-lg", colors.border)}
+                  disabled={role.maxSlots >= 10}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Max Applicants */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label
+                  className={cn(
+                    "text-sm font-medium flex items-center gap-2",
+                    colors.text
+                  )}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Max Applicants
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-blue-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-xs">
+                          Maximum number of applications to review for this
+                          role. Higher numbers give you more options but require
+                          more time to review.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <div className="text-xs text-gray-500">
+                  {maxApplicants < role.maxSlots ? (
+                    <span className="text-red-500">Too low</span>
+                  ) : maxApplicants < role.maxSlots * 5 ? (
+                    <span className="text-yellow-500">Balanced</span>
+                  ) : (
+                    <span className="text-green-500">Good range</span>
+                  )}
+                </div>
               </div>
 
-              {/* Progress Bar */}
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-2">
-                  <span className={cn("text-sm font-medium", styles.text)}>
-                    Setup Progress
-                  </span>
-                  <span className="text-sm font-bold text-orange-500">
-                    {progressPercentage}%
-                  </span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() =>
+                      updateRole(role.role, {
+                        maxApplicants: Math.max(
+                          1,
+                          (role.maxApplicants || 20) - 1
+                        ),
+                      })
+                    }
+                    className={cn("rounded-lg", colors.border)}
+                    disabled={(role.maxApplicants || 20) <= 1}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <div className="flex-1 text-center">
+                    <div className="text-4xl font-bold text-blue-600">
+                      {maxApplicants}
+                    </div>
+                    <div className={cn("text-xs", colors.textMuted)}>
+                      Applications
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() =>
+                      updateRole(role.role, {
+                        maxApplicants: (role.maxApplicants || 20) + 1,
+                      })
+                    }
+                    className={cn("rounded-lg", colors.border)}
+                    disabled={(role.maxApplicants || 20) >= 200}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Progress
-                  value={progressPercentage}
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap gap-2">
+                  {maxApplicantsPresets.slice(0, 6).map((num) => (
+                    <Button
+                      key={num}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        updateRole(role.role, { maxApplicants: num })
+                      }
+                      className={cn(
+                        "text-xs px-3 py-1",
+                        maxApplicants === num
+                          ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
+                          : ""
+                      )}
+                    >
+                      {num}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Slider for fine control */}
+                <div className="pt-2">
+                  <Slider
+                    value={[maxApplicants]}
+                    min={1}
+                    max={200}
+                    step={1}
+                    onValueChange={([value]) =>
+                      updateRole(role.role, { maxApplicants: value })
+                    }
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>1</span>
+                    <span>50</span>
+                    <span>100</span>
+                    <span>150</span>
+                    <span>200</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Validation */}
+          {maxApplicants < role.maxSlots && (
+            <div
+              className={cn(
+                "p-3 rounded-lg mb-4 flex items-center gap-2",
+                isDarkMode
+                  ? "bg-red-900/20 border-red-800/30"
+                  : "bg-red-50 border-red-200"
+              )}
+            >
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-600">
+                <strong>Recommendation:</strong> Max applicants ({maxApplicants}
+                ) should be at least
+                {role.maxSlots * 3} for {role.maxSlots} position
+                {role.maxSlots > 1 ? "s" : ""}
+                to ensure quality selection.
+              </p>
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="mb-6">
+            <Label
+              className={cn("text-sm font-medium mb-2 block", colors.text)}
+            >
+              Role Description (Optional)
+            </Label>
+            <Textarea
+              placeholder="Describe responsibilities, style preferences, experience level..."
+              value={role.description || ""}
+              onChange={(e) =>
+                updateRole(role.role, { description: e.target.value })
+              }
+              rows={2}
+              className={cn(
+                "resize-none",
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700 text-white"
+                  : "bg-white border-gray-200"
+              )}
+            />
+          </div>
+
+          {/* Pricing */}
+          <div className="mb-6">
+            <Label
+              className={cn("text-sm font-medium mb-3 block", colors.text)}
+            >
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Compensation
+              </div>
+            </Label>
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-3">
+                <Select
+                  value={role.currency || "KES"}
+                  onValueChange={(value) =>
+                    updateRole(role.role, { currency: value })
+                  }
+                >
+                  <SelectTrigger className={cn(colors.border)}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent
+                    className={isDarkMode ? "bg-gray-800" : "bg-white"}
+                  >
+                    <SelectItem value="KES">KES</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-6">
+                <Input
+                  type="number"
+                  placeholder="Amount per position"
+                  value={role.price || ""}
+                  onChange={(e) =>
+                    updateRole(role.role, { price: e.target.value })
+                  }
+                  min="0"
                   className={cn(
-                    "h-2",
-                    isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                    isDarkMode
+                      ? "bg-gray-800 border-gray-700 text-white"
+                      : "bg-white border-gray-200"
                   )}
                 />
               </div>
+              <div className="col-span-3">
+                <div
+                  className={cn(
+                    "flex items-center justify-between p-2 rounded-lg h-full",
+                    isDarkMode ? "bg-gray-800/50" : "bg-gray-50"
+                  )}
+                >
+                  <Switch
+                    checked={role.negotiable ?? true}
+                    onCheckedChange={(checked) =>
+                      updateRole(role.role, { negotiable: checked })
+                    }
+                  />
+                  <span className={cn("text-sm", colors.text)}>
+                    {role.negotiable ? "Negotiable" : "Fixed"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-              {/* Search and Filter */}
-              <div className="mt-4 space-y-3">
-                <div className="relative">
+          {/* Skills */}
+          <div>
+            <Label
+              className={cn("text-sm font-medium mb-3 block", colors.text)}
+            >
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Required Skills
+              </div>
+            </Label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {commonSkills.slice(0, 12).map((skill) => (
+                <Badge
+                  key={skill}
+                  variant={
+                    role.requiredSkills.includes(skill) ? "default" : "outline"
+                  }
+                  className={cn(
+                    "cursor-pointer transition-all",
+                    role.requiredSkills.includes(skill) &&
+                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                  )}
+                  onClick={() => toggleSkill(role.role, skill)}
+                >
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Add custom skill..."
+                className={cn(
+                  "flex-1",
+                  isDarkMode
+                    ? "bg-gray-800 border-gray-700 text-white"
+                    : "bg-white border-gray-200"
+                )}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.currentTarget.value.trim()) {
+                    const skill = e.currentTarget.value.trim();
+                    if (!role.requiredSkills.includes(skill)) {
+                      updateRole(role.role, {
+                        requiredSkills: [...role.requiredSkills, skill],
+                      });
+                    }
+                    e.currentTarget.value = "";
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.querySelector(
+                    `input[placeholder="Add custom skill..."]`
+                  ) as HTMLInputElement;
+                  if (input?.value.trim()) {
+                    const skill = input.value.trim();
+                    if (!role.requiredSkills.includes(skill)) {
+                      updateRole(role.role, {
+                        requiredSkills: [...role.requiredSkills, skill],
+                      });
+                    }
+                    input.value = "";
+                  }
+                }}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-7xl h-[85vh] p-0 overflow-hidden">
+        <div className="flex h-full">
+          {/* Left Panel - Role Selection */}
+          <div
+            className={cn(
+              "w-1/3 border-r flex flex-col",
+              colors.border,
+              isDarkMode ? "bg-gray-900" : "bg-gray-50"
+            )}
+          >
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <DialogTitle
+                    className={cn("text-2xl font-bold", colors.text)}
+                  >
+                    Select Roles
+                  </DialogTitle>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Choose the band members you need
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     placeholder="Search roles..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className={cn(
-                      "pl-10 rounded-full",
+                      "pl-10",
                       isDarkMode
                         ? "bg-gray-800 border-gray-700 text-white"
-                        : "bg-white border-gray-200"
+                        : "bg-white"
                     )}
                   />
                 </div>
-
-                <ScrollArea className="w-full">
-                  <div className="flex gap-2 pb-2">
-                    {roleCategories.map((category) => {
-                      const Icon = category.icon;
-                      return (
-                        <button
-                          key={category.value}
-                          onClick={() => setSelectedCategory(category.value)}
-                          className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all shrink-0",
-                            selectedCategory === category.value
-                              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                              : cn(styles.hoverBg, styles.borderSecondary)
-                          )}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span className="text-sm">{category.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    setViewMode(viewMode === "grid" ? "list" : "grid")
+                  }
+                  className={cn(colors.border)}
+                >
+                  {viewMode === "grid" ? (
+                    <List className="w-4 h-4" />
+                  ) : (
+                    <Grid className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
-            </DialogHeader>
 
-            <ScrollArea className="flex-1">
-              <div className="p-6">
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {roleCategories.map((category) => {
+                  const Icon = category.icon;
+                  return (
+                    <button
+                      key={category.value}
+                      onClick={() => setSelectedCategory(category.value)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap transition-all shrink-0",
+                        selectedCategory === category.value
+                          ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                          : cn(colors.border, colors.textSecondary)
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm">{category.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1 p-6">
+              {viewMode === "grid" ? (
                 <div className="grid grid-cols-2 gap-3">
                   {filteredRoles.map((role) => {
                     const isSelected = selectedRoles.some(
@@ -389,17 +876,15 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                     const Icon = role.icon;
 
                     return (
-                      <motion.button
+                      <button
                         key={role.value}
                         onClick={() => toggleRole(role.value)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
                         className={cn(
-                          "relative p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all group",
-                          styles.border,
+                          "relative p-4 rounded-xl border flex flex-col items-center gap-3 transition-all",
+                          colors.border,
                           isSelected
                             ? "bg-gradient-to-br from-orange-500/10 to-red-500/10 ring-2 ring-orange-500/50"
-                            : cn("hover:shadow-lg", styles.hoverBg)
+                            : cn("hover:shadow-lg", colors.hoverBg)
                         )}
                       >
                         {isSelected && (
@@ -409,942 +894,287 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                         )}
                         <div
                           className={cn(
-                            "p-3 rounded-xl transition-transform group-hover:scale-110",
+                            "p-3 rounded-lg",
                             isSelected
                               ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                              : cn(styles.backgroundMuted, "text-orange-500")
+                              : cn(colors.backgroundMuted, colors.primary)
                           )}
                         >
                           <Icon className="w-6 h-6" />
                         </div>
-                        <span
-                          className={cn(
-                            "text-sm font-medium text-center",
-                            styles.text
-                          )}
-                        >
-                          {role.value}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-xs mt-1",
-                            styles.borderSecondary,
-                            isDarkMode ? "text-gray-400" : "text-gray-600"
-                          )}
-                        >
-                          {role.category}
-                        </Badge>
-                      </motion.button>
+                        <div className="text-center">
+                          <span
+                            className={cn(
+                              "text-sm font-medium block",
+                              colors.text
+                            )}
+                          >
+                            {role.value}
+                          </span>
+                          <div className="flex items-center justify-center gap-1 mt-1">
+                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                            <span className="text-xs text-gray-500">
+                              {role.popularity}%
+                            </span>
+                          </div>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredRoles.map((role) => {
+                    const isSelected = selectedRoles.some(
+                      (r) => r.role === role.value
+                    );
+                    const Icon = role.icon;
 
-                {/* Custom Role Section */}
-                <div className="mt-8">
-                  <div className={cn("p-4 rounded-2xl border", styles.border)}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className={cn("font-semibold", styles.text)}>
-                          Custom Role
-                        </h3>
-                        <p className={cn("text-sm", styles.textMuted)}>
-                          Need a unique role? Add it here.
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowCustomForm(!showCustomForm)}
-                        className={cn("rounded-full gap-2", styles.border)}
-                      >
-                        {showCustomForm ? (
-                          <>
-                            <X className="w-4 h-4" />
-                            Cancel
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4" />
-                            Add Custom
-                          </>
+                    return (
+                      <button
+                        key={role.value}
+                        onClick={() => toggleRole(role.value)}
+                        className={cn(
+                          "w-full p-3 rounded-lg border flex items-center gap-3 transition-all",
+                          colors.border,
+                          isSelected
+                            ? "bg-gradient-to-r from-orange-500/10 to-red-500/10 ring-1 ring-orange-500/30"
+                            : cn(
+                                "hover:bg-gray-100 dark:hover:bg-gray-800",
+                                colors.hoverBg
+                              )
                         )}
-                      </Button>
-                    </div>
-
-                    <AnimatePresence>
-                      {showCustomForm && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
+                      >
+                        <div
+                          className={cn(
+                            "p-2 rounded-lg",
+                            isSelected
+                              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                              : cn(colors.backgroundMuted)
+                          )}
                         >
-                          <div className="space-y-3 pt-3">
-                            <Input
-                              value={customRole}
-                              onChange={(e) => setCustomRole(e.target.value)}
-                              placeholder="e.g., 'Harpist', 'Beatboxer', 'Turntablist'"
-                              className={cn(
-                                "w-full",
-                                isDarkMode
-                                  ? "bg-gray-800 border-gray-700 text-white"
-                                  : "bg-white border-gray-200"
-                              )}
-                            />
-                            <Button
-                              onClick={addCustomRole}
-                              disabled={!customRole.trim()}
-                              className="w-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Add Custom Role
-                            </Button>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span
+                            className={cn("text-sm font-medium", colors.text)}
+                          >
+                            {role.value}
+                          </span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500 capitalize">
+                              {role.category}
+                            </span>
+                            <span className="text-xs text-gray-500">•</span>
+                            <span className="text-xs text-gray-500">
+                              {role.popularity}% popular
+                            </span>
                           </div>
-                        </motion.div>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-orange-500" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Custom Role Section */}
+              <div className="mt-8">
+                <div className={cn("rounded-xl border p-4", colors.border)}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className={cn("font-semibold", colors.text)}>
+                        Add Custom Role
+                      </h3>
+                      <p className={cn("text-sm", colors.textMuted)}>
+                        Can't find what you're looking for?
+                      </p>
+                    </div>
+                    <Plus className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={customRole}
+                      onChange={(e) => setCustomRole(e.target.value)}
+                      placeholder="e.g., Harpist, Beatboxer..."
+                      className={cn(
+                        isDarkMode
+                          ? "bg-gray-800 border-gray-700 text-white"
+                          : "bg-white"
                       )}
-                    </AnimatePresence>
+                    />
+                    <Button
+                      onClick={addCustomRole}
+                      disabled={!customRole.trim()}
+                      className="bg-gradient-to-r from-orange-500 to-red-500"
+                    >
+                      Add
+                    </Button>
                   </div>
                 </div>
               </div>
             </ScrollArea>
+
+            <div className={cn("p-6 border-t", colors.border)}>
+              <Button
+                onClick={() => setActiveTab("configure")}
+                disabled={selectedRoles.length === 0}
+                className="w-full gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500"
+              >
+                <ChevronRight className="w-5 h-5" />
+                Configure {selectedRoles.length} Role
+                {selectedRoles.length !== 1 ? "s" : ""}
+              </Button>
+            </div>
           </div>
 
-          {/* Right Panel - Role Configuration */}
-          <div className="w-3/5 flex flex-col">
-            <DialogHeader className={cn("p-6 border-b", styles.border)}>
-              <div className="flex items-center justify-between">
+          {/* Right Panel - Configuration */}
+          <div className="flex-1 flex flex-col">
+            <div className={cn("p-6 border-b", colors.border)}>
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <DialogTitle className={cn("text-xl font-bold", styles.text)}>
-                    Role Configuration
-                  </DialogTitle>
-                  <DialogDescription className={cn("mt-1", styles.textMuted)}>
-                    Customize each role's requirements, skills, and pricing
-                  </DialogDescription>
+                  <h2 className={cn("text-2xl font-bold", colors.text)}>
+                    Configure Roles
+                  </h2>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Set requirements and compensation for each role
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "gap-1",
-                      isDarkMode ? "bg-gray-800" : "bg-gray-100"
-                    )}
-                  >
-                    <Users className="w-3 h-3" />
-                    {selectedRoles.length} Roles
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn("gap-1", styles.borderSecondary)}
-                  >
-                    <UserPlus className="w-3 h-3" />
-                    {totalPositions} Positions
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Configuration Tabs */}
-              <div className="flex gap-2 mt-4">
-                {(["roles", "skills", "budget"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                      activeTab === tab
-                        ? {
-                            roles:
-                              "bg-gradient-to-r from-orange-500 to-red-500",
-                            skills:
-                              "bg-gradient-to-r from-blue-500 to-cyan-500",
-                            budget:
-                              "bg-gradient-to-r from-green-500 to-emerald-500",
-                          }[tab] + " text-white"
-                        : cn(styles.hoverBg, styles.text)
-                    )}
-                  >
-                    {tab === "roles" && (
-                      <Settings className="w-4 h-4 inline mr-2" />
-                    )}
-                    {tab === "skills" && (
-                      <Target className="w-4 h-4 inline mr-2" />
-                    )}
-                    {tab === "budget" && (
-                      <DollarSign className="w-4 h-4 inline mr-2" />
-                    )}
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </DialogHeader>
-
-            <ScrollArea className="flex-1">
-              <div className="p-6">
-                <AnimatePresence mode="wait">
-                  {activeTab === "roles" && (
-                    <motion.div
-                      key="roles"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="space-y-4"
-                    >
-                      {selectedRoles.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-orange-500/10 to-red-500/10 flex items-center justify-center">
-                            <Users className="w-8 h-8 text-orange-500" />
-                          </div>
-                          <h3
-                            className={cn(
-                              "text-lg font-semibold mb-2",
-                              styles.text
-                            )}
-                          >
-                            No Roles Selected
-                          </h3>
-                          <p className={cn("text-sm", styles.textMuted)}>
-                            Select roles from the left panel to start
-                            configuring your band.
-                          </p>
-                        </div>
-                      ) : (
-                        selectedRoles.map((role) => {
-                          const rolePrice = role.price
-                            ? parseFloat(role.price)
-                            : 0;
-                          const isValidPrice = !isNaN(rolePrice);
-
-                          return (
-                            <div
-                              key={role.role}
-                              className={cn(
-                                "rounded-2xl border p-5",
-                                styles.border
-                              )}
-                            >
-                              <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
-                                    <Music className="w-5 h-5 text-orange-500" />
-                                  </div>
-                                  <div>
-                                    <h4
-                                      className={cn(
-                                        "font-bold text-lg",
-                                        styles.text
-                                      )}
-                                    >
-                                      {role.role}
-                                    </h4>
-                                    <p
-                                      className={cn(
-                                        "text-sm",
-                                        styles.textMuted
-                                      )}
-                                    >
-                                      Configure requirements and pricing
-                                    </p>
-                                  </div>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeRole(role.role)}
-                                  className="text-gray-400 hover:text-red-500 rounded-full"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              </div>
-
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* Left Column */}
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label
-                                      className={cn(
-                                        "text-sm font-medium mb-2 block",
-                                        styles.text
-                                      )}
-                                    >
-                                      Positions Needed
-                                    </Label>
-                                    <div className="flex items-center gap-3">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                          updateRole(role.role, {
-                                            maxSlots: Math.max(
-                                              1,
-                                              role.maxSlots - 1
-                                            ),
-                                          })
-                                        }
-                                        className={cn(
-                                          "p-2 rounded-full",
-                                          styles.border
-                                        )}
-                                      >
-                                        <Minus className="w-4 h-4" />
-                                      </Button>
-                                      <div className="flex-1 text-center">
-                                        <div className="text-3xl font-bold text-orange-600">
-                                          {role.maxSlots}
-                                        </div>
-                                      </div>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                          updateRole(role.role, {
-                                            maxSlots: role.maxSlots + 1,
-                                          })
-                                        }
-                                        className={cn(
-                                          "p-2 rounded-full",
-                                          styles.border
-                                        )}
-                                      >
-                                        <Plus className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <Label
-                                      className={cn(
-                                        "text-sm font-medium mb-2 block",
-                                        styles.text
-                                      )}
-                                    >
-                                      Role Description
-                                    </Label>
-                                    <Textarea
-                                      placeholder="Describe responsibilities, requirements, or special notes..."
-                                      value={role.description || ""}
-                                      onChange={(e) =>
-                                        updateRole(role.role, {
-                                          description: e.target.value,
-                                        })
-                                      }
-                                      rows={3}
-                                      className={cn(
-                                        "resize-none",
-                                        isDarkMode
-                                          ? "bg-gray-800 border-gray-700 text-white"
-                                          : "bg-white border-gray-200"
-                                      )}
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Right Column */}
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label
-                                      className={cn(
-                                        "text-sm font-medium mb-2 block",
-                                        styles.text
-                                      )}
-                                    >
-                                      Pricing & Budget
-                                    </Label>
-                                    <div className="space-y-3">
-                                      <div className="grid grid-cols-3 gap-2">
-                                        <Select
-                                          value={role.currency || "KES"}
-                                          onValueChange={(value) =>
-                                            updateRole(role.role, {
-                                              currency: value,
-                                            })
-                                          }
-                                        >
-                                          <SelectTrigger
-                                            className={cn(
-                                              "col-span-1",
-                                              styles.border
-                                            )}
-                                          >
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent
-                                            className={cn(
-                                              isDarkMode
-                                                ? "bg-gray-800"
-                                                : "bg-white"
-                                            )}
-                                          >
-                                            <SelectItem value="KES">
-                                              KES
-                                            </SelectItem>
-                                            <SelectItem value="USD">
-                                              USD
-                                            </SelectItem>
-                                            <SelectItem value="EUR">
-                                              EUR
-                                            </SelectItem>
-                                            <SelectItem value="GBP">
-                                              GBP
-                                            </SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                        <Input
-                                          type="number"
-                                          placeholder="Amount per position"
-                                          value={role.price || ""}
-                                          onChange={(e) =>
-                                            updateRole(role.role, {
-                                              price: e.target.value,
-                                            })
-                                          }
-                                          min="0"
-                                          className={cn(
-                                            "col-span-2",
-                                            isDarkMode
-                                              ? "bg-gray-800 border-gray-700 text-white"
-                                              : "bg-white border-gray-200"
-                                          )}
-                                        />
-                                      </div>
-
-                                      <div
-                                        className={cn(
-                                          "relative overflow-hidden p-5 rounded-2xl cursor-pointer transition-all duration-300",
-                                          "border hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
-                                          role.negotiable
-                                            ? isDarkMode
-                                              ? "bg-gradient-to-br from-green-900/20 via-gray-900 to-emerald-900/20 border-green-700/30"
-                                              : "bg-gradient-to-br from-green-50 via-white to-emerald-50/70 border-green-300/50"
-                                            : isDarkMode
-                                              ? "bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800/50 border-gray-700/50"
-                                              : "bg-gradient-to-br from-gray-50 via-white to-gray-100/50 border-gray-300/50"
-                                        )}
-                                        onClick={() =>
-                                          updateRole(role.role, {
-                                            negotiable: !role.negotiable,
-                                          })
-                                        }
-                                      >
-                                        {/* Negotiable toggle content remains the same */}
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-3">
-                                            <div className="relative">
-                                              <div className="w-10 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-1 transition-transform duration-300">
-                                                <div
-                                                  className={cn(
-                                                    "w-4 h-4 bg-white rounded-full transform transition-transform duration-300",
-                                                    role.negotiable
-                                                      ? "translate-x-4"
-                                                      : "translate-x-0"
-                                                  )}
-                                                />
-                                              </div>
-                                            </div>
-                                            <div>
-                                              <div
-                                                className={cn(
-                                                  "font-medium",
-                                                  styles.text
-                                                )}
-                                              >
-                                                Price Negotiable
-                                              </div>
-                                              <div
-                                                className={cn(
-                                                  "text-sm",
-                                                  styles.textMuted
-                                                )}
-                                              >
-                                                Allow applicants to negotiate
-                                                the price
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div
-                                            className={cn(
-                                              "text-sm font-medium",
-                                              role.negotiable
-                                                ? "text-green-600"
-                                                : "text-gray-500"
-                                            )}
-                                          >
-                                            {role.negotiable ? "ON" : "OFF"}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {isValidPrice && rolePrice > 0 && (
-                                    <div
-                                      className={cn(
-                                        "p-3 rounded-lg",
-                                        isDarkMode
-                                          ? "bg-gradient-to-r from-orange-900/20 to-red-900/20"
-                                          : "bg-gradient-to-r from-orange-50 to-red-50"
-                                      )}
-                                    >
-                                      <div className="flex justify-between items-center">
-                                        <span
-                                          className={cn(
-                                            "text-sm font-medium",
-                                            styles.text
-                                          )}
-                                        >
-                                          Total for this role:
-                                        </span>
-                                        <div className="text-right">
-                                          <div className="text-2xl font-bold text-orange-600">
-                                            {role.currency || "KES"}{" "}
-                                            {(
-                                              rolePrice * role.maxSlots
-                                            ).toLocaleString()}
-                                          </div>
-                                          <div
-                                            className={cn(
-                                              "text-xs",
-                                              styles.textMuted
-                                            )}
-                                          >
-                                            {role.currency || "KES"}{" "}
-                                            {rolePrice.toLocaleString()} ×{" "}
-                                            {role.maxSlots} position
-                                            {role.maxSlots > 1 ? "s" : ""}
-                                            {role.negotiable && " • Negotiable"}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </motion.div>
-                  )}
-
-                  {activeTab === "skills" && (
-                    <motion.div
-                      key="skills"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="space-y-4"
-                    >
-                      {selectedRoles.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500/10 to-cyan-500/10 flex items-center justify-center">
-                            <Target className="w-8 h-8 text-blue-500" />
-                          </div>
-                          <h3
-                            className={cn(
-                              "text-lg font-semibold mb-2",
-                              styles.text
-                            )}
-                          >
-                            Select Roles First
-                          </h3>
-                          <p className={cn("text-sm", styles.textMuted)}>
-                            Choose roles to configure their required skills.
-                          </p>
-                        </div>
-                      ) : (
-                        selectedRoles.map((role) => (
-                          <div
-                            key={role.role}
-                            className={cn(
-                              "rounded-2xl border p-5",
-                              styles.border
-                            )}
-                          >
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
-                                <Target className="w-5 h-5 text-blue-500" />
-                              </div>
-                              <div>
-                                <h4 className={cn("font-bold", styles.text)}>
-                                  {role.role}
-                                </h4>
-                                <p className={cn("text-sm", styles.textMuted)}>
-                                  Select required skills and genres
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="space-y-4">
-                              <div>
-                                <Label
-                                  className={cn(
-                                    "text-sm font-medium mb-3 block",
-                                    styles.text
-                                  )}
-                                >
-                                  Required Skills & Genres
-                                </Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {commonSkills.map((skill) => (
-                                    <Badge
-                                      key={skill}
-                                      variant={
-                                        role.requiredSkills.includes(skill)
-                                          ? "default"
-                                          : "outline"
-                                      }
-                                      className={cn(
-                                        "cursor-pointer transition-all hover:scale-105",
-                                        role.requiredSkills.includes(skill) &&
-                                          "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-transparent"
-                                      )}
-                                      onClick={() =>
-                                        toggleSkill(role.role, skill)
-                                      }
-                                    >
-                                      {skill}
-                                      {role.requiredSkills.includes(skill) && (
-                                        <X className="w-3 h-3 ml-1" />
-                                      )}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label
-                                  className={cn(
-                                    "text-sm font-medium mb-2 block",
-                                    styles.text
-                                  )}
-                                >
-                                  Add Custom Skill
-                                </Label>
-                                <Input
-                                  placeholder="Type a custom skill and press Enter"
-                                  className={cn(
-                                    "w-full",
-                                    isDarkMode
-                                      ? "bg-gray-800 border-gray-700 text-white"
-                                      : "bg-white border-gray-200"
-                                  )}
-                                  onKeyDown={(e) => {
-                                    if (
-                                      e.key === "Enter" &&
-                                      e.currentTarget.value.trim()
-                                    ) {
-                                      const skill =
-                                        e.currentTarget.value.trim();
-                                      if (
-                                        !role.requiredSkills.includes(skill)
-                                      ) {
-                                        updateRole(role.role, {
-                                          requiredSkills: [
-                                            ...role.requiredSkills,
-                                            skill,
-                                          ],
-                                        });
-                                      }
-                                      e.currentTarget.value = "";
-                                    }
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </motion.div>
-                  )}
-
-                  {activeTab === "budget" && (
-                    <motion.div
-                      key="budget"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="space-y-6"
-                    >
-                      {/* Budget Summary */}
-                      <div
-                        className={cn("rounded-xl border p-6", styles.border)}
-                      >
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="p-3 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white">
-                            <DollarSign className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <h3
-                              className={cn("text-xl font-bold", styles.text)}
-                            >
-                              Band Budget Summary
-                            </h3>
-                            <p className={cn("text-sm", styles.textMuted)}>
-                              Total estimated cost for your band setup
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div
-                            className={cn(
-                              "flex justify-between items-center py-4 border-b",
-                              styles.borderSecondary
-                            )}
-                          >
-                            <div>
-                              <div
-                                className={cn(
-                                  "text-lg font-semibold",
-                                  styles.text
-                                )}
-                              >
-                                Total Positions
-                              </div>
-                              <div className={cn("text-sm", styles.textMuted)}>
-                                Across all roles
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-orange-600">
-                                {totalPositions}
-                              </div>
-                              <div className={cn("text-sm", styles.textMuted)}>
-                                positions needed
-                              </div>
-                            </div>
-                          </div>
-
-                          <div
-                            className={cn(
-                              "flex justify-between items-center py-4 border-b",
-                              styles.borderSecondary
-                            )}
-                          >
-                            <div>
-                              <div
-                                className={cn(
-                                  "text-lg font-semibold",
-                                  styles.text
-                                )}
-                              >
-                                Estimated Budget
-                              </div>
-                              <div className={cn("text-sm", styles.textMuted)}>
-                                Based on current pricing
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-3xl font-bold text-green-600">
-                                {selectedRoles.find((r) => r.price)?.currency ||
-                                  "KES"}{" "}
-                                {totalBudget.toLocaleString()}
-                              </div>
-                              <div className={cn("text-sm", styles.textMuted)}>
-                                {
-                                  selectedRoles.filter(
-                                    (r) => r.price && parseFloat(r.price) > 0
-                                  ).length
-                                }{" "}
-                                of {selectedRoles.length} roles priced
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 pt-4">
-                            <div
-                              className={cn(
-                                "p-3 rounded-lg",
-                                isDarkMode ? "bg-gray-800" : "bg-white/50"
-                              )}
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <Zap className="w-4 h-4 text-blue-500" />
-                                <span
-                                  className={cn(
-                                    "text-sm font-medium",
-                                    styles.text
-                                  )}
-                                >
-                                  Priced Roles
-                                </span>
-                              </div>
-                              <div className="text-2xl font-bold">
-                                {
-                                  selectedRoles.filter(
-                                    (r) => r.price && parseFloat(r.price) > 0
-                                  ).length
-                                }
-                              </div>
-                            </div>
-                            <div
-                              className={cn(
-                                "p-3 rounded-lg",
-                                isDarkMode ? "bg-gray-800" : "bg-white/50"
-                              )}
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <TrendingUp className="w-4 h-4 text-green-500" />
-                                <span
-                                  className={cn(
-                                    "text-sm font-medium",
-                                    styles.text
-                                  )}
-                                >
-                                  Negotiable
-                                </span>
-                              </div>
-                              <div className="text-2xl font-bold">
-                                {
-                                  selectedRoles.filter((r) => r.negotiable)
-                                    .length
-                                }
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Budget Breakdown */}
-                      {selectedRoles.filter(
-                        (r) => r.price && parseFloat(r.price) > 0
-                      ).length > 0 && (
-                        <div
-                          className={cn("rounded-xl border p-6", styles.border)}
-                        >
-                          <h4
-                            className={cn(
-                              "text-lg font-semibold mb-4",
-                              styles.text
-                            )}
-                          >
-                            Detailed Budget Breakdown
-                          </h4>
-                          <div className="space-y-3">
-                            {selectedRoles
-                              .filter(
-                                (role) =>
-                                  role.price && parseFloat(role.price) > 0
-                              )
-                              .map((role) => {
-                                const price = parseFloat(role.price!);
-                                return (
-                                  <div
-                                    key={role.role}
-                                    className={cn(
-                                      "flex items-center justify-between p-3 rounded-lg",
-                                      isDarkMode ? "bg-gray-800" : "bg-white"
-                                    )}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
-                                        <Music className="w-4 h-4 text-orange-500" />
-                                      </div>
-                                      <div>
-                                        <div
-                                          className={cn(
-                                            "font-medium",
-                                            styles.text
-                                          )}
-                                        >
-                                          {role.role}
-                                        </div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs"
-                                          >
-                                            {role.maxSlots} pos
-                                          </Badge>
-                                          {role.negotiable && (
-                                            <Badge
-                                              variant="secondary"
-                                              className="text-xs bg-green-100 text-green-800"
-                                            >
-                                              Negotiable
-                                            </Badge>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-lg font-bold text-green-600">
-                                        {role.currency || "KES"}{" "}
-                                        {(
-                                          price * role.maxSlots
-                                        ).toLocaleString()}
-                                      </div>
-                                      <div
-                                        className={cn(
-                                          "text-xs",
-                                          styles.textMuted
-                                        )}
-                                      >
-                                        {role.currency || "KES"}{" "}
-                                        {price.toLocaleString()} each
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </ScrollArea>
-
-            {/* Footer */}
-            <DialogFooter className={cn("p-6 border-t", styles.border)}>
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
-                    onClick={onClose}
-                    className={cn("gap-2 rounded-full", styles.border)}
+                    onClick={() => setActiveTab("select")}
+                    className="gap-2"
                   >
-                    <X className="w-4 h-4" />
-                    Cancel
+                    <ChevronLeft className="w-4 h-4" />
+                    Back to Selection
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span className={cn("text-sm", styles.textMuted)}>
-                      {selectedRoles.length} roles • {totalPositions} positions
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleSubmit}
-                  disabled={selectedRoles.length === 0}
-                  className={cn(
-                    "gap-3 px-8 py-6 rounded-xl",
-                    "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                    "text-white shadow-xl hover:shadow-2xl transition-all duration-300"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5" />
-                    <div className="text-left">
-                      <div className="font-bold">Create Band</div>
-                      <div className="text-xs opacity-90">
-                        {selectedRoles.length} roles
-                        {totalBudget > 0 && (
-                          <span className="ml-2">
-                            •{" "}
-                            {selectedRoles.find((r) => r.price)?.currency ||
-                              "KES"}{" "}
-                            {totalBudget.toLocaleString()}
-                          </span>
-                        )}
-                      </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-500">
+                      Total Applications
+                    </div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {totalMaxApplicants}
                     </div>
                   </div>
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
+                </div>
               </div>
-            </DialogFooter>
+
+              <div className="grid grid-cols-4 gap-4">
+                <div className={cn("p-3 rounded-lg", colors.backgroundMuted)}>
+                  <div className="text-sm text-gray-500">Roles</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {selectedRoles.length}
+                  </div>
+                </div>
+                <div className={cn("p-3 rounded-lg", colors.backgroundMuted)}>
+                  <div className="text-sm text-gray-500">Positions</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {totalPositions}
+                  </div>
+                </div>
+                <div className={cn("p-3 rounded-lg", colors.backgroundMuted)}>
+                  <div className="text-sm text-gray-500">Max Apps</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {totalMaxApplicants}
+                  </div>
+                </div>
+                <div className={cn("p-3 rounded-lg", colors.backgroundMuted)}>
+                  <div className="text-sm text-gray-500">Budget</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {selectedRoles[0]?.currency || "KES"}{" "}
+                    {totalBudget.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1 p-6">
+              {selectedRoles.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <div className="w-32 h-32 mb-6 rounded-full bg-gradient-to-r from-orange-500/10 to-red-500/10 flex items-center justify-center">
+                    <Users className="w-16 h-16 text-orange-500" />
+                  </div>
+                  <h3 className={cn("text-xl font-semibold mb-2", colors.text)}>
+                    No Roles Selected
+                  </h3>
+                  <p className={cn("text-gray-500 mb-6 max-w-md")}>
+                    Select roles from the left panel to configure their
+                    requirements, compensation, and application limits.
+                  </p>
+                  <Button
+                    onClick={() => setActiveTab("select")}
+                    className="gap-2 bg-gradient-to-r from-orange-500 to-red-500"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Select Roles
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-6">
+                  {selectedRoles.map((role) => (
+                    <RoleConfigCard key={role.role} role={role} />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Footer Actions */}
+            {selectedRoles.length > 0 && (
+              <div className={cn("p-6 border-t", colors.border)}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-gray-500">
+                      Ready to create {totalPositions} position
+                      {totalPositions !== 1 ? "s" : ""} across{" "}
+                      {selectedRoles.length} role
+                      {selectedRoles.length !== 1 ? "s" : ""}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-orange-500" />
+                        <span className="font-medium">
+                          {totalPositions} positions
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <UserPlus className="w-4 h-4 text-blue-500" />
+                        <span className="font-medium">
+                          {totalMaxApplicants} max applications
+                        </span>
+                      </div>
+                      {totalBudget > 0 && (
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-green-500" />
+                          <span className="font-medium">
+                            {selectedRoles[0]?.currency || "KES"}{" "}
+                            {totalBudget.toLocaleString()} total
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={onClose}
+                      className="px-6"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSubmit}
+                      className="px-8 gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-lg"
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Create Band Setup
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

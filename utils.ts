@@ -1639,6 +1639,8 @@ export const prepareGigDataForConvex = (
           price: role.price ? role.price : undefined,
           currency: role.currency || formValues.currency || "KES",
           negotiable: role.negotiable ?? formValues.negotiable ?? false,
+          maxApplicants: role.maxApplicants || 20,
+          currentApplicants: 0,
         }))
       : [];
 
@@ -2135,28 +2137,24 @@ export const getUserGigStatus = (
     return baseStatus;
   }
 
-  // ========== BAND GIG LOGIC ==========
+  // ========== BAND GIG LOGIC (bandCategory only) ==========
   if (isClientBand) {
-    // Check if user is in any band application
-    const bandApplications = gig.bookCount || [];
-    const userBandApplication = bandApplications.find(
-      (app) =>
-        app.appliedBy === currentUserId ||
-        app.performingMembers?.some((member) => member.userId === currentUserId)
-    );
-
-    // Check band roles
+    // Check band roles - ONLY use bandCategory, ignore bookCount
     const bandRoles = gig.bandCategory || [];
     let userRoleDetails = null;
+    let foundRole = false;
 
     for (const role of bandRoles) {
       const isApplicant = role.applicants.includes(currentUserId);
       const isBooked = role.bookedUsers.includes(currentUserId);
 
       if (isApplicant || isBooked) {
+        foundRole = true;
         baseStatus.isInApplicants = isApplicant;
         baseStatus.isInBookedUsers = isBooked;
         baseStatus.bandRoleApplied = role.role;
+        baseStatus.isBooked = isBooked; // Set isBooked based on bookedUsers
+        baseStatus.isPending = isApplicant && !isBooked; // Set isPending if applicant but not booked
 
         userRoleDetails = {
           role: role.role,
@@ -2170,15 +2168,16 @@ export const getUserGigStatus = (
       }
     }
 
-    if (userBandApplication) {
-      baseStatus.isInBandApplication = true;
-      baseStatus.bandApplicationId = userBandApplication.bandId;
-      baseStatus.isPending =
-        userBandApplication.status === "pending" ||
-        userBandApplication.status === "applied";
-      baseStatus.isBooked =
-        userBandApplication.status === "booked" ||
-        userBandApplication.status === "confirmed";
+    // If user is not found in any role, check if they can apply to any role
+    if (!foundRole) {
+      const availableRoles = bandRoles.filter(
+        (role) => role.filledSlots < role.maxSlots
+      );
+      baseStatus.canApply = availableRoles.length > 0;
+    } else {
+      // User is found in a role
+      baseStatus.canWithdraw =
+        baseStatus.isInApplicants || baseStatus.isInBookedUsers;
     }
 
     // Determine status message
@@ -2190,7 +2189,7 @@ export const getUserGigStatus = (
       baseStatus.statusMessage = `Booked as ${baseStatus.bandRoleApplied || "band member"}`;
       baseStatus.statusBadgeVariant = "default";
     } else if (baseStatus.isPending) {
-      baseStatus.statusMessage = `Pending as ${baseStatus.bandRoleApplied || "band"}`;
+      baseStatus.statusMessage = `Pending as ${baseStatus.bandRoleApplied}`;
       baseStatus.statusBadgeVariant = "outline";
       baseStatus.canWithdraw = true;
     } else if (baseStatus.isInApplicants) {
@@ -2201,13 +2200,22 @@ export const getUserGigStatus = (
       baseStatus.statusMessage = "Role full";
       baseStatus.statusBadgeVariant = "secondary";
     } else {
-      baseStatus.statusMessage = "Available for bands";
+      baseStatus.statusMessage = "Available";
       baseStatus.statusBadgeVariant = "outline";
       baseStatus.canApply = true;
     }
 
+    // Add role details if found
     if (userRoleDetails) {
       baseStatus.roleDetails = userRoleDetails;
+    }
+
+    // Add position info (based on applicant position in the role)
+    if (baseStatus.isInApplicants) {
+      const role = bandRoles.find((r) => r.applicants.includes(currentUserId));
+      if (role) {
+        baseStatus.position = role.applicants.indexOf(currentUserId) + 1;
+      }
     }
 
     return baseStatus;

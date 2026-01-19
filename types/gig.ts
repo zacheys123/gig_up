@@ -519,31 +519,29 @@ export interface BandFormationStatus {
   isComplete: boolean;
   missingRoles: string[];
 }
-// Add these to your types/gig.ts file:
-
-// Band Role Input (for form input)
-export interface BandRoleInput {
-  role: string;
-  maxSlots: number;
-  filledSlots?: number;
-  applicants?: Id<"users">[];
-  bookedUsers?: Id<"users">[];
-  requiredSkills?: string[];
-  description?: string;
-  isLocked?: boolean;
-  price?: number;
-  currency?: string;
-  negotiable?: boolean;
-  bookedPrice?: number;
-}
-
-// Band Setup Role (for band setup/configuration)
+// In your types/gig.ts file
 export interface BandSetupRole {
   role: string;
   maxSlots: number;
+  maxApplicants?: number; // Add this field
+  currentApplicants?: number; // Add this field
   requiredSkills: string[];
+  description: string;
+  price?: string;
+  currency: string;
+  negotiable: boolean;
+  filledSlots?: number;
+  isLocked?: boolean;
+}
+
+export interface BandRoleInput {
+  role: string;
+  maxSlots: number;
+  maxApplicants?: number; // Add this field
+  currentApplicants?: number; // Add this field
+  requiredSkills?: string[];
   description?: string;
-  price?: string; // Store as string for input fields
+  price?: number;
   currency?: string;
   negotiable?: boolean;
   filledSlots?: number;

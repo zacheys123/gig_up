@@ -64,6 +64,7 @@ import {
   Shield as ShieldIcon,
   Palette as PaletteIcon,
   Settings,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -775,6 +776,85 @@ const BandSetupPreview = React.memo(
       (sum: number, role: BandRoleInput) => sum + role.maxSlots,
       0
     );
+    const totalMaxApplicants = bandRoles.reduce(
+      (sum: number, role: BandRoleInput) => sum + (role.maxApplicants || 20),
+      0
+    );
+
+    const totalCurrentApplicants = bandRoles.reduce(
+      (sum: number, role: BandRoleInput) => sum + (role.currentApplicants || 0),
+      0
+    );
+
+    const totalPrice = bandRoles.reduce((sum: number, role: BandRoleInput) => {
+      const price = role.price || 0;
+      return sum + price * role.maxSlots;
+    }, 0);
+
+    const hasPricedRoles = bandRoles.some(
+      (role: BandRoleInput) => role.price && role.price > 0
+    );
+    const hasNegotiableRoles = bandRoles.some(
+      (role: BandRoleInput) => role.negotiable
+    );
+
+    // Get role icon based on role name
+    const getRoleIcon = (roleName: string) => {
+      const roleIcons: Record<string, React.ElementType> = {
+        "Lead Vocalist": Mic,
+        Guitarist: Guitar,
+        Bassist: Music,
+        Drummer: Drum,
+        "Pianist/Keyboardist": Piano,
+        Saxophonist: Music,
+        Trumpeter: Music,
+        Violinist: Music,
+        "Backup Vocalist": Mic,
+        Percussionist: Drum,
+        DJ: Volume2,
+        "MC/Host": Mic,
+        Vocalist: Mic,
+        Keyboardist: Piano,
+        "Bass Guitarist": Music,
+      };
+
+      const Icon = roleIcons[roleName] || Music;
+      return <Icon className="w-4 h-4" />;
+    };
+
+    // Get color for role badge
+    const getRoleColor = (roleName: string) => {
+      const roleColors: Record<string, string> = {
+        "Lead Vocalist":
+          "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+        Guitarist:
+          "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+        Bassist:
+          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+        Drummer:
+          "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+        "Pianist/Keyboardist":
+          "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+        Saxophonist:
+          "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
+        Trumpeter:
+          "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
+        Violinist:
+          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+        "Backup Vocalist":
+          "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
+        Percussionist:
+          "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+        DJ: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
+        "MC/Host":
+          "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
+      };
+
+      return (
+        roleColors[roleName] ||
+        "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+      );
+    };
 
     return (
       <motion.div
@@ -798,7 +878,8 @@ const BandSetupPreview = React.memo(
               <h3 className={cn("font-semibold", colors.text)}>Band Setup</h3>
               <p className={cn("text-sm", colors.textMuted)}>
                 {bandRoles.length} role{bandRoles.length !== 1 ? "s" : ""},{" "}
-                {totalPositions} position{totalPositions !== 1 ? "s" : ""}
+                {totalPositions} position{totalPositions !== 1 ? "s" : ""},{" "}
+                {totalMaxApplicants} max applications
               </p>
             </div>
           </div>
@@ -813,44 +894,207 @@ const BandSetupPreview = React.memo(
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
-          {bandRoles.map((role: BandRoleInput, index: number) => (
-            <div key={index} className="p-3 border rounded-lg">
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-medium">{role.role}</span>
-                <Badge variant="outline" className="text-xs">
-                  {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
-                </Badge>
-              </div>
+          {bandRoles.map((role: BandRoleInput, index: number) => {
+            const maxApplicants = role.maxApplicants || 20;
+            const currentApplicants = role.currentApplicants || 0;
+            const applicantProgress = Math.min(
+              (currentApplicants / maxApplicants) * 100,
+              100
+            );
+            const roleCurrency = role.currency || "KES";
 
-              {role?.requiredSkills && role.requiredSkills.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {role.requiredSkills.slice(0, 3).map((skill) => (
-                    <Badge key={skill} variant="secondary" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
-                  {role.requiredSkills.length > 3 && (
+            return (
+              <div
+                key={index}
+                className={cn(
+                  "p-4 border rounded-lg hover:shadow-md transition-shadow",
+                  colors.border,
+                  colors.background,
+                  "group"
+                )}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "p-1.5 rounded-md",
+                        getRoleColor(role.role)
+                      )}
+                    >
+                      {getRoleIcon(role.role)}
+                    </div>
+                    <span className="font-medium text-sm">{role.role}</span>
+                  </div>
+                  <div className="flex gap-1">
                     <Badge variant="outline" className="text-xs">
-                      +{role.requiredSkills.length - 3} more
+                      {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
                     </Badge>
-                  )}
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    >
+                      {maxApplicants} max
+                    </Badge>
+                  </div>
                 </div>
-              )}
 
-              {role.description && (
-                <p className="text-xs text-gray-600 line-clamp-2">
-                  {role.description}
-                </p>
-              )}
+                {/* Applicant Progress */}
+                <div className="space-y-1.5 mb-3">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Applications
+                    </span>
+                    <span className="font-medium">
+                      {currentApplicants}/{maxApplicants}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-300",
+                        applicantProgress < 30
+                          ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                          : applicantProgress < 70
+                            ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                            : applicantProgress < 90
+                              ? "bg-gradient-to-r from-orange-500 to-amber-500"
+                              : "bg-gradient-to-r from-red-500 to-pink-500"
+                      )}
+                      style={{ width: `${applicantProgress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {role?.requiredSkills && role.requiredSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {role.requiredSkills.slice(0, 3).map((skill) => (
+                      <Badge
+                        key={skill}
+                        variant="outline"
+                        className="text-xs px-2 py-0.5"
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                    {role.requiredSkills.length > 3 && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs px-2 py-0.5"
+                      >
+                        +{role.requiredSkills.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
+                {role.description && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+                    {role.description}
+                  </p>
+                )}
+
+                {/* Price Info */}
+                {role.price && role.price > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <DollarSign className="w-3 h-3 text-green-500" />
+                        <span className="text-xs font-medium">
+                          {roleCurrency} {role.price.toLocaleString()}
+                        </span>
+                      </div>
+                      {role.negotiable && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-2 py-0.5 text-green-600 border-green-200"
+                        >
+                          Negotiable
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Summary Footer */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 relative z-10">
+          <div className="grid grid-cols-3 gap-2 text-center mb-3">
+            <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+              <div className="text-xs text-gray-500">Total Roles</div>
+              <div className="text-lg font-bold text-orange-600">
+                {bandRoles.length}
+              </div>
             </div>
-          ))}
+            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <div className="text-xs text-gray-500">Max Applications</div>
+              <div className="text-lg font-bold text-blue-600">
+                {totalMaxApplicants}
+              </div>
+            </div>
+            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
+              <div className="text-xs text-gray-500">Total Positions</div>
+              <div className="text-lg font-bold text-green-600">
+                {totalPositions}
+              </div>
+            </div>
+          </div>
+
+          {hasPricedRoles && (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <span className={cn("text-sm font-medium", colors.text)}>
+                  Total Budget Estimate
+                </span>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold text-green-600">
+                  {bandRoles[0]?.currency || "KES"}{" "}
+                  {totalPrice.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Across{" "}
+                  {
+                    bandRoles.filter(
+                      (r: BandRoleInput) => r.price && r.price > 0
+                    ).length
+                  }{" "}
+                  priced roles
+                </div>
+              </div>
+            </div>
+          )}
+
+          {totalCurrentApplicants > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-2 p-2 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20"
+            >
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium">
+                  {totalCurrentApplicants} application
+                  {totalCurrentApplicants !== 1 ? "s" : ""} received
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {Math.round(
+                  (totalCurrentApplicants / totalMaxApplicants) * 100
+                )}
+                % of maximum capacity
+              </div>
+            </motion.div>
+          )}
         </div>
       </motion.div>
     );
   }
 );
 BandSetupPreview.displayName = "BandSetupPreview";
-
 // Interest Window Section Component
 const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
   const [showInterestWindow, setShowInterestWindow] = useState(false);
@@ -1311,9 +1555,11 @@ export default function NormalGigsForm() {
     return {
       role: role.role,
       maxSlots: role.maxSlots,
-      requiredSkills: role.requiredSkills || [], // Ensure array exists
+      maxApplicants: role.maxApplicants || 15, // Default to 20
+      currentApplicants: role.currentApplicants || 0,
+      requiredSkills: role.requiredSkills || [],
       description: role.description || "",
-      price: role.price?.toString() || "", // Convert number to string
+      price: role.price?.toString() || "",
       currency: role.currency || "KES",
       negotiable: role.negotiable ?? true,
       filledSlots: role.filledSlots || 0,
@@ -1759,7 +2005,6 @@ export default function NormalGigsForm() {
     [activeTalentType]
   );
 
-  // Handle band setup submit
   const handleBandSetupSubmit = useCallback((roles: BandRoleInput[]) => {
     setBandRoles(roles);
     toast.success(

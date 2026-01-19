@@ -4,31 +4,21 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   Users,
   Music,
-  Award,
   CheckCircle,
   Sparkles,
-  Target,
-  AlertCircle,
-  TrendingUp,
-  Lock,
-  Info,
-  ChevronRight,
-  UserPlus,
   Calendar,
   Clock,
+  MapPin,
+  Building2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { GigWithApplicants } from "@/types/bookings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useThemeColors } from "@/hooks/useTheme";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 interface BandRolesTabProps {
@@ -37,53 +27,26 @@ interface BandRolesTabProps {
   clerkId?: string;
 }
 
-// Define easing functions
-const EASE_OUT = [0.17, 0.67, 0.83, 0.67];
-const EASE_IN_OUT = [0.42, 0, 0.58, 1];
-
 export const BandRolesTab: React.FC<BandRolesTabProps> = ({
   selectedGigData,
   filteredApplicants,
-  clerkId,
 }) => {
   const router = useRouter();
   const { colors, isDarkMode, mounted } = useThemeColors();
 
-  // Query to check if crew chat can be created
-  const crewChatCheck = useQuery(
-    api.controllers.prebooking.canCreateCrewChat,
-    clerkId && selectedGigData?.gig._id
-      ? { gigId: selectedGigData.gig._id, clerkId }
-      : "skip"
-  );
-
-  // Mutation for bookAndCreateCrewChat
-  const bookAndCreateCrewChat = useMutation(
-    api.controllers.prebooking.bookAndCreateCrewChat
-  );
-
-  const handleBookAndCreateCrewChat = async () => {
-    if (!selectedGigData || !clerkId) return;
-
-    try {
-      const result = await bookAndCreateCrewChat({
-        gigId: selectedGigData.gig._id,
-        clerkId: clerkId,
-        clientRole: "admin",
-      });
-
-      toast.success(result.message || "Gig booked and crew chat created!");
-
-      if (result.chatId) {
-        window.open(`/chat/${result.chatId}`, "_blank");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to book gig and create crew chat");
-      console.error(error);
+  // Get organization/venue name from gig description or location
+  const getVenueName = () => {
+    const gig = selectedGigData?.gig;
+    if (gig?.description) {
+      const match = gig.description.match(/(?:at|@|venue:)\s*([^.,!?]+)/i);
+      if (match) return match[1].trim();
     }
+    return gig?.location?.split(",")[0] || "Venue";
   };
 
-  // Calculate role completion progress
+  const venueName = getVenueName();
+
+  // Calculate role completion
   const getRoleCompletion = () => {
     if (!selectedGigData?.gig.bandCategory)
       return { filled: 0, total: 0, percentage: 0 };
@@ -105,38 +68,37 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
   };
 
   const roleCompletion = getRoleCompletion();
+  const totalApplicants = filteredApplicants?.length || 0;
 
-  // Calculate applicants per role
-  const getRoleApplicantsSummary = () => {
-    if (!selectedGigData?.gig.bandCategory || !filteredApplicants) return [];
-
-    return selectedGigData.gig.bandCategory.map((role, index) => {
-      const roleApplicants = filteredApplicants.filter(
-        (applicant) => applicant.bandRoleIndex === index
-      );
-
-      const shortlistedInRole =
-        selectedGigData.shortlisted?.filter(
-          (item: any) => item.bandRoleIndex === index
-        ) || [];
-
-      return {
-        role: role.role,
-        maxSlots: role.maxSlots,
-        filledSlots: role.filledSlots,
-        applicants: roleApplicants.length,
-        shortlisted: shortlistedInRole.length,
-        index,
-      };
+  // Format date and time
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
     });
   };
 
-  const roleApplicantsSummary = getRoleApplicantsSummary();
-  const totalApplicants = filteredApplicants?.length || 0;
-  const totalShortlisted = selectedGigData.shortlisted?.length || 0;
+  const formatTime = (timeString: string | undefined) => {
+    if (!timeString) return "TBD";
 
-  const handleViewApplicants = () => {
-    router.push(`/gigs/${selectedGigData.gig._id}/band-applicants`);
+    try {
+      const [hours, minutes] = timeString.split(":");
+      const hour = parseInt(hours);
+      const suffix = hour >= 12 ? "PM" : "AM";
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${suffix}`;
+    } catch {
+      return timeString;
+    }
+  };
+
+  const handleViewAll = () => {
+    router.push(`/gigs/client/${selectedGigData.gig._id}/band-applicants`);
+  };
+
+  const handleViewGigDetails = () => {
+    router.push(`/hub/gigs/client/${selectedGigData.gig._id}/band-applicants`);
   };
 
   const containerVariants = {
@@ -144,33 +106,26 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
+        staggerChildren: 0.05,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.3 },
+      transition: { duration: 0.2 },
     },
   };
 
   if (!mounted) {
     return (
-      <div className="space-y-6">
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-4">
+        <Skeleton className="h-20 w-full rounded-lg" />
+        <Skeleton className="h-20 w-full rounded-lg" />
+        <Skeleton className="h-20 w-full rounded-lg" />
       </div>
     );
   }
@@ -180,456 +135,396 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4"
     >
-      {/* Band Gig Overview Card */}
+      {/* Header Card - Gig Overview */}
       <Card
         className={cn(
-          "overflow-hidden border-0 shadow-lg",
+          "overflow-hidden border-0 shadow-sm",
           isDarkMode
-            ? "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-gray-700"
-            : "bg-gradient-to-br from-white via-gray-50 to-white border-gray-200"
+            ? "bg-gray-800/50 border-gray-700"
+            : "bg-white border-gray-200"
         )}
       >
-        <CardContent className="p-6">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Music className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className={cn("text-2xl font-bold", colors.text)}>
-                    {selectedGigData.gig.title}
-                  </h2>
-                  <p className={cn("text-sm", colors.textMuted)}>
-                    Band Gig • {selectedGigData.gig.bandCategory?.length || 0}{" "}
-                    Roles Available
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Badges */}
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                className={cn(
-                  "px-4 py-2 text-base font-semibold",
-                  isDarkMode
-                    ? "bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-purple-700/50 text-purple-200"
-                    : "bg-gradient-to-r from-purple-100 to-pink-100 border-purple-200 text-purple-800"
-                )}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                {totalApplicants} Applicants
-              </Badge>
-              <Badge
-                className={cn(
-                  "px-4 py-2 text-base font-semibold",
-                  isDarkMode
-                    ? "bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-green-700/50 text-green-200"
-                    : "bg-gradient-to-r from-green-100 to-emerald-100 border-green-200 text-green-800"
-                )}
-              >
-                <Award className="w-4 h-4 mr-2" />
-                {totalShortlisted} Shortlisted
-              </Badge>
-            </div>
-          </div>
-
-          {/* Progress Section */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Target className="w-6 h-6 text-purple-500" />
-                <div>
-                  <h3 className={cn("text-lg font-bold", colors.text)}>
-                    Band Formation Progress
-                  </h3>
-                  <p className={cn("text-sm", colors.textMuted)}>
-                    {roleCompletion.filled}/{roleCompletion.total} roles filled
-                  </p>
-                </div>
-              </div>
-              <Badge
-                className={cn(
-                  "px-4 py-2 text-lg font-bold",
-                  roleCompletion.percentage === 100
-                    ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                    : roleCompletion.percentage >= 50
-                      ? "bg-gradient-to-r from-yellow-600 to-amber-600 text-white"
-                      : "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                )}
-              >
-                {roleCompletion.percentage}% Complete
-              </Badge>
-            </div>
-
-            <Progress value={roleCompletion.percentage} className="h-3" />
-
-            {/* Role Status Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-              {roleApplicantsSummary.map((role, index) => (
-                <motion.div
-                  key={index}
-                  variants={itemVariants}
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <div
                   className={cn(
-                    "p-4 rounded-xl border",
+                    "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
                     isDarkMode
-                      ? "bg-gray-800/50 border-gray-700 hover:bg-gray-800"
-                      : "bg-white border-gray-200 hover:bg-gray-50"
+                      ? "bg-purple-900/30 text-purple-300"
+                      : "bg-purple-100 text-purple-600"
                   )}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center",
-                          isDarkMode
-                            ? "bg-purple-900/30 text-purple-300"
-                            : "bg-purple-100 text-purple-600"
-                        )}
-                      >
-                        <Music className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className={cn("font-bold", colors.text)}>
-                          {role.role}
-                        </h4>
-                        <p className={cn("text-xs", colors.textMuted)}>
-                          {role.filledSlots}/{role.maxSlots} slots filled
-                        </p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={role.applicants > 0 ? "default" : "secondary"}
-                      className={cn(
-                        "px-2 py-1",
-                        role.applicants > 0
-                          ? isDarkMode
-                            ? "bg-green-900/50 text-green-200"
-                            : "bg-green-100 text-green-800"
-                          : ""
-                      )}
-                    >
-                      {role.applicants} app
-                    </Badge>
-                  </div>
+                  <Music className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className={cn("font-bold text-lg truncate", colors.text)}>
+                    {selectedGigData.gig.title}
+                  </h3>
+                  <p className={cn("text-sm truncate", colors.textMuted)}>
+                    <Building2 className="w-3 h-3 inline mr-1" />
+                    {venueName}
+                  </p>
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className={cn(colors.textMuted)}>Applicants:</span>
-                      <span className={cn("font-semibold", colors.text)}>
-                        {role.applicants}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className={cn(colors.textMuted)}>Shortlisted:</span>
-                      <span className={cn("font-semibold text-green-600")}>
-                        {role.shortlisted}
-                      </span>
-                    </div>
+              {/* Quick Info */}
+              <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-gray-500" />
+                  <span className={colors.text}>
+                    {formatDate(selectedGigData.gig.date)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-gray-500" />
+                  <span className={colors.text}>
+                    {formatTime(selectedGigData.gig.time?.start)}
+                  </span>
+                </div>
+                {selectedGigData.gig.location && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-gray-500" />
+                    <span className={cn("text-sm truncate", colors.text)}>
+                      {selectedGigData.gig.location.split(",")[0]}
+                    </span>
                   </div>
-                </motion.div>
-              ))}
+                )}
+              </div>
             </div>
+
+            {/* Status Badge */}
+            <Badge
+              className={cn(
+                "px-3 py-1 text-sm font-semibold flex-shrink-0",
+                isDarkMode
+                  ? "bg-purple-900/30 text-purple-300 border-purple-700/50"
+                  : "bg-purple-100 text-purple-800 border-purple-200"
+              )}
+            >
+              {roleCompletion.percentage}% Complete
+            </Badge>
           </div>
 
-          {/* Crew Chat Requirements */}
-          {crewChatCheck && selectedGigData.gig.isClientBand && (
-            <div className="mb-8">
-              <Card
-                className={cn(
-                  "border-2",
-                  crewChatCheck.canCreate
-                    ? "border-green-500/30 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20"
-                    : "border-yellow-500/30 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20"
-                )}
-              >
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-3">
-                      {crewChatCheck.canCreate ? (
-                        <>
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                            <CheckCircle className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h4
-                              className={cn("font-bold text-xl", colors.text)}
-                            >
-                              Ready to Book! 🎉
-                            </h4>
-                            <p className={cn("text-sm", colors.textMuted)}>
-                              All requirements met for crew chat
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 flex items-center justify-center">
-                            <AlertCircle className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h4
-                              className={cn("font-bold text-xl", colors.text)}
-                            >
-                              Requirements Pending ⏳
-                            </h4>
-                            <p className={cn("text-sm", colors.textMuted)}>
-                              {crewChatCheck.reason}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Score Badge */}
-                    <Badge
-                      className={cn(
-                        "px-4 py-2 text-lg font-bold min-w-[100px] text-center",
-                        crewChatCheck.canCreate
-                          ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                          : "bg-gradient-to-r from-amber-600 to-yellow-600 text-white"
-                      )}
-                    >
-                      {crewChatCheck.score}/{crewChatCheck.maxScore}
-                    </Badge>
-                  </div>
-
-                  {crewChatCheck.requirements && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                      {crewChatCheck.requirements.map((req, index) => (
-                        <div
-                          key={index}
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg",
-                            req.met
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                          )}
-                        >
-                          <div className="flex-shrink-0">
-                            {req.met ? (
-                              <CheckCircle className="w-5 h-5" />
-                            ) : (
-                              <AlertCircle className="w-5 h-5" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <span className="font-medium text-sm">
-                              {req.requirement}
-                            </span>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs px-2",
-                              req.met
-                                ? "border-green-300 text-green-700"
-                                : "border-amber-300 text-amber-700"
-                            )}
-                          >
-                            {req.points}pt
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Book Band Button */}
-                  <Button
-                    onClick={handleBookAndCreateCrewChat}
-                    disabled={!crewChatCheck?.canCreate}
-                    className={cn(
-                      "w-full text-lg py-6 font-bold transition-all relative overflow-hidden group",
-                      crewChatCheck?.canCreate
-                        ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl"
-                        : "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed opacity-70"
-                    )}
-                    size="lg"
-                  >
-                    {crewChatCheck.canCreate && (
-                      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    )}
-
-                    <div className="relative z-10 flex items-center justify-center gap-3">
-                      {crewChatCheck.canCreate ? (
-                        <>
-                          <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                          <span>Book Entire Band & Create Crew Chat</span>
-                          <TrendingUp className="w-5 h-5" />
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-5 h-5" />
-                          <span>Complete Requirements to Book Band</span>
-                          <Info className="w-5 h-5" />
-                        </>
-                      )}
-                    </div>
-                  </Button>
-                </CardContent>
-              </Card>
+          {/* Custom Progress Bar */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1 text-xs">
+              <span className={colors.textMuted}>Band Formation</span>
+              <span className="font-semibold">
+                {roleCompletion.filled}/{roleCompletion.total} roles
+              </span>
             </div>
-          )}
-
-          {/* View Applicants Button */}
-          <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                onClick={handleViewApplicants}
-                className={cn(
-                  "flex-1 text-lg py-7 font-bold transition-all relative overflow-hidden group",
-                  "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg hover:shadow-xl"
-                )}
-                size="lg"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <div className="relative z-10 flex items-center justify-center gap-4">
-                  <Users className="w-7 h-7" />
-                  <div className="text-left">
-                    <div className="font-bold">View All Applicants</div>
-                    <div className="text-sm opacity-90 font-normal">
-                      See {totalApplicants} applicants across all roles
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 ml-auto group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className={cn(
-                  "flex-1 text-lg py-7 font-bold border-2",
-                  isDarkMode
-                    ? "border-purple-700 text-purple-300 hover:bg-purple-900/30"
-                    : "border-purple-300 text-purple-700 hover:bg-purple-50"
-                )}
-                size="lg"
-                onClick={() => {
-                  // Share gig functionality
-                  navigator.clipboard.writeText(
-                    `${window.location.origin}/gigs/${selectedGigData.gig._id}`
-                  );
-                  toast.success("Gig link copied to clipboard!");
+            <div className="relative w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${roleCompletion.percentage}%`,
+                  backgroundColor:
+                    roleCompletion.percentage === 100
+                      ? "#10b981" // green-500
+                      : roleCompletion.percentage >= 50
+                        ? "#f59e0b" // yellow-500
+                        : "#3b82f6", // blue-500
                 }}
-              >
-                <UserPlus className="w-6 h-6 mr-3" />
-                Share Gig
-              </Button>
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Stats Footer */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card
-          className={cn(
-            isDarkMode
-              ? "bg-gradient-to-br from-gray-800 to-gray-900"
-              : "bg-gradient-to-br from-blue-50 to-cyan-50"
-          )}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+      {/* Roles Summary Card */}
+      <Card
+        className={cn(
+          "overflow-hidden border-0 shadow-sm",
+          isDarkMode
+            ? "bg-gray-800/50 border-gray-700"
+            : "bg-white border-gray-200"
+        )}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className={cn("font-bold", colors.text)}>Band Roles</h4>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xs",
+                isDarkMode
+                  ? "border-gray-600 text-gray-300"
+                  : "border-gray-300 text-gray-600"
+              )}
+            >
+              {selectedGigData.gig.bandCategory?.length || 0} Roles
+            </Badge>
+          </div>
+          // In the Roles Summary Card section, update the role display:
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+            {selectedGigData.gig.bandCategory?.map((role, index) => {
+              const roleApplicants =
+                filteredApplicants?.filter(
+                  (applicant) => applicant.bandRoleIndex === index
+                ) || [];
+
+              // Calculate current applicants (this should come from the role itself)
+              const currentApplicants =
+                role.currentApplicants || roleApplicants.length;
+              const maxApplicants = role.maxApplicants || 20; // Default 20
+
+              const applicantProgress =
+                maxApplicants > 0
+                  ? Math.min((currentApplicants / maxApplicants) * 100, 100)
+                  : 0;
+
+              return (
+                <motion.div
+                  key={index}
+                  variants={itemVariants}
+                  className={cn(
+                    "flex items-center justify-between p-2 rounded-lg",
+                    isDarkMode ? "hover:bg-gray-700/50" : "hover:bg-gray-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-md flex items-center justify-center",
+                        isDarkMode
+                          ? "bg-gray-700 text-gray-300"
+                          : "bg-gray-100 text-gray-600"
+                      )}
+                    >
+                      <Music className="w-3 h-3" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className={cn("text-sm font-medium", colors.text)}
+                        >
+                          {role.role}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className="text-xs h-4 px-1 py-0 border-gray-300"
+                          >
+                            {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
+                          </Badge>
+                          <Badge
+                            variant="secondary"
+                            className="text-xs h-4 px-1 py-0 bg-blue-100 text-blue-700"
+                          >
+                            {maxApplicants} max
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Applicant Progress Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className={colors.textMuted}>
+                            {currentApplicants}/{maxApplicants} applicants
+                          </span>
+                          <span className={cn("text-xs", colors.textMuted)}>
+                            {role.filledSlots}/{role.maxSlots} filled
+                          </span>
+                        </div>
+                        <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${applicantProgress}%`,
+                              backgroundColor:
+                                applicantProgress < 30
+                                  ? "#10b981" // green-500
+                                  : applicantProgress < 70
+                                    ? "#3b82f6" // blue-500
+                                    : applicantProgress < 90
+                                      ? "#f59e0b" // amber-500
+                                      : "#ef4444", // red-500
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge
+                      variant={
+                        role.filledSlots >= role.maxSlots
+                          ? "destructive"
+                          : currentApplicants >= maxApplicants
+                            ? "secondary"
+                            : "default"
+                      }
+                      className="text-xs h-5"
+                    >
+                      {role.filledSlots >= role.maxSlots
+                        ? "Filled"
+                        : currentApplicants >= maxApplicants
+                          ? "Full"
+                          : `${currentApplicants} app`}
+                    </Badge>
+
+                    {currentApplicants > 0 && maxApplicants > 0 && (
+                      <div className="text-xs text-gray-500">
+                        {Math.round(applicantProgress)}% capacity
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Applicants & Actions Card */}
+      <Card
+        className={cn(
+          "overflow-hidden border-0 shadow-sm",
+          isDarkMode
+            ? "bg-gray-800/50 border-gray-700"
+            : "bg-white border-gray-200"
+        )}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
               <div
                 className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center",
+                  "w-8 h-8 rounded-lg flex items-center justify-center",
                   isDarkMode
-                    ? "bg-blue-900/50 text-blue-300"
+                    ? "bg-blue-900/30 text-blue-300"
                     : "bg-blue-100 text-blue-600"
                 )}
               >
-                <Calendar className="w-6 h-6" />
+                <Users className="w-4 h-4" />
               </div>
               <div>
-                <p className={cn("text-sm font-medium", colors.textMuted)}>
-                  Gig Date
+                <h4 className={cn("font-bold", colors.text)}>Applicants</h4>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  {totalApplicants} total applications
                 </p>
-                <p className={cn("text-lg font-bold", colors.text)}>
-                  {new Date(selectedGigData.gig.date).toLocaleDateString(
-                    "en-US",
-                    {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    }
+              </div>
+            </div>
+            {roleCompletion.percentage === 100 && (
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-2 py-1">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Complete
+              </Badge>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <Button
+              onClick={handleViewAll}
+              className={cn(
+                "w-full justify-between group",
+                isDarkMode
+                  ? "bg-gray-700 hover:bg-gray-600 border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 border-gray-200"
+              )}
+              variant="outline"
+            >
+              <span className="font-medium">View All Applicants</span>
+              <span
+                className={cn(
+                  "text-xs px-2 py-1 rounded",
+                  isDarkMode
+                    ? "bg-gray-600 group-hover:bg-gray-500"
+                    : "bg-gray-200 group-hover:bg-gray-300"
+                )}
+              >
+                {totalApplicants}
+              </span>
+            </Button>
+
+            <Button
+              onClick={handleViewGigDetails}
+              className={cn(
+                "w-full",
+                isDarkMode
+                  ? "bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 border-purple-700/50"
+                  : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-200"
+              )}
+              variant="outline"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              View Gig Details
+            </Button>
+
+            {/* Quick Stats */}
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t">
+              <div
+                className={cn(
+                  "text-center p-2 rounded",
+                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50"
+                )}
+              >
+                <div className="text-xs text-gray-500">Roles Open</div>
+                <div className="font-bold">
+                  {roleCompletion.total - roleCompletion.filled}
+                </div>
+              </div>
+              <div
+                className={cn(
+                  "text-center p-2 rounded",
+                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50"
+                )}
+              >
+                <div className="text-xs text-gray-500">Max Apps</div>
+                <div className="font-bold">
+                  {selectedGigData.gig.bandCategory?.reduce(
+                    (sum, role) => sum + (role.maxApplicants || 20),
+                    0
                   )}
-                </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={cn(
-            isDarkMode
-              ? "bg-gradient-to-br from-gray-800 to-gray-900"
-              : "bg-gradient-to-br from-green-50 to-emerald-50"
-          )}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center",
-                  isDarkMode
-                    ? "bg-green-900/50 text-green-300"
-                    : "bg-green-100 text-green-600"
+                  "text-center p-2 rounded",
+                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50"
                 )}
               >
-                <Clock className="w-6 h-6" />
-              </div>
-              <div>
-                <p className={cn("text-sm font-medium", colors.textMuted)}>
-                  Time Slot
-                </p>
-                <p className={cn("text-lg font-bold", colors.text)}>
-                  {selectedGigData.gig.time?.start} -{" "}
-                  {selectedGigData.gig.time?.end}
-                </p>
+                <div className="text-xs text-gray-500">Status</div>
+                <div className="font-bold">
+                  {roleCompletion.percentage === 100 ? "Ready" : "Hiring"}
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Quick Tips */}
+      {roleCompletion.percentage < 100 && (
         <Card
           className={cn(
+            "overflow-hidden border-0 shadow-sm",
             isDarkMode
-              ? "bg-gradient-to-br from-gray-800 to-gray-900"
-              : "bg-gradient-to-br from-purple-50 to-pink-50"
+              ? "bg-gradient-to-r from-blue-900/20 to-cyan-900/20 border-blue-800/30"
+              : "bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200"
           )}
         >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center",
-                  isDarkMode
-                    ? "bg-purple-900/50 text-purple-300"
-                    : "bg-purple-100 text-purple-600"
-                )}
-              >
-                <Award className="w-6 h-6" />
-              </div>
+          <CardContent className="p-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className={cn("text-sm font-medium", colors.textMuted)}>
-                  Shortlist Rate
-                </p>
-                <p className={cn("text-lg font-bold", colors.text)}>
-                  {totalApplicants > 0
-                    ? Math.round((totalShortlisted / totalApplicants) * 100)
-                    : 0}
-                  %
+                <p className="text-xs font-medium">Need more applicants?</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Share this gig to get more qualified musicians.
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
     </motion.div>
   );
 };

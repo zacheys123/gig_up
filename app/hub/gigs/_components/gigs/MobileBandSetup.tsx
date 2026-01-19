@@ -28,6 +28,10 @@ import {
   TrendingUp,
   Zap,
   Layers,
+  UserPlus,
+  Users as UsersIcon,
+  Info,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BandRoleInput, BandSetupRole } from "@/types/gig";
@@ -40,12 +44,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 
 interface MobileBandSetupModalProps {
   isOpen: boolean;
@@ -122,6 +127,8 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   const [selectedRoles, setSelectedRoles] = useState<BandSetupRole[]>(
     initialRoles.map((role) => ({
       ...role,
+      maxApplicants: role.maxApplicants || 20, // Default to 20
+      currentApplicants: role.currentApplicants || 0,
       requiredSkills: role.requiredSkills || [],
       price: role.price || "",
       currency: role.currency || "KES",
@@ -136,9 +143,10 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
     "roles"
   );
   const [view, setView] = useState<"selection" | "configuration">("selection");
+  const [showMaxApplicantsInfo, setShowMaxApplicantsInfo] = useState(false);
 
   // Memoized calculations
-  const { totalPositions, totalBudget } = useMemo(() => {
+  const { totalPositions, totalBudget, totalMaxApplicants } = useMemo(() => {
     const positions = selectedRoles.reduce(
       (sum, role) => sum + role.maxSlots,
       0
@@ -147,7 +155,15 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
       const price = role.price ? parseFloat(role.price) : 0;
       return total + (isNaN(price) ? 0 : price) * role.maxSlots;
     }, 0);
-    return { totalPositions: positions, totalBudget: budget };
+    const maxApplicants = selectedRoles.reduce(
+      (sum, role) => sum + (role.maxApplicants || 20),
+      0
+    );
+    return {
+      totalPositions: positions,
+      totalBudget: budget,
+      totalMaxApplicants: maxApplicants,
+    };
   }, [selectedRoles]);
 
   const filteredRoles = useMemo(() => {
@@ -181,10 +197,13 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           {
             role: roleName,
             maxSlots: 1,
+            maxApplicants: 20, // Default 20
+            currentApplicants: 0,
             requiredSkills: [],
             description: "",
             currency: "KES",
             negotiable: true,
+            isLocked: false,
           },
         ];
       }
@@ -209,10 +228,13 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         {
           role: customRole.trim(),
           maxSlots: 1,
+          maxApplicants: 20, // Default 20
+          currentApplicants: 0,
           requiredSkills: [],
           description: "",
           currency: "KES",
           negotiable: true,
+          isLocked: false,
         },
       ]);
       setCustomRole("");
@@ -247,12 +269,15 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
       return {
         role: role.role,
         maxSlots: role.maxSlots,
+        maxApplicants: role.maxApplicants || 20,
+        currentApplicants: role.currentApplicants || 0,
         requiredSkills:
           role.requiredSkills.length > 0 ? role.requiredSkills : undefined,
         description: role.description || undefined,
         price: price && !isNaN(price) ? price : undefined,
         currency: role.currency,
         negotiable: role.negotiable,
+        isLocked: role.isLocked || false,
       };
     },
     []
@@ -265,6 +290,9 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
       onClose();
     }
   }, [selectedRoles, prepareForSubmission, onSubmit, onClose]);
+
+  // Max Applicants Quick Presets
+  const maxApplicantsPresets = [10, 15, 20, 30, 50, 100];
 
   // Selection View
   const SelectionView = () => (
@@ -444,31 +472,395 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           colors.border
         )}
       >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               <span className={cn("text-sm font-medium", colors.text)}>
                 {selectedRoles.length} roles selected
               </span>
             </div>
-            <Progress
-              value={progressPercentage}
-              className={cn("h-2", isDarkMode ? "bg-gray-700" : "bg-gray-200")}
-            />
+            <div className="flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium text-blue-600">
+                {totalMaxApplicants} max apps
+              </span>
+            </div>
           </div>
-          <Button
-            onClick={() => setView("configuration")}
-            disabled={selectedRoles.length === 0}
-            className="ml-4 gap-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"
-          >
-            Configure
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+          <Progress
+            value={progressPercentage}
+            className={cn("h-2", isDarkMode ? "bg-gray-700" : "bg-gray-200")}
+          />
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="text-gray-500">Positions</div>
+              <div className="font-bold text-orange-600">{totalPositions}</div>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <div className="text-gray-500">Max Apps</div>
+              <div className="font-bold text-blue-600">
+                {totalMaxApplicants}
+              </div>
+            </div>
+          </div>
         </div>
+
+        <Button
+          onClick={() => setView("configuration")}
+          disabled={selectedRoles.length === 0}
+          className="w-full mt-3 gap-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"
+        >
+          Configure
+          <ArrowRight className="w-4 h-4" />
+        </Button>
       </div>
     </div>
   );
+
+  // Role Configuration Component
+  const RoleConfiguration = ({ role }: { role: BandSetupRole }) => {
+    const maxApplicants = role.maxApplicants || 20;
+
+    return (
+      <div className="space-y-4">
+        {/* Role Name and Basic Info */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h4 className={cn("font-bold text-lg", colors.text)}>
+              {role.role}
+            </h4>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="text-xs">
+                {role.maxSlots} position{role.maxSlots > 1 ? "s" : ""}
+              </Badge>
+              <Badge
+                variant="secondary"
+                className="text-xs bg-blue-100 text-blue-700"
+              >
+                {maxApplicants} max apps
+              </Badge>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => removeRole(role.role)}
+            className="text-gray-400 hover:text-red-500 rounded-full"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Two-column layout for numbers */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Positions Needed */}
+          <div>
+            <Label
+              className={cn("text-sm font-medium mb-2 block", colors.text)}
+            >
+              Positions Needed
+            </Label>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  updateRole(role.role, {
+                    maxSlots: Math.max(1, role.maxSlots - 1),
+                  })
+                }
+                className={cn("p-2 rounded-full", colors.border)}
+                disabled={role.maxSlots <= 1}
+              >
+                <Minus className="w-4 h-4" />
+              </Button>
+              <div className="flex-1 text-center">
+                <div className="text-3xl font-bold text-orange-600">
+                  {role.maxSlots}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  updateRole(role.role, {
+                    maxSlots: role.maxSlots + 1,
+                  })
+                }
+                className={cn("p-2 rounded-full", colors.border)}
+                disabled={role.maxSlots >= 10}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className={cn("text-xs mt-1", colors.textMuted)}>
+              How many musicians for this role
+            </p>
+          </div>
+
+          {/* Max Applicants */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className={cn("text-sm font-medium", colors.text)}>
+                Max Applicants
+              </Label>
+              <button
+                onClick={() => setShowMaxApplicantsInfo(!showMaxApplicantsInfo)}
+                className="text-blue-500 hover:text-blue-600"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    updateRole(role.role, {
+                      maxApplicants: Math.max(
+                        1,
+                        (role.maxApplicants || 20) - 1
+                      ),
+                    })
+                  }
+                  className={cn("p-2 rounded-full", colors.border)}
+                  disabled={(role.maxApplicants || 20) <= 1}
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <div className="flex-1 text-center">
+                  <div className="text-3xl font-bold text-blue-600">
+                    {maxApplicants}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    updateRole(role.role, {
+                      maxApplicants: (role.maxApplicants || 20) + 1,
+                    })
+                  }
+                  className={cn("p-2 rounded-full", colors.border)}
+                  disabled={(role.maxApplicants || 20) >= 100}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Quick presets */}
+              <div className="flex flex-wrap gap-1">
+                {maxApplicantsPresets.map((num) => (
+                  <Button
+                    key={num}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      updateRole(role.role, { maxApplicants: num })
+                    }
+                    className={cn(
+                      "text-xs px-2 py-1",
+                      maxApplicants === num &&
+                        "bg-blue-500 text-white border-blue-500"
+                    )}
+                  >
+                    {num}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <p className={cn("text-xs mt-1", colors.textMuted)}>
+              How many applications to review
+            </p>
+          </div>
+        </div>
+
+        {/* Info box for max applicants */}
+        {showMaxApplicantsInfo && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div
+              className={cn(
+                "p-3 rounded-lg mt-2",
+                isDarkMode
+                  ? "bg-blue-900/20 border-blue-800/30"
+                  : "bg-blue-50 border-blue-200"
+              )}
+            >
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div className="text-xs">
+                  <p className="font-medium">Application Limit Explained:</p>
+                  <ul className="list-disc pl-4 mt-1 space-y-1">
+                    <li>
+                      <strong>Positions Needed:</strong> How many musicians you
+                      need
+                    </li>
+                    <li>
+                      <strong>Max Applicants:</strong> How many applications to
+                      review
+                    </li>
+                    <li>
+                      <strong>Tip:</strong> Set lower (10-20) for exclusive
+                      roles, higher (30-50) for open calls
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Validation check */}
+        {maxApplicants < role.maxSlots && (
+          <div
+            className={cn(
+              "p-2 rounded-lg flex items-center gap-2",
+              isDarkMode
+                ? "bg-red-900/20 border-red-800/30"
+                : "bg-red-50 border-red-200"
+            )}
+          >
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <p className="text-xs text-red-600">
+              Max applicants ({maxApplicants}) should be at least as many as
+              positions ({role.maxSlots})
+            </p>
+          </div>
+        )}
+
+        {/* Description */}
+        <div>
+          <Label className={cn("text-sm font-medium mb-2 block", colors.text)}>
+            Role Description
+          </Label>
+          <Textarea
+            placeholder="Describe responsibilities..."
+            value={role.description || ""}
+            onChange={(e) =>
+              updateRole(role.role, { description: e.target.value })
+            }
+            rows={2}
+            className={cn(
+              "resize-none",
+              isDarkMode
+                ? "bg-gray-800 border-gray-700 text-white"
+                : "bg-white border-gray-200"
+            )}
+          />
+        </div>
+
+        {/* Pricing */}
+        <div>
+          <Label className={cn("text-sm font-medium mb-2 block", colors.text)}>
+            Pricing
+          </Label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <Select
+                value={role.currency || "KES"}
+                onValueChange={(value) =>
+                  updateRole(role.role, { currency: value })
+                }
+              >
+                <SelectTrigger className={cn("col-span-1", colors.border)}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent
+                  className={isDarkMode ? "bg-gray-800" : "bg-white"}
+                >
+                  <SelectItem value="KES">KES</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                placeholder="Amount"
+                value={role.price || ""}
+                onChange={(e) =>
+                  updateRole(role.role, { price: e.target.value })
+                }
+                min="0"
+                className={cn(
+                  "col-span-2",
+                  isDarkMode
+                    ? "bg-gray-800 border-gray-700 text-white"
+                    : "bg-white border-gray-200"
+                )}
+              />
+            </div>
+
+            <div
+              className={cn(
+                "flex items-center justify-between p-3 rounded-lg",
+                isDarkMode
+                  ? "bg-gradient-to-r from-green-900/20 to-emerald-900/20"
+                  : "bg-gradient-to-r from-green-50 to-emerald-50"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={role.negotiable ?? true}
+                  onCheckedChange={(checked) =>
+                    updateRole(role.role, { negotiable: checked })
+                  }
+                />
+                <span className={cn("text-sm font-medium", colors.text)}>
+                  Negotiable
+                </span>
+              </div>
+              {role.price && parseFloat(role.price) > 0 && (
+                <Badge
+                  variant={role.negotiable ? "default" : "outline"}
+                  className={cn(
+                    role.negotiable &&
+                      "bg-gradient-to-r from-green-500 to-emerald-500"
+                  )}
+                >
+                  {role.negotiable ? "Negotiable" : "Fixed"}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Skills Section */}
+        {activeTab === "skills" && (
+          <div className="space-y-4">
+            <Label className={cn("text-sm font-medium block", colors.text)}>
+              Required Skills
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {commonSkills.slice(0, 8).map((skill) => (
+                <Badge
+                  key={skill}
+                  variant={
+                    role.requiredSkills.includes(skill) ? "default" : "outline"
+                  }
+                  className={cn(
+                    "cursor-pointer transition-all",
+                    role.requiredSkills.includes(skill) &&
+                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                  )}
+                  onClick={() => toggleSkill(role.role, skill)}
+                >
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Configuration View
   const ConfigurationView = () => (
@@ -488,7 +880,8 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
               Configure Roles
             </h2>
             <p className={cn("text-sm", colors.textMuted)}>
-              {selectedRoles.length} roles selected
+              {selectedRoles.length} roles • {totalPositions} positions •{" "}
+              {totalMaxApplicants} max apps
             </p>
           </div>
           <Button
@@ -573,186 +966,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                   key={role.role}
                   className={cn("rounded-xl border p-4 mb-3", colors.border)}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
-                        <Music className="w-5 h-5 text-orange-500" />
-                      </div>
-                      <div>
-                        <h4 className={cn("font-bold", colors.text)}>
-                          {role.role}
-                        </h4>
-                        <Badge
-                          variant="outline"
-                          className={cn("text-xs mt-1", colors.border)}
-                        >
-                          {role.maxSlots} position{role.maxSlots > 1 ? "s" : ""}
-                        </Badge>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeRole(role.role)}
-                      className="text-gray-400 hover:text-red-500 rounded-full"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <Label
-                        className={cn(
-                          "text-sm font-medium mb-2 block",
-                          colors.text
-                        )}
-                      >
-                        Positions Needed
-                      </Label>
-                      <div className="flex items-center gap-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            updateRole(role.role, {
-                              maxSlots: Math.max(1, role.maxSlots - 1),
-                            })
-                          }
-                          className={cn("p-2 rounded-full", colors.border)}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        <div className="flex-1 text-center">
-                          <div className="text-3xl font-bold text-orange-600">
-                            {role.maxSlots}
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            updateRole(role.role, {
-                              maxSlots: role.maxSlots + 1,
-                            })
-                          }
-                          className={cn("p-2 rounded-full", colors.border)}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label
-                        className={cn(
-                          "text-sm font-medium mb-2 block",
-                          colors.text
-                        )}
-                      >
-                        Role Description
-                      </Label>
-                      <Textarea
-                        placeholder="Describe responsibilities..."
-                        value={role.description || ""}
-                        onChange={(e) =>
-                          updateRole(role.role, { description: e.target.value })
-                        }
-                        rows={2}
-                        className={cn(
-                          "resize-none",
-                          isDarkMode
-                            ? "bg-gray-800 border-gray-700 text-white"
-                            : "bg-white border-gray-200"
-                        )}
-                      />
-                    </div>
-
-                    <div>
-                      <Label
-                        className={cn(
-                          "text-sm font-medium mb-2 block",
-                          colors.text
-                        )}
-                      >
-                        Pricing
-                      </Label>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-3 gap-2">
-                          <Select
-                            value={role.currency || "KES"}
-                            onValueChange={(value) =>
-                              updateRole(role.role, { currency: value })
-                            }
-                          >
-                            <SelectTrigger
-                              className={cn("col-span-1", colors.border)}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent
-                              className={cn(
-                                isDarkMode ? "bg-gray-800" : "bg-white"
-                              )}
-                            >
-                              <SelectItem value="KES">KES</SelectItem>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="EUR">EUR</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            type="number"
-                            placeholder="Amount"
-                            value={role.price || ""}
-                            onChange={(e) =>
-                              updateRole(role.role, { price: e.target.value })
-                            }
-                            min="0"
-                            className={cn(
-                              "col-span-2",
-                              isDarkMode
-                                ? "bg-gray-800 border-gray-700 text-white"
-                                : "bg-white border-gray-200"
-                            )}
-                          />
-                        </div>
-
-                        <div
-                          className={cn(
-                            "flex items-center justify-between p-3 rounded-lg",
-                            isDarkMode
-                              ? "bg-gradient-to-r from-green-900/20 to-emerald-900/20"
-                              : "bg-gradient-to-r from-green-50 to-emerald-50"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={role.negotiable ?? true}
-                              onCheckedChange={(checked) =>
-                                updateRole(role.role, { negotiable: checked })
-                              }
-                            />
-                            <span
-                              className={cn("text-sm font-medium", colors.text)}
-                            >
-                              Negotiable
-                            </span>
-                          </div>
-                          {role.price && parseFloat(role.price) > 0 && (
-                            <Badge
-                              variant={role.negotiable ? "default" : "outline"}
-                              className={cn(
-                                role.negotiable &&
-                                  "bg-gradient-to-r from-green-500 to-emerald-500"
-                              )}
-                            >
-                              {role.negotiable ? "Negotiable" : "Fixed"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <RoleConfiguration role={role} />
                 </div>
               ))
             )}
@@ -786,14 +1000,15 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                         {role.role}
                       </h4>
                       <p className={cn("text-sm", colors.textMuted)}>
-                        Required skills
+                        Required skills • {role.maxApplicants || 20} max
+                        applicants
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <div className="flex flex-wrap gap-2">
-                      {commonSkills.slice(0, 12).map((skill) => (
+                      {commonSkills.map((skill) => (
                         <Badge
                           key={skill}
                           variant={
@@ -878,19 +1093,30 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                         Budget Summary
                       </h3>
                       <p className={cn("text-sm", colors.textMuted)}>
-                        Total estimated cost
+                        Total estimated cost • {totalMaxApplicants} max
+                        applications
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2">
-                      <span className={cn("font-medium", colors.text)}>
-                        Total Positions
-                      </span>
-                      <span className="text-lg font-bold text-orange-600">
-                        {totalPositions}
-                      </span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                        <div className="text-sm text-gray-500">
+                          Total Positions
+                        </div>
+                        <div className="text-2xl font-bold text-orange-600">
+                          {totalPositions}
+                        </div>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                        <div className="text-sm text-gray-500">
+                          Max Applications
+                        </div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {totalMaxApplicants}
+                        </div>
+                      </div>
                     </div>
 
                     <Separator className={colors.borderSecondary} />
@@ -987,6 +1213,12 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                                   <Badge variant="outline" className="text-xs">
                                     {role.maxSlots} pos
                                   </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-blue-100 text-blue-700"
+                                  >
+                                    {role.maxApplicants || 20} max apps
+                                  </Badge>
                                   {role.negotiable && (
                                     <Badge
                                       variant="secondary"
@@ -1028,6 +1260,29 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           colors.border
         )}
       >
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm">
+            <div className="flex items-center gap-2">
+              <UsersIcon className="w-4 h-4" />
+              <span>{selectedRoles.length} roles</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>{totalPositions} positions</span>
+              <span>•</span>
+              <span>{totalMaxApplicants} max applications</span>
+            </div>
+          </div>
+          {totalBudget > 0 && (
+            <div className="text-right">
+              <div className="text-lg font-bold text-green-600">
+                {selectedRoles.find((r) => r.price)?.currency || "KES"}{" "}
+                {totalBudget.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500">Total budget</div>
+            </div>
+          )}
+        </div>
+
         <Button
           onClick={handleSubmit}
           disabled={selectedRoles.length === 0}
