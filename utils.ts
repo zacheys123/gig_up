@@ -2038,6 +2038,7 @@ interface GigForStatusCheck {
     applicants: Id<"users">[];
     bookedUsers: Id<"users">[];
   }>;
+  // Band applications (for band gigs)
   bookCount?: Array<{
     bandId: Id<"bands">;
     appliedBy: Id<"users">;

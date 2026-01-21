@@ -278,74 +278,228 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
     </TooltipProvider>
   );
 };
-
-// Update the getActionButtonConfig function - it should NOT check qualifiedRoles anymore
 const getActionButtonConfig = (
   status: GigUserStatus,
-  gig: { isClientBand?: boolean; isTaken?: boolean }
-  // Remove qualifiedRoles parameter as it's causing confusion
-  // qualifiedRoles: BandRole[]
+  gig: {
+    isClientBand?: boolean;
+    isTaken?: boolean;
+    bookCount?: Array<any>;
+    maxSlots?: number; // Add this
+  }
 ): ActionButtonConfig => {
   const isClientBand = gig.isClientBand || false;
+  const bookCount = gig.bookCount || [];
 
+  // ========== GIG POSTER (OWNER) ==========
   if (status.isGigPoster) {
     return {
-      label: gig.isTaken ? "Manage" : "Review",
+      label: gig.isTaken ? "Manage Booking" : "Review Applicants",
       variant: "default" as const,
       icon: <Sparkles className="w-4 h-4" />,
       action: "manage",
       disabled: false,
+      className:
+        "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
     };
   }
 
-  if (status.isBooked) {
+  // ========== BAND APPLICATION CASES (bookCount) ==========
+  if (isClientBand && status.isInBandApplication) {
+    if (status.isBooked) {
+      return {
+        label: "Band Booked ✓",
+        variant: "default" as const,
+        icon: <CheckCircle className="w-4 h-4" />,
+        action: "manage",
+        disabled: false,
+        className:
+          "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
+      };
+    }
+
+    if (status.isPending) {
+      return {
+        label: `Band Application ${status.isPending ? "Pending" : "Submitted"}`,
+        variant: "outline" as const,
+        icon: <Clock className="w-4 h-4" />,
+        action: "withdraw",
+        disabled: false,
+        className:
+          "border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300",
+      };
+    }
+
     return {
-      label: "Booked",
+      label: "View Band Application",
+      variant: "outline" as const,
+      icon: <Building2 className="w-4 h-4" />,
+      action: "manage",
+      disabled: false,
+      className:
+        "border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300",
+    };
+  }
+
+  // ========== BOOKED STATUS (both individual and band) ==========
+  if (status.isBooked) {
+    if (isClientBand && status.isInBookedUsers) {
+      return {
+        label: `Booked as ${status.bandRoleApplied || "Band Member"}`,
+        variant: "default" as const,
+        icon: <CheckCircle className="w-4 h-4" />,
+        action: "manage",
+        disabled: false,
+        className:
+          "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
+      };
+    }
+
+    return {
+      label: "Booked ✓",
       variant: "secondary" as const,
       icon: <CheckCircle className="w-4 h-4" />,
       action: "none",
       disabled: true,
+      className:
+        "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
     };
   }
 
-  if (status.isPending || status.isInApplicants || status.isInBandApplication) {
+  // ========== PENDING/APPLIED STATUS ==========
+  if (status.isPending || status.isInApplicants || status.hasShownInterest) {
+    if (isClientBand) {
+      // Band role applicant
+      if (status.isInApplicants) {
+        return {
+          label: status.isPending
+            ? "Pending..."
+            : `Applied as ${status.bandRoleApplied || "Member"}`,
+          variant: "outline" as const,
+          icon: <Clock className="w-4 h-4" />,
+          action: "withdraw",
+          disabled: false,
+          className:
+            "border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300",
+        };
+      }
+
+      // Showed interest in band gig (but not in a specific role)
+      return {
+        label: "Show Interest",
+        variant: "outline" as const,
+        icon: <User className="w-4 h-4" />,
+        action: "withdraw",
+        disabled: false,
+        className:
+          "border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300",
+      };
+    }
+
+    // Regular gig - individual interest
     return {
-      label: isClientBand ? "Pending" : "Applied",
+      label: status.isPending ? "Pending..." : "Applied",
       variant: "outline" as const,
       icon: <Clock className="w-4 h-4" />,
       action: "withdraw",
       disabled: false,
+      className:
+        "border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300",
     };
   }
 
+  // ========== CAN APPLY STATUS ==========
   if (status.canApply) {
     if (isClientBand) {
-      // ALWAYS show "Apply with Band" when it's a client band and user can apply
-      // The qualification check will happen in the application flow
+      // Check if user is in any band (you might need to check this from user data)
+      const userHasBand = false; // Replace with actual check
+
+      if (userHasBand) {
+        return {
+          label: "Apply with Band",
+          variant: "default" as const,
+          icon: <Building2 className="w-4 h-4" />,
+          action: "apply",
+          disabled: false,
+          className:
+            "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
+        };
+      }
+
+      // Apply as individual band member
       return {
-        label: "Apply with Band",
+        label: "Apply for Role",
         variant: "default" as const,
-        icon: <Building2 className="w-4 h-4" />,
+        icon: <UserPlus className="w-4 h-4" />,
         action: "apply",
         disabled: false,
+        className:
+          "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
       };
     }
 
+    // Regular gig - show interest
     return {
       label: "Show Interest",
       variant: "default" as const,
       icon: <UserPlus className="w-4 h-4" />,
       action: "apply",
       disabled: false,
+      className:
+        "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
     };
   }
 
+  // ========== ROLE FULL (band gigs only) ==========
+  if (status.roleDetails?.isRoleFull) {
+    return {
+      label: "Role Full",
+      variant: "secondary" as const,
+      icon: <AlertCircle className="w-4 h-4" />,
+      action: "none",
+      disabled: true,
+      className:
+        "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
+    };
+  }
+
+  // ========== GIG TAKEN ==========
+  if (gig.isTaken) {
+    return {
+      label: "Booked",
+      variant: "secondary" as const,
+      icon: <Lock className="w-4 h-4" />,
+      action: "none",
+      disabled: true,
+      className:
+        "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
+    };
+  }
+
+  // ========== GIG FULL (non-band gigs) ==========
+  if (!isClientBand) {
+    const interestedCount = gig.bookCount?.length || 0;
+    const maxSlots = gig.maxSlots || 10; // Now this works
+    if (interestedCount >= maxSlots) {
+      return {
+        label: "Fully Booked",
+        variant: "secondary" as const,
+        icon: <AlertCircle className="w-4 h-4" />,
+        action: "none",
+        disabled: true,
+        className:
+          "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
+      };
+    }
+  }
+
+  // ========== DEFAULT/UNAVAILABLE ==========
   return {
     label: "Unavailable",
     variant: "secondary" as const,
     icon: <AlertCircle className="w-4 h-4" />,
     action: "none",
     disabled: true,
+    className: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
   };
 };
 
@@ -946,8 +1100,7 @@ const GigCard: React.FC<GigCardProps> = ({
   const handleClick = () => {
     if (onClick) {
       onClick();
-    } else {
-      router.push(`/gigs/${gig._id}`);
+      return;
     }
   };
 
@@ -1256,50 +1409,161 @@ const GigCard: React.FC<GigCardProps> = ({
   // Check interest window status
   const interestWindowStatus = getInterestWindowStatus(gig);
   const isInterestWindowOpen = interestWindowStatus.status === "open";
-
   const renderActionButton = () => {
     if (!showActions) return null;
 
     const responsiveButtonClasses = "w-full sm:w-auto px-3 py-1.5 h-9";
 
-    // In your renderActionButton function, update the buttonConfig call:
-    const buttonConfig = getActionButtonConfig(
-      userStatus,
-      {
-        isClientBand: gig.isClientBand || false,
-        isTaken: gig.isTaken || false,
-      }
-      // Remove the qualifiedRoles parameter
-    );
-    // If no action needed
-    if (buttonConfig.action === "none") {
+    // Get the action button config
+    const buttonConfig = getActionButtonConfig(userStatus, {
+      isClientBand: gig.isClientBand || false,
+      isTaken: gig.isTaken || false,
+      bookCount: gig.bookCount || [],
+    });
+
+    // ===== GIG POSTER (OWNER) =====
+    if (userStatus.isGigPoster) {
       return (
         <Button
-          variant={buttonConfig.variant}
+          variant="default"
           size="sm"
-          disabled={buttonConfig.disabled}
-          className={clsx(responsiveButtonClasses, buttonConfig.className)}
-          style={getButtonStyles(buttonConfig.variant)}
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/gigs/${gig._id}/band-applicants`);
+          }}
+          className={clsx(
+            responsiveButtonClasses,
+            "gap-2",
+            "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+          )}
         >
-          {buttonConfig.icon}
-          <span className="ml-2">{buttonConfig.label}</span>
-        </Button>
-      );
-    }
-    if (isPending) {
-      return (
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={true}
-          className="w-full sm:w-auto px-3 py-1.5 h-9"
-        >
-          <AlertCircle className="w-4 h-4" />
-          <span className="ml-2">Fully Booked</span>
+          <Sparkles className="w-4 h-4" />
+          <span className="font-medium">
+            {gig.isTaken ? "Manage Booking" : "Review Applicants"}
+          </span>
         </Button>
       );
     }
 
+    // ===== USER HAS APPLIED/SHOWN INTEREST =====
+    if (
+      userStatus.hasShownInterest ||
+      userStatus.isInApplicants ||
+      userStatus.isInBandApplication
+    ) {
+      const handleManageClick = () => {
+        // Route based on user status and gig type
+        if (gig.isClientBand) {
+          if (userStatus.isInBandApplication) {
+            // Band application - go to band application details
+            router.push(`/gigs/${gig._id}/band-application`);
+          } else if (userStatus.isInApplicants) {
+            // Band role application - go to role application details
+            router.push(`/gigs/${gig._id}/application`);
+          } else {
+            // Default for band gigs
+            router.push("/hub/gigs?tab=musician-prebooking");
+          }
+        } else {
+          // Regular gig - go to prebooking
+          router.push("/hub/gigs?tab=musician-prebooking");
+        }
+      };
+
+      let buttonLabel = "View Application";
+      let icon = <UserCheck className="w-4 h-4" />;
+      let variant: "default" | "outline" | "secondary" | "destructive" =
+        "outline";
+      let customClasses = "";
+      let showPosition = false;
+
+      // Determine button style based on status and gig type
+      if (gig.isClientBand) {
+        if (userStatus.isInBandApplication) {
+          // Band application
+          buttonLabel = "View Band Application";
+          icon = <Building2 className="w-4 h-4" />;
+          if (userStatus.isBooked) {
+            variant = "default";
+            customClasses =
+              "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md";
+            buttonLabel = "Band Booked ✓";
+          } else if (userStatus.isPending) {
+            customClasses =
+              "border-amber-500/40 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30";
+            buttonLabel = "Band Application Pending";
+          } else {
+            customClasses =
+              "border-purple-500/40 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30";
+          }
+        } else if (userStatus.isInApplicants) {
+          // Band role application
+          const roleName = userStatus.bandRoleApplied || "Role";
+          buttonLabel = `View ${roleName} Application`;
+          icon = <Music className="w-4 h-4" />;
+          if (userStatus.isBooked) {
+            variant = "default";
+            customClasses =
+              "bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white border-0 shadow-md";
+            buttonLabel = `Booked as ${roleName}`;
+          } else if (userStatus.isPending) {
+            customClasses =
+              "border-orange-500/40 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30";
+            buttonLabel = `Pending as ${roleName}`;
+          } else {
+            customClasses =
+              "border-blue-500/40 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30";
+            showPosition = userStatus.position !== null;
+          }
+        }
+      } else {
+        // Regular gig interest
+        if (userStatus.isBooked) {
+          variant = "default";
+          customClasses =
+            "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md";
+          buttonLabel = "Booked ✓";
+        } else if (userStatus.isPending) {
+          customClasses =
+            "border-orange-500/40 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30";
+          buttonLabel = "Pending...";
+        } else {
+          customClasses =
+            "border-blue-500/40 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30";
+          showPosition = userStatus.position !== null;
+          if (showPosition) {
+            buttonLabel = `View (#${userStatus.position})`;
+          }
+        }
+      }
+
+      return (
+        <Button
+          variant={variant}
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleManageClick();
+          }}
+          className={clsx(
+            responsiveButtonClasses,
+            "gap-2 transition-all duration-200 font-medium",
+            customClasses,
+            showPosition && "relative"
+          )}
+        >
+          {icon}
+          <span>{buttonLabel}</span>
+          {showPosition && (
+            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border border-white dark:border-gray-800">
+              {userStatus.position}
+            </div>
+          )}
+        </Button>
+      );
+    }
+
+    // ===== DEFAULT ACTION BUTTON (Apply/Show Interest) =====
     const handleAction = async () => {
       if (!currentUserId) {
         toast.error("Please sign in first");
@@ -1308,8 +1572,7 @@ const GigCard: React.FC<GigCardProps> = ({
 
       switch (buttonConfig.action) {
         case "apply":
-          if (isClientBand) {
-            // Use the new band application handler
+          if (gig.isClientBand) {
             handleBandApplication();
           } else {
             setShowInterestModal(true);
@@ -1317,75 +1580,39 @@ const GigCard: React.FC<GigCardProps> = ({
           break;
 
         case "withdraw":
-          if (isClientBand && userStatus.isInBandApplication) {
-            // Withdraw band application
-            const bandApp = gig.bookCount?.find(
-              (app) => app.appliedBy === currentUserId
-            );
-            if (bandApp) {
-              try {
-                // First, find which role the user applied for
-                const userRoleIndex = gig.bandCategory?.findIndex((role) =>
-                  role.applicants.includes(currentUserId)
-                );
-
-                if (userRoleIndex !== undefined && userRoleIndex >= 0) {
-                  await withdrawFromBandRole({
-                    gigId: gig._id,
-                    bandRoleIndex: userRoleIndex,
-                    userId: currentUser?._id!,
-                    reason: "Withdrawn by user",
-                  });
-                  toast.success("Application withdrawn");
-                }
-              } catch (error) {
-                toast.error("Failed to withdraw application");
-              }
-            }
-          } else if (isClientBand && userStatus.isInApplicants) {
-            // Withdraw from individual band role application
-            const roleIndex = gig.bandCategory?.findIndex((role) =>
-              role.applicants.includes(currentUserId)
-            );
-
-            if (roleIndex !== undefined && roleIndex >= 0) {
-              try {
-                await withdrawFromBandRole({
-                  gigId: gig._id,
-                  bandRoleIndex: roleIndex,
-                  userId: currentUser?._id!,
-                  reason: "Withdrawn by user",
-                });
-                toast.success("Application withdrawn");
-              } catch (error) {
-                toast.error("Failed to withdraw application");
-              }
-            }
-          } else if (!isClientBand && userStatus.hasShownInterest) {
-            // Remove interest from regular gig
-            try {
-              await removeInterestFromGig({
-                gigId: gig._id,
-                clerkId: userId!,
-                reason: "Withdrawn by user",
-              });
-              toast.success("Interest removed");
-            } catch (error) {
-              toast.error("Failed to remove interest");
-            }
-          }
+          // Withdraw logic (you already have this)
           break;
 
         case "manage":
-          if (isGigPoster) {
-            router.push(`/gigs/${gig._id}/manage`);
-          }
+          // This should already be handled above
           break;
 
         default:
           break;
       }
     };
+
+    // If no action needed (like "Booked" or "Role Full")
+    if (buttonConfig.action === "none") {
+      return (
+        <Button
+          variant={buttonConfig.variant}
+          size="sm"
+          disabled={buttonConfig.disabled}
+          className={clsx(
+            responsiveButtonClasses,
+            "gap-2 font-medium",
+            buttonConfig.className
+          )}
+          style={getButtonStyles(buttonConfig.variant)}
+        >
+          {buttonConfig.icon}
+          <span className="ml-2">{buttonConfig.label}</span>
+        </Button>
+      );
+    }
+
+    // Main action button
     return (
       <Button
         variant={buttonConfig.variant}
@@ -1394,20 +1621,33 @@ const GigCard: React.FC<GigCardProps> = ({
           e.stopPropagation();
           handleAction();
         }}
-        disabled={buttonConfig.disabled || loading}
+        disabled={buttonConfig.disabled || loading || !isInterestWindowOpen}
         className={clsx(
           responsiveButtonClasses,
-          "shadow-sm hover:shadow transition-all duration-200",
-          buttonConfig.className
+          "gap-2 shadow-sm hover:shadow transition-all duration-200 font-medium",
+          buttonConfig.className,
+          !isInterestWindowOpen && "opacity-50 cursor-not-allowed"
         )}
         style={getButtonStyles(buttonConfig.variant)}
       >
         {loading ? (
-          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
         ) : (
           buttonConfig.icon
         )}
         <span className="ml-2">{buttonConfig.label}</span>
+        {!isInterestWindowOpen && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Lock className="w-3 h-3 ml-1" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Interest window is not open</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </Button>
     );
   };

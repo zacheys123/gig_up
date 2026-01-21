@@ -259,7 +259,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
               {selectedGigData.gig.bandCategory?.length || 0} Roles
             </Badge>
           </div>
-          // In the Roles Summary Card section, update the role display:
+
           <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
             {selectedGigData.gig.bandCategory?.map((role, index) => {
               const roleApplicants =
@@ -327,7 +327,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                             {currentApplicants}/{maxApplicants} applicants
                           </span>
                           <span className={cn("text-xs", colors.textMuted)}>
-                            {role.filledSlots}/{role.maxSlots} filled
+                            {role.filledSlots}/{role.maxSlots} booked
                           </span>
                         </div>
                         <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">

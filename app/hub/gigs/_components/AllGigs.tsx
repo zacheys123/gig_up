@@ -469,7 +469,6 @@ export const AllGigs = ({ user }: { user: any }) => {
     // Cast the bookingHistory entries to fix status types
     const convertedBookingHistory = gig.bookingHistory?.map((entry: any) => ({
       ...entry,
-      // TypeScript will accept this as it's a superset of the required values
       status: entry.status as any,
     }));
 
@@ -481,22 +480,29 @@ export const AllGigs = ({ user }: { user: any }) => {
       })
     );
 
-    // Convert bookCount to BandMember[] if needed
+    // DO NOT convert bookCount - keep it as band applications
     const convertedBookCount = gig.bookCount?.map((entry: any) => ({
       ...entry,
-      // Map to BandMember structure
-      userId: entry.appliedBy || entry.bandId,
-      name: entry.performingMembers?.[0]?.name || "",
-      role: entry.performingMembers?.[0]?.role || "",
-      joinedAt: entry.appliedAt || Date.now(),
-      status: entry.status || "pending",
+      // Keep the original structure
+      bandId: entry.bandId,
+      appliedAt: entry.appliedAt,
+      appliedBy: entry.appliedBy,
+      status: entry.status,
+      performingMembers: entry.performingMembers || [],
+      proposedFee: entry.proposedFee,
+      notes: entry.notes,
+      bookedAt: entry.bookedAt,
+      agreedFee: entry.agreedFee,
+      contractSigned: entry.contractSigned,
+      shortlistedAt: entry.shortlistedAt,
+      shortlistNotes: entry.shortlistNotes,
     }));
 
     return {
       ...gig,
       bookingHistory: convertedBookingHistory,
       bandBookingHistory: convertedBandBookingHistory,
-      bookCount: convertedBookCount,
+      bookCount: convertedBookCount, // This is now correctly typed
       // Cast other problematic fields
       paymentStatus: gig.paymentStatus as any,
     };
@@ -1107,6 +1113,7 @@ export const AllGigs = ({ user }: { user: any }) => {
           ) : (
             filteredGigs.map((gig, index) => {
               const userStatus = getUserStatusForGig(gig);
+
               return (
                 <motion.div
                   key={gig._id}
@@ -1117,10 +1124,11 @@ export const AllGigs = ({ user }: { user: any }) => {
                   whileHover={{ scale: viewMode === "grid" ? 1.02 : 1 }}
                 >
                   <GigCard
+                    key={gig._id}
                     gig={gig}
                     userStatus={userStatus}
                     onClick={() => handleOpenGigDescription(gig)}
-                    showFullGigs={false} // Or true if you want to show fully booked gigs
+                    showFullGigs={false}
                   />
                 </motion.div>
               );

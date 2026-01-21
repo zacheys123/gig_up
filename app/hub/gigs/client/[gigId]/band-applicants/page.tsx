@@ -176,7 +176,88 @@ const extractColorClass = (colorProp: string): string => {
 
   return getColorValue(colorProp);
 };
+const showBookingFeedback = (
+  type: "success" | "error" | "warning",
+  title: string,
+  description?: string,
+  options?: any
+) => {
+  console.log(`📣 showBookingFeedback: ${type} - ${title} - ${description}`);
 
+  const icons = { success: "✅", error: "❌", warning: "⚠️" };
+  if (type === "success") {
+    toast.success(`${icons[type]} ${title}`, {
+      description,
+      duration: 4000,
+      ...options,
+    });
+  } else if (type === "error") {
+    toast.error(`${icons[type]} ${title}`, {
+      description,
+      duration: 5000,
+      ...options,
+    });
+  } else {
+    toast.warning(`${icons[type]} ${title}`, {
+      description,
+      duration: 4000,
+      ...options,
+    });
+  }
+};
+
+const handleConvexError = (error: any, context: string = "booking") => {
+  const errorMessage = error.message || "An unknown error occurred";
+  console.log(`🔍 handleConvexError called: ${errorMessage}`);
+
+  const parts = errorMessage.split(":");
+  const errorType = parts[0];
+
+  console.log(`📊 Parsed error - Type: ${errorType}, Parts:`, parts);
+
+  if (errorType === "ROLE_FULL") {
+    const roleName = parts[1] || "this position";
+    const filled = parts[2] || "1";
+    const total = parts[3] || "1";
+    showBookingFeedback(
+      "error",
+      "Position Filled",
+      `The "${roleName}" position is already full (${filled}/${total} slots). Please choose another musician.`
+    );
+  } else if (errorType === "PERMISSION_DENIED") {
+    showBookingFeedback(
+      "error",
+      "Permission Denied",
+      "Only the band leader can book musicians"
+    );
+  } else if (errorMessage.includes("already full")) {
+    showBookingFeedback(
+      "error",
+      "Position Filled",
+      "This band position has already been filled"
+    );
+  } else {
+    // Check if it's a Convex network error
+    if (
+      errorMessage.includes("Failed to fetch") ||
+      errorMessage.includes("NetworkError")
+    ) {
+      showBookingFeedback(
+        "error",
+        "Network Error",
+        "Unable to connect to server. Please check your internet connection."
+      );
+    } else {
+      showBookingFeedback(
+        "error",
+        "Action Failed",
+        errorMessage || "Please try again or contact support"
+      );
+    }
+  }
+
+  console.error(`Error in ${context}:`, error);
+};
 export default function BandApplicantsPage() {
   const params = useParams();
   const router = useRouter();
@@ -225,32 +306,74 @@ export default function BandApplicantsPage() {
   const unbookFromRole = useMutation(
     api.controllers.bookings.unbookFromBandRole
   );
-
-  // Action handlers
   const handleBookForRole = async (
     applicantUserId: Id<"users">,
     bandRoleIndex: number,
     bandRole: string,
     applicantName: string
   ) => {
+    console.log("📞 handleBookForRole called:", {
+      applicantUserId,
+      bandRoleIndex,
+      bandRole,
+      applicantName,
+      clerkId,
+      gigId,
+    });
+
     if (!clerkId) {
-      toast.error("Please sign in to book musicians");
+      console.log("❌ No clerkId - showing auth error");
+      showBookingFeedback(
+        "error",
+        "Authentication Required",
+        "Please sign in to book musicians"
+      );
       return;
     }
 
     setLoadingBooking(true);
     try {
-      await bookForRole({
+      console.log("🚀 Calling bookForRole mutation...");
+
+      const result = await bookForRole({
         gigId,
         userId: applicantUserId,
         bandRoleIndex,
         clerkId,
         reason: `Booked as ${bandRole}`,
       });
-      toast.success(`Booked ${applicantName} as ${bandRole}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to book");
+
+      console.log("✅ Booking successful:", result);
+
+      // Success feedback based on result
+      const description =
+        result.gigStatus === "fully_booked"
+          ? "All band positions are now filled!"
+          : `${result.remainingSlots} ${bandRole} spot${result.remainingSlots !== 1 ? "s" : ""} remaining`;
+
+      showBookingFeedback(
+        "success",
+        "Musician Booked",
+        `Successfully booked ${applicantName} as ${bandRole}. ${description}`,
+        {
+          action: {
+            label: "View Gig",
+            onClick: () => router.push(`/gigs/${gigId}/manage`),
+          },
+        }
+      );
+    } catch (error: any) {
+      console.error("❌ Caught error in handleBookForRole:", error);
+      console.error("📄 Error message:", error.message);
+      console.error("🔍 Error stack:", error.stack);
+
+      // Log the error type and structure
+      console.log("📊 Error type:", typeof error);
+      console.log("📊 Is Convex error?", error instanceof Error);
+
+      handleConvexError(error, "booking");
     } finally {
+      console.log("🔄 Setting loading to false");
       setLoadingBooking(false);
     }
   };
@@ -261,7 +384,20 @@ export default function BandApplicantsPage() {
     userName: string
   ) => {
     if (!clerkId) {
-      toast.error("Please sign in");
+      showBookingFeedback(
+        "error",
+        "Authentication Required",
+        "Please sign in to perform this action"
+      );
+      return;
+    }
+
+    // Confirmation dialog before unbooking
+    if (
+      !window.confirm(
+        `Are you sure you want to unbook ${userName}? They will be moved back to applicants.`
+      )
+    ) {
       return;
     }
 
@@ -274,9 +410,20 @@ export default function BandApplicantsPage() {
         clerkId,
         reason: "Unbooked by band leader",
       });
-      toast.success(`${userName} has been unbooked`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to unbook");
+
+      showBookingFeedback(
+        "success",
+        "Musician Unbooked",
+        `${userName} has been moved back to applicants`,
+        {
+          action: {
+            label: "Review Applicants",
+            onClick: () => window.location.reload(),
+          },
+        }
+      );
+    } catch (error: any) {
+      handleConvexError(error, "unbooking");
     } finally {
       setLoadingUnbooking(false);
     }
@@ -287,6 +434,15 @@ export default function BandApplicantsPage() {
     bandRoleIndex: number,
     userId: Id<"users">
   ) => {
+    // Confirmation dialog
+    if (
+      !window.confirm(
+        "Are you sure you want to remove this applicant? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
     setLoadingRemoval(true);
     try {
       await removeFromRole({
@@ -295,14 +451,24 @@ export default function BandApplicantsPage() {
         userId,
         reason: "Removed by band leader",
       });
-      toast.success("Applicant removed");
-    } catch (error) {
-      toast.error("Failed to remove applicant");
+
+      showBookingFeedback(
+        "success",
+        "Applicant Removed",
+        "The applicant has been removed from this role",
+        {
+          action: {
+            label: "Refresh",
+            onClick: () => window.location.reload(),
+          },
+        }
+      );
+    } catch (error: any) {
+      handleConvexError(error, "removing applicant");
     } finally {
       setLoadingRemoval(false);
     }
   };
-
   // Role colors using theme colors
   const getRoleColors = (roleIndex: number) => {
     const rolePalette = [
@@ -666,7 +832,6 @@ export default function BandApplicantsPage() {
           </div>
         </div>
 
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {roles.map((role: any, index: number) => {
             const roleApplicants =
@@ -682,57 +847,173 @@ export default function BandApplicantsPage() {
                 ? Math.min((currentApplicants / maxApplicants) * 100, 100)
                 : 0;
 
+            // Check if role is fully booked
+            const isFullyBooked = role.filledSlots >= role.maxSlots;
+            const availableSlots = Math.max(
+              0,
+              role.maxSlots - roleBooked.length
+            );
+
             return (
               <Card
                 key={index}
-                className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md"
-                onClick={() => setSelectedRole(role.role)}
+                className={`cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md relative overflow-hidden ${
+                  isFullyBooked ? "opacity-90" : ""
+                }`}
+                onClick={() => !isFullyBooked && setSelectedRole(role.role)}
                 style={{
                   backgroundColor: themeColors.card,
                   borderColor: isSelected
                     ? roleColors.border
-                    : themeColors.border,
-                  borderLeftColor: roleColors.border,
+                    : isFullyBooked
+                      ? themeColors.destructive
+                      : themeColors.border,
+                  borderLeftColor: isFullyBooked
+                    ? themeColors.destructive
+                    : roleColors.border,
                   borderLeftWidth: "4px",
+                  cursor: isFullyBooked ? "not-allowed" : "pointer",
                 }}
               >
-                <CardContent className="p-4">
+                {/* "Booked" Watermark Overlay */}
+                {isFullyBooked && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-600/10 dark:from-red-500/10 dark:to-red-600/20"></div>
+                    <div
+                      className="relative transform -rotate-45 opacity-20"
+                      style={{
+                        color: themeColors.destructive,
+                      }}
+                    >
+                      <div className="text-5xl md:text-6xl font-black tracking-widest text-center">
+                        BOOKED
+                      </div>
+                      <div className="text-2xl md:text-3xl font-bold text-center mt-2">
+                        FULL
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* "Booked" Ribbon Badge */}
+                {isFullyBooked && (
+                  <div className="absolute -top-2 -right-2 z-20">
+                    <div className="relative">
+                      <div
+                        className="w-24 h-8 flex items-center justify-center transform rotate-45 translate-x-8 -translate-y-2 shadow-lg"
+                        style={{
+                          backgroundColor: themeColors.destructive,
+                          color: themeColors.primaryContrast,
+                        }}
+                      >
+                        <span className="text-xs font-bold tracking-wider">
+                          BOOKED
+                        </span>
+                      </div>
+                      <div
+                        className="absolute top-0 right-0 w-2 h-2"
+                        style={{ backgroundColor: themeColors.destructive }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                <CardContent className="p-4 relative z-0">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4
-                        className="font-semibold text-sm"
-                        style={{ color: themeColors.text }}
-                      >
-                        {role.role}
-                      </h4>
+                      <div className="flex items-center gap-2">
+                        <h4
+                          className="font-semibold text-sm"
+                          style={{
+                            color: isFullyBooked
+                              ? `${themeColors.text}80`
+                              : themeColors.text,
+                          }}
+                        >
+                          {role.role}
+                        </h4>
+                        {isFullyBooked && (
+                          <Badge
+                            className="px-2 py-0.5 text-xs"
+                            style={{
+                              backgroundColor: themeColors.destructive,
+                              color: themeColors.primaryContrast,
+                              borderColor: themeColors.destructive,
+                            }}
+                          >
+                            Full
+                          </Badge>
+                        )}
+                      </div>
                       <p
                         className="text-xs mt-1"
-                        style={{ color: themeColors.textMuted }}
+                        style={{
+                          color: isFullyBooked
+                            ? `${themeColors.textMuted}70`
+                            : themeColors.textMuted,
+                        }}
                       >
                         {roleBooked.length}/{role.maxSlots} booked
                       </p>
                     </div>
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                        isFullyBooked ? "opacity-60" : ""
+                      }`}
                       style={{
-                        backgroundColor: roleColors.bg,
-                        color: roleColors.text,
+                        backgroundColor: isFullyBooked
+                          ? `${themeColors.destructive}20`
+                          : roleColors.bg,
+                        color: isFullyBooked
+                          ? themeColors.destructive
+                          : roleColors.text,
                       }}
                     >
                       <Music className="w-5 h-5" />
                     </div>
                   </div>
 
+                  {/* Status Indicator */}
+                  {isFullyBooked && (
+                    <div
+                      className="my-2 p-2 rounded-md text-center border"
+                      style={{
+                        backgroundColor: `${themeColors.destructive}10`,
+                        borderColor: `${themeColors.destructive}30`,
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <CheckCircle
+                          className="w-4 h-4"
+                          style={{ color: themeColors.destructive }}
+                        />
+                        <span
+                          className="text-xs font-medium"
+                          style={{ color: themeColors.destructive }}
+                        >
+                          All {role.maxSlots} slots filled
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Applicant Capacity Progress Bar */}
                   <div className="mt-3 mb-2">
                     <div className="flex justify-between text-xs mb-1">
-                      <span style={{ color: themeColors.textMuted }}>
+                      <span
+                        style={{
+                          color: isFullyBooked
+                            ? `${themeColors.textMuted}70`
+                            : themeColors.textMuted,
+                        }}
+                      >
                         Applications:
                       </span>
                       <span
                         style={{
-                          color:
-                            applicantPercentage >= 100
+                          color: isFullyBooked
+                            ? themeColors.destructive
+                            : applicantPercentage >= 100
                               ? themeColors.destructive
                               : applicantPercentage >= 80
                                 ? themeColors.warning
@@ -742,19 +1023,33 @@ export default function BandApplicantsPage() {
                         {currentApplicants}/{maxApplicants}
                       </span>
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+                    <div
+                      className="h-2 rounded-full overflow-hidden relative"
+                      style={{
+                        backgroundColor: isFullyBooked
+                          ? `${themeColors.destructive}20`
+                          : isDarkMode
+                            ? "#374151"
+                            : "#e5e7eb",
+                      }}
+                    >
                       <div
                         className="h-full rounded-full transition-all duration-300"
                         style={{
                           width: `${applicantPercentage}%`,
-                          backgroundColor:
-                            applicantPercentage >= 100
+                          backgroundColor: isFullyBooked
+                            ? themeColors.destructive
+                            : applicantPercentage >= 100
                               ? themeColors.destructive
                               : applicantPercentage >= 80
                                 ? themeColors.warning
                                 : themeColors.success,
                         }}
                       />
+                      {/* If fully booked, show a full-width indicator */}
+                      {isFullyBooked && (
+                        <div className="absolute inset-0 h-full rounded-full bg-gradient-to-r from-transparent via-red-500/20 to-transparent animate-pulse"></div>
+                      )}
                     </div>
                     {applicantPercentage >= 100 && (
                       <div
@@ -769,24 +1064,65 @@ export default function BandApplicantsPage() {
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span style={{ color: themeColors.textMuted }}>
+                      <span
+                        style={{
+                          color: isFullyBooked
+                            ? `${themeColors.textMuted}70`
+                            : themeColors.textMuted,
+                        }}
+                      >
                         Available Slots:
                       </span>
-                      <span style={{ color: themeColors.success }}>
-                        {Math.max(0, role.maxSlots - roleBooked.length)}
+                      <span
+                        style={{
+                          color: isFullyBooked
+                            ? themeColors.destructive
+                            : availableSlots > 0
+                              ? themeColors.success
+                              : themeColors.destructive,
+                        }}
+                      >
+                        {isFullyBooked ? "0" : availableSlots}
                       </span>
                     </div>
                     {role.price && (
                       <div className="flex justify-between text-xs">
-                        <span style={{ color: themeColors.textMuted }}>
+                        <span
+                          style={{
+                            color: isFullyBooked
+                              ? `${themeColors.textMuted}70`
+                              : themeColors.textMuted,
+                          }}
+                        >
                           Rate:
                         </span>
-                        <span style={{ color: themeColors.primary }}>
+                        <span
+                          style={{
+                            color: isFullyBooked
+                              ? `${themeColors.primary}80`
+                              : themeColors.primary,
+                          }}
+                        >
                           ${role.price}
                         </span>
                       </div>
                     )}
                   </div>
+
+                  {/* Hover message for fully booked */}
+                  {isFullyBooked && (
+                    <div
+                      className="mt-3 pt-3 border-t"
+                      style={{ borderColor: `${themeColors.destructive}30` }}
+                    >
+                      <p
+                        className="text-xs text-center"
+                        style={{ color: themeColors.destructive }}
+                      >
+                        This role is no longer accepting applications
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -1083,6 +1419,16 @@ export default function BandApplicantsPage() {
                           className="w-full group transition-all"
                           onClick={() => {
                             if (!isBooked) {
+                              // Check if role is already full
+                              const role = roles[user.bandRoleIndex];
+                              if (role && role.filledSlots >= role.maxSlots) {
+                                showBookingFeedback(
+                                  "error",
+                                  "Position Filled",
+                                  `The "${role.role}" position is already full (${role.filledSlots}/${role.maxSlots} slots)`
+                                );
+                                return;
+                              }
                               handleBookForRole(
                                 user.userId,
                                 user.bandRoleIndex,

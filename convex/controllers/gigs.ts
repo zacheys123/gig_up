@@ -44,6 +44,88 @@ export const showInterestInGig = mutation({
     if (!gig) throw new Error("Gig not found");
     if (!user) throw new Error("User not found");
 
+    // 🔴 ADD INSTRUMENT/ROLE VALIDATION FOR REGULAR GIGS
+    // Check if this is a specific talent type gig (not band creation or full band)
+    if (
+      gig.bussinesscat &&
+      gig.bussinesscat !== "other" &&
+      gig.bussinesscat !== "full"
+    ) {
+      const gigCategory = gig.bussinesscat.toLowerCase();
+      const userInstrument = user.instrument?.toLowerCase() || "";
+      const userRoleType = user.roleType?.toLowerCase() || "";
+
+      // For MC gigs - user must be an MC
+      if (gigCategory === "mc") {
+        if (userRoleType !== "mc" && userInstrument !== "mc") {
+          throw new Error(
+            "Only MCs can apply for MC gigs. Your role type is: " +
+              (userRoleType || userInstrument || "not specified")
+          );
+        }
+      }
+      // For DJ gigs - user must be a DJ
+      else if (gigCategory === "dj") {
+        if (userRoleType !== "dj" && userInstrument !== "dj") {
+          throw new Error(
+            "Only DJs can apply for DJ gigs. Your role type is: " +
+              (userRoleType || userInstrument || "not specified")
+          );
+        }
+      }
+      // For vocalist gigs - user must be a vocalist
+      else if (gigCategory === "vocalist") {
+        const isVocalist =
+          userRoleType === "vocalist" ||
+          userInstrument.includes("vocals") ||
+          userInstrument.includes("vocalist") ||
+          user.roleType?.toLowerCase().includes("vocal");
+
+        if (!isVocalist) {
+          throw new Error(
+            "Only vocalists can apply for vocalist gigs. Your role/instrument is: " +
+              (userRoleType || userInstrument || "not specified")
+          );
+        }
+      }
+      // For specific instrument gigs (e.g., pianist, guitarist)
+      else {
+        // Check if gig category matches user's instrument or role type
+        const gigIsInstrument = [
+          "pianist",
+          "guitarist",
+          "drummer",
+          "bassist",
+          "saxophonist",
+          "violinist",
+          "trumpeter",
+          "keyboardist",
+          "percussionist",
+          "trombonist",
+          "flutist",
+          "cellist",
+          "clarinetist",
+          "harpist",
+          "banjoist",
+          "mandolinist",
+          "accordionist",
+        ].includes(gigCategory);
+
+        if (gigIsInstrument) {
+          const userCanApply =
+            userInstrument.includes(gigCategory) ||
+            userRoleType.includes(gigCategory) ||
+            user.instrument?.toLowerCase().includes(gigCategory);
+
+          if (!userCanApply) {
+            throw new Error(
+              `Only ${gigCategory}s can apply for this gig. Your instrument is: ${userInstrument || "not specified"}`
+            );
+          }
+        }
+      }
+    }
+
     // Prevent spam - check if user has shown too much interest recently
     const recentInterests =
       gig.bookingHistory?.filter(
@@ -107,11 +189,9 @@ export const showInterestInGig = mutation({
       throw new Error("The interest period for this gig has ended");
     }
 
-    // Check if this is a band gig
+    // Check if this is a band gig (should use applyForBandRole instead)
     if (gig.isClientBand) {
-      throw new Error(
-        "This is a band gig - use joinBand or bookUserForBand instead"
-      );
+      throw new Error("This is a band gig - use applyForBandRole instead");
     }
 
     // Check if gig is active

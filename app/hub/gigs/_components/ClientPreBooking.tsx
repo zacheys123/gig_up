@@ -78,7 +78,7 @@ import { BookingOptionsSection } from "./BookingOptions";
 import { PreBookingStats } from "./gigs/PreBookingStats";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, easeOut, easeInOut } from "framer-motion";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface ClientPreBookingProps {
@@ -670,7 +670,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       y: 0,
       transition: {
         duration: 0.3,
-        ease: "easeOut",
+        ease: easeOut, // Use imported easing function
       },
     },
     hover: {
@@ -678,7 +678,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       scale: 1.02,
       transition: {
         duration: 0.2,
-        ease: "easeInOut",
+        ease: easeInOut, // Use imported easing function
       },
     },
   };
