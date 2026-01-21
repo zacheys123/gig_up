@@ -56,6 +56,7 @@ import {
   Briefcase,
   Target,
   Award,
+  Edit, // Add Edit icon
 } from "lucide-react";
 
 // Custom Components
@@ -957,7 +958,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         <Card>
           <CardContent className="p-4 md:p-6">
             <div className="space-y-6">
-              {/* Gig Header */}
+              {/* Gig Header - Updated with Edit Button */}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -986,6 +987,20 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                     </div>
                   </div>
                 </div>
+                {/* Edit Button - Added here */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    router.push(
+                      `/hub/gigs/client/edit/${selectedGigData.gig._id}`
+                    );
+                  }}
+                  className="flex items-center gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span className="hidden sm:inline">Edit Gig</span>
+                </Button>
               </div>
 
               {/* Gig Stats */}

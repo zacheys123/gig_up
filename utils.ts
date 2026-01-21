@@ -16,7 +16,7 @@ export const toGigId = (id: string): Id<"gigs"> => {
 export const searchFunc = (
   users: UserProps[],
   searchQuery: string,
-  isBookerEnabled: boolean
+  isBookerEnabled: boolean,
 ): UserProps[] => {
   if (!users || users.length === 0) return [];
 
@@ -44,7 +44,7 @@ export const searchFunc = (
         user?.instrument?.toLowerCase().includes(query) ||
         user?.roleType?.toLowerCase().includes(query) ||
         user?.musiciangenres?.some((genre) =>
-          genre.toLowerCase().includes(query)
+          genre.toLowerCase().includes(query),
         );
       // user?.services?.some((service) =>
       //   service.toLowerCase().includes(query)
@@ -80,7 +80,7 @@ export const searchFunc = (
           user?.companyName?.toLowerCase().includes(query) ||
           user?.agencyName?.toLowerCase().includes(query) ||
           user?.managedArtists?.some((artist) =>
-            artist.toLowerCase().includes(query)
+            artist.toLowerCase().includes(query),
           );
 
         if (bookerMatch) return true;
@@ -107,7 +107,7 @@ export class DeepSeekCostTracker {
 
   static calculateMonthlyCost(
     dailyQuestions: number,
-    days: number = 30
+    days: number = 30,
   ): number {
     const costPerQuestion = this.estimateTypicalCost();
     return costPerQuestion * dailyQuestions * days;
@@ -118,7 +118,7 @@ export class DeepSeekCostTracker {
 console.log("Cost per question:", DeepSeekCostTracker.estimateTypicalCost()); // ~$0.000042
 console.log(
   "Monthly cost (100 questions/day):",
-  DeepSeekCostTracker.calculateMonthlyCost(100)
+  DeepSeekCostTracker.calculateMonthlyCost(100),
 );
 
 // Fixed TypeScript interfaces
@@ -254,7 +254,7 @@ export interface UserProfile {
 }
 
 export const calculateProfileCompletion = (
-  user: UserProfile | null | undefined
+  user: UserProfile | null | undefined,
 ): number => {
   if (!user) return 0;
 
@@ -326,7 +326,7 @@ export const calculateProfileCompletion = (
 
       const totalWeight = teacherFields.reduce(
         (sum, field) => sum + field.weight,
-        0
+        0,
       );
       const completedWeight = teacherFields.reduce((sum, field) => {
         return sum + (field.check() ? field.weight : 0);
@@ -378,7 +378,7 @@ export const calculateProfileCompletion = (
 
       const totalWeight = nonInstrumentFields.reduce(
         (sum, field) => sum + field.weight,
-        0
+        0,
       );
       const completedWeight = nonInstrumentFields.reduce((sum, field) => {
         return sum + (field.check() ? field.weight : 0);
@@ -431,7 +431,7 @@ export const calculateProfileCompletion = (
 
       const totalWeight = musicianFields.reduce(
         (sum, field) => sum + field.weight,
-        0
+        0,
       );
       const completedWeight = musicianFields.reduce((sum, field) => {
         return sum + (field.check() ? field.weight : 0);
@@ -461,7 +461,7 @@ export const calculateProfileCompletion = (
 
     const totalWeight = clientFields.reduce(
       (sum, field) => sum + field.weight,
-      0
+      0,
     );
     const completedWeight = clientFields.reduce((sum, field) => {
       return sum + (field.check() ? field.weight : 0);
@@ -480,7 +480,7 @@ export const getProfileCompletionMessage = (percentage: number): string => {
 };
 
 export const getMissingFields = (
-  user: UserProfile | null | undefined
+  user: UserProfile | null | undefined,
 ): string[] => {
   if (!user) return ["All fields"];
 
@@ -574,7 +574,7 @@ export const getMissingFields = (
 export function formatLastMessage(
   lastMessage: string,
   currentUserId: string,
-  senderId?: string
+  senderId?: string,
 ): string {
   if (!lastMessage) return "No messages yet";
 
@@ -595,7 +595,7 @@ export function formatLastMessage(
 // For media messages
 export function getLastMessagePreview(
   messageType: string,
-  content?: string
+  content?: string,
 ): string {
   switch (messageType) {
     case "image":
@@ -640,7 +640,7 @@ export function isGroupedNotification(item: any): item is GroupedNotification {
 export type NotificationItem = Notification | GroupedNotification;
 
 export const groupNotifications = (
-  notifications: Notification[]
+  notifications: Notification[],
 ): NotificationItem[] => {
   const grouped: NotificationItem[] = [];
   const messageGroup: GroupedNotification = {
@@ -672,7 +672,7 @@ export const groupNotifications = (
       messageGroup.count += 1;
       messageGroup.latestTimestamp = Math.max(
         messageGroup.latestTimestamp,
-        notification.createdAt
+        notification.createdAt,
       );
       messageGroup.isRead = messageGroup.isRead && notification.isRead;
 
@@ -718,7 +718,7 @@ export const groupNotifications = (
 // Handle non-message notifications with individual grouping
 const handleNonMessageNotification = (
   notification: Notification,
-  grouped: NotificationItem[]
+  grouped: NotificationItem[],
 ) => {
   switch (notification.type) {
     case "new_follower":
@@ -749,7 +749,7 @@ const handleNonMessageNotification = (
 // Follow grouping function
 const groupFollowNotification = (
   notification: Notification,
-  grouped: NotificationItem[]
+  grouped: NotificationItem[],
 ) => {
   const followerId =
     notification.metadata?.followerDocumentId ||
@@ -761,7 +761,7 @@ const groupFollowNotification = (
       (item) =>
         isGroupedNotification(item) &&
         item.type === "follow_group" &&
-        item.metadata.followerIds?.includes(followerId)
+        item.metadata.followerIds?.includes(followerId),
     ) as GroupedNotification | undefined;
 
     if (existingGroup) {
@@ -769,7 +769,7 @@ const groupFollowNotification = (
       existingGroup.count += 1;
       existingGroup.latestTimestamp = Math.max(
         existingGroup.latestTimestamp,
-        notification.createdAt
+        notification.createdAt,
       );
       existingGroup.isRead = existingGroup.isRead && notification.isRead;
 
@@ -803,7 +803,7 @@ const groupFollowNotification = (
 // Profile view grouping function
 const groupProfileViewNotification = (
   notification: Notification,
-  grouped: NotificationItem[]
+  grouped: NotificationItem[],
 ) => {
   const viewerId = notification.metadata?.viewerDocumentId;
 
@@ -813,7 +813,7 @@ const groupProfileViewNotification = (
       (item) =>
         isGroupedNotification(item) &&
         item.type === "profile_view_group" &&
-        item.metadata.viewerIds?.includes(viewerId)
+        item.metadata.viewerIds?.includes(viewerId),
     ) as GroupedNotification | undefined;
 
     if (existingGroup) {
@@ -821,7 +821,7 @@ const groupProfileViewNotification = (
       existingGroup.count += 1;
       existingGroup.latestTimestamp = Math.max(
         existingGroup.latestTimestamp,
-        notification.createdAt
+        notification.createdAt,
       );
       existingGroup.isRead = existingGroup.isRead && notification.isRead;
 
@@ -856,7 +856,7 @@ const groupProfileViewNotification = (
 // Gig grouping function
 const groupGigNotification = (
   notification: Notification,
-  grouped: NotificationItem[]
+  grouped: NotificationItem[],
 ) => {
   const gigId = notification.metadata?.gigId || notification.relatedGigId;
 
@@ -866,7 +866,7 @@ const groupGigNotification = (
       (item) =>
         isGroupedNotification(item) &&
         item.type === "gig_group" &&
-        item.metadata.gigIds?.includes(gigId)
+        item.metadata.gigIds?.includes(gigId),
     ) as GroupedNotification | undefined;
 
     if (existingGroup) {
@@ -874,7 +874,7 @@ const groupGigNotification = (
       existingGroup.count += 1;
       existingGroup.latestTimestamp = Math.max(
         existingGroup.latestTimestamp,
-        notification.createdAt
+        notification.createdAt,
       );
       existingGroup.isRead = existingGroup.isRead && notification.isRead;
 
@@ -923,7 +923,7 @@ const getFollowGroupTitle = (type: NotificationType): string => {
 
 const getFollowGroupDescription = (
   notification: Notification,
-  count: number
+  count: number,
 ): string => {
   const name =
     notification.metadata?.followerName ||
@@ -1061,7 +1061,7 @@ export const formatRateType = (rateType?: string): string => {
 export const getRateForGigType = (
   rate: MusicianRate | null | undefined,
   gigType: GigType,
-  musicianRole?: string
+  musicianRole?: string,
 ): RateInfo | null => {
   if (!rate) {
     return null;
@@ -1073,13 +1073,13 @@ export const getRateForGigType = (
   if (rate.categories && rate.categories.length > 0) {
     // Look for exact category match
     let categoryRate = rate.categories.find(
-      (cat) => cat.name.toLowerCase() === category.toLowerCase()
+      (cat) => cat.name.toLowerCase() === category.toLowerCase(),
     );
 
     // If no exact match, try role-based matching for some gig types
     if (!categoryRate && musicianRole) {
       categoryRate = rate.categories.find(
-        (cat) => cat.name.toLowerCase() === musicianRole.toLowerCase()
+        (cat) => cat.name.toLowerCase() === musicianRole.toLowerCase(),
       );
     }
 
@@ -1128,7 +1128,7 @@ export const getRateForGigType = (
 // Helper function to get display rate from categories (for general display)
 export const getDisplayRate = (
   rate: MusicianRate | null | undefined,
-  musicianRole?: string
+  musicianRole?: string,
 ): string => {
   if (!rate) return "Contact for rates";
 
@@ -1172,7 +1172,7 @@ export const getDisplayRate = (
 
 // Function to get all available rates for a musician
 export const getAllRates = (
-  rate: MusicianRate | null | undefined
+  rate: MusicianRate | null | undefined,
 ): RateInfo[] => {
   if (!rate) return [];
 
@@ -1222,7 +1222,7 @@ export const getAllRates = (
 // Function to check if musician has rate for specific gig type
 export const hasRateForGigType = (
   rate: MusicianRate | null | undefined,
-  gigType: GigType
+  gigType: GigType,
 ): boolean => {
   return getRateForGigType(rate, gigType) !== null;
 };
@@ -1230,7 +1230,7 @@ export const hasRateForGigType = (
 // Function to get the best matching rate (for search/filtering)
 export const getBestMatchingRate = (
   rate: MusicianRate | null | undefined,
-  preferredGigTypes: GigType[] = []
+  preferredGigTypes: GigType[] = [],
 ): RateInfo | null => {
   if (!rate) return null;
 
@@ -1248,36 +1248,173 @@ export const getBestMatchingRate = (
 };
 // utils/index.ts or utils/colors-fonts.ts
 export const colors = [
+  // Black & White Shades
   "#000000", // Black
+  "#0A0A0A", // Rich Black
+  "#1A1A1A", // Eerie Black
+  "#2C2C2C", // Jet
+  "#404040", // Onyx
   "#FFFFFF", // White
-  "#FF3B30", // Red
-  "#FF9500", // Orange
-  "#FFCC00", // Yellow
-  "#4CD964", // Green
-  "#5AC8FA", // Blue
-  "#007AFF", // Primary Blue
-  "#5856D6", // Purple
-  "#FF2D55", // Pink
-  "#8B4513", // Brown
+  "#F8F9FA", // Cultured
+  "#E9ECEF", // Anti-flash White
+  "#DEE2E6", // Platinum
+  "#CED4DA", // French Gray
+
+  // Red Shades
+  "#FF3B30", // Red (iOS)
+  "#DC2626", // Red 600
+  "#B91C1C", // Red 700
+  "#991B1B", // Red 800
+  "#7F1D1D", // Red 900
+  "#EF4444", // Tailwind Red 500
+  "#FCA5A5", // Tailwind Red 300
+  "#FECACA", // Tailwind Red 200
+  "#FEE2E2", // Tailwind Red 100
+  "#DC143C", // Crimson
+
+  // Orange Shades
+  "#FF9500", // Orange (iOS)
+  "#EA580C", // Tailwind Orange 600
+  "#C2410C", // Tailwind Orange 700
+  "#9A3412", // Tailwind Orange 800
+  "#7C2D12", // Tailwind Orange 900
+  "#FF8C00", // Dark Orange
+  "#FFA500", // Web Orange
+  "#FFB347", // Light Orange
+  "#FF7F50", // Coral
+  "#FF6347", // Tomato
+
+  // Yellow Shades
+  "#FFCC00", // Yellow (iOS)
+  "#EAB308", // Tailwind Yellow 500
+  "#CA8A04", // Tailwind Yellow 600
+  "#A16207", // Tailwind Yellow 700
+  "#854D0E", // Tailwind Yellow 800
+  "#713F12", // Tailwind Yellow 900
+  "#FFD700", // Gold
+  "#FFEC19", // Cadmium Yellow
+  "#FFEA00", // Safety Yellow
+  "#FFC107", // Amber
+
+  // Green Shades
+  "#4CD964", // Green (iOS)
+  "#22C55E", // Tailwind Green 500
+  "#16A34A", // Tailwind Green 600
+  "#15803D", // Tailwind Green 700
+  "#166534", // Tailwind Green 800
+  "#14532D", // Tailwind Green 900
+  "#32CD32", // Lime Green
+  "#2E8B57", // Sea Green
+  "#228B22", // Forest Green
+  "#006400", // Dark Green
+
+  // Blue Shades
+  "#5AC8FA", // Blue (iOS)
+  "#007AFF", // Primary Blue (iOS)
+  "#0EA5E9", // Tailwind Sky 500
+  "#0284C7", // Tailwind Sky 600
+  "#0369A1", // Tailwind Sky 700
+  "#075985", // Tailwind Sky 800
+  "#0C4A6E", // Tailwind Sky 900
+  "#1E90FF", // Dodger Blue
+  "#4682B4", // Steel Blue
+  "#4169E1", // Royal Blue
+
+  // Purple Shades
+  "#5856D6", // Purple (iOS)
+  "#8B5CF6", // Tailwind Violet 500
+  "#7C3AED", // Tailwind Violet 600
+  "#6D28D9", // Tailwind Violet 700
+  "#5B21B6", // Tailwind Violet 800
+  "#4C1D95", // Tailwind Violet 900
+  "#9370DB", // Medium Purple
+  "#6A5ACD", // Slate Blue
+  "#9932CC", // Dark Orchid
+  "#9400D3", // Dark Violet
+
+  // Pink Shades
+  "#FF2D55", // Pink (iOS)
+  "#EC4899", // Tailwind Pink 500
+  "#DB2777", // Tailwind Pink 600
+  "#BE185D", // Tailwind Pink 700
+  "#9D174D", // Tailwind Pink 800
+  "#831843", // Tailwind Pink 900
+  "#FF69B4", // Hot Pink
+  "#FF1493", // Deep Pink
+  "#C71585", // Medium Violet Red
+  "#DB7093", // Pale Violet Red
+
+  // Brown Shades
+  "#8B4513", // Saddle Brown
   "#A0522D", // Sienna
   "#D2691E", // Chocolate
-  "#1E90FF", // Dodger Blue
-  "#32CD32", // Lime Green
-  "#FF69B4", // Hot Pink
-  "#9370DB", // Medium Purple
+  "#CD853F", // Peru
+  "#BC8F8F", // Rosy Brown
+  "#8B7355", // Burly Wood
+  "#654321", // Dark Brown
+  "#5C4033", // Very Dark Brown
+  "#A0522D", // Sienna
+  "#6F4E37", // Coffee
+
+  // Teal & Cyan Shades
   "#20B2AA", // Light Sea Green
-  "#FF6347", // Tomato
-  "#6A5ACD", // Slate Blue
-  "#2E8B57", // Sea Green
-  "#DAA520", // Golden Rod
-  "#CD5C5C", // Indian Red
+  "#00CED1", // Dark Turquoise
+  "#48D1CC", // Medium Turquoise
+  "#40E0D0", // Turquoise
+  "#00FFFF", // Cyan
+  "#00BFFF", // Deep Sky Blue
+  "#5F9EA0", // Cadet Blue
   "#4682B4", // Steel Blue
-  "#9ACD32", // Yellow Green
+  "#008080", // Teal
+  "#008B8B", // Dark Cyan
+
+  // Gold & Metallic Shades
+  "#DAA520", // Golden Rod
+  "#FFD700", // Gold
+  "#F0E68C", // Khaki
+  "#EEE8AA", // Pale Golden Rod
+  "#B8860B", // Dark Golden Rod
+  "#CD853F", // Peru
+  "#DAA520", // Golden Rod
+  "#BDB76B", // Dark Khaki
+  "#F4A460", // Sandy Brown
+  "#DEB887", // Burly Wood
+
+  // Pastel Shades
+  "#FFB6C1", // Light Pink
+  "#FFDAB9", // Peach Puff
+  "#E6E6FA", // Lavender
+  "#D8BFD8", // Thistle
+  "#B0E0E6", // Powder Blue
+  "#AFEEEE", // Pale Turquoise
+  "#98FB98", // Pale Green
+  "#FFFACD", // Lemon Chiffon
+  "#FFE4E1", // Misty Rose
+  "#F5F5DC", // Beige
+
+  // Dark & Rich Colors
+  "#2F4F4F", // Dark Slate Gray
+  "#696969", // Dim Gray
+  "#808080", // Gray
+  "#A9A9A9", // Dark Gray
+  "#C0C0C0", // Silver
+  "#800000", // Maroon
+  "#8B0000", // Dark Red
+  "#483D8B", // Dark Slate Blue
+  "#2E8B57", // Sea Green
+  "#556B2F", // Dark Olive Green
+
+  // Vibrant Modern Colors
+  "#00FF7F", // Spring Green
+  "#7FFF00", // Chartreuse
+  "#FF00FF", // Magenta
   "#FF4500", // Orange Red
   "#DA70D6", // Orchid
-  "#00CED1", // Dark Turquoise
-  "#FF8C00", // Dark Orange
-  "#9932CC", // Dark Orchid
+  "#BA55D3", // Medium Orchid
+  "#9370DB", // Medium Purple
+  "#8A2BE2", // Blue Violet
+  "#4B0082", // Indigo
+  "#2E8B57", // Sea Green
 ];
 
 export const fonts = [
@@ -1311,6 +1448,40 @@ export const fonts = [
   "Segoe UI, sans-serif",
   "Calibri, sans-serif",
   "Candara, sans-serif",
+  // Modern Fonts
+  "Inter, sans-serif",
+  "Poppins, sans-serif",
+  "Roboto, sans-serif",
+  "Montserrat, sans-serif",
+  "Open Sans, sans-serif",
+  "Lato, sans-serif",
+  "Raleway, sans-serif",
+  "Nunito, sans-serif",
+  "Source Sans Pro, sans-serif",
+  "Ubuntu, sans-serif",
+  // Serif Modern
+  "Playfair Display, serif",
+  "Merriweather, serif",
+  "Libre Baskerville, serif",
+  "Crimson Text, serif",
+  "Source Serif Pro, serif",
+  // Monospace Modern
+  "Roboto Mono, monospace",
+  "Source Code Pro, monospace",
+  "Fira Code, monospace",
+  "Cascadia Code, monospace",
+  "JetBrains Mono, monospace",
+  // Display Fonts
+  "Oswald, sans-serif",
+  "Anton, sans-serif",
+  "Bebas Neue, sans-serif",
+  "Lobster, cursive",
+  "Pacifico, cursive",
+  "Dancing Script, cursive",
+  "Great Vibes, cursive",
+  "Parisienne, cursive",
+  "Sacramento, cursive",
+  "Shadows Into Light, cursive",
 ];
 
 // You can also create utility functions for handling colors
@@ -1349,7 +1520,7 @@ export const colorUtils = {
   generateGradient: (
     color1: string,
     color2: string,
-    angle: number = 45
+    angle: number = 45,
   ): string => {
     return `linear-gradient(${angle}deg, ${color1}, ${color2})`;
   },
@@ -1400,7 +1571,7 @@ export const fontUtils = {
       "Bodoni",
     ];
     return serifFonts.some((serif) =>
-      font.toLowerCase().includes(serif.toLowerCase())
+      font.toLowerCase().includes(serif.toLowerCase()),
     );
   },
 
@@ -1418,7 +1589,7 @@ export const fontUtils = {
       "Calibri",
     ];
     return sansSerifFonts.some((sans) =>
-      font.toLowerCase().includes(sans.toLowerCase())
+      font.toLowerCase().includes(sans.toLowerCase()),
     );
   },
 
@@ -1426,7 +1597,7 @@ export const fontUtils = {
   isMonospace: (font: string): boolean => {
     const monoFonts = ["monospace", "Courier", "Lucida Console"];
     return monoFonts.some((mono) =>
-      font.toLowerCase().includes(mono.toLowerCase())
+      font.toLowerCase().includes(mono.toLowerCase()),
     );
   },
 
@@ -1434,7 +1605,7 @@ export const fontUtils = {
   isCursive: (font: string): boolean => {
     const cursiveFonts = ["cursive", "Comic", "Brush", "Lucida Handwriting"];
     return cursiveFonts.some((cursive) =>
-      font.toLowerCase().includes(cursive.toLowerCase())
+      font.toLowerCase().includes(cursive.toLowerCase()),
     );
   },
 };
@@ -1517,7 +1688,7 @@ export const prepareGigDataForConvex = (
   schedulingProcedure: any,
   bandRoles: BandRoleInput[],
   durationFrom?: string,
-  durationTo?: string
+  durationTo?: string,
 ) => {
   // 1. VALIDATE REQUIRED FIELDS FIRST
   if (!formValues.bussinesscat) {
@@ -1710,7 +1881,7 @@ export const prepareGigDataForConvex = (
 // Function to format gig price for display
 export const formatGigPrice = (
   price: number,
-  currency: string = "KES"
+  currency: string = "KES",
 ): string => {
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -1771,7 +1942,7 @@ export const getTalentTypeIcon = (type: string): string => {
 // Function to validate gig form
 export const validateGigForm = (
   formData: GigFormInputs,
-  bussinesscat: string | null
+  bussinesscat: string | null,
 ): Record<string, string> => {
   const errors: Record<string, string> = {};
 
@@ -2052,7 +2223,7 @@ interface GigForStatusCheck {
 
 export const getUserGigStatus = (
   gig: GigForStatusCheck,
-  currentUserId: Id<"users"> | null
+  currentUserId: Id<"users"> | null,
 ): GigUserStatus => {
   if (!currentUserId) {
     return {
@@ -2076,6 +2247,7 @@ export const getUserGigStatus = (
 
   const isGigPoster = gig.postedBy === currentUserId;
   const isClientBand = gig.isClientBand || false;
+  const bookCount = gig.bookCount || [];
 
   // Initialize base status
   const baseStatus: GigUserStatus = {
@@ -2096,7 +2268,7 @@ export const getUserGigStatus = (
     isBooked: false,
   };
 
-  // ========== REGULAR GIG LOGIC ==========
+  // ========== REGULAR GIG LOGIC (individual users) ==========
   if (!isClientBand) {
     const interestedUsers = gig.interestedUsers || [];
     const hasShownInterest = interestedUsers.includes(currentUserId);
@@ -2130,24 +2302,35 @@ export const getUserGigStatus = (
     return baseStatus;
   }
 
-  // ========== BAND GIG LOGIC (bandCategory only) ==========
+  // ========== BAND GIG LOGIC ==========
   if (isClientBand) {
-    // Check band roles - ONLY use bandCategory, ignore bookCount
+    // Check if user has applied as part of a band (through bookCount)
+    const userBandApplication = bookCount.find((application) => {
+      // Check if user is the applicant OR part of performing members
+      return (
+        application.appliedBy === currentUserId ||
+        application.performingMembers.some(
+          (member) => member.userId === currentUserId,
+        )
+      );
+    });
+
+    // Check band roles (bandCategory)
     const bandRoles = gig.bandCategory || [];
     let userRoleDetails = null;
-    let foundRole = false;
+    let foundInBandCategory = false;
 
     for (const role of bandRoles) {
       const isApplicant = role.applicants.includes(currentUserId);
       const isBooked = role.bookedUsers.includes(currentUserId);
 
       if (isApplicant || isBooked) {
-        foundRole = true;
+        foundInBandCategory = true;
         baseStatus.isInApplicants = isApplicant;
         baseStatus.isInBookedUsers = isBooked;
         baseStatus.bandRoleApplied = role.role;
-        baseStatus.isBooked = isBooked; // Set isBooked based on bookedUsers
-        baseStatus.isPending = isApplicant && !isBooked; // Set isPending if applicant but not booked
+        baseStatus.isBooked = isBooked;
+        baseStatus.isPending = isApplicant && !isBooked;
 
         userRoleDetails = {
           role: role.role,
@@ -2161,16 +2344,32 @@ export const getUserGigStatus = (
       }
     }
 
-    // If user is not found in any role, check if they can apply to any role
-    if (!foundRole) {
+    // Set band application status if found
+    if (userBandApplication) {
+      baseStatus.isInBandApplication = true;
+      baseStatus.bandApplicationId = userBandApplication.bandId;
+      baseStatus.isPending =
+        userBandApplication.status === "applied" ||
+        userBandApplication.status === "shortlisted" ||
+        userBandApplication.status === "interviewed";
+      baseStatus.isBooked =
+        userBandApplication.status === "booked" ||
+        userBandApplication.status === "confirmed" ||
+        userBandApplication.status === "completed";
+    }
+
+    // If user is not found anywhere, check if they can apply
+    if (!foundInBandCategory && !userBandApplication) {
       const availableRoles = bandRoles.filter(
-        (role) => role.filledSlots < role.maxSlots
+        (role) => role.filledSlots < role.maxSlots,
       );
       baseStatus.canApply = availableRoles.length > 0;
     } else {
-      // User is found in a role
+      // User is found somewhere
       baseStatus.canWithdraw =
-        baseStatus.isInApplicants || baseStatus.isInBookedUsers;
+        baseStatus.isInApplicants ||
+        baseStatus.isInBandApplication ||
+        baseStatus.isInBookedUsers;
     }
 
     // Determine status message
@@ -2179,14 +2378,26 @@ export const getUserGigStatus = (
       baseStatus.statusBadgeVariant = "default";
       baseStatus.canManage = true;
     } else if (baseStatus.isBooked) {
-      baseStatus.statusMessage = `Booked as ${baseStatus.bandRoleApplied || "band member"}`;
+      if (userBandApplication) {
+        baseStatus.statusMessage = `Band Booked (${userBandApplication.status || "booked"})`;
+      } else {
+        baseStatus.statusMessage = `Booked as ${baseStatus.bandRoleApplied || "band member"}`;
+      }
       baseStatus.statusBadgeVariant = "default";
     } else if (baseStatus.isPending) {
-      baseStatus.statusMessage = `Pending as ${baseStatus.bandRoleApplied}`;
+      if (userBandApplication) {
+        baseStatus.statusMessage = `Band Pending (${userBandApplication.status || "applied"})`;
+      } else {
+        baseStatus.statusMessage = `Pending as ${baseStatus.bandRoleApplied}`;
+      }
       baseStatus.statusBadgeVariant = "outline";
       baseStatus.canWithdraw = true;
     } else if (baseStatus.isInApplicants) {
       baseStatus.statusMessage = `Applied as ${baseStatus.bandRoleApplied}`;
+      baseStatus.statusBadgeVariant = "outline";
+      baseStatus.canWithdraw = true;
+    } else if (baseStatus.isInBandApplication) {
+      baseStatus.statusMessage = `Band Applied (${userBandApplication?.status || "applied"})`;
       baseStatus.statusBadgeVariant = "outline";
       baseStatus.canWithdraw = true;
     } else if (userRoleDetails?.isRoleFull) {
@@ -2203,7 +2414,7 @@ export const getUserGigStatus = (
       baseStatus.roleDetails = userRoleDetails;
     }
 
-    // Add position info (based on applicant position in the role)
+    // Add position info
     if (baseStatus.isInApplicants) {
       const role = bandRoles.find((r) => r.applicants.includes(currentUserId));
       if (role) {
@@ -2230,7 +2441,7 @@ export type ActionButtonConfig = {
 // Helper to get stats for user across all gigs
 export const getUserGigStats = (
   gigs: GigForStatusCheck[],
-  userId: Id<"users"> | null
+  userId: Id<"users"> | null,
 ) => {
   const stats = {
     posted: 0,

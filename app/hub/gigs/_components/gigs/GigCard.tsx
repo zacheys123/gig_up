@@ -251,7 +251,7 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
             variant={badgeProps.variant}
             className={clsx(
               "inline-flex items-center gap-1 text-xs font-medium px-2 py-1",
-              badgeProps.className
+              badgeProps.className,
             )}
           >
             <Icon className="w-3 h-3 flex-shrink-0" />
@@ -285,7 +285,7 @@ const getActionButtonConfig = (
     isTaken?: boolean;
     bookCount?: Array<any>;
     maxSlots?: number; // Add this
-  }
+  },
 ): ActionButtonConfig => {
   const isClientBand = gig.isClientBand || false;
   const bookCount = gig.bookCount || [];
@@ -534,13 +534,13 @@ const GigCard: React.FC<GigCardProps> = ({
   // Convex mutations
   const showInterestInGig = useMutation(api.controllers.gigs.showInterestInGig);
   const removeInterestFromGig = useMutation(
-    api.controllers.gigs.removeInterestFromGig
+    api.controllers.gigs.removeInterestFromGig,
   );
   const applyForBandRole = useMutation(
-    api.controllers.bookings.applyForBandRole
+    api.controllers.bookings.applyForBandRole,
   );
   const withdrawFromBandRole = useMutation(
-    api.controllers.bookings.withdrawFromBandRole
+    api.controllers.bookings.withdrawFromBandRole,
   );
   const saveGig = useMutation(api.controllers.gigs.saveGig);
   const unsaveGig = useMutation(api.controllers.gigs.unsaveGig);
@@ -555,7 +555,7 @@ const GigCard: React.FC<GigCardProps> = ({
 
   const userData = useQuery(
     api.controllers.user.getCurrentUser,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   const currentUserId = currentUser?._id;
@@ -623,7 +623,7 @@ const GigCard: React.FC<GigCardProps> = ({
       if (roleDetails) {
         return Math.min(
           (roleDetails.filledSlots / roleDetails.maxSlots) * 100,
-          100
+          100,
         );
       }
       return 0;
@@ -671,7 +671,7 @@ const GigCard: React.FC<GigCardProps> = ({
   const bandIsFull = bandCount >= (gig.maxSlots || 5);
   const totalBandMembers = bandApplications.reduce(
     (total, band) => total + (band.performingMembers?.length || 0),
-    0
+    0,
   );
 
   // Format date and time
@@ -724,14 +724,14 @@ const GigCard: React.FC<GigCardProps> = ({
 
     // Find roles that are available AND user is qualified for
     const availableRoles = gig.bandCategory.filter(
-      (role) => role.filledSlots < role.maxSlots
+      (role) => role.filledSlots < role.maxSlots,
     );
 
     if (availableRoles.length === 0) return false;
 
     // Check if user is qualified for any available role
     return availableRoles.some((role) =>
-      isUserQualifiedForRole(currentUser, role)
+      isUserQualifiedForRole(currentUser, role),
     );
   }, [currentUser, gig.bandCategory]);
 
@@ -741,7 +741,7 @@ const GigCard: React.FC<GigCardProps> = ({
     return gig.bandCategory.filter(
       (role) =>
         role.filledSlots < role.maxSlots &&
-        isUserQualifiedForRole(currentUser, role)
+        isUserQualifiedForRole(currentUser, role),
     );
   }, [currentUser, gig.bandCategory]);
 
@@ -789,7 +789,7 @@ const GigCard: React.FC<GigCardProps> = ({
               Update your skills in your profile to apply
             </p>
           </div>
-        </div>
+        </div>,
       );
       return;
     }
@@ -863,7 +863,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 Position #{userPosition || "?"} • {availableSlots} left
               </p>
             </div>
-          </div>
+          </div>,
         );
       }
     } catch (error) {
@@ -885,15 +885,41 @@ const GigCard: React.FC<GigCardProps> = ({
       if (!currentUserId) return null;
 
       const isGigPoster = currentUserId === gig.postedBy;
+      const hasApplied = role.applicants.includes(currentUserId);
+      const isBooked = role.bookedUsers.includes(currentUserId);
+      const isRoleFull = role.filledSlots >= role.maxSlots;
+      const hasApplicants = role.applicants.length > 0;
+      const hasBookedUsers = role.bookedUsers.length > 0;
 
+      // ========== GIG POSTER (OWNER) ACTIONS ==========
       if (isGigPoster) {
-        const hasApplicants = role.applicants.length > 0;
-        const hasBookedUsers = role.bookedUsers.length > 0;
+        // If there are booked users, show manage button
+        if (hasBookedUsers) {
+          return {
+            type: "manage",
+            label: "Manage Booked",
+            variant: "default",
+            action: () => {
+              router.push(`/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`);
+              return Promise.resolve();
+            },
+            disabled: false,
+            routing: {
+              forMusician: "",
+              forClient: `/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`,
+              message: "Manage booked musicians",
+            },
+            icon: <Users className="w-4 h-4" />,
+            className:
+              "bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0",
+          };
+        }
 
-        if (hasApplicants && !hasBookedUsers) {
+        // If there are applicants, show review button
+        if (hasApplicants) {
           return {
             type: "review",
-            label: "Review",
+            label: "Review Applicants",
             variant: "default",
             action: async () => {
               router.push(`/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`);
@@ -905,67 +931,53 @@ const GigCard: React.FC<GigCardProps> = ({
               forClient: `/gigs/${gig._id}/review?roleIndex=${bandRoleIndex}`,
               message: "Review applicants",
             },
-          };
-        } else if (hasBookedUsers) {
-          return {
-            type: "manage",
-            label: "Manage",
-            variant: "outline",
-            action: () => {
-              router.push(`/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`);
-              return Promise.resolve();
-            },
-            disabled: false,
-            routing: {
-              forMusician: "",
-              forClient: `/gigs/${gig._id}/manage?roleIndex=${bandRoleIndex}`,
-              message: "Manage musicians",
-            },
-          };
-        } else {
-          return {
-            type: "edit",
-            label: "Edit",
-            variant: "outline",
-            action: () => {
-              router.push(`/hub/gigs/client/edit/${gig._id}`);
-              return Promise.resolve();
-            },
-            disabled: false,
-            routing: {
-              forMusician: "",
-              forClient: `/hub/gigs/client/edit/${gig._id}`,
-              message: "Edit gig",
-            },
-            icon: <Edit className="w-4 h-4" />,
+            icon: <UserCheck className="w-4 h-4" />,
             className:
-              "border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20",
+              "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0",
           };
         }
+
+        // Default for gig owners - EDIT button (always shown)
+        return {
+          type: "edit",
+          label: "Edit Role",
+          variant: "outline",
+          action: () => {
+            router.push(`/hub/gigs/edit/${gig._id}?roleIndex=${bandRoleIndex}`);
+            return Promise.resolve();
+          },
+          disabled: false,
+          routing: {
+            forMusician: "",
+            forClient: `/hub/gigs/edit/${gig._id}?roleIndex=${bandRoleIndex}`,
+            message: "Edit this role",
+          },
+          icon: <Edit className="w-4 h-4" />,
+          className:
+            "border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-600",
+        };
       }
 
-      const hasApplied = role.applicants.includes(currentUserId);
-      const isBooked = role.bookedUsers.includes(currentUserId);
-      const isRoleFull = role.filledSlots >= role.maxSlots;
+      // ========== MUSICIAN (NON-OWNER) ACTIONS ==========
 
+      // ===== BOOKED =====
       if (isBooked) {
         return {
           type: "leave",
-          label: "Leave",
-          variant: "destructive",
+          label: "Booked - Leave",
+          variant: "outline",
           action: async () => {
             try {
               await withdrawFromBandRole({
                 gigId: gig._id,
                 bandRoleIndex,
                 userId: currentUser?._id!,
-
                 reason: "Left voluntarily",
               });
               toast.success("Left the role");
             } catch (error) {
               toast.error(
-                error instanceof Error ? error.message : "Failed to leave"
+                error instanceof Error ? error.message : "Failed to leave",
               );
             }
           },
@@ -975,30 +987,79 @@ const GigCard: React.FC<GigCardProps> = ({
             forClient: "/hub/gigs?tab=my-gigs",
             message: "Booked for this role",
           },
+          icon: <CheckCircle className="w-4 h-4" />,
+          className:
+            "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20",
         };
       }
 
+      // ===== APPLIED (PENDING) =====
       if (hasApplied && !isBooked) {
         return {
           type: "pending",
-          label: "Pending",
+          label: "Applied - Pending",
           variant: "outline",
-          action: null,
-          disabled: true,
+          action: async () => {
+            // Optional: Add withdraw functionality here
+            try {
+              await withdrawFromBandRole({
+                gigId: gig._id,
+                bandRoleIndex,
+                userId: currentUser?._id!,
+                reason: "Withdrew application",
+              });
+              toast.success("Application withdrawn");
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : "Failed to withdraw",
+              );
+            }
+          },
+          disabled: false,
           routing: {
             forMusician: "/hub/gigs?tab=pending",
             forClient: "/hub/gigs?tab=my-gigs",
             message: "Application pending",
           },
+          icon: <Clock className="w-4 h-4" />,
+          className:
+            "border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
         };
       }
 
+      // ===== ROLE FULL =====
+      if (isRoleFull && !hasApplied && !isBooked) {
+        return {
+          type: "full",
+          label: "Role Full",
+          variant: "secondary",
+          action: null,
+          disabled: true,
+          routing: {
+            forMusician: "/hub/gigs?tab=all",
+            forClient: "/hub/gigs?tab=my-gigs",
+            message: "Role full",
+          },
+          icon: <AlertCircle className="w-4 h-4" />,
+          className: "bg-gray-100 text-gray-500 border-gray-300",
+        };
+      }
+
+      // ===== CAN APPLY =====
       if (!isRoleFull && !hasApplied && !isBooked) {
+        // Check if user is qualified for this role
+        const isQualified = isUserQualifiedForRole(currentUser!, role);
+
         return {
           type: "apply",
-          label: "Apply",
-          variant: "default",
+          label: isQualified ? "Apply" : "View Requirements",
+          variant: isQualified ? "default" : "outline",
           action: async () => {
+            if (!isQualified) {
+              toast.error("You don't meet the requirements for this role");
+              return;
+            }
+
             try {
               await applyForBandRole({
                 gigId: gig._id,
@@ -1009,37 +1070,48 @@ const GigCard: React.FC<GigCardProps> = ({
               toast.success("Application submitted!");
             } catch (error) {
               toast.error(
-                error instanceof Error ? error.message : "Failed to apply"
+                error instanceof Error ? error.message : "Failed to apply",
               );
             }
           },
-          disabled: false,
+          disabled: !isQualified,
           routing: {
             forMusician: "/hub/gigs?tab=all",
             forClient: "/hub/gigs?tab=my-gigs",
             message: "Apply for role",
           },
+          icon: isQualified ? (
+            <UserPlus className="w-4 h-4" />
+          ) : (
+            <AlertCircle className="w-4 h-4" />
+          ),
+          className: isQualified
+            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0 hover:from-blue-700 hover:to-indigo-700"
+            : "border-gray-400 text-gray-500 hover:bg-gray-50",
         };
       }
 
-      if (isRoleFull && !hasApplied && !isBooked) {
-        return {
-          type: "full",
-          label: "Full",
-          variant: "secondary",
-          action: null,
-          disabled: true,
-          routing: {
-            forMusician: "/hub/gigs?tab=all",
-            forClient: "/hub/gigs?tab=my-gigs",
-            message: "Role full",
-          },
-        };
-      }
-
-      return null;
+      // ===== DEFAULT (VIEW DETAILS) =====
+      return {
+        type: "review",
+        label: "View Details",
+        variant: "outline",
+        action: () => {
+          router.push(`/gigs/${gig._id}?roleIndex=${bandRoleIndex}`);
+          return Promise.resolve();
+        },
+        disabled: false,
+        routing: {
+          forMusician: `/gigs/${gig._id}?roleIndex=${bandRoleIndex}`,
+          forClient: `/gigs/${gig._id}?roleIndex=${bandRoleIndex}`,
+          message: "View role details",
+        },
+        icon: <Eye className="w-4 h-4" />,
+        className:
+          "border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
+      };
     },
-    [gig, currentUser, userId, interestNotes, router]
+    [gig, currentUser, userId, interestNotes, router],
   );
   // Save/favorite handlers
   const handleSave = async () => {
@@ -1175,7 +1247,7 @@ const GigCard: React.FC<GigCardProps> = ({
   };
 
   const getButtonStyles = (
-    variant: "default" | "outline" | "secondary" | "destructive" = "default"
+    variant: "default" | "outline" | "secondary" | "destructive" = "default",
   ) => {
     const bgColor = gig.backgroundColor;
     const fontColor = gig.fontColor;
@@ -1405,7 +1477,157 @@ const GigCard: React.FC<GigCardProps> = ({
       </div>
     );
   };
+  // Update your renderBandRoleActions function to this:
+  const renderBandRoleActions = () => {
+    if (!gig.bandCategory || gig.bandCategory.length === 0) return null;
+    if (compact) return null; // Don't show in compact mode
 
+    return (
+      <div
+        className="space-y-3 mt-4 pt-4 border-t"
+        style={{
+          borderTopColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
+        }}
+      >
+        <div
+          className={cn(
+            "text-sm font-semibold flex items-center gap-2",
+            colors.text,
+          )}
+        >
+          <Music className="w-4 h-4" />
+          Band Roles ({gig.bandCategory.length})
+        </div>
+        <div className="space-y-2">
+          {gig.bandCategory.map((role, index) => {
+            const action = handleBandAction(index);
+            const roleColors = getRoleColors(index);
+
+            if (!action) return null;
+
+            return (
+              <div
+                key={index}
+                className={cn(
+                  "flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border transition-all hover:shadow-sm",
+                  colors.border,
+                  colors.hoverBg,
+                )}
+              >
+                {/* Role Info */}
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-1"
+                    style={{
+                      backgroundColor: roleColors.bg,
+                      color: roleColors.text,
+                    }}
+                  >
+                    <span className="text-lg">{getRoleIcon(role.role)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h4
+                        className={cn(
+                          "font-semibold text-sm truncate",
+                          colors.text,
+                        )}
+                      >
+                        {role.role}
+                      </h4>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs flex-shrink-0 px-2 py-0.5",
+                          colors.border,
+                        )}
+                      >
+                        {role.filledSlots}/{role.maxSlots} slots
+                      </Badge>
+                      {role.price && (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200"
+                        >
+                          ${role.price}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {role.description && (
+                      <p
+                        className={cn("text-xs line-clamp-2", colors.textMuted)}
+                      >
+                        {role.description}
+                      </p>
+                    )}
+
+                    {role.requiredSkills && role.requiredSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {role.requiredSkills.slice(0, 2).map((skill, i) => (
+                          <Badge
+                            key={i}
+                            variant="outline"
+                            className="text-xs border-purple-300 text-purple-600 dark:text-purple-400"
+                          >
+                            {skill}
+                          </Badge>
+                        ))}
+                        {role.requiredSkills.length > 2 && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-gray-300 text-gray-500"
+                          >
+                            +{role.requiredSkills.length - 2} more
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                {action && (
+                  <div className="flex-shrink-0">
+                    <Button
+                      variant={action.variant}
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (action.action) {
+                          action.action();
+                        }
+                      }}
+                      disabled={action.disabled}
+                      className={cn(
+                        "text-xs h-9 px-4 whitespace-nowrap",
+                        action.className,
+                        // Make edit button more prominent
+                        action.type === "edit" &&
+                          "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-sm",
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        {action.icon}
+                        <span>{action.label}</span>
+                      </span>
+                    </Button>
+
+                    {/* Tooltip for disabled buttons */}
+                    {action.disabled && action.type === "full" && (
+                      <p className="text-xs text-gray-500 mt-1 text-center">
+                        All slots filled
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
   // Check interest window status
   const interestWindowStatus = getInterestWindowStatus(gig);
   const isInterestWindowOpen = interestWindowStatus.status === "open";
@@ -1414,34 +1636,57 @@ const GigCard: React.FC<GigCardProps> = ({
 
     const responsiveButtonClasses = "w-full sm:w-auto px-3 py-1.5 h-9";
 
-    // Get the action button config
+    // In renderActionButton function:
     const buttonConfig = getActionButtonConfig(userStatus, {
       isClientBand: gig.isClientBand || false,
       isTaken: gig.isTaken || false,
       bookCount: gig.bookCount || [],
+      maxSlots: gig.maxSlots, // Add this
     });
 
     // ===== GIG POSTER (OWNER) =====
+    // In your renderActionButton function, modify the GIG POSTER section:
+    // ===== GIG POSTER (OWNER) =====
     if (userStatus.isGigPoster) {
       return (
-        <Button
-          variant="default"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push(`/gigs/${gig._id}/band-applicants`);
-          }}
-          className={clsx(
-            responsiveButtonClasses,
-            "gap-2",
-            "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
-          )}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span className="font-medium">
-            {gig.isTaken ? "Manage Booking" : "Review Applicants"}
-          </span>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/gigs/${gig._id}/band-applicants`);
+            }}
+            className={clsx(
+              responsiveButtonClasses,
+              "gap-2",
+              "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg transition-all duration-200",
+            )}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="font-medium">
+              {gig.isTaken ? "Manage Booking" : "Review Applicants"}
+            </span>
+          </Button>
+
+          {/* Add Edit Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/hub/gigs/client/edit/${gig._id}`);
+            }}
+            className={clsx(
+              responsiveButtonClasses,
+              "gap-2",
+              "border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-600",
+            )}
+          >
+            <Edit className="w-4 h-4" />
+            <span>Edit</span>
+          </Button>
+        </div>
       );
     }
 
@@ -1549,7 +1794,7 @@ const GigCard: React.FC<GigCardProps> = ({
             responsiveButtonClasses,
             "gap-2 transition-all duration-200 font-medium",
             customClasses,
-            showPosition && "relative"
+            showPosition && "relative",
           )}
         >
           {icon}
@@ -1602,7 +1847,7 @@ const GigCard: React.FC<GigCardProps> = ({
           className={clsx(
             responsiveButtonClasses,
             "gap-2 font-medium",
-            buttonConfig.className
+            buttonConfig.className,
           )}
           style={getButtonStyles(buttonConfig.variant)}
         >
@@ -1626,7 +1871,7 @@ const GigCard: React.FC<GigCardProps> = ({
           responsiveButtonClasses,
           "gap-2 shadow-sm hover:shadow transition-all duration-200 font-medium",
           buttonConfig.className,
-          !isInterestWindowOpen && "opacity-50 cursor-not-allowed"
+          !isInterestWindowOpen && "opacity-50 cursor-not-allowed",
         )}
         style={getButtonStyles(buttonConfig.variant)}
       >
@@ -1731,7 +1976,7 @@ const GigCard: React.FC<GigCardProps> = ({
               isClientBand && userStatus.isInBandApplication,
             "ring-1 ring-green-500":
               !isClientBand && userStatus.hasShownInterest,
-          }
+          },
         )}
         onClick={handleClick}
         style={getCardStyles()}
@@ -1861,7 +2106,19 @@ const GigCard: React.FC<GigCardProps> = ({
 
           {/* Progress bar */}
           {renderProgressBar()}
-
+          {/* Inside the main return statement, add: */}
+          {isClientBand && gig.bandCategory && gig.bandCategory.length > 0 && (
+            <div
+              className="mt-4 pt-4 border-t"
+              style={{
+                borderTopColor: gig.fontColor
+                  ? `${gig.fontColor}20`
+                  : undefined,
+              }}
+            >
+              {renderBandRoleActions()}
+            </div>
+          )}
           {/* Location and time */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3 mb-3">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
@@ -2058,7 +2315,7 @@ const GigCard: React.FC<GigCardProps> = ({
             "sm:max-w-md rounded-xl shadow-xl",
             colors.background,
             colors.border,
-            "border-2"
+            "border-2",
           )}
         >
           <DialogHeader className={cn("pb-3", colors.border)}>
@@ -2081,14 +2338,14 @@ const GigCard: React.FC<GigCardProps> = ({
                         colors.successBg,
                         colors.successBorder,
                         "border",
-                        colors.text
+                        colors.text,
                       )
                     : cn(
                         colors.infoBg,
                         colors.infoBorder,
                         "border",
-                        colors.text
-                      )
+                        colors.text,
+                      ),
                 )}
               >
                 <div className="flex items-center gap-2 mb-1">
@@ -2097,7 +2354,7 @@ const GigCard: React.FC<GigCardProps> = ({
                       "w-4 h-4",
                       interestWindowStatus.status === "open"
                         ? colors.successText
-                        : colors.infoText
+                        : colors.infoText,
                     )}
                   />
                   <span
@@ -2105,7 +2362,7 @@ const GigCard: React.FC<GigCardProps> = ({
                       "font-medium",
                       interestWindowStatus.status === "open"
                         ? colors.successText
-                        : colors.infoText
+                        : colors.infoText,
                     )}
                   >
                     Interest Window
@@ -2116,7 +2373,7 @@ const GigCard: React.FC<GigCardProps> = ({
                     "text-sm",
                     interestWindowStatus.status === "open"
                       ? colors.successText
-                      : colors.infoText
+                      : colors.infoText,
                   )}
                 >
                   {interestWindowStatus.message}
@@ -2130,14 +2387,14 @@ const GigCard: React.FC<GigCardProps> = ({
                 "p-3 rounded-lg border",
                 isDarkMode
                   ? "bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-800/30"
-                  : "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200"
+                  : "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200",
               )}
             >
               <div className="flex items-center justify-between">
                 <span
                   className={cn(
                     "text-sm font-medium",
-                    isDarkMode ? "text-blue-300" : "text-blue-700"
+                    isDarkMode ? "text-blue-300" : "text-blue-700",
                   )}
                 >
                   Available: {availableSlots}/{maxSlots}
@@ -2169,7 +2426,7 @@ const GigCard: React.FC<GigCardProps> = ({
                   colors.border,
                   colors.background,
                   "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                  colors.text
+                  colors.text,
                 )}
               />
             </div>
@@ -2179,7 +2436,7 @@ const GigCard: React.FC<GigCardProps> = ({
             className={cn(
               "flex-col sm:flex-row gap-3 pt-4",
               colors.border,
-              "border-t"
+              "border-t",
             )}
           >
             <Button
@@ -2190,7 +2447,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 "w-full sm:w-auto rounded-xl",
                 colors.border,
                 colors.hoverBg,
-                colors.text
+                colors.text,
               )}
             >
               Cancel
@@ -2203,7 +2460,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 colors.gradientPrimary,
                 "text-white shadow-lg",
                 colors.primaryBgHover,
-                "disabled:opacity-50 disabled:cursor-not-allowed"
+                "disabled:opacity-50 disabled:cursor-not-allowed",
               )}
             >
               {loading ? (
@@ -2228,7 +2485,7 @@ const GigCard: React.FC<GigCardProps> = ({
             "sm:max-w-md rounded-xl shadow-xl",
             colors.background,
             colors.border,
-            "border-2"
+            "border-2",
           )}
         >
           <DialogHeader className={cn("pb-3", colors.border)}>
@@ -2247,14 +2504,14 @@ const GigCard: React.FC<GigCardProps> = ({
                 "p-3 rounded-lg border",
                 isDarkMode
                   ? "bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-800/30"
-                  : "bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200"
+                  : "bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200",
               )}
             >
               <div className="flex items-center justify-between">
                 <span
                   className={cn(
                     "text-sm font-medium",
-                    isDarkMode ? "text-purple-300" : "text-purple-700"
+                    isDarkMode ? "text-purple-300" : "text-purple-700",
                   )}
                 >
                   Available: {availableSlots}/{maxSlots} bands
@@ -2272,7 +2529,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 <p
                   className={cn(
                     "text-xs mt-1",
-                    isDarkMode ? "text-purple-400" : "text-purple-600"
+                    isDarkMode ? "text-purple-400" : "text-purple-600",
                   )}
                 >
                   {bandCount} bands applied • {totalBandMembers} total musicians
@@ -2296,7 +2553,7 @@ const GigCard: React.FC<GigCardProps> = ({
                   colors.border,
                   "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
                   colors.background,
-                  colors.text
+                  colors.text,
                 )}
               />
             </div>
@@ -2316,7 +2573,7 @@ const GigCard: React.FC<GigCardProps> = ({
                       colors.border,
                       colors.background,
                       colors.text,
-                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
                     )}
                   >
                     <SelectValue placeholder="Choose a role for your band" />
@@ -2325,16 +2582,16 @@ const GigCard: React.FC<GigCardProps> = ({
                     className={cn(
                       colors.background,
                       colors.border,
-                      "rounded-xl shadow-lg border-2"
+                      "rounded-xl shadow-lg border-2",
                     )}
                   >
                     {gig.bandCategory.map((role, index) => {
                       const isFull = role.filledSlots >= role.maxSlots;
                       const isBooked = role.bookedUsers.includes(
-                        currentUserId!
+                        currentUserId!,
                       );
                       const hasApplied = role.applicants.includes(
-                        currentUserId!
+                        currentUserId!,
                       );
 
                       return (
@@ -2349,7 +2606,7 @@ const GigCard: React.FC<GigCardProps> = ({
                             isFull && "opacity-50 cursor-not-allowed",
                             hasApplied &&
                               !isBooked &&
-                              cn(colors.infoBg, colors.infoText)
+                              cn(colors.infoBg, colors.infoText),
                           )}
                         >
                           <div className="flex items-center justify-between">
@@ -2360,7 +2617,7 @@ const GigCard: React.FC<GigCardProps> = ({
                                   "text-xs px-2 py-1 rounded-full",
                                   isDarkMode
                                     ? "bg-gray-800 text-gray-300"
-                                    : "bg-gray-100 text-gray-700"
+                                    : "bg-gray-100 text-gray-700",
                                 )}
                               >
                                 {role.filledSlots}/{role.maxSlots}
@@ -2372,7 +2629,7 @@ const GigCard: React.FC<GigCardProps> = ({
                                     "text-xs",
                                     colors.successBg,
                                     colors.successBorder,
-                                    colors.successText
+                                    colors.successText,
                                   )}
                                 >
                                   Booked
@@ -2385,7 +2642,7 @@ const GigCard: React.FC<GigCardProps> = ({
                                     "text-xs",
                                     colors.infoBg,
                                     colors.infoBorder,
-                                    colors.infoText
+                                    colors.infoText,
                                   )}
                                 >
                                   Applied
@@ -2424,7 +2681,7 @@ const GigCard: React.FC<GigCardProps> = ({
                           colors.backgroundMuted,
                           colors.border,
                           colors.text,
-                          "hover:shadow-md"
+                          "hover:shadow-md",
                         )}
                       >
                         <div className="flex items-center gap-3">
@@ -2433,7 +2690,7 @@ const GigCard: React.FC<GigCardProps> = ({
                               "w-9 h-9 border-2",
                               isDarkMode
                                 ? "bg-gradient-to-br from-purple-700/30 to-pink-700/30 border-purple-600/30"
-                                : "bg-gradient-to-br from-purple-100 to-pink-100 border-purple-200"
+                                : "bg-gradient-to-br from-purple-100 to-pink-100 border-purple-200",
                             )}
                           >
                             <AvatarFallback
@@ -2441,7 +2698,7 @@ const GigCard: React.FC<GigCardProps> = ({
                                 "font-semibold",
                                 isDarkMode
                                   ? "text-purple-300"
-                                  : "text-purple-600"
+                                  : "text-purple-600",
                               )}
                             >
                               {bandName.charAt(0).toUpperCase()}
@@ -2452,7 +2709,7 @@ const GigCard: React.FC<GigCardProps> = ({
                               <p
                                 className={cn(
                                   "text-sm font-medium",
-                                  colors.text
+                                  colors.text,
                                 )}
                               >
                                 {bandName}'s Band
@@ -2463,7 +2720,7 @@ const GigCard: React.FC<GigCardProps> = ({
                                   "text-xs",
                                   isDarkMode
                                     ? "border-purple-700 text-purple-300 bg-purple-900/20"
-                                    : "border-purple-300 text-purple-700 bg-purple-50"
+                                    : "border-purple-300 text-purple-700 bg-purple-50",
                                 )}
                               >
                                 {memberCount}{" "}
@@ -2482,7 +2739,7 @@ const GigCard: React.FC<GigCardProps> = ({
                               "text-xs",
                               colors.primary,
                               colors.border,
-                              isDarkMode ? "bg-orange-900/20" : "bg-orange-50"
+                              isDarkMode ? "bg-orange-900/20" : "bg-orange-50",
                             )}
                           >
                             Your Band
@@ -2500,7 +2757,7 @@ const GigCard: React.FC<GigCardProps> = ({
             className={cn(
               "flex-col sm:flex-row gap-3 pt-4",
               colors.border,
-              "border-t"
+              "border-t",
             )}
           >
             <Button
@@ -2511,7 +2768,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 "w-full sm:w-auto rounded-xl",
                 colors.border,
                 colors.hoverBg,
-                colors.text
+                colors.text,
               )}
             >
               Cancel
@@ -2520,7 +2777,7 @@ const GigCard: React.FC<GigCardProps> = ({
               onClick={() => {
                 if (selectedRole) {
                   const roleIndex = gig.bandCategory?.findIndex(
-                    (r) => r.role === selectedRole
+                    (r) => r.role === selectedRole,
                   );
                   if (roleIndex !== undefined && roleIndex >= 0) {
                     const action = handleBandAction(roleIndex);
@@ -2538,7 +2795,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 colors.gradientPrimary,
                 "text-white shadow-lg hover:shadow-xl transition-all duration-200",
                 colors.primaryBgHover,
-                "disabled:opacity-50 disabled:cursor-not-allowed"
+                "disabled:opacity-50 disabled:cursor-not-allowed",
               )}
             >
               {loading ? (
@@ -2567,7 +2824,7 @@ const GigCard: React.FC<GigCardProps> = ({
             "sm:max-w-md",
             colors.background,
             colors.border,
-            "rounded-xl shadow-xl"
+            "rounded-xl shadow-xl",
           )}
         >
           <DialogHeader className={cn("pb-3", colors.border)}>
@@ -2596,7 +2853,7 @@ const GigCard: React.FC<GigCardProps> = ({
                     "p-4 rounded-xl border cursor-pointer transition-all duration-200",
                     "hover:scale-[1.02] hover:shadow-lg",
                     colors.border,
-                    colors.hoverBg
+                    colors.hoverBg,
                   )}
                   onClick={() => {
                     setSelectedRoleForApplication(role);
@@ -2618,7 +2875,7 @@ const GigCard: React.FC<GigCardProps> = ({
                           className={cn(
                             "text-xs",
                             "bg-gradient-to-r from-purple-50 to-pink-50",
-                            "dark:from-purple-900/20 dark:to-pink-900/20"
+                            "dark:from-purple-900/20 dark:to-pink-900/20",
                           )}
                         >
                           {bandRole?.filledSlots || 0}/{bandRole?.maxSlots || 1}{" "}
@@ -2704,7 +2961,7 @@ const GigCard: React.FC<GigCardProps> = ({
             className={cn(
               "flex-col sm:flex-row gap-3 pt-4",
               colors.border,
-              "border-t"
+              "border-t",
             )}
           >
             <Button
@@ -2714,7 +2971,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 "w-full sm:w-auto rounded-xl",
                 colors.border,
                 colors.hoverBg,
-                colors.text
+                colors.text,
               )}
             >
               Cancel
@@ -2731,7 +2988,7 @@ const GigCard: React.FC<GigCardProps> = ({
               className={cn(
                 "w-full sm:w-auto rounded-xl font-semibold",
                 "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                "text-white shadow-lg"
+                "text-white shadow-lg",
               )}
             >
               <Sparkles className="w-4 h-4 mr-2" />
@@ -2751,7 +3008,7 @@ const GigCard: React.FC<GigCardProps> = ({
             "sm:max-w-md",
             colors.background,
             colors.border,
-            "rounded-xl shadow-xl"
+            "rounded-xl shadow-xl",
           )}
         >
           <DialogHeader className={cn("pb-3", colors.border)}>
@@ -2762,8 +3019,8 @@ const GigCard: React.FC<GigCardProps> = ({
                   backgroundColor: selectedRoleForApplication
                     ? getRoleColors(
                         gig.bandCategory?.findIndex(
-                          (r) => r.role === selectedRoleForApplication.role
-                        ) || 0
+                          (r) => r.role === selectedRoleForApplication.role,
+                        ) || 0,
                       ).bg
                     : colors.backgroundMuted,
                 }}
@@ -2774,8 +3031,8 @@ const GigCard: React.FC<GigCardProps> = ({
                     color: selectedRoleForApplication
                       ? getRoleColors(
                           gig.bandCategory?.findIndex(
-                            (r) => r.role === selectedRoleForApplication.role
-                          ) || 0
+                            (r) => r.role === selectedRoleForApplication.role,
+                          ) || 0,
                         ).text
                       : colors.text,
                   }}
@@ -2805,7 +3062,7 @@ const GigCard: React.FC<GigCardProps> = ({
                   "min-h-[100px] rounded-xl border-2 transition-all",
                   colors.border,
                   "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                  colors.background
+                  colors.background,
                 )}
                 value={interestNotes}
                 onChange={(e) => setInterestNotes(e.target.value)}
@@ -2821,7 +3078,7 @@ const GigCard: React.FC<GigCardProps> = ({
                   "p-4 rounded-xl border",
                   "bg-gradient-to-r from-blue-50/50 to-cyan-50/50",
                   "dark:from-blue-900/10 dark:to-cyan-900/10",
-                  colors.border
+                  colors.border,
                 )}
               >
                 <div className="flex items-center gap-2 mb-3">
@@ -2851,7 +3108,7 @@ const GigCard: React.FC<GigCardProps> = ({
                           (skill, i) => {
                             const userHasSkill = isUserQualifiedForRole(
                               currentUser!,
-                              selectedRoleForApplication!
+                              selectedRoleForApplication!,
                             );
                             return (
                               <Badge
@@ -2861,7 +3118,7 @@ const GigCard: React.FC<GigCardProps> = ({
                                   "text-xs",
                                   userHasSkill
                                     ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-                                    : "border-amber-500/30 text-amber-600 dark:text-amber-400"
+                                    : "border-amber-500/30 text-amber-600 dark:text-amber-400",
                                 )}
                               >
                                 {skill}
@@ -2870,7 +3127,7 @@ const GigCard: React.FC<GigCardProps> = ({
                                 )}
                               </Badge>
                             );
-                          }
+                          },
                         )}
                       </div>
                     </div>
@@ -2915,7 +3172,7 @@ const GigCard: React.FC<GigCardProps> = ({
             className={cn(
               "flex-col sm:flex-row gap-3 pt-4",
               colors.border,
-              "border-t"
+              "border-t",
             )}
           >
             <Button
@@ -2929,7 +3186,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 "w-full sm:w-auto rounded-xl",
                 colors.border,
                 colors.hoverBg,
-                colors.text
+                colors.text,
               )}
             >
               Cancel
@@ -2939,7 +3196,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 if (selectedRoleForApplication && currentUser) {
                   const roleIndex =
                     gig.bandCategory?.findIndex(
-                      (r) => r.role === selectedRoleForApplication.role
+                      (r) => r.role === selectedRoleForApplication.role,
                     ) || 0;
 
                   // Apply for the role
@@ -2963,7 +3220,7 @@ const GigCard: React.FC<GigCardProps> = ({
                               Applied for {selectedRoleForApplication.role}
                             </p>
                           </div>
-                        </div>
+                        </div>,
                       );
                       setShowApplicationModal(false);
                       setSelectedRoleForApplication(null);
@@ -2978,7 +3235,7 @@ const GigCard: React.FC<GigCardProps> = ({
                             color: colors.destructive,
                             borderColor: colors.destructive,
                           },
-                        }
+                        },
                       );
                     });
                 }
@@ -2987,7 +3244,7 @@ const GigCard: React.FC<GigCardProps> = ({
                 "w-full sm:w-auto rounded-xl font-semibold",
                 "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
                 "text-white shadow-lg hover:shadow-xl transition-all duration-200",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
+                "disabled:opacity-50 disabled:cursor-not-allowed",
               )}
               disabled={loading}
             >

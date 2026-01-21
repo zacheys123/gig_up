@@ -1,6 +1,4 @@
-// EditGigForm component with full themig
-"use client";
-
+// Update your imports section:
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -15,9 +13,6 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft,
-  Calendar,
-  MapPin,
-  DollarSign,
   Save,
   Trash2,
   Shield,
@@ -28,22 +23,21 @@ import {
   Eye,
   EyeOff,
   Phone,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { fileupload, MinimalUser } from "@/hooks/fileUpload";
+
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { CustomProps } from "@/types/gig"; // Add this imp
-import { BandRoleInput, BusinessCategory } from "@/types/gig";
+import { BusinessCategory } from "@/types/gig"; // Combined import
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -57,8 +51,43 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { UpdateGigParams, useGigUpdate } from "@/lib/gigUpdates";
+import { useGigUpdate } from "@/lib/gigUpdates"; // UpdateGigParams removed
+import { fileupload } from "@/hooks/fileUpload";
+import GigCustomization from "../../../_components/gigs/GigCustomization";
 
+// Type definitions - consolidate to avoid duplicates
+interface BandRoleInput {
+  role: string;
+  maxSlots?: number;
+  filledSlots?: number;
+  applicants?: Id<"users">[];
+  bookedUsers?: Id<"users">[];
+  requiredSkills?: string[];
+  description?: string;
+  isLocked?: boolean;
+  price?: number | null;
+  currency?: string;
+  negotiable?: boolean;
+  bookedPrice?: number | null;
+}
+
+interface MinimalUser {
+  _id: Id<"users">;
+  clerkId: string;
+  email?: string;
+  username?: string;
+}
+
+// In your EditGigForm component, update the props interface:
+interface EditGigFormProps {
+  gigId: string;
+  customization?: {
+    fontColor: string;
+    font: string;
+    backgroundColor: string;
+  };
+  logo?: string;
+}
 // Memoized ErrorMessage component
 const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
   if (!error) return null;
@@ -128,7 +157,7 @@ const MemoizedInput = React.memo(
               "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
               error ? "border-red-500" : `${colors.border}`,
               `${colors.background} ${colors.text}`,
-              className
+              className,
             )}
             {...props}
           />
@@ -136,7 +165,7 @@ const MemoizedInput = React.memo(
         <ErrorMessage error={error} />
       </div>
     );
-  }
+  },
 );
 MemoizedInput.displayName = "MemoizedInput";
 
@@ -178,14 +207,14 @@ const MemoizedTextarea = React.memo(
             "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
             error ? "border-red-500" : `${colors.border}`,
             `${colors.background} ${colors.text}`,
-            className
+            className,
           )}
           {...props}
         />
         <ErrorMessage error={error} />
       </div>
     );
-  }
+  },
 );
 MemoizedTextarea.displayName = "MemoizedTextarea";
 
@@ -253,11 +282,19 @@ const HistoryView = React.memo(({ gig }: { gig: any }) => {
 });
 HistoryView.displayName = "HistoryView";
 
-// Main EditGigForm component
-export default function EditGigForm() {
+interface CustomProps {
+  fontColor: string;
+  font: string;
+  backgroundColor: string;
+}
+
+export default function EditGigForm({
+  gigId,
+  customization: initialCustomization,
+  logo: initialLogo,
+}: EditGigFormProps) {
   const router = useRouter();
   const params = useParams();
-  const gigId = params.id as Id<"gigs">;
   const { colors } = useThemeColors();
   const { user } = useCurrentUser();
 
@@ -277,15 +314,19 @@ export default function EditGigForm() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [secretpass, setSecretPass] = useState<boolean>(false);
-  // State - ADD THIS SECTION
+
+  // Customization state - ADD THIS
+  const [showCustomizationModal, setShowCustomizationModal] = useState(false);
   const [gigcustom, setGigCustom] = useState<CustomProps>({
     fontColor: "",
     font: "",
     backgroundColor: "",
   });
-  // Convex queries and mutations
-  const gig = useQuery(api.controllers.gigs.getGigById, { gigId });
 
+  // Convex queries and mutations
+  const gig = useQuery(api.controllers.gigs.getGigById, {
+    gigId: gigId as Id<"gigs">,
+  });
   const deleteGig = useMutation(api.controllers.gigs.deleteGig);
 
   // Check if user is the owner
@@ -331,7 +372,7 @@ export default function EditGigForm() {
           gig.acceptInterestStartTime && gig.acceptInterestEndTime
             ? Math.round(
                 (gig.acceptInterestEndTime - gig.acceptInterestStartTime) /
-                  (1000 * 60 * 60 * 24)
+                  (1000 * 60 * 60 * 24),
               )
             : 7,
         enableInterestWindow: !!(
@@ -345,12 +386,16 @@ export default function EditGigForm() {
       setBussinessCategory(gig.bussinesscat as BusinessCategory);
       setUrl(gig.logo || "");
 
-      // ADD THIS: Initialize gigcustom state
-      setGigCustom({
-        fontColor: gig.fontColor || "",
-        font: gig.font || "",
-        backgroundColor: gig.backgroundColor || "",
-      });
+      setGigCustom(
+        initialCustomization || {
+          fontColor: gig.fontColor || "",
+          font: gig.font || "",
+          backgroundColor: gig.backgroundColor || "",
+        },
+      );
+
+      // Initialize logo from either passed props or gig data
+      setUrl(initialLogo || gig.logo || "");
 
       const bandRolesFromGig =
         gig.bandCategory?.map((role: any) => ({
@@ -372,23 +417,37 @@ export default function EditGigForm() {
       setIsLoading(false);
     }
   }, [gig]);
-  // Check for changes
+
+  // In your hasChanges useEffect:
   useEffect(() => {
     if (formValues && originalValues && gig) {
       const hasChanges =
         JSON.stringify(formValues) !== JSON.stringify(originalValues) ||
         JSON.stringify(gigcustom) !==
-          JSON.stringify({
-            fontColor: gig.fontColor || "",
-            font: gig.font || "",
-            backgroundColor: gig.backgroundColor || "",
-          }) ||
-        JSON.stringify(bandRoles) !== JSON.stringify(gig?.bandCategory || []);
+          JSON.stringify(
+            initialCustomization || {
+              fontColor: gig.fontColor || "",
+              font: gig.font || "",
+              backgroundColor: gig.backgroundColor || "",
+            },
+          ) ||
+        JSON.stringify(bandRoles) !== JSON.stringify(gig?.bandCategory || []) ||
+        imageUrl !== (initialLogo || gig.logo || "");
 
       setHasChanges(hasChanges);
     }
-  }, [formValues, originalValues, gigcustom, bandRoles, gig]);
-  // File upload handler
+  }, [
+    formValues,
+    originalValues,
+    gigcustom,
+    bandRoles,
+    imageUrl,
+    gig,
+    initialCustomization,
+    initialLogo,
+  ]);
+
+  // File upload handler - UPDATE to set imageUrl
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const dep = "image";
@@ -430,18 +489,72 @@ export default function EditGigForm() {
         },
         setIsUploading,
         dep,
-        minimalUser
+        minimalUser,
       );
     },
-    [imageUrl, user]
+    [imageUrl, user],
   );
+
+  // Customization file change handler - for the customization modal
+  const handleCustomizationFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const dep = "image";
+      const allowedTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/webp",
+      ];
+
+      if (!user) {
+        toast.error("Please log in to upload files");
+        return;
+      }
+
+      const minimalUser: MinimalUser = {
+        _id: user._id,
+        clerkId: user.clerkId,
+        ...(user.email && { email: user.email }),
+        ...(user.username && { username: user.username }),
+      };
+
+      fileupload(
+        event,
+        (file: string) => {
+          if (file) {
+            setUrl(file);
+            toast.success("Logo updated successfully!");
+            setHasChanges(true);
+          }
+        },
+        toast,
+        allowedTypes,
+        imageUrl,
+        (file: string | undefined) => {
+          if (file) {
+            // Handle file URL if needed
+          }
+        },
+        setIsUploading,
+        dep,
+        minimalUser,
+      );
+    },
+    [imageUrl, user],
+  );
+
+  // Handle apply customization from modal
+  const handleApplyCustomization = useCallback(() => {
+    setHasChanges(true);
+    toast.success("Customization applied!");
+  }, []);
 
   // Input change handler
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-      >
+      >,
     ) => {
       const { name, value, type } = e.target;
 
@@ -467,7 +580,7 @@ export default function EditGigForm() {
         });
       }
     },
-    [fieldErrors]
+    [fieldErrors],
   );
 
   // Select change handler
@@ -549,14 +662,14 @@ export default function EditGigForm() {
   const handleDelete = useCallback(async () => {
     if (
       !window.confirm(
-        "Are you sure you want to delete this gig? This action cannot be undone."
+        "Are you sure you want to delete this gig? This action cannot be undone.",
       )
     ) {
       return;
     }
 
     try {
-      await deleteGig({ gigId });
+      await deleteGig({ gigId: gigId as Id<"gigs"> });
       toast.success("Gig deleted successfully");
       router.push("/hub/gigs");
     } catch (error) {
@@ -574,6 +687,7 @@ export default function EditGigForm() {
     }
   }, [hasChanges, router]);
 
+  // Handle save - UPDATE to include gigcustom
   const handleSave = useCallback(async () => {
     if (!validateForm()) {
       toast.error("Please fix all errors before saving");
@@ -608,9 +722,9 @@ export default function EditGigForm() {
             }))
           : undefined; // Send undefined if not "other" category
 
-      // Prepare update data - ADD gigcustom fields
+      // Prepare update data - include gigcustom fields
       const updateData = {
-        gigId,
+        gigId: gigId as Id<"gigs">,
         clerkId: user.clerkId,
         title: formValues.title,
         description: formValues.description,
@@ -641,7 +755,7 @@ export default function EditGigForm() {
         maxSlots: formValues.maxSlots
           ? parseInt(formValues.maxSlots)
           : undefined,
-        // ADD THESE: gigcustom fields
+        // Add customization fields
         font: gigcustom.font || undefined,
         fontColor: gigcustom.fontColor || undefined,
         backgroundColor: gigcustom.backgroundColor || undefined,
@@ -657,11 +771,11 @@ export default function EditGigForm() {
 
       // Remove undefined values
       const cleanUpdateData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, v]) => v !== undefined)
+        Object.entries(updateData).filter(([_, v]) => v !== undefined),
       );
 
       // Use the helper utility
-      const result = await updateGig(cleanUpdateData as UpdateGigParams);
+      await updateGig(cleanUpdateData as any);
 
       // Update original values
       setOriginalValues(formValues);
@@ -674,17 +788,16 @@ export default function EditGigForm() {
       setTimeout(() => {
         router.refresh();
       }, 1000);
-
-      return result;
     } catch (error) {
       console.error("Error updating gig:", error);
+      toast.error("Failed to update gig");
       throw error;
     } finally {
       setIsSaving(false);
     }
   }, [
     formValues,
-    gigcustom, // ADD THIS dependency
+    gigcustom,
     imageUrl,
     bandRoles,
     bussinesscat,
@@ -695,21 +808,22 @@ export default function EditGigForm() {
     router,
   ]);
 
-  // Confirm cancel - UPDATE THIS function
   const confirmCancel = useCallback(() => {
     if (formValues && originalValues) {
       setFormValues(originalValues);
     }
-    setUrl(gig?.logo || "");
 
-    // ADD THIS: Reset gigcustom state
-    if (gig) {
-      setGigCustom({
-        fontColor: gig.fontColor || "",
-        font: gig.font || "",
-        backgroundColor: gig.backgroundColor || "",
-      });
-    }
+    // Reset to initial props or gig data
+    setUrl(initialLogo || gig?.logo || "");
+
+    // Reset gigcustom state to initial props or gig data
+    setGigCustom(
+      initialCustomization || {
+        fontColor: gig?.fontColor || "",
+        font: gig?.font || "",
+        backgroundColor: gig?.backgroundColor || "",
+      },
+    );
 
     const bandRolesFromGig =
       (gig &&
@@ -728,7 +842,14 @@ export default function EditGigForm() {
     setHasChanges(false);
     setShowCancelConfirm(false);
     router.back();
-  }, [formValues, originalValues, gig, router]);
+  }, [
+    formValues,
+    originalValues,
+    gig,
+    initialCustomization,
+    initialLogo,
+    router,
+  ]);
   // Loading state
   if (isLoading) {
     return (
@@ -786,6 +907,18 @@ export default function EditGigForm() {
 
   return (
     <div className={`min-h-screen ${colors.background}`}>
+      {/* Customization Modal */}
+      {showCustomizationModal && (
+        <GigCustomization
+          customization={gigcustom}
+          setCustomization={setGigCustom}
+          closeModal={() => setShowCustomizationModal(false)}
+          logo={imageUrl}
+          handleFileChange={handleCustomizationFileChange}
+          isUploading={isUploading}
+        />
+      )}
+
       {/* Header */}
       <div
         className={`sticky top-0 z-40 ${colors.navBackground}/80 backdrop-blur-sm ${colors.navBorder} border-b`}
@@ -853,6 +986,7 @@ export default function EditGigForm() {
             <TabsTrigger value="customize">Customize</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
+
           {/* Basic Info Tab */}
           <TabsContent value="basic" className="space-y-6">
             <Card className={colors.cardBorder}>
@@ -874,6 +1008,18 @@ export default function EditGigForm() {
                     />
                   </div>
 
+                  {hasChanges &&
+                    (gigcustom.fontColor ||
+                      gigcustom.font ||
+                      gigcustom.backgroundColor) && (
+                      <Badge
+                        variant="outline"
+                        className="ml-3 border-purple-500 text-purple-600"
+                      >
+                        <Palette className="w-3 h-3 mr-1" />
+                        Customized
+                      </Badge>
+                    )}
                   {/* Description */}
                   <div>
                     <Label htmlFor="description" className={colors.text}>
@@ -902,7 +1048,6 @@ export default function EditGigForm() {
                       onChange={handleInputChange}
                       name="location"
                       placeholder="Event location"
-                      icon={MapPin}
                       error={fieldErrors.location}
                       required
                     />
@@ -935,6 +1080,7 @@ export default function EditGigForm() {
               </CardContent>
             </Card>
           </TabsContent>
+
           {/* Details Tab */}
           <TabsContent value="details" className="space-y-6">
             <Card className={colors.cardBorder}>
@@ -1237,8 +1383,8 @@ export default function EditGigForm() {
               </CardContent>
             </Card>
           </TabsContent>
-          {/* Customize Tab */}
 
+          {/* Customize Tab */}
           <TabsContent value="customize">
             <Card className={colors.cardBorder}>
               <CardContent className="p-6">
@@ -1249,68 +1395,231 @@ export default function EditGigForm() {
                         Customize Gig Card
                       </h3>
                       <p className={`text-sm ${colors.textMuted}`}>
-                        Add your branding and styling
+                        Add your branding and styling to make your gig stand out
                       </p>
                     </div>
-                    <Button variant="outline">
-                      <Palette className="w-4 h-4 mr-2" />
-                      Customize
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCustomizationModal(true)}
+                      className="flex items-center gap-2 border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    >
+                      <Palette className="w-4 h-4" />
+                      Open Customizer
                     </Button>
                   </div>
 
-                  {/* Current Preview - UPDATE to show gigcustom values */}
-                  <div className={`rounded-lg p-4 ${colors.border} border`}>
-                    <h4 className={`font-medium mb-3 ${colors.text}`}>
-                      Current Styling
+                  {/* Current Customization Preview */}
+                  <div className={`rounded-lg p-6 border ${colors.border}`}>
+                    <h4 className={`font-medium mb-4 ${colors.text}`}>
+                      Current Customization
                     </h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded border"
-                          style={{
-                            backgroundColor:
-                              gigcustom.backgroundColor || "transparent",
-                          }}
-                        />
-                        <span className={`text-sm ${colors.text}`}>
-                          Background: {gigcustom.backgroundColor || "Default"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded border"
-                          style={{
-                            backgroundColor:
-                              gigcustom.fontColor || "transparent",
-                          }}
-                        />
-                        <span className={`text-sm ${colors.text}`}>
-                          Text Color: {gigcustom.fontColor || "Default"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm ${colors.text}`}>
-                          Font: {gigcustom.font || "Default"}
-                        </span>
-                      </div>
-                      {imageUrl && (
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={imageUrl}
-                            alt="Logo"
-                            className="w-8 h-8 rounded"
-                          />
-                          <span className={`text-sm ${colors.text}`}>
-                            Logo uploaded
-                          </span>
+
+                    <div className="space-y-4">
+                      {/* Color Preview */}
+                      <div>
+                        <h5
+                          className={`text-sm font-medium mb-2 ${colors.text}`}
+                        >
+                          Colors
+                        </h5>
+                        <div className="flex flex-wrap gap-3">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-8 h-8 rounded border shadow-sm"
+                              style={{
+                                backgroundColor:
+                                  gigcustom.fontColor ||
+                                  gig?.fontColor ||
+                                  colors.text,
+                              }}
+                            />
+                            <span className={`text-sm ${colors.text}`}>
+                              Font Color:{" "}
+                              {gigcustom.fontColor ||
+                                gig?.fontColor ||
+                                "Default"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-8 h-8 rounded border shadow-sm"
+                              style={{
+                                backgroundColor:
+                                  gigcustom.backgroundColor ||
+                                  gig?.backgroundColor ||
+                                  colors.background,
+                              }}
+                            />
+                            <span className={`text-sm ${colors.text}`}>
+                              Background:{" "}
+                              {gigcustom.backgroundColor ||
+                                gig?.backgroundColor ||
+                                "Default"}
+                            </span>
+                          </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Font Preview */}
+                      <div>
+                        <h5
+                          className={`text-sm font-medium mb-2 ${colors.text}`}
+                        >
+                          Font
+                        </h5>
+                        <p
+                          className={`text-lg ${colors.text}`}
+                          style={{
+                            fontFamily:
+                              gigcustom.font || gig?.font || "inherit",
+                          }}
+                        >
+                          {gigcustom.font || gig?.font || "Default font"}
+                        </p>
+                      </div>
+
+                      {/* Logo Preview */}
+                      <div>
+                        <h5
+                          className={`text-sm font-medium mb-2 ${colors.text}`}
+                        >
+                          Logo
+                        </h5>
+                        {imageUrl || gig?.logo ? (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={imageUrl || gig?.logo}
+                              alt="Logo"
+                              className="w-12 h-12 rounded-lg border shadow-sm object-cover"
+                            />
+                            <span className={`text-sm ${colors.text}`}>
+                              {imageUrl ? "Custom logo uploaded" : "Gig logo"}
+                            </span>
+                          </div>
+                        ) : (
+                          <p className={`text-sm ${colors.textMuted}`}>
+                            No logo uploaded
+                          </p>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Live Preview Card */}
+                    <div className="mt-6 pt-6 border-t">
+                      <h5 className={`text-sm font-medium mb-3 ${colors.text}`}>
+                        Live Preview
+                      </h5>
+                      <div
+                        className="p-4 rounded-xl border shadow-sm"
+                        style={{
+                          backgroundColor:
+                            gigcustom.backgroundColor ||
+                            gig?.backgroundColor ||
+                            colors.background,
+                          borderColor: colors.border,
+                        }}
+                      >
+                        <div className="space-y-3">
+                          <h4
+                            className="font-bold text-lg truncate"
+                            style={{
+                              color:
+                                gigcustom.fontColor ||
+                                gig?.fontColor ||
+                                colors.text,
+                              fontFamily:
+                                gigcustom.font || gig?.font || "inherit",
+                            }}
+                          >
+                            {formValues?.title ||
+                              gig?.title ||
+                              "Your Gig Title"}
+                          </h4>
+                          <p
+                            className="text-sm line-clamp-2"
+                            style={{
+                              color:
+                                gigcustom.fontColor || gig?.fontColor
+                                  ? `${gigcustom.fontColor || gig?.fontColor || colors.text}CC`
+                                  : colors.textMuted,
+                              fontFamily:
+                                gigcustom.font || gig?.font || "inherit",
+                            }}
+                          >
+                            {formValues?.description ||
+                              gig?.description ||
+                              "Your gig description will appear here"}
+                          </p>
+                          <div className="flex justify-between items-center">
+                            <span
+                              className="font-semibold"
+                              style={{
+                                color:
+                                  gigcustom.fontColor ||
+                                  gig?.fontColor ||
+                                  colors.text,
+                                fontFamily:
+                                  gigcustom.font || gig?.font || "inherit",
+                              }}
+                            >
+                              ${formValues?.price || gig?.price || "0"}
+                            </span>
+                            <div className="w-8 h-8 rounded-full overflow-hidden border">
+                              {imageUrl || gig?.logo ? (
+                                <img
+                                  src={imageUrl || gig?.logo}
+                                  alt="Logo"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">
+                                    G
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reset Customization */}
+                  <div className="flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setGigCustom({
+                          fontColor: "",
+                          font: "",
+                          backgroundColor: "",
+                        });
+                        setUrl("");
+                        setHasChanges(true);
+                        toast.info("Customization reset to default");
+                      }}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      disabled={
+                        !gigcustom.fontColor &&
+                        !gigcustom.font &&
+                        !gigcustom.backgroundColor &&
+                        !imageUrl &&
+                        !gig?.fontColor &&
+                        !gig?.font &&
+                        !gig?.backgroundColor &&
+                        !gig?.logo
+                      }
+                    >
+                      Reset to Default
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
+
           {/* History Tab */}
           <TabsContent value="history">
             <Card className={colors.cardBorder}>
