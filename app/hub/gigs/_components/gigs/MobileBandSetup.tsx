@@ -52,11 +52,13 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 
+// In MobileBandSetupModal.tsx, the interface is already correct:
 interface MobileBandSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (roles: BandRoleInput[]) => void;
-  initialRoles?: BandSetupRole[];
+  initialRoles?: BandRoleInput[];
+  isEditMode?: boolean;
 }
 
 const commonRoles = [
@@ -126,21 +128,26 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   const { colors, isDarkMode } = useThemeColors();
   const [selectedRoles, setSelectedRoles] = useState<BandSetupRole[]>(
     initialRoles.map((role) => ({
-      ...role,
-      maxApplicants: role.maxApplicants || 20, // Default to 20
+      role: role.role,
+      maxSlots: role.maxSlots,
+      maxApplicants: role.maxApplicants || 20,
       currentApplicants: role.currentApplicants || 0,
       requiredSkills: role.requiredSkills || [],
-      price: role.price || "",
+      description: role.description || "", // Convert empty/undefined to ""
+      price: role.price?.toString() || "", // Convert number to string
       currency: role.currency || "KES",
       negotiable: role.negotiable ?? true,
-    }))
+      isLocked: role.isLocked || false,
+      filledSlots: role.filledSlots || 0,
+      bookedPrice: role.bookedPrice,
+    })),
   );
   const [customRole, setCustomRole] = useState("");
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeTab, setActiveTab] = useState<"roles" | "skills" | "budget">(
-    "roles"
+    "roles",
   );
   const [view, setView] = useState<"selection" | "configuration">("selection");
   const [showMaxApplicantsInfo, setShowMaxApplicantsInfo] = useState(false);
@@ -149,7 +156,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
   const { totalPositions, totalBudget, totalMaxApplicants } = useMemo(() => {
     const positions = selectedRoles.reduce(
       (sum, role) => sum + role.maxSlots,
-      0
+      0,
     );
     const budget = selectedRoles.reduce((total, role) => {
       const price = role.price ? parseFloat(role.price) : 0;
@@ -157,7 +164,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
     }, 0);
     const maxApplicants = selectedRoles.reduce(
       (sum, role) => sum + (role.maxApplicants || 20),
-      0
+      0,
     );
     return {
       totalPositions: positions,
@@ -181,7 +188,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
     const baseProgress = Math.min(selectedRoles.length * 15, 60);
     const configuredProgress =
       selectedRoles.filter(
-        (role) => role.maxSlots > 0 && role.requiredSkills.length > 0
+        (role) => role.maxSlots > 0 && role.requiredSkills.length > 0,
       ).length * 5;
     return Math.min(baseProgress + configuredProgress, 100);
   }, [selectedRoles]);
@@ -214,11 +221,11 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
     (roleName: string, updates: Partial<BandSetupRole>) => {
       setSelectedRoles((prev) =>
         prev.map((role) =>
-          role.role === roleName ? { ...role, ...updates } : role
-        )
+          role.role === roleName ? { ...role, ...updates } : role,
+        ),
       );
     },
-    []
+    [],
   );
 
   const addCustomRole = useCallback(() => {
@@ -232,9 +239,12 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           currentApplicants: 0,
           requiredSkills: [],
           description: "",
+          price: "", // Add this - required property
           currency: "KES",
           negotiable: true,
           isLocked: false,
+          filledSlots: 0, // Add this if required
+          // bookedPrice: undefined, // Optional, can be omitted
         },
       ]);
       setCustomRole("");
@@ -259,7 +269,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           };
         }
         return role;
-      })
+      }),
     );
   }, []);
 
@@ -278,9 +288,11 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         currency: role.currency,
         negotiable: role.negotiable,
         isLocked: role.isLocked || false,
+        filledSlots: role.filledSlots || 0,
+        bookedPrice: role.bookedPrice || undefined,
       };
     },
-    []
+    [],
   );
 
   const handleSubmit = useCallback(() => {
@@ -327,7 +339,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
               "pl-10 rounded-full",
               isDarkMode
                 ? "bg-gray-800 border-gray-700 text-white"
-                : "bg-white border-gray-200"
+                : "bg-white border-gray-200",
             )}
           />
         </div>
@@ -346,7 +358,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                     "flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap transition-all shrink-0",
                     selectedCategory === category.value
                       ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                      : cn(colors.border, colors.textSecondary)
+                      : cn(colors.border, colors.textSecondary),
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -359,7 +371,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             {filteredRoles.map((role) => {
               const isSelected = selectedRoles.some(
-                (r) => r.role === role.value
+                (r) => r.role === role.value,
               );
               const Icon = role.icon;
 
@@ -372,7 +384,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                     colors.border,
                     isSelected
                       ? "bg-gradient-to-br from-orange-500/10 to-red-500/10 ring-2 ring-orange-500/50"
-                      : cn("hover:shadow-lg", colors.hoverBg)
+                      : cn("hover:shadow-lg", colors.hoverBg),
                   )}
                 >
                   {isSelected && (
@@ -385,7 +397,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                       "p-3 rounded-xl",
                       isSelected
                         ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                        : cn(colors.backgroundMuted, colors.primary)
+                        : cn(colors.backgroundMuted, colors.primary),
                     )}
                   >
                     <Icon className="w-6 h-6" />
@@ -393,7 +405,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                   <span
                     className={cn(
                       "text-sm font-medium text-center",
-                      colors.text
+                      colors.text,
                     )}
                   >
                     {role.value}
@@ -445,7 +457,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                           "w-full",
                           isDarkMode
                             ? "bg-gray-800 border-gray-700 text-white"
-                            : "bg-white border-gray-200"
+                            : "bg-white border-gray-200",
                         )}
                       />
                       <Button
@@ -469,7 +481,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         className={cn(
           "sticky bottom-0 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t",
           colors.background,
-          colors.border
+          colors.border,
         )}
       >
         <div className="space-y-3">
@@ -621,7 +633,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                     updateRole(role.role, {
                       maxApplicants: Math.max(
                         1,
-                        (role.maxApplicants || 20) - 1
+                        (role.maxApplicants || 20) - 1,
                       ),
                     })
                   }
@@ -664,7 +676,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                     className={cn(
                       "text-xs px-2 py-1",
                       maxApplicants === num &&
-                        "bg-blue-500 text-white border-blue-500"
+                        "bg-blue-500 text-white border-blue-500",
                     )}
                   >
                     {num}
@@ -691,7 +703,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                 "p-3 rounded-lg mt-2",
                 isDarkMode
                   ? "bg-blue-900/20 border-blue-800/30"
-                  : "bg-blue-50 border-blue-200"
+                  : "bg-blue-50 border-blue-200",
               )}
             >
               <div className="flex items-start gap-2">
@@ -725,7 +737,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
               "p-2 rounded-lg flex items-center gap-2",
               isDarkMode
                 ? "bg-red-900/20 border-red-800/30"
-                : "bg-red-50 border-red-200"
+                : "bg-red-50 border-red-200",
             )}
           >
             <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
@@ -752,7 +764,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
               "resize-none",
               isDarkMode
                 ? "bg-gray-800 border-gray-700 text-white"
-                : "bg-white border-gray-200"
+                : "bg-white border-gray-200",
             )}
           />
         </div>
@@ -793,7 +805,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                   "col-span-2",
                   isDarkMode
                     ? "bg-gray-800 border-gray-700 text-white"
-                    : "bg-white border-gray-200"
+                    : "bg-white border-gray-200",
                 )}
               />
             </div>
@@ -803,7 +815,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                 "flex items-center justify-between p-3 rounded-lg",
                 isDarkMode
                   ? "bg-gradient-to-r from-green-900/20 to-emerald-900/20"
-                  : "bg-gradient-to-r from-green-50 to-emerald-50"
+                  : "bg-gradient-to-r from-green-50 to-emerald-50",
               )}
             >
               <div className="flex items-center gap-2">
@@ -822,7 +834,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                   variant={role.negotiable ? "default" : "outline"}
                   className={cn(
                     role.negotiable &&
-                      "bg-gradient-to-r from-green-500 to-emerald-500"
+                      "bg-gradient-to-r from-green-500 to-emerald-500",
                   )}
                 >
                   {role.negotiable ? "Negotiable" : "Fixed"}
@@ -848,7 +860,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                   className={cn(
                     "cursor-pointer transition-all",
                     role.requiredSkills.includes(skill) &&
-                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
                   )}
                   onClick={() => toggleSkill(role.role, skill)}
                 >
@@ -902,7 +914,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
           <TabsList
             className={cn(
               "grid grid-cols-3 w-full",
-              isDarkMode ? "bg-gray-800" : "bg-gray-100"
+              isDarkMode ? "bg-gray-800" : "bg-gray-100",
             )}
           >
             <TabsTrigger
@@ -911,7 +923,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                 "text-xs",
                 isDarkMode
                   ? "data-[state=active]:bg-gray-700"
-                  : "data-[state=active]:bg-white"
+                  : "data-[state=active]:bg-white",
               )}
             >
               <Settings className="w-3 h-3 mr-1" />
@@ -923,7 +935,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                 "text-xs",
                 isDarkMode
                   ? "data-[state=active]:bg-gray-700"
-                  : "data-[state=active]:bg-white"
+                  : "data-[state=active]:bg-white",
               )}
             >
               <Target className="w-3 h-3 mr-1" />
@@ -935,7 +947,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                 "text-xs",
                 isDarkMode
                   ? "data-[state=active]:bg-gray-700"
-                  : "data-[state=active]:bg-white"
+                  : "data-[state=active]:bg-white",
               )}
             >
               <DollarSign className="w-3 h-3 mr-1" />
@@ -1019,7 +1031,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                           className={cn(
                             "cursor-pointer transition-all",
                             role.requiredSkills.includes(skill) &&
-                              "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                              "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
                           )}
                           onClick={() => toggleSkill(role.role, skill)}
                         >
@@ -1032,7 +1044,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                       <Label
                         className={cn(
                           "text-sm font-medium mb-2 block",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Add Custom Skill
@@ -1042,7 +1054,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                         className={cn(
                           isDarkMode
                             ? "bg-gray-800 border-gray-700 text-white"
-                            : "bg-white border-gray-200"
+                            : "bg-white border-gray-200",
                         )}
                         onKeyDown={(e) => {
                           if (
@@ -1138,7 +1150,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                       <div
                         className={cn(
                           "p-3 rounded-lg",
-                          isDarkMode ? "bg-gray-800" : "bg-white/50"
+                          isDarkMode ? "bg-gray-800" : "bg-white/50",
                         )}
                       >
                         <div className="flex items-center gap-2 mb-1">
@@ -1152,7 +1164,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                         <div className="text-xl font-bold">
                           {
                             selectedRoles.filter(
-                              (r) => r.price && parseFloat(r.price) > 0
+                              (r) => r.price && parseFloat(r.price) > 0,
                             ).length
                           }
                         </div>
@@ -1160,7 +1172,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                       <div
                         className={cn(
                           "p-3 rounded-lg",
-                          isDarkMode ? "bg-gray-800" : "bg-white/50"
+                          isDarkMode ? "bg-gray-800" : "bg-white/50",
                         )}
                       >
                         <div className="flex items-center gap-2 mb-1">
@@ -1188,7 +1200,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                     <div className="space-y-2">
                       {selectedRoles
                         .filter(
-                          (role) => role.price && parseFloat(role.price) > 0
+                          (role) => role.price && parseFloat(role.price) > 0,
                         )
                         .map((role) => {
                           const price = parseFloat(role.price!);
@@ -1197,14 +1209,14 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                               key={role.role}
                               className={cn(
                                 "flex items-center justify-between p-2 rounded-lg",
-                                isDarkMode ? "bg-gray-800" : "bg-gray-50"
+                                isDarkMode ? "bg-gray-800" : "bg-gray-50",
                               )}
                             >
                               <div className="flex-1">
                                 <span
                                   className={cn(
                                     "text-sm font-medium",
-                                    colors.text
+                                    colors.text,
                                   )}
                                 >
                                   {role.role}
@@ -1257,7 +1269,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
         className={cn(
           "sticky bottom-0 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t",
           colors.background,
-          colors.border
+          colors.border,
         )}
       >
         <div className="flex items-center justify-between mb-3">
@@ -1300,7 +1312,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
       <DrawerContent
         className={cn(
           "h-[90vh] max-h-[90vh]",
-          isDarkMode ? "bg-gray-900" : "bg-white"
+          isDarkMode ? "bg-gray-900" : "bg-white",
         )}
       >
         {view === "selection" ? <SelectionView /> : <ConfigurationView />}

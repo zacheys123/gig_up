@@ -74,9 +74,9 @@ interface DesktopBandSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (roles: BandRoleInput[]) => void;
-  initialRoles?: BandSetupRole[];
+  initialRoles?: BandRoleInput[]; // Accept BandRoleInput[]
+  isEditMode?: boolean;
 }
-
 const commonRoles = [
   {
     value: "Lead Vocalist",
@@ -211,14 +211,19 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
   const { colors, isDarkMode } = useThemeColors();
   const [selectedRoles, setSelectedRoles] = useState<BandSetupRole[]>(
     initialRoles.map((role) => ({
-      ...role,
+      role: role.role,
+      maxSlots: role.maxSlots,
       maxApplicants: role.maxApplicants || 20,
       currentApplicants: role.currentApplicants || 0,
       requiredSkills: role.requiredSkills || [],
-      price: role.price || "",
+      description: role.description || "", // Convert empty/undefined to ""
+      price: role.price?.toString() || "", // Convert number to string
       currency: role.currency || "KES",
       negotiable: role.negotiable ?? true,
-    }))
+      isLocked: role.isLocked || false,
+      filledSlots: role.filledSlots || 0,
+      bookedPrice: role.bookedPrice,
+    })),
   );
   const [customRole, setCustomRole] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -232,7 +237,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     useMemo(() => {
       const positions = selectedRoles.reduce(
         (sum, role) => sum + role.maxSlots,
-        0
+        0,
       );
       const budget = selectedRoles.reduce((total, role) => {
         const price = role.price ? parseFloat(role.price) : 0;
@@ -240,10 +245,10 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
       }, 0);
       const maxApplicants = selectedRoles.reduce(
         (sum, role) => sum + (role.maxApplicants || 20),
-        0
+        0,
       );
       const pricedRoles = selectedRoles.filter(
-        (r) => r.price && parseFloat(r.price) > 0
+        (r) => r.price && parseFloat(r.price) > 0,
       ).length;
 
       return {
@@ -293,11 +298,11 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     (roleName: string, updates: Partial<BandSetupRole>) => {
       setSelectedRoles((prev) =>
         prev.map((role) =>
-          role.role === roleName ? { ...role, ...updates } : role
-        )
+          role.role === roleName ? { ...role, ...updates } : role,
+        ),
       );
     },
-    []
+    [],
   );
 
   const addCustomRole = useCallback(() => {
@@ -337,7 +342,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
           };
         }
         return role;
-      })
+      }),
     );
   }, []);
 
@@ -358,7 +363,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
         isLocked: role.isLocked || false,
       };
     },
-    []
+    [],
   );
 
   const handleSubmit = useCallback(() => {
@@ -385,7 +390,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                       commonRoles.find((r) => r.value === role.role)!.icon,
                       {
                         className: "w-5 h-5",
-                      }
+                      },
                     )
                   ) : (
                     <Music className="w-5 h-5" />
@@ -472,7 +477,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                 <Label
                   className={cn(
                     "text-sm font-medium flex items-center gap-2",
-                    colors.text
+                    colors.text,
                   )}
                 >
                   <UserPlus className="w-4 h-4" />
@@ -512,7 +517,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                       updateRole(role.role, {
                         maxApplicants: Math.max(
                           1,
-                          (role.maxApplicants || 20) - 1
+                          (role.maxApplicants || 20) - 1,
                         ),
                       })
                     }
@@ -559,7 +564,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                         "text-xs px-3 py-1",
                         maxApplicants === num
                           ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
-                          : ""
+                          : "",
                       )}
                     >
                       {num}
@@ -598,7 +603,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                 "p-3 rounded-lg mb-4 flex items-center gap-2",
                 isDarkMode
                   ? "bg-red-900/20 border-red-800/30"
-                  : "bg-red-50 border-red-200"
+                  : "bg-red-50 border-red-200",
               )}
             >
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
@@ -630,7 +635,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                 "resize-none",
                 isDarkMode
                   ? "bg-gray-800 border-gray-700 text-white"
-                  : "bg-white border-gray-200"
+                  : "bg-white border-gray-200",
               )}
             />
           </div>
@@ -678,7 +683,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                   className={cn(
                     isDarkMode
                       ? "bg-gray-800 border-gray-700 text-white"
-                      : "bg-white border-gray-200"
+                      : "bg-white border-gray-200",
                   )}
                 />
               </div>
@@ -686,7 +691,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                 <div
                   className={cn(
                     "flex items-center justify-between p-2 rounded-lg h-full",
-                    isDarkMode ? "bg-gray-800/50" : "bg-gray-50"
+                    isDarkMode ? "bg-gray-800/50" : "bg-gray-50",
                   )}
                 >
                   <Switch
@@ -723,7 +728,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                   className={cn(
                     "cursor-pointer transition-all",
                     role.requiredSkills.includes(skill) &&
-                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
                   )}
                   onClick={() => toggleSkill(role.role, skill)}
                 >
@@ -738,7 +743,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                   "flex-1",
                   isDarkMode
                     ? "bg-gray-800 border-gray-700 text-white"
-                    : "bg-white border-gray-200"
+                    : "bg-white border-gray-200",
                 )}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && e.currentTarget.value.trim()) {
@@ -757,7 +762,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                 size="sm"
                 onClick={() => {
                   const input = document.querySelector(
-                    `input[placeholder="Add custom skill..."]`
+                    `input[placeholder="Add custom skill..."]`,
                   ) as HTMLInputElement;
                   if (input?.value.trim()) {
                     const skill = input.value.trim();
@@ -788,7 +793,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
             className={cn(
               "w-1/3 border-r flex flex-col",
               colors.border,
-              isDarkMode ? "bg-gray-900" : "bg-gray-50"
+              isDarkMode ? "bg-gray-900" : "bg-gray-50",
             )}
           >
             <div className="p-6 border-b">
@@ -824,7 +829,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                       "pl-10",
                       isDarkMode
                         ? "bg-gray-800 border-gray-700 text-white"
-                        : "bg-white"
+                        : "bg-white",
                     )}
                   />
                 </div>
@@ -855,7 +860,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                         "flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap transition-all shrink-0",
                         selectedCategory === category.value
                           ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                          : cn(colors.border, colors.textSecondary)
+                          : cn(colors.border, colors.textSecondary),
                       )}
                     >
                       <Icon className="w-4 h-4" />
@@ -871,7 +876,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   {filteredRoles.map((role) => {
                     const isSelected = selectedRoles.some(
-                      (r) => r.role === role.value
+                      (r) => r.role === role.value,
                     );
                     const Icon = role.icon;
 
@@ -884,7 +889,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                           colors.border,
                           isSelected
                             ? "bg-gradient-to-br from-orange-500/10 to-red-500/10 ring-2 ring-orange-500/50"
-                            : cn("hover:shadow-lg", colors.hoverBg)
+                            : cn("hover:shadow-lg", colors.hoverBg),
                         )}
                       >
                         {isSelected && (
@@ -897,7 +902,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                             "p-3 rounded-lg",
                             isSelected
                               ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                              : cn(colors.backgroundMuted, colors.primary)
+                              : cn(colors.backgroundMuted, colors.primary),
                           )}
                         >
                           <Icon className="w-6 h-6" />
@@ -906,7 +911,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                           <span
                             className={cn(
                               "text-sm font-medium block",
-                              colors.text
+                              colors.text,
                             )}
                           >
                             {role.value}
@@ -926,7 +931,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                 <div className="space-y-2">
                   {filteredRoles.map((role) => {
                     const isSelected = selectedRoles.some(
-                      (r) => r.role === role.value
+                      (r) => r.role === role.value,
                     );
                     const Icon = role.icon;
 
@@ -941,8 +946,8 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                             ? "bg-gradient-to-r from-orange-500/10 to-red-500/10 ring-1 ring-orange-500/30"
                             : cn(
                                 "hover:bg-gray-100 dark:hover:bg-gray-800",
-                                colors.hoverBg
-                              )
+                                colors.hoverBg,
+                              ),
                         )}
                       >
                         <div
@@ -950,7 +955,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                             "p-2 rounded-lg",
                             isSelected
                               ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                              : cn(colors.backgroundMuted)
+                              : cn(colors.backgroundMuted),
                           )}
                         >
                           <Icon className="w-5 h-5" />
@@ -1002,7 +1007,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                       className={cn(
                         isDarkMode
                           ? "bg-gray-800 border-gray-700 text-white"
-                          : "bg-white"
+                          : "bg-white",
                       )}
                     />
                     <Button

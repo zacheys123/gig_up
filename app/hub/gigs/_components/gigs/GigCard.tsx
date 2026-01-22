@@ -438,6 +438,47 @@ const GigCard: React.FC<GigCardProps> = ({
     (total, band) => total + (band.performingMembers?.length || 0),
     0,
   );
+  // Add this debug function at the top of your component
+  const debugGigState = () => {
+    console.log("=== DEBUG: Gig State ===");
+    console.log("Gig ID:", gig._id);
+    console.log("Gig Type:", gigType);
+    console.log("Is Client Band:", isClientBand);
+    console.log("Is Taken:", gig.isTaken);
+    console.log("Is Full:", isFull);
+    console.log("Current User ID:", currentUserId);
+    console.log("Current User:", currentUser?.username);
+    console.log("User instruments:", currentUser?.instrument);
+
+    // Check interestedUsers
+    if (gig.interestedUsers) {
+      console.log("Interested Users:", gig.interestedUsers);
+      const isInInterested = gig.interestedUsers.includes(currentUserId!);
+      console.log("Is user in interestedUsers?", isInInterested);
+    }
+
+    // Check bandCategory
+    if (gig.bandCategory) {
+      console.log("Band Roles:", gig.bandCategory.length);
+      gig.bandCategory.forEach((role, i) => {
+        console.log(`Role ${i}: ${role.role}`, {
+          requiredSkills: role.requiredSkills,
+          filledSlots: role.filledSlots,
+          maxSlots: role.maxSlots,
+          applicants: role.applicants.length,
+          isUserApplicant: role.applicants.includes(currentUserId!),
+          isUserBooked: role.bookedUsers.includes(currentUserId!),
+        });
+      });
+    }
+  };
+
+  // Call it in useEffect
+  useEffect(() => {
+    if (currentUser) {
+      debugGigState();
+    }
+  }, [currentUser, gig]);
   const getGigType = () => {
     switch (gig.bussinesscat) {
       case "full":
@@ -689,9 +730,7 @@ const GigCard: React.FC<GigCardProps> = ({
   //   if (!currentUser) return false;
   //   const role = gig.bandCategory?.[roleIndex];
   //   if (!role) return false;
-  //   return isUserQualifiedForRole(currentUser, role);
-  // }; // Add this function inside your GigCard component, after the other handlers
-  // Update your handleBandApplication function to be more robust
+
   const handleBandApplication = () => {
     if (!currentUser) {
       toast.error("Please sign in first");
@@ -1565,6 +1604,24 @@ const GigCard: React.FC<GigCardProps> = ({
   // Check interest window status
   const interestWindowStatus = getInterestWindowStatus(gig);
   const isInterestWindowOpen = interestWindowStatus.status === "open";
+  // Add this useEffect to debug
+  useEffect(() => {
+    if (currentUser && gig.bandCategory) {
+      console.log("=== DEBUG: Role Qualification ===");
+      console.log("User instruments:", currentUser.instrument);
+      console.log("User role type:", currentUser.roleType);
+      console.log("Available roles:", gig.bandCategory);
+
+      gig.bandCategory.forEach((role, index) => {
+        const isQualified = isUserQualifiedForRole(currentUser, role);
+        console.log(`Role ${role.role}:`, {
+          requiredSkills: role.requiredSkills,
+          isQualified,
+          slots: `${role.filledSlots}/${role.maxSlots}`,
+        });
+      });
+    }
+  }, [currentUser, gig.bandCategory]);
   const renderActionButton = () => {
     if (!showActions) return null;
 
@@ -1795,17 +1852,46 @@ const GigCard: React.FC<GigCardProps> = ({
             ) || [];
 
           if (qualifiedRoles.length === 0) {
+            const allRoles = gig.bandCategory || [];
+            const availableRoles = allRoles.filter(
+              (role) => role.filledSlots < role.maxSlots,
+            );
+
             return {
-              label: "No Qualified Roles",
+              label: "View Requirements",
               variant: "outline" as const,
+              disabled: false,
               icon: <AlertCircle className="w-4 h-4" />,
-              action: () =>
-                toast.error(
-                  "You don't meet requirements for any available roles",
-                ),
+              action: () => {
+                // Show requirements modal
+                toast.info(
+                  <div className="p-4">
+                    <p className="font-semibold">Role Requirements</p>
+                    {availableRoles.map((role, idx) => (
+                      <div key={idx} className="mt-2 p-2 border rounded-lg">
+                        <p className="font-medium">{role.role}</p>
+                        <p className="text-sm text-gray-600">Requirements:</p>
+                        <ul className="list-disc pl-4 text-sm">
+                          {role.requiredSkills?.map((skill, i) => (
+                            <li key={i}>{skill}</li>
+                          ))}
+                        </ul>
+                        <p className="text-xs mt-1">
+                          Your instruments:{" "}
+                          {Array.isArray(currentUser?.instrument)
+                            ? currentUser.instrument.join(", ")
+                            : currentUser?.instrument}
+                        </p>
+                      </div>
+                    ))}
+                  </div>,
+                  { duration: 10000 },
+                );
+              },
             };
           }
 
+          // ADD THIS RETURN STATEMENT - THIS WAS MISSING!
           return {
             label:
               qualifiedRoles.length === 1

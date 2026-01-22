@@ -8,6 +8,7 @@ const bandMember = v.object({
   joinedAt: v.number(), // Timestamp when they joined
 });
 
+// In your convex/gigs.ts schema file
 const bandRoleSchema = v.object({
   role: v.string(),
   maxSlots: v.number(),
@@ -43,7 +44,7 @@ const bandBookingEntry = v.object({
     v.literal("interview_completed"),
     v.literal("withdrawn"), // ADD THIS
     v.literal("rejected"), // Optionally add this too
-    v.literal("accepted") // Optionally add this too
+    v.literal("accepted"), // Optionally add this too
   ),
 
   // Booking phase
@@ -65,8 +66,8 @@ const bandBookingEntry = v.object({
       v.literal("paid"),
       v.literal("disputed"),
       v.literal("cancelled"),
-      v.literal("refunded") // Consider adding this too
-    )
+      v.literal("refunded"), // Consider adding this too
+    ),
   ),
   paymentAmount: v.optional(v.number()),
   paymentDate: v.optional(v.number()),
@@ -93,7 +94,7 @@ const bookingHistoryEntry = v.object({
     v.literal("cancelled"),
     v.literal("rejected"),
     v.literal("updated"),
-    v.literal("viewed")
+    v.literal("viewed"),
   ),
 
   gigType: v.union(v.literal("regular"), v.literal("band")),
@@ -125,7 +126,7 @@ const bandApplicationEntry = v.object({
     v.literal("cancelled"),
     v.literal("rejected"),
     v.literal("updated"),
-    v.literal("viewed")
+    v.literal("viewed"),
   ),
 
   // Band members who will perform if booked
@@ -135,7 +136,7 @@ const bandApplicationEntry = v.object({
       name: v.string(),
       role: v.string(),
       instrument: v.string(),
-    })
+    }),
   ),
 
   // Application details
@@ -219,7 +220,7 @@ export const gigModel = defineTable({
       }),
       createdBy: v.id("users"),
       createdAt: v.number(),
-    })
+    }),
   ),
 
   // === GIG CAPACITY ===
@@ -270,13 +271,13 @@ export const gigModel = defineTable({
         v.literal("mpesa"),
         v.literal("cash"),
         v.literal("bank"),
-        v.literal("other")
+        v.literal("other"),
       ),
       temporaryConfirm: v.optional(v.boolean()),
       finalizedAt: v.optional(v.number()),
       verified: v.optional(v.boolean()), // Whether code was verified against other party
       notes: v.optional(v.string()),
-    })
+    }),
   ),
 
   clientConfirmPayment: v.optional(
@@ -291,13 +292,13 @@ export const gigModel = defineTable({
         v.literal("mpesa"),
         v.literal("cash"),
         v.literal("bank"),
-        v.literal("other")
+        v.literal("other"),
       ),
       temporaryConfirm: v.optional(v.boolean()),
       finalizedAt: v.optional(v.number()),
       verified: v.optional(v.boolean()),
       notes: v.optional(v.string()),
-    })
+    }),
   ),
 
   // === PAYMENT STATUS ===
@@ -307,7 +308,7 @@ export const gigModel = defineTable({
     v.literal("paid"), // Full payment confirmed
     v.literal("disputed"), // Payment disputed
     v.literal("refunded"), // Refund issued
-    v.literal("verified_paid") // Verified and paid (both confirmed with matching codes)
+    v.literal("verified_paid"), // Verified and paid (both confirmed with matching codes)
   ),
 
   // === FINALIZATION DETAILS ===
@@ -318,8 +319,8 @@ export const gigModel = defineTable({
       v.literal("musician"),
       v.literal("both"),
       v.literal("system"),
-      v.literal("admin")
-    )
+      v.literal("admin"),
+    ),
   ),
   finalizedAt: v.optional(v.number()),
 
@@ -340,14 +341,14 @@ export const gigModel = defineTable({
           v.union(
             v.literal("active"),
             v.literal("booked"),
-            v.literal("removed")
-          )
+            v.literal("removed"),
+          ),
         ),
         bandRole: v.optional(v.string()),
         bandRoleIndex: v.optional(v.number()),
         bookedAt: v.optional(v.number()),
-      })
-    )
+      }),
+    ),
   ),
 })
   .index("by_postedBy", ["postedBy"])

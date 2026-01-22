@@ -523,33 +523,42 @@ export interface BandFormationStatus {
 export interface BandSetupRole {
   role: string;
   maxSlots: number;
-  maxApplicants?: number; // Add this field
-  currentApplicants?: number; // Add this field
+  maxApplicants: number;
+  currentApplicants: number;
   requiredSkills: string[];
   description: string;
-  price?: string;
+  price?: string; // Make optional with ?
   currency: string;
   negotiable: boolean;
-  filledSlots?: number;
   isLocked?: boolean;
+  filledSlots?: number;
+  bookedPrice?: number;
 }
-
 export interface BandRoleInput {
   role: string;
   maxSlots: number;
-  maxApplicants?: number; // Add this field
-  currentApplicants?: number; // Add this field
+  maxApplicants?: number;
+  currentApplicants?: number;
   requiredSkills?: string[];
   description?: string;
-  price?: number;
+  price?: number; // Number for API/data storage
   currency?: string;
   negotiable?: boolean;
-  filledSlots?: number;
   isLocked?: boolean;
+  filledSlots?: number;
+  bookedPrice?: number;
 }
 
-// Also add these related types if needed:
+// Add type guards to help with conversion
+export function isBandSetupRole(role: any): role is BandSetupRole {
+  return (
+    role && typeof role.role === "string" && Array.isArray(role.requiredSkills)
+  );
+}
 
+export function isBandRoleInput(role: any): role is BandRoleInput {
+  return role && typeof role.role === "string";
+}
 // For BandApplication (deprecated but might be used elsewhere)
 export interface BandApplication {
   userId: Id<"users">;

@@ -1,15 +1,19 @@
-// app/gigs/_components/BandSetupModal.tsx
+// app/gigs/_components/BandSetUpModal.tsx
+"use client";
+
 import React from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { BandRoleInput, BandSetupRole } from "@/types/gig";
 import DesktopBandSetupModal from "./DesktopBandSetupModal";
 import MobileBandSetupModal from "./MobileBandSetup";
 
+// Update the interface to accept BandRoleInput[] instead of BandSetupRole[]
 interface BandSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (roles: BandRoleInput[]) => void;
-  initialRoles?: BandSetupRole[];
+  initialRoles?: BandRoleInput[];
+  isEditMode?: boolean;
 }
 
 const BandSetupModal: React.FC<BandSetupModalProps> = (props) => {
