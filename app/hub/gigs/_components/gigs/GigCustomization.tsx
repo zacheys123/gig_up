@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Box, CircularProgress, Divider } from "@mui/material";
 import {
   BsCameraFill,
   BsPaletteFill,
@@ -11,18 +10,16 @@ import {
 } from "react-icons/bs";
 import { TbColorFilter, TbPaletteOff } from "react-icons/tb";
 import { MdColorLens, MdFormatColorText, MdPalette } from "react-icons/md";
-
-import altlogo from "../../../../../public/assets/png/logo-no-background.png";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { CustomProps } from "@/types/gig";
 import {
-  colors,
   fonts,
   colorPalettes,
   fontCategories,
   getContrastColor,
 } from "@/lib/gigColors";
+import { Box, CircularProgress, Divider } from "@mui/material";
 
 interface GigCustomizationProps {
   customization: CustomProps;
@@ -31,6 +28,7 @@ interface GigCustomizationProps {
   logo: string;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   isUploading: boolean;
+  onApply?: (customization: CustomProps) => void;
 }
 
 const GigCustomization: React.FC<GigCustomizationProps> = ({
@@ -40,21 +38,51 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
   logo,
   handleFileChange,
   isUploading,
+  onApply,
 }) => {
-  const { colors: themeColors } = useThemeColors();
+  const { colors: themeColors, isDarkMode } = useThemeColors();
   const [activeTab, setActiveTab] = useState<"colors" | "fonts" | "preview">(
     "colors",
   );
   const [activePalette, setActivePalette] = useState<
     "vibrant" | "professional" | "pastel" | "dark" | "earthy" | "monochrome"
   >("vibrant");
+  const [localCustomization, setLocalCustomization] =
+    useState<CustomProps>(customization);
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalCustomization(customization);
+  }, [customization]);
 
   const handleReset = () => {
-    setCustomization({
+    const resetValues: CustomProps = {
       font: "",
       fontColor: "",
       backgroundColor: "",
-    });
+    };
+    setLocalCustomization(resetValues);
+    setCustomization(resetValues);
+  };
+
+  const handleApply = () => {
+    // Update parent state
+    setCustomization(localCustomization);
+
+    // Call optional onApply callback
+    if (onApply) {
+      onApply(localCustomization);
+    }
+
+    // Close modal
+    closeModal();
+  };
+
+  const updateLocalCustomization = (updates: Partial<CustomProps>) => {
+    setLocalCustomization((prev) => ({
+      ...prev,
+      ...updates,
+    }));
   };
 
   const getFontPreviewStyle = (fontName: string) => {
@@ -80,7 +108,15 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
         )}
       >
         {/* Header with Tabs */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b p-6">
+        <div
+          className={cn(
+            "sticky top-0 z-10 p-6 border-b",
+            isDarkMode
+              ? "bg-gradient-to-r from-gray-900 to-gray-800"
+              : "bg-gradient-to-r from-gray-50 to-gray-100",
+            themeColors.border,
+          )}
+        >
           <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className={cn("text-2xl font-bold", themeColors.text)}>
@@ -93,7 +129,8 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
             <button
               onClick={closeModal}
               className={cn(
-                "p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all hover:scale-110",
+                "p-2 rounded-full transition-all hover:scale-110",
+                themeColors.hoverBg,
                 themeColors.textMuted,
               )}
             >
@@ -108,10 +145,15 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
                 activeTab === "colors"
-                  ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg"
+                  ? cn(
+                      "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg",
+                      "ring-2 ring-orange-500/20",
+                    )
                   : cn(
-                      "hover:bg-gray-200 dark:hover:bg-gray-700",
+                      themeColors.hoverBg,
                       themeColors.text,
+                      "border",
+                      themeColors.border,
                     ),
               )}
             >
@@ -123,10 +165,15 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
                 activeTab === "fonts"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg"
+                  ? cn(
+                      "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg",
+                      "ring-2 ring-blue-500/20",
+                    )
                   : cn(
-                      "hover:bg-gray-200 dark:hover:bg-gray-700",
+                      themeColors.hoverBg,
                       themeColors.text,
+                      "border",
+                      themeColors.border,
                     ),
               )}
             >
@@ -138,10 +185,15 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
                 activeTab === "preview"
-                  ? "bg-gradient-to-r from-green-500 to-teal-500 text-white shadow-lg"
+                  ? cn(
+                      "bg-gradient-to-r from-green-500 to-teal-500 text-white shadow-lg",
+                      "ring-2 ring-green-500/20",
+                    )
                   : cn(
-                      "hover:bg-gray-200 dark:hover:bg-gray-700",
+                      themeColors.hoverBg,
                       themeColors.text,
+                      "border",
+                      themeColors.border,
                     ),
               )}
             >
@@ -168,7 +220,14 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                   <div className="flex gap-2">
                     <button
                       onClick={handleReset}
-                      className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors",
+                        themeColors.warningBg,
+                        themeColors.warningText,
+                        "border",
+                        themeColors.warningBorder,
+                        themeColors.warningHover,
+                      )}
                     >
                       <TbPaletteOff className="w-4 h-4" />
                       Reset
@@ -182,17 +241,21 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                       key={key}
                       onClick={() => setActivePalette(key as any)}
                       className={cn(
-                        "p-3 rounded-xl border transition-all hover:scale-[1.02]",
+                        "p-3 rounded-xl transition-all hover:scale-[1.02]",
+                        "border",
                         activePalette === key
-                          ? "ring-2 ring-orange-500 ring-offset-2"
-                          : cn("hover:shadow-lg", themeColors.border),
+                          ? cn(
+                              "ring-2 ring-orange-500 ring-offset-2",
+                              themeColors.activeBg,
+                            )
+                          : cn(themeColors.hoverBg, themeColors.border),
                       )}
                     >
                       <div className="flex gap-1 mb-2">
                         {palette.slice(0, 4).map((color, i) => (
                           <div
                             key={i}
-                            className="w-6 h-6 rounded"
+                            className="w-6 h-6 rounded border border-white/20"
                             style={{ backgroundColor: color }}
                           />
                         ))}
@@ -224,25 +287,26 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                       <button
                         key={color}
                         onClick={() =>
-                          setCustomization((prev) => ({
-                            ...prev,
-                            fontColor: color,
-                          }))
+                          updateLocalCustomization({ fontColor: color })
                         }
                         className="group relative"
                         title={color}
                       >
                         <div
-                          className={`w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110 group-hover:ring-2 group-hover:ring-white/50 ${
-                            customization.fontColor === color
-                              ? "border-white dark:border-gray-900 ring-4 ring-orange-500"
-                              : "border-transparent"
-                          }`}
+                          className={cn(
+                            "w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110",
+                            localCustomization.fontColor === color
+                              ? `border-white ring-4 ring-orange-500 ${isDarkMode ? "border-gray-900" : ""}`
+                              : "border-transparent",
+                          )}
                           style={{ backgroundColor: color }}
                         />
                         <div
-                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"
-                          style={{ backgroundColor: getContrastColor(color) }}
+                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
+                          style={{
+                            backgroundColor: getContrastColor(color),
+                            borderColor: isDarkMode ? "#111827" : "white",
+                          }}
                         />
                       </button>
                     ))}
@@ -263,25 +327,26 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                       <button
                         key={color}
                         onClick={() =>
-                          setCustomization((prev) => ({
-                            ...prev,
-                            backgroundColor: color,
-                          }))
+                          updateLocalCustomization({ backgroundColor: color })
                         }
                         className="group relative"
                         title={color}
                       >
                         <div
-                          className={`w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110 group-hover:ring-2 group-hover:ring-white/50 ${
-                            customization.backgroundColor === color
-                              ? "border-white dark:border-gray-900 ring-4 ring-green-500"
-                              : "border-transparent"
-                          }`}
+                          className={cn(
+                            "w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110",
+                            localCustomization.backgroundColor === color
+                              ? `border-white ring-4 ring-green-500 ${isDarkMode ? "border-gray-900" : ""}`
+                              : "border-transparent",
+                          )}
                           style={{ backgroundColor: color }}
                         />
                         <div
-                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"
-                          style={{ backgroundColor: getContrastColor(color) }}
+                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
+                          style={{
+                            backgroundColor: getContrastColor(color),
+                            borderColor: isDarkMode ? "#111827" : "white",
+                          }}
                         />
                       </button>
                     ))}
@@ -290,8 +355,15 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
               </div>
 
               {/* Current Selection Preview */}
-              {(customization.fontColor || customization.backgroundColor) && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 border">
+              {(localCustomization.fontColor ||
+                localCustomization.backgroundColor) && (
+                <div
+                  className={cn(
+                    "p-4 rounded-xl border",
+                    themeColors.card,
+                    themeColors.cardBorder,
+                  )}
+                >
                   <h4
                     className={cn(
                       "text-sm font-semibold mb-2",
@@ -300,28 +372,34 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                   >
                     Current Selection
                   </h4>
-                  <div className="flex items-center gap-4">
-                    {customization.fontColor && (
+                  <div className="flex flex-wrap items-center gap-4">
+                    {localCustomization.fontColor && (
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-6 h-6 rounded border"
-                          style={{ backgroundColor: customization.fontColor }}
+                          className="w-6 h-6 rounded border border-white/20"
+                          style={{
+                            backgroundColor: localCustomization.fontColor,
+                          }}
                         />
-                        <span className={cn("text-xs", themeColors.text)}>
-                          Font: {customization.fontColor}
+                        <span
+                          className={cn("text-xs font-mono", themeColors.text)}
+                        >
+                          {localCustomization.fontColor}
                         </span>
                       </div>
                     )}
-                    {customization.backgroundColor && (
+                    {localCustomization.backgroundColor && (
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-6 h-6 rounded border"
+                          className="w-6 h-6 rounded border border-white/20"
                           style={{
-                            backgroundColor: customization.backgroundColor,
+                            backgroundColor: localCustomization.backgroundColor,
                           }}
                         />
-                        <span className={cn("text-xs", themeColors.text)}>
-                          Background: {customization.backgroundColor}
+                        <span
+                          className={cn("text-xs font-mono", themeColors.text)}
+                        >
+                          {localCustomization.backgroundColor}
                         </span>
                       </div>
                     )}
@@ -349,14 +427,12 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                       <button
                         key={category}
                         onClick={() =>
-                          setCustomization((prev) => ({
-                            ...prev,
-                            font: fontList[0],
-                          }))
+                          updateLocalCustomization({ font: fontList[0] })
                         }
                         className={cn(
                           "p-4 rounded-xl border text-left transition-all hover:scale-[1.02]",
-                          themeColors.border,
+                          themeColors.card,
+                          themeColors.cardBorder,
                           themeColors.hoverBg,
                         )}
                       >
@@ -369,7 +445,13 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           >
                             {category}
                           </span>
-                          <span className="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700">
+                          <span
+                            className={cn(
+                              "text-xs px-2 py-1 rounded-full",
+                              themeColors.tagBg,
+                              themeColors.tagText,
+                            )}
+                          >
                             {fontList.length}
                           </span>
                         </div>
@@ -398,17 +480,16 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                     {fonts.map((font) => (
                       <button
                         key={font}
-                        onClick={() =>
-                          setCustomization((prev) => ({ ...prev, font }))
-                        }
+                        onClick={() => updateLocalCustomization({ font })}
                         className={cn(
                           "p-3 rounded-lg border text-left transition-all hover:shadow-md",
-                          customization.font === font
-                            ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                            : cn(
-                                "hover:bg-gray-50 dark:hover:bg-gray-800",
-                                themeColors.border,
-                              ),
+                          localCustomization.font === font
+                            ? cn(
+                                "ring-2 ring-blue-500",
+                                themeColors.infoBg,
+                                themeColors.infoBorder,
+                              )
+                            : cn(themeColors.hoverBg, themeColors.border),
                         )}
                       >
                         <div className="flex items-center justify-between">
@@ -418,8 +499,13 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           >
                             {font}
                           </span>
-                          {customization.font === font && (
-                            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                          {localCustomization.font === font && (
+                            <div
+                              className={cn(
+                                "w-6 h-6 rounded-full flex items-center justify-center",
+                                themeColors.primaryBg,
+                              )}
+                            >
                               <span className="text-white text-xs">✓</span>
                             </div>
                           )}
@@ -454,7 +540,8 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                   <label
                     htmlFor="logo"
                     className={cn(
-                      "flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed cursor-pointer transition-all hover:border-orange-500 hover:bg-orange-50/30 dark:hover:bg-orange-900/10",
+                      "flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed cursor-pointer transition-all",
+                      "hover:border-orange-500",
                       themeColors.border,
                       themeColors.hoverBg,
                     )}
@@ -510,9 +597,15 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                   />
 
                   {logo && (
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+                    <div
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-lg border",
+                        themeColors.successBg,
+                        themeColors.successBorder,
+                      )}
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-white dark:border-gray-800 shadow-lg">
+                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 shadow-lg">
                           <img
                             src={logo}
                             alt="Logo preview"
@@ -537,7 +630,12 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                         onClick={() =>
                           handleFileChange({ target: { files: null } } as any)
                         }
-                        className="px-3 py-1 text-sm rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                        className={cn(
+                          "px-3 py-1 text-sm rounded-lg transition-colors",
+                          themeColors.destructiveBg,
+                          themeColors.destructive,
+                          themeColors.destructiveHover,
+                        )}
                       >
                         Remove
                       </button>
@@ -568,13 +666,17 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Preview Card */}
                   <div
-                    className="p-8 rounded-2xl border-2 shadow-2xl transition-all duration-500 transform hover:scale-[1.02] hover:shadow-3xl"
+                    className={cn(
+                      "p-8 rounded-2xl border-2 shadow-2xl transition-all duration-500",
+                      "transform hover:scale-[1.02] hover:shadow-3xl",
+                    )}
                     style={{
                       backgroundColor:
-                        customization.backgroundColor || themeColors.background,
-                      borderColor: customization.fontColor
-                        ? `${customization.fontColor}30`
-                        : themeColors.border,
+                        localCustomization.backgroundColor ||
+                        (isDarkMode ? "#1f2937" : "#ffffff"),
+                      borderColor: localCustomization.fontColor
+                        ? `${localCustomization.fontColor}30`
+                        : themeColors.borderColor,
                     }}
                   >
                     <Box className="space-y-6">
@@ -585,8 +687,9 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                             className="text-2xl font-bold leading-tight"
                             style={{
                               color:
-                                customization.fontColor || themeColors.text,
-                              fontFamily: customization.font,
+                                localCustomization.fontColor ||
+                                themeColors.textStrong,
+                              fontFamily: localCustomization.font,
                             }}
                           >
                             Summer Music Festival
@@ -595,12 +698,13 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                             <span
                               className="text-sm px-3 py-1.5 rounded-full font-medium"
                               style={{
-                                backgroundColor: customization.fontColor
-                                  ? `${customization.fontColor}15`
-                                  : themeColors.backgroundMuted,
+                                backgroundColor: localCustomization.fontColor
+                                  ? `${localCustomization.fontColor}15`
+                                  : themeColors.tagBg,
                                 color:
-                                  customization.fontColor || themeColors.text,
-                                fontFamily: customization.font,
+                                  localCustomization.fontColor ||
+                                  themeColors.tagText,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               🎵 Live Band
@@ -608,12 +712,13 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                             <span
                               className="text-sm px-3 py-1.5 rounded-full font-medium"
                               style={{
-                                backgroundColor: customization.fontColor
-                                  ? `${customization.fontColor}15`
-                                  : themeColors.backgroundMuted,
+                                backgroundColor: localCustomization.fontColor
+                                  ? `${localCustomization.fontColor}15`
+                                  : themeColors.tagBg,
                                 color:
-                                  customization.fontColor || themeColors.text,
-                                fontFamily: customization.font,
+                                  localCustomization.fontColor ||
+                                  themeColors.tagText,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               🎤 5 Slots
@@ -621,7 +726,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           </div>
                         </div>
                         {logo && (
-                          <div className="w-16 h-16 rounded-xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-xl">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden border-4 shadow-xl">
                             <img
                               src={logo}
                               alt="Logo"
@@ -644,8 +749,9 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                               className="text-sm font-medium"
                               style={{
                                 color:
-                                  customization.fontColor || themeColors.text,
-                                fontFamily: customization.font,
+                                  localCustomization.fontColor ||
+                                  themeColors.text,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               Nairobi, Kenya
@@ -653,10 +759,10 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                             <p
                               className="text-xs"
                               style={{
-                                color: customization.fontColor
-                                  ? `${customization.fontColor}80`
+                                color: localCustomization.fontColor
+                                  ? `${localCustomization.fontColor}80`
                                   : themeColors.textMuted,
-                                fontFamily: customization.font,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               15 Dec 2024 • 7:00 PM - 11:00 PM
@@ -673,8 +779,9 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                               className="text-xl font-bold"
                               style={{
                                 color:
-                                  customization.fontColor || themeColors.text,
-                                fontFamily: customization.font,
+                                  localCustomization.fontColor ||
+                                  themeColors.textStrong,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               $2,500
@@ -682,10 +789,10 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                             <p
                               className="text-xs"
                               style={{
-                                color: customization.fontColor
-                                  ? `${customization.fontColor}80`
+                                color: localCustomization.fontColor
+                                  ? `${localCustomization.fontColor}80`
                                   : themeColors.textMuted,
-                                fontFamily: customization.font,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               Per performance • Negotiable
@@ -699,24 +806,14 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                       {/* Footer */}
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 overflow-hidden">
-                            <img
-                              src={
-                                typeof altlogo === "string"
-                                  ? altlogo
-                                  : altlogo.src
-                              }
-                              alt="Profile"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
                           <div>
                             <p
                               className="text-sm font-medium"
                               style={{
                                 color:
-                                  customization.fontColor || themeColors.text,
-                                fontFamily: customization.font,
+                                  localCustomization.fontColor ||
+                                  themeColors.text,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               Music Events Ltd
@@ -724,10 +821,10 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                             <p
                               className="text-xs"
                               style={{
-                                color: customization.fontColor
-                                  ? `${customization.fontColor}80`
+                                color: localCustomization.fontColor
+                                  ? `${localCustomization.fontColor}80`
                                   : themeColors.textMuted,
-                                fontFamily: customization.font,
+                                fontFamily: localCustomization.font,
                               }}
                             >
                               4.8 ★ • 120 bookings
@@ -737,15 +834,19 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                         <Button
                           size="sm"
                           className={cn(
-                            "px-6 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all",
-                            customization.fontColor
-                              ? `text-white border-0`
-                              : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white",
+                            "px-6 py-2.5 rounded-full font-semibold shadow-lg transition-all",
+                            "hover:shadow-xl",
+                            localCustomization.fontColor
+                              ? "text-white border-0"
+                              : cn(
+                                  "bg-gradient-to-r from-orange-500 to-red-500 text-white",
+                                  "hover:from-orange-600 hover:to-red-600",
+                                ),
                           )}
                           style={{
                             backgroundColor:
-                              customization.fontColor || undefined,
-                            fontFamily: customization.font,
+                              localCustomization.fontColor || undefined,
+                            fontFamily: localCustomization.font,
                           }}
                         >
                           Book Now
@@ -756,7 +857,13 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
 
                   {/* Customization Summary */}
                   <div className="space-y-6">
-                    <div className="p-6 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 border">
+                    <div
+                      className={cn(
+                        "p-6 rounded-2xl border",
+                        themeColors.card,
+                        themeColors.cardBorder,
+                      )}
+                    >
                       <h4
                         className={cn(
                           "text-lg font-bold mb-4",
@@ -766,19 +873,24 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                         Design Summary
                       </h4>
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/50 dark:bg-gray-800/50">
+                        <div
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-lg",
+                            themeColors.backgroundSecondary,
+                          )}
+                        >
                           <div className="flex items-center gap-3">
                             <MdFormatColorText className="w-5 h-5 text-blue-500" />
                             <span className={cn("text-sm", themeColors.text)}>
                               Font Color
                             </span>
                           </div>
-                          {customization.fontColor ? (
+                          {localCustomization.fontColor ? (
                             <div className="flex items-center gap-2">
                               <div
-                                className="w-6 h-6 rounded border"
+                                className="w-6 h-6 rounded border border-white/20"
                                 style={{
-                                  backgroundColor: customization.fontColor,
+                                  backgroundColor: localCustomization.fontColor,
                                 }}
                               />
                               <span
@@ -787,7 +899,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                                   themeColors.text,
                                 )}
                               >
-                                {customization.fontColor}
+                                {localCustomization.fontColor}
                               </span>
                             </div>
                           ) : (
@@ -799,20 +911,25 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/50 dark:bg-gray-800/50">
+                        <div
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-lg",
+                            themeColors.backgroundSecondary,
+                          )}
+                        >
                           <div className="flex items-center gap-3">
                             <MdPalette className="w-5 h-5 text-green-500" />
                             <span className={cn("text-sm", themeColors.text)}>
                               Background
                             </span>
                           </div>
-                          {customization.backgroundColor ? (
+                          {localCustomization.backgroundColor ? (
                             <div className="flex items-center gap-2">
                               <div
-                                className="w-6 h-6 rounded border"
+                                className="w-6 h-6 rounded border border-white/20"
                                 style={{
                                   backgroundColor:
-                                    customization.backgroundColor,
+                                    localCustomization.backgroundColor,
                                 }}
                               />
                               <span
@@ -821,7 +938,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                                   themeColors.text,
                                 )}
                               >
-                                {customization.backgroundColor}
+                                {localCustomization.backgroundColor}
                               </span>
                             </div>
                           ) : (
@@ -833,19 +950,24 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/50 dark:bg-gray-800/50">
+                        <div
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-lg",
+                            themeColors.backgroundSecondary,
+                          )}
+                        >
                           <div className="flex items-center gap-3">
                             <BsFonts className="w-5 h-5 text-purple-500" />
                             <span className={cn("text-sm", themeColors.text)}>
                               Font Family
                             </span>
                           </div>
-                          {customization.font ? (
+                          {localCustomization.font ? (
                             <span
                               className="text-sm font-medium"
-                              style={{ fontFamily: customization.font }}
+                              style={{ fontFamily: localCustomization.font }}
                             >
-                              {customization.font}
+                              {localCustomization.font}
                             </span>
                           ) : (
                             <span
@@ -856,7 +978,12 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/50 dark:bg-gray-800/50">
+                        <div
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-lg",
+                            themeColors.backgroundSecondary,
+                          )}
+                        >
                           <div className="flex items-center gap-3">
                             <BsCameraFill className="w-5 h-5 text-orange-500" />
                             <span className={cn("text-sm", themeColors.text)}>
@@ -866,7 +993,8 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           {logo ? (
                             <span
                               className={cn(
-                                "text-sm text-green-600 dark:text-green-400",
+                                "text-sm font-medium",
+                                themeColors.successText,
                               )}
                             >
                               ✓ Uploaded
@@ -883,9 +1011,15 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                     </div>
 
                     {/* Contrast Warning */}
-                    {customization.fontColor &&
-                      customization.backgroundColor && (
-                        <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800">
+                    {localCustomization.fontColor &&
+                      localCustomization.backgroundColor && (
+                        <div
+                          className={cn(
+                            "p-4 rounded-xl border",
+                            themeColors.warningBg,
+                            themeColors.warningBorder,
+                          )}
+                        >
                           <div className="flex items-start gap-3">
                             <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
                               <span className="text-white text-sm">!</span>
@@ -894,7 +1028,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                               <h5
                                 className={cn(
                                   "text-sm font-semibold mb-1",
-                                  themeColors.text,
+                                  themeColors.warningText,
                                 )}
                               >
                                 Contrast Check
@@ -917,13 +1051,22 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 border-t p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div
+          className={cn(
+            "sticky bottom-0 border-t p-6",
+            isDarkMode
+              ? "bg-gradient-to-r from-gray-900 to-gray-800"
+              : "bg-gradient-to-r from-gray-50 to-gray-100",
+            themeColors.border,
+          )}
+        >
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
               onClick={handleReset}
               className={cn(
                 "border-amber-500 text-amber-600 hover:bg-amber-50",
+                isDarkMode ? "hover:bg-amber-900/20" : "",
                 themeColors.border,
               )}
             >
@@ -938,13 +1081,11 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  // Apply customization
-                  closeModal();
-                }}
+                onClick={handleApply}
                 className={cn(
-                  "px-8 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                  "text-white font-semibold shadow-lg hover:shadow-xl transition-all",
+                  "px-8 font-semibold shadow-lg transition-all",
+                  "bg-gradient-to-r from-orange-500 to-red-500 text-white",
+                  "hover:from-orange-600 hover:to-red-600 hover:shadow-xl",
                 )}
               >
                 Apply Design

@@ -278,230 +278,6 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
     </TooltipProvider>
   );
 };
-const getActionButtonConfig = (
-  status: GigUserStatus,
-  gig: {
-    isClientBand?: boolean;
-    isTaken?: boolean;
-    bookCount?: Array<any>;
-    maxSlots?: number; // Add this
-  },
-): ActionButtonConfig => {
-  const isClientBand = gig.isClientBand || false;
-  const bookCount = gig.bookCount || [];
-
-  // ========== GIG POSTER (OWNER) ==========
-  if (status.isGigPoster) {
-    return {
-      label: gig.isTaken ? "Manage Booking" : "Review Applicants",
-      variant: "default" as const,
-      icon: <Sparkles className="w-4 h-4" />,
-      action: "manage",
-      disabled: false,
-      className:
-        "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
-    };
-  }
-
-  // ========== BAND APPLICATION CASES (bookCount) ==========
-  if (isClientBand && status.isInBandApplication) {
-    if (status.isBooked) {
-      return {
-        label: "Band Booked ✓",
-        variant: "default" as const,
-        icon: <CheckCircle className="w-4 h-4" />,
-        action: "manage",
-        disabled: false,
-        className:
-          "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
-      };
-    }
-
-    if (status.isPending) {
-      return {
-        label: `Band Application ${status.isPending ? "Pending" : "Submitted"}`,
-        variant: "outline" as const,
-        icon: <Clock className="w-4 h-4" />,
-        action: "withdraw",
-        disabled: false,
-        className:
-          "border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300",
-      };
-    }
-
-    return {
-      label: "View Band Application",
-      variant: "outline" as const,
-      icon: <Building2 className="w-4 h-4" />,
-      action: "manage",
-      disabled: false,
-      className:
-        "border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300",
-    };
-  }
-
-  // ========== BOOKED STATUS (both individual and band) ==========
-  if (status.isBooked) {
-    if (isClientBand && status.isInBookedUsers) {
-      return {
-        label: `Booked as ${status.bandRoleApplied || "Band Member"}`,
-        variant: "default" as const,
-        icon: <CheckCircle className="w-4 h-4" />,
-        action: "manage",
-        disabled: false,
-        className:
-          "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
-      };
-    }
-
-    return {
-      label: "Booked ✓",
-      variant: "secondary" as const,
-      icon: <CheckCircle className="w-4 h-4" />,
-      action: "none",
-      disabled: true,
-      className:
-        "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
-    };
-  }
-
-  // ========== PENDING/APPLIED STATUS ==========
-  if (status.isPending || status.isInApplicants || status.hasShownInterest) {
-    if (isClientBand) {
-      // Band role applicant
-      if (status.isInApplicants) {
-        return {
-          label: status.isPending
-            ? "Pending..."
-            : `Applied as ${status.bandRoleApplied || "Member"}`,
-          variant: "outline" as const,
-          icon: <Clock className="w-4 h-4" />,
-          action: "withdraw",
-          disabled: false,
-          className:
-            "border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300",
-        };
-      }
-
-      // Showed interest in band gig (but not in a specific role)
-      return {
-        label: "Show Interest",
-        variant: "outline" as const,
-        icon: <User className="w-4 h-4" />,
-        action: "withdraw",
-        disabled: false,
-        className:
-          "border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300",
-      };
-    }
-
-    // Regular gig - individual interest
-    return {
-      label: status.isPending ? "Pending..." : "Applied",
-      variant: "outline" as const,
-      icon: <Clock className="w-4 h-4" />,
-      action: "withdraw",
-      disabled: false,
-      className:
-        "border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300",
-    };
-  }
-
-  // ========== CAN APPLY STATUS ==========
-  if (status.canApply) {
-    if (isClientBand) {
-      // Check if user is in any band (you might need to check this from user data)
-      const userHasBand = false; // Replace with actual check
-
-      if (userHasBand) {
-        return {
-          label: "Apply with Band",
-          variant: "default" as const,
-          icon: <Building2 className="w-4 h-4" />,
-          action: "apply",
-          disabled: false,
-          className:
-            "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
-        };
-      }
-
-      // Apply as individual band member
-      return {
-        label: "Apply for Role",
-        variant: "default" as const,
-        icon: <UserPlus className="w-4 h-4" />,
-        action: "apply",
-        disabled: false,
-        className:
-          "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
-      };
-    }
-
-    // Regular gig - show interest
-    return {
-      label: "Show Interest",
-      variant: "default" as const,
-      icon: <UserPlus className="w-4 h-4" />,
-      action: "apply",
-      disabled: false,
-      className:
-        "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
-    };
-  }
-
-  // ========== ROLE FULL (band gigs only) ==========
-  if (status.roleDetails?.isRoleFull) {
-    return {
-      label: "Role Full",
-      variant: "secondary" as const,
-      icon: <AlertCircle className="w-4 h-4" />,
-      action: "none",
-      disabled: true,
-      className:
-        "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
-    };
-  }
-
-  // ========== GIG TAKEN ==========
-  if (gig.isTaken) {
-    return {
-      label: "Booked",
-      variant: "secondary" as const,
-      icon: <Lock className="w-4 h-4" />,
-      action: "none",
-      disabled: true,
-      className:
-        "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
-    };
-  }
-
-  // ========== GIG FULL (non-band gigs) ==========
-  if (!isClientBand) {
-    const interestedCount = gig.bookCount?.length || 0;
-    const maxSlots = gig.maxSlots || 10; // Now this works
-    if (interestedCount >= maxSlots) {
-      return {
-        label: "Fully Booked",
-        variant: "secondary" as const,
-        icon: <AlertCircle className="w-4 h-4" />,
-        action: "none",
-        disabled: true,
-        className:
-          "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
-      };
-    }
-  }
-
-  // ========== DEFAULT/UNAVAILABLE ==========
-  return {
-    label: "Unavailable",
-    variant: "secondary" as const,
-    icon: <AlertCircle className="w-4 h-4" />,
-    action: "none",
-    disabled: true,
-    className: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
-  };
-};
 
 const GigCard: React.FC<GigCardProps> = ({
   gig,
@@ -574,17 +350,6 @@ const GigCard: React.FC<GigCardProps> = ({
     userStatus.isInApplicants ||
     userStatus.isInBandApplication;
   const userPosition = userStatus.position;
-
-  // Calculate if the gig is full
-  const isFull = useMemo(() => {
-    if (isClientBand) {
-      return userStatus.roleDetails?.isRoleFull || false;
-    } else {
-      const interestedCount = gig.interestedUsers?.length || 0;
-      const maxSlots = gig.maxSlots || 10;
-      return interestedCount >= maxSlots;
-    }
-  }, [isClientBand, userStatus.roleDetails, gig.interestedUsers, gig.maxSlots]);
 
   if (isPending && !showFullGigs) {
     // Instead of returning null, you could return a "Fully Booked" card:
@@ -673,7 +438,176 @@ const GigCard: React.FC<GigCardProps> = ({
     (total, band) => total + (band.performingMembers?.length || 0),
     0,
   );
+  const getGigType = () => {
+    switch (gig.bussinesscat) {
+      case "full":
+        // "Full" = Need an ENTIRE BAND (not individual roles)
+        // This uses bookCount for band applications
+        return "full_band"; // Changed from just "band"
 
+      case "other":
+        // "Other" = Client creating THEIR OWN BAND with specific roles
+        // This ALWAYS has bandCategory with roles
+        return "client_band_creation"; // Changed from "band_roles"
+
+      case "personal":
+        // "Personal" = Need an INDIVIDUAL musician (solo)
+        // This uses interestedUsers array
+        return "individual_musician";
+
+      case "mc":
+        // "MC" = Need an MC/Master of Ceremonies
+        return "mc";
+
+      case "dj":
+        // "DJ" = Need a DJ
+        return "dj";
+
+      case "vocalist":
+        // "Vocalist" = Need a vocalist/singer
+        return "vocalist";
+
+      default:
+        // Fallback
+        return "individual_musician";
+    }
+  };
+
+  const gigType = getGigType();
+
+  // ===== SLOT CALCULATIONS FOR EACH TYPE =====
+  const isFull = useMemo(() => {
+    switch (gigType) {
+      case "full_band":
+        // Full band gig: bands apply via bookCount
+        const bandCount = gig.bookCount?.length || 0;
+        const maxBands = gig.maxSlots || 1; // Usually 1 full band needed
+        return bandCount >= maxBands;
+
+      case "client_band_creation":
+        // Client band creation: each role has its own slots
+        if (!gig.bandCategory || gig.bandCategory.length === 0) return false;
+        return gig.bandCategory.every(
+          (role) => role.filledSlots >= role.maxSlots,
+        );
+
+      case "individual_musician":
+      case "mc":
+      case "dj":
+      case "vocalist":
+        // Individual talent gigs: musicians show interest
+        const interestedCount = gig.interestedUsers?.length || 0;
+        const maxSlots = gig.maxSlots || 1; // Usually 1 musician needed
+        return interestedCount >= maxSlots;
+
+      default:
+        return false;
+    }
+  }, [
+    gigType,
+    gig.bandCategory,
+    gig.bookCount,
+    gig.interestedUsers,
+    gig.maxSlots,
+  ]);
+  const getActionButtonConfig = (
+    userStatus: GigUserStatus,
+    gigInfo: {
+      isClientBand?: boolean;
+      isTaken?: boolean;
+      bookCount?: any[];
+      maxSlots?: number;
+    },
+  ) => {
+    if (gig.isTaken) {
+      return {
+        label: "Booked",
+        variant: "secondary" as const,
+        disabled: true,
+        icon: <Lock className="w-4 h-4" />,
+        action: "none" as const,
+      };
+    }
+
+    if (isFull) {
+      return {
+        label: "Fully Booked",
+        variant: "secondary" as const,
+        disabled: true,
+        icon: <AlertCircle className="w-4 h-4" />,
+        action: "none" as const,
+      };
+    }
+
+    switch (gigType) {
+      case "full_band":
+        return {
+          label: "Apply with Band",
+          variant: "default" as const,
+          disabled: false,
+          icon: <Building2 className="w-4 h-4" />,
+          action: "apply" as const,
+        };
+
+      case "client_band_creation":
+        // Check if user can apply to any role
+        const qualifiedRoles =
+          gig.bandCategory?.filter(
+            (role) =>
+              role.filledSlots < role.maxSlots &&
+              isUserQualifiedForRole(currentUser!, role),
+          ) || [];
+
+        if (qualifiedRoles.length === 0) {
+          return {
+            label: "No Available Roles",
+            variant: "outline" as const,
+            disabled: true,
+            icon: <AlertCircle className="w-4 h-4" />,
+            action: "none" as const,
+          };
+        }
+
+        return {
+          label:
+            qualifiedRoles.length === 1
+              ? `Apply as ${qualifiedRoles[0].role}`
+              : "Apply for Role",
+          variant: "default" as const,
+          disabled: false,
+          icon: <UserPlus className="w-4 h-4" />,
+          action: "apply" as const,
+        };
+
+      case "individual_musician":
+      case "mc":
+      case "dj":
+      case "vocalist":
+        return {
+          label:
+            gigType === "mc"
+              ? "Apply as MC"
+              : gigType === "dj"
+                ? "Apply as DJ"
+                : gigType === "vocalist"
+                  ? "Apply as Vocalist"
+                  : "Show Interest",
+          variant: "default" as const,
+          disabled: false,
+          icon: <UserPlus className="w-4 h-4" />,
+          action: "apply" as const,
+        };
+
+      default:
+        return {
+          label: "Show Interest",
+          variant: "default" as const,
+          disabled: false,
+          icon: <UserPlus className="w-4 h-4" />,
+          action: "apply" as const,
+        };
+    }
+  };
   // Format date and time
   const formattedDate = new Date(gig.date).toLocaleDateString("en-US", {
     weekday: "short",
@@ -1636,16 +1570,10 @@ const GigCard: React.FC<GigCardProps> = ({
 
     const responsiveButtonClasses = "w-full sm:w-auto px-3 py-1.5 h-9";
 
-    // In renderActionButton function:
-    const buttonConfig = getActionButtonConfig(userStatus, {
-      isClientBand: gig.isClientBand || false,
-      isTaken: gig.isTaken || false,
-      bookCount: gig.bookCount || [],
-      maxSlots: gig.maxSlots, // Add this
-    });
+    // Check interest window
+    const interestWindowStatus = getInterestWindowStatus(gig);
+    const isInterestWindowOpen = interestWindowStatus.status === "open";
 
-    // ===== GIG POSTER (OWNER) =====
-    // In your renderActionButton function, modify the GIG POSTER section:
     // ===== GIG POSTER (OWNER) =====
     if (userStatus.isGigPoster) {
       return (
@@ -1655,7 +1583,18 @@ const GigCard: React.FC<GigCardProps> = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/gigs/${gig._id}/band-applicants`);
+              // Route based on gig type
+              switch (gigType) {
+                case "full_band":
+                  router.push(`/hub/gigs/client/${gig._id}/band-applicants`);
+                  break;
+                case "client_band_creation":
+                  router.push(`/hub/gigs/client/${gig._id}/role-applicants`);
+                  break;
+                default:
+                  router.push(`/hub/gigs/client/${gig._id}/applicants`);
+                  break;
+              }
             }}
             className={clsx(
               responsiveButtonClasses,
@@ -1698,19 +1637,14 @@ const GigCard: React.FC<GigCardProps> = ({
     ) {
       const handleManageClick = () => {
         // Route based on user status and gig type
-        if (gig.isClientBand) {
-          if (userStatus.isInBandApplication) {
-            // Band application - go to band application details
-            router.push(`/gigs/${gig._id}/band-application`);
-          } else if (userStatus.isInApplicants) {
-            // Band role application - go to role application details
-            router.push(`/gigs/${gig._id}/application`);
-          } else {
-            // Default for band gigs
-            router.push("/hub/gigs?tab=musician-prebooking");
-          }
+        if (gigType === "client_band_creation" && userStatus.isInApplicants) {
+          // Band role application
+          router.push(`/gigs/${gig._id}/application`);
+        } else if (gigType === "full_band" && userStatus.isInBandApplication) {
+          // Full band application
+          router.push(`/gigs/${gig._id}/band-application`);
         } else {
-          // Regular gig - go to prebooking
+          // Individual gig or other
           router.push("/hub/gigs?tab=musician-prebooking");
         }
       };
@@ -1723,46 +1657,47 @@ const GigCard: React.FC<GigCardProps> = ({
       let showPosition = false;
 
       // Determine button style based on status and gig type
-      if (gig.isClientBand) {
-        if (userStatus.isInBandApplication) {
-          // Band application
-          buttonLabel = "View Band Application";
-          icon = <Building2 className="w-4 h-4" />;
-          if (userStatus.isBooked) {
-            variant = "default";
-            customClasses =
-              "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md";
-            buttonLabel = "Band Booked ✓";
-          } else if (userStatus.isPending) {
-            customClasses =
-              "border-amber-500/40 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30";
-            buttonLabel = "Band Application Pending";
-          } else {
-            customClasses =
-              "border-purple-500/40 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30";
-          }
-        } else if (userStatus.isInApplicants) {
-          // Band role application
-          const roleName = userStatus.bandRoleApplied || "Role";
-          buttonLabel = `View ${roleName} Application`;
-          icon = <Music className="w-4 h-4" />;
-          if (userStatus.isBooked) {
-            variant = "default";
-            customClasses =
-              "bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white border-0 shadow-md";
-            buttonLabel = `Booked as ${roleName}`;
-          } else if (userStatus.isPending) {
-            customClasses =
-              "border-orange-500/40 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30";
-            buttonLabel = `Pending as ${roleName}`;
-          } else {
-            customClasses =
-              "border-blue-500/40 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30";
-            showPosition = userStatus.position !== null;
-          }
+      if (gigType === "full_band" && userStatus.isInBandApplication) {
+        // Full band application
+        buttonLabel = "View Band Application";
+        icon = <Building2 className="w-4 h-4" />;
+        if (userStatus.isBooked) {
+          variant = "default";
+          customClasses =
+            "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md";
+          buttonLabel = "Band Booked ✓";
+        } else if (userStatus.isPending) {
+          customClasses =
+            "border-amber-500/40 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30";
+          buttonLabel = "Band Application Pending";
+        } else {
+          customClasses =
+            "border-purple-500/40 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30";
+        }
+      } else if (
+        gigType === "client_band_creation" &&
+        userStatus.isInApplicants
+      ) {
+        // Band role application
+        const roleName = userStatus.bandRoleApplied || "Role";
+        buttonLabel = `View ${roleName} Application`;
+        icon = <Music className="w-4 h-4" />;
+        if (userStatus.isBooked) {
+          variant = "default";
+          customClasses =
+            "bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white border-0 shadow-md";
+          buttonLabel = `Booked as ${roleName}`;
+        } else if (userStatus.isPending) {
+          customClasses =
+            "border-orange-500/40 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30";
+          buttonLabel = `Pending as ${roleName}`;
+        } else {
+          customClasses =
+            "border-blue-500/40 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30";
+          showPosition = userStatus.position !== null;
         }
       } else {
-        // Regular gig interest
+        // Individual gig interest
         if (userStatus.isBooked) {
           variant = "default";
           customClasses =
@@ -1808,69 +1743,131 @@ const GigCard: React.FC<GigCardProps> = ({
       );
     }
 
-    // ===== DEFAULT ACTION BUTTON (Apply/Show Interest) =====
-    const handleAction = async () => {
-      if (!currentUserId) {
-        toast.error("Please sign in first");
-        return;
-      }
-
-      switch (buttonConfig.action) {
-        case "apply":
-          if (gig.isClientBand) {
-            handleBandApplication();
-          } else {
-            setShowInterestModal(true);
-          }
-          break;
-
-        case "withdraw":
-          // Withdraw logic (you already have this)
-          break;
-
-        case "manage":
-          // This should already be handled above
-          break;
-
-        default:
-          break;
-      }
-    };
-
-    // If no action needed (like "Booked" or "Role Full")
-    if (buttonConfig.action === "none") {
+    // ===== DEFAULT ACTION BUTTONS =====
+    if (gig.isTaken) {
       return (
         <Button
-          variant={buttonConfig.variant}
+          variant="secondary"
           size="sm"
-          disabled={buttonConfig.disabled}
-          className={clsx(
-            responsiveButtonClasses,
-            "gap-2 font-medium",
-            buttonConfig.className,
-          )}
-          style={getButtonStyles(buttonConfig.variant)}
+          disabled
+          className={clsx(responsiveButtonClasses, "gap-2")}
+          style={getButtonStyles("secondary")}
         >
-          {buttonConfig.icon}
-          <span className="ml-2">{buttonConfig.label}</span>
+          <Lock className="w-4 h-4" />
+          <span>Booked</span>
         </Button>
       );
     }
 
-    // Main action button
+    if (isFull) {
+      return (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled
+          className={clsx(responsiveButtonClasses, "gap-2")}
+          style={getButtonStyles("secondary")}
+        >
+          <AlertCircle className="w-4 h-4" />
+          <span>{gigType === "full_band" ? "Bands Full" : "Fully Booked"}</span>
+        </Button>
+      );
+    }
+
+    // Get the button config based on gig type
+    const getButtonConfig = () => {
+      switch (gigType) {
+        case "full_band":
+          return {
+            label: "Apply with Band",
+            variant: "default" as const,
+            icon: <Building2 className="w-4 h-4" />,
+            action: () => setShowBandJoinModal(true),
+          };
+
+        case "client_band_creation":
+          // Check if user can apply to any role
+          const qualifiedRoles =
+            gig.bandCategory?.filter(
+              (role) =>
+                role.filledSlots < role.maxSlots &&
+                isUserQualifiedForRole(currentUser!, role),
+            ) || [];
+
+          if (qualifiedRoles.length === 0) {
+            return {
+              label: "No Qualified Roles",
+              variant: "outline" as const,
+              icon: <AlertCircle className="w-4 h-4" />,
+              action: () =>
+                toast.error(
+                  "You don't meet requirements for any available roles",
+                ),
+            };
+          }
+
+          return {
+            label:
+              qualifiedRoles.length === 1
+                ? `Apply as ${qualifiedRoles[0].role}`
+                : "Apply for Role",
+            variant: "default" as const,
+            icon: <UserPlus className="w-4 h-4" />,
+            action: handleBandApplication,
+          };
+
+        case "mc":
+          return {
+            label: "Apply as MC",
+            variant: "default" as const,
+            icon: <UserPlus className="w-4 h-4" />,
+            action: () => setShowInterestModal(true),
+          };
+
+        case "dj":
+          return {
+            label: "Apply as DJ",
+            variant: "default" as const,
+            icon: <UserPlus className="w-4 h-4" />,
+            action: () => setShowInterestModal(true),
+          };
+
+        case "vocalist":
+          return {
+            label: "Apply as Vocalist",
+            variant: "default" as const,
+            icon: <UserPlus className="w-4 h-4" />,
+            action: () => setShowInterestModal(true),
+          };
+
+        case "individual_musician":
+        default:
+          return {
+            label: "Show Interest",
+            variant: "default" as const,
+            icon: <UserPlus className="w-4 h-4" />,
+            action: () => setShowInterestModal(true),
+          };
+      }
+    };
+
+    const buttonConfig = getButtonConfig();
+
     return (
       <Button
         variant={buttonConfig.variant}
         size="sm"
         onClick={(e) => {
           e.stopPropagation();
-          handleAction();
+          buttonConfig.action();
         }}
-        disabled={buttonConfig.disabled || loading || !isInterestWindowOpen}
+        disabled={loading || !isInterestWindowOpen}
         className={clsx(
           responsiveButtonClasses,
           "gap-2 shadow-sm hover:shadow transition-all duration-200 font-medium",
-          buttonConfig.className,
+          buttonConfig.variant === "default"
+            ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+            : "border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
           !isInterestWindowOpen && "opacity-50 cursor-not-allowed",
         )}
         style={getButtonStyles(buttonConfig.variant)}
@@ -1896,66 +1893,72 @@ const GigCard: React.FC<GigCardProps> = ({
       </Button>
     );
   };
-
   const renderProgressBar = () => {
     if (compact) return null;
 
-    const unitLabel = isClientBand ? "bands" : "spots";
+    const getProgressInfo = () => {
+      switch (gigType) {
+        case "full_band":
+          const bandCount = gig.bookCount?.length || 0;
+          const maxBands = gig.maxSlots || 1;
+          return {
+            used: bandCount,
+            total: maxBands,
+            label: "bands",
+            color: "from-purple-500 to-pink-600",
+          };
+
+        case "client_band_creation":
+          if (!gig.bandCategory) return null;
+          const totalSlots = gig.bandCategory.reduce(
+            (sum, role) => sum + role.maxSlots,
+            0,
+          );
+          const filledSlots = gig.bandCategory.reduce(
+            (sum, role) => sum + role.filledSlots,
+            0,
+          );
+          return {
+            used: filledSlots,
+            total: totalSlots,
+            label: "roles",
+            color: "from-blue-500 to-indigo-600",
+          };
+
+        default:
+          const interestedCount = gig.interestedUsers?.length || 0;
+          const maxSlots = gig.maxSlots || 1;
+          return {
+            used: interestedCount,
+            total: maxSlots,
+            label: "applicants",
+            color: "from-green-500 to-emerald-600",
+          };
+      }
+    };
+
+    const progress = getProgressInfo();
+    if (!progress) return null;
+
+    const percentage = Math.min((progress.used / progress.total) * 100, 100);
+    const available = Math.max(0, progress.total - progress.used);
 
     return (
       <div className="mt-3">
         <div className="flex justify-between items-center mb-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              {slotsUsed}/{maxSlots} {unitLabel}
-            </span>
-            {userPosition && (
-              <Badge
-                variant="outline"
-                className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-xs px-2 py-0"
-              >
-                <span className="flex items-center gap-1">
-                  <User className="w-3 h-3" />#{userPosition}
-                </span>
-              </Badge>
-            )}
-          </div>
-          <span className="text-xs font-semibold">{availableSlots} left</span>
+          <span className="text-xs font-medium">
+            {progress.used}/{progress.total} {progress.label}
+          </span>
+          <span className="text-xs font-semibold">{available} left</span>
         </div>
-
-        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <motion.div
-            className={clsx("h-full rounded-full", {
-              "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
-              "bg-gradient-to-r from-green-500 to-emerald-600":
-                !isClientBand && !isFull,
-              "bg-gradient-to-r from-amber-500 to-orange-600":
-                !isClientBand && progressPercentage >= 80 && !isFull,
-              "bg-gradient-to-r from-red-500 to-rose-600": isFull,
-            })}
+            className={`h-full rounded-full bg-gradient-to-r ${progress.color}`}
             initial={{ width: "0%" }}
-            animate={{ width: `${progressPercentage}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            animate={{ width: `${percentage}%` }}
+            transition={{ duration: 0.5 }}
           />
         </div>
-
-        {isClientBand && totalBandMembers > 0 && (
-          <div className="flex items-center gap-1 mt-1">
-            <Users2 className="w-3 h-3 text-purple-500" />
-            <span className="text-xs text-purple-600 dark:text-purple-400">
-              {totalBandMembers} total musicians across {bandCount} bands
-            </span>
-          </div>
-        )}
-
-        {availableSlots <= 2 && availableSlots > 0 && (
-          <div className="flex items-center gap-1 mt-1">
-            <AlertCircle className="w-3 h-3 text-amber-500" />
-            <span className="text-xs text-amber-600 dark:text-amber-400">
-              Only {availableSlots} left!
-            </span>
-          </div>
-        )}
       </div>
     );
   };

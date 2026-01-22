@@ -337,7 +337,7 @@ export function useThemeColors() {
   // Get user's theme preference from Convex
   const userTheme = useQuery(
     api.controllers.theme.getUserTheme,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   // Wait for both mounting AND userTheme to be available for authenticated users
@@ -373,7 +373,7 @@ export function useThemeColors() {
   // Memoize colors based on theme to prevent object recreation
   const colors = useMemo(
     () => (isDarkMode ? DARK_COLORS : LIGHT_COLORS),
-    [isDarkMode]
+    [isDarkMode],
   );
 
   return {
@@ -420,7 +420,7 @@ export function useThemeToggle() {
   };
 
   const setThemeWithPersistence = async (
-    newTheme: "light" | "dark" | "system"
+    newTheme: "light" | "dark" | "system",
   ) => {
     setTheme(newTheme);
 
