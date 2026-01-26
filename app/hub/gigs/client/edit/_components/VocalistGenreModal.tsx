@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X, Music, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useThemeColors } from "@/hooks/useTheme";
 
 interface VocalistGenreModalProps {
   isOpen: boolean;
@@ -28,7 +29,9 @@ export default function VocalistGenreModal({
   onSubmit,
   initialData = {},
 }: VocalistGenreModalProps) {
-  // Vocalist genres array (same as in ActionPage)
+  const { isDarkMode } = useThemeColors();
+
+  // Vocalist genres array
   const vocalistGenres = useMemo(
     () => [
       "Pop",
@@ -62,7 +65,7 @@ export default function VocalistGenreModal({
       : "",
   );
 
-  // Handle single genre selection (like ActionPage)
+  // Handle single genre selection
   const handleGenreSelect = (genre: string) => {
     setSelectedSingleGenre(genre);
     if (genre && !selectedGenres.includes(genre)) {
@@ -73,10 +76,9 @@ export default function VocalistGenreModal({
   // Handle form submission
   const handleSubmit = () => {
     if (selectedGenres.length === 0 && !selectedSingleGenre) {
-      return; // Don't submit if no genres selected
+      return;
     }
 
-    // Use the selected genres or the single selected genre
     const genresToSubmit =
       selectedGenres.length > 0
         ? selectedGenres
@@ -110,29 +112,61 @@ export default function VocalistGenreModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent
+        className={cn(
+          "max-w-md",
+          isDarkMode
+            ? "bg-gray-900 border-gray-700 text-gray-200"
+            : "bg-white text-gray-900",
+        )}
+      >
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+          <DialogTitle
+            className={cn(
+              "text-xl font-bold flex items-center gap-2",
+              isDarkMode ? "text-white" : "text-gray-900",
+            )}
+          >
             <Music className="w-5 h-5 text-pink-500" />
             Select Vocalist Genre
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription
+            className={cn(isDarkMode ? "text-gray-400" : "text-gray-600")}
+          >
             Choose the genre for your vocalist (select one or multiple)
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Simple Select Dropdown (like ActionPage) */}
+          {/* Simple Select Dropdown */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select Genre</label>
+            <label
+              className={cn(
+                "text-sm font-medium",
+                isDarkMode ? "text-gray-200" : "text-gray-900",
+              )}
+            >
+              Select Genre
+            </label>
             <select
               value={selectedSingleGenre}
               onChange={(e) => handleGenreSelect(e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-700 text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              className={cn(
+                "w-full p-3 rounded-lg border text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent",
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700 text-gray-200"
+                  : "bg-white border-gray-300 text-gray-900",
+              )}
             >
-              <option value="">Select a genre</option>
+              <option value="" className={isDarkMode ? "bg-gray-800" : ""}>
+                Select a genre
+              </option>
               {vocalistGenres.map((genre) => (
-                <option key={genre} value={genre.toLowerCase()}>
+                <option
+                  key={genre}
+                  value={genre.toLowerCase()}
+                  className={isDarkMode ? "bg-gray-800" : ""}
+                >
                   {genre}
                 </option>
               ))}
@@ -141,37 +175,65 @@ export default function VocalistGenreModal({
 
           {/* OR Multi-select option */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">
+            <label
+              className={cn(
+                "text-sm font-medium",
+                isDarkMode ? "text-gray-200" : "text-gray-900",
+              )}
+            >
               Or select multiple genres:
             </label>
-            <div className="flex flex-wrap gap-2 p-3 border rounded-lg min-h-[60px]">
+            <div
+              className={cn(
+                "flex flex-wrap gap-2 p-3 rounded-lg min-h-[60px]",
+                isDarkMode
+                  ? "bg-gray-800/50 border border-gray-700"
+                  : "bg-gray-50 border border-gray-200",
+              )}
+            >
               {selectedGenres.map((genre) => (
                 <Badge
                   key={genre}
                   variant="secondary"
-                  className="bg-pink-100 text-pink-700 hover:bg-pink-200"
+                  className={cn(
+                    isDarkMode
+                      ? "bg-pink-900/30 text-pink-300 border-pink-800 hover:bg-pink-800/40"
+                      : "bg-pink-100 text-pink-700 hover:bg-pink-200",
+                  )}
                 >
                   {genre}
                   <button
                     type="button"
                     onClick={() => removeGenre(genre)}
-                    className="ml-1 hover:text-pink-900"
+                    className="ml-1 hover:text-pink-900 dark:hover:text-pink-200 transition-colors"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </Badge>
               ))}
               {selectedGenres.length === 0 && (
-                <span className="text-gray-500 text-sm">
+                <span
+                  className={cn(
+                    "text-sm",
+                    isDarkMode ? "text-gray-400" : "text-gray-500",
+                  )}
+                >
                   No genres selected yet
                 </span>
               )}
             </div>
           </div>
 
-          {/* Genre buttons for quick selection (like ActionPage) */}
+          {/* Genre buttons for quick selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Quick Select:</label>
+            <label
+              className={cn(
+                "text-sm font-medium",
+                isDarkMode ? "text-gray-200" : "text-gray-900",
+              )}
+            >
+              Quick Select:
+            </label>
             <div className="grid grid-cols-2 gap-2">
               {vocalistGenres.slice(0, 8).map((genre) => (
                 <button
@@ -186,11 +248,18 @@ export default function VocalistGenreModal({
                     }
                   }}
                   className={cn(
-                    "p-2 rounded border text-sm transition-colors text-left",
+                    "p-2 rounded border text-sm transition-all text-left",
                     selectedGenres.includes(genre) ||
                       selectedSingleGenre === genre
-                      ? "border-pink-500 bg-pink-50 text-pink-700 dark:bg-pink-900/20 dark:border-pink-700"
-                      : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800",
+                      ? cn(
+                          "border-pink-500 bg-pink-50 text-pink-700 dark:bg-pink-900/30 dark:border-pink-700 dark:text-pink-300",
+                          "transform scale-105",
+                        )
+                      : cn(
+                          isDarkMode
+                            ? "border-gray-700 text-gray-300 hover:bg-gray-800"
+                            : "border-gray-200 text-gray-700 hover:bg-gray-50",
+                        ),
                   )}
                 >
                   <div className="flex items-center justify-between">
@@ -207,13 +276,21 @@ export default function VocalistGenreModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className={cn(
+              isDarkMode
+                ? "border-gray-700 hover:bg-gray-800 text-gray-200"
+                : "",
+            )}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={selectedGenres.length === 0 && !selectedSingleGenre}
-            className="bg-pink-500 hover:bg-pink-600"
+            className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
           >
             Save Genres
           </Button>

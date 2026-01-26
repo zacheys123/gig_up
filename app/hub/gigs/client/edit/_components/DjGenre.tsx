@@ -3,7 +3,16 @@ import React, { useState, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Search, Volume2, Music, Settings, Star, X } from "lucide-react";
+import {
+  Search,
+  Volume2,
+  Music,
+  Settings,
+  Star,
+  X,
+  Plus,
+  Check,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -13,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { useThemeColors } from "@/hooks/useTheme";
 import { BaseTalentModal } from "./BaseTalentModal";
 import { Button } from "@/components/ui/button";
@@ -142,6 +150,16 @@ export default function DJGenreModal({
     onSubmit,
   ]);
 
+  // Remove selected genre
+  const removeGenre = useCallback((genre: string) => {
+    setSelectedGenres((prev) => prev.filter((g) => g !== genre));
+  }, []);
+
+  // Remove selected equipment
+  const removeEquipment = useCallback((equipment: string) => {
+    setSelectedEquipment((prev) => prev.filter((e) => e !== equipment));
+  }, []);
+
   return (
     <BaseTalentModal
       isOpen={isOpen}
@@ -158,13 +176,18 @@ export default function DJGenreModal({
             <Label
               className={cn(
                 "text-sm font-medium flex items-center gap-2",
-                colors.text,
+                isDarkMode ? "text-gray-200" : "text-gray-900",
               )}
             >
               <Music className="w-4 h-4" />
               Music Genres *
             </Label>
-            <span className="text-xs text-gray-500">
+            <span
+              className={cn(
+                "text-xs",
+                isDarkMode ? "text-gray-400" : "text-gray-500",
+              )}
+            >
               {selectedGenres.length} selected
             </span>
           </div>
@@ -179,14 +202,21 @@ export default function DJGenreModal({
               className={cn(
                 "pl-10",
                 isDarkMode
-                  ? "bg-gray-800 border-gray-700"
-                  : "bg-white border-gray-200",
+                  ? "bg-gray-800 border-gray-700 text-gray-200 placeholder:text-gray-500"
+                  : "bg-white border-gray-200 text-gray-900",
               )}
             />
           </div>
 
           {/* Genre Selection */}
-          <ScrollArea className="h-48 border rounded-lg p-3 mb-4">
+          <ScrollArea
+            className={cn(
+              "h-48 rounded-lg p-3 mb-4",
+              isDarkMode
+                ? "bg-gray-800/50 border border-gray-700"
+                : "bg-gray-50 border border-gray-200",
+            )}
+          >
             <div className="grid grid-cols-2 gap-2">
               {filteredGenres.map((genre: string) => {
                 const isSelected = selectedGenres.includes(genre);
@@ -197,56 +227,31 @@ export default function DJGenreModal({
                     key={genre}
                     variant={isSelected ? "default" : "outline"}
                     className={cn(
-                      "cursor-pointer transition-all",
-                      isSelected &&
-                        !isOther &&
-                        "bg-gradient-to-r from-purple-500 to-pink-500",
-                      isOther &&
-                        isSelected &&
-                        "bg-gradient-to-r from-orange-500 to-red-500",
+                      "cursor-pointer transition-all hover:scale-105",
+                      isSelected
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent"
+                        : isDarkMode
+                          ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+                          : "border-gray-300 text-gray-700 hover:bg-gray-100",
                     )}
                     onClick={() => toggleGenre(genre)}
                   >
                     {genre}
+                    {isSelected && <Check className="w-3 h-3 ml-1 inline" />}
                   </Badge>
                 );
               })}
             </div>
           </ScrollArea>
 
-          {/* Custom Genre Input */}
-          <div className="mb-6">
-            <Label
-              className={cn("text-sm font-medium mb-2 block", colors.text)}
-            >
-              Add Custom Genre
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter custom genre..."
-                value={customGenre}
-                onChange={(e) => setCustomGenre(e.target.value)}
-                className={cn(
-                  isDarkMode
-                    ? "bg-gray-800 border-gray-700"
-                    : "bg-white border-gray-200",
-                )}
-              />
-              <Button
-                onClick={addCustomGenre}
-                disabled={!customGenre.trim()}
-                variant="outline"
-              >
-                Add
-              </Button>
-            </div>
-          </div>
-
           {/* Selected Genres Preview */}
           {selectedGenres.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-4">
               <Label
-                className={cn("text-sm font-medium mb-2 block", colors.text)}
+                className={cn(
+                  "text-sm font-medium mb-2 block",
+                  isDarkMode ? "text-gray-200" : "text-gray-900",
+                )}
               >
                 Selected Genres
               </Label>
@@ -255,12 +260,12 @@ export default function DJGenreModal({
                   <Badge
                     key={genre}
                     variant="default"
-                    className="bg-gradient-to-r from-blue-500 to-cyan-500"
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white"
                   >
                     {genre}
                     <button
-                      onClick={() => toggleGenre(genre)}
-                      className="ml-2 hover:text-white"
+                      onClick={() => removeGenre(genre)}
+                      className="ml-2 hover:text-white/80 transition-colors"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -269,6 +274,47 @@ export default function DJGenreModal({
               </div>
             </div>
           )}
+
+          {/* Custom Genre Input */}
+          <div className="mb-6">
+            <Label
+              className={cn(
+                "text-sm font-medium mb-2 block",
+                isDarkMode ? "text-gray-200" : "text-gray-900",
+              )}
+            >
+              Add Custom Genre
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter custom genre..."
+                value={customGenre}
+                onChange={(e) => setCustomGenre(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && customGenre.trim()) {
+                    addCustomGenre();
+                  }
+                }}
+                className={cn(
+                  isDarkMode
+                    ? "bg-gray-800 border-gray-700 text-gray-200 placeholder:text-gray-500"
+                    : "bg-white border-gray-200 text-gray-900",
+                )}
+              />
+              <Button
+                onClick={addCustomGenre}
+                disabled={!customGenre.trim()}
+                variant="outline"
+                className={cn(
+                  isDarkMode
+                    ? "border-gray-600 hover:bg-gray-700 text-gray-200"
+                    : "border-gray-300 hover:bg-gray-100",
+                )}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Equipment Section */}
@@ -277,13 +323,18 @@ export default function DJGenreModal({
             <Label
               className={cn(
                 "text-sm font-medium flex items-center gap-2",
-                colors.text,
+                isDarkMode ? "text-gray-200" : "text-gray-900",
               )}
             >
               <Settings className="w-4 h-4" />
               Equipment (Optional)
             </Label>
-            <span className="text-xs text-gray-500">
+            <span
+              className={cn(
+                "text-xs",
+                isDarkMode ? "text-gray-400" : "text-gray-500",
+              )}
+            >
               {selectedEquipment.length} selected
             </span>
           </div>
@@ -298,14 +349,21 @@ export default function DJGenreModal({
               className={cn(
                 "pl-10",
                 isDarkMode
-                  ? "bg-gray-800 border-gray-700"
-                  : "bg-white border-gray-200",
+                  ? "bg-gray-800 border-gray-700 text-gray-200 placeholder:text-gray-500"
+                  : "bg-white border-gray-200 text-gray-900",
               )}
             />
           </div>
 
           {/* Equipment Selection */}
-          <ScrollArea className="h-48 border rounded-lg p-3">
+          <ScrollArea
+            className={cn(
+              "h-48 rounded-lg p-3 mb-4",
+              isDarkMode
+                ? "bg-gray-800/50 border border-gray-700"
+                : "bg-gray-50 border border-gray-200",
+            )}
+          >
             <div className="grid grid-cols-2 gap-2">
               {filteredEquipment.map((equipment: string) => {
                 const isSelected = selectedEquipment.includes(equipment);
@@ -316,27 +374,61 @@ export default function DJGenreModal({
                     key={equipment}
                     variant={isSelected ? "default" : "outline"}
                     className={cn(
-                      "cursor-pointer transition-all",
-                      isSelected &&
-                        !isOther &&
-                        "bg-gradient-to-r from-green-500 to-emerald-500",
-                      isOther &&
-                        isSelected &&
-                        "bg-gradient-to-r from-yellow-500 to-amber-500",
+                      "cursor-pointer transition-all hover:scale-105",
+                      isSelected
+                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent"
+                        : isDarkMode
+                          ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+                          : "border-gray-300 text-gray-700 hover:bg-gray-100",
                     )}
                     onClick={() => toggleEquipment(equipment)}
                   >
                     {equipment}
+                    {isSelected && <Check className="w-3 h-3 ml-1 inline" />}
                   </Badge>
                 );
               })}
             </div>
           </ScrollArea>
 
+          {/* Selected Equipment Preview */}
+          {selectedEquipment.length > 0 && (
+            <div className="mb-4">
+              <Label
+                className={cn(
+                  "text-sm font-medium mb-2 block",
+                  isDarkMode ? "text-gray-200" : "text-gray-900",
+                )}
+              >
+                Selected Equipment
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {selectedEquipment.map((equipment) => (
+                  <Badge
+                    key={equipment}
+                    variant="default"
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                  >
+                    {equipment}
+                    <button
+                      onClick={() => removeEquipment(equipment)}
+                      className="ml-2 hover:text-white/80 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Custom Equipment Input */}
           <div className="mt-4">
             <Label
-              className={cn("text-sm font-medium mb-2 block", colors.text)}
+              className={cn(
+                "text-sm font-medium mb-2 block",
+                isDarkMode ? "text-gray-200" : "text-gray-900",
+              )}
             >
               Add Custom Equipment
             </Label>
@@ -345,18 +437,28 @@ export default function DJGenreModal({
                 placeholder="Enter custom equipment..."
                 value={customEquipment}
                 onChange={(e) => setCustomEquipment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && customEquipment.trim()) {
+                    addCustomEquipment();
+                  }
+                }}
                 className={cn(
                   isDarkMode
-                    ? "bg-gray-800 border-gray-700"
-                    : "bg-white border-gray-200",
+                    ? "bg-gray-800 border-gray-700 text-gray-200 placeholder:text-gray-500"
+                    : "bg-white border-gray-200 text-gray-900",
                 )}
               />
               <Button
                 onClick={addCustomEquipment}
                 disabled={!customEquipment.trim()}
                 variant="outline"
+                className={cn(
+                  isDarkMode
+                    ? "border-gray-600 hover:bg-gray-700 text-gray-200"
+                    : "border-gray-300 hover:bg-gray-100",
+                )}
               >
-                Add
+                <Plus className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -364,16 +466,42 @@ export default function DJGenreModal({
 
         {/* DJ Setup */}
         <div>
-          <Label className={cn("text-sm font-medium mb-3 block", colors.text)}>
+          <Label
+            className={cn(
+              "text-sm font-medium mb-3 block",
+              isDarkMode ? "text-gray-200" : "text-gray-900",
+            )}
+          >
             DJ Setup (Optional)
           </Label>
           <Select value={selectedSetup} onValueChange={setSelectedSetup}>
-            <SelectTrigger className={cn(colors.border)}>
+            <SelectTrigger
+              className={cn(
+                "w-full",
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700 text-gray-200"
+                  : "bg-white border-gray-200",
+              )}
+            >
               <SelectValue placeholder="Select setup type" />
             </SelectTrigger>
-            <SelectContent className={isDarkMode ? "bg-gray-800" : "bg-white"}>
+            <SelectContent
+              className={cn(
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700 text-gray-200"
+                  : "bg-white",
+              )}
+            >
               {talentCategories.dj.setups.map((setup) => (
-                <SelectItem key={setup} value={setup}>
+                <SelectItem
+                  key={setup}
+                  value={setup}
+                  className={cn(
+                    isDarkMode
+                      ? "text-gray-200 hover:bg-gray-700 focus:bg-gray-700"
+                      : "hover:bg-gray-100",
+                  )}
+                >
                   {setup}
                 </SelectItem>
               ))}
@@ -383,7 +511,12 @@ export default function DJGenreModal({
 
         {/* Experience Level */}
         <div>
-          <Label className={cn("text-sm font-medium mb-3 block", colors.text)}>
+          <Label
+            className={cn(
+              "text-sm font-medium mb-3 block",
+              isDarkMode ? "text-gray-200" : "text-gray-900",
+            )}
+          >
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4" />
               Experience Level (Optional)
@@ -393,12 +526,33 @@ export default function DJGenreModal({
             value={selectedExperience}
             onValueChange={setSelectedExperience}
           >
-            <SelectTrigger className={cn(colors.border)}>
+            <SelectTrigger
+              className={cn(
+                "w-full",
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700 text-gray-200"
+                  : "bg-white border-gray-200",
+              )}
+            >
               <SelectValue placeholder="Select experience level" />
             </SelectTrigger>
-            <SelectContent className={isDarkMode ? "bg-gray-800" : "bg-white"}>
+            <SelectContent
+              className={cn(
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700 text-gray-200"
+                  : "bg-white",
+              )}
+            >
               {experienceLevels.map((level: any) => (
-                <SelectItem key={level} value={level}>
+                <SelectItem
+                  key={level}
+                  value={level}
+                  className={cn(
+                    isDarkMode
+                      ? "text-gray-200 hover:bg-gray-700 focus:bg-gray-700"
+                      : "hover:bg-gray-100",
+                  )}
+                >
                   {level}
                 </SelectItem>
               ))}

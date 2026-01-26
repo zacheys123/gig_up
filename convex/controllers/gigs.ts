@@ -2223,18 +2223,20 @@ function isGigDocument(doc: any): doc is GigDoc {
 // Format band roles for update
 function formatBandRolesForUpdate(bandRoles: any[]) {
   return bandRoles.map((role) => ({
-    role: role.role || "",
+    role: role.role,
     maxSlots: role.maxSlots || 1,
+    maxApplicants: role.maxApplicants || 20,
+    currentApplicants: role.currentApplicants || 0,
     filledSlots: role.filledSlots || 0,
     applicants: role.applicants || [],
     bookedUsers: role.bookedUsers || [],
     requiredSkills: role.requiredSkills || [],
     description: role.description || "",
     isLocked: role.isLocked || false,
-    price: role.price !== undefined ? role.price : null,
+    price: role.price !== undefined ? role.price : undefined,
     currency: role.currency || "KES",
     negotiable: role.negotiable !== undefined ? role.negotiable : true,
-    bookedPrice: role.bookedPrice !== undefined ? role.bookedPrice : null,
+    bookedPrice: role.bookedPrice || undefined,
   }));
 }
 

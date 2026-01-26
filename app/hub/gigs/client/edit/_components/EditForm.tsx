@@ -1675,10 +1675,10 @@ export default function EditGigForm({
           requiredSkills: role.requiredSkills || [],
           description: role.description || "",
           isLocked: role.isLocked || false,
-          price: role.price !== undefined ? role.price : null,
+          price: role.price !== undefined ? role.price : undefined, // Use undefined instead of null
           currency: role.currency || "KES",
           negotiable: role.negotiable !== undefined ? role.negotiable : true,
-          bookedPrice: role.bookedPrice !== undefined ? role.bookedPrice : null,
+          bookedPrice: role.bookedPrice || undefined, // Use undefined instead of null
         };
       };
 
