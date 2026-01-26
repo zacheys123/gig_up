@@ -965,30 +965,6 @@ const getGigGroupTitle = (type: NotificationType): string => {
   }
 };
 
-export const formatTimeAgo = (timestamp: string | number | Date): string => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  const intervals: Record<string, number> = {
-    year: 31536000,
-    month: 2592000,
-    week: 604800,
-    day: 86400,
-    hour: 3600,
-    minute: 60,
-  };
-
-  for (const [unit, value] of Object.entries(intervals)) {
-    const interval = Math.floor(seconds / value);
-    if (interval >= 1) {
-      return `${interval} ${unit}${interval > 1 ? "s" : ""} ago`;
-    }
-  }
-
-  return "just now";
-};
-
 // utils/rateUtils.ts - Rate calculation utilities
 
 export interface RateInfo {
@@ -1758,47 +1734,85 @@ export const prepareGigDataForConvex = (
     totalSlots = formValues.maxSlots || 1;
   }
 
-  // 6. PROCESS INTEREST WINDOW
+  // 6. PROCESS INTEREST WINDOW - FIXED VERSION
   let acceptInterestStartTime: number | undefined;
   let acceptInterestEndTime: number | undefined;
 
+  console.log("=== DEBUG: Processing interest window ===");
+  console.log("Form values:", {
+    enableInterestWindow: formValues.enableInterestWindow,
+    startTime: formValues.acceptInterestStartTime,
+    endTime: formValues.acceptInterestEndTime,
+    days: formValues.interestWindowDays,
+  });
+
   if (formValues.enableInterestWindow) {
+    // Convert string dates to timestamps
     if (formValues.acceptInterestStartTime) {
       try {
+        // The datetime-local input gives format: "YYYY-MM-DDTHH:MM"
         const startDate = new Date(formValues.acceptInterestStartTime);
-        if (!isNaN(startDate.getTime())) {
+
+        if (isNaN(startDate.getTime())) {
+          console.warn(
+            "Invalid start date string:",
+            formValues.acceptInterestStartTime,
+          );
+        } else {
           acceptInterestStartTime = startDate.getTime();
+          console.log(
+            "Start time converted:",
+            acceptInterestStartTime,
+            "(",
+            new Date(acceptInterestStartTime).toISOString(),
+            ")",
+          );
         }
       } catch (error) {
-        console.warn("Invalid acceptInterestStartTime:", error);
+        console.warn("Error parsing acceptInterestStartTime:", error);
       }
     }
 
     if (formValues.acceptInterestEndTime) {
       try {
         const endDate = new Date(formValues.acceptInterestEndTime);
-        if (!isNaN(endDate.getTime())) {
+        if (isNaN(endDate.getTime())) {
+          console.warn(
+            "Invalid end date string:",
+            formValues.acceptInterestEndTime,
+          );
+        } else {
           acceptInterestEndTime = endDate.getTime();
+          console.log(
+            "End time converted:",
+            acceptInterestEndTime,
+            "(",
+            new Date(acceptInterestEndTime).toISOString(),
+            ")",
+          );
         }
       } catch (error) {
-        console.warn("Invalid acceptInterestEndTime:", error);
+        console.warn("Error parsing acceptInterestEndTime:", error);
       }
     }
 
+    // If using days window instead of specific dates
     if (formValues.interestWindowDays && !acceptInterestEndTime) {
       const startTime = acceptInterestStartTime || Date.now();
       acceptInterestEndTime =
         startTime + formValues.interestWindowDays * 24 * 60 * 60 * 1000;
+      console.log("Calculated end time from days:", acceptInterestEndTime);
     }
 
-    if (
-      acceptInterestStartTime &&
-      acceptInterestEndTime &&
-      acceptInterestEndTime <= acceptInterestStartTime
-    ) {
-      console.warn("Invalid interest window times");
-      acceptInterestStartTime = undefined;
-      acceptInterestEndTime = undefined;
+    // Validate window is sensible
+    if (acceptInterestStartTime && acceptInterestEndTime) {
+      if (acceptInterestEndTime <= acceptInterestStartTime) {
+        console.warn(
+          "Invalid interest window: end time must be after start time",
+        );
+        acceptInterestStartTime = undefined;
+        acceptInterestEndTime = undefined;
+      }
     }
   }
 
@@ -1822,8 +1836,8 @@ export const prepareGigDataForConvex = (
         }))
       : [];
 
-  // 8. RETURN COMPLETE DATA WITH ALL REQUIRED FIELDS
-  return {
+  // 8. BUILD THE FINAL DATA OBJECT
+  const result = {
     // 🔴 REQUIRED FIELDS (Convex checks these)
     postedBy: userId,
     title: formValues.title.trim(),
@@ -1860,7 +1874,7 @@ export const prepareGigDataForConvex = (
     scheduleDate: scheduleDate,
     schedulingProcedure: publishType,
 
-    // Interest window
+    // 🔴 CRITICAL FIX: INTEREST WINDOW FIELDS
     ...(acceptInterestStartTime && { acceptInterestStartTime }),
     ...(acceptInterestEndTime && { acceptInterestEndTime }),
 
@@ -1876,6 +1890,20 @@ export const prepareGigDataForConvex = (
     durationFrom: durationFrom || formValues.durationfrom || "pm",
     durationTo: durationTo || formValues.durationto || "pm",
   };
+
+  console.log("=== DEBUG: Final prepared data ===");
+  console.log("Interest window fields:", {
+    hasStartTime: !!result.acceptInterestStartTime,
+    hasEndTime: !!result.acceptInterestEndTime,
+    startTime: result.acceptInterestStartTime
+      ? new Date(result.acceptInterestStartTime).toISOString()
+      : "undefined",
+    endTime: result.acceptInterestEndTime
+      ? new Date(result.acceptInterestEndTime).toISOString()
+      : "undefined",
+  });
+
+  return result;
 };
 
 // Function to format gig price for display
@@ -2108,60 +2136,63 @@ export const updateWeeklyGigCount = (currentWeeklyData: any) => {
   };
 };
 // utils/interestWindow.ts
-// utils/index.ts
-export const getInterestWindowStatus = (gig: {
-  acceptInterestStartTime?: string | number | Date;
-  acceptInterestEndTime?: string | number | Date;
-}) => {
-  const now = Date.now();
+// utils/interestWindow.ts
+export function getInterestWindowStatus(gig: any) {
+  const now = new Date();
 
-  // Convert to timestamp if it's a string
-  const startTime = gig.acceptInterestStartTime
-    ? typeof gig.acceptInterestStartTime === "string"
-      ? new Date(gig.acceptInterestStartTime).getTime()
-      : typeof gig.acceptInterestStartTime === "number"
-        ? gig.acceptInterestStartTime
-        : gig.acceptInterestStartTime.getTime()
-    : null;
+  // Check if gig has interest window dates
+  const hasStartTime = gig.acceptInterestStartTime;
+  const hasEndTime = gig.acceptInterestEndTime;
 
-  const endTime = gig.acceptInterestEndTime
-    ? typeof gig.acceptInterestEndTime === "string"
-      ? new Date(gig.acceptInterestEndTime).getTime()
-      : typeof gig.acceptInterestEndTime === "number"
-        ? gig.acceptInterestEndTime
-        : gig.acceptInterestEndTime.getTime()
-    : null;
-
-  if (!startTime || !endTime) {
+  if (!hasStartTime && !hasEndTime) {
     return {
       hasWindow: false,
-      status: "no_window",
-      message: "No interest window set",
+      status: "no_window" as const,
+      message: "Interest window not set",
     };
   }
 
-  if (now < startTime) {
+  // Convert timestamps to Date objects
+  const startTime = hasStartTime ? new Date(gig.acceptInterestStartTime) : null;
+  const endTime = hasEndTime ? new Date(gig.acceptInterestEndTime) : null;
+
+  // Check current status
+  if (startTime && now < startTime) {
     return {
       hasWindow: true,
-      status: "not_open",
-      message: `Interest window opens in ${Math.ceil((startTime - now) / (1000 * 60 * 60))} hours`,
+      status: "not_open" as const,
+      message: `Opens ${formatTimeAgo(startTime)}`,
     };
   }
 
-  if (now > endTime) {
+  if (endTime && now > endTime) {
     return {
       hasWindow: true,
-      status: "closed",
-      message: "Interest window closed",
+      status: "closed" as const,
+      message: "Closed",
     };
   }
 
+  // Window is open if we're between start and end, or if only end time is set (ongoing)
   return {
     hasWindow: true,
-    status: "open",
-    message: `Interest window open! Closes in ${Math.ceil((endTime - now) / (1000 * 60 * 60))} hours`,
+    status: "open" as const,
+    message: endTime
+      ? `Closes ${formatTimeAgo(endTime)}`
+      : "Open for applications",
   };
-};
+}
+
+export function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 0) return `in ${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+  if (diffHours > 0) return `in ${diffHours} hour${diffHours !== 1 ? "s" : ""}`;
+  return "soon";
+}
 
 export type GigUserStatus = {
   // Basic status
@@ -2172,8 +2203,8 @@ export type GigUserStatus = {
   isInBandApplication: boolean;
 
   // Position info
-  position: number | null; // Position in interestedUsers
-  bandRoleApplied: string | null; // Which band role user applied for
+  position: number | null;
+  bandRoleApplied: string | null;
   bandApplicationId: Id<"bands"> | null;
 
   // Derived messages
@@ -2185,9 +2216,9 @@ export type GigUserStatus = {
   canWithdraw: boolean;
   canManage: boolean;
   isPending: boolean;
-  isBooked: boolean;
+  isBooked: boolean; // This should already be boolean
 
-  // Role-specific info (for band gigs)
+  // Role-specific info
   roleDetails?: {
     role: string;
     maxSlots: number;
@@ -2198,7 +2229,8 @@ export type GigUserStatus = {
   };
 };
 
-interface GigForStatusCheck {
+// Update your GigForStatusCheck interface to include missing properties
+export interface GigForStatusCheck {
   _id: Id<"gigs">;
   postedBy: Id<"users">;
   interestedUsers?: Id<"users">[];
@@ -2219,6 +2251,10 @@ interface GigForStatusCheck {
   isClientBand?: boolean;
   isTaken?: boolean;
   isPending?: boolean;
+
+  // ADD THESE MISSING PROPERTIES
+  bussinesscat: string; // Required for determining gig type
+  maxSlots?: number; // For full band gigs
 }
 
 export const getUserGigStatus = (
@@ -2246,8 +2282,28 @@ export const getUserGigStatus = (
   }
 
   const isGigPoster = gig.postedBy === currentUserId;
-  const isClientBand = gig.isClientBand || false;
-  const bookCount = gig.bookCount || [];
+
+  // Determine gig type based on bussinesscat
+  const getGigType = () => {
+    switch (gig.bussinesscat) {
+      case "full":
+        return "full_band";
+      case "other":
+        return "client_band_creation";
+      case "personal":
+        return "individual_musician";
+      case "mc":
+        return "mc";
+      case "dj":
+        return "dj";
+      case "vocalist":
+        return "vocalist";
+      default:
+        return "individual_musician";
+    }
+  };
+
+  const gigType = getGigType();
 
   // Initialize base status
   const baseStatus: GigUserStatus = {
@@ -2268,8 +2324,15 @@ export const getUserGigStatus = (
     isBooked: false,
   };
 
-  // ========== REGULAR GIG LOGIC (individual users) ==========
-  if (!isClientBand) {
+  // ========== REGULAR GIGS (individual musicians) ==========
+  // Use interestedUsers for individual gigs (mc, dj, vocalist, personal)
+  // ========== REGULAR GIGS (individual musicians) ==========
+  if (
+    gigType === "individual_musician" ||
+    gigType === "mc" ||
+    gigType === "dj" ||
+    gigType === "vocalist"
+  ) {
     const interestedUsers = gig.interestedUsers || [];
     const hasShownInterest = interestedUsers.includes(currentUserId);
     const position = hasShownInterest
@@ -2279,6 +2342,10 @@ export const getUserGigStatus = (
     baseStatus.hasShownInterest = hasShownInterest;
     baseStatus.position = position;
 
+    // FIXED: Use Boolean() or explicit false fallback
+    baseStatus.isBooked = Boolean(gig.isTaken) && hasShownInterest;
+    baseStatus.isPending = !baseStatus.isBooked && hasShownInterest;
+
     if (isGigPoster) {
       baseStatus.statusMessage = gig.isTaken
         ? "Your gig (Booked)"
@@ -2286,13 +2353,19 @@ export const getUserGigStatus = (
       baseStatus.statusBadgeVariant = "default";
       baseStatus.canManage = true;
     } else if (gig.isTaken) {
+      // This also needs fixing
       baseStatus.statusMessage = "Gig is booked";
       baseStatus.statusBadgeVariant = "secondary";
     } else if (hasShownInterest) {
-      baseStatus.statusMessage = `Interested (#${position})`;
-      baseStatus.statusBadgeVariant = "default";
+      baseStatus.statusMessage = baseStatus.isBooked
+        ? "Booked ✓"
+        : baseStatus.isPending
+          ? `Pending (#${position})`
+          : `Interested (#${position})`;
+      baseStatus.statusBadgeVariant = baseStatus.isBooked
+        ? "default"
+        : "outline";
       baseStatus.canWithdraw = true;
-      baseStatus.isPending = gig.isPending || false;
     } else {
       baseStatus.statusMessage = "Available";
       baseStatus.statusBadgeVariant = "outline";
@@ -2302,129 +2375,143 @@ export const getUserGigStatus = (
     return baseStatus;
   }
 
-  // ========== BAND GIG LOGIC ==========
-  if (isClientBand) {
-    // Check if user has applied as part of a band (through bookCount)
-    const userBandApplication = bookCount.find((application) => {
-      // Check if user is the applicant OR part of performing members
-      return (
-        application.appliedBy === currentUserId ||
-        application.performingMembers.some(
-          (member) => member.userId === currentUserId,
-        )
-      );
-    });
-
-    // Check band roles (bandCategory)
+  // ========== CLIENT BAND CREATION (with roles) ==========
+  // Use bandCategory.applicants for client_band_creation
+  if (gigType === "client_band_creation") {
     const bandRoles = gig.bandCategory || [];
-    let userRoleDetails = null;
-    let foundInBandCategory = false;
+    let foundRole = null;
 
+    // Check each role for user's status
     for (const role of bandRoles) {
       const isApplicant = role.applicants.includes(currentUserId);
       const isBooked = role.bookedUsers.includes(currentUserId);
 
       if (isApplicant || isBooked) {
-        foundInBandCategory = true;
+        foundRole = role;
         baseStatus.isInApplicants = isApplicant;
         baseStatus.isInBookedUsers = isBooked;
         baseStatus.bandRoleApplied = role.role;
+        baseStatus.position = isApplicant
+          ? role.applicants.indexOf(currentUserId) + 1
+          : null;
         baseStatus.isBooked = isBooked;
         baseStatus.isPending = isApplicant && !isBooked;
-
-        userRoleDetails = {
-          role: role.role,
-          maxSlots: role.maxSlots,
-          filledSlots: role.filledSlots,
-          isRoleFull: role.filledSlots >= role.maxSlots,
-          applicantsCount: role.applicants.length,
-          bookedCount: role.bookedUsers.length,
-        };
         break;
       }
     }
 
-    // Set band application status if found
-    if (userBandApplication) {
-      baseStatus.isInBandApplication = true;
-      baseStatus.bandApplicationId = userBandApplication.bandId;
-      baseStatus.isPending =
-        userBandApplication.status === "applied" ||
-        userBandApplication.status === "shortlisted" ||
-        userBandApplication.status === "interviewed";
-      baseStatus.isBooked =
-        userBandApplication.status === "booked" ||
-        userBandApplication.status === "confirmed" ||
-        userBandApplication.status === "completed";
-    }
-
-    // If user is not found anywhere, check if they can apply
-    if (!foundInBandCategory && !userBandApplication) {
-      const availableRoles = bandRoles.filter(
-        (role) => role.filledSlots < role.maxSlots,
-      );
-      baseStatus.canApply = availableRoles.length > 0;
-    } else {
-      // User is found somewhere
-      baseStatus.canWithdraw =
-        baseStatus.isInApplicants ||
-        baseStatus.isInBandApplication ||
-        baseStatus.isInBookedUsers;
-    }
-
-    // Determine status message
     if (isGigPoster) {
       baseStatus.statusMessage = "Your band gig";
       baseStatus.statusBadgeVariant = "default";
       baseStatus.canManage = true;
-    } else if (baseStatus.isBooked) {
-      if (userBandApplication) {
-        baseStatus.statusMessage = `Band Booked (${userBandApplication.status || "booked"})`;
+    } else if (foundRole) {
+      // User is found in a role
+      if (baseStatus.isBooked) {
+        baseStatus.statusMessage = `Booked as ${baseStatus.bandRoleApplied} ✓`;
+        baseStatus.statusBadgeVariant = "default";
+      } else if (baseStatus.isPending) {
+        baseStatus.statusMessage = `Pending as ${baseStatus.bandRoleApplied} (#${baseStatus.position})`;
+        baseStatus.statusBadgeVariant = "outline";
+        baseStatus.canWithdraw = true;
       } else {
-        baseStatus.statusMessage = `Booked as ${baseStatus.bandRoleApplied || "band member"}`;
+        baseStatus.statusMessage = `Applied as ${baseStatus.bandRoleApplied}`;
+        baseStatus.statusBadgeVariant = "outline";
+        baseStatus.canWithdraw = true;
       }
-      baseStatus.statusBadgeVariant = "default";
-    } else if (baseStatus.isPending) {
-      if (userBandApplication) {
-        baseStatus.statusMessage = `Band Pending (${userBandApplication.status || "applied"})`;
-      } else {
-        baseStatus.statusMessage = `Pending as ${baseStatus.bandRoleApplied}`;
-      }
-      baseStatus.statusBadgeVariant = "outline";
-      baseStatus.canWithdraw = true;
-    } else if (baseStatus.isInApplicants) {
-      baseStatus.statusMessage = `Applied as ${baseStatus.bandRoleApplied}`;
-      baseStatus.statusBadgeVariant = "outline";
-      baseStatus.canWithdraw = true;
-    } else if (baseStatus.isInBandApplication) {
-      baseStatus.statusMessage = `Band Applied (${userBandApplication?.status || "applied"})`;
-      baseStatus.statusBadgeVariant = "outline";
-      baseStatus.canWithdraw = true;
-    } else if (userRoleDetails?.isRoleFull) {
-      baseStatus.statusMessage = "Role full";
-      baseStatus.statusBadgeVariant = "secondary";
     } else {
-      baseStatus.statusMessage = "Available";
-      baseStatus.statusBadgeVariant = "outline";
-      baseStatus.canApply = true;
+      // User not found in any role - check if can apply
+      const availableRoles = bandRoles.filter(
+        (role) => role.filledSlots < role.maxSlots,
+      );
+      baseStatus.canApply = availableRoles.length > 0;
+      baseStatus.statusMessage = baseStatus.canApply
+        ? "Available"
+        : "All roles full";
+      baseStatus.statusBadgeVariant = baseStatus.canApply
+        ? "outline"
+        : "secondary";
     }
 
     // Add role details if found
-    if (userRoleDetails) {
-      baseStatus.roleDetails = userRoleDetails;
-    }
-
-    // Add position info
-    if (baseStatus.isInApplicants) {
-      const role = bandRoles.find((r) => r.applicants.includes(currentUserId));
-      if (role) {
-        baseStatus.position = role.applicants.indexOf(currentUserId) + 1;
-      }
+    if (foundRole) {
+      baseStatus.roleDetails = {
+        role: foundRole.role,
+        maxSlots: foundRole.maxSlots,
+        filledSlots: foundRole.filledSlots,
+        isRoleFull: foundRole.filledSlots >= foundRole.maxSlots,
+        applicantsCount: foundRole.applicants.length,
+        bookedCount: foundRole.bookedUsers.length,
+      };
     }
 
     return baseStatus;
   }
 
+  // ========== FULL BAND GIGS ==========
+  // Use bookCount for full_band gigs
+  if (gigType === "full_band") {
+    const bookCount = gig.bookCount || [];
+
+    // Find user's band application
+    const userBandApplication = bookCount.find((application) => {
+      // Check if user is the applicant OR part of performing members
+      return (
+        application.appliedBy === currentUserId ||
+        application.performingMembers?.some(
+          (member) => member.userId === currentUserId,
+        )
+      );
+    });
+
+    if (userBandApplication) {
+      baseStatus.isInBandApplication = true;
+      baseStatus.bandApplicationId = userBandApplication.bandId;
+      baseStatus.position = bookCount.indexOf(userBandApplication) + 1;
+
+      // Determine status based on application status
+      const status = userBandApplication.status || "applied";
+      baseStatus.isBooked =
+        status === "booked" || status === "confirmed" || status === "completed";
+      baseStatus.isPending =
+        !baseStatus.isBooked &&
+        (status === "applied" ||
+          status === "shortlisted" ||
+          status === "interviewed");
+    }
+
+    if (isGigPoster) {
+      baseStatus.statusMessage = "Your band gig";
+      baseStatus.statusBadgeVariant = "default";
+      baseStatus.canManage = true;
+    } else if (userBandApplication) {
+      // User has a band application
+      if (baseStatus.isBooked) {
+        baseStatus.statusMessage = `Band Booked ✓ (#${baseStatus.position})`;
+        baseStatus.statusBadgeVariant = "default";
+      } else if (baseStatus.isPending) {
+        baseStatus.statusMessage = `Band Pending (#${baseStatus.position})`;
+        baseStatus.statusBadgeVariant = "outline";
+        baseStatus.canWithdraw = true;
+      } else {
+        baseStatus.statusMessage = `Band Applied (#${baseStatus.position})`;
+        baseStatus.statusBadgeVariant = "outline";
+        baseStatus.canWithdraw = true;
+      }
+    } else {
+      // User has no band application
+      const maxBands = gig.maxSlots || 1; // FIXED: Now gig has maxSlots property
+      const currentBands = bookCount.length;
+      const isFull = currentBands >= maxBands;
+
+      baseStatus.canApply = !isFull;
+      baseStatus.statusMessage = isFull ? "Bands full" : "Available for bands";
+      baseStatus.statusBadgeVariant = isFull ? "secondary" : "outline";
+    }
+
+    return baseStatus;
+  }
+
+  // Default fallback
   return baseStatus;
 };
 

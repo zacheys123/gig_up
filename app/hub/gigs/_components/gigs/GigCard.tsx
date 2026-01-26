@@ -600,26 +600,55 @@ const GigCard: React.FC<GigCardProps> = ({
           ) || [];
 
         if (qualifiedRoles.length === 0) {
+          const allRoles = gig.bandCategory || [];
+          const availableRoles = allRoles.filter(
+            (role) => role.filledSlots < role.maxSlots,
+          );
+
           return {
-            label: "No Available Roles",
+            label: "View Requirements",
             variant: "outline" as const,
-            disabled: true,
+            disabled: false,
             icon: <AlertCircle className="w-4 h-4" />,
-            action: "none" as const,
+            action: () => {
+              // Show requirements modal
+              toast.info(
+                <div className="p-4">
+                  <p className="font-semibold">Role Requirements</p>
+                  {availableRoles.map((role, idx) => (
+                    <div key={idx} className="mt-2 p-2 border rounded-lg">
+                      <p className="font-medium">{role.role}</p>
+                      <p className="text-sm text-gray-600">Requirements:</p>
+                      <ul className="list-disc pl-4 text-sm">
+                        {role.requiredSkills?.map((skill, i) => (
+                          <li key={i}>{skill}</li>
+                        ))}
+                      </ul>
+                      <p className="text-xs mt-1">
+                        Your instruments:{" "}
+                        {Array.isArray(currentUser?.instrument)
+                          ? currentUser.instrument.join(", ")
+                          : currentUser?.instrument}
+                      </p>
+                    </div>
+                  ))}
+                </div>,
+                { duration: 10000 },
+              );
+            },
           };
         }
 
+        // THIS IS THE MISSING RETURN STATEMENT
         return {
           label:
             qualifiedRoles.length === 1
               ? `Apply as ${qualifiedRoles[0].role}`
               : "Apply for Role",
           variant: "default" as const,
-          disabled: false,
           icon: <UserPlus className="w-4 h-4" />,
-          action: "apply" as const,
+          action: handleBandApplication,
         };
-
       case "individual_musician":
       case "mc":
       case "dj":
@@ -1863,35 +1892,79 @@ const GigCard: React.FC<GigCardProps> = ({
               disabled: false,
               icon: <AlertCircle className="w-4 h-4" />,
               action: () => {
-                // Show requirements modal
+                console.log("View Requirements button clicked");
+                console.log("Available roles:", availableRoles);
+                console.log("Current user:", currentUser);
+
+                // Show requirements modal - NO ALERT
                 toast.info(
-                  <div className="p-4">
-                    <p className="font-semibold">Role Requirements</p>
-                    {availableRoles.map((role, idx) => (
-                      <div key={idx} className="mt-2 p-2 border rounded-lg">
-                        <p className="font-medium">{role.role}</p>
-                        <p className="text-sm text-gray-600">Requirements:</p>
-                        <ul className="list-disc pl-4 text-sm">
-                          {role.requiredSkills?.map((skill, i) => (
-                            <li key={i}>{skill}</li>
-                          ))}
-                        </ul>
-                        <p className="text-xs mt-1">
-                          Your instruments:{" "}
-                          {Array.isArray(currentUser?.instrument)
-                            ? currentUser.instrument.join(", ")
-                            : currentUser?.instrument}
+                  <div className="max-w-md p-4">
+                    <h3 className="font-bold text-lg mb-3 text-gray-900 dark:text-white">
+                      Role Requirements
+                    </h3>
+                    <div className="space-y-3">
+                      {availableRoles.length > 0 ? (
+                        availableRoles.map((role, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 border rounded-lg bg-white dark:bg-gray-800"
+                          >
+                            <p className="font-semibold text-blue-600 dark:text-blue-400">
+                              {role.role}
+                            </p>
+                            {role.requiredSkills &&
+                              role.requiredSkills.length > 0 && (
+                                <>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                                    Required Skills:
+                                  </p>
+                                  <ul className="list-disc pl-4 text-sm space-y-1 mt-1">
+                                    {role.requiredSkills.map((skill, i) => (
+                                      <li
+                                        key={i}
+                                        className="text-gray-700 dark:text-gray-300"
+                                      >
+                                        {skill}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </>
+                              )}
+                            <div className="mt-2 text-xs">
+                              <p className="text-gray-500">
+                                Available slots:{" "}
+                                {role.maxSlots - role.filledSlots} of{" "}
+                                {role.maxSlots}
+                              </p>
+                              <p className="mt-1 font-medium">
+                                Your instruments:{" "}
+                                <span className="text-green-600">
+                                  {Array.isArray(currentUser?.instrument)
+                                    ? currentUser.instrument.join(", ")
+                                    : currentUser?.instrument || "None"}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-600">
+                          All roles are filled or no roles available.
                         </p>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>,
-                  { duration: 10000 },
+                  {
+                    duration: 10000,
+                    style: { maxWidth: "450px" },
+                  },
                 );
               },
+              // ADD THIS PROP TO OVERRIDE THE DISABLED LOGIC
+              overrideDisabled: true, // Custom prop to skip interest window check
             };
           }
 
-          // ADD THIS RETURN STATEMENT - THIS WAS MISSING!
           return {
             label:
               qualifiedRoles.length === 1
@@ -1901,7 +1974,6 @@ const GigCard: React.FC<GigCardProps> = ({
             icon: <UserPlus className="w-4 h-4" />,
             action: handleBandApplication,
           };
-
         case "mc":
           return {
             label: "Apply as MC",
@@ -1938,6 +2010,11 @@ const GigCard: React.FC<GigCardProps> = ({
     };
 
     const buttonConfig = getButtonConfig();
+    if (!buttonConfig) {
+      return null;
+    }
+
+    const isViewRequirementsButton = buttonConfig.label === "View Requirements";
 
     return (
       <Button
@@ -1947,14 +2024,18 @@ const GigCard: React.FC<GigCardProps> = ({
           e.stopPropagation();
           buttonConfig.action();
         }}
-        disabled={loading || !isInterestWindowOpen}
+        disabled={
+          loading || (!isInterestWindowOpen && !isViewRequirementsButton)
+        }
         className={clsx(
           responsiveButtonClasses,
           "gap-2 shadow-sm hover:shadow transition-all duration-200 font-medium",
           buttonConfig.variant === "default"
             ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
             : "border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-          !isInterestWindowOpen && "opacity-50 cursor-not-allowed",
+          !isInterestWindowOpen &&
+            !isViewRequirementsButton &&
+            "opacity-50 cursor-not-allowed",
         )}
         style={getButtonStyles(buttonConfig.variant)}
       >
@@ -1964,18 +2045,21 @@ const GigCard: React.FC<GigCardProps> = ({
           buttonConfig.icon
         )}
         <span className="ml-2">{buttonConfig.label}</span>
-        {!isInterestWindowOpen && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Lock className="w-3 h-3 ml-1" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Interest window is not open</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+
+        {interestWindowStatus.hasWindow &&
+          !isInterestWindowOpen &&
+          !isViewRequirementsButton && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Lock className="w-3 h-3 ml-1" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Interest window is {interestWindowStatus.status}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
       </Button>
     );
   };
@@ -2048,7 +2132,79 @@ const GigCard: React.FC<GigCardProps> = ({
       </div>
     );
   };
+  // Add this function to debug interest window specifically
+  const debugInterestWindowDetails = () => {
+    console.log("=== DEBUG: Interest Window Details ===");
+    console.log("Gig ID:", gig._id);
 
+    // Check if gig has interest window properties
+    console.log("acceptInterestStartTime:", gig.acceptInterestStartTime);
+    console.log("acceptInterestEndTime:", gig.acceptInterestEndTime);
+
+    // Parse dates if they exist
+    if (gig.acceptInterestStartTime) {
+      const startDate = new Date(gig.acceptInterestStartTime);
+      console.log("Start Date parsed:", {
+        ISO: startDate.toISOString(),
+        Local: startDate.toLocaleString(),
+        Timestamp: startDate.getTime(),
+        Now: Date.now(),
+        IsPast: startDate.getTime() < Date.now(),
+        IsFuture: startDate.getTime() > Date.now(),
+      });
+    }
+
+    if (gig.acceptInterestEndTime) {
+      const endDate = new Date(gig.acceptInterestEndTime);
+      console.log("End Date parsed:", {
+        ISO: endDate.toISOString(),
+        Local: endDate.toLocaleString(),
+        Timestamp: endDate.getTime(),
+        Now: Date.now(),
+        IsPast: endDate.getTime() < Date.now(),
+        IsFuture: endDate.getTime() > Date.now(),
+      });
+    }
+
+    // Check getInterestWindowStatus result
+    const windowStatus = getInterestWindowStatus(gig);
+    console.log("Window Status Result:", windowStatus);
+
+    // Manual check
+    const now = Date.now();
+    console.log("Manual Check:", {
+      hasStartTime: !!gig.acceptInterestStartTime,
+      hasEndTime: !!gig.acceptInterestEndTime,
+      now: new Date(now).toLocaleString(),
+      nowTimestamp: now,
+    });
+
+    if (gig.acceptInterestStartTime) {
+      const start = new Date(gig.acceptInterestStartTime).getTime();
+      console.log("Start vs Now:", {
+        start,
+        now,
+        difference: start - now,
+        isOpen: now >= start,
+      });
+    }
+
+    if (gig.acceptInterestEndTime) {
+      const end = new Date(gig.acceptInterestEndTime).getTime();
+      console.log("End vs Now:", {
+        end,
+        now,
+        difference: now - end,
+        isClosed: now > end,
+      });
+    }
+  };
+
+  // Call it in useEffect
+  useEffect(() => {
+    debugGigState();
+    debugInterestWindowDetails(); // Add this
+  }, [currentUser, gig]);
   // ===== MAIN RETURN STATEMENT =====
   return (
     <>

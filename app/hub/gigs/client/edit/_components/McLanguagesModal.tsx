@@ -3,7 +3,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Search, Mic, Globe, Star, User } from "lucide-react";
+import { Search, Mic, Globe, Star, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -13,9 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { talentCategories, experienceLevels } from "@/types/talent";
+
 import { useThemeColors } from "@/hooks/useTheme";
 import { BaseTalentModal } from "./BaseTalentModal";
+import { experienceLevels, talentCategories } from "../types";
+import { Button } from "@/components/ui/button";
 
 interface MCLanguagesModalProps {
   isOpen: boolean;

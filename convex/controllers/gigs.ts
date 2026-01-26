@@ -60,7 +60,7 @@ export const showInterestInGig = mutation({
         if (userRoleType !== "mc" && userInstrument !== "mc") {
           throw new Error(
             "Only MCs can apply for MC gigs. Your role type is: " +
-              (userRoleType || userInstrument || "not specified")
+              (userRoleType || userInstrument || "not specified"),
           );
         }
       }
@@ -69,7 +69,7 @@ export const showInterestInGig = mutation({
         if (userRoleType !== "dj" && userInstrument !== "dj") {
           throw new Error(
             "Only DJs can apply for DJ gigs. Your role type is: " +
-              (userRoleType || userInstrument || "not specified")
+              (userRoleType || userInstrument || "not specified"),
           );
         }
       }
@@ -84,7 +84,7 @@ export const showInterestInGig = mutation({
         if (!isVocalist) {
           throw new Error(
             "Only vocalists can apply for vocalist gigs. Your role/instrument is: " +
-              (userRoleType || userInstrument || "not specified")
+              (userRoleType || userInstrument || "not specified"),
           );
         }
       }
@@ -119,7 +119,7 @@ export const showInterestInGig = mutation({
 
           if (!userCanApply) {
             throw new Error(
-              `Only ${gigCategory}s can apply for this gig. Your instrument is: ${userInstrument || "not specified"}`
+              `Only ${gigCategory}s can apply for this gig. Your instrument is: ${userInstrument || "not specified"}`,
             );
           }
         }
@@ -131,12 +131,12 @@ export const showInterestInGig = mutation({
       gig.bookingHistory?.filter(
         (entry) =>
           entry.userId === userId &&
-          Date.now() - entry.timestamp < 24 * 60 * 60 * 1000
+          Date.now() - entry.timestamp < 24 * 60 * 60 * 1000,
       ) || [];
 
     if (recentInterests.length >= 5) {
       throw new Error(
-        "Too many interests shown recently. Please try again later."
+        "Too many interests shown recently. Please try again later.",
       );
     }
 
@@ -149,7 +149,7 @@ export const showInterestInGig = mutation({
     // Optional: Prevent low-quality users from showing interest
     if (user?.trustScore && user?.trustScore < 0) {
       throw new Error(
-        "Your account needs attention before showing interest in gigs"
+        "Your account needs attention before showing interest in gigs",
       );
     }
 
@@ -158,7 +158,7 @@ export const showInterestInGig = mutation({
     if (currentInterestedUsers.length >= maxSlots) {
       throw new Error(
         `This gig has reached maximum capacity (${maxSlots} slots). ` +
-          `Currently ${currentInterestedUsers.length} interested musicians.`
+          `Currently ${currentInterestedUsers.length} interested musicians.`,
       );
     }
 
@@ -180,7 +180,7 @@ export const showInterestInGig = mutation({
 
     if (interestStartTime && now < interestStartTime) {
       throw new Error(
-        `Interest for this gig opens on ${new Date(interestStartTime).toLocaleDateString()}`
+        `Interest for this gig opens on ${new Date(interestStartTime).toLocaleDateString()}`,
       );
     }
 
@@ -344,7 +344,7 @@ export const removeInterestFromGig = mutation({
     }
 
     const updatedInterestedUsers = currentInterestedUsers.filter(
-      (id) => id !== musician._id
+      (id) => id !== musician._id,
     );
     // Get max slots from gig (with default)
     const maxSlots = gig.maxSlots || 10;
@@ -534,7 +534,7 @@ export const selectMusicianFromInterested = mutation({
 
     // NOTIFY OTHER INTERESTED MUSICIANS THEY WEREN'T SELECTED
     const otherInterestedUsers = interestedUsers.filter(
-      (id) => id !== musicianId
+      (id) => id !== musicianId,
     );
 
     await Promise.all(
@@ -557,7 +557,7 @@ export const selectMusicianFromInterested = mutation({
         } catch (error) {
           console.error("Failed to notify user:", error);
         }
-      })
+      }),
     );
     // Update trust scores for both parties
     try {
@@ -856,7 +856,7 @@ export const getInterestedUsersWithDetails = query({
           notes: latestEntry?.notes || "",
           position: interestedUserIds.indexOf(userId) + 1,
         };
-      })
+      }),
     );
 
     // Filter out null values
@@ -883,7 +883,7 @@ export const getUserInterestedGigs = query({
 
     // Filter gigs where user is in interestedUsers
     const interestedGigs = allGigs.filter((gig) =>
-      gig.interestedUsers?.includes(args.userId)
+      gig.interestedUsers?.includes(args.userId),
     );
 
     // Get detailed info for each gig
@@ -917,12 +917,12 @@ export const getUserInterestedGigs = query({
             isClientBand: gig.isClientBand || false,
           },
         };
-      })
+      }),
     );
 
     // Sort by most recent interest
     return gigsWithDetails.sort(
-      (a, b) => b.userStatus.interestedAt - a.userStatus.interestedAt
+      (a, b) => b.userStatus.interestedAt - a.userStatus.interestedAt,
     );
   },
 });
@@ -969,7 +969,7 @@ export const getBandDetails = query({
             lastname: user.lastname || "",
           },
         };
-      })
+      }),
     );
 
     // Get band creator info - fetch user document with type assertion
@@ -1010,15 +1010,15 @@ export const getGigTypeInfo = query({
       // Fix: bandCategory is an array, need to aggregate bookedUsers from all roles
       const bandCategory = gig.bandCategory || [];
       const bandMembers = bandCategory.flatMap(
-        (role) => role.bookedUsers || []
+        (role) => role.bookedUsers || [],
       );
       const totalSlots = bandCategory.reduce(
         (sum, role) => sum + (role.maxSlots || 0),
-        0
+        0,
       );
       const filledSlots = bandCategory.reduce(
         (sum, role) => sum + (role.filledSlots || 0),
-        0
+        0,
       );
       const maxSlots = gig.maxSlots || totalSlots || 5;
 
@@ -1242,7 +1242,7 @@ export const getSavedGigs = query({
         } catch (error) {
           return null;
         }
-      })
+      }),
     );
 
     // Filter out null values (deleted gigs)
@@ -1284,7 +1284,7 @@ export const getFavoriteGigs = query({
         } catch (error) {
           return null;
         }
-      })
+      }),
     );
 
     // Filter out null values
@@ -1409,13 +1409,13 @@ export const createGig = mutation({
           negotiable: v.optional(v.boolean()),
           maxApplicants: v.optional(v.number()),
           currentApplicants: v.optional(v.number()),
-        })
-      )
+        }),
+      ),
     ),
     vocalistGenre: v.optional(v.array(v.string())),
     bookedBy: v.optional(v.id("users")),
     paymentStatus: v.optional(
-      v.union(v.literal("pending"), v.literal("paid"), v.literal("refunded"))
+      v.union(v.literal("pending"), v.literal("paid"), v.literal("refunded")),
     ),
     cancellationReason: v.optional(v.string()),
     phoneNo: v.optional(v.string()),
@@ -1465,6 +1465,8 @@ export const createGig = mutation({
       negotiable,
       isClientBand,
       maxSlots,
+      acceptInterestStartTime,
+      acceptInterestEndTime,
     } = args;
 
     // Validate required fields
@@ -1542,7 +1544,7 @@ export const createGig = mutation({
         }));
         const totalBandSlots = processedBandCategory.reduce(
           (sum: number, role: any) => sum + role.maxSlots,
-          0
+          0,
         );
         processedMaxSlots = totalBandSlots || 5;
         processedCategory = "band-creation";
@@ -1550,8 +1552,8 @@ export const createGig = mutation({
         relevantUsersQuery = relevantUsersQuery.filter((q) =>
           q.or(
             q.eq(q.field("openToBandWork"), true),
-            q.eq(q.field("interestedInBands"), true)
-          )
+            q.eq(q.field("interestedInBands"), true),
+          ),
         );
         break;
 
@@ -1671,7 +1673,7 @@ export const createGig = mutation({
 
     // Update the updateWeeklyGigCount function with explicit typing
     const updateWeeklyGigCount = (
-      currentWeeklyData: WeeklyGigData | null
+      currentWeeklyData: WeeklyGigData | null,
     ): WeeklyGigData => {
       // Get current week start (Monday)
       const now = new Date();
@@ -1702,7 +1704,7 @@ export const createGig = mutation({
 
     // Update user's weekly gig count
     const updatedWeeklyData = updateWeeklyGigCount(
-      user.gigsPostedThisWeek as WeeklyGigData | null
+      user.gigsPostedThisWeek as WeeklyGigData | null,
     );
 
     // Update user stats
@@ -1764,14 +1766,14 @@ export const createGig = mutation({
         case "full":
           // For full band, look for band leaders or versatile musicians
           relevantUsersQuery = relevantUsersQuery.filter((q) =>
-            q.eq(q.field("roleType"), "band-leader")
+            q.eq(q.field("roleType"), "band-leader"),
           );
           break;
         case "personal":
           // For individual, filter by instrument if specified
           if (category) {
             relevantUsersQuery = relevantUsersQuery.filter((q) =>
-              q.eq(q.field("instrument"), category)
+              q.eq(q.field("instrument"), category),
             );
           }
           break;
@@ -1780,7 +1782,7 @@ export const createGig = mutation({
           // or check if they have skills matching band roles
           if (processedBandCategory.length > 0) {
             const requiredSkills = processedBandCategory.flatMap(
-              (role: any) => role.requiredSkills || []
+              (role: any) => role.requiredSkills || [],
             );
             if (requiredSkills.length > 0) {
               // Note: This is a simple filter, you might need a more complex query
@@ -1788,9 +1790,9 @@ export const createGig = mutation({
               relevantUsersQuery = relevantUsersQuery.filter((q) =>
                 q.or(
                   ...requiredSkills.map((skill: string) =>
-                    q.eq(q.field("instrument"), skill)
-                  )
-                )
+                    q.eq(q.field("instrument"), skill),
+                  ),
+                ),
               );
             }
           }
@@ -1800,7 +1802,7 @@ export const createGig = mutation({
         case "vocalist":
           // For specific talents, filter by roleType
           relevantUsersQuery = relevantUsersQuery.filter((q) =>
-            q.eq(q.field("roleType"), bussinesscat)
+            q.eq(q.field("roleType"), bussinesscat),
           );
           break;
       }
@@ -1808,7 +1810,7 @@ export const createGig = mutation({
       // Filter by location if available
       if (location && posterUser.city) {
         relevantUsersQuery = relevantUsersQuery.filter((q) =>
-          q.eq(q.field("city"), posterUser.city)
+          q.eq(q.field("city"), posterUser.city),
         );
       }
 
@@ -1922,7 +1924,7 @@ export const exploreGigs = query({
     // Apply filters
     if (args.isClientBand !== undefined) {
       query = query.filter((q) =>
-        q.eq(q.field("isClientBand"), args.isClientBand)
+        q.eq(q.field("isClientBand"), args.isClientBand),
       );
     }
 
@@ -1950,7 +1952,7 @@ export const exploreGigs = query({
               }
             : null,
         };
-      })
+      }),
     );
 
     return gigsWithPosters;
@@ -1965,7 +1967,7 @@ export const getGigStats = query({
 
     if (args.userId) {
       gigsQuery = gigsQuery.filter((q) =>
-        q.eq(q.field("postedBy"), args.userId)
+        q.eq(q.field("postedBy"), args.userId),
       );
     } else {
       gigsQuery = gigsQuery.filter((q) => q.eq(q.field("isActive"), true));
@@ -1988,7 +1990,7 @@ export const getGigStats = query({
           : 0,
       totalViews: gigs.reduce(
         (sum, gig) => sum + ((gig?.viewCount && gig?.viewCount.length) || 0),
-        0
+        0,
       ),
     };
 
@@ -2014,7 +2016,7 @@ export const getGigsWithUsers = query({
           postedByUser,
           bookedByUser,
         };
-      })
+      }),
     );
 
     return gigsWithUsers;
@@ -2101,11 +2103,11 @@ export const getGigsByUser = query({
         v.literal("active"),
         v.literal("taken"),
         v.literal("pending"),
-        v.literal("all")
-      )
+        v.literal("all"),
+      ),
     ),
     gigType: v.optional(
-      v.union(v.literal("regular"), v.literal("band"), v.literal("all"))
+      v.union(v.literal("regular"), v.literal("band"), v.literal("all")),
     ),
   },
   handler: async (ctx, args) => {
@@ -2188,7 +2190,7 @@ type GigDoc = Doc<"gigs">;
 async function validateGigOwnership(
   ctx: QueryCtx,
   gigId: Id<"gigs">,
-  userId: Id<"users">
+  userId: Id<"users">,
 ): Promise<GigDoc> {
   const gig = await ctx.db.get(gigId);
 
@@ -2256,7 +2258,7 @@ export const updateGig = mutation({
         end: v.string(),
         durationFrom: v.optional(v.string()),
         durationTo: v.optional(v.string()),
-      })
+      }),
     ),
 
     // Business category
@@ -2370,7 +2372,7 @@ export const updateGig = mutation({
       notes: "Gig details updated",
       metadata: {
         updatedFields: Object.keys(payload).filter(
-          (key) => key !== "updatedAt"
+          (key) => key !== "updatedAt",
         ),
         bandRolesUpdated: bandCategory ? bandCategory.length : 0,
       },
