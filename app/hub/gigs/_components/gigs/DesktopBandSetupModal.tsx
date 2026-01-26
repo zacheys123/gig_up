@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -787,6 +787,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     );
   };
   // Update the SlimRoleCard component definition
+  // Update the SlimRoleCard component with useRef
   const SlimRoleCard = ({
     role,
     onRoleUpdate,
@@ -797,9 +798,22 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     const maxApplicants = role.maxApplicants || 20;
     const roleInfo = commonRoles.find((r) => r.value === role.role);
     const Icon = roleInfo?.icon || Music;
-    const [isExpanded, setIsExpanded] = useState(false);
 
-    // Add this helper function to handle updates
+    // Use useRef to persist expanded state across re-renders
+    const expandedStateRef = useRef<Record<string, boolean>>({});
+
+    // Initialize from ref, not useState
+    const [isExpanded, setIsExpanded] = useState(
+      () => expandedStateRef.current[role.role] || false,
+    );
+
+    // Handle toggle and persist to ref
+    const handleToggle = () => {
+      const newState = !isExpanded;
+      expandedStateRef.current[role.role] = newState;
+      setIsExpanded(newState);
+    };
+
     const handleUpdate = (updates: Partial<BandSetupRole>) => {
       onRoleUpdate({ ...role, ...updates });
     };
@@ -844,7 +858,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={handleToggle} // Use handleToggle instead of inline
                 className={cn(
                   "h-8 px-3 gap-2",
                   isExpanded
