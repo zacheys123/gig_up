@@ -90,7 +90,6 @@ import {
   useGigScheduler,
 } from "@/app/stores/useGigStore";
 import { OfflineNotification } from "./OfflineNotification";
-import TalentModal from "./TalentModal";
 import GigCustomization from "./GigCustomization";
 import SchedulerComponent from "./SchedulerComponent";
 import { useMutation } from "convex/react";
@@ -111,6 +110,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import TalentModal from "./TalentModal";
 
 // Memoized ErrorMessage Component
 const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
@@ -181,7 +181,7 @@ const MemoizedInput = React.memo(
               "py-3 rounded-xl border-2 transition-all",
               "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
               error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
-              className
+              className,
             )}
             {...props}
           />
@@ -189,7 +189,7 @@ const MemoizedInput = React.memo(
         <ErrorMessage error={error} />
       </div>
     );
-  }
+  },
 );
 MemoizedInput.displayName = "MemoizedInput";
 
@@ -229,14 +229,14 @@ const MemoizedTextarea = React.memo(
             "rounded-xl border-2 resize-none transition-all",
             "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
             error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
-            className
+            className,
           )}
           {...props}
         />
         <ErrorMessage error={error} />
       </div>
     );
-  }
+  },
 );
 MemoizedTextarea.displayName = "MemoizedTextarea";
 
@@ -279,7 +279,7 @@ const DraftsListModal = React.memo(
             draft.data.formValues.location?.toLowerCase().includes(query) ||
             (draft.isBandGig &&
               draft.data.bandRoles?.some((role) =>
-                role.role.toLowerCase().includes(query)
+                role.role.toLowerCase().includes(query),
               ))
           );
         });
@@ -641,7 +641,7 @@ const DraftsListModal = React.memo(
         </motion.div>
       </motion.div>
     );
-  }
+  },
 );
 DraftsListModal.displayName = "DraftsListModal";
 
@@ -663,7 +663,7 @@ const TalentPreview = React.memo(({ formValues, colors }: any) => {
         "rounded-xl p-4 border mt-4",
         colors.border,
         colors.backgroundMuted,
-        "relative overflow-hidden"
+        "relative overflow-hidden",
       )}
     >
       <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
@@ -701,7 +701,7 @@ const TalentPreview = React.memo(({ formValues, colors }: any) => {
               variant="outline"
               className={cn(
                 "border-red-200 text-red-700 dark:border-red-800 dark:text-red-300",
-                "px-3 py-1 rounded-full font-medium"
+                "px-3 py-1 rounded-full font-medium",
               )}
             >
               MC: {formValues.mcType}
@@ -711,7 +711,7 @@ const TalentPreview = React.memo(({ formValues, colors }: any) => {
                 variant="outline"
                 className={cn(
                   "border-purple-200 text-purple-700 dark:border-purple-800 dark:text-purple-300",
-                  "px-3 py-1 rounded-full font-medium"
+                  "px-3 py-1 rounded-full font-medium",
                 )}
               >
                 {formValues.mcLanguages}
@@ -726,7 +726,7 @@ const TalentPreview = React.memo(({ formValues, colors }: any) => {
               variant="outline"
               className={cn(
                 "border-pink-200 text-pink-700 dark:border-pink-800 dark:text-pink-300",
-                "px-3 py-1 rounded-full font-medium"
+                "px-3 py-1 rounded-full font-medium",
               )}
             >
               DJ: {formValues.djGenre}
@@ -736,7 +736,7 @@ const TalentPreview = React.memo(({ formValues, colors }: any) => {
                 variant="outline"
                 className={cn(
                   "border-amber-200 text-amber-700 dark:border-amber-800 dark:text-amber-300",
-                  "px-3 py-1 rounded-full font-medium"
+                  "px-3 py-1 rounded-full font-medium",
                 )}
               >
                 {formValues.djEquipment}
@@ -753,7 +753,7 @@ const TalentPreview = React.memo(({ formValues, colors }: any) => {
                 variant="outline"
                 className={cn(
                   "border-green-200 text-green-700 dark:border-green-800 dark:text-green-300",
-                  "px-3 py-1 rounded-full font-medium"
+                  "px-3 py-1 rounded-full font-medium",
                 )}
               >
                 {genre}
@@ -774,16 +774,16 @@ const BandSetupPreview = React.memo(
 
     const totalPositions = bandRoles.reduce(
       (sum: number, role: BandRoleInput) => sum + role.maxSlots,
-      0
+      0,
     );
     const totalMaxApplicants = bandRoles.reduce(
       (sum: number, role: BandRoleInput) => sum + (role.maxApplicants || 20),
-      0
+      0,
     );
 
     const totalCurrentApplicants = bandRoles.reduce(
       (sum: number, role: BandRoleInput) => sum + (role.currentApplicants || 0),
-      0
+      0,
     );
 
     const totalPrice = bandRoles.reduce((sum: number, role: BandRoleInput) => {
@@ -792,10 +792,10 @@ const BandSetupPreview = React.memo(
     }, 0);
 
     const hasPricedRoles = bandRoles.some(
-      (role: BandRoleInput) => role.price && role.price > 0
+      (role: BandRoleInput) => role.price && role.price > 0,
     );
     const hasNegotiableRoles = bandRoles.some(
-      (role: BandRoleInput) => role.negotiable
+      (role: BandRoleInput) => role.negotiable,
     );
 
     // Get role icon based on role name
@@ -864,7 +864,7 @@ const BandSetupPreview = React.memo(
           "rounded-xl p-4 border mt-4",
           colors.border,
           colors.backgroundMuted,
-          "relative overflow-hidden"
+          "relative overflow-hidden",
         )}
       >
         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
@@ -899,7 +899,7 @@ const BandSetupPreview = React.memo(
             const currentApplicants = role.currentApplicants || 0;
             const applicantProgress = Math.min(
               (currentApplicants / maxApplicants) * 100,
-              100
+              100,
             );
             const roleCurrency = role.currency || "KES";
 
@@ -910,7 +910,7 @@ const BandSetupPreview = React.memo(
                   "p-4 border rounded-lg hover:shadow-md transition-shadow",
                   colors.border,
                   colors.background,
-                  "group"
+                  "group",
                 )}
               >
                 <div className="flex justify-between items-start mb-3">
@@ -918,7 +918,7 @@ const BandSetupPreview = React.memo(
                     <div
                       className={cn(
                         "p-1.5 rounded-md",
-                        getRoleColor(role.role)
+                        getRoleColor(role.role),
                       )}
                     >
                       {getRoleIcon(role.role)}
@@ -958,7 +958,7 @@ const BandSetupPreview = React.memo(
                             ? "bg-gradient-to-r from-blue-500 to-cyan-500"
                             : applicantProgress < 90
                               ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                              : "bg-gradient-to-r from-red-500 to-pink-500"
+                              : "bg-gradient-to-r from-red-500 to-pink-500",
                       )}
                       style={{ width: `${applicantProgress}%` }}
                     />
@@ -1059,7 +1059,7 @@ const BandSetupPreview = React.memo(
                   Across{" "}
                   {
                     bandRoles.filter(
-                      (r: BandRoleInput) => r.price && r.price > 0
+                      (r: BandRoleInput) => r.price && r.price > 0,
                     ).length
                   }{" "}
                   priced roles
@@ -1083,7 +1083,7 @@ const BandSetupPreview = React.memo(
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {Math.round(
-                  (totalCurrentApplicants / totalMaxApplicants) * 100
+                  (totalCurrentApplicants / totalMaxApplicants) * 100,
                 )}
                 % of maximum capacity
               </div>
@@ -1092,7 +1092,7 @@ const BandSetupPreview = React.memo(
         </div>
       </motion.div>
     );
-  }
+  },
 );
 BandSetupPreview.displayName = "BandSetupPreview";
 // Interest Window Section Component
@@ -1106,7 +1106,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
     (field: string, value: any) => {
       // This would be handled by parent component
     },
-    []
+    [],
   );
 
   if (!showInterestWindow) {
@@ -1118,7 +1118,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
           "rounded-xl p-6 border cursor-pointer transition-all group",
           colors.border,
           colors.backgroundMuted,
-          "hover:shadow-lg hover:border-purple-500/50"
+          "hover:shadow-lg hover:border-purple-500/50",
         )}
         onClick={() => setShowInterestWindow(true)}
       >
@@ -1127,7 +1127,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
             <div
               className={cn(
                 "p-3 rounded-lg transition-transform group-hover:scale-110",
-                "bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+                "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
               )}
             >
               <Clock className="w-5 h-5 text-purple-500" />
@@ -1154,7 +1154,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
       className={cn(
         "rounded-xl border overflow-hidden",
         colors.border,
-        colors.backgroundMuted
+        colors.backgroundMuted,
       )}
     >
       <div className="p-6">
@@ -1176,7 +1176,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
             onClick={() => setShowInterestWindow(false)}
             className={cn(
               "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
-              colors.textMuted
+              colors.textMuted,
             )}
           >
             <X className="w-5 h-5" />
@@ -1195,7 +1195,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
               className={cn(
                 "flex-1",
                 interestWindowType === "dates" &&
-                  "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                  "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
               )}
             >
               Specific Dates
@@ -1207,7 +1207,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
               className={cn(
                 "flex-1",
                 interestWindowType === "days" &&
-                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
               )}
             >
               Days After Posting
@@ -1232,7 +1232,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
                     onChange={(e) =>
                       handleInterestWindowChange(
                         "acceptInterestStartTime",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="pl-10"
@@ -1257,7 +1257,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
                     onChange={(e) =>
                       handleInterestWindowChange(
                         "acceptInterestEndTime",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="pl-10"
@@ -1288,7 +1288,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
                     const current = formValues.interestWindowDays || 7;
                     handleInterestWindowChange(
                       "interestWindowDays",
-                      Math.max(1, current - 1)
+                      Math.max(1, current - 1),
                     );
                   }}
                   className="h-10 w-10"
@@ -1302,7 +1302,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
                     onChange={(e) =>
                       handleInterestWindowChange(
                         "interestWindowDays",
-                        parseInt(e.target.value) || 7
+                        parseInt(e.target.value) || 7,
                       )
                     }
                     min="1"
@@ -1321,7 +1321,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
                     const current = formValues.interestWindowDays || 7;
                     handleInterestWindowChange(
                       "interestWindowDays",
-                      current + 1
+                      current + 1,
                     );
                   }}
                   className="h-10 w-10"
@@ -1353,7 +1353,7 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
                   }
                   className={cn(
                     formValues.interestWindowDays === days &&
-                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
                   )}
                 >
                   {days} {days === 1 ? "day" : "days"}
@@ -1568,7 +1568,7 @@ export default function NormalGigsForm() {
     };
   };
   const [formValidationErrors, setFormValidationErrors] = useState<string[]>(
-    []
+    [],
   );
   const [isFormValid, setIsFormValid] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -1585,7 +1585,7 @@ export default function NormalGigsForm() {
       { value: "dj", label: "🎧 DJ", icon: Volume2, color: "pink" },
       { value: "vocalist", label: "🎤 Vocalist", icon: Music, color: "green" },
     ],
-    []
+    [],
   );
 
   const bandInstruments = useMemo(
@@ -1601,7 +1601,7 @@ export default function NormalGigsForm() {
       { value: "trumpet", label: "Trumpet", icon: GiTrumpet },
       { value: "percussion", label: "Percussion", icon: MusicIcon },
     ],
-    []
+    [],
   );
 
   const individualInstruments = useMemo(
@@ -1620,7 +1620,7 @@ export default function NormalGigsForm() {
       "xylophone",
       "percussion",
     ],
-    []
+    [],
   );
 
   const days = useMemo(
@@ -1633,7 +1633,7 @@ export default function NormalGigsForm() {
       { id: 6, val: "saturday", name: "Saturday" },
       { id: 7, val: "sunday", name: "Sunday" },
     ],
-    []
+    [],
   );
 
   const priceRanges = useMemo(
@@ -1645,7 +1645,7 @@ export default function NormalGigsForm() {
       { value: "hundredsofthousands", label: "Hundreds of thousands (00000)" },
       { value: "millions", label: "Millions (000000)" },
     ],
-    []
+    [],
   );
 
   const instrumentSuggestions = useMemo(
@@ -1671,7 +1671,7 @@ export default function NormalGigsForm() {
       "French Horn",
       "Tuba Player",
     ],
-    []
+    [],
   );
 
   // Validate form
@@ -1781,7 +1781,7 @@ export default function NormalGigsForm() {
 
       return allRequiredFields.includes(fieldName);
     },
-    [bussinesscat, formValues.gigtimeline]
+    [bussinesscat, formValues.gigtimeline],
   );
 
   // Should show field condition
@@ -1802,7 +1802,7 @@ export default function NormalGigsForm() {
           return true;
       }
     },
-    [bussinesscat]
+    [bussinesscat],
   );
 
   // File upload handler
@@ -1846,10 +1846,10 @@ export default function NormalGigsForm() {
         },
         setIsUploading,
         dep,
-        minimalUser
+        minimalUser,
       );
     },
-    [fileUrl, user]
+    [fileUrl, user],
   );
 
   // Input change handler
@@ -1857,7 +1857,7 @@ export default function NormalGigsForm() {
     (
       e: React.ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-      >
+      >,
     ) => {
       const { name, value, type } = e.target;
 
@@ -1884,7 +1884,7 @@ export default function NormalGigsForm() {
         });
       }
     },
-    []
+    [],
   );
   const getPasswordStrength = (password: string) => {
     if (!password) return { score: 0, text: "Empty", color: "text-gray-400" };
@@ -1934,7 +1934,7 @@ export default function NormalGigsForm() {
         }
       }
     },
-    [formValues]
+    [formValues],
   );
   // Handle select change
   const handleSelectChange = useCallback((name: string, value: string) => {
@@ -2003,13 +2003,13 @@ export default function NormalGigsForm() {
       setShowTalentModal(false);
       toast.success("Talent details updated!");
     },
-    [activeTalentType]
+    [activeTalentType],
   );
 
   const handleBandSetupSubmit = useCallback((roles: BandRoleInput[]) => {
     setBandRoles(roles);
     toast.success(
-      `Band setup complete! ${roles.length} role${roles.length !== 1 ? "s" : ""} selected.`
+      `Band setup complete! ${roles.length} role${roles.length !== 1 ? "s" : ""} selected.`,
     );
   }, []);
 
@@ -2143,7 +2143,7 @@ export default function NormalGigsForm() {
     (draftIdToDelete: string) => {
       if (
         window.confirm(
-          "Are you sure you want to delete this draft? This action cannot be undone."
+          "Are you sure you want to delete this draft? This action cannot be undone.",
         )
       ) {
         const success = deleteGigDraft(draftIdToDelete);
@@ -2165,7 +2165,7 @@ export default function NormalGigsForm() {
         }
       }
     },
-    [draftId, refreshDrafts]
+    [draftId, refreshDrafts],
   );
 
   // Handle form submit
@@ -2211,7 +2211,7 @@ export default function NormalGigsForm() {
           },
           bandRoles,
           formValues.durationfrom,
-          formValues.durationto
+          formValues.durationto,
         );
 
         // 🔴 DEBUG: Check what's being sent
@@ -2262,7 +2262,7 @@ export default function NormalGigsForm() {
       formValues,
       bandRoles,
       bussinesscat,
-    ]
+    ],
   );
 
   // Auto-save draft
@@ -2435,7 +2435,7 @@ export default function NormalGigsForm() {
           "rounded-xl p-6 border",
           colors.border,
           colors.backgroundMuted,
-          "relative overflow-hidden"
+          "relative overflow-hidden",
         )}
       >
         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
@@ -2475,7 +2475,7 @@ export default function NormalGigsForm() {
                         ...prev,
                         maxSlots: Math.max(
                           1,
-                          (prev.maxSlots || getDefaultSlots()) - 1
+                          (prev.maxSlots || getDefaultSlots()) - 1,
                         ),
                       }))
                     }
@@ -2493,7 +2493,7 @@ export default function NormalGigsForm() {
                           ...prev,
                           maxSlots: Math.max(
                             1,
-                            parseInt(e.target.value) || getDefaultSlots()
+                            parseInt(e.target.value) || getDefaultSlots(),
                           ),
                         }))
                       }
@@ -2541,7 +2541,7 @@ export default function NormalGigsForm() {
                         className={cn(
                           "px-3",
                           currentSlots === num &&
-                            "bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+                            "bg-gradient-to-r from-blue-500 to-purple-500 text-white",
                         )}
                       >
                         {num}
@@ -2570,7 +2570,7 @@ export default function NormalGigsForm() {
                       className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center",
                         "bg-gradient-to-r from-blue-500/20 to-purple-500/20",
-                        "border border-blue-500/30"
+                        "border border-blue-500/30",
                       )}
                     >
                       <Users className="w-4 h-4 text-blue-500" />
@@ -2682,7 +2682,7 @@ export default function NormalGigsForm() {
             className={cn(
               "rounded-xl p-4 border",
               colors.border,
-              colors.backgroundMuted
+              colors.backgroundMuted,
             )}
           >
             <div className="flex items-center gap-3">
@@ -2737,7 +2737,7 @@ export default function NormalGigsForm() {
                 "fixed top-6 left-1/2 transform -translate-x-1/2 z-50 rounded-xl px-6 py-4 shadow-2xl backdrop-blur-sm",
                 error
                   ? "bg-gradient-to-r from-red-500/90 to-orange-500/90"
-                  : "bg-gradient-to-r from-emerald-500/90 to-green-500/90"
+                  : "bg-gradient-to-r from-emerald-500/90 to-green-500/90",
               )}
             >
               <div className="flex items-center gap-3">
@@ -2785,7 +2785,7 @@ export default function NormalGigsForm() {
           className={cn(
             "sticky top-0 z-40 border-b backdrop-blur-sm",
             colors.navBackground,
-            colors.navBorder
+            colors.navBorder,
           )}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -2847,7 +2847,7 @@ export default function NormalGigsForm() {
             <TabsList
               className={cn(
                 "grid grid-cols-4 mb-6",
-                colors.backgroundSecondary
+                colors.backgroundSecondary,
               )}
             >
               <TabsTrigger value="basic">
@@ -2878,7 +2878,7 @@ export default function NormalGigsForm() {
                       <Label
                         className={cn(
                           "text-lg font-semibold mb-4",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Business Category
@@ -2930,7 +2930,7 @@ export default function NormalGigsForm() {
                         htmlFor="title"
                         className={cn(
                           "text-lg font-semibold mb-4",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Gig Title
@@ -2953,7 +2953,7 @@ export default function NormalGigsForm() {
                         htmlFor="description"
                         className={cn(
                           "text-lg font-semibold mb-4",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Description
@@ -2992,7 +2992,7 @@ export default function NormalGigsForm() {
                         htmlFor="location"
                         className={cn(
                           "text-lg font-semibold mb-4",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Location
@@ -3015,7 +3015,7 @@ export default function NormalGigsForm() {
                       <Label
                         className={cn(
                           "text-lg font-semibold mb-4",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Event Details
@@ -3026,7 +3026,7 @@ export default function NormalGigsForm() {
                           <Label
                             className={cn(
                               "text-sm font-medium mb-2",
-                              colors.text
+                              colors.text,
                             )}
                           >
                             Gig Type
@@ -3063,7 +3063,7 @@ export default function NormalGigsForm() {
                             <Label
                               className={cn(
                                 "text-sm font-medium mb-2",
-                                colors.text
+                                colors.text,
                               )}
                             >
                               Day of Week
@@ -3095,7 +3095,7 @@ export default function NormalGigsForm() {
                           <Label
                             className={cn(
                               "text-sm font-medium mb-2",
-                              colors.text
+                              colors.text,
                             )}
                           >
                             Event Date
@@ -3108,7 +3108,7 @@ export default function NormalGigsForm() {
                               colors.border,
                               colors.background,
                               colors.text,
-                              "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                              "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
                             )}
                             placeholderText="Select a date"
                             isClearable
@@ -3125,7 +3125,7 @@ export default function NormalGigsForm() {
                           className={cn(
                             "flex justify-between items-center p-4 rounded-xl border cursor-pointer",
                             colors.border,
-                            colors.backgroundMuted
+                            colors.backgroundMuted,
                           )}
                         >
                           <div className="flex items-center gap-3">
@@ -3147,7 +3147,7 @@ export default function NormalGigsForm() {
                               <Label
                                 className={cn(
                                   "text-sm font-medium mb-2",
-                                  colors.text
+                                  colors.text,
                                 )}
                               >
                                 Start Time
@@ -3180,7 +3180,7 @@ export default function NormalGigsForm() {
                               <Label
                                 className={cn(
                                   "text-sm font-medium mb-2",
-                                  colors.text
+                                  colors.text,
                                 )}
                               >
                                 End Time
@@ -3219,7 +3219,7 @@ export default function NormalGigsForm() {
                         htmlFor="phoneNo"
                         className={cn(
                           "text-lg font-semibold mb-4",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Contact Information
@@ -3247,7 +3247,7 @@ export default function NormalGigsForm() {
                         <Label
                           className={cn(
                             "text-lg font-semibold mb-4",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           Instrument Selection
@@ -3257,7 +3257,7 @@ export default function NormalGigsForm() {
                           <Guitar
                             className={cn(
                               "absolute left-3 top-1/2 transform -translate-y-1/2 z-10",
-                              colors.textMuted
+                              colors.textMuted,
                             )}
                           />
 
@@ -3267,7 +3267,7 @@ export default function NormalGigsForm() {
                               type="button"
                               onClick={() =>
                                 setIsInstrumentDropdownOpen(
-                                  !isInstrumentDropdownOpen
+                                  !isInstrumentDropdownOpen,
                                 )
                               }
                               className={cn(
@@ -3275,7 +3275,7 @@ export default function NormalGigsForm() {
                                 colors.border,
                                 colors.background,
                                 colors.text,
-                                "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                                "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
                               )}
                             >
                               {formValues.category
@@ -3298,7 +3298,7 @@ export default function NormalGigsForm() {
                                       onClick={() => {
                                         handleSelectChange(
                                           "category",
-                                          instrument
+                                          instrument,
                                         );
                                         setIsInstrumentDropdownOpen(false);
                                       }}
@@ -3306,7 +3306,7 @@ export default function NormalGigsForm() {
                                         "w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors",
                                         formValues.category === instrument
                                           ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
-                                          : colors.text
+                                          : colors.text,
                                       )}
                                     >
                                       {instrument.charAt(0).toUpperCase() +
@@ -3421,7 +3421,7 @@ export default function NormalGigsForm() {
                         htmlFor="secret"
                         className={cn(
                           "text-lg font-semibold mb-4",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         Secret Passphrase *
@@ -3534,7 +3534,7 @@ export default function NormalGigsForm() {
                   className={cn(
                     "flex-1 py-6 rounded-xl font-semibold text-lg",
                     "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                    "text-white shadow-xl"
+                    "text-white shadow-xl",
                   )}
                 >
                   <span className="flex items-center justify-center gap-3">
@@ -3595,23 +3595,6 @@ export default function NormalGigsForm() {
                 vocalistGenre: formValues.vocalistGenre,
               }),
             }}
-            errors={fieldErrors}
-            validateField={(field: string, value: string) => {
-              switch (field) {
-                case "mcType":
-                case "mcLanguages":
-                  return !value ? `${field} is required` : "";
-                case "djGenre":
-                case "djEquipment":
-                  return !value ? `${field} is required` : "";
-                case "vocalistGenre":
-                  return !value || (Array.isArray(value) && value.length === 0)
-                    ? "At least one genre is required"
-                    : "";
-                default:
-                  return "";
-              }
-            }}
           />
         )}
       </AnimatePresence>
@@ -3635,7 +3618,7 @@ export default function NormalGigsForm() {
             isOpen={showBandSetupModal}
             onClose={() => setShowBandSetupModal(false)}
             onSubmit={handleBandSetupSubmit}
-            initialRoles={bandRoles.map(convertToBandSetupRole)}
+            initialRoles={bandRoles}
           />
         )}
       </AnimatePresence>

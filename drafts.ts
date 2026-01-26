@@ -44,6 +44,11 @@ export type LocalGigInputs = {
   acceptInterestEndTime?: string;
   interestWindowDays?: number;
   enableInterestWindow?: boolean;
+
+  vocalistRange?: string;
+  notes?: string; // Add this line
+  // Add customMcType property
+  customMcType?: string;
 };
 
 // Draft data structure with band roles including price
@@ -123,7 +128,7 @@ const calculateProgress = (data: GigDraftData): number => {
 
       // Check if at least one role has required skills
       const hasRequiredSkills = bandRoles.some(
-        (role) => role.requiredSkills && role.requiredSkills.length > 0
+        (role) => role.requiredSkills && role.requiredSkills.length > 0,
       );
       if (hasRequiredSkills) completed++;
 
@@ -148,7 +153,7 @@ const calculateProgress = (data: GigDraftData): number => {
 
 export const saveGigDraft = (
   draftData: GigDraftData,
-  existingId?: string
+  existingId?: string,
 ): GigDraft => {
   const drafts = getGigDrafts();
   const now = new Date().toISOString();
@@ -203,7 +208,7 @@ export const saveGigDraft = (
       `Draft saved: ${newDraft.title} (ID: ${newDraft.id}, Progress: ${progress}%)`,
       isBandGig
         ? `[Band Gig: ${bandRoleCount} roles, ${totalSlots} slots, Budget: ${estimatedBudget}]`
-        : ""
+        : "",
     );
 
     return newDraft;
@@ -328,7 +333,7 @@ export const getGigDrafts = (): GigDraft[] => {
       const totalSlots = isBandGig
         ? migratedData.bandRoles?.reduce(
             (sum, role) => sum + role.maxSlots,
-            0
+            0,
           ) || 0
         : 0;
 
@@ -406,7 +411,7 @@ export const getDraftStats = () => {
   // Calculate total budget for band gigs
   const totalBandBudget = drafts.reduce(
     (sum, d) => sum + (d.estimatedBudget || 0),
-    0
+    0,
   );
   const averageBandBudget =
     drafts.filter((d) => d.isBandGig).length > 0
@@ -423,13 +428,13 @@ export const getDraftStats = () => {
         acc[category] = (acc[category] || 0) + 1;
         return acc;
       },
-      {} as Record<string, number>
+      {} as Record<string, number>,
     ),
     recent: drafts.filter((d) => new Date(d.updatedAt) > sevenDaysAgo).length,
     averageProgress:
       drafts.length > 0
         ? Math.round(
-            drafts.reduce((sum, d) => sum + d.progress, 0) / drafts.length
+            drafts.reduce((sum, d) => sum + d.progress, 0) / drafts.length,
           )
         : 0,
     lastUpdated: drafts[0]?.updatedAt || null,
@@ -438,7 +443,7 @@ export const getDraftStats = () => {
     totalBandBudget: totalBandBudget,
     averageBandBudget: averageBandBudget,
     bandGigsWithPrice: drafts.filter(
-      (d) => d.isBandGig && d.estimatedBudget && d.estimatedBudget > 0
+      (d) => d.isBandGig && d.estimatedBudget && d.estimatedBudget > 0,
     ).length,
   };
 
@@ -515,12 +520,12 @@ export const importDrafts = (jsonData: string): boolean => {
 
 // Filter drafts by category
 export const filterDraftsByCategory = (
-  category: BusinessCategory
+  category: BusinessCategory,
 ): GigDraft[] => {
   const drafts = getGigDrafts();
   if (!category) return drafts;
   return drafts.filter(
-    (draft) => draft.data.formValues.bussinesscat === category
+    (draft) => draft.data.formValues.bussinesscat === category,
   );
 };
 
@@ -532,7 +537,7 @@ export const getBandGigDrafts = (): GigDraft[] => {
 // Update band roles for a draft
 export const updateDraftBandRoles = (
   draftId: string,
-  bandRoles: BandRoleInput[]
+  bandRoles: BandRoleInput[],
 ): GigDraft | null => {
   const draft = getGigDraftById(draftId);
   if (!draft) return null;
@@ -558,7 +563,7 @@ export const updateDraftBandRoles = (
 
   const drafts = getGigDrafts();
   const updatedDrafts = drafts.map((d) =>
-    d.id === draftId ? updatedDraft : d
+    d.id === draftId ? updatedDraft : d,
   );
   localStorage.setItem(DRAFTS_KEY, JSON.stringify(updatedDrafts));
 

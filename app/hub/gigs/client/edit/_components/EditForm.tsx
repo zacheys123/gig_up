@@ -39,10 +39,27 @@ import {
   Drum,
   Piano,
   Guitar,
-  Guitar as GuitarIcon,
   Music as MusicIcon,
   Mic as MicIcon,
   Volume2 as Volume2Icon,
+  FileText,
+  Search,
+  Briefcase,
+  Zap,
+  Type,
+  ArrowRight,
+  ChevronRight,
+  Key,
+  Shield as ShieldIcon,
+  Palette as PaletteIcon,
+  Settings,
+  UserPlus,
+  Star,
+  TrendingUp,
+  CheckCircle,
+  Plus,
+  Check,
+  Users as UsersIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -57,6 +74,8 @@ import {
   BandRoleInput,
   BandSetupRole,
   CustomProps,
+  TalentType,
+  parseTalentData,
 } from "@/types/gig";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -78,90 +97,12 @@ import { useGigUpdate } from "@/lib/gigUpdates";
 import { fileupload } from "@/hooks/fileUpload";
 import GigCustomization from "../../../_components/gigs/GigCustomization";
 import BandSetupModal from "../../../_components/gigs/BandSetUpModal";
+import TalentModal from "./TalentModal";
 
-// Type definitions
-interface MinimalUser {
-  _id: Id<"users">;
-  clerkId: string;
-  email?: string;
-  username?: string;
-}
-
-interface EditGigFormProps {
-  gigId: string;
-  customization?: CustomProps;
-  logo?: string;
-}
-
-// In your EditGigForm, update the convert functions
-const convertToBandSetupRole = (role: BandRoleInput): BandSetupRole => {
-  return {
-    role: role.role,
-    maxSlots: role.maxSlots || 1,
-    maxApplicants: role.maxApplicants || 20,
-    currentApplicants: role.currentApplicants || 0,
-    requiredSkills: role.requiredSkills || [],
-    description: role.description || "",
-    price: role.price?.toString() || "",
-    currency: role.currency || "KES",
-    negotiable: role.negotiable ?? true,
-    filledSlots: role.filledSlots || 0,
-    isLocked: role.isLocked || false,
-  };
-};
-
-const convertFromBandSetupRole = (role: BandSetupRole): BandRoleInput => {
-  return {
-    role: role.role,
-    maxSlots: role.maxSlots,
-    maxApplicants: role.maxApplicants,
-    currentApplicants: role.currentApplicants,
-    requiredSkills: role.requiredSkills,
-    description: role.description,
-    price: role.price ? parseFloat(role.price) : undefined,
-    currency: role.currency,
-    negotiable: role.negotiable,
-    filledSlots: role.filledSlots,
-    isLocked: role.isLocked,
-  };
-};
-
-// Add these utility functions for conversion between types
-const convertBandRoleInputToSetup = (role: BandRoleInput): BandSetupRole => {
-  return {
-    role: role.role,
-    maxSlots: role.maxSlots || 1,
-    maxApplicants: role.maxApplicants || 20,
-    currentApplicants: role.currentApplicants || 0,
-    requiredSkills: role.requiredSkills || [],
-    description: role.description || "",
-    price: role.price?.toString() || "",
-    currency: role.currency || "KES",
-    negotiable: role.negotiable ?? true,
-    filledSlots: role.filledSlots || 0,
-    isLocked: role.isLocked || false,
-  };
-};
-
-const convertBandSetupRoleToInput = (role: BandSetupRole): BandRoleInput => {
-  return {
-    role: role.role,
-    maxSlots: role.maxSlots,
-    maxApplicants: role.maxApplicants,
-    currentApplicants: role.currentApplicants,
-    requiredSkills: role.requiredSkills || [],
-    description: role.description,
-    price: role.price ? parseFloat(role.price) : undefined,
-    currency: role.currency,
-    negotiable: role.negotiable,
-    filledSlots: role.filledSlots,
-    isLocked: role.isLocked,
-  };
-};
-
-// Memoized ErrorMessage component
+// Memoized ErrorMessage Component
 const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
   if (!error) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
@@ -175,7 +116,7 @@ const ErrorMessage = React.memo(({ error }: { error: string | undefined }) => {
 });
 ErrorMessage.displayName = "ErrorMessage";
 
-// Memoized Input component
+// Memoized Input Component
 const MemoizedInput = React.memo(
   ({
     value,
@@ -226,8 +167,7 @@ const MemoizedInput = React.memo(
               required ? "pr-10" : "",
               "py-3 rounded-xl border-2 transition-all",
               "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-              error ? "border-red-500" : `${colors.border}`,
-              `${colors.background} ${colors.text}`,
+              error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
               className,
             )}
             {...props}
@@ -240,7 +180,7 @@ const MemoizedInput = React.memo(
 );
 MemoizedInput.displayName = "MemoizedInput";
 
-// Memoized Textarea component
+// Memoized Textarea Component
 const MemoizedTextarea = React.memo(
   ({
     value,
@@ -263,7 +203,6 @@ const MemoizedTextarea = React.memo(
     rows?: number;
     [key: string]: any;
   }) => {
-    const { colors } = useThemeColors();
     return (
       <div>
         <Textarea
@@ -276,8 +215,7 @@ const MemoizedTextarea = React.memo(
           className={cn(
             "rounded-xl border-2 resize-none transition-all",
             "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-            error ? "border-red-500" : `${colors.border}`,
-            `${colors.background} ${colors.text}`,
+            error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
             className,
           )}
           {...props}
@@ -289,81 +227,137 @@ const MemoizedTextarea = React.memo(
 );
 MemoizedTextarea.displayName = "MemoizedTextarea";
 
-// HistoryView component
-const HistoryView = React.memo(({ gig }: { gig: any }) => {
-  const { colors } = useThemeColors();
-
-  if (!gig.bookingHistory || gig.bookingHistory.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <History className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-        <p className={colors.textMuted}>No booking history yet</p>
-      </div>
-    );
+// Talent Preview Component
+const TalentPreview = React.memo(({ formValues, colors }: any) => {
+  if (
+    !formValues.mcType &&
+    !formValues.djGenre &&
+    !formValues.vocalistGenre?.length
+  ) {
+    return null;
   }
 
   return (
-    <div className="space-y-4">
-      <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
-        Booking History
-      </h3>
-      <div className="space-y-3">
-        {gig.bookingHistory
-          .sort((a: any, b: any) => b.timestamp - a.timestamp)
-          .map((entry: any, index: number) => (
-            <Card
-              key={index}
-              className={`overflow-hidden ${colors.cardBorder}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={
-                        entry.status === "booked"
-                          ? "default"
-                          : entry.status === "cancelled"
-                            ? "destructive"
-                            : "outline"
-                      }
-                    >
-                      {entry.status}
-                    </Badge>
-                    <span className={`text-sm ${colors.textMuted}`}>
-                      {new Date(entry.timestamp).toLocaleString()}
-                    </span>
-                  </div>
-                  {entry.userRole && (
-                    <Badge variant="secondary">{entry.userRole}</Badge>
-                  )}
-                </div>
-                <p className={`text-sm ${colors.text}`}>{entry.notes}</p>
-                {entry.agreedPrice && (
-                  <p className={`text-sm font-medium mt-2 ${colors.text}`}>
-                    Price: {entry.currency || "$"}
-                    {entry.agreedPrice}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={cn(
+        "rounded-xl p-4 border mt-4",
+        colors.border,
+        colors.backgroundMuted,
+        "relative overflow-hidden",
+      )}
+    >
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+
+      <div className="flex justify-between items-center mb-4 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
+            <Star className="w-5 h-5 text-orange-500" />
+          </div>
+          <h3 className={cn("font-semibold", colors.text)}>Talent Details</h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("text-sm", colors.hoverBg, "hover:text-orange-600")}
+          onClick={() => {
+            // This would be handled by parent component
+          }}
+        >
+          Edit
+        </Button>
       </div>
-    </div>
+
+      <div className="space-y-3 relative z-10">
+        {formValues.mcType && (
+          <div className="flex items-center gap-3">
+            <Badge
+              variant="outline"
+              className={cn(
+                "border-red-200 text-red-700 dark:border-red-800 dark:text-red-300",
+                "px-3 py-1 rounded-full font-medium",
+              )}
+            >
+              MC: {formValues.mcType}
+            </Badge>
+            {formValues.mcLanguages && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "border-purple-200 text-purple-700 dark:border-purple-800 dark:text-purple-300",
+                  "px-3 py-1 rounded-full font-medium",
+                )}
+              >
+                {Array.isArray(formValues.mcLanguages)
+                  ? formValues.mcLanguages.join(", ")
+                  : formValues.mcLanguages}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {formValues.djGenre && (
+          <div className="flex items-center gap-3">
+            <Badge
+              variant="outline"
+              className={cn(
+                "border-pink-200 text-pink-700 dark:border-pink-800 dark:text-pink-300",
+                "px-3 py-1 rounded-full font-medium",
+              )}
+            >
+              DJ:{" "}
+              {Array.isArray(formValues.djGenre)
+                ? formValues.djGenre.join(", ")
+                : formValues.djGenre}
+            </Badge>
+            {formValues.djEquipment && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "border-amber-200 text-amber-700 dark:border-amber-800 dark:text-amber-300",
+                  "px-3 py-1 rounded-full font-medium",
+                )}
+              >
+                {Array.isArray(formValues.djEquipment)
+                  ? formValues.djEquipment.join(", ")
+                  : formValues.djEquipment}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {formValues.vocalistGenre?.length && (
+          <div className="flex flex-wrap gap-2">
+            {formValues.vocalistGenre.map((genre: string) => (
+              <Badge
+                key={genre}
+                variant="outline"
+                className={cn(
+                  "border-green-200 text-green-700 dark:border-green-800 dark:text-green-300",
+                  "px-3 py-1 rounded-full font-medium",
+                )}
+              >
+                {genre}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 });
-HistoryView.displayName = "HistoryView";
+TalentPreview.displayName = "TalentPreview";
 
 // Band Setup Preview Component
 const BandSetupPreview = React.memo(
   ({ bandRoles, bussinesscat, colors, setShowBandSetupModal }: any) => {
-    if (bussinesscat !== "other" || !bandRoles || bandRoles.length === 0)
-      return null;
+    if (bussinesscat !== "other" || bandRoles.length === 0) return null;
 
     const totalPositions = bandRoles.reduce(
-      (sum: number, role: BandRoleInput) => sum + (role.maxSlots || 1),
+      (sum: number, role: BandRoleInput) => sum + role.maxSlots,
       0,
     );
-
     const totalMaxApplicants = bandRoles.reduce(
       (sum: number, role: BandRoleInput) => sum + (role.maxApplicants || 20),
       0,
@@ -374,20 +368,14 @@ const BandSetupPreview = React.memo(
       0,
     );
 
-    const totalFilledSlots = bandRoles.reduce(
-      (sum: number, role: BandRoleInput) => sum + (role.filledSlots || 0),
-      0,
-    );
-
     const totalPrice = bandRoles.reduce((sum: number, role: BandRoleInput) => {
       const price = role.price || 0;
-      return sum + price * (role.maxSlots || 1);
+      return sum + price * role.maxSlots;
     }, 0);
 
     const hasPricedRoles = bandRoles.some(
       (role: BandRoleInput) => role.price && role.price > 0,
     );
-
     const hasNegotiableRoles = bandRoles.some(
       (role: BandRoleInput) => role.negotiable,
     );
@@ -472,7 +460,8 @@ const BandSetupPreview = React.memo(
               <h3 className={cn("font-semibold", colors.text)}>Band Setup</h3>
               <p className={cn("text-sm", colors.textMuted)}>
                 {bandRoles.length} role{bandRoles.length !== 1 ? "s" : ""},{" "}
-                {totalPositions} position{totalPositions !== 1 ? "s" : ""}
+                {totalPositions} position{totalPositions !== 1 ? "s" : ""},{" "}
+                {totalMaxApplicants} max applications
               </p>
             </div>
           </div>
@@ -488,14 +477,12 @@ const BandSetupPreview = React.memo(
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
           {bandRoles.map((role: BandRoleInput, index: number) => {
-            const maxSlots = role.maxSlots || 1;
-            const filledSlots = role.filledSlots || 0;
             const maxApplicants = role.maxApplicants || 20;
             const currentApplicants = role.currentApplicants || 0;
-            const filledPercentage =
-              maxSlots > 0 ? (filledSlots / maxSlots) * 100 : 0;
-            const applicantPercentage =
-              maxApplicants > 0 ? (currentApplicants / maxApplicants) * 100 : 0;
+            const applicantProgress = Math.min(
+              (currentApplicants / maxApplicants) * 100,
+              100,
+            );
             const roleCurrency = role.currency || "KES";
 
             return (
@@ -522,43 +509,14 @@ const BandSetupPreview = React.memo(
                   </div>
                   <div className="flex gap-1">
                     <Badge variant="outline" className="text-xs">
-                      {maxSlots} slot{maxSlots > 1 ? "s" : ""}
+                      {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
                     </Badge>
-                    {filledSlots > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                      >
-                        {filledSlots} filled
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Slot Filling Progress */}
-                <div className="space-y-1.5 mb-3">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Filled Slots
-                    </span>
-                    <span className="font-medium">
-                      {filledSlots}/{maxSlots}
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-300",
-                        filledPercentage < 30
-                          ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                          : filledPercentage < 70
-                            ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                            : filledPercentage < 90
-                              ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                              : "bg-gradient-to-r from-red-500 to-pink-500",
-                      )}
-                      style={{ width: `${filledPercentage}%` }}
-                    />
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    >
+                      {maxApplicants} max
+                    </Badge>
                   </div>
                 </div>
 
@@ -576,15 +534,15 @@ const BandSetupPreview = React.memo(
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-300",
-                        applicantPercentage < 30
+                        applicantProgress < 30
                           ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                          : applicantPercentage < 70
+                          : applicantProgress < 70
                             ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                            : applicantPercentage < 90
+                            : applicantProgress < 90
                               ? "bg-gradient-to-r from-orange-500 to-amber-500"
                               : "bg-gradient-to-r from-red-500 to-pink-500",
                       )}
-                      style={{ width: `${applicantPercentage}%` }}
+                      style={{ width: `${applicantProgress}%` }}
                     />
                   </div>
                 </div>
@@ -653,30 +611,15 @@ const BandSetupPreview = React.memo(
               </div>
             </div>
             <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-              <div className="text-xs text-gray-500">Total Positions</div>
+              <div className="text-xs text-gray-500">Max Applications</div>
               <div className="text-lg font-bold text-blue-600">
-                {totalPositions}
-              </div>
-            </div>
-            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
-              <div className="text-xs text-gray-500">Filled Positions</div>
-              <div className="text-lg font-bold text-green-600">
-                {totalFilledSlots}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-center mb-3">
-            <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20">
-              <div className="text-xs text-gray-500">Max Applicants</div>
-              <div className="text-lg font-bold text-purple-600">
                 {totalMaxApplicants}
               </div>
             </div>
-            <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
-              <div className="text-xs text-gray-500">Current Applicants</div>
-              <div className="text-lg font-bold text-cyan-600">
-                {totalCurrentApplicants}
+            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
+              <div className="text-xs text-gray-500">Total Positions</div>
+              <div className="text-lg font-bold text-green-600">
+                {totalPositions}
               </div>
             </div>
           </div>
@@ -686,7 +629,7 @@ const BandSetupPreview = React.memo(
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
                 <span className={cn("text-sm font-medium", colors.text)}>
-                  Total Budget
+                  Total Budget Estimate
                 </span>
               </div>
               <div className="text-right">
@@ -707,44 +650,24 @@ const BandSetupPreview = React.memo(
             </div>
           )}
 
-          {totalFilledSlots > 0 && (
+          {totalCurrentApplicants > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-2 p-2 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20"
             >
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium">
-                  {totalFilledSlots} position
-                  {totalFilledSlots !== 1 ? "s" : ""} filled
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {Math.round((totalFilledSlots / totalPositions) * 100)}% of
-                total positions
-              </div>
-            </motion.div>
-          )}
-
-          {totalCurrentApplicants > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-2 p-2 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20"
-            >
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span className="text-sm font-medium">
                   {totalCurrentApplicants} application
-                  {totalCurrentApplicants !== 1 ? "s" : ""}
+                  {totalCurrentApplicants !== 1 ? "s" : ""} received
                 </span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {Math.round(
                   (totalCurrentApplicants / totalMaxApplicants) * 100,
                 )}
-                % of maximum applicants
+                % of maximum capacity
               </div>
             </motion.div>
           )}
@@ -754,6 +677,371 @@ const BandSetupPreview = React.memo(
   },
 );
 BandSetupPreview.displayName = "BandSetupPreview";
+
+// Interest Window Section Component
+const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
+  const [showInterestWindow, setShowInterestWindow] = useState(false);
+  const [interestWindowType, setInterestWindowType] = useState<
+    "dates" | "days"
+  >("dates");
+
+  const handleInterestWindowChange = useCallback(
+    (field: string, value: any) => {
+      // This would be handled by parent component
+    },
+    [],
+  );
+
+  if (!showInterestWindow) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(
+          "rounded-xl p-6 border cursor-pointer transition-all group",
+          colors.border,
+          colors.backgroundMuted,
+          "hover:shadow-lg hover:border-purple-500/50",
+        )}
+        onClick={() => setShowInterestWindow(true)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "p-3 rounded-lg transition-transform group-hover:scale-110",
+                "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
+              )}
+            >
+              <Clock className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>
+                Set Interest Window (Optional)
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                Control when musicians can show interest in your gig
+              </p>
+            </div>
+          </div>
+          <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      className={cn(
+        "rounded-xl border overflow-hidden",
+        colors.border,
+        colors.backgroundMuted,
+      )}
+    >
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+              <Clock className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>
+                Interest Window Settings
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                When can musicians show interest in this gig?
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowInterestWindow(false)}
+            className={cn(
+              "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
+              colors.textMuted,
+            )}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <label className={cn("block text-sm font-medium mb-3", colors.text)}>
+            Interest Window Type
+          </label>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant={interestWindowType === "dates" ? "default" : "outline"}
+              onClick={() => setInterestWindowType("dates")}
+              className={cn(
+                "flex-1",
+                interestWindowType === "dates" &&
+                  "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+              )}
+            >
+              Specific Dates
+            </Button>
+            <Button
+              type="button"
+              variant={interestWindowType === "days" ? "default" : "outline"}
+              onClick={() => setInterestWindowType("days")}
+              className={cn(
+                "flex-1",
+                interestWindowType === "days" &&
+                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
+              )}
+            >
+              Days After Posting
+            </Button>
+          </div>
+        </div>
+
+        {interestWindowType === "dates" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  className={cn("block text-sm font-medium mb-2", colors.text)}
+                >
+                  Interest Opens
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="datetime-local"
+                    value={formValues.acceptInterestStartTime || ""}
+                    onChange={(e) =>
+                      handleInterestWindowChange(
+                        "acceptInterestStartTime",
+                        e.target.value,
+                      )
+                    }
+                    className="pl-10"
+                  />
+                </div>
+                <p className={cn("text-xs mt-1", colors.textMuted)}>
+                  When musicians can start showing interest
+                </p>
+              </div>
+
+              <div>
+                <label
+                  className={cn("block text-sm font-medium mb-2", colors.text)}
+                >
+                  Interest Closes
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="datetime-local"
+                    value={formValues.acceptInterestEndTime || ""}
+                    onChange={(e) =>
+                      handleInterestWindowChange(
+                        "acceptInterestEndTime",
+                        e.target.value,
+                      )
+                    }
+                    className="pl-10"
+                  />
+                </div>
+                <p className={cn("text-xs mt-1", colors.textMuted)}>
+                  When interest period ends
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {interestWindowType === "days" && (
+          <div>
+            <label
+              className={cn("block text-sm font-medium mb-3", colors.text)}
+            >
+              Interest Window Duration
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const current = formValues.interestWindowDays || 7;
+                    handleInterestWindowChange(
+                      "interestWindowDays",
+                      Math.max(1, current - 1),
+                    );
+                  }}
+                  className="h-10 w-10"
+                >
+                  -
+                </Button>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={formValues.interestWindowDays || 7}
+                    onChange={(e) =>
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        parseInt(e.target.value) || 7,
+                      )
+                    }
+                    min="1"
+                    max="90"
+                    className="w-20 text-center"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                    days
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const current = formValues.interestWindowDays || 7;
+                    handleInterestWindowChange(
+                      "interestWindowDays",
+                      current + 1,
+                    );
+                  }}
+                  className="h-10 w-10"
+                >
+                  +
+                </Button>
+              </div>
+
+              <div className="flex-1">
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Musicians can show interest for{" "}
+                  <span className="font-semibold">
+                    {formValues.interestWindowDays || 7} days
+                  </span>{" "}
+                  after posting
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {[1, 3, 7, 14, 30].map((days) => (
+                <Button
+                  key={days}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleInterestWindowChange("interestWindowDays", days)
+                  }
+                  className={cn(
+                    formValues.interestWindowDays === days &&
+                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
+                  )}
+                >
+                  {days} {days === 1 ? "day" : "days"}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(formValues.acceptInterestStartTime ||
+          formValues.acceptInterestEndTime ||
+          formValues.interestWindowDays) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 pt-4 border-t"
+          >
+            <div className="flex items-center gap-3">
+              <Info className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm font-medium">
+                  Interest Window Configured
+                </p>
+                <p className="text-xs text-gray-500">
+                  {interestWindowType === "dates"
+                    ? `Interest opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"}`
+                    : `Interest open for ${formValues.interestWindowDays || 7} days after posting`}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="mt-4 pt-4 border-t">
+          <p className={cn("text-xs", colors.textMuted)}>
+            <strong>Tip:</strong> Setting an interest window helps manage
+            application flow and prevents last-minute applications.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+InterestWindowSection.displayName = "InterestWindowSection";
+
+// History View Component
+const HistoryView = ({ gig }: { gig: any }) => {
+  const { colors } = useThemeColors();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <History className="w-5 h-5 text-orange-500" />
+        <h3 className={`text-lg font-semibold ${colors.text}`}>Gig History</h3>
+      </div>
+
+      <div className="space-y-3">
+        <div className={`p-4 rounded-xl border ${colors.border}`}>
+          <div className="flex items-center justify-between">
+            <span className={`font-medium ${colors.text}`}>Created</span>
+            <span className={`text-sm ${colors.textMuted}`}>
+              {gig?._creationTime
+                ? new Date(gig._creationTime).toLocaleString()
+                : "Unknown"}
+            </span>
+          </div>
+        </div>
+
+        <div className={`p-4 rounded-xl border ${colors.border}`}>
+          <div className="flex items-center justify-between">
+            <span className={`font-medium ${colors.text}`}>Last Updated</span>
+            <span className={`text-sm ${colors.textMuted}`}>
+              {gig?.lastUpdated
+                ? new Date(gig.lastUpdated).toLocaleString()
+                : "Never"}
+            </span>
+          </div>
+        </div>
+
+        {gig?.applications && gig.applications.length > 0 && (
+          <div className={`p-4 rounded-xl border ${colors.border}`}>
+            <div className="flex items-center justify-between">
+              <span className={`font-medium ${colors.text}`}>Applications</span>
+              <Badge variant="outline">{gig.applications.length}</Badge>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Type definitions
+interface MinimalUser {
+  _id: Id<"users">;
+  clerkId: string;
+  email?: string;
+  username?: string;
+}
+
+interface EditGigFormProps {
+  gigId: string;
+  customization?: CustomProps;
+  logo?: string;
+}
 
 export default function EditGigForm({
   gigId,
@@ -780,6 +1068,11 @@ export default function EditGigForm({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [secretpass, setSecretPass] = useState<boolean>(false);
+
+  // Talent Modal State
+  const [activeTalentType, setActiveTalentType] = useState<TalentType>(null);
+  const [showTalentModal, setShowTalentModal] = useState(false);
+
   // Add state for instrument dropdown
   const [isInstrumentDropdownOpen, setIsInstrumentDropdownOpen] =
     useState(false);
@@ -791,6 +1084,26 @@ export default function EditGigForm({
     font: "",
     backgroundColor: "",
   });
+
+  // Duration state
+  const [durationVisible, setDurationVisible] = useState(false);
+
+  // Band setup state
+  const [showBandSetupModal, setShowBandSetupModal] = useState(false);
+
+  // Price ranges constant
+  const priceRanges = useMemo(
+    () => [
+      { value: "0", label: "Select range" },
+      { value: "hundreds", label: "Hundreds (00)" },
+      { value: "thousands", label: "Thousands (000)" },
+      { value: "tensofthousands", label: "Tens of thousands (0000)" },
+      { value: "hundredsofthousands", label: "Hundreds of thousands (00000)" },
+      { value: "millions", label: "Millions (000000)" },
+    ],
+    [],
+  );
+
   const individualInstruments = useMemo(
     () => [
       "piano",
@@ -817,24 +1130,73 @@ export default function EditGigForm({
     [],
   );
 
-  // Band setup state
-  const [showBandSetupModal, setShowBandSetupModal] = useState(false);
-  const [durationVisible, setDurationVisible] = useState(false);
+  const days = useMemo(
+    () => [
+      { id: 1, val: "monday", name: "Monday" },
+      { id: 2, val: "tuesday", name: "Tuesday" },
+      { id: 3, val: "wednesday", name: "Wednesday" },
+      { id: 4, val: "thursday", name: "Thursday" },
+      { id: 5, val: "friday", name: "Friday" },
+      { id: 6, val: "saturday", name: "Saturday" },
+      { id: 7, val: "sunday", name: "Sunday" },
+    ],
+    [],
+  );
+
+  const businessCategories = useMemo(
+    () => [
+      { value: "full", label: "🎵 Full Band", icon: Users, color: "orange" },
+      { value: "personal", label: "👤 Individual", icon: Music, color: "blue" },
+      { value: "other", label: "🎭 Create Band", icon: Zap, color: "purple" },
+      { value: "mc", label: "🎤 MC", icon: Mic, color: "red" },
+      { value: "dj", label: "🎧 DJ", icon: Volume2, color: "pink" },
+      { value: "vocalist", label: "🎤 Vocalist", icon: Music, color: "green" },
+    ],
+    [],
+  );
 
   // Convex queries and mutations
   const gig = useQuery(api.controllers.gigs.getGigById, {
     gigId: gigId as Id<"gigs">,
   });
   const deleteGig = useMutation(api.controllers.gigs.deleteGig);
+  const { updateGig } = useGigUpdate();
 
   // Check if user is the owner
   const isOwner = useMemo(() => {
     return user?._id === gig?.postedBy;
   }, [user, gig]);
 
-  // Initialize form from gig data
+  // In EditGigForm, update handleTalentSubmit:
+  const handleTalentSubmit = useCallback(
+    (data: Partial<any>) => {
+      setFormValues((prev: any) => ({
+        ...prev,
+        ...(activeTalentType === "mc" && {
+          mcType: data.mcType,
+          mcLanguages: data.mcLanguages,
+        }),
+        ...(activeTalentType === "dj" && {
+          djGenre: data.djGenre,
+          djEquipment: data.djEquipment,
+        }),
+        ...(activeTalentType === "vocalist" && {
+          vocalistGenre: data.vocalistGenre,
+        }),
+      }));
+      setShowTalentModal(false);
+      setHasChanges(true);
+      toast.success("Talent details updated!");
+    },
+    [activeTalentType],
+  );
+  // Update your parseTalentData function in EditGigForm.tsx:
+
+  // Then use it in your useEffect:
   useEffect(() => {
     if (gig && !formValues) {
+      // Then in your EditGigForm.tsx, use it like this:
+      const talentData = parseTalentData(gig);
       const formattedValues = {
         title: gig.title || "",
         description: gig.description || "",
@@ -856,10 +1218,10 @@ export default function EditGigForm({
         currency: gig.currency || "KES",
         negotiable: gig.negotiable ?? true,
         mcType: gig.mcType || "",
-        mcLanguages: gig.mcLanguages || "",
-        djGenre: gig.djGenre || "",
-        djEquipment: gig.djEquipment || "",
-        vocalistGenre: gig.vocalistGenre || [],
+        mcLanguages: talentData.mcLanguages,
+        djGenre: talentData.djGenre,
+        djEquipment: talentData.djEquipment,
+        vocalistGenre: talentData.vocalistGenre,
         acceptInterestEndTime: gig.acceptInterestEndTime
           ? new Date(gig.acceptInterestEndTime).toISOString().slice(0, 16)
           : "",
@@ -903,6 +1265,8 @@ export default function EditGigForm({
           maxApplicants: role.maxApplicants || 20,
           currentApplicants: role.currentApplicants || 0,
           filledSlots: role.filledSlots || 0,
+          applicants: role.applicants || [],
+          bookedUsers: role.bookedUsers || [],
           requiredSkills: role.requiredSkills || [],
           description: role.description || "",
           price: role.price || undefined,
@@ -920,7 +1284,6 @@ export default function EditGigForm({
       setIsLoading(false);
     }
   }, [gig, initialCustomization, initialLogo]);
-
   // Check for changes
   useEffect(() => {
     if (formValues && originalValues && gig) {
@@ -1089,6 +1452,7 @@ export default function EditGigForm({
     },
     [fieldErrors],
   );
+
   const handleInputBlur = useCallback(
     (fieldName: string) => {
       const value = formValues?.[fieldName as keyof typeof formValues];
@@ -1113,6 +1477,7 @@ export default function EditGigForm({
     },
     [formValues],
   );
+
   // Add this function to determine if a field is required
   const isFieldRequired = useCallback(
     (fieldName: string) => {
@@ -1152,6 +1517,7 @@ export default function EditGigForm({
     },
     [bussinesscat, formValues?.gigtimeline],
   );
+
   // Select change handler
   const handleSelectChange = useCallback((name: string, value: string) => {
     setFormValues((prev: any) => ({
@@ -1161,7 +1527,7 @@ export default function EditGigForm({
     setHasChanges(true);
   }, []);
 
-  // Business category change
+  // Business category change - Updated to handle talent modal
   const handleBussinessChange = useCallback((value: BusinessCategory) => {
     setBussinessCategory(value);
     setFormValues((prev: any) => ({
@@ -1169,6 +1535,15 @@ export default function EditGigForm({
       bussinesscat: value,
     }));
     setHasChanges(true);
+
+    // Show talent modal for talent categories
+    if (["mc", "dj", "vocalist"].includes(value || "")) {
+      const newTalentType = value as Exclude<TalentType, null>;
+      setActiveTalentType(newTalentType);
+      setShowTalentModal(true);
+    } else if (value === "other") {
+      setShowBandSetupModal(true);
+    }
   }, []);
 
   // Date selection
@@ -1238,8 +1613,6 @@ export default function EditGigForm({
     return Object.keys(errors).length === 0;
   }, [formValues, bandRoles]);
 
-  const { updateGig } = useGigUpdate();
-
   // Handle delete
   const handleDelete = useCallback(async () => {
     if (
@@ -1283,28 +1656,62 @@ export default function EditGigForm({
 
     setIsSaving(true);
     try {
+      // Helper function to convert BandRoleInput to Convex format
+      const convertBandRoleForConvex = (role: BandRoleInput) => {
+        return {
+          role: role.role,
+          maxSlots: role.maxSlots || 1,
+          maxApplicants: role.maxApplicants || 20,
+          currentApplicants: role.currentApplicants || 0,
+          filledSlots: role.filledSlots || 0,
+          // Convert applicants to string array
+          applicants: (role.applicants || []).map((app: any) =>
+            typeof app === "string" ? app : app._id || "",
+          ),
+          // Convert bookedUsers to string array
+          bookedUsers: (role.bookedUsers || []).map((user: any) =>
+            typeof user === "string" ? user : user._id || "",
+          ),
+          requiredSkills: role.requiredSkills || [],
+          description: role.description || "",
+          isLocked: role.isLocked || false,
+          price: role.price !== undefined ? role.price : null,
+          currency: role.currency || "KES",
+          negotiable: role.negotiable !== undefined ? role.negotiable : true,
+          bookedPrice: role.bookedPrice !== undefined ? role.bookedPrice : null,
+        };
+      };
+
       // Format band roles properly before sending
       const formattedBandRoles =
         bussinesscat === "other" && bandRoles.length > 0
-          ? bandRoles.map((role) => ({
-              role: role.role,
-              maxSlots: role.maxSlots || 1,
-              maxApplicants: role.maxApplicants || 20,
-              currentApplicants: role.currentApplicants || 0,
-              filledSlots: role.filledSlots || 0,
-              applicants: role.applicants || [],
-              bookedUsers: role.bookedUsers || [],
-              requiredSkills: role.requiredSkills || [],
-              description: role.description || "",
-              isLocked: role.isLocked || false,
-              price: role.price !== undefined ? role.price : null,
-              currency: role.currency || "KES",
-              negotiable:
-                role.negotiable !== undefined ? role.negotiable : true,
-              bookedPrice:
-                role.bookedPrice !== undefined ? role.bookedPrice : null,
-            }))
+          ? bandRoles.map(convertBandRoleForConvex)
           : undefined;
+
+      // Convert talent arrays to strings for Convex
+      const mcLanguagesString = Array.isArray(formValues.mcLanguages)
+        ? formValues.mcLanguages.join(", ")
+        : typeof formValues.mcLanguages === "string"
+          ? formValues.mcLanguages
+          : "";
+
+      const djGenreString = Array.isArray(formValues.djGenre)
+        ? formValues.djGenre.join(", ")
+        : typeof formValues.djGenre === "string"
+          ? formValues.djGenre
+          : "";
+
+      const djEquipmentString = Array.isArray(formValues.djEquipment)
+        ? formValues.djEquipment.join(", ")
+        : typeof formValues.djEquipment === "string"
+          ? formValues.djEquipment
+          : "";
+
+      const vocalistGenreString = Array.isArray(formValues.vocalistGenre)
+        ? formValues.vocalistGenre.join(", ")
+        : typeof formValues.vocalistGenre === "string"
+          ? formValues.vocalistGenre
+          : "";
 
       // Prepare update data - include gigcustom fields
       const updateData = {
@@ -1326,10 +1733,10 @@ export default function EditGigForm({
         currency: formValues.currency || "KES",
         negotiable: formValues.negotiable ?? true,
         mcType: formValues.mcType || undefined,
-        mcLanguages: formValues.mcLanguages || undefined,
-        djGenre: formValues.djGenre || undefined,
-        djEquipment: formValues.djEquipment || undefined,
-        vocalistGenre: formValues.vocalistGenre || undefined,
+        mcLanguages: mcLanguagesString || undefined,
+        djGenre: djGenreString || undefined,
+        djEquipment: djEquipmentString || undefined,
+        vocalistGenre: vocalistGenreString || undefined,
         acceptInterestEndTime: formValues.acceptInterestEndTime
           ? new Date(formValues.acceptInterestEndTime).getTime()
           : undefined,
@@ -1417,6 +1824,9 @@ export default function EditGigForm({
           maxApplicants: role.maxApplicants || 20,
           currentApplicants: role.currentApplicants || 0,
           filledSlots: role.filledSlots || 0,
+          // Don't forget applicants and bookedUsers here too
+          applicants: role.applicants || [],
+          bookedUsers: role.bookedUsers || [],
           requiredSkills: role.requiredSkills || [],
           description: role.description || "",
           price: role.price || undefined,
@@ -1437,6 +1847,375 @@ export default function EditGigForm({
     initialCustomization,
     initialLogo,
     router,
+  ]);
+
+  // Slots Configuration Component
+  const SlotsConfiguration = useCallback(() => {
+    if (!bussinesscat || bussinesscat === "other") return null;
+
+    const getDefaultSlots = () => {
+      switch (bussinesscat) {
+        case "full":
+          return 5;
+        case "personal":
+          return 1;
+        case "mc":
+        case "dj":
+        case "vocalist":
+          return 1;
+        default:
+          return 1;
+      }
+    };
+
+    const getSlotLabel = () => {
+      switch (bussinesscat) {
+        case "full":
+          return "band members";
+        case "personal":
+          return "person";
+        case "mc":
+          return "MC";
+        case "dj":
+          return "DJ";
+        case "vocalist":
+          return "vocalist";
+        default:
+          return "slots";
+      }
+    };
+
+    const getDescription = () => {
+      switch (bussinesscat) {
+        case "full":
+          return "How many musicians do you need for your full band?";
+        case "personal":
+          return "How many individual musicians do you need?";
+        case "mc":
+          return "How many MCs do you need for your event?";
+        case "dj":
+          return "How many DJs do you need for your event?";
+        case "vocalist":
+          return "How many vocalists do you need for your event?";
+        default:
+          return "Number of positions available";
+      }
+    };
+
+    const getIcon = () => {
+      switch (bussinesscat) {
+        case "full":
+          return Users;
+        case "personal":
+          return Users;
+        case "mc":
+          return Mic;
+        case "dj":
+          return Volume2;
+        case "vocalist":
+          return Music;
+        default:
+          return Users;
+      }
+    };
+
+    const Icon = getIcon();
+    const currentSlots = formValues?.maxSlots || getDefaultSlots();
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          "rounded-xl p-6 border mt-4",
+          colors.border,
+          colors.backgroundMuted,
+          "relative overflow-hidden",
+        )}
+      >
+        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+
+        <div className="flex items-start justify-between mb-6 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+              <Icon className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <h3 className={cn("font-semibold", colors.text)}>
+                Positions Needed
+              </h3>
+              <p className={cn("text-sm", colors.textMuted)}>
+                {getDescription()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+            <div className="flex-1">
+              <label
+                className={cn("block text-sm font-medium mb-3", colors.text)}
+              >
+                Number of {getSlotLabel()}
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setFormValues((prev: any) => ({
+                        ...prev,
+                        maxSlots: Math.max(
+                          1,
+                          (prev.maxSlots || getDefaultSlots()) - 1,
+                        ),
+                      }))
+                    }
+                    className="h-12 w-12 rounded-xl text-lg"
+                  >
+                    -
+                  </Button>
+
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={currentSlots}
+                      onChange={(e) =>
+                        setFormValues((prev: any) => ({
+                          ...prev,
+                          maxSlots: Math.max(
+                            1,
+                            parseInt(e.target.value) || getDefaultSlots(),
+                          ),
+                        }))
+                      }
+                      min="1"
+                      max={bussinesscat === "full" ? "20" : "10"}
+                      className="w-24 h-12 text-center text-xl font-bold"
+                    />
+                    <div className="absolute inset-y-0 right-2 flex items-center">
+                      <span className={cn("text-sm", colors.textMuted)}>
+                        {getSlotLabel()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setFormValues((prev: any) => ({
+                        ...prev,
+                        maxSlots: (prev.maxSlots || getDefaultSlots()) + 1,
+                      }))
+                    }
+                    className="h-12 w-12 rounded-xl text-lg"
+                  >
+                    +
+                  </Button>
+                </div>
+
+                {bussinesscat === "full" && (
+                  <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
+                    {[3, 4, 5, 6, 7, 8].map((num) => (
+                      <Button
+                        key={num}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setFormValues((prev: any) => ({
+                            ...prev,
+                            maxSlots: num,
+                          }))
+                        }
+                        className={cn(
+                          "px-3",
+                          currentSlots === num &&
+                            "bg-gradient-to-r from-blue-500 to-purple-500 text-white",
+                        )}
+                      >
+                        {num}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <div className={cn("p-4 rounded-xl border", colors.border)}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={cn("text-sm font-medium", colors.text)}>
+                    Available Positions
+                  </span>
+                  <Badge variant="outline">
+                    {currentSlots} {getSlotLabel()}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: currentSlots }).map((_, index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center",
+                        "bg-gradient-to-r from-blue-500/20 to-purple-500/20",
+                        "border border-blue-500/30",
+                      )}
+                    >
+                      <Users className="w-4 h-4 text-blue-500" />
+                    </div>
+                  ))}
+                </div>
+
+                {bussinesscat === "full" && (
+                  <p className={cn("text-xs mt-2", colors.textMuted)}>
+                    {currentSlots} positions to fill in your band
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <p className={cn("text-xs", colors.textMuted)}>
+                {bussinesscat === "full"
+                  ? "You can specify exact roles for each slot in the next section."
+                  : "This is the number of positions available for this gig."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }, [bussinesscat, formValues?.maxSlots, colors]);
+
+  // Render Price Information
+  const renderPriceInformation = useCallback(() => {
+    if (bussinesscat === "other") return null;
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <Label className={cn("text-lg font-semibold mb-4", colors.text)}>
+            Budget Information
+          </Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label className={cn("text-sm font-medium mb-2", colors.text)}>
+                Currency
+              </Label>
+              <Select
+                value={formValues?.currency || "KES"}
+                onValueChange={(value) => handleSelectChange("currency", value)}
+              >
+                <SelectTrigger className={cn("rounded-xl py-3", colors.border)}>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent className={colors.background}>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
+                  <SelectItem value="KES">KES (KSh)</SelectItem>
+                  <SelectItem value="NGN">NGN (₦)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className={cn("text-sm font-medium mb-2", colors.text)}>
+                Amount
+              </Label>
+              <MemoizedInput
+                type="number"
+                value={formValues?.price || ""}
+                onChange={handleInputChange}
+                onBlur={() => handleInputBlur("price")}
+                name="price"
+                placeholder="15000"
+                icon={DollarSign}
+                min="0"
+              />
+            </div>
+
+            <div>
+              <Label className={cn("text-sm font-medium mb-2", colors.text)}>
+                Price Range
+              </Label>
+              <Select
+                value={formValues?.pricerange || ""}
+                onValueChange={(value) =>
+                  handleSelectChange("pricerange", value)
+                }
+              >
+                <SelectTrigger className={cn("rounded-xl py-3", colors.border)}>
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent className={colors.background}>
+                  {priceRanges.map((range) => (
+                    <SelectItem key={range.value} value={range.value}>
+                      {range.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {(formValues?.price || formValues?.pricerange !== "0") && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "rounded-xl p-4 border",
+              colors.border,
+              colors.backgroundMuted,
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
+                <TrendingUp className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <span className={cn("text-sm font-medium", colors.text)}>
+                  Budget Estimate:
+                </span>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className={cn("text-xl font-bold", colors.text)}>
+                    {formValues?.currency === "USD" && "$"}
+                    {formValues?.currency === "EUR" && "€"}
+                    {formValues?.currency === "GBP" && "£"}
+                    {formValues?.currency === "KES" && "KSh"}
+                    {formValues?.currency === "NGN" && "₦"}
+                    {formValues?.price || "---"}
+                  </span>
+                  {formValues?.pricerange !== "0" && formValues?.pricerange && (
+                    <span className={cn("text-sm", colors.textMuted)}>
+                      ({formValues.pricerange})
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </div>
+    );
+  }, [
+    bussinesscat,
+    formValues,
+    colors,
+    handleSelectChange,
+    handleInputChange,
+    handleInputBlur,
   ]);
 
   // Loading state
@@ -1494,87 +2273,33 @@ export default function EditGigForm({
     );
   }
 
-  // Add the Instrument Input component in the Details tab
-  const renderInstrumentInput = () => {
-    if (bussinesscat !== "personal") return null;
-
-    return (
-      <div>
-        <Label className={cn("text-lg font-semibold mb-4", colors.text)}>
-          Instrument Selection
-        </Label>
-
-        <div className="relative">
-          <GuitarIcon
-            className={cn(
-              "absolute left-3 top-1/2 transform -translate-y-1/2 z-10",
-              colors.textMuted,
-            )}
-          />
-
-          {/* Custom dropdown implementation */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() =>
-                setIsInstrumentDropdownOpen(!isInstrumentDropdownOpen)
-              }
-              className={cn(
-                "w-full pl-12 pr-10 py-3 text-left rounded-xl border transition-all duration-200",
-                colors.border,
-                colors.background,
-                colors.text,
-                "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-              )}
-            >
-              {formValues?.category
-                ? formValues.category.charAt(0).toUpperCase() +
-                  formValues.category.slice(1)
-                : "Select your instrument"}
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
-            </button>
-
-            {/* Dropdown menu */}
-            {isInstrumentDropdownOpen && (
-              <div className="absolute z-50 mt-1 w-full rounded-xl border shadow-lg max-h-60 overflow-auto">
-                <div className={cn("p-2", colors.backgroundMuted)}>
-                  {individualInstruments.map((instrument) => (
-                    <button
-                      key={instrument}
-                      type="button"
-                      onClick={() => {
-                        handleSelectChange("category", instrument);
-                        setIsInstrumentDropdownOpen(false);
-                      }}
-                      className={cn(
-                        "w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors",
-                        formValues?.category === instrument
-                          ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
-                          : colors.text,
-                      )}
-                    >
-                      {instrument.charAt(0).toUpperCase() + instrument.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Show error if required */}
-        {isFieldRequired("category") && !formValues?.category && (
-          <p className="text-sm text-red-500 mt-2 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            Please select an instrument
-          </p>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className={`min-h-screen ${colors.background}`}>
+      {/* Talent Modal */}
+      <AnimatePresence>
+        {showTalentModal && activeTalentType && (
+          <TalentModal
+            isOpen={showTalentModal}
+            onClose={() => setShowTalentModal(false)}
+            talentType={activeTalentType}
+            onSubmit={handleTalentSubmit}
+            initialData={{
+              ...(activeTalentType === "mc" && {
+                mcType: formValues?.mcType,
+                mcLanguages: formValues?.mcLanguages,
+              }),
+              ...(activeTalentType === "dj" && {
+                djGenre: formValues?.djGenre,
+                djEquipment: formValues?.djEquipment,
+              }),
+              ...(activeTalentType === "vocalist" && {
+                vocalistGenre: formValues?.vocalistGenre,
+              }),
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Customization Modal */}
       <AnimatePresence>
         {showCustomizationModal && (
@@ -1588,18 +2313,20 @@ export default function EditGigForm({
           />
         )}
       </AnimatePresence>
-      // Update the BandSetupModal call
+
+      {/* Band Setup Modal */}
       <AnimatePresence>
         {showBandSetupModal && (
           <BandSetupModal
             isOpen={showBandSetupModal}
             onClose={() => setShowBandSetupModal(false)}
             onSubmit={handleBandSetupSubmit}
-            initialRoles={bandRoles} // Pass directly as BandRoleInput[]
+            initialRoles={bandRoles}
             isEditMode={true}
           />
         )}
       </AnimatePresence>
+
       {/* Header */}
       <div
         className={`sticky top-0 z-40 ${colors.navBackground}/80 backdrop-blur-sm ${colors.navBorder} border-b`}
@@ -1655,6 +2382,7 @@ export default function EditGigForm({
           </div>
         </div>
       </div>
+
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs
@@ -1678,7 +2406,10 @@ export default function EditGigForm({
                 <div className="space-y-6">
                   {/* Title */}
                   <div>
-                    <Label htmlFor="title" className={colors.text}>
+                    <Label
+                      htmlFor="title"
+                      className={cn("text-lg font-semibold mb-4", colors.text)}
+                    >
                       Title
                     </Label>
                     <MemoizedInput
@@ -1694,7 +2425,10 @@ export default function EditGigForm({
 
                   {/* Description */}
                   <div>
-                    <Label htmlFor="description" className={colors.text}>
+                    <Label
+                      htmlFor="description"
+                      className={cn("text-lg font-semibold mb-4", colors.text)}
+                    >
                       Description
                     </Label>
                     <MemoizedTextarea
@@ -1711,7 +2445,10 @@ export default function EditGigForm({
 
                   {/* Location */}
                   <div>
-                    <Label htmlFor="location" className={colors.text}>
+                    <Label
+                      htmlFor="location"
+                      className={cn("text-lg font-semibold mb-4", colors.text)}
+                    >
                       Location
                     </Label>
                     <MemoizedInput
@@ -1725,30 +2462,46 @@ export default function EditGigForm({
                       icon={MapPin}
                     />
                   </div>
-                  {renderInstrumentInput()}
+
                   {/* Business Category */}
                   <div>
-                    <Label className={colors.text}>Business Category</Label>
+                    <Label
+                      className={cn("text-lg font-semibold mb-4", colors.text)}
+                    >
+                      Business Category
+                    </Label>
                     <Select
                       value={bussinesscat || ""}
                       onValueChange={(value) =>
                         handleBussinessChange(value as BusinessCategory)
                       }
                     >
-                      <SelectTrigger className={colors.border}>
-                        <SelectValue placeholder="Select category" />
+                      <SelectTrigger className={cn("py-6", colors.border)}>
+                        <SelectValue placeholder="Select who you need for your gig" />
                       </SelectTrigger>
                       <SelectContent className={colors.background}>
-                        <SelectItem value="full">🎵 Full Band</SelectItem>
-                        <SelectItem value="personal">👤 Individual</SelectItem>
-                        <SelectItem value="other">🎭 Create Band</SelectItem>
-                        <SelectItem value="mc">🎤 MC</SelectItem>
-                        <SelectItem value="dj">🎧 DJ</SelectItem>
-                        <SelectItem value="vocalist">🎤 Vocalist</SelectItem>
+                        {businessCategories.map((category) => {
+                          const Icon = category.icon;
+                          return (
+                            <SelectItem
+                              key={category.value}
+                              value={category.value}
+                              className="py-3"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Icon className="w-5 h-5" />
+                                <span>{category.label}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <ErrorMessage error={fieldErrors.bussinesscat} />
                   </div>
+
+                  {/* Talent Preview */}
+                  <TalentPreview formValues={formValues} colors={colors} />
 
                   {/* Band Setup Preview */}
                   {bussinesscat === "other" && (
@@ -1807,76 +2560,11 @@ export default function EditGigForm({
                     />
                   </div>
 
-                  {/* Price Info */}
-                  <div>
-                    <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
-                      Price Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label className={colors.text}>Currency</Label>
-                        <Select
-                          value={formValues?.currency || "KES"}
-                          onValueChange={(value) =>
-                            handleSelectChange("currency", value)
-                          }
-                        >
-                          <SelectTrigger className={colors.border}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className={colors.background}>
-                            <SelectItem value="USD">USD ($)</SelectItem>
-                            <SelectItem value="EUR">EUR (€)</SelectItem>
-                            <SelectItem value="GBP">GBP (£)</SelectItem>
-                            <SelectItem value="KES">KES (KSh)</SelectItem>
-                            <SelectItem value="NGN">NGN (₦)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className={colors.text}>Amount</Label>
-                        <MemoizedInput
-                          type="number"
-                          value={formValues?.price || ""}
-                          onChange={handleInputChange}
-                          name="price"
-                          placeholder="Amount"
-                          icon={DollarSign}
-                        />
-                      </div>
-                      <div>
-                        <Label className={colors.text}>Price Range</Label>
-                        <Select
-                          value={formValues?.pricerange || ""}
-                          onValueChange={(value) =>
-                            handleSelectChange("pricerange", value)
-                          }
-                        >
-                          <SelectTrigger className={colors.border}>
-                            <SelectValue placeholder="Select range" />
-                          </SelectTrigger>
-                          <SelectContent className={colors.background}>
-                            <SelectItem value="0">Select range</SelectItem>
-                            <SelectItem value="hundreds">
-                              Hundreds (00)
-                            </SelectItem>
-                            <SelectItem value="thousands">
-                              Thousands (000)
-                            </SelectItem>
-                            <SelectItem value="tensofthousands">
-                              Tens of thousands (0000)
-                            </SelectItem>
-                            <SelectItem value="hundredsofthousands">
-                              Hundreds of thousands (00000)
-                            </SelectItem>
-                            <SelectItem value="millions">
-                              Millions (000000)
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Price Information */}
+                  {renderPriceInformation()}
+
+                  {/* Slots Configuration */}
+                  <SlotsConfiguration />
 
                   {/* Instrument Selection - Only for personal category */}
                   {bussinesscat === "personal" && (
@@ -1891,7 +2579,7 @@ export default function EditGigForm({
                       </Label>
 
                       <div className="relative">
-                        <GuitarIcon
+                        <Guitar
                           className={cn(
                             "absolute left-3 top-1/2 transform -translate-y-1/2 z-10",
                             colors.textMuted,
@@ -2339,117 +3027,16 @@ export default function EditGigForm({
                     />
                   </div>
 
-                  {/* Max Slots (only show for non-band categories) */}
-                  {bussinesscat !== "other" && (
-                    <div>
-                      <Label
-                        className={cn(
-                          "text-lg font-semibold mb-4",
-                          colors.text,
-                        )}
-                      >
-                        Capacity
-                      </Label>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setFormValues((prev: any) => ({
-                                ...prev,
-                                maxSlots: Math.max(1, (prev.maxSlots || 1) - 1),
-                              }))
-                            }
-                            className="h-10 w-10 rounded-xl text-lg"
-                            disabled={(formValues?.maxSlots || 1) <= 1}
-                          >
-                            -
-                          </Button>
-
-                          <div className="relative">
-                            <MemoizedInput
-                              type="number"
-                              value={formValues?.maxSlots?.toString() || "1"}
-                              onChange={handleInputChange}
-                              name="maxSlots"
-                              placeholder="Slots"
-                              min="1"
-                              max={bussinesscat === "full" ? "20" : "10"}
-                              className="w-24 text-center"
-                            />
-                          </div>
-
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setFormValues((prev: any) => ({
-                                ...prev,
-                                maxSlots: (prev.maxSlots || 1) + 1,
-                              }))
-                            }
-                            className="h-10 w-10 rounded-xl text-lg"
-                            disabled={
-                              (bussinesscat === "full" &&
-                                (formValues?.maxSlots || 1) >= 20) ||
-                              (bussinesscat !== "full" &&
-                                (formValues?.maxSlots || 1) >= 10)
-                            }
-                          >
-                            +
-                          </Button>
-                        </div>
-
-                        <div>
-                          <p className={cn("font-medium", colors.text)}>
-                            {formValues?.maxSlots || 1} position
-                            {(formValues?.maxSlots || 1) !== 1 ? "s" : ""}
-                          </p>
-                          <p className={cn("text-sm", colors.textMuted)}>
-                            {bussinesscat === "full"
-                              ? "Number of band members needed"
-                              : bussinesscat === "personal"
-                                ? "Number of individual musicians needed"
-                                : "Available positions"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Quick selection buttons for full band */}
-                      {bussinesscat === "full" && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {[3, 4, 5, 6, 7, 8].map((num) => (
-                            <Button
-                              key={num}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setFormValues((prev: any) => ({
-                                  ...prev,
-                                  maxSlots: num,
-                                }))
-                              }
-                              className={cn(
-                                "px-3",
-                                (formValues?.maxSlots || 1) === num &&
-                                  "bg-gradient-to-r from-blue-500 to-purple-500 text-white",
-                              )}
-                            >
-                              {num}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Interest Window Section */}
+                  <InterestWindowSection
+                    formValues={formValues}
+                    colors={colors}
+                  />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
+
           {/* Customize Tab */}
           <TabsContent value="customize">
             <Card className={colors.cardBorder}>
@@ -2696,6 +3283,7 @@ export default function EditGigForm({
           </TabsContent>
         </Tabs>
       </div>
+
       {/* Cancel Confirmation Dialog */}
       <Dialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
         <DialogContent className={colors.background}>
@@ -2718,6 +3306,7 @@ export default function EditGigForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Save Confirmation Dialog */}
       <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
         <DialogContent className={colors.background}>

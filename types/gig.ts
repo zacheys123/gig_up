@@ -1,5 +1,5 @@
 // types/gig.ts
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 
 // ====== Core Types ======
 
@@ -519,21 +519,7 @@ export interface BandFormationStatus {
   isComplete: boolean;
   missingRoles: string[];
 }
-// In your types/gig.ts file
-export interface BandSetupRole {
-  role: string;
-  maxSlots: number;
-  maxApplicants: number;
-  currentApplicants: number;
-  requiredSkills: string[];
-  description: string;
-  price?: string; // Make optional with ?
-  currency: string;
-  negotiable: boolean;
-  isLocked?: boolean;
-  filledSlots?: number;
-  bookedPrice?: number;
-}
+// Add these properties to your existing BandRoleInput interface
 export interface BandRoleInput {
   role: string;
   maxSlots: number;
@@ -541,12 +527,34 @@ export interface BandRoleInput {
   currentApplicants?: number;
   requiredSkills?: string[];
   description?: string;
-  price?: number; // Number for API/data storage
+  price?: number;
   currency?: string;
   negotiable?: boolean;
   isLocked?: boolean;
   filledSlots?: number;
   bookedPrice?: number;
+
+  // Add these missing properties
+  applicants?: string[] | Id<"users">[];
+  bookedUsers?: string[] | Id<"users">[];
+}
+
+// In your gig.ts file, update the BandSetupRole interface:
+export interface BandSetupRole {
+  role: string;
+  maxSlots: number;
+  maxApplicants: number;
+  currentApplicants: number;
+  requiredSkills: string[];
+  description: string;
+  price?: string; // This is optional string
+  currency: string;
+  negotiable: boolean;
+  isLocked?: boolean;
+  filledSlots?: number;
+  bookedPrice?: string; // This should also be optional string
+  applicants?: string[] | Id<"users">[];
+  bookedUsers?: string[] | Id<"users">[];
 }
 
 // Add type guards to help with conversion
@@ -578,4 +586,112 @@ export interface BandApplicant {
   trustScore: number;
   appliedAt: number;
   message?: string;
+}
+
+// Add these to your gig.ts file since they're used in your components:
+
+// 1. MinimalUser interface (used in fileupload)
+export interface MinimalUser {
+  _id: Id<"users">;
+  clerkId: string;
+  email?: string;
+  username?: string;
+}
+
+// 2. LocalGigInputs type alias (used in NormalGigsForm)
+export type LocalGigInputs = GigFormInputs;
+
+// 3. SchedulerProcedure interface
+export interface SchedulerProcedure {
+  type: "create" | "schedule" | "draft";
+  date: Date;
+}
+
+// 4. TalentModalData interface (for TalentModal component)
+export interface TalentModalData {
+  mcType?: string;
+  mcLanguages?: string[] | string;
+  djGenre?: string[] | string;
+  djEquipment?: string[] | string;
+  vocalistGenre?: string[] | string;
+}
+
+// 5. GigDraft related interfaces (for draft functionality)
+export interface GigDraftData {
+  formValues: Partial<GigFormInputs>;
+  bandRoles: BandRoleInput[];
+  customization?: CustomProps;
+  imageUrl?: string;
+  schedulingProcedure?: SchedulerProcedure;
+}
+
+export interface GigDraft {
+  id: string;
+  title: string;
+  category: BusinessCategory;
+  isBandGig: boolean;
+  bandRoleCount?: number;
+  totalSlots?: number;
+  data: GigDraftData;
+  createdAt: Date;
+  updatedAt: Date;
+  progress: number;
+}
+
+// 6. Component prop interfaces
+export interface TalentPreviewProps {
+  formValues: Partial<GigFormInputs>;
+  colors: any;
+}
+
+export interface BandSetupPreviewProps {
+  bandRoles: BandRoleInput[];
+  bussinesscat: BusinessCategory;
+  colors: any;
+  setShowBandSetupModal: (show: boolean) => void;
+}
+
+// 7. EditGigForm props
+export interface EditGigFormProps {
+  gigId: string;
+  customization?: CustomProps;
+  logo?: string;
+}
+
+export type GigDoc = Doc<"gigs">;
+
+// Update parseTalentData to accept either type:
+export function parseTalentData(
+  gig: Partial<GigProps> | GigDoc | null | undefined,
+): TalentModalData {
+  const data: TalentModalData = {};
+
+  const safeParseArray = (value: any): string[] => {
+    if (!value) return [];
+
+    if (typeof value === "string") {
+      return value
+        .split(",")
+        .map((item: string) => item.trim())
+        .filter(Boolean);
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item: any) => (typeof item === "string" ? item : String(item)))
+        .filter(Boolean);
+    }
+
+    return [];
+  };
+
+  if (gig) {
+    data.mcType = gig.mcType;
+    data.mcLanguages = safeParseArray(gig.mcLanguages);
+    data.djGenre = safeParseArray(gig.djGenre);
+    data.djEquipment = safeParseArray(gig.djEquipment);
+    data.vocalistGenre = safeParseArray(gig.vocalistGenre);
+  }
+
+  return data;
 }
