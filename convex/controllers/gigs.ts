@@ -2244,7 +2244,7 @@ export const updateGig = mutation({
 export const getGigStats = query({
   args: {
     gigId: v.id("gigs"),
-    userId: v.string(), // Keep this if you need clerkId
+    userId: v.id("users")
   },
   handler: async (ctx, args) => {
     // If you need to get user from userId instead of clerkId, change the args

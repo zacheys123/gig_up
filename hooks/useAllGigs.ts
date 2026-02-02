@@ -3,29 +3,35 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { CreateGigInput } from "@/types/gig";
 import { prepareGigDataForConvex } from "@/utils";
 import { Id } from "@/convex/_generated/dataModel";
 import { LocalGigInputs } from "@/drafts";
+import { useCurrentUser } from "./useCurrentUser";
 
-export const useGigs = (userId?: Id<"users">) => {
+export const useGigs = (userId?: Id<"users">, gigId?: Id<"gigs">) => {
   // Memoize query args to prevent unnecessary re-runs
   const userGigsArgs = useMemo(() => (userId ? { userId } : "skip"), [userId]);
-
-  const gigStatsArgs = useMemo(() => (userId ? { userId } : "skip"), [userId]);
+  const { user } = useCurrentUser();
+  const gigStatsArgs = useMemo(
+    () => (userId && gigId ? { userId, gigId } : "skip"),
+    [userId, gigId],
+  );
 
   const userApplicationsArgs = useMemo(
     () => (userId ? { userId } : "skip"),
-    [userId]
+    [userId],
   );
 
   // Queries with stable args
   const userGigs = useQuery(api.controllers.gigs.getUserGigs, userGigsArgs);
   const exploreGigs = useQuery(api.controllers.gigs.exploreGigs, {});
-  const gigStats = useQuery(api.controllers.gigs.getGigStats, gigStatsArgs);
+  const gigStats = useQuery(api.controllers.gigs.getGigStats, {
+    gigId: gigId as Id<"gigs">,
+    userId: user?._id as Id<"users">, // Pass userId instead of clerkId
+  });
   const userApplications = useQuery(
     api.controllers.gigs.getUserApplications,
-    userApplicationsArgs
+    userApplicationsArgs,
   );
 
   // Mutations - consider combining if they're related
@@ -57,7 +63,7 @@ export const useGigs = (userId?: Id<"users">) => {
         setMutationState((prev) => ({ ...prev, isDeleting: false }));
       }
     },
-    [deleteGigMutation]
+    [deleteGigMutation],
   );
 
   // Memoize the returned object to prevent unnecessary re-renders
@@ -93,15 +99,18 @@ export const useGigs = (userId?: Id<"users">) => {
       mutationState,
 
       deleteGig,
-    ]
+    ],
   );
 
   return result;
 };
 
-// Optional: Create a more specialized hook for gig stats
-export const useGigStats = (userId?: Id<"users">) => {
-  const gigStatsArgs = useMemo(() => (userId ? { userId } : "skip"), [userId]);
+// // Optional: Create a more specialized hook for gig stats
+// export const useGigStats = (userId?: Id<"users">) => {
+//   const gigStatsArgs = useMemo(() => (userId ? { userId } : "skip"), [userId]);
 
-  return useQuery(api.controllers.gigs.getGigStats, gigStatsArgs);
-};
+//   return useQuery(api.controllers.gigs.getGigStats, {
+//     gigId: gigId as Id<"gigs">,
+//     userId: user?._id,
+//   });
+// };

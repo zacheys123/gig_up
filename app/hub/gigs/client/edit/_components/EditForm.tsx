@@ -1,5 +1,4 @@
 "use client";
-import { ErrorBoundary } from "react-error-boundary";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -621,11 +620,51 @@ const DateField = ({
 // Interest Window Section Component
 const InterestWindowSection = React.memo(
   ({ formValues, colors, onInterestWindowChange }: any) => {
-    const [showInterestWindow, setShowInterestWindow] = useState(false);
+    const [showInterestWindow, setShowInterestWindow] = useState(() => {
+      // Show the window if there are any interest window values
+      return !!(
+        formValues?.acceptInterestStartTime ||
+        formValues?.acceptInterestEndTime ||
+        (formValues?.interestWindowDays && formValues.interestWindowDays !== 7)
+      );
+    });
+
     const [interestWindowType, setInterestWindowType] = useState<
       "dates" | "days"
-    >("dates");
+    >(() => {
+      // Determine type based on existing values
+      if (
+        formValues?.acceptInterestStartTime ||
+        formValues?.acceptInterestEndTime
+      ) {
+        return "dates";
+      }
+      return "days";
+    });
 
+    // Log when component renders
+    useEffect(() => {
+      console.log("=== InterestWindowSection Render ===");
+      console.log("Form values passed:", {
+        acceptInterestStartTime: formValues?.acceptInterestStartTime,
+        acceptInterestEndTime: formValues?.acceptInterestEndTime,
+        interestWindowDays: formValues?.interestWindowDays,
+        enableInterestWindow: formValues?.enableInterestWindow,
+      });
+      console.log("Current interestWindowType:", interestWindowType);
+    }, [formValues, interestWindowType]);
+
+    // When the section opens, automatically enable it
+    useEffect(() => {
+      if (showInterestWindow && !formValues?.enableInterestWindow) {
+        console.log("Auto-enabling interest window");
+        onInterestWindowChange("enableInterestWindow", true);
+      }
+    }, [
+      showInterestWindow,
+      formValues?.enableInterestWindow,
+      onInterestWindowChange,
+    ]);
     // Inside InterestWindowSection component, replace the handleInterestWindowChange
     const handleInterestWindowChange = useCallback(
       (field: string, value: any) => {
@@ -637,7 +676,28 @@ const InterestWindowSection = React.memo(
       },
       [onInterestWindowChange], // This should be passed as a prop
     );
+    // Add these helper functions inside the component
+    const getDefaultStartDate = () => {
+      const now = new Date();
+      now.setHours(now.getHours() + 1); // 1 hour from now
+      return formatDateForInput(now);
+    };
 
+    const getDefaultEndDate = () => {
+      const now = new Date();
+      now.setDate(now.getDate() + 7); // 7 days from now
+      now.setHours(17, 0, 0, 0); // 5:00 PM
+      return formatDateForInput(now);
+    };
+
+    const formatDateForInput = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
     if (!showInterestWindow) {
       return (
         <motion.div
@@ -724,10 +784,15 @@ const InterestWindowSection = React.memo(
                 variant={interestWindowType === "dates" ? "default" : "outline"}
                 onClick={() => {
                   setInterestWindowType("dates");
-                  // Clear days when switching to dates
-                  if (onInterestWindowChange) {
+                  // When switching to dates, clear days
+                  if (
+                    formValues?.interestWindowDays &&
+                    formValues.interestWindowDays !== 7
+                  ) {
                     onInterestWindowChange("interestWindowDays", undefined);
                   }
+                  // Ensure interest window is enabled
+                  onInterestWindowChange("enableInterestWindow", true);
                 }}
                 className={cn(
                   "flex-1",
@@ -742,14 +807,19 @@ const InterestWindowSection = React.memo(
                 variant={interestWindowType === "days" ? "default" : "outline"}
                 onClick={() => {
                   setInterestWindowType("days");
-                  // Clear date fields when switching to days
-                  if (onInterestWindowChange) {
+                  // When switching to days, clear dates
+                  if (
+                    formValues?.acceptInterestStartTime ||
+                    formValues?.acceptInterestEndTime
+                  ) {
                     onInterestWindowChange(
                       "acceptInterestStartTime",
                       undefined,
                     );
                     onInterestWindowChange("acceptInterestEndTime", undefined);
                   }
+                  // Ensure interest window is enabled
+                  onInterestWindowChange("enableInterestWindow", true);
                 }}
                 className={cn(
                   "flex-1",
@@ -761,30 +831,88 @@ const InterestWindowSection = React.memo(
               </Button>
             </div>
           </div>
-
           {interestWindowType === "dates" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DateField
-                label="Interest Opens"
-                value={formValues.acceptInterestStartTime}
-                onChange={(value: any) =>
-                  handleInterestWindowChange("acceptInterestStartTime", value)
-                }
-                description="When musicians can start showing interest"
-                colors={colors}
-              />
-              <DateField
-                label="Interest Closes"
-                value={formValues.acceptInterestEndTime}
-                onChange={(value: any) =>
-                  handleInterestWindowChange("acceptInterestEndTime", value)
-                }
-                description="When interest period ends"
-                colors={colors}
-              />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    className={cn(
+                      "block text-sm font-medium mb-2",
+                      colors.text,
+                    )}
+                  >
+                    Interest Opens
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="datetime-local"
+                      value={
+                        formValues.acceptInterestStartTime ||
+                        getDefaultStartDate()
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        console.log("Start time changed to:", value);
+                        onInterestWindowChange(
+                          "acceptInterestStartTime",
+                          value || undefined,
+                        );
+                        // Auto-set end date if not set
+                        if (!formValues.acceptInterestEndTime && value) {
+                          const startDate = new Date(value);
+                          const endDate = new Date(
+                            startDate.getTime() + 7 * 24 * 60 * 60 * 1000,
+                          ); // 7 days later
+                          const endValue = formatDateForInput(endDate);
+                          onInterestWindowChange(
+                            "acceptInterestEndTime",
+                            endValue,
+                          );
+                        }
+                      }}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className={cn("text-xs mt-1", colors.textMuted)}>
+                    When musicians can start showing interest
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    className={cn(
+                      "block text-sm font-medium mb-2",
+                      colors.text,
+                    )}
+                  >
+                    Interest Closes
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="datetime-local"
+                      value={
+                        formValues.acceptInterestEndTime || getDefaultEndDate()
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        console.log("End time changed to:", value);
+                        onInterestWindowChange(
+                          "acceptInterestEndTime",
+                          value || undefined,
+                        );
+                      }}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className={cn("text-xs mt-1", colors.textMuted)}>
+                    When interest period ends
+                  </p>
+                </div>
+              </div>
             </div>
           )}
-
           {interestWindowType === "days" && (
             <div>
               <label
@@ -800,10 +928,10 @@ const InterestWindowSection = React.memo(
                     variant="outline"
                     onClick={() => {
                       const current = formValues.interestWindowDays || 7;
-                      handleInterestWindowChange(
-                        "interestWindowDays",
-                        Math.max(1, current - 1),
-                      );
+                      const newValue = Math.max(1, current - 1);
+                      console.log("Decreasing days to:", newValue);
+                      onInterestWindowChange("interestWindowDays", newValue);
+                      onInterestWindowChange("enableInterestWindow", true);
                     }}
                     className="h-10 w-10"
                   >
@@ -813,12 +941,12 @@ const InterestWindowSection = React.memo(
                     <Input
                       type="number"
                       value={formValues.interestWindowDays || 7}
-                      onChange={(e) =>
-                        handleInterestWindowChange(
-                          "interestWindowDays",
-                          parseInt(e.target.value) || 7,
-                        )
-                      }
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 7;
+                        console.log("Days changed to:", value);
+                        onInterestWindowChange("interestWindowDays", value);
+                        onInterestWindowChange("enableInterestWindow", true);
+                      }}
                       min="1"
                       max="90"
                       className="w-20 text-center"
@@ -833,10 +961,10 @@ const InterestWindowSection = React.memo(
                     variant="outline"
                     onClick={() => {
                       const current = formValues.interestWindowDays || 7;
-                      handleInterestWindowChange(
-                        "interestWindowDays",
-                        current + 1,
-                      );
+                      const newValue = current + 1;
+                      console.log("Increasing days to:", newValue);
+                      onInterestWindowChange("interestWindowDays", newValue);
+                      onInterestWindowChange("enableInterestWindow", true);
                     }}
                     className="h-10 w-10"
                   >
@@ -862,9 +990,11 @@ const InterestWindowSection = React.memo(
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      handleInterestWindowChange("interestWindowDays", days)
-                    }
+                    onClick={() => {
+                      console.log("Setting days to:", days);
+                      onInterestWindowChange("interestWindowDays", days);
+                      onInterestWindowChange("enableInterestWindow", true);
+                    }}
                     className={cn(
                       formValues.interestWindowDays === days &&
                         "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
@@ -907,6 +1037,26 @@ const InterestWindowSection = React.memo(
               application flow and prevents last-minute applications.
             </p>
           </div>
+        </div>
+        {/* Add this at the bottom of the expanded section for debugging */}
+        <div className="mt-4 p-4 rounded-lg bg-gray-100 dark:bg-gray-800">
+          <h4 className="text-sm font-medium mb-2">Debug Info</h4>
+          <pre className="text-xs overflow-auto">
+            {JSON.stringify(
+              {
+                showInterestWindow,
+                interestWindowType,
+                formValues: {
+                  acceptInterestStartTime: formValues?.acceptInterestStartTime,
+                  acceptInterestEndTime: formValues?.acceptInterestEndTime,
+                  interestWindowDays: formValues?.interestWindowDays,
+                  enableInterestWindow: formValues?.enableInterestWindow,
+                },
+              },
+              null,
+              2,
+            )}
+          </pre>
         </div>
       </motion.div>
     );
@@ -1148,12 +1298,13 @@ export default function EditGigForm({
     if (gig && !formValues) {
       const talentData = parseTalentData(gig);
 
-      // Helper function to convert timestamp to datetime-local format
       const timestampToDateTimeLocal = (timestamp: number | undefined) => {
         if (!timestamp) return undefined;
+
+        // Create date object
         const date = new Date(timestamp);
 
-        // Format: YYYY-MM-DDTHH:mm
+        // Get local time components
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
@@ -1164,7 +1315,7 @@ export default function EditGigForm({
       };
 
       // Calculate interest window days if both dates exist
-      let interestWindowDays = 7; // Default
+      let interestWindowDays = gig.interestWindowDays; // Default
       if (gig.acceptInterestStartTime && gig.acceptInterestEndTime) {
         const start = gig.acceptInterestStartTime;
         const end = gig.acceptInterestEndTime;
@@ -1696,6 +1847,34 @@ export default function EditGigForm({
 
     setIsSaving(true);
     try {
+      console.log("=== DEBUG: Form Values Before Save ===");
+      console.log("Form values:", formValues);
+      console.log("Interest window values:", {
+        acceptInterestStartTime: formValues?.acceptInterestStartTime,
+        acceptInterestEndTime: formValues?.acceptInterestEndTime,
+        interestWindowDays: formValues?.interestWindowDays,
+      });
+
+      // DEBUG: Log the parsed dates
+      if (formValues?.acceptInterestStartTime) {
+        const startDate = new Date(formValues.acceptInterestStartTime);
+        console.log("Start date parsed:", {
+          raw: formValues.acceptInterestStartTime,
+          date: startDate,
+          timestamp: startDate.getTime(),
+          isValid: !isNaN(startDate.getTime()),
+        });
+      }
+
+      if (formValues?.acceptInterestEndTime) {
+        const endDate = new Date(formValues.acceptInterestEndTime);
+        console.log("End date parsed:", {
+          raw: formValues.acceptInterestEndTime,
+          date: endDate,
+          timestamp: endDate.getTime(),
+          isValid: !isNaN(endDate.getTime()),
+        });
+      }
       const convertBandRoleForConvex = (role: BandRoleInput) => {
         // Create a new object without bookedPrice
         const { bookedPrice, ...roleWithoutBookedPrice } = role as any;
