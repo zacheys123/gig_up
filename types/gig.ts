@@ -524,7 +524,7 @@ export interface BandRoleInput {
   role: string;
   maxSlots: number;
   maxApplicants?: number;
-  currentApplicants?: number;
+
   requiredSkills?: string[];
   description?: string;
   price?: number;
@@ -532,8 +532,6 @@ export interface BandRoleInput {
   negotiable?: boolean;
   isLocked?: boolean;
   filledSlots?: number;
-  bookedPrice?: number;
-
   // Add these missing properties
   applicants?: string[] | Id<"users">[];
   bookedUsers?: string[] | Id<"users">[];
@@ -544,7 +542,6 @@ export interface BandSetupRole {
   role: string;
   maxSlots: number;
   maxApplicants: number;
-  currentApplicants: number;
   requiredSkills: string[];
   description: string;
   price?: string; // This is optional string
@@ -552,7 +549,6 @@ export interface BandSetupRole {
   negotiable: boolean;
   isLocked?: boolean;
   filledSlots?: number;
-  bookedPrice?: string; // This should also be optional string
   applicants?: string[] | Id<"users">[];
   bookedUsers?: string[] | Id<"users">[];
 }

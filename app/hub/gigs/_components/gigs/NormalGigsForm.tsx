@@ -781,11 +781,6 @@ const BandSetupPreview = React.memo(
       0,
     );
 
-    const totalCurrentApplicants = bandRoles.reduce(
-      (sum: number, role: BandRoleInput) => sum + (role.currentApplicants || 0),
-      0,
-    );
-
     const totalPrice = bandRoles.reduce((sum: number, role: BandRoleInput) => {
       const price = role.price || 0;
       return sum + price * role.maxSlots;
@@ -896,11 +891,7 @@ const BandSetupPreview = React.memo(
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
           {bandRoles.map((role: BandRoleInput, index: number) => {
             const maxApplicants = role.maxApplicants || 20;
-            const currentApplicants = role.currentApplicants || 0;
-            const applicantProgress = Math.min(
-              (currentApplicants / maxApplicants) * 100,
-              100,
-            );
+
             const roleCurrency = role.currency || "KES";
 
             return (
@@ -935,33 +926,6 @@ const BandSetupPreview = React.memo(
                     >
                       {maxApplicants} max
                     </Badge>
-                  </div>
-                </div>
-
-                {/* Applicant Progress */}
-                <div className="space-y-1.5 mb-3">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Applications
-                    </span>
-                    <span className="font-medium">
-                      {currentApplicants}/{maxApplicants}
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-300",
-                        applicantProgress < 30
-                          ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                          : applicantProgress < 70
-                            ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                            : applicantProgress < 90
-                              ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                              : "bg-gradient-to-r from-red-500 to-pink-500",
-                      )}
-                      style={{ width: `${applicantProgress}%` }}
-                    />
                   </div>
                 </div>
 
@@ -1066,28 +1030,6 @@ const BandSetupPreview = React.memo(
                 </div>
               </div>
             </div>
-          )}
-
-          {totalCurrentApplicants > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-2 p-2 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20"
-            >
-              <div className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium">
-                  {totalCurrentApplicants} application
-                  {totalCurrentApplicants !== 1 ? "s" : ""} received
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {Math.round(
-                  (totalCurrentApplicants / totalMaxApplicants) * 100,
-                )}
-                % of maximum capacity
-              </div>
-            </motion.div>
           )}
         </div>
       </motion.div>
@@ -1557,7 +1499,6 @@ export default function NormalGigsForm() {
       role: role.role,
       maxSlots: role.maxSlots,
       maxApplicants: role.maxApplicants || 15, // Default to 20
-      currentApplicants: role.currentApplicants || 0,
       requiredSkills: role.requiredSkills || [],
       description: role.description || "",
       price: role.price?.toString() || "",

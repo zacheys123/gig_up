@@ -69,7 +69,7 @@ import { useThemeColors } from "@/hooks/useTheme";
 import { getInterestWindowStatus } from "@/utils";
 import { cn } from "@/lib/utils";
 import { getUserGigStatus, type GigUserStatus } from "@/utils";
-import { isUserQualifiedForRole } from "@/mapping/userRoleMapping";
+import { isUserQualifiedForRole } from "../../utils";
 
 // Types
 interface PerformingMember {
@@ -306,6 +306,8 @@ const GigCard: React.FC<GigCardProps> = ({
   const [showRoleSelectionModal, setShowRoleSelectionModal] = useState(false);
   const [selectedRoleForApplication, setSelectedRoleForApplication] =
     useState<BandRole | null>(null);
+  // Add this to your existing state declarations
+  const [showRolesModal, setShowRolesModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   // Convex mutations
   const showInterestInGig = useMutation(api.controllers.gigs.showInterestInGig);
@@ -749,17 +751,6 @@ const GigCard: React.FC<GigCardProps> = ({
     );
   }, [currentUser, gig.bandCategory]);
 
-  // const isRoleFull = (roleIndex: number) => {
-  //   const role = gig.bandCategory?.[roleIndex];
-  //   if (!role) return true;
-  //   return role.filledSlots >= role.maxSlots;
-  // };
-
-  // const isUserQualifiedForSpecificRole = (roleIndex: number) => {
-  //   if (!currentUser) return false;
-  //   const role = gig.bandCategory?.[roleIndex];
-  //   if (!role) return false;
-
   const handleBandApplication = () => {
     if (!currentUser) {
       toast.error("Please sign in first");
@@ -778,7 +769,6 @@ const GigCard: React.FC<GigCardProps> = ({
 
     // Check if user has skills for any available role
     if (getUserQualifiedRoles.length === 0) {
-      // Show a more informative message
       toast.error(
         <div className="flex items-start gap-2">
           <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
@@ -796,8 +786,13 @@ const GigCard: React.FC<GigCardProps> = ({
       return;
     }
 
+    // Since we're now showing role cards, we can either:
+    // 1. Auto-select the first qualified role
+    // 2. Show the role selection modal
+    // 3. Just do nothing and let users click role cards
+
+    // OPTION 1: Auto-select first qualified role (simpler)
     if (getUserQualifiedRoles.length === 1) {
-      // Apply directly to the single role
       const role = getUserQualifiedRoles[0];
       const roleIndex =
         gig.bandCategory?.findIndex((r) => r.role === role.role) || 0;
@@ -811,64 +806,59 @@ const GigCard: React.FC<GigCardProps> = ({
         return;
       }
 
-      // Show confirmation modal or apply directly
-      setSelectedRoleForApplication(role);
-      setShowApplicationModal(true);
+      // Apply directly
+      applyForBandRole({
+        gigId: gig._id,
+        bandRoleIndex: roleIndex,
+        userId: currentUser._id,
+        applicationNotes: "",
+      })
+        .then(() => {
+          toast.success(
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="font-medium">Applied successfully!</p>
+                <p className="text-sm">For role: {role.role}</p>
+              </div>
+            </div>,
+          );
+        })
+        .catch((error) => {
+          toast.error(error.message || "Failed to apply");
+        });
     } else {
-      // Show role selection modal
+      // OPTION 2: Show role selection modal (for multiple qualified roles)
       setShowRoleSelectionModal(true);
     }
   };
 
-  // Regular gig interest handler - FIXED: Using userStatus instead of regularIsInterested
   const handleRegularInterest = async (notes?: string) => {
+    console.log("=== DEBUG handleRegularInterest ===");
+    console.log("Current User (from useCurrentUser):", currentUser);
+    console.log("Current User Convex ID:", currentUser?._id);
+    console.log("Clerk userId:", userId);
+    console.log("Gig interestedUsers:", gig.interestedUsers);
+
     if (!currentUserId) {
+      // This is the Convex ID
       toast.error("Sign in to show interest");
-      return;
-    }
-
-    if (gig.isTaken) {
-      toast.error("Gig already taken");
-      return;
-    }
-
-    if (isFull) {
-      toast.error("Fully booked!");
       return;
     }
 
     setLoading(true);
     try {
-      if (userStatus.hasShownInterest) {
-        // Changed from regularIsInterested
-        await removeInterestFromGig({
-          gigId: gig._id,
-          clerkId: userId!,
-          reason: "Withdrew interest",
-        });
-        toast.success("Interest removed");
-      } else {
-        await showInterestInGig({
-          gigId: gig._id,
-          userId: currentUserId,
-          notes: notes || undefined,
-        });
+      // Send the Convex ID
+      const result = await showInterestInGig({
+        gigId: gig._id,
+        userId: currentUserId, // Should be "jn7a6b3wrh8c4v1ex5hs6hz5357tddr9"
+        notes: notes || undefined,
+      });
 
-        toast.success(
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
-              <UserCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="font-medium">Interest shown!</p>
-              <p className="text-sm opacity-90">
-                Position #{userPosition || "?"} • {availableSlots} left
-              </p>
-            </div>
-          </div>,
-        );
-      }
+      console.log("Mutation result:", result);
+      toast.success("Interest shown!");
     } catch (error) {
+      console.error("Mutation error:", error);
       toast.error(error instanceof Error ? error.message : "Failed");
     } finally {
       setLoading(false);
@@ -882,7 +872,7 @@ const GigCard: React.FC<GigCardProps> = ({
       if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) return null;
 
       const role = gig.bandCategory[bandRoleIndex];
-      const currentUserId = currentUser?._id;
+      const currentUserId = currentUser?._id as Id<"users">;
 
       if (!currentUserId) return null;
 
@@ -1204,34 +1194,6 @@ const GigCard: React.FC<GigCardProps> = ({
     return luminance > 0.5 ? "#000000" : "#ffffff";
   };
 
-  const getBadgeStyle = () => {
-    const bgColor = gig.backgroundColor;
-    const fontColor = gig.fontColor;
-
-    const badgeColor = fontColor || "#ef4444";
-    const textColor = getContrastColor(badgeColor);
-
-    const hex = badgeColor.replace("#", "");
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    let finalBadgeColor = badgeColor;
-    if (luminance > 0.7) {
-      finalBadgeColor = "#dc2626";
-    } else if (luminance < 0.3) {
-      finalBadgeColor = "#f87171";
-    }
-
-    return {
-      backgroundColor: finalBadgeColor,
-      color: getContrastColor(finalBadgeColor),
-      fontWeight: "bold" as const,
-      boxShadow: "0 0 0 1px rgba(0,0,0,0.1)",
-    };
-  };
-
   const getCardStyles = () => {
     return {
       backgroundColor: gig.backgroundColor || undefined,
@@ -1479,186 +1441,179 @@ const GigCard: React.FC<GigCardProps> = ({
       </div>
     );
   };
-  // Update your renderBandRoleActions function to this:
-  const renderBandRoleActions = () => {
-    if (!gig.bandCategory || gig.bandCategory.length === 0) return null;
-    if (compact) return null; // Don't show in compact mode
+  // const renderBandRoleActions = () => {
+  //   if (!gig.bandCategory || gig.bandCategory.length === 0) return null;
+  //   if (compact) return null;
 
-    return (
-      <div
-        className="space-y-3 mt-4 pt-4 border-t"
-        style={{
-          borderTopColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
-        }}
-      >
-        <div
-          className={cn(
-            "text-sm font-semibold flex items-center gap-2",
-            colors.text,
-          )}
-        >
-          <Music className="w-4 h-4" />
-          Band Roles ({gig.bandCategory.length})
-        </div>
-        <div className="space-y-2">
-          {gig.bandCategory.map((role, index) => {
-            const action = handleBandAction(index);
-            const roleColors = getRoleColors(index);
+  //   return (
+  //     <div className="space-y-3 mt-4 pt-4 border-t">
+  //       <div className="text-sm font-semibold flex items-center justify-between">
+  //         <span>Band Roles ({gig.bandCategory.length})</span>
+  //         <Badge variant="outline" className="text-xs">
+  //           {
+  //             gig.bandCategory.filter((role) =>
+  //               isUserQualifiedForRole(currentUser!, role),
+  //             ).length
+  //           }{" "}
+  //           match your skills
+  //         </Badge>
+  //       </div>
 
-            if (!action) return null;
+  //       <div className="space-y-2">
+  //         {gig.bandCategory.map((role, index) => {
+  //           const isQualified = isUserQualifiedForRole(currentUser!, role);
+  //           const isRoleFull = role.filledSlots >= role.maxSlots;
+  //           const hasApplied =
+  //             currentUser?._id && role.applicants.includes(currentUser._id);
+  //           const isBooked =
+  //             currentUser?._id && role.bookedUsers.includes(currentUser._id);
 
-            return (
-              <div
-                key={index}
-                className={cn(
-                  "flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border transition-all hover:shadow-sm",
-                  colors.border,
-                  colors.hoverBg,
-                )}
-              >
-                {/* Role Info */}
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-1"
-                    style={{
-                      backgroundColor: roleColors.bg,
-                      color: roleColors.text,
-                    }}
-                  >
-                    <span className="text-lg">{getRoleIcon(role.role)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h4
-                        className={cn(
-                          "font-semibold text-sm truncate",
-                          colors.text,
-                        )}
-                      >
-                        {role.role}
-                      </h4>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-xs flex-shrink-0 px-2 py-0.5",
-                          colors.border,
-                        )}
-                      >
-                        {role.filledSlots}/{role.maxSlots} slots
-                      </Badge>
-                      {role.price && (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200"
-                        >
-                          ${role.price}
-                        </Badge>
-                      )}
-                    </div>
+  //           // Get proper action for this specific role
+  //           const roleAction = handleBandAction(index);
 
-                    {role.description && (
-                      <p
-                        className={cn("text-xs line-clamp-2", colors.textMuted)}
-                      >
-                        {role.description}
-                      </p>
-                    )}
+  //           return (
+  //             <div
+  //               key={index}
+  //               className={cn(
+  //                 "p-3 rounded-xl border transition-all",
+  //                 isQualified
+  //                   ? "border-green-200 bg-green-50 dark:bg-green-900/20"
+  //                   : "opacity-60 border-gray-200",
+  //               )}
+  //             >
+  //               {/* Role header */}
+  //               <div className="flex items-center justify-between mb-2">
+  //                 <div className="flex items-center gap-2">
+  //                   <h4 className="font-semibold">{role.role}</h4>
+  //                   {!isQualified && (
+  //                     <Badge variant="outline" className="text-xs">
+  //                       Requires:{" "}
+  //                       {role.requiredSkills?.[0] || "specific skills"}
+  //                     </Badge>
+  //                   )}
+  //                 </div>
+  //                 <div className="flex items-center gap-2">
+  //                   {/* Slot info badge */}
+  //                   <Badge variant="outline" className="text-xs">
+  //                     {role.filledSlots}/{role.maxSlots} filled
+  //                   </Badge>
 
-                    {role.requiredSkills && role.requiredSkills.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {role.requiredSkills.slice(0, 2).map((skill, i) => (
-                          <Badge
-                            key={i}
-                            variant="outline"
-                            className="text-xs border-purple-300 text-purple-600 dark:text-purple-400"
-                          >
-                            {skill}
-                          </Badge>
-                        ))}
-                        {role.requiredSkills.length > 2 && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-gray-300 text-gray-500"
-                          >
-                            +{role.requiredSkills.length - 2} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+  //                   {isQualified ? (
+  //                     isBooked ? (
+  //                       <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+  //                         ✓ Booked
+  //                       </Badge>
+  //                     ) : hasApplied ? (
+  //                       <Badge className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+  //                         ✓ Applied
+  //                       </Badge>
+  //                     ) : (
+  //                       <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+  //                         ✓ Qualified
+  //                       </Badge>
+  //                     )
+  //                   ) : (
+  //                     <Badge variant="secondary" className="text-xs">
+  //                       Skills needed
+  //                     </Badge>
+  //                   )}
+  //                 </div>
+  //               </div>
 
-                {/* Action Button */}
-                {action && (
-                  <div className="flex-shrink-0">
-                    <Button
-                      variant={action.variant}
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (action.action) {
-                          action.action();
-                        }
-                      }}
-                      disabled={action.disabled}
-                      className={cn(
-                        "text-xs h-9 px-4 whitespace-nowrap",
-                        action.className,
-                        // Make edit button more prominent
-                        action.type === "edit" &&
-                          "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-sm",
-                      )}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        {action.icon}
-                        <span>{action.label}</span>
-                      </span>
-                    </Button>
+  //               {/* Role description */}
+  //               {role.description && (
+  //                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+  //                   {role.description}
+  //                 </p>
+  //               )}
 
-                    {/* Tooltip for disabled buttons */}
-                    {action.disabled && action.type === "full" && (
-                      <p className="text-xs text-gray-500 mt-1 text-center">
-                        All slots filled
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-  // Check interest window status
-  const interestWindowStatus = getInterestWindowStatus(gig);
-  const isInterestWindowOpen = interestWindowStatus.status === "open";
-  // Add this useEffect to debug
-  useEffect(() => {
-    if (currentUser && gig.bandCategory) {
-      console.log("=== DEBUG: Role Qualification ===");
-      console.log("User instruments:", currentUser.instrument);
-      console.log("User role type:", currentUser.roleType);
-      console.log("Available roles:", gig.bandCategory);
+  //               {/* Required skills */}
+  //               {role.requiredSkills && role.requiredSkills.length > 0 && (
+  //                 <div className="flex flex-wrap gap-1 mb-3">
+  //                   {role.requiredSkills.slice(0, 3).map((skill, i) => (
+  //                     <Badge
+  //                       key={i}
+  //                       variant="outline"
+  //                       className="text-xs bg-gray-100 dark:bg-gray-800"
+  //                     >
+  //                       {skill}
+  //                     </Badge>
+  //                   ))}
+  //                   {role.requiredSkills.length > 3 && (
+  //                     <Badge variant="outline" className="text-xs">
+  //                       +{role.requiredSkills.length - 3} more
+  //                     </Badge>
+  //                   )}
+  //                 </div>
+  //               )}
 
-      gig.bandCategory.forEach((role, index) => {
-        const isQualified = isUserQualifiedForRole(currentUser, role);
-        console.log(`Role ${role.role}:`, {
-          requiredSkills: role.requiredSkills,
-          isQualified,
-          slots: `${role.filledSlots}/${role.maxSlots}`,
-        });
-      });
-    }
-  }, [currentUser, gig.bandCategory]);
+  //               {/* Compensation */}
+  //               <div className="flex items-center justify-between mb-3">
+  //                 <div className="flex items-center gap-2">
+  //                   <DollarSign className="w-4 h-4 text-green-500" />
+  //                   <span className="font-medium">
+  //                     {role.price ? `$${role.price}` : "Contact for rate"}
+  //                   </span>
+  //                   {role.negotiable && (
+  //                     <Badge
+  //                       variant="outline"
+  //                       className="text-xs border-amber-500/30 text-amber-600 dark:text-amber-400"
+  //                     >
+  //                       Negotiable
+  //                     </Badge>
+  //                   )}
+  //                 </div>
+  //                 <div className="text-sm text-gray-500 dark:text-gray-400">
+  //                   {role.currency || "KES"}
+  //                 </div>
+  //               </div>
+
+  //               {/* Action button - ONLY WAY TO APPLY */}
+  //               {roleAction && (
+  //                 <Button
+  //                   variant={
+  //                     isQualified && !isRoleFull && !hasApplied && !isBooked
+  //                       ? "default"
+  //                       : "outline"
+  //                   }
+  //                   size="sm"
+  //                   disabled={
+  //                     !isQualified || isRoleFull || hasApplied || isBooked
+  //                   }
+  //                   onClick={(e) => {
+  //                     e.stopPropagation();
+  //                     if (roleAction.action) {
+  //                       roleAction.action();
+  //                     }
+  //                   }}
+  //                   className={cn(
+  //                     "w-full",
+  //                     !isQualified && "cursor-not-allowed opacity-50",
+  //                   )}
+  //                 >
+  //                   {isBooked
+  //                     ? "Booked ✓"
+  //                     : hasApplied
+  //                       ? "Application Pending"
+  //                       : isRoleFull
+  //                         ? "Role Full"
+  //                         : isQualified
+  //                           ? "Apply for this Role"
+  //                           : "Not Qualified"}
+  //                 </Button>
+  //               )}
+  //             </div>
+  //           );
+  //         })}
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
   const renderActionButton = () => {
     if (!showActions) return null;
 
     const responsiveButtonClasses = "w-full sm:w-auto px-3 py-1.5 h-9";
-
-    // Check interest window
-    const interestWindowStatus = getInterestWindowStatus(gig);
-    const isInterestWindowOpen = interestWindowStatus.status === "open";
 
     // ===== GIG POSTER (OWNER) =====
     if (userStatus.isGigPoster) {
@@ -1669,16 +1624,15 @@ const GigCard: React.FC<GigCardProps> = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              // Route based on gig type
               switch (gigType) {
                 case "full_band":
                   router.push(`/hub/gigs/client/${gig._id}/band-applicants`);
                   break;
                 case "client_band_creation":
-                  router.push(`/hub/gigs/client/${gig._id}/role-applicants`);
+                  router.push(`/hub/gigs?tab=pre-booking`);
                   break;
                 default:
-                  router.push(`/hub/gigs/client/${gig._id}/applicants`);
+                  router.push(`/hub/gigs/client/${gig._id}/band_applicants`);
                   break;
               }
             }}
@@ -1690,11 +1644,10 @@ const GigCard: React.FC<GigCardProps> = ({
           >
             <Sparkles className="w-4 h-4" />
             <span className="font-medium">
-              {gig.isTaken ? "Manage Booking" : "Review Applicants"}
+              {gig.isTaken ? "Manage Booking" : "Manage Roles"}
             </span>
           </Button>
 
-          {/* Add Edit Button */}
           <Button
             variant="outline"
             size="sm"
@@ -1715,22 +1668,18 @@ const GigCard: React.FC<GigCardProps> = ({
       );
     }
 
-    // ===== USER HAS APPLIED/SHOWN INTEREST =====
+    // ===== USER HAS ALREADY APPLIED/SHOWN INTEREST =====
     if (
       userStatus.hasShownInterest ||
       userStatus.isInApplicants ||
       userStatus.isInBandApplication
     ) {
       const handleManageClick = () => {
-        // Route based on user status and gig type
         if (gigType === "client_band_creation" && userStatus.isInApplicants) {
-          // Band role application
           router.push(`/gigs/${gig._id}/application`);
         } else if (gigType === "full_band" && userStatus.isInBandApplication) {
-          // Full band application
           router.push(`/gigs/${gig._id}/band-application`);
         } else {
-          // Individual gig or other
           router.push("/hub/gigs?tab=musician-prebooking");
         }
       };
@@ -1742,9 +1691,7 @@ const GigCard: React.FC<GigCardProps> = ({
       let customClasses = "";
       let showPosition = false;
 
-      // Determine button style based on status and gig type
       if (gigType === "full_band" && userStatus.isInBandApplication) {
-        // Full band application
         buttonLabel = "View Band Application";
         icon = <Building2 className="w-4 h-4" />;
         if (userStatus.isBooked) {
@@ -1764,7 +1711,6 @@ const GigCard: React.FC<GigCardProps> = ({
         gigType === "client_band_creation" &&
         userStatus.isInApplicants
       ) {
-        // Band role application
         const roleName = userStatus.bandRoleApplied || "Role";
         buttonLabel = `View ${roleName} Application`;
         icon = <Music className="w-4 h-4" />;
@@ -1783,7 +1729,6 @@ const GigCard: React.FC<GigCardProps> = ({
           showPosition = userStatus.position !== null;
         }
       } else {
-        // Individual gig interest
         if (userStatus.isBooked) {
           variant = "default";
           customClasses =
@@ -1829,7 +1774,36 @@ const GigCard: React.FC<GigCardProps> = ({
       );
     }
 
-    // ===== DEFAULT ACTION BUTTONS =====
+    // ===== FOR CLIENT BAND CREATION: SHOW VIEW ROLES BUTTON =====
+    if (gigType === "client_band_creation") {
+      const qualifiedCount = getUserQualifiedRoles.length;
+      const totalRoles = gig.bandCategory?.length || 0;
+
+      return (
+        <Button
+          variant="default"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowRolesModal(true);
+          }}
+          className={clsx(
+            responsiveButtonClasses,
+            "gap-2 shadow-sm hover:shadow transition-all duration-200 font-medium",
+            qualifiedCount > 0
+              ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+              : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white",
+          )}
+        >
+          <Users className="w-4 h-4" />
+          <span>
+            View Roles ({qualifiedCount}/{totalRoles})
+          </span>
+        </Button>
+      );
+    }
+
+    // ===== DEFAULT ACTION BUTTONS (for other gig types) =====
     if (gig.isTaken) {
       return (
         <Button
@@ -1837,7 +1811,6 @@ const GigCard: React.FC<GigCardProps> = ({
           size="sm"
           disabled
           className={clsx(responsiveButtonClasses, "gap-2")}
-          style={getButtonStyles("secondary")}
         >
           <Lock className="w-4 h-4" />
           <span>Booked</span>
@@ -1852,7 +1825,6 @@ const GigCard: React.FC<GigCardProps> = ({
           size="sm"
           disabled
           className={clsx(responsiveButtonClasses, "gap-2")}
-          style={getButtonStyles("secondary")}
         >
           <AlertCircle className="w-4 h-4" />
           <span>{gigType === "full_band" ? "Bands Full" : "Fully Booked"}</span>
@@ -1860,7 +1832,7 @@ const GigCard: React.FC<GigCardProps> = ({
       );
     }
 
-    // Get the button config based on gig type
+    // ===== REGULAR GIG TYPES =====
     const getButtonConfig = () => {
       switch (gigType) {
         case "full_band":
@@ -1871,109 +1843,6 @@ const GigCard: React.FC<GigCardProps> = ({
             action: () => setShowBandJoinModal(true),
           };
 
-        case "client_band_creation":
-          // Check if user can apply to any role
-          const qualifiedRoles =
-            gig.bandCategory?.filter(
-              (role) =>
-                role.filledSlots < role.maxSlots &&
-                isUserQualifiedForRole(currentUser!, role),
-            ) || [];
-
-          if (qualifiedRoles.length === 0) {
-            const allRoles = gig.bandCategory || [];
-            const availableRoles = allRoles.filter(
-              (role) => role.filledSlots < role.maxSlots,
-            );
-
-            return {
-              label: "View Requirements",
-              variant: "outline" as const,
-              disabled: false,
-              icon: <AlertCircle className="w-4 h-4" />,
-              action: () => {
-                console.log("View Requirements button clicked");
-                console.log("Available roles:", availableRoles);
-                console.log("Current user:", currentUser);
-
-                // Show requirements modal - NO ALERT
-                toast.info(
-                  <div className="max-w-md p-4">
-                    <h3 className="font-bold text-lg mb-3 text-gray-900 dark:text-white">
-                      Role Requirements
-                    </h3>
-                    <div className="space-y-3">
-                      {availableRoles.length > 0 ? (
-                        availableRoles.map((role, idx) => (
-                          <div
-                            key={idx}
-                            className="p-3 border rounded-lg bg-white dark:bg-gray-800"
-                          >
-                            <p className="font-semibold text-blue-600 dark:text-blue-400">
-                              {role.role}
-                            </p>
-                            {role.requiredSkills &&
-                              role.requiredSkills.length > 0 && (
-                                <>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                                    Required Skills:
-                                  </p>
-                                  <ul className="list-disc pl-4 text-sm space-y-1 mt-1">
-                                    {role.requiredSkills.map((skill, i) => (
-                                      <li
-                                        key={i}
-                                        className="text-gray-700 dark:text-gray-300"
-                                      >
-                                        {skill}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </>
-                              )}
-                            <div className="mt-2 text-xs">
-                              <p className="text-gray-500">
-                                Available slots:{" "}
-                                {role.maxSlots - role.filledSlots} of{" "}
-                                {role.maxSlots}
-                              </p>
-                              <p className="mt-1 font-medium">
-                                Your instruments:{" "}
-                                <span className="text-green-600">
-                                  {Array.isArray(currentUser?.instrument)
-                                    ? currentUser.instrument.join(", ")
-                                    : currentUser?.instrument || "None"}
-                                </span>
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-gray-600">
-                          All roles are filled or no roles available.
-                        </p>
-                      )}
-                    </div>
-                  </div>,
-                  {
-                    duration: 10000,
-                    style: { maxWidth: "450px" },
-                  },
-                );
-              },
-              // ADD THIS PROP TO OVERRIDE THE DISABLED LOGIC
-              overrideDisabled: true, // Custom prop to skip interest window check
-            };
-          }
-
-          return {
-            label:
-              qualifiedRoles.length === 1
-                ? `Apply as ${qualifiedRoles[0].role}`
-                : "Apply for Role",
-            variant: "default" as const,
-            icon: <UserPlus className="w-4 h-4" />,
-            action: handleBandApplication,
-          };
         case "mc":
           return {
             label: "Apply as MC",
@@ -2010,11 +1879,11 @@ const GigCard: React.FC<GigCardProps> = ({
     };
 
     const buttonConfig = getButtonConfig();
-    if (!buttonConfig) {
-      return null;
-    }
+    if (!buttonConfig) return null;
 
-    const isViewRequirementsButton = buttonConfig.label === "View Requirements";
+    // Check interest window
+    const interestWindowStatus = getInterestWindowStatus(gig);
+    const isInterestWindowOpen = interestWindowStatus.status === "open";
 
     return (
       <Button
@@ -2024,20 +1893,15 @@ const GigCard: React.FC<GigCardProps> = ({
           e.stopPropagation();
           buttonConfig.action();
         }}
-        disabled={
-          loading || (!isInterestWindowOpen && !isViewRequirementsButton)
-        }
+        disabled={loading || !isInterestWindowOpen}
         className={clsx(
           responsiveButtonClasses,
           "gap-2 shadow-sm hover:shadow transition-all duration-200 font-medium",
           buttonConfig.variant === "default"
             ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
             : "border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-          !isInterestWindowOpen &&
-            !isViewRequirementsButton &&
-            "opacity-50 cursor-not-allowed",
+          !isInterestWindowOpen && "opacity-50 cursor-not-allowed",
         )}
-        style={getButtonStyles(buttonConfig.variant)}
       >
         {loading ? (
           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -2046,23 +1910,43 @@ const GigCard: React.FC<GigCardProps> = ({
         )}
         <span className="ml-2">{buttonConfig.label}</span>
 
-        {interestWindowStatus.hasWindow &&
-          !isInterestWindowOpen &&
-          !isViewRequirementsButton && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Lock className="w-3 h-3 ml-1" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Interest window is {interestWindowStatus.status}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+        {interestWindowStatus.hasWindow && !isInterestWindowOpen && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Lock className="w-3 h-3 ml-1" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Interest window is {interestWindowStatus.status}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </Button>
     );
   };
+  // Check interest window status
+  const interestWindowStatus = getInterestWindowStatus(gig);
+  const isInterestWindowOpen = interestWindowStatus.status === "open";
+  // Add this useEffect to debug
+  useEffect(() => {
+    if (currentUser && gig.bandCategory) {
+      console.log("=== DEBUG: Role Qualification ===");
+      console.log("User instruments:", currentUser.instrument);
+      console.log("User role type:", currentUser.roleType);
+      console.log("Available roles:", gig.bandCategory);
+
+      gig.bandCategory.forEach((role, index) => {
+        const isQualified = isUserQualifiedForRole(currentUser, role);
+        console.log(`Role ${role.role}:`, {
+          requiredSkills: role.requiredSkills,
+          isQualified,
+          slots: `${role.filledSlots}/${role.maxSlots}`,
+        });
+      });
+    }
+  }, [currentUser, gig.bandCategory]);
+
   const renderProgressBar = () => {
     if (compact) return null;
 
@@ -2199,7 +2083,39 @@ const GigCard: React.FC<GigCardProps> = ({
       });
     }
   };
+  // Add this function near your other debug functions
+  const debugInterestWindow = () => {
+    console.log("=== DEBUG Interest Window ===");
+    console.log("Gig:", {
+      id: gig._id,
+      startTime: gig.acceptInterestStartTime,
+      endTime: gig.acceptInterestEndTime,
+    });
 
+    const now = new Date();
+    console.log("Current time:", now.toISOString());
+
+    if (gig.acceptInterestStartTime) {
+      const start = new Date(gig.acceptInterestStartTime);
+      console.log("Start time parsed:", start.toISOString());
+      console.log("Is now >= start?", now >= start);
+    }
+
+    if (gig.acceptInterestEndTime) {
+      const end = new Date(gig.acceptInterestEndTime);
+      console.log("End time parsed:", end.toISOString());
+      console.log("Is now <= end?", now <= end);
+    }
+
+    const status = getInterestWindowStatus(gig);
+    console.log("Window status:", status);
+    return status;
+  };
+
+  // Call it in useEffect
+  useEffect(() => {
+    debugInterestWindow();
+  }, [gig]);
   // Call it in useEffect
   useEffect(() => {
     debugGigState();
@@ -2351,19 +2267,7 @@ const GigCard: React.FC<GigCardProps> = ({
 
           {/* Progress bar */}
           {renderProgressBar()}
-          {/* Inside the main return statement, add: */}
-          {isClientBand && gig.bandCategory && gig.bandCategory.length > 0 && (
-            <div
-              className="mt-4 pt-4 border-t"
-              style={{
-                borderTopColor: gig.fontColor
-                  ? `${gig.fontColor}20`
-                  : undefined,
-              }}
-            >
-              {renderBandRoleActions()}
-            </div>
-          )}
+
           {/* Location and time */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3 mb-3">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
@@ -3505,6 +3409,296 @@ const GigCard: React.FC<GigCardProps> = ({
                 </div>
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* View Roles Modal */}
+      <Dialog open={showRolesModal} onOpenChange={setShowRolesModal}>
+        <DialogContent
+          className={cn(
+            "sm:max-w-lg max-h-[80vh] overflow-y-auto",
+            colors.background,
+            colors.border,
+            "rounded-xl shadow-xl",
+          )}
+        >
+          <DialogHeader className={cn("pb-3", colors.border)}>
+            <DialogTitle
+              className={cn(
+                "text-xl font-bold flex items-center gap-2",
+                colors.text,
+              )}
+            >
+              <Users className="w-5 h-5" />
+              Available Roles
+            </DialogTitle>
+            <DialogDescription className={cn(colors.textMuted)}>
+              {gig.bandCategory?.length || 0} total roles • Select one to apply
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Summary stats */}
+            <div
+              className={cn(
+                "p-3 rounded-xl border",
+                isDarkMode
+                  ? "bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-800/30"
+                  : "bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200",
+              )}
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className={cn("text-xs font-medium", colors.textMuted)}>
+                    Your Skills
+                  </p>
+                  <p className={cn("text-lg font-bold", colors.text)}>
+                    {currentUser?.instrument || "No instrument set"}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn("text-xs font-medium", colors.textMuted)}>
+                    Matches
+                  </p>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {getUserQualifiedRoles.length} role
+                    {getUserQualifiedRoles.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* All Roles List */}
+            <div className="space-y-3">
+              {gig.bandCategory?.map((role, index) => {
+                const isQualified = isUserQualifiedForRole(currentUser!, role);
+                const isRoleFull = role.filledSlots >= role.maxSlots;
+                const hasApplied =
+                  currentUser?._id && role.applicants.includes(currentUser._id);
+                const isBooked =
+                  currentUser?._id &&
+                  role.bookedUsers.includes(currentUser._id);
+                const roleAction = handleBandAction(index);
+                const roleColors = getRoleColors(index);
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={cn(
+                      "p-4 rounded-xl border transition-all duration-200",
+                      colors.border,
+                      isQualified && !isRoleFull && !hasApplied && !isBooked
+                        ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                        : "cursor-not-allowed opacity-60",
+                      isQualified &&
+                        "border-green-200 bg-green-50/50 dark:bg-green-900/10",
+                      !isQualified && "border-gray-200 dark:border-gray-800",
+                    )}
+                    onClick={() => {
+                      if (
+                        isQualified &&
+                        !isRoleFull &&
+                        !hasApplied &&
+                        !isBooked
+                      ) {
+                        setShowRolesModal(false);
+                        if (roleAction?.action) {
+                          roleAction.action();
+                        }
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      {/* Role Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                              isQualified
+                                ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+                            )}
+                          >
+                            {getRoleIcon(role.role)}
+                          </div>
+                          <div className="min-w-0">
+                            <h4
+                              className={cn(
+                                "font-semibold truncate",
+                                colors.text,
+                              )}
+                            >
+                              {role.role}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {role.filledSlots}/{role.maxSlots} slots
+                              </Badge>
+                              {role.price && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs border-green-500/30 text-green-600 dark:text-green-400"
+                                >
+                                  ${role.price}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        {role.description && (
+                          <p
+                            className={cn(
+                              "text-sm mb-2 line-clamp-2",
+                              colors.textMuted,
+                            )}
+                          >
+                            {role.description}
+                          </p>
+                        )}
+
+                        {/* Required Skills */}
+                        {role.requiredSkills &&
+                          role.requiredSkills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {role.requiredSkills
+                                .slice(0, 3)
+                                .map((skill, i) => (
+                                  <Badge
+                                    key={i}
+                                    variant="outline"
+                                    className={cn(
+                                      "text-xs",
+                                      isQualified
+                                        ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+                                        : "bg-gray-100 border-gray-200 dark:bg-gray-800 dark:border-gray-700",
+                                    )}
+                                  >
+                                    {skill}
+                                    {isQualified && (
+                                      <CheckCircle className="w-3 h-3 ml-1 inline" />
+                                    )}
+                                  </Badge>
+                                ))}
+                              {role.requiredSkills.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{role.requiredSkills.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                      </div>
+
+                      {/* Status/Action */}
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        {isBooked ? (
+                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                            Booked ✓
+                          </Badge>
+                        ) : hasApplied ? (
+                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                            Applied ✓
+                          </Badge>
+                        ) : isRoleFull ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                          >
+                            Role Full
+                          </Badge>
+                        ) : isQualified ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                              ✓ Qualified
+                            </Badge>
+                            <Button
+                              size="sm"
+                              className={cn(
+                                "text-xs h-7 px-3",
+                                "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
+                                "text-white border-0 shadow-sm",
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowRolesModal(false);
+                                if (roleAction?.action) {
+                                  roleAction.action();
+                                }
+                              }}
+                            >
+                              Apply Now
+                            </Button>
+                          </div>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-gray-500 border-gray-300"
+                          >
+                            Not Qualified
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {(!gig.bandCategory || gig.bandCategory.length === 0) && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                    <AlertCircle className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h4 className={cn("font-medium mb-1", colors.text)}>
+                    No Roles Available
+                  </h4>
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    This gig doesn't have any defined roles yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter
+            className={cn(
+              "flex-col sm:flex-row gap-3 pt-4 mt-4",
+              colors.border,
+              "border-t",
+            )}
+          >
+            <div className="text-center sm:text-left flex-1">
+              <p className={cn("text-xs", colors.textMuted)}>
+                Need different skills? Update your profile.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowRolesModal(false)}
+                className={cn(
+                  "rounded-xl",
+                  colors.border,
+                  colors.hoverBg,
+                  colors.text,
+                )}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => router.push("/hub/profile/edit")}
+                variant="outline"
+                className={cn(
+                  "rounded-xl border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
+                )}
+              >
+                Update Profile
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

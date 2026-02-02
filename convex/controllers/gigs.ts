@@ -33,284 +33,48 @@ interface ProcessedBandRole {
 export const showInterestInGig = mutation({
   args: {
     gigId: v.id("gigs"),
-    userId: v.id("users"),
+    userId: v.id("users"), // This should be Convex ID
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { gigId, userId, notes } = args;
 
+    console.log("=== DEBUG Mutation ===");
+    console.log("Received userId:", userId);
+    console.log("Type of userId:", typeof userId);
+    console.log("userId starts with 'jn':", userId.startsWith("jn"));
+
     const gig = await ctx.db.get(gigId);
     const user = await ctx.db.get(userId);
+
+    console.log("Gig found:", !!gig);
+    console.log("User found:", !!user);
+    console.log("User from DB:", user);
+    console.log("Current interestedUsers:", gig?.interestedUsers);
+
     if (!gig) throw new Error("Gig not found");
-    if (!user) throw new Error("User not found");
-
-    // 🔴 ADD INSTRUMENT/ROLE VALIDATION FOR REGULAR GIGS
-    // Check if this is a specific talent type gig (not band creation or full band)
-    if (
-      gig.bussinesscat &&
-      gig.bussinesscat !== "other" &&
-      gig.bussinesscat !== "full"
-    ) {
-      const gigCategory = gig.bussinesscat.toLowerCase();
-      const userInstrument = user.instrument?.toLowerCase() || "";
-      const userRoleType = user.roleType?.toLowerCase() || "";
-
-      // For MC gigs - user must be an MC
-      if (gigCategory === "mc") {
-        if (userRoleType !== "mc" && userInstrument !== "mc") {
-          throw new Error(
-            "Only MCs can apply for MC gigs. Your role type is: " +
-              (userRoleType || userInstrument || "not specified"),
-          );
-        }
-      }
-      // For DJ gigs - user must be a DJ
-      else if (gigCategory === "dj") {
-        if (userRoleType !== "dj" && userInstrument !== "dj") {
-          throw new Error(
-            "Only DJs can apply for DJ gigs. Your role type is: " +
-              (userRoleType || userInstrument || "not specified"),
-          );
-        }
-      }
-      // For vocalist gigs - user must be a vocalist
-      else if (gigCategory === "vocalist") {
-        const isVocalist =
-          userRoleType === "vocalist" ||
-          userInstrument.includes("vocals") ||
-          userInstrument.includes("vocalist") ||
-          user.roleType?.toLowerCase().includes("vocal");
-
-        if (!isVocalist) {
-          throw new Error(
-            "Only vocalists can apply for vocalist gigs. Your role/instrument is: " +
-              (userRoleType || userInstrument || "not specified"),
-          );
-        }
-      }
-      // For specific instrument gigs (e.g., pianist, guitarist)
-      else {
-        // Check if gig category matches user's instrument or role type
-        const gigIsInstrument = [
-          "pianist",
-          "guitarist",
-          "drummer",
-          "bassist",
-          "saxophonist",
-          "violinist",
-          "trumpeter",
-          "keyboardist",
-          "percussionist",
-          "trombonist",
-          "flutist",
-          "cellist",
-          "clarinetist",
-          "harpist",
-          "banjoist",
-          "mandolinist",
-          "accordionist",
-        ].includes(gigCategory);
-
-        if (gigIsInstrument) {
-          const userCanApply =
-            userInstrument.includes(gigCategory) ||
-            userRoleType.includes(gigCategory) ||
-            user.instrument?.toLowerCase().includes(gigCategory);
-
-          if (!userCanApply) {
-            throw new Error(
-              `Only ${gigCategory}s can apply for this gig. Your instrument is: ${userInstrument || "not specified"}`,
-            );
-          }
-        }
-      }
-    }
-
-    // Prevent spam - check if user has shown too much interest recently
-    const recentInterests =
-      gig.bookingHistory?.filter(
-        (entry) =>
-          entry.userId === userId &&
-          Date.now() - entry.timestamp < 24 * 60 * 60 * 1000,
-      ) || [];
-
-    if (recentInterests.length >= 5) {
+    if (!user)
       throw new Error(
-        "Too many interests shown recently. Please try again later.",
+        "User not found - make sure you're passing Convex ID, not Clerk ID",
       );
-    }
+
+    // ... rest of your existing validation code ...
 
     // Check existing interest
     const currentInterestedUsers = gig.interestedUsers || [];
+    console.log("Checking if user is already interested...");
+    console.log("User ID to check:", userId);
+    console.log("Interested users array:", currentInterestedUsers);
+    console.log(
+      "Is user already interested?",
+      currentInterestedUsers.includes(userId),
+    );
+
     if (currentInterestedUsers.includes(userId)) {
       throw new Error("You've already shown interest in this gig");
     }
 
-    // Optional: Prevent low-quality users from showing interest
-    if (user?.trustScore && user?.trustScore < 0) {
-      throw new Error(
-        "Your account needs attention before showing interest in gigs",
-      );
-    }
-
-    // Check max slots - provide default value
-    const maxSlots = gig.maxSlots || 10;
-    if (currentInterestedUsers.length >= maxSlots) {
-      throw new Error(
-        `This gig has reached maximum capacity (${maxSlots} slots). ` +
-          `Currently ${currentInterestedUsers.length} interested musicians.`,
-      );
-    }
-
-    // Check interest window times - FIXED: Compare timestamps properly
-    const now = Date.now(); // Use timestamp for comparison
-
-    // FIX: Convert gig timestamps to numbers if they exist
-    const interestStartTime = gig.acceptInterestStartTime
-      ? typeof gig.acceptInterestStartTime === "string"
-        ? new Date(gig.acceptInterestStartTime).getTime()
-        : gig.acceptInterestStartTime
-      : null;
-
-    const interestEndTime = gig.acceptInterestEndTime
-      ? typeof gig.acceptInterestEndTime === "string"
-        ? new Date(gig.acceptInterestEndTime).getTime()
-        : gig.acceptInterestEndTime
-      : null;
-
-    if (interestStartTime && now < interestStartTime) {
-      throw new Error(
-        `Interest for this gig opens on ${new Date(interestStartTime).toLocaleDateString()}`,
-      );
-    }
-
-    // Check interest end time
-    if (interestEndTime && now > interestEndTime) {
-      throw new Error("The interest period for this gig has ended");
-    }
-
-    // Check if this is a band gig (should use applyForBandRole instead)
-    if (gig.isClientBand) {
-      throw new Error("This is a band gig - use applyForBandRole instead");
-    }
-
-    // Check if gig is active
-    if (!gig.isActive) {
-      throw new Error("This gig is no longer active");
-    }
-
-    // FINAL BOSS CHECK: isTaken means gig is completely booked
-    if (gig.isTaken) {
-      throw new Error("This gig has already been taken");
-    }
-
-    // For regular gigs, also check if bookedBy exists
-    if (gig.bookedBy) {
-      throw new Error("This gig has already been booked by another musician");
-    }
-
-    // Add to interestedUsers
-    const updatedInterestedUsers = [...currentInterestedUsers, userId];
-    const position = updatedInterestedUsers.length; // User's position in queue
-
-    // Use the enhanced booking entry format with "applied" status instead of "pending"
-    const bookingEntry = {
-      entryId: `${gigId}_${userId}_${now}`,
-      timestamp: now,
-      userId: userId,
-      userRole: user.roleType || "musician",
-
-      status: "applied" as const, // Changed from "pending" to "applied"
-      gigType: "regular" as const,
-      actionBy: userId,
-      actionFor: userId,
-      notes: notes || "",
-      reason: "Showed interest in gig",
-      metadata: {
-        userRole: user.roleType,
-        userName: user.firstname || user.username,
-        position: position,
-        totalSlots: maxSlots,
-        availableSlots: maxSlots - position,
-        // Include legacy fields in metadata for compatibility
-        legacyAction: "interest_shown",
-        legacyRole: user.roleType || "musician",
-      },
-      // Include price info if available
-      proposedPrice: gig.price,
-      currency: gig.currency,
-    };
-
-    // Check if adding this user will fill all slots
-    const willBeFull = currentInterestedUsers.length + 1 >= maxSlots;
-
-    await ctx.db.patch(gigId, {
-      interestedUsers: updatedInterestedUsers,
-      bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
-      updatedAt: now,
-      // Set isPending to true if gig is now full
-      isPending: willBeFull,
-    });
-
-    // Create notification for gig poster
-    const gigPoster = await ctx.db.get(gig.postedBy);
-    if (gigPoster) {
-      await createNotificationInternal(ctx, {
-        userDocumentId: gig.postedBy,
-        type: "gig_interest",
-        title: "🎵 New Interest in Your Gig!",
-        message: `${user.firstname || user.username} is interested in your gig "${gig.title}"`,
-        image: user.picture,
-        actionUrl: `/gigs/${gigId}`,
-        relatedUserDocumentId: userId,
-        metadata: {
-          gigId,
-          gigTitle: gig.title,
-          interestedUserId: userId,
-          userName: user.firstname || user.username,
-          userRole: user.roleType,
-          availableSlots: maxSlots - updatedInterestedUsers.length,
-          position: position,
-          notes: notes || "",
-        },
-      });
-    }
-
-    // Create confirmation notification for the user
-    await createNotificationInternal(ctx, {
-      userDocumentId: userId,
-      type: "interest_confirmation",
-      title: "✅ Interest Recorded!",
-      message: `Your interest in "${gig.title}" has been recorded. Position: #${position}`,
-      image: gig.logo,
-      actionUrl: `/gigs/${gigId}`,
-      relatedUserDocumentId: gig.postedBy,
-      metadata: {
-        gigId,
-        gigTitle: gig.title,
-        position: position,
-        totalSlots: maxSlots,
-        availableSlots: maxSlots - position,
-      },
-    });
-
-    try {
-      await ctx.db.patch(userId, {
-        totalInterests: (user.totalInterests || 0) + 1,
-        lastInterestAt: now,
-        updatedAt: now,
-      });
-    } catch (error) {
-      console.error("Failed to update user stats:", error);
-    }
-
-    return {
-      success: true,
-      availableSlots: maxSlots - updatedInterestedUsers.length,
-      position: position,
-      totalSlots: maxSlots,
-      totalInterested: updatedInterestedUsers.length,
-    };
+    // ... rest of your code ...
   },
 });
 
@@ -1959,45 +1723,6 @@ export const exploreGigs = query({
   },
 });
 
-// Query for gig stats
-export const getGigStats = query({
-  args: { userId: v.optional(v.id("users")) },
-  handler: async (ctx, args) => {
-    let gigsQuery = ctx.db.query("gigs");
-
-    if (args.userId) {
-      gigsQuery = gigsQuery.filter((q) =>
-        q.eq(q.field("postedBy"), args.userId),
-      );
-    } else {
-      gigsQuery = gigsQuery.filter((q) => q.eq(q.field("isActive"), true));
-    }
-
-    const gigs = await gigsQuery.collect();
-
-    const stats = {
-      totalGigs: gigs.length,
-      activeGigs: gigs.filter((g) => g.isActive).length,
-      takenGigs: gigs.filter((g) => g.isTaken).length,
-      pendingGigs: gigs.filter((g) => g.isPending).length,
-      totalEarnings: gigs
-        .filter((g) => g.paymentStatus === "paid")
-        .reduce((sum, gig) => sum + (gig.price || 0), 0),
-      averageRating:
-        gigs.length > 0
-          ? gigs.reduce((sum, gig) => sum + (gig.gigRating || 0), 0) /
-            gigs.length
-          : 0,
-      totalViews: gigs.reduce(
-        (sum, gig) => sum + ((gig?.viewCount && gig?.viewCount.length) || 0),
-        0,
-      ),
-    };
-
-    return stats;
-  },
-});
-
 export const getGigsWithUsers = query({
   args: {},
   handler: async (ctx, args) => {
@@ -2151,20 +1876,22 @@ export const getGigsByUser = query({
     return gigs.sort((a, b) => b.createdAt - a.createdAt);
   },
 });
-// Band role schema from your definitions
+// In your convex/controllers/gigs.ts file, update the bandRoleSchema definition
 const bandRoleSchema = v.object({
   role: v.string(),
-  maxSlots: v.number(),
-  filledSlots: v.optional(v.number()),
+  maxSlots: v.float64(), // Changed from v.number() to v.float64()
+  maxApplicants: v.optional(v.float64()),
+  currentApplicants: v.optional(v.float64()), // ADD THIS
   applicants: v.optional(v.array(v.id("users"))),
+  bookedPrice: v.optional(v.float64()),
   bookedUsers: v.optional(v.array(v.id("users"))),
-  requiredSkills: v.optional(v.array(v.string())),
-  description: v.optional(v.string()),
-  isLocked: v.optional(v.boolean()),
-  price: v.optional(v.number()),
   currency: v.optional(v.string()),
+  description: v.optional(v.string()),
+  filledSlots: v.optional(v.float64()),
+  isLocked: v.optional(v.boolean()),
   negotiable: v.optional(v.boolean()),
-  bookedPrice: v.optional(v.number()),
+  price: v.optional(v.float64()),
+  requiredSkills: v.optional(v.array(v.string())),
 });
 
 // Helper function to get current user with clerkId
@@ -2220,26 +1947,27 @@ function isGigDocument(doc: any): doc is GigDoc {
     "description" in doc
   );
 }
-// Format band roles for update
-function formatBandRolesForUpdate(bandRoles: any[]) {
-  return bandRoles.map((role) => ({
-    role: role.role,
-    maxSlots: role.maxSlots || 1,
-    maxApplicants: role.maxApplicants || 20,
-    currentApplicants: role.currentApplicants || 0,
-    filledSlots: role.filledSlots || 0,
-    applicants: role.applicants || [],
-    bookedUsers: role.bookedUsers || [],
-    requiredSkills: role.requiredSkills || [],
-    description: role.description || "",
-    isLocked: role.isLocked || false,
-    price: role.price !== undefined ? role.price : undefined,
-    currency: role.currency || "KES",
-    negotiable: role.negotiable !== undefined ? role.negotiable : true,
-    bookedPrice: role.bookedPrice || undefined,
-  }));
-}
 
+const formatBandRolesForUpdate = (bandRoles: any[]) => {
+  return bandRoles.map((role) => {
+    // Remove currentApplicants if it exists
+    const { currentApplicants, ...rest } = role;
+
+    // Ensure applicants array exists
+    const formattedRole = {
+      ...rest,
+      applicants: rest.applicants || [],
+      bookedUsers: rest.bookedUsers || [],
+      filledSlots: rest.filledSlots || 0,
+      maxApplicants: rest.maxApplicants || 20,
+      isLocked: rest.isLocked || false,
+      negotiable: rest.negotiable ?? true,
+      currency: rest.currency || "KES",
+    };
+
+    return formattedRole;
+  });
+};
 export const updateGig = mutation({
   args: {
     clerkId: v.string(),
@@ -2311,11 +2039,47 @@ export const updateGig = mutation({
   handler: async (ctx, args) => {
     const { gigId, bandCategory, ...otherArgs } = args;
 
+    // DEBUG: Log incoming arguments
+    console.log("=== DEBUG: updateGig Mutation ===");
+    console.log("Gig ID:", gigId);
+    console.log("Interest window data:", {
+      acceptInterestStartTime: args.acceptInterestStartTime,
+      acceptInterestEndTime: args.acceptInterestEndTime,
+      startDate: args.acceptInterestStartTime
+        ? new Date(args.acceptInterestStartTime).toLocaleString()
+        : null,
+      endDate: args.acceptInterestEndTime
+        ? new Date(args.acceptInterestEndTime).toLocaleString()
+        : null,
+    });
+    console.log("Band category data:", bandCategory);
+
     // Get current user with clerkId
     const { dbUser } = await getCurrentUser(ctx, args.clerkId);
 
+    if (!dbUser) {
+      throw new Error("User not found");
+    }
+
     // Validate ownership
     const existingGig = await validateGigOwnership(ctx, gigId, dbUser._id);
+
+    // DEBUG: Log existing gig data
+    console.log("=== Existing Gig Data ===");
+    console.log("Existing interest window:", {
+      start: existingGig.acceptInterestStartTime,
+      end: existingGig.acceptInterestEndTime,
+      startDate: existingGig.acceptInterestStartTime
+        ? new Date(existingGig.acceptInterestStartTime).toLocaleString()
+        : null,
+      endDate: existingGig.acceptInterestEndTime
+        ? new Date(existingGig.acceptInterestEndTime).toLocaleString()
+        : null,
+    });
+    console.log(
+      "Current interested users:",
+      existingGig.interestedUsers?.length || 0,
+    );
 
     // Prepare update payload
     const payload: any = {
@@ -2326,27 +2090,67 @@ export const updateGig = mutation({
     Object.keys(otherArgs).forEach((key) => {
       const value = otherArgs[key as keyof typeof otherArgs];
       if (value !== undefined && key !== "clerkId") {
-        // Ensure clerkId is excluded
         payload[key] = value;
       }
     });
 
-    // Handle bandCategory update specially
+    // Handle band category updates
     if (bandCategory !== undefined) {
-      if (bandCategory === null || bandCategory.length === 0) {
-        // Clear bandCategory if empty array or null
-        payload.bandCategory = [];
-      } else {
-        // Format band roles properly
-        payload.bandCategory = formatBandRolesForUpdate(bandCategory);
+      console.log("=== Band Category Update ===");
+      console.log("New band roles:", bandCategory);
+
+      // Validate band roles don't have duplicate entries
+      const roleNames = bandCategory.map((role) => role.role);
+      const uniqueRoleNames = [...new Set(roleNames)];
+      if (roleNames.length !== uniqueRoleNames.length) {
+        throw new Error("Duplicate role names are not allowed in band setup");
       }
 
-      // Also update isClientBand based on bandCategory
-      if (bandCategory.length > 0) {
-        payload.isClientBand = true;
-      } else {
-        payload.isClientBand = false;
-      }
+      // For each band role, ensure we preserve existing applicants
+      const updatedBandCategory = bandCategory.map((newRole, index) => {
+        // Find existing role with the same index or same role name
+        const existingRole =
+          existingGig.bandCategory?.[index] ||
+          existingGig.bandCategory?.find((r) => r.role === newRole.role);
+
+        if (existingRole) {
+          console.log(`Role ${newRole.role} - preserving existing data:`);
+          console.log(
+            "Existing applicants:",
+            existingRole.applicants?.length || 0,
+          );
+          console.log(
+            "Existing booked users:",
+            existingRole.bookedUsers?.length || 0,
+          );
+
+          // Preserve existing applicants and booked users
+          return {
+            ...newRole,
+            currentApplicants: existingRole.currentApplicants || 0,
+            applicants: existingRole.applicants || [],
+            bookedUsers: existingRole.bookedUsers || [],
+            filledSlots: existingRole.filledSlots || 0,
+            // Preserve booked price if not being updated
+            bookedPrice:
+              newRole.bookedPrice !== undefined
+                ? newRole.bookedPrice
+                : existingRole.bookedPrice,
+          };
+        }
+
+        // New role - initialize arrays
+        return {
+          ...newRole,
+          currentApplicants: 0,
+          applicants: [],
+          bookedUsers: [],
+          filledSlots: 0,
+        };
+      });
+
+      payload.bandCategory = updatedBandCategory;
+      console.log("Final band category to save:", updatedBandCategory);
     }
 
     // If time is being updated, ensure it has proper structure
@@ -2359,8 +2163,31 @@ export const updateGig = mutation({
       };
     }
 
+    // DEBUG: Log final payload
+    console.log("=== Final Update Payload ===");
+    console.log("Payload to update:", JSON.stringify(payload, null, 2));
+
     // Update the gig
     await ctx.db.patch(gigId, payload);
+
+    // DEBUG: Fetch and log the updated gig
+    const updatedGig = await ctx.db.get(gigId);
+    console.log("=== After Update ===");
+    console.log("Updated interest window:", {
+      start: updatedGig?.acceptInterestStartTime,
+      end: updatedGig?.acceptInterestEndTime,
+      startDate: updatedGig?.acceptInterestStartTime
+        ? new Date(updatedGig.acceptInterestStartTime).toLocaleString()
+        : null,
+      endDate: updatedGig?.acceptInterestEndTime
+        ? new Date(updatedGig.acceptInterestEndTime).toLocaleString()
+        : null,
+    });
+    console.log("Updated band category:", updatedGig?.bandCategory);
+    console.log(
+      "Total interested users:",
+      updatedGig?.interestedUsers?.length || 0,
+    );
 
     // Log the update in booking history
     const historyEntry = {
@@ -2374,9 +2201,12 @@ export const updateGig = mutation({
       notes: "Gig details updated",
       metadata: {
         updatedFields: Object.keys(payload).filter(
-          (key) => key !== "updatedAt",
+          (key) => key !== "updatedAt" && key !== "bookingHistory",
         ),
         bandRolesUpdated: bandCategory ? bandCategory.length : 0,
+        interestWindowUpdated: !!(
+          args.acceptInterestStartTime || args.acceptInterestEndTime
+        ),
       },
     };
 
@@ -2393,6 +2223,83 @@ export const updateGig = mutation({
       gigId,
       updatedAt: payload.updatedAt,
       bandRolesUpdated: bandCategory ? bandCategory.length : 0,
+      interestWindowUpdated: !!(
+        args.acceptInterestStartTime || args.acceptInterestEndTime
+      ),
+      // Return current stats for debugging
+      stats: {
+        interestedUsers: updatedGig?.interestedUsers?.length || 0,
+
+        bandRoles: updatedGig?.bandCategory?.length || 0,
+        totalApplicants:
+          updatedGig?.bandCategory?.reduce(
+            (sum, role) => sum + (role.applicants?.length || 0),
+            0,
+          ) || 0,
+      },
+    };
+  },
+});
+
+export const getGigStats = query({
+  args: {
+    gigId: v.id("gigs"),
+    userId: v.string(), // Keep this if you need clerkId
+  },
+  handler: async (ctx, args) => {
+    // If you need to get user from userId instead of clerkId, change the args
+    const { userId } = args; // Change this line based on what you're passing
+    const gig = await ctx.db.get(args.gigId);
+
+    if (!gig) {
+      throw new Error("Gig not found");
+    }
+
+    // Get user by userId directly (if that's what you have)
+    const user = await ctx.db.get(userId as Id<"users">);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Check ownership
+    const isOwner = gig.postedBy === user._id;
+    if (!isOwner) {
+      throw new Error("Unauthorized");
+    }
+
+    return {
+      basicStats: {
+        interestedUsers: gig.interestedUsers?.length || 0,
+
+        totalViews: gig.viewCount || 0,
+      },
+      bandStats:
+        gig.bandCategory?.map((role) => ({
+          role: role.role,
+          maxSlots: role.maxSlots,
+          filledSlots: role.filledSlots || 0,
+          currentApplicants: role.currentApplicants || 0,
+          applicants: role.applicants?.length || 0,
+          bookedUsers: role.bookedUsers?.length || 0,
+          isLocked: role.isLocked || false,
+        })) || [],
+      interestWindow: {
+        acceptInterestStartTime: gig.acceptInterestStartTime,
+        acceptInterestEndTime: gig.acceptInterestEndTime,
+        isActive:
+          !gig.acceptInterestStartTime || !gig.acceptInterestEndTime
+            ? true // If no window set, it's always active
+            : Date.now() >= gig.acceptInterestStartTime &&
+              Date.now() <= gig.acceptInterestEndTime,
+        currentStatus:
+          !gig.acceptInterestStartTime || !gig.acceptInterestEndTime
+            ? "always open"
+            : Date.now() < gig.acceptInterestStartTime
+              ? `opens ${new Date(gig.acceptInterestStartTime).toLocaleString()}`
+              : Date.now() > gig.acceptInterestEndTime
+                ? `closed since ${new Date(gig.acceptInterestEndTime).toLocaleString()}`
+                : "open now",
+      },
     };
   },
 });

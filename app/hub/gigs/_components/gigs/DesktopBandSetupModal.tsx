@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +75,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";
+import { getBackendValue, getDisplayName } from "../../utils";
 // Add these imports if not already present
 
 interface DesktopBandSetupModalProps {
@@ -204,6 +211,175 @@ const commonSkills = [
 
 const maxApplicantsPresets = [10, 15, 20, 30, 50, 75, 100, 150, 200];
 
+const SlimRoleCard = React.memo(
+  ({
+    role,
+    onRoleUpdate,
+    onRemoveRole,
+  }: {
+    role: BandSetupRole;
+    onRoleUpdate: (role: BandSetupRole) => void;
+    onRemoveRole: (roleName: string) => void;
+  }) => {
+    const { isDarkMode } = useThemeColors();
+    const roleInfo = commonRoles.find((r) => r.value === role.role);
+    const Icon = roleInfo?.icon || Music;
+
+    const handleUpdate = (field: keyof BandSetupRole, value: any) => {
+      onRoleUpdate({ ...role, [field]: value });
+    };
+
+    return (
+      <div
+        className={cn(
+          "group relative flex items-center gap-6 p-4 rounded-2xl border transition-all duration-300",
+          isDarkMode
+            ? "bg-zinc-900/40 border-zinc-800/50 hover:border-orange-500/30 hover:bg-zinc-900/60"
+            : "bg-white border-zinc-200 hover:border-orange-500/30 hover:shadow-xl shadow-zinc-200/50",
+        )}
+      >
+        {/* 1. Identity */}
+        <div className="flex items-center gap-4 min-w-[160px]">
+          <div
+            className={cn(
+              "p-3 rounded-xl transition-colors",
+              isDarkMode
+                ? "bg-zinc-800 text-orange-400"
+                : "bg-orange-50 text-orange-600",
+            )}
+          >
+            <Icon className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-black text-sm uppercase tracking-tight leading-none mb-1">
+              {role.role}
+            </h4>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+              Active Slot
+            </p>
+          </div>
+        </div>
+
+        {/* 2. Positions & Applicants */}
+        <div className="flex items-center gap-6 px-6 border-x border-zinc-100 dark:border-zinc-800">
+          <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase text-zinc-400 tracking-tighter">
+              Qty
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() =>
+                  handleUpdate("maxSlots", Math.max(1, role.maxSlots - 1))
+                }
+                className="p-1 hover:text-orange-500"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="text-sm font-black min-w-[12px] text-center">
+                {role.maxSlots}
+              </span>
+              <button
+                onClick={() => handleUpdate("maxSlots", role.maxSlots + 1)}
+                className="p-1 hover:text-orange-500"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase text-zinc-400 tracking-tighter">
+              Max Apps
+            </p>
+            <Select
+              value={role.maxApplicants?.toString()}
+              onValueChange={(v) => handleUpdate("maxApplicants", parseInt(v))}
+            >
+              <SelectTrigger className="h-7 w-16 text-xs font-bold bg-zinc-100 dark:bg-zinc-800 border-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        {/* 3. PRICING (THE FOCUS) */}
+        <div className="flex-1 space-y-1.5">
+          <p className="text-[9px] font-black uppercase text-zinc-400 tracking-tighter">
+            Rate per head
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 group/input">
+              <span
+                className={cn(
+                  "absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold transition-colors",
+                  isDarkMode
+                    ? "text-zinc-500 group-focus-within/input:text-orange-500"
+                    : "text-zinc-400 group-focus-within/input:text-orange-600",
+                )}
+              >
+                {role.currency}
+              </span>
+              <Input
+                type="number"
+                value={role.price}
+                onChange={(e) => handleUpdate("price", e.target.value)}
+                className={cn(
+                  "pl-10 h-10 bg-zinc-100/50 dark:bg-zinc-800/50 border-none text-sm font-black transition-all",
+                  "focus-visible:ring-1 focus-visible:ring-orange-500/50 focus-visible:bg-white dark:focus-visible:bg-zinc-800",
+                )}
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* CUSTOM STYLED NEGO SWITCH */}
+            <div
+              className={cn(
+                "flex flex-col items-center justify-center px-3 py-1 rounded-xl transition-all border",
+                role.negotiable
+                  ? "bg-orange-500/5 border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]"
+                  : "bg-transparent border-zinc-200 dark:border-zinc-800 opacity-60",
+              )}
+            >
+              <span
+                className={cn(
+                  "text-[8px] font-black uppercase tracking-widest mb-1 transition-colors",
+                  role.negotiable ? "text-orange-500" : "text-zinc-500",
+                )}
+              >
+                {role.negotiable ? "Open" : "Fixed"}
+              </span>
+              <Switch
+                checked={role.negotiable}
+                onCheckedChange={(v) => handleUpdate("negotiable", v)}
+                className={cn(
+                  "scale-75 transition-all",
+                  // The "Track" styling
+                  "data-[state=checked]:bg-orange-500 data-[state=unchecked]:bg-zinc-300 dark:data-[state=unchecked]:bg-zinc-700",
+                  // Add a glow when active
+                  "role.negotiable && shadow-[0_0_10px_rgba(249,115,22,0.4)]",
+                )}
+              />
+            </div>
+          </div>
+        </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemoveRole(role.role)}
+          className="opacity-0 group-hover:opacity-100 rounded-full hover:bg-red-50 hover:text-red-500"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  },
+);
+SlimRoleCard.displayName = "SlimRoleCard";
+
 const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
   isOpen,
   onClose,
@@ -212,21 +388,23 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
 }) => {
   const { colors, isDarkMode } = useThemeColors();
   const [selectedRoles, setSelectedRoles] = useState<BandSetupRole[]>(
-    initialRoles.map((role) => ({
-      role: role.role,
-      maxSlots: role.maxSlots,
-      maxApplicants: role.maxApplicants || 20,
-      currentApplicants: role.currentApplicants || 0,
-      requiredSkills: role.requiredSkills || [],
-      description: role.description || "",
-      price: role.price?.toString() || "",
-      currency: role.currency || "KES",
-      negotiable: role.negotiable ?? true,
-      isLocked: role.isLocked || false,
-      filledSlots: role.filledSlots || 0,
-      // Fix: Ensure bookedPrice is properly handled
-      bookedPrice: role.bookedPrice ? role.bookedPrice.toString() : "",
-    })),
+    initialRoles.map((role) => {
+      // Convert backend value to display name
+      const displayName = getDisplayName(role.role);
+
+      return {
+        role: displayName, // Store as display name
+        maxSlots: role.maxSlots,
+        maxApplicants: role.maxApplicants || 20,
+        requiredSkills: role.requiredSkills || [],
+        description: role.description || "",
+        price: role.price?.toString() || "",
+        currency: role.currency || "KES",
+        negotiable: role.negotiable ?? true,
+        isLocked: role.isLocked || false,
+        filledSlots: role.filledSlots || 0,
+      };
+    }),
   );
   const [customRole, setCustomRole] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -351,15 +529,11 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
   const prepareForSubmission = useCallback(
     (role: BandSetupRole): BandRoleInput => {
       const price = role.price ? parseFloat(role.price) : undefined;
-      const bookedPrice = role.bookedPrice
-        ? parseFloat(role.bookedPrice)
-        : undefined;
 
-      return {
-        role: role.role,
+      const formattedRole: BandRoleInput = {
+        role: getBackendValue(role.role), // This converts display name to backend value
         maxSlots: role.maxSlots,
         maxApplicants: role.maxApplicants || 20,
-        currentApplicants: role.currentApplicants || 0,
         requiredSkills:
           role.requiredSkills.length > 0 ? role.requiredSkills : undefined,
         description: role.description || undefined,
@@ -368,12 +542,16 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
         negotiable: role.negotiable,
         isLocked: role.isLocked || false,
         filledSlots: role.filledSlots || 0,
-        bookedPrice:
-          bookedPrice && !isNaN(bookedPrice) ? bookedPrice : undefined,
-        // These are optional - you might want to handle them if needed
-        applicants: undefined,
-        bookedUsers: undefined,
       };
+
+      // Remove undefined values
+      Object.keys(formattedRole).forEach((key) => {
+        if (formattedRole[key as keyof BandRoleInput] === undefined) {
+          delete formattedRole[key as keyof BandRoleInput];
+        }
+      });
+
+      return formattedRole;
     },
     [],
   );
@@ -785,337 +963,52 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
         </CardContent>
       </Card>
     );
-  };
-  // Update the SlimRoleCard component definition
-  // Update the SlimRoleCard component with useRef
-  const SlimRoleCard = ({
-    role,
-    onRoleUpdate,
-  }: {
-    role: BandSetupRole;
-    onRoleUpdate: (role: BandSetupRole) => void;
-  }) => {
-    const maxApplicants = role.maxApplicants || 20;
-    const roleInfo = commonRoles.find((r) => r.value === role.role);
-    const Icon = roleInfo?.icon || Music;
+  }; // Add expanded state for each role in the parent component
+  const [expandedRoles, setExpandedRoles] = useState<Record<string, boolean>>(
+    {},
+  );
 
-    // Use useRef to persist expanded state across re-renders
-    const expandedStateRef = useRef<Record<string, boolean>>({});
+  // Add this function to handle expanding/collapsing
+  const toggleExpanded = useCallback((roleName: string) => {
+    setExpandedRoles((prev) => ({
+      ...prev,
+      [roleName]: !prev[roleName],
+    }));
+  }, []);
 
-    // Initialize from ref, not useState
-    const [isExpanded, setIsExpanded] = useState(
-      () => expandedStateRef.current[role.role] || false,
-    );
+  // Add these refs at the top of DesktopBandSetupModal component
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastCardRef = useRef<HTMLDivElement>(null);
 
-    // Handle toggle and persist to ref
-    const handleToggle = () => {
-      const newState = !isExpanded;
-      expandedStateRef.current[role.role] = newState;
-      setIsExpanded(newState);
-    };
+  // Add this useEffect to scroll to bottom when roles change
+  useEffect(() => {
+    if (
+      selectedRoles.length > 0 &&
+      scrollContainerRef.current &&
+      lastCardRef.current
+    ) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        if (scrollContainerRef.current && lastCardRef.current) {
+          // Scroll to the last card
+          lastCardRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          });
+        }
+      }, 100);
+    }
+  }, [selectedRoles.length]); // Scroll when number of roles changes
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-    const handleUpdate = (updates: Partial<BandSetupRole>) => {
-      onRoleUpdate({ ...role, ...updates });
-    };
-
-    return (
-      <Card
-        className={cn(
-          "overflow-hidden transition-all hover:shadow-md",
-          colors.border,
-          isExpanded && "ring-2 ring-orange-500/30",
-        )}
-      >
-        <CardContent className="p-4">
-          {/* Top Row: Basic Info with Configure Button */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-lg", colors.backgroundMuted)}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className={cn("font-bold", colors.text)}>{role.role}</h4>
-                <div className="flex items-center gap-3 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {role.maxSlots} position{role.maxSlots > 1 ? "s" : ""}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <UserPlus className="w-3 h-3" />
-                    {maxApplicants} max apps
-                  </span>
-                  {role.price && parseFloat(role.price) > 0 && (
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="w-3 h-3" />
-                      {role.currency} {parseFloat(role.price).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggle} // Use handleToggle instead of inline
-                className={cn(
-                  "h-8 px-3 gap-2",
-                  isExpanded
-                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200",
-                )}
-              >
-                {isExpanded ? (
-                  <>
-                    <EyeOff className="w-4 h-4" />
-                    Hide Details
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    Configure
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeRole(role.role)}
-                className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Collapsible Configuration Area */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="pt-3 border-t space-y-3">
-                  {/* Quick Adjustments - Row */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {/* Positions */}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500">
-                        Positions
-                      </Label>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleUpdate({
-                              maxSlots: Math.max(1, role.maxSlots - 1),
-                            })
-                          }
-                          className="h-8 w-8 p-0"
-                          disabled={role.maxSlots <= 1}
-                        >
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                        <div className="flex-1 text-center">
-                          <div className="text-lg font-bold text-orange-600">
-                            {role.maxSlots}
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleUpdate({ maxSlots: role.maxSlots + 1 })
-                          }
-                          className="h-8 w-8 p-0"
-                          disabled={role.maxSlots >= 10}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Max Applicants */}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500">
-                        Max Apps
-                      </Label>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleUpdate({
-                              maxApplicants: Math.max(1, maxApplicants - 5),
-                            })
-                          }
-                          className="h-8 w-8 p-0"
-                          disabled={maxApplicants <= 5}
-                        >
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                        <div className="flex-1 text-center">
-                          <div className="text-lg font-bold text-blue-600">
-                            {maxApplicants}
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleUpdate({ maxApplicants: maxApplicants + 5 })
-                          }
-                          className="h-8 w-8 p-0"
-                          disabled={maxApplicants >= 200}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Price */}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500">
-                        Price
-                      </Label>
-                      <div className="flex gap-1">
-                        <Select
-                          value={role.currency || "KES"}
-                          onValueChange={(value) =>
-                            handleUpdate({ currency: value })
-                          }
-                        >
-                          <SelectTrigger className="h-8 w-12 text-xs p-0 px-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="KES" className="text-xs">
-                              KES
-                            </SelectItem>
-                            <SelectItem value="USD" className="text-xs">
-                              USD
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={role.price || ""}
-                          onChange={(e) =>
-                            handleUpdate({ price: e.target.value })
-                          }
-                          className="h-8 text-sm"
-                          min="0"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Skills Row */}
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500 mb-1 block">
-                      Skills
-                    </Label>
-                    <div className="flex flex-wrap gap-1">
-                      {role.requiredSkills.slice(0, 3).map((skill) => (
-                        <Badge
-                          key={skill}
-                          variant="outline"
-                          className="text-xs px-2 py-0 h-5 cursor-pointer hover:bg-gray-100"
-                          onClick={() => {
-                            const hasSkill =
-                              role.requiredSkills.includes(skill);
-                            handleUpdate({
-                              requiredSkills: hasSkill
-                                ? role.requiredSkills.filter((s) => s !== skill)
-                                : [...role.requiredSkills, skill],
-                            });
-                          }}
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                      {role.requiredSkills.length > 3 && (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs px-2 py-0 h-5"
-                        >
-                          +{role.requiredSkills.length - 3}
-                        </Badge>
-                      )}
-                      <Input
-                        placeholder="Add skill"
-                        className="h-6 text-xs w-24"
-                        onKeyDown={(e) => {
-                          if (
-                            e.key === "Enter" &&
-                            e.currentTarget.value.trim()
-                          ) {
-                            const skill = e.currentTarget.value.trim();
-                            if (!role.requiredSkills.includes(skill)) {
-                              handleUpdate({
-                                requiredSkills: [...role.requiredSkills, skill],
-                              });
-                            }
-                            e.currentTarget.value = "";
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Description & Negotiable */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500 mb-1 block">
-                        Description
-                      </Label>
-                      <Input
-                        placeholder="Brief description..."
-                        value={role.description || ""}
-                        onChange={(e) =>
-                          handleUpdate({ description: e.target.value })
-                        }
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center justify-end">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={role.negotiable ?? true}
-                          onCheckedChange={(checked) =>
-                            handleUpdate({ negotiable: checked })
-                          }
-                          className="h-4 w-8"
-                        />
-                        <Label className="text-xs text-gray-500">
-                          Negotiable
-                        </Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Warning if max applicants too low */}
-                  {maxApplicants < role.maxSlots && (
-                    <div className="flex items-center gap-2 text-xs text-red-500">
-                      <AlertCircle className="w-3 h-3" />
-                      Max applicants should be at least {role.maxSlots * 3}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-    );
-  };
-
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [selectedRoles.length]);
   const EmptyState = () => (
     <div className="h-full flex flex-col items-center justify-center p-8 text-center">
       {/* Sleek animated icon */}
@@ -1356,419 +1249,273 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          "max-w-7xl p-0 overflow-hidden",
-          colors.background,
-          "h-[85vh]",
+          "max-w-7xl p-0 overflow-hidden border-none shadow-2xl",
+          isDarkMode ? "bg-[#09090b] text-zinc-100" : "bg-white text-zinc-900",
+          "h-[85vh] flex flex-col",
         )}
       >
-        <div className="flex h-full relative">
-          {/* Left Panel - Role Selection with Absolute Positioning */}
+        <div className="flex flex-1 min-h-0">
+          {/* ================= LEFT PANEL: QUIET SELECTION ================= */}
           <div
             className={cn(
-              "w-1/3 border-r flex flex-col relative",
-              colors.border,
-              isDarkMode ? "bg-gray-900" : "bg-gray-50",
+              "w-[30%] flex flex-col border-r transition-all duration-300",
+              isDarkMode
+                ? "border-zinc-800/50 bg-[#09090b]"
+                : "border-zinc-100 bg-zinc-50/30",
             )}
           >
-            {/* Fixed Header - Absolute positioned */}
-            <div
-              className={cn(
-                "absolute top-0 left-0 right-0 p-6 border-b z-10",
-                colors.border,
-                isDarkMode ? "bg-gray-900" : "bg-gray-50",
-              )}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <DialogTitle
-                    className={cn("text-2xl font-bold", colors.text)}
-                  >
-                    Select Roles
+            {/* Subtle Header */}
+            <div className="p-6 pb-2 shrink-0">
+              <div className="flex items-center justify-between mb-6">
+                <div className="space-y-0.5">
+                  <DialogTitle className="text-lg font-bold tracking-tight">
+                    Roles
                   </DialogTitle>
-                  <p className={cn("text-sm", colors.textMuted)}>
-                    Choose the band members you need
+                  <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+                    {selectedRoles.length} selected
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
+                  className="h-8 w-8 rounded-full opacity-50 hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Quiet Search */}
+              <div className="relative group mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                <Input
+                  placeholder="Search instruments..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
-                    "rounded-full",
-                    colors.hoverBg,
-                    colors.textMuted,
+                    "pl-9 h-10 text-sm bg-transparent border-zinc-200 dark:border-zinc-800 rounded-xl",
+                    "focus-visible:ring-1 focus-visible:ring-orange-500/50 focus-visible:border-orange-500/50 transition-all",
                   )}
-                >
-                  <X className="w-5 h-5" />
-                </Button>
+                />
               </div>
 
-              <div className="flex items-center gap-2 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="Search roles..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className={cn("pl-10", colors.background)}
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() =>
-                    setViewMode(viewMode === "grid" ? "list" : "grid")
-                  }
-                  className={cn(colors.border, colors.hoverBg)}
-                >
-                  {viewMode === "grid" ? (
-                    <List className="w-4 h-4" />
-                  ) : (
-                    <Grid className="w-4 h-4" />
-                  )}
-                </Button>
+              {/* Category Pills - More compact */}
+              <div className="flex gap-1.5 overflow-x-auto pb-4 no-scrollbar">
+                {roleCategories.map((category) => (
+                  <button
+                    key={category.value}
+                    onClick={() => setSelectedCategory(category.value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border",
+                      selectedCategory === category.value
+                        ? "bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent"
+                        : "bg-transparent text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400",
+                    )}
+                  >
+                    {category.label}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {roleCategories.map((category) => {
-                  const Icon = category.icon;
-                  return (
-                    <button
-                      key={category.value}
-                      onClick={() => setSelectedCategory(category.value)}
+            {/* Role List - Refined hover states */}
+            <div className="flex-1 overflow-y-auto px-4 space-y-1.5 no-scrollbar">
+              {filteredRoles.map((role) => {
+                const isSelected = selectedRoles.some(
+                  (r) => r.role === role.value,
+                );
+                const Icon = role.icon;
+                return (
+                  <button
+                    key={role.value}
+                    onClick={() => toggleRole(role.value)}
+                    className={cn(
+                      "w-full p-3 rounded-xl flex items-center gap-3 transition-all relative group",
+                      isSelected
+                        ? "bg-orange-500/5 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500/20"
+                        : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900",
+                    )}
+                  >
+                    <div
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap transition-all shrink-0",
-                        selectedCategory === category.value
-                          ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                          : cn(colors.border, colors.textSecondary),
+                        "p-2 rounded-lg transition-all",
+                        isSelected
+                          ? "bg-orange-500 text-white"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100",
                       )}
                     >
                       <Icon className="w-4 h-4" />
-                      <span className="text-sm">{category.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                    </div>
+                    <span className="font-semibold text-sm">{role.value}</span>
+                    {isSelected && <Check className="ml-auto w-3.5 h-3.5" />}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Fixed Footer - Absolute positioned */}
-            <div
-              className={cn(
-                "absolute bottom-0 left-0 right-0 p-6 border-t z-10",
-                colors.border,
-                isDarkMode ? "bg-gray-900" : "bg-gray-50",
-              )}
-            >
-              <Button
-                onClick={() => setActiveTab("configure")}
-                disabled={selectedRoles.length === 0}
-                className="w-full gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500"
-              >
-                <ChevronRight className="w-5 h-5" />
-                Configure {selectedRoles.length} Role
-                {selectedRoles.length !== 1 ? "s" : ""}
-              </Button>
-            </div>
-
-            {/* SCROLLABLE CONTENT AREA - Takes remaining space */}
-            <div className="absolute top-[calc(200px)] bottom-[88px] left-0 right-0 overflow-y-auto">
-              <div className="p-6">
-                {viewMode === "grid" ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {filteredRoles.map((role) => {
-                      const isSelected = selectedRoles.some(
-                        (r) => r.role === role.value,
-                      );
-                      const Icon = role.icon;
-
-                      return (
-                        <button
-                          key={role.value}
-                          onClick={() => toggleRole(role.value)}
-                          className={cn(
-                            "relative p-4 rounded-xl border flex flex-col items-center gap-3 transition-all",
-                            colors.border,
-                            isSelected
-                              ? "bg-gradient-to-br from-orange-500/10 to-red-500/10 ring-2 ring-orange-500/50"
-                              : cn("hover:shadow-lg", colors.hoverBg),
-                          )}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
-                            </div>
-                          )}
-                          <div
-                            className={cn(
-                              "p-3 rounded-lg",
-                              isSelected
-                                ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                                : cn(colors.backgroundMuted, colors.primary),
-                            )}
-                          >
-                            <Icon className="w-6 h-6" />
-                          </div>
-                          <div className="text-center">
-                            <span
-                              className={cn(
-                                "text-sm font-medium block",
-                                colors.text,
-                              )}
-                            >
-                              {role.value}
-                            </span>
-                            <div className="flex items-center justify-center gap-1 mt-1">
-                              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                              <span className="text-xs text-gray-500">
-                                {role.popularity}%
-                              </span>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredRoles.map((role) => {
-                      const isSelected = selectedRoles.some(
-                        (r) => r.role === role.value,
-                      );
-                      const Icon = role.icon;
-
-                      return (
-                        <button
-                          key={role.value}
-                          onClick={() => toggleRole(role.value)}
-                          className={cn(
-                            "w-full p-3 rounded-lg border flex items-center gap-3 transition-all",
-                            colors.border,
-                            isSelected
-                              ? "bg-gradient-to-r from-orange-500/10 to-red-500/10 ring-1 ring-orange-500/30"
-                              : cn(colors.hoverBg),
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "p-2 rounded-lg",
-                              isSelected
-                                ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                                : cn(colors.backgroundMuted),
-                            )}
-                          >
-                            <Icon className="w-5 h-5" />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <span
-                              className={cn("text-sm font-medium", colors.text)}
-                            >
-                              {role.value}
-                            </span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500 capitalize">
-                                {role.category}
-                              </span>
-                              <span className="text-xs text-gray-500">•</span>
-                              <span className="text-xs text-gray-500">
-                                {role.popularity}% popular
-                              </span>
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <Check className="w-4 h-4 text-orange-500" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Custom Role Section */}
-                <div className="mt-8">
-                  <div className={cn("rounded-xl border p-4", colors.border)}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className={cn("font-semibold", colors.text)}>
-                          Add Custom Role
-                        </h3>
-                        <p className={cn("text-sm", colors.textMuted)}>
-                          Can't find what you're looking for?
-                        </p>
-                      </div>
-                      <Plus className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={customRole}
-                        onChange={(e) => setCustomRole(e.target.value)}
-                        placeholder="e.g., Harpist, Beatboxer..."
-                        className={cn(colors.background)}
-                      />
-                      <Button
-                        onClick={addCustomRole}
-                        disabled={!customRole.trim()}
-                        className="bg-gradient-to-r from-orange-500 to-red-500"
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Extra padding at bottom for better scrolling */}
-                <div className="h-6"></div>
+            {/* Custom Input Section */}
+            <div className="p-4 mt-auto border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20">
+              <div className="flex gap-2">
+                <Input
+                  value={customRole}
+                  onChange={(e) => setCustomRole(e.target.value)}
+                  placeholder="Other role..."
+                  className="h-9 text-xs bg-background border-zinc-200 dark:border-zinc-800"
+                />
+                <Button
+                  onClick={addCustomRole}
+                  size="sm"
+                  className="bg-zinc-900 dark:bg-zinc-100 dark:text-black h-9"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           </div>
 
-          {/* Right Panel - Configuration with Absolute Positioning */}
-          <div className="w-2/3 flex flex-col relative">
-            {/* Fixed Header - Absolute positioned */}
+          {/* ================= RIGHT PANEL: CONFIGURATION ================= */}
+          <div
+            className={cn(
+              "w-[70%] flex flex-col relative",
+              isDarkMode ? "bg-[#09090b]" : "bg-[#fcfcfc]",
+            )}
+          >
+            {/* Main Header */}
             <div
               className={cn(
-                "absolute top-0 left-0 right-0 p-6 border-b z-10",
-                colors.border,
-                colors.background,
+                "p-8 border-b shrink-0 z-10 backdrop-blur-xl bg-opacity-90",
+                isDarkMode
+                  ? "border-zinc-800 bg-[#09090b]/80"
+                  : "border-zinc-100 bg-white/80",
               )}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className={cn("text-2xl font-bold", colors.text)}>
-                    Configure Roles
-                  </h2>
-                  <p className={cn("text-sm", colors.textMuted)}>
-                    Set requirements for each selected role
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveTab("select")}
-                    className="gap-2"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Back to Selection
-                  </Button>
-                </div>
-              </div>
-
-              {/* Quick Stats Bar */}
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                    <Music className="w-4 h-4 text-orange-500" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Roles</div>
-                    <div className="font-bold text-orange-600">
-                      {selectedRoles.length}
-                    </div>
+              <div className="flex items-end justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-3xl font-black italic uppercase tracking-tighter">
+                    Configuration
+                  </h3>
+                  <div className="flex gap-2">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-bold uppercase tracking-widest border-orange-500/30 text-orange-600"
+                    >
+                      Live Ensemble
+                    </Badge>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <Users className="w-4 h-4 text-blue-500" />
+                <div className="flex gap-8">
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                      Total Budget
+                    </p>
+                    <p className="text-2xl font-black text-green-500">
+                      <span className="text-xs mr-1 opacity-50 font-medium">
+                        KES
+                      </span>
+                      {totalBudget.toLocaleString()}
+                    </p>
                   </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Positions</div>
-                    <div className="font-bold text-blue-600">
-                      {totalPositions}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                    <UserPlus className="w-4 h-4 text-purple-500" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Max Apps</div>
-                    <div className="font-bold text-purple-600">
-                      {totalMaxApplicants}
-                    </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                      Positions
+                    </p>
+                    <p className="text-2xl font-black">{totalPositions}</p>
                   </div>
                 </div>
-
-                {totalBudget > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                      <DollarSign className="w-4 h-4 text-green-500" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500">Total Budget</div>
-                      <div className="font-bold text-green-600">
-                        {selectedRoles[0]?.currency || "KES"}{" "}
-                        {totalBudget.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
-            {/* Fixed Footer - Absolute positioned */}
-            {selectedRoles.length > 0 && (
-              <div
-                className={cn(
-                  "absolute bottom-0 left-0 right-0 p-6 border-t z-10",
-                  colors.border,
-                  colors.background,
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    {selectedRoles.length} role
-                    {selectedRoles.length !== 1 ? "s" : ""} • {totalPositions}{" "}
-                    position{totalPositions !== 1 ? "s" : ""} •{" "}
-                    {totalMaxApplicants} max applications
+
+            {/* Config Content Area */}
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto p-8 scroll-smooth no-scrollbar"
+            >
+              {selectedRoles.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
+                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-zinc-400 flex items-center justify-center">
+                    <Music className="w-6 h-6" />
                   </div>
-                  <div className="flex items-center gap-3">
+                  <p className="text-sm font-medium">
+                    Add roles from the left to configure your setup
+                  </p>
+                </div>
+              ) : (
+                <div
+                  ref={scrollRef}
+                  className="flex-1 overflow-y-auto p-8 space-y-4 no-scrollbar"
+                >
+                  <AnimatePresence>
+                    {selectedRoles.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center opacity-20">
+                        <Music className="w-12 h-12 mb-2" />
+                        <p className="text-sm font-bold">Add roles to begin</p>
+                      </div>
+                    ) : (
+                      selectedRoles.map((role) => (
+                        <motion.div
+                          key={role.role}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                        >
+                          <SlimRoleCard
+                            role={role}
+                            onRemoveRole={toggleRole}
+                            onRoleUpdate={(updated) =>
+                              setSelectedRoles((prev) =>
+                                prev.map((r) =>
+                                  r.role === updated.role ? updated : r,
+                                ),
+                              )
+                            }
+                          />
+                        </motion.div>
+                      ))
+                    )}
+                  </AnimatePresence>
+                  <div className="h-32" />
+                </div>
+              )}
+            </div>
+
+            {/* Floating Action Footer */}
+            {selectedRoles.length > 0 && (
+              <div className="absolute bottom-0 left-0 right-0 p-8 pointer-events-none">
+                <div
+                  className={cn(
+                    "max-w-xl mx-auto p-4 rounded-3xl border shadow-2xl pointer-events-auto flex items-center justify-between",
+                    isDarkMode
+                      ? "bg-zinc-900/95 border-zinc-700 backdrop-blur-xl"
+                      : "bg-white/95 border-zinc-200 backdrop-blur-xl",
+                  )}
+                >
+                  <div className="pl-4">
+                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-tighter">
+                      Ready to post
+                    </p>
+                    <p className="font-bold text-sm leading-none">
+                      {selectedRoles.length} Roles Defined
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       onClick={onClose}
-                      className="px-6"
+                      className="rounded-2xl font-bold text-xs h-10 px-5"
                     >
-                      Cancel
+                      Discard
                     </Button>
                     <Button
                       onClick={handleSubmit}
-                      className="px-8 gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                      className="bg-orange-500 hover:bg-orange-600 text-white rounded-2xl px-8 font-black text-xs h-10 shadow-lg shadow-orange-500/30 transition-all hover:scale-[1.02] active:scale-95"
                     >
-                      <Sparkles className="w-5 h-5" />
-                      Create Setup
+                      CONFIRM SETUP
                     </Button>
                   </div>
                 </div>
               </div>
             )}
-
-            {/* SCROLLABLE CONTENT AREA - Fixed to preserve state */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="p-6">
-                {selectedRoles.length === 0 ? (
-                  <EmptyState />
-                ) : (
-                  // In your return statement, update the SlimRoleCard rendering:
-                  <div className="space-y-4 max-w-4xl mx-auto">
-                    {selectedRoles.map((role) => (
-                      <SlimRoleCard
-                        key={`${role.role}-${role.maxSlots}-${role.maxApplicants}`}
-                        role={role}
-                        onRoleUpdate={(updatedRole) => {
-                          setSelectedRoles((prev) =>
-                            prev.map((r) =>
-                              r.role === updatedRole.role ? updatedRole : r,
-                            ),
-                          );
-                        }}
-                      />
-                    ))}
-                    {/* Add extra space at bottom for better scrolling */}
-                    <div className="h-10"></div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </DialogContent>

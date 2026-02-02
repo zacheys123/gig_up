@@ -2135,53 +2135,64 @@ export const updateWeeklyGigCount = (currentWeeklyData: any) => {
     weekStart: weekStartTimestamp,
   };
 };
-// utils/interestWindow.ts
-// utils/interestWindow.ts
-export function getInterestWindowStatus(gig: any) {
-  const now = new Date();
+// Create or update this function
+export const getInterestWindowStatus = (gig: any) => {
+  const now = Date.now();
 
-  // Check if gig has interest window dates
-  const hasStartTime = gig.acceptInterestStartTime;
-  const hasEndTime = gig.acceptInterestEndTime;
+  // Handle undefined or null values
+  const startTime = gig.acceptInterestStartTime;
+  const endTime = gig.acceptInterestEndTime;
 
-  if (!hasStartTime && !hasEndTime) {
+  console.log("=== getInterestWindowStatus ===");
+  console.log("Gig ID:", gig._id);
+  console.log("Start Time:", startTime, typeof startTime);
+  console.log("End Time:", endTime, typeof endTime);
+  console.log("Now:", now, new Date(now).toLocaleString());
+
+  // If no window is set, return open
+  if (!startTime && !endTime) {
     return {
       hasWindow: false,
-      status: "no_window" as const,
-      message: "Interest window not set",
+      status: "open",
+      message: "Always open",
     };
   }
 
-  // Convert timestamps to Date objects
-  const startTime = hasStartTime ? new Date(gig.acceptInterestStartTime) : null;
-  const endTime = hasEndTime ? new Date(gig.acceptInterestEndTime) : null;
+  // Parse timestamps if they exist
+  const startTimestamp = startTime ? new Date(startTime).getTime() : null;
+  const endTimestamp = endTime ? new Date(endTime).getTime() : null;
 
-  // Check current status
-  if (startTime && now < startTime) {
+  console.log("Parsed timestamps:", {
+    startTimestamp,
+    endTimestamp,
+    startDate: startTimestamp
+      ? new Date(startTimestamp).toLocaleString()
+      : "none",
+    endDate: endTimestamp ? new Date(endTimestamp).toLocaleString() : "none",
+  });
+
+  if (startTimestamp && now < startTimestamp) {
     return {
       hasWindow: true,
-      status: "not_open" as const,
-      message: `Opens ${formatTimeAgo(startTime)}`,
+      status: "not_open",
+      message: `Opens ${new Date(startTimestamp).toLocaleDateString()}`,
     };
   }
 
-  if (endTime && now > endTime) {
+  if (endTimestamp && now > endTimestamp) {
     return {
       hasWindow: true,
-      status: "closed" as const,
+      status: "closed",
       message: "Closed",
     };
   }
 
-  // Window is open if we're between start and end, or if only end time is set (ongoing)
   return {
     hasWindow: true,
-    status: "open" as const,
-    message: endTime
-      ? `Closes ${formatTimeAgo(endTime)}`
-      : "Open for applications",
+    status: "open",
+    message: "Open for interest",
   };
-}
+};
 
 export function formatTimeAgo(date: Date): string {
   const now = new Date();

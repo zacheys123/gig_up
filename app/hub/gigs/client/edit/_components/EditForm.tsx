@@ -1,5 +1,5 @@
 "use client";
-
+import { ErrorBoundary } from "react-error-boundary";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -358,15 +358,6 @@ const BandSetupPreview = React.memo(
       (sum: number, role: BandRoleInput) => sum + role.maxSlots,
       0,
     );
-    const totalMaxApplicants = bandRoles.reduce(
-      (sum: number, role: BandRoleInput) => sum + (role.maxApplicants || 20),
-      0,
-    );
-
-    const totalCurrentApplicants = bandRoles.reduce(
-      (sum: number, role: BandRoleInput) => sum + (role.currentApplicants || 0),
-      0,
-    );
 
     const totalPrice = bandRoles.reduce((sum: number, role: BandRoleInput) => {
       const price = role.price || 0;
@@ -376,11 +367,12 @@ const BandSetupPreview = React.memo(
     const hasPricedRoles = bandRoles.some(
       (role: BandRoleInput) => role.price && role.price > 0,
     );
+
+    // logic used for global indicator
     const hasNegotiableRoles = bandRoles.some(
       (role: BandRoleInput) => role.negotiable,
     );
 
-    // Get role icon based on role name
     const getRoleIcon = (roleName: string) => {
       const roleIcons: Record<string, React.ElementType> = {
         "Lead Vocalist": Mic,
@@ -399,12 +391,10 @@ const BandSetupPreview = React.memo(
         Keyboardist: Piano,
         "Bass Guitarist": Music,
       };
-
       const Icon = roleIcons[roleName] || Music;
       return <Icon className="w-4 h-4" />;
     };
 
-    // Get color for role badge
     const getRoleColor = (roleName: string) => {
       const roleColors: Record<string, string> = {
         "Lead Vocalist":
@@ -417,21 +407,7 @@ const BandSetupPreview = React.memo(
           "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
         "Pianist/Keyboardist":
           "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-        Saxophonist:
-          "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
-        Trumpeter:
-          "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
-        Violinist:
-          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-        "Backup Vocalist":
-          "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
-        Percussionist:
-          "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-        DJ: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
-        "MC/Host":
-          "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
       };
-
       return (
         roleColors[roleName] ||
         "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
@@ -443,543 +419,499 @@ const BandSetupPreview = React.memo(
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className={cn(
-          "rounded-xl p-4 border mt-4",
+          "rounded-xl p-4 border mt-4 overflow-hidden relative",
           colors.border,
           colors.backgroundMuted,
-          "relative overflow-hidden",
         )}
       >
-        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+        {/* Animated accent glow */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -translate-y-16 translate-x-16 blur-3xl pointer-events-none" />
 
         <div className="flex justify-between items-center mb-4 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
-              <Users className="w-5 h-5 text-purple-500" />
+            <div className="p-2 rounded-lg bg-orange-500/10">
+              <Users className="w-5 h-5 text-orange-500" />
             </div>
             <div>
-              <h3 className={cn("font-semibold", colors.text)}>Band Setup</h3>
-              <p className={cn("text-sm", colors.textMuted)}>
-                {bandRoles.length} role{bandRoles.length !== 1 ? "s" : ""},{" "}
-                {totalPositions} position{totalPositions !== 1 ? "s" : ""},{" "}
-                {totalMaxApplicants} max applications
+              <div className="flex items-center gap-2">
+                <h3
+                  className={cn(
+                    "font-bold uppercase tracking-tighter",
+                    colors.text,
+                  )}
+                >
+                  Band Setup
+                </h3>
+                {hasNegotiableRoles && (
+                  <Badge className="bg-orange-500/10 text-orange-600 border-none text-[9px] font-black uppercase tracking-widest h-4">
+                    Open Rates
+                  </Badge>
+                )}
+              </div>
+              <p
+                className={cn(
+                  "text-[10px] font-bold uppercase text-zinc-500 tracking-widest",
+                  colors.textMuted,
+                )}
+              >
+                {bandRoles.length} Roles • {totalPositions} Slots
               </p>
             </div>
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className={cn("text-sm", colors.hoverBg, "hover:text-purple-600")}
+            className="rounded-full h-8 text-xs font-bold border-zinc-200 dark:border-zinc-800"
             onClick={() => setShowBandSetupModal(true)}
           >
-            Edit
+            Edit Lineup
           </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
-          {bandRoles.map((role: BandRoleInput, index: number) => {
-            const maxApplicants = role.maxApplicants || 20;
-            const currentApplicants = role.currentApplicants || 0;
-            const applicantProgress = Math.min(
-              (currentApplicants / maxApplicants) * 100,
-              100,
-            );
-            const roleCurrency = role.currency || "KES";
-
-            return (
-              <div
-                key={index}
-                className={cn(
-                  "p-4 border rounded-lg hover:shadow-md transition-shadow",
-                  colors.border,
-                  colors.background,
-                  "group",
-                )}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        "p-1.5 rounded-md",
-                        getRoleColor(role.role),
-                      )}
-                    >
-                      {getRoleIcon(role.role)}
-                    </div>
-                    <span className="font-medium text-sm">{role.role}</span>
+          {bandRoles.map((role: BandRoleInput, index: number) => (
+            <div
+              key={index}
+              className={cn(
+                "p-4 border rounded-xl transition-all group",
+                colors.border,
+                colors.background,
+                "hover:border-orange-500/20",
+              )}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={cn("p-1.5 rounded-lg", getRoleColor(role.role))}
+                  >
+                    {getRoleIcon(role.role)}
                   </div>
-                  <div className="flex gap-1">
-                    <Badge variant="outline" className="text-xs">
-                      {role.maxSlots} slot{role.maxSlots > 1 ? "s" : ""}
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                    >
-                      {maxApplicants} max
-                    </Badge>
-                  </div>
+                  <span className="font-black text-xs uppercase tracking-tight">
+                    {role.role}
+                  </span>
                 </div>
-
-                {/* Applicant Progress */}
-                <div className="space-y-1.5 mb-3">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Applications
-                    </span>
-                    <span className="font-medium">
-                      {currentApplicants}/{maxApplicants}
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-300",
-                        applicantProgress < 30
-                          ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                          : applicantProgress < 70
-                            ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                            : applicantProgress < 90
-                              ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                              : "bg-gradient-to-r from-red-500 to-pink-500",
-                      )}
-                      style={{ width: `${applicantProgress}%` }}
-                    />
-                  </div>
+                <div className="flex gap-1">
+                  <span className="text-[10px] font-black bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
+                    x{role.maxSlots}
+                  </span>
                 </div>
-
-                {role?.requiredSkills && role.requiredSkills.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {role.requiredSkills.slice(0, 3).map((skill) => (
-                      <Badge
-                        key={skill}
-                        variant="outline"
-                        className="text-xs px-2 py-0.5"
-                      >
-                        {skill}
-                      </Badge>
-                    ))}
-                    {role.requiredSkills.length > 3 && (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs px-2 py-0.5"
-                      >
-                        +{role.requiredSkills.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
-
-                {role.description && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                    {role.description}
-                  </p>
-                )}
-
-                {/* Price Info */}
-                {role.price && role.price > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <DollarSign className="w-3 h-3 text-green-500" />
-                        <span className="text-xs font-medium">
-                          {roleCurrency} {role.price.toLocaleString()}
-                        </span>
-                      </div>
-                      {role.negotiable && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs px-2 py-0.5 text-green-600 border-green-200"
-                        >
-                          Negotiable
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
-            );
-          })}
+
+              {/* Price Row matching the modal aesthetic */}
+              {role.price && role.price > 0 && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-50 dark:border-zinc-800">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">
+                      Rate:
+                    </span>
+                    <span className="text-sm font-black text-green-600">
+                      {role.currency} {role.price.toLocaleString()}
+                    </span>
+                  </div>
+                  {role.negotiable && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_5px_rgba(249,115,22,0.8)]" />
+                      <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest">
+                        Negotiable
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
-        {/* Summary Footer */}
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 relative z-10">
-          <div className="grid grid-cols-3 gap-2 text-center mb-3">
-            <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-              <div className="text-xs text-gray-500">Total Roles</div>
-              <div className="text-lg font-bold text-orange-600">
-                {bandRoles.length}
+        {/* Total Budget Summary Area */}
+        {hasPricedRoles && (
+          <div
+            className={cn(
+              "mt-4 p-4 rounded-xl flex items-center justify-between border-l-4 transition-all",
+              "bg-zinc-100/80 dark:bg-zinc-900/40 backdrop-blur-sm",
+              hasNegotiableRoles
+                ? "border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.05)]"
+                : "border-zinc-400 dark:border-zinc-700",
+            )}
+          >
+            <div className="flex items-center gap-4">
+              <div
+                className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center rotate-3 transition-transform group-hover:rotate-0",
+                  hasNegotiableRoles
+                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                    : "bg-zinc-800 dark:bg-zinc-200 text-zinc-100 dark:text-zinc-900",
+                )}
+              >
+                <DollarSign className="w-5 h-5" />
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em] leading-none mb-1.5">
+                  Est. Total Investment
+                </p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase">
+                    {bandRoles[0]?.currency || "KES"}
+                  </span>
+                  <p
+                    className={cn(
+                      "text-2xl font-black tracking-tighter leading-none",
+                      "text-zinc-900",
+                    )}
+                  >
+                    {totalPrice.toLocaleString()}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-              <div className="text-xs text-gray-500">Max Applications</div>
-              <div className="text-lg font-bold text-blue-600">
-                {totalMaxApplicants}
+
+            {hasNegotiableRoles && (
+              <div className="text-right flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-orange-500/10 border border-orange-500/20">
+                  <div className="w-1 h-1 rounded-full bg-orange-500 animate-ping" />
+                  <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider">
+                    Flexible
+                  </span>
+                </div>
+                <p className="text-[9px] font-bold text-zinc-500 italic">
+                  Subject to negotiation
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </motion.div>
+    );
+  },
+);
+// Create a reusable ErrorDisplay component
+const ErrorDisplay = ({ error, className = "" }: any) => {
+  if (!error) return null;
+  return <p className={`text-sm text-red-500 mt-1 ${className}`}>{error}</p>;
+};
+
+// Simplified date field component
+const DateField = ({
+  label,
+  value,
+  onChange,
+  error,
+  description,
+  fieldName,
+  colors,
+}: any) => (
+  <div>
+    <label className={cn("block text-sm font-medium mb-2", colors.text)}>
+      {label}
+    </label>
+    <div className="relative">
+      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      <Input
+        type="datetime-local"
+        value={value || ""}
+        onChange={(e) => onChange(fieldName, e.target.value || undefined)}
+        className="pl-10"
+      />
+    </div>
+    <ErrorDisplay error={error} />
+    <p className={cn("text-xs mt-1", colors.textMuted)}>{description}</p>
+  </div>
+);
+
+// Interest Window Section Component
+const InterestWindowSection = React.memo(
+  ({ formValues, colors, onInterestWindowChange }: any) => {
+    const [showInterestWindow, setShowInterestWindow] = useState(false);
+    const [interestWindowType, setInterestWindowType] = useState<
+      "dates" | "days"
+    >("dates");
+
+    // Inside InterestWindowSection component, replace the handleInterestWindowChange
+    const handleInterestWindowChange = useCallback(
+      (field: string, value: any) => {
+        // This function should be defined by the parent component (EditGigForm)
+        // and passed down as a prop
+        if (onInterestWindowChange) {
+          onInterestWindowChange(field, value);
+        }
+      },
+      [onInterestWindowChange], // This should be passed as a prop
+    );
+
+    if (!showInterestWindow) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={cn(
+            "rounded-xl p-6 border cursor-pointer transition-all group",
+            colors.border,
+            colors.backgroundMuted,
+            "hover:shadow-lg hover:border-purple-500/50",
+          )}
+          onClick={() => setShowInterestWindow(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "p-3 rounded-lg transition-transform group-hover:scale-110",
+                  "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
+                )}
+              >
+                <Clock className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h3 className={cn("font-semibold", colors.text)}>
+                  Set Interest Window (Optional)
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Control when musicians can show interest in your gig
+                </p>
               </div>
             </div>
-            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
-              <div className="text-xs text-gray-500">Total Positions</div>
-              <div className="text-lg font-bold text-green-600">
-                {totalPositions}
+            <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
+          </div>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: "auto" }}
+        className={cn(
+          "rounded-xl border overflow-hidden",
+          colors.border,
+          colors.backgroundMuted,
+        )}
+      >
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+                <Clock className="w-5 h-5 text-purple-500" />
               </div>
+              <div>
+                <h3 className={cn("font-semibold", colors.text)}>
+                  Interest Window Settings
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  When can musicians show interest in this gig?
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowInterestWindow(false)}
+              className={cn(
+                "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
+                colors.textMuted,
+              )}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="mb-6">
+            <label
+              className={cn("block text-sm font-medium mb-3", colors.text)}
+            >
+              Interest Window Type
+            </label>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant={interestWindowType === "dates" ? "default" : "outline"}
+                onClick={() => {
+                  setInterestWindowType("dates");
+                  // Clear days when switching to dates
+                  if (onInterestWindowChange) {
+                    onInterestWindowChange("interestWindowDays", undefined);
+                  }
+                }}
+                className={cn(
+                  "flex-1",
+                  interestWindowType === "dates" &&
+                    "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+                )}
+              >
+                Specific Dates
+              </Button>
+              <Button
+                type="button"
+                variant={interestWindowType === "days" ? "default" : "outline"}
+                onClick={() => {
+                  setInterestWindowType("days");
+                  // Clear date fields when switching to days
+                  if (onInterestWindowChange) {
+                    onInterestWindowChange(
+                      "acceptInterestStartTime",
+                      undefined,
+                    );
+                    onInterestWindowChange("acceptInterestEndTime", undefined);
+                  }
+                }}
+                className={cn(
+                  "flex-1",
+                  interestWindowType === "days" &&
+                    "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
+                )}
+              >
+                Days After Posting
+              </Button>
             </div>
           </div>
 
-          {hasPricedRoles && (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
-                <span className={cn("text-sm font-medium", colors.text)}>
-                  Total Budget Estimate
-                </span>
+          {interestWindowType === "dates" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <DateField
+                label="Interest Opens"
+                value={formValues.acceptInterestStartTime}
+                onChange={(value: any) =>
+                  handleInterestWindowChange("acceptInterestStartTime", value)
+                }
+                description="When musicians can start showing interest"
+                colors={colors}
+              />
+              <DateField
+                label="Interest Closes"
+                value={formValues.acceptInterestEndTime}
+                onChange={(value: any) =>
+                  handleInterestWindowChange("acceptInterestEndTime", value)
+                }
+                description="When interest period ends"
+                colors={colors}
+              />
+            </div>
+          )}
+
+          {interestWindowType === "days" && (
+            <div>
+              <label
+                className={cn("block text-sm font-medium mb-3", colors.text)}
+              >
+                Interest Window Duration
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const current = formValues.interestWindowDays || 7;
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        Math.max(1, current - 1),
+                      );
+                    }}
+                    className="h-10 w-10"
+                  >
+                    -
+                  </Button>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={formValues.interestWindowDays || 7}
+                      onChange={(e) =>
+                        handleInterestWindowChange(
+                          "interestWindowDays",
+                          parseInt(e.target.value) || 7,
+                        )
+                      }
+                      min="1"
+                      max="90"
+                      className="w-20 text-center"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                      days
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const current = formValues.interestWindowDays || 7;
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        current + 1,
+                      );
+                    }}
+                    className="h-10 w-10"
+                  >
+                    +
+                  </Button>
+                </div>
+
+                <div className="flex-1">
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Musicians can show interest for{" "}
+                    <span className="font-semibold">
+                      {formValues.interestWindowDays || 7} days
+                    </span>{" "}
+                    after posting
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-green-600">
-                  {bandRoles[0]?.currency || "KES"}{" "}
-                  {totalPrice.toLocaleString()}
-                </div>
-                <div className="text-xs text-gray-500">
-                  Across{" "}
-                  {
-                    bandRoles.filter(
-                      (r: BandRoleInput) => r.price && r.price > 0,
-                    ).length
-                  }{" "}
-                  priced roles
-                </div>
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                {[1, 3, 7, 14, 30].map((days) => (
+                  <Button
+                    key={days}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleInterestWindowChange("interestWindowDays", days)
+                    }
+                    className={cn(
+                      formValues.interestWindowDays === days &&
+                        "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
+                    )}
+                  >
+                    {days} {days === 1 ? "day" : "days"}
+                  </Button>
+                ))}
               </div>
             </div>
           )}
 
-          {totalCurrentApplicants > 0 && (
+          {(formValues.acceptInterestStartTime ||
+            formValues.acceptInterestEndTime ||
+            formValues.interestWindowDays) && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-2 p-2 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20"
+              className="mt-6 pt-4 border-t"
             >
-              <div className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium">
-                  {totalCurrentApplicants} application
-                  {totalCurrentApplicants !== 1 ? "s" : ""} received
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {Math.round(
-                  (totalCurrentApplicants / totalMaxApplicants) * 100,
-                )}
-                % of maximum capacity
+              <div className="flex items-center gap-3">
+                <Info className="w-5 h-5 text-blue-500" />
+                <div>
+                  <p className="text-sm font-medium">
+                    Interest Window Configured
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {interestWindowType === "dates"
+                      ? `Interest opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"}`
+                      : `Interest open for ${formValues.interestWindowDays || 7} days after posting`}
+                  </p>
+                </div>
               </div>
             </motion.div>
           )}
+
+          <div className="mt-4 pt-4 border-t">
+            <p className={cn("text-xs", colors.textMuted)}>
+              <strong>Tip:</strong> Setting an interest window helps manage
+              application flow and prevents last-minute applications.
+            </p>
+          </div>
         </div>
       </motion.div>
     );
   },
 );
-BandSetupPreview.displayName = "BandSetupPreview";
-
-// Interest Window Section Component
-const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
-  const [showInterestWindow, setShowInterestWindow] = useState(false);
-  const [interestWindowType, setInterestWindowType] = useState<
-    "dates" | "days"
-  >("dates");
-
-  const handleInterestWindowChange = useCallback(
-    (field: string, value: any) => {
-      // This would be handled by parent component
-    },
-    [],
-  );
-
-  if (!showInterestWindow) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className={cn(
-          "rounded-xl p-6 border cursor-pointer transition-all group",
-          colors.border,
-          colors.backgroundMuted,
-          "hover:shadow-lg hover:border-purple-500/50",
-        )}
-        onClick={() => setShowInterestWindow(true)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "p-3 rounded-lg transition-transform group-hover:scale-110",
-                "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
-              )}
-            >
-              <Clock className="w-5 h-5 text-purple-500" />
-            </div>
-            <div>
-              <h3 className={cn("font-semibold", colors.text)}>
-                Set Interest Window (Optional)
-              </h3>
-              <p className={cn("text-sm", colors.textMuted)}>
-                Control when musicians can show interest in your gig
-              </p>
-            </div>
-          </div>
-          <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
-        </div>
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      className={cn(
-        "rounded-xl border overflow-hidden",
-        colors.border,
-        colors.backgroundMuted,
-      )}
-    >
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
-              <Clock className="w-5 h-5 text-purple-500" />
-            </div>
-            <div>
-              <h3 className={cn("font-semibold", colors.text)}>
-                Interest Window Settings
-              </h3>
-              <p className={cn("text-sm", colors.textMuted)}>
-                When can musicians show interest in this gig?
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowInterestWindow(false)}
-            className={cn(
-              "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
-              colors.textMuted,
-            )}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="mb-6">
-          <label className={cn("block text-sm font-medium mb-3", colors.text)}>
-            Interest Window Type
-          </label>
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant={interestWindowType === "dates" ? "default" : "outline"}
-              onClick={() => setInterestWindowType("dates")}
-              className={cn(
-                "flex-1",
-                interestWindowType === "dates" &&
-                  "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
-              )}
-            >
-              Specific Dates
-            </Button>
-            <Button
-              type="button"
-              variant={interestWindowType === "days" ? "default" : "outline"}
-              onClick={() => setInterestWindowType("days")}
-              className={cn(
-                "flex-1",
-                interestWindowType === "days" &&
-                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
-              )}
-            >
-              Days After Posting
-            </Button>
-          </div>
-        </div>
-
-        {interestWindowType === "dates" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  className={cn("block text-sm font-medium mb-2", colors.text)}
-                >
-                  Interest Opens
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    type="datetime-local"
-                    value={formValues.acceptInterestStartTime || ""}
-                    onChange={(e) =>
-                      handleInterestWindowChange(
-                        "acceptInterestStartTime",
-                        e.target.value,
-                      )
-                    }
-                    className="pl-10"
-                  />
-                </div>
-                <p className={cn("text-xs mt-1", colors.textMuted)}>
-                  When musicians can start showing interest
-                </p>
-              </div>
-
-              <div>
-                <label
-                  className={cn("block text-sm font-medium mb-2", colors.text)}
-                >
-                  Interest Closes
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    type="datetime-local"
-                    value={formValues.acceptInterestEndTime || ""}
-                    onChange={(e) =>
-                      handleInterestWindowChange(
-                        "acceptInterestEndTime",
-                        e.target.value,
-                      )
-                    }
-                    className="pl-10"
-                  />
-                </div>
-                <p className={cn("text-xs mt-1", colors.textMuted)}>
-                  When interest period ends
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {interestWindowType === "days" && (
-          <div>
-            <label
-              className={cn("block text-sm font-medium mb-3", colors.text)}
-            >
-              Interest Window Duration
-            </label>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const current = formValues.interestWindowDays || 7;
-                    handleInterestWindowChange(
-                      "interestWindowDays",
-                      Math.max(1, current - 1),
-                    );
-                  }}
-                  className="h-10 w-10"
-                >
-                  -
-                </Button>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    value={formValues.interestWindowDays || 7}
-                    onChange={(e) =>
-                      handleInterestWindowChange(
-                        "interestWindowDays",
-                        parseInt(e.target.value) || 7,
-                      )
-                    }
-                    min="1"
-                    max="90"
-                    className="w-20 text-center"
-                  />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                    days
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const current = formValues.interestWindowDays || 7;
-                    handleInterestWindowChange(
-                      "interestWindowDays",
-                      current + 1,
-                    );
-                  }}
-                  className="h-10 w-10"
-                >
-                  +
-                </Button>
-              </div>
-
-              <div className="flex-1">
-                <p className={cn("text-sm", colors.textMuted)}>
-                  Musicians can show interest for{" "}
-                  <span className="font-semibold">
-                    {formValues.interestWindowDays || 7} days
-                  </span>{" "}
-                  after posting
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mt-3">
-              {[1, 3, 7, 14, 30].map((days) => (
-                <Button
-                  key={days}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handleInterestWindowChange("interestWindowDays", days)
-                  }
-                  className={cn(
-                    formValues.interestWindowDays === days &&
-                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
-                  )}
-                >
-                  {days} {days === 1 ? "day" : "days"}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(formValues.acceptInterestStartTime ||
-          formValues.acceptInterestEndTime ||
-          formValues.interestWindowDays) && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 pt-4 border-t"
-          >
-            <div className="flex items-center gap-3">
-              <Info className="w-5 h-5 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium">
-                  Interest Window Configured
-                </p>
-                <p className="text-xs text-gray-500">
-                  {interestWindowType === "dates"
-                    ? `Interest opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"}`
-                    : `Interest open for ${formValues.interestWindowDays || 7} days after posting`}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        <div className="mt-4 pt-4 border-t">
-          <p className={cn("text-xs", colors.textMuted)}>
-            <strong>Tip:</strong> Setting an interest window helps manage
-            application flow and prevents last-minute applications.
-          </p>
-        </div>
-      </div>
-    </motion.div>
-  );
-});
 InterestWindowSection.displayName = "InterestWindowSection";
 
 // History View Component
@@ -1190,13 +1122,57 @@ export default function EditGigForm({
     },
     [activeTalentType],
   );
-  // Update your parseTalentData function in EditGigForm.tsx:
 
-  // Then use it in your useEffect:
+  useEffect(() => {
+    if (gig) {
+      console.log("=== GIG DATA LOADED ===");
+      console.log("Gig interest window data:", {
+        acceptInterestStartTime: gig.acceptInterestStartTime,
+        acceptInterestEndTime: gig.acceptInterestEndTime,
+      });
+
+      if (gig.acceptInterestStartTime) {
+        console.log("Start time details:", {
+          raw: gig.acceptInterestStartTime,
+          date: new Date(gig.acceptInterestStartTime),
+          iso: new Date(gig.acceptInterestStartTime).toISOString(),
+          local: new Date(gig.acceptInterestStartTime).toLocaleString(),
+        });
+      }
+
+      debugInterestWindowData();
+    }
+  }, [gig]);
+  // In your EditGigForm component
   useEffect(() => {
     if (gig && !formValues) {
-      // Then in your EditGigForm.tsx, use it like this:
       const talentData = parseTalentData(gig);
+
+      // Helper function to convert timestamp to datetime-local format
+      const timestampToDateTimeLocal = (timestamp: number | undefined) => {
+        if (!timestamp) return undefined;
+        const date = new Date(timestamp);
+
+        // Format: YYYY-MM-DDTHH:mm
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
+
+      // Calculate interest window days if both dates exist
+      let interestWindowDays = 7; // Default
+      if (gig.acceptInterestStartTime && gig.acceptInterestEndTime) {
+        const start = gig.acceptInterestStartTime;
+        const end = gig.acceptInterestEndTime;
+        const diffInMs = end - start;
+        const diffInDays = Math.round(diffInMs / (1000 * 60 * 60 * 24));
+        interestWindowDays = Math.max(1, diffInDays);
+      }
+
       const formattedValues = {
         title: gig.title || "",
         description: gig.description || "",
@@ -1222,29 +1198,36 @@ export default function EditGigForm({
         djGenre: talentData.djGenre,
         djEquipment: talentData.djEquipment,
         vocalistGenre: talentData.vocalistGenre,
-        acceptInterestEndTime: gig.acceptInterestEndTime
-          ? new Date(gig.acceptInterestEndTime).toISOString().slice(0, 16)
-          : "",
-        acceptInterestStartTime: gig.acceptInterestStartTime
-          ? new Date(gig.acceptInterestStartTime).toISOString().slice(0, 16)
-          : "",
-        interestWindowDays:
-          gig.acceptInterestStartTime && gig.acceptInterestEndTime
-            ? Math.round(
-                (gig.acceptInterestEndTime - gig.acceptInterestStartTime) /
-                  (1000 * 60 * 60 * 24),
-              )
-            : 7,
+        // Interest window fields
+        acceptInterestStartTime: timestampToDateTimeLocal(
+          gig.acceptInterestStartTime,
+        ),
+        acceptInterestEndTime: timestampToDateTimeLocal(
+          gig.acceptInterestEndTime,
+        ),
+        interestWindowDays: interestWindowDays,
         enableInterestWindow: !!(
           gig.acceptInterestStartTime || gig.acceptInterestEndTime
         ),
         maxSlots: gig.maxSlots || 1,
       };
 
+      console.log("=== DEBUG: Initialized Form Values ===");
+      console.log("Interest window dates:", {
+        start: formattedValues.acceptInterestStartTime,
+        end: formattedValues.acceptInterestEndTime,
+        days: formattedValues.interestWindowDays,
+        rawGigData: {
+          start: gig.acceptInterestStartTime,
+          end: gig.acceptInterestEndTime,
+          days: gig.interestWindowDays,
+        },
+      });
+
       setFormValues(formattedValues);
       setOriginalValues(formattedValues);
       setBussinessCategory(gig.bussinesscat as BusinessCategory);
-      setUrl(gig.logo || "");
+      setUrl(initialLogo || gig.logo || "");
 
       setGigCustom(
         initialCustomization || {
@@ -1254,26 +1237,26 @@ export default function EditGigForm({
         },
       );
 
-      // Initialize logo from either passed props or gig data
-      setUrl(initialLogo || gig.logo || "");
-
       // Initialize band roles from gig data
       const bandRolesFromGig =
-        gig.bandCategory?.map((role: any) => ({
-          role: role.role,
-          maxSlots: role.maxSlots || 1,
-          maxApplicants: role.maxApplicants || 20,
-          currentApplicants: role.currentApplicants || 0,
-          filledSlots: role.filledSlots || 0,
-          applicants: role.applicants || [],
-          bookedUsers: role.bookedUsers || [],
-          requiredSkills: role.requiredSkills || [],
-          description: role.description || "",
-          price: role.price || undefined,
-          currency: role.currency || "KES",
-          negotiable: role.negotiable ?? true,
-          isLocked: role.isLocked || false,
-        })) || [];
+        gig.bandCategory?.map((role: any) => {
+          const { bookedPrice, ...roleWithoutBookedPrice } = role;
+          return {
+            ...roleWithoutBookedPrice,
+            maxSlots: role.maxSlots || 1,
+            maxApplicants: role.maxApplicants || 20,
+            currentApplicants: role.currentApplicants || 0,
+            filledSlots: role.filledSlots || 0,
+            applicants: role.applicants || [],
+            bookedUsers: role.bookedUsers || [],
+            requiredSkills: role.requiredSkills || [],
+            description: role.description || "",
+            price: role.price || undefined,
+            currency: role.currency || "KES",
+            negotiable: role.negotiable ?? true,
+            isLocked: role.isLocked || false,
+          };
+        }) || [];
 
       setBandRoles(bandRolesFromGig);
 
@@ -1283,7 +1266,138 @@ export default function EditGigForm({
 
       setIsLoading(false);
     }
-  }, [gig, initialCustomization, initialLogo]);
+  }, [gig, initialCustomization, initialLogo, formValues]);
+
+  const validateForm = useCallback(() => {
+    const errors: Record<string, string> = {};
+
+    // Basic required fields
+    if (!formValues?.title?.trim()) {
+      errors.title = "Title is required";
+    }
+    if (!formValues?.description?.trim()) {
+      errors.description = "Description is required";
+    }
+    if (!formValues?.location?.trim()) {
+      errors.location = "Location is required";
+    }
+    if (!formValues?.bussinesscat) {
+      errors.bussinesscat = "Business category is required";
+    }
+
+    // Category-specific validations
+    if (formValues?.bussinesscat === "mc") {
+      if (!formValues.mcType) errors.mcType = "MC type is required";
+      if (!formValues.mcLanguages)
+        errors.mcLanguages = "Languages are required";
+    } else if (formValues?.bussinesscat === "dj") {
+      if (!formValues.djGenre) errors.djGenre = "DJ genre is required";
+      if (!formValues.djEquipment) errors.djEquipment = "Equipment is required";
+    } else if (formValues?.bussinesscat === "vocalist") {
+      if (!formValues.vocalistGenre || formValues.vocalistGenre.length === 0) {
+        errors.vocalistGenre = "At least one genre is required";
+      }
+    }
+
+    // Band roles validation for "other" category
+    if (
+      formValues?.bussinesscat === "other" &&
+      (!bandRoles || bandRoles.length === 0)
+    ) {
+      errors.bandRoles = "At least one band role is required";
+    }
+
+    // Timeline validations
+    if (formValues?.gigtimeline === "once" && !formValues.date) {
+      errors.date = "Event date is required for one-time events";
+    } else if (formValues?.gigtimeline !== "once" && !formValues.day) {
+      errors.day = "Day of week is required for recurring events";
+    }
+
+    // Secret validation
+    if (!formValues?.secret?.trim() || formValues.secret.length < 4) {
+      errors.secret = "Secret passphrase is required (minimum 4 characters)";
+    }
+
+    // Price validation for non-"other" categories
+    if (formValues?.bussinesscat !== "other" && formValues?.price) {
+      const price = parseFloat(formValues.price);
+      if (isNaN(price) || price < 0) {
+        errors.price = "Please enter a valid price";
+      }
+    }
+
+    // Interest window validation
+    // Only validate if at least one date is set
+    const hasStartTime = formValues?.acceptInterestStartTime;
+    const hasEndTime = formValues?.acceptInterestEndTime;
+
+    if (hasStartTime || hasEndTime) {
+      // If one is set, both should be set
+      if (hasStartTime && !hasEndTime) {
+        errors.acceptInterestEndTime =
+          "End time is required when start time is set";
+      }
+      if (!hasStartTime && hasEndTime) {
+        errors.acceptInterestStartTime =
+          "Start time is required when end time is set";
+      }
+
+      // Validate dates if both are set
+      if (hasStartTime && hasEndTime) {
+        const start = new Date(formValues.acceptInterestStartTime);
+        const end = new Date(formValues.acceptInterestEndTime);
+
+        if (isNaN(start.getTime())) {
+          errors.acceptInterestStartTime = "Invalid start date";
+        }
+
+        if (isNaN(end.getTime())) {
+          errors.acceptInterestEndTime = "Invalid end date";
+        }
+
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end <= start) {
+          errors.acceptInterestEndTime = "End time must be after start time";
+        }
+      }
+    }
+
+    // Interest window days validation
+    if (formValues?.interestWindowDays) {
+      const days = parseInt(formValues.interestWindowDays);
+      if (isNaN(days) || days < 1 || days > 90) {
+        errors.interestWindowDays =
+          "Interest window must be between 1 and 90 days";
+      }
+    }
+
+    // Max slots validation
+    if (formValues?.maxSlots) {
+      const slots = parseInt(formValues.maxSlots);
+      if (isNaN(slots) || slots < 1) {
+        errors.maxSlots = "At least 1 slot is required";
+      }
+    }
+
+    // Phone validation (if provided)
+    if (formValues?.phoneNo && formValues.phoneNo.trim()) {
+      const phoneRegex = /^[+]?[\d\s\-()]{10,}$/;
+      if (!phoneRegex.test(formValues.phoneNo)) {
+        errors.phoneNo = "Please enter a valid phone number";
+      }
+    }
+
+    console.log("=== DEBUG: Form Validation ===");
+    console.log("Errors:", errors);
+    console.log("Interest window state:", {
+      start: formValues?.acceptInterestStartTime,
+      end: formValues?.acceptInterestEndTime,
+      days: formValues?.interestWindowDays,
+    });
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [formValues, bandRoles]);
   // Check for changes
   useEffect(() => {
     if (formValues && originalValues && gig) {
@@ -1312,54 +1426,6 @@ export default function EditGigForm({
     initialCustomization,
     initialLogo,
   ]);
-
-  // File upload handler
-  const handleFileChange = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const dep = "image";
-      const allowedTypes = [
-        "image/png",
-        "image/jpeg",
-        "image/gif",
-        "image/webp",
-      ];
-
-      if (!user) {
-        toast.error("Please log in to upload files");
-        return;
-      }
-
-      const minimalUser: MinimalUser = {
-        _id: user._id,
-        clerkId: user.clerkId,
-        ...(user.email && { email: user.email }),
-        ...(user.username && { username: user.username }),
-      };
-
-      fileupload(
-        event,
-        (file: string) => {
-          if (file) {
-            setUrl(file);
-            toast.success("Logo updated successfully!");
-            setHasChanges(true);
-          }
-        },
-        toast,
-        allowedTypes,
-        imageUrl,
-        (file: string | undefined) => {
-          if (file) {
-            // Handle file URL if needed
-          }
-        },
-        setIsUploading,
-        dep,
-        minimalUser,
-      );
-    },
-    [imageUrl, user],
-  );
 
   // Customization file change handler
   const handleCustomizationFileChange = useCallback(
@@ -1417,7 +1483,64 @@ export default function EditGigForm({
     );
   }, []);
 
-  // Input change handler
+  // Update handleInterestWindowChange with proper dependencies
+  const handleInterestWindowChange = useCallback(
+    (field: string, value: any) => {
+      setFormValues((prev: any) => ({
+        ...prev,
+        [field]: value === "" ? undefined : value,
+      }));
+      setHasChanges(true);
+    },
+    [setFormValues, setHasChanges], // Add these
+  );
+
+  // Update handleBussinessChange
+  const handleBussinessChange = useCallback(
+    (value: BusinessCategory) => {
+      setBussinessCategory(value);
+      setFormValues((prev: any) => ({
+        ...prev,
+        bussinesscat: value,
+      }));
+      setHasChanges(true);
+
+      // Show talent modal for talent categories
+      if (["mc", "dj", "vocalist"].includes(value || "")) {
+        const newTalentType = value as Exclude<TalentType, null>;
+        setActiveTalentType(newTalentType);
+        setShowTalentModal(true);
+      } else if (value === "other") {
+        setShowBandSetupModal(true);
+      }
+    },
+    [
+      setBussinessCategory,
+      setFormValues,
+      setHasChanges,
+      setActiveTalentType,
+      setShowTalentModal,
+      setShowBandSetupModal,
+    ],
+  );
+
+  // Update handleSelectChange
+  const handleSelectChange = useCallback(
+    (name: string, value: string) => {
+      setFormValues((prev: any) => ({
+        ...prev,
+        [name]: value,
+      }));
+      setHasChanges(true);
+    },
+    [setFormValues, setHasChanges],
+  );
+
+  const handleSetFormValues = useCallback((updater: any) => {
+    setFormValues(updater);
+    setHasChanges(true);
+  }, []);
+
   const handleInputChange = useCallback(
     (
       e: React.ChangeEvent<
@@ -1518,34 +1641,6 @@ export default function EditGigForm({
     [bussinesscat, formValues?.gigtimeline],
   );
 
-  // Select change handler
-  const handleSelectChange = useCallback((name: string, value: string) => {
-    setFormValues((prev: any) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setHasChanges(true);
-  }, []);
-
-  // Business category change - Updated to handle talent modal
-  const handleBussinessChange = useCallback((value: BusinessCategory) => {
-    setBussinessCategory(value);
-    setFormValues((prev: any) => ({
-      ...prev,
-      bussinesscat: value,
-    }));
-    setHasChanges(true);
-
-    // Show talent modal for talent categories
-    if (["mc", "dj", "vocalist"].includes(value || "")) {
-      const newTalentType = value as Exclude<TalentType, null>;
-      setActiveTalentType(newTalentType);
-      setShowTalentModal(true);
-    } else if (value === "other") {
-      setShowBandSetupModal(true);
-    }
-  }, []);
-
   // Date selection
   const handleDate = useCallback((date: Date | null) => {
     if (date) {
@@ -1554,64 +1649,10 @@ export default function EditGigForm({
         ...prev,
         date: date.toISOString().split("T")[0],
       }));
+
       setHasChanges(true);
     }
   }, []);
-
-  // Validate form
-  const validateForm = useCallback(() => {
-    const errors: Record<string, string> = {};
-
-    if (!formValues?.title?.trim()) {
-      errors.title = "Title is required";
-    }
-    if (!formValues?.description?.trim()) {
-      errors.description = "Description is required";
-    }
-    if (!formValues?.location?.trim()) {
-      errors.location = "Location is required";
-    }
-    if (!formValues?.bussinesscat) {
-      errors.bussinesscat = "Business category is required";
-    }
-
-    // Category-specific validations
-    if (formValues?.bussinesscat === "mc") {
-      if (!formValues.mcType) errors.mcType = "MC type is required";
-      if (!formValues.mcLanguages)
-        errors.mcLanguages = "Languages are required";
-    } else if (formValues?.bussinesscat === "dj") {
-      if (!formValues.djGenre) errors.djGenre = "DJ genre is required";
-      if (!formValues.djEquipment) errors.djEquipment = "Equipment is required";
-    } else if (formValues?.bussinesscat === "vocalist") {
-      if (!formValues.vocalistGenre || formValues.vocalistGenre.length === 0) {
-        errors.vocalistGenre = "At least one genre is required";
-      }
-    }
-
-    // Band roles validation for "other" category
-    if (
-      formValues?.bussinesscat === "other" &&
-      (!bandRoles || bandRoles.length === 0)
-    ) {
-      errors.bandRoles = "At least one band role is required";
-    }
-
-    // Timeline validations
-    if (formValues?.gigtimeline === "once" && !formValues.date) {
-      errors.date = "Event date is required for one-time events";
-    } else if (formValues?.gigtimeline !== "once" && !formValues.day) {
-      errors.day = "Day of week is required for recurring events";
-    }
-
-    // Secret validation
-    if (!formValues?.secret?.trim() || formValues.secret.length < 4) {
-      errors.secret = "Secret passphrase is required (minimum 4 characters)";
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  }, [formValues, bandRoles]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -1641,8 +1682,7 @@ export default function EditGigForm({
       router.back();
     }
   }, [hasChanges, router]);
-
-  // Handle save
+  // Update your handleSave function to remove bookedPrice
   const handleSave = useCallback(async () => {
     if (!validateForm()) {
       toast.error("Please fix all errors before saving");
@@ -1656,30 +1696,56 @@ export default function EditGigForm({
 
     setIsSaving(true);
     try {
-      // Helper function to convert BandRoleInput to Convex format
       const convertBandRoleForConvex = (role: BandRoleInput) => {
-        return {
-          role: role.role,
-          maxSlots: role.maxSlots || 1,
-          maxApplicants: role.maxApplicants || 20,
-          currentApplicants: role.currentApplicants || 0,
-          filledSlots: role.filledSlots || 0,
-          // Convert applicants to string array
-          applicants: (role.applicants || []).map((app: any) =>
-            typeof app === "string" ? app : app._id || "",
+        // Create a new object without bookedPrice
+        const { bookedPrice, ...roleWithoutBookedPrice } = role as any;
+
+        const formattedRole: any = {
+          role: roleWithoutBookedPrice.role,
+          maxSlots: roleWithoutBookedPrice.maxSlots || 1,
+          maxApplicants: roleWithoutBookedPrice.maxApplicants || 20,
+          currentApplicants: roleWithoutBookedPrice.currentApplicants || 0,
+          filledSlots: roleWithoutBookedPrice.filledSlots || 0,
+          applicants: (roleWithoutBookedPrice.applicants || []).map(
+            (app: any) => (typeof app === "string" ? app : app._id || ""),
           ),
-          // Convert bookedUsers to string array
-          bookedUsers: (role.bookedUsers || []).map((user: any) =>
-            typeof user === "string" ? user : user._id || "",
+          bookedUsers: (roleWithoutBookedPrice.bookedUsers || []).map(
+            (user: any) => (typeof user === "string" ? user : user._id || ""),
           ),
-          requiredSkills: role.requiredSkills || [],
-          description: role.description || "",
-          isLocked: role.isLocked || false,
-          price: role.price !== undefined ? role.price : undefined, // Use undefined instead of null
-          currency: role.currency || "KES",
-          negotiable: role.negotiable !== undefined ? role.negotiable : true,
-          bookedPrice: role.bookedPrice || undefined, // Use undefined instead of null
+          requiredSkills: roleWithoutBookedPrice.requiredSkills || [],
+          description: roleWithoutBookedPrice.description || "",
+          isLocked: roleWithoutBookedPrice.isLocked || false,
+          currency: roleWithoutBookedPrice.currency || "KES",
+          negotiable:
+            roleWithoutBookedPrice.negotiable !== undefined
+              ? roleWithoutBookedPrice.negotiable
+              : true,
         };
+
+        // Handle price
+        if (
+          roleWithoutBookedPrice.price !== undefined &&
+          roleWithoutBookedPrice.price !== null
+        ) {
+          const price = roleWithoutBookedPrice.price;
+          if (typeof price === "number" && !isNaN(price)) {
+            formattedRole.price = price;
+          } else if (typeof price === "string") {
+            const parsed = parseFloat(price);
+            if (!isNaN(parsed)) {
+              formattedRole.price = parsed;
+            }
+          }
+        }
+
+        // Remove undefined values
+        Object.keys(formattedRole).forEach((key) => {
+          if (formattedRole[key] === undefined) {
+            delete formattedRole[key];
+          }
+        });
+
+        return formattedRole;
       };
 
       // Format band roles properly before sending
@@ -1712,7 +1778,58 @@ export default function EditGigForm({
         : typeof formValues.vocalistGenre === "string"
           ? formValues.vocalistGenre
           : "";
+      console.log("=== DEBUG: Before Sending to Convex ===");
+      console.log("Raw dates from form:", {
+        startTimeRaw: formValues.acceptInterestStartTime,
+        endTimeRaw: formValues.acceptInterestEndTime,
+      });
 
+      // In your handleSave function, update parseDateTimeLocal:
+      const parseDateTimeLocal = (dateTimeStr: string | undefined) => {
+        if (!dateTimeStr) return undefined;
+
+        // datetime-local format: "YYYY-MM-DDTHH:mm"
+        // We need to ensure it's parsed correctly in local timezone
+        const date = new Date(dateTimeStr);
+
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          console.error("Invalid date:", dateTimeStr);
+          return undefined;
+        }
+
+        // Return timestamp
+        return date.getTime();
+      };
+
+      // Add validation for dates
+      const acceptInterestStartTime = formValues.acceptInterestStartTime
+        ? parseDateTimeLocal(formValues.acceptInterestStartTime)
+        : undefined;
+
+      const acceptInterestEndTime = formValues.acceptInterestEndTime
+        ? parseDateTimeLocal(formValues.acceptInterestEndTime)
+        : undefined;
+
+      // Validate that end time is after start time if both exist
+      if (acceptInterestStartTime && acceptInterestEndTime) {
+        if (acceptInterestEndTime <= acceptInterestStartTime) {
+          toast.error("Interest end time must be after start time");
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      console.log("Parsed timestamps:", {
+        startTime: acceptInterestStartTime,
+        endTime: acceptInterestEndTime,
+        startDate: acceptInterestStartTime
+          ? new Date(acceptInterestStartTime).toLocaleString()
+          : "none",
+        endDate: acceptInterestEndTime
+          ? new Date(acceptInterestEndTime).toLocaleString()
+          : "none",
+      });
       // Prepare update data - include gigcustom fields
       const updateData = {
         gigId: gigId as Id<"gigs">,
@@ -1737,12 +1854,8 @@ export default function EditGigForm({
         djGenre: djGenreString || undefined,
         djEquipment: djEquipmentString || undefined,
         vocalistGenre: vocalistGenreString || undefined,
-        acceptInterestEndTime: formValues.acceptInterestEndTime
-          ? new Date(formValues.acceptInterestEndTime).getTime()
-          : undefined,
-        acceptInterestStartTime: formValues.acceptInterestStartTime
-          ? new Date(formValues.acceptInterestStartTime).getTime()
-          : undefined,
+        acceptInterestEndTime: acceptInterestEndTime,
+        acceptInterestStartTime: acceptInterestStartTime,
         maxSlots: formValues.maxSlots
           ? parseInt(formValues.maxSlots)
           : undefined,
@@ -1764,7 +1877,15 @@ export default function EditGigForm({
       const cleanUpdateData = Object.fromEntries(
         Object.entries(updateData).filter(([_, v]) => v !== undefined),
       );
-
+      // In your handleSave function, add this before calling updateGig:
+      console.log("=== DEBUG: Band roles being sent to Convex ===");
+      formattedBandRoles?.forEach((role, index) => {
+        console.log(`Role ${index}:`, JSON.stringify(role, null, 2));
+        console.log("Has bookedPrice property?", "bookedPrice" in role);
+        if ("bookedPrice" in role) {
+          console.log("bookedPrice value:", role.bookedPrice);
+        }
+      });
       // Use the helper utility
       await updateGig(cleanUpdateData as any);
 
@@ -1798,7 +1919,47 @@ export default function EditGigForm({
     updateGig,
     router,
   ]);
+  // Add this near your other debug functions
+  const debugInterestWindowData = () => {
+    console.log("=== DEBUG: Interest Window Data ===");
+    console.log("Form Values:", {
+      acceptInterestStartTime: formValues?.acceptInterestStartTime,
+      acceptInterestEndTime: formValues?.acceptInterestEndTime,
+      interestWindowDays: formValues?.interestWindowDays,
+      enableInterestWindow: formValues?.enableInterestWindow,
+    });
 
+    // Parse the dates to see what we have
+    if (formValues?.acceptInterestStartTime) {
+      const start = new Date(formValues.acceptInterestStartTime);
+      console.log("Start Date parsed:", {
+        raw: formValues.acceptInterestStartTime,
+        ISO: start.toISOString(),
+        local: start.toLocaleString(),
+        timestamp: start.getTime(),
+        isValid: !isNaN(start.getTime()),
+      });
+    }
+
+    if (formValues?.acceptInterestEndTime) {
+      const end = new Date(formValues.acceptInterestEndTime);
+      console.log("End Date parsed:", {
+        raw: formValues.acceptInterestEndTime,
+        ISO: end.toISOString(),
+        local: end.toLocaleString(),
+        timestamp: end.getTime(),
+        isValid: !isNaN(end.getTime()),
+      });
+    }
+
+    // Check what the component is getting from the gig
+    console.log("Original gig data:", {
+      start: gig?.acceptInterestStartTime,
+      end: gig?.acceptInterestEndTime,
+      startType: typeof gig?.acceptInterestStartTime,
+      endType: typeof gig?.acceptInterestEndTime,
+    });
+  };
   const confirmCancel = useCallback(() => {
     if (formValues && originalValues) {
       setFormValues(originalValues);
@@ -1816,26 +1977,32 @@ export default function EditGigForm({
       },
     );
 
+    // Initialize band roles from gig data
     const bandRolesFromGig =
       (gig &&
-        gig?.bandCategory?.map((role: any) => ({
-          role: role.role,
-          maxSlots: role.maxSlots || 1,
-          maxApplicants: role.maxApplicants || 20,
-          currentApplicants: role.currentApplicants || 0,
-          filledSlots: role.filledSlots || 0,
-          // Don't forget applicants and bookedUsers here too
-          applicants: role.applicants || [],
-          bookedUsers: role.bookedUsers || [],
-          requiredSkills: role.requiredSkills || [],
-          description: role.description || "",
-          price: role.price || undefined,
-          currency: role.currency || "KES",
-          negotiable: role.negotiable ?? true,
-          isLocked: role.isLocked || false,
-        }))) ||
+        gig?.bandCategory?.map((role: any) => {
+          const { bookedPrice, ...roleWithoutBookedPrice } = role;
+
+          return {
+            ...roleWithoutBookedPrice,
+            maxSlots: role.maxSlots || 1,
+            maxApplicants: role.maxApplicants || 20,
+            currentApplicants: role.currentApplicants || 0,
+            filledSlots: role.filledSlots || 0,
+            applicants: role.applicants || [],
+            bookedUsers: role.bookedUsers || [],
+            requiredSkills: role.requiredSkills || [],
+            description: role.description || "",
+            price: role.price || undefined,
+            currency: role.currency || "KES",
+            negotiable: role.negotiable ?? true,
+            isLocked: role.isLocked || false,
+            // DO NOT include bookedPrice
+          };
+        })) ||
       [];
 
+    setBandRoles(bandRolesFromGig);
     setBandRoles(bandRolesFromGig);
     setHasChanges(false);
     setShowCancelConfirm(false);
@@ -2027,12 +2194,13 @@ export default function EditGigForm({
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() =>
+                        onClick={() => {
                           setFormValues((prev: any) => ({
                             ...prev,
                             maxSlots: num,
-                          }))
-                        }
+                          }));
+                          setHasChanges(true);
+                        }}
                         className={cn(
                           "px-3",
                           currentSlots === num &&
@@ -2216,6 +2384,7 @@ export default function EditGigForm({
     handleSelectChange,
     handleInputChange,
     handleInputBlur,
+    setHasChanges,
   ]);
 
   // Loading state
@@ -2500,10 +2669,13 @@ export default function EditGigForm({
                     <ErrorMessage error={fieldErrors.bussinesscat} />
                   </div>
 
-                  {/* Talent Preview */}
-                  <TalentPreview formValues={formValues} colors={colors} />
-
                   {/* Band Setup Preview */}
+                  {bussinesscat !== "other" && (
+                    <>
+                      <TalentPreview formValues={formValues} colors={colors} />
+                    </>
+                  )}
+
                   {bussinesscat === "other" && (
                     <>
                       <BandSetupPreview
@@ -2591,9 +2763,7 @@ export default function EditGigForm({
                           <button
                             type="button"
                             onClick={() =>
-                              setIsInstrumentDropdownOpen(
-                                !isInstrumentDropdownOpen,
-                              )
+                              setIsInstrumentDropdownOpen((prev) => !prev)
                             }
                             className={cn(
                               "w-full pl-12 pr-10 py-3 text-left rounded-xl border transition-all duration-200",
@@ -2787,8 +2957,9 @@ export default function EditGigForm({
                     <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>
                       Duration
                     </h3>
+
                     <div
-                      onClick={() => setDurationVisible(!durationVisible)}
+                      onClick={() => setDurationVisible((prev) => !prev)}
                       className={cn(
                         "flex justify-between items-center p-4 rounded-xl border cursor-pointer transition-all duration-200",
                         colors.border,
@@ -3004,33 +3175,34 @@ export default function EditGigForm({
                       )}
                     </div>
                   </div>
-
                   {/* Negotiable Switch */}
-                  <div className="flex items-center justify-between p-4 rounded-xl border">
-                    <div>
-                      <Label className={cn("font-medium", colors.text)}>
-                        Price Negotiable
-                      </Label>
-                      <p className={cn("text-sm", colors.textMuted)}>
-                        Allow applicants to negotiate the price
-                      </p>
+                  {formValues.bussinesscat !== "other" && (
+                    <div className="flex items-center justify-between p-4 rounded-xl border">
+                      <div>
+                        <Label className={cn("font-medium", colors.text)}>
+                          Price Negotiable
+                        </Label>
+                        <p className={cn("text-sm", colors.textMuted)}>
+                          Allow applicants to negotiate the price
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formValues?.negotiable ?? true}
+                        onCheckedChange={(checked) => {
+                          setFormValues((prev: any) => ({
+                            ...prev,
+                            negotiable: checked,
+                          }));
+                          setHasChanges(true); // Add this
+                        }}
+                      />
                     </div>
-                    <Switch
-                      checked={formValues?.negotiable ?? true}
-                      onCheckedChange={(checked) => {
-                        setFormValues((prev: any) => ({
-                          ...prev,
-                          negotiable: checked,
-                        }));
-                        setHasChanges(true);
-                      }}
-                    />
-                  </div>
+                  )}
 
-                  {/* Interest Window Section */}
                   <InterestWindowSection
                     formValues={formValues}
                     colors={colors}
+                    onInterestWindowChange={handleInterestWindowChange} // Add this
                   />
                 </div>
               </CardContent>

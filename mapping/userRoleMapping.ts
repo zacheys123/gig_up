@@ -2,6 +2,7 @@
 
 import { Doc } from "@/convex/_generated/dataModel";
 import { instrumentRoleMappings } from "./instrementMapping";
+import { isUserQualifiedForRole } from "@/app/hub/gigs/utils";
 
 type User = Doc<"users">;
 
@@ -19,28 +20,6 @@ const normalizeSkill = (skill: string): string => {
     .trim()
     .replace(/[^\w\s]/g, "") // Remove special characters
     .replace(/\s+/g, "_"); // Replace spaces with underscores
-};
-export const isUserQualifiedForRole = (
-  user: User,
-  bandRole: BandRole,
-): boolean => {
-  // If role has no specific requirements, anyone can apply
-  if (!bandRole.requiredSkills || bandRole.requiredSkills.length === 0) {
-    return true;
-  }
-
-  // Get all user skills in normalized form
-  const userSkills: string[] = getAllNormalizedUserSkills(user);
-
-  // Normalize required skills
-  const requiredSkills = bandRole.requiredSkills.map(normalizeSkill);
-
-  // Check if user has ANY of the required skills
-  return userSkills.some((userSkill) =>
-    requiredSkills.some((requiredSkill) =>
-      areSkillsEquivalent(userSkill, requiredSkill),
-    ),
-  );
 };
 
 // Helper to get all user skills

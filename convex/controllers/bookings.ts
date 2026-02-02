@@ -203,7 +203,7 @@ export const withdrawFromBandRole = mutation({
               availableSlots: Math.max(
                 0,
                 role.maxSlots -
-                  updatedBandCategory[bandRoleIndex].bookedUsers.length
+                  updatedBandCategory[bandRoleIndex].bookedUsers.length,
               ),
             }),
           },
@@ -223,7 +223,7 @@ export const withdrawFromBandRole = mutation({
           ? Math.max(
               0,
               role.maxSlots -
-                updatedBandCategory[bandRoleIndex].bookedUsers.length
+                updatedBandCategory[bandRoleIndex].bookedUsers.length,
             )
           : undefined,
       };
@@ -242,7 +242,7 @@ export const withdrawFromBandRole = mutation({
 
       // Wrap unexpected errors
       throw new Error(
-        `UNKNOWN_ERROR:${error.message || "Unknown withdrawal error"}`
+        `UNKNOWN_ERROR:${error.message || "Unknown withdrawal error"}`,
       );
     }
   },
@@ -374,7 +374,7 @@ export const applyForBandRole = mutation({
     const canUserApplyForRole = (
       roleName: string,
       userInstrument: string,
-      userRoleType: string
+      userRoleType: string,
     ): boolean => {
       // Mapping of roles to possible instrument keywords
       const roleMappings = {
@@ -419,7 +419,7 @@ export const applyForBandRole = mutation({
       if (mappings) {
         return mappings.some(
           (keyword) =>
-            userInstrument.includes(keyword) || userRoleType.includes(keyword)
+            userInstrument.includes(keyword) || userRoleType.includes(keyword),
         );
       }
 
@@ -435,21 +435,21 @@ export const applyForBandRole = mutation({
         `You cannot apply for the "${role.role}" role. ` +
           `This role requires skills/instruments related to "${role.role}". ` +
           `Your profile shows: ${userDisplay}. ` +
-          `Please update your profile or apply for a different role.`
+          `Please update your profile or apply for a different role.`,
       );
     }
 
     // Check if role is locked
     if (role.isLocked) {
       throw new Error(
-        `The role "${role.role}" is no longer accepting applications`
+        `The role "${role.role}" is no longer accepting applications`,
       );
     }
 
     // Check if role is already full (all slots booked)
     if (role.filledSlots >= role.maxSlots) {
       throw new Error(
-        `The role "${role.role}" is already full (all ${role.maxSlots} slots booked)`
+        `The role "${role.role}" is already full (all ${role.maxSlots} slots booked)`,
       );
     }
 
@@ -460,7 +460,7 @@ export const applyForBandRole = mutation({
     if (currentApplicantsCount >= maxApplicants) {
       throw new Error(
         `This role has reached the maximum number of applicants (${maxApplicants}). ` +
-          `Please try another role or check back later.`
+          `Please try another role or check back later.`,
       );
     }
 
@@ -487,11 +487,11 @@ export const applyForBandRole = mutation({
 
     console.log(
       "  Role applicants after:",
-      updatedBandCategory[bandRoleIndex].applicants
+      updatedBandCategory[bandRoleIndex].applicants,
     );
     console.log(
       "  Current applicants count:",
-      updatedBandCategory[bandRoleIndex].currentApplicants
+      updatedBandCategory[bandRoleIndex].currentApplicants,
     );
 
     // Create band booking history entry for application
@@ -568,98 +568,263 @@ export const applyForBandRole = mutation({
   },
 });
 
-// COMPLETE BAND PAYMENT (Mark payment as completed)
-export const completeBandPayment = mutation({
+export const bookForBandRole = mutation({
   args: {
     gigId: v.id("gigs"),
     userId: v.id("users"),
     bandRoleIndex: v.number(),
-    clerkId: v.string(), // Client's Clerk ID
-    paymentAmount: v.number(),
-    paymentDate: v.number(),
+    clerkId: v.string(),
+    bookedPrice: v.optional(v.number()),
+    reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const {
-      gigId,
-      userId,
-      bandRoleIndex,
-      clerkId,
-      paymentAmount,
-      paymentDate,
-    } = args;
+    const { gigId, userId, bandRoleIndex, clerkId, bookedPrice, reason } = args;
 
-    // Get client user from Clerk ID
-    const clientUser = await getUserByClerkId(ctx, clerkId);
-    if (!clientUser) throw new Error("Client not found");
+    try {
+      // Get client user from Clerk ID
+      const clientUser = await getUserByClerkId(ctx, clerkId);
+      if (!clientUser) {
+        throw new Error(
+          "CLIENT_NOT_FOUND: Your account was not found. Please sign in again.",
+        );
+      }
 
-    const gig = await ctx.db.get(gigId);
-    if (!gig) throw new Error("Gig not found");
+      const gig = await ctx.db.get(gigId);
+      if (!gig) {
+        throw new Error(
+          "GIG_NOT_FOUND: This gig does not exist or has been deleted.",
+        );
+      }
 
-    // Verify this is a band gig
-    if (!gig.isClientBand || gig.bussinesscat !== "other") {
-      throw new Error("This is not a band gig");
+      // Verify this is a band gig
+      if (!gig.isClientBand || gig.bussinesscat !== "other") {
+        throw new Error(
+          "NOT_BAND_GIG: This is not a band gig. Booking is only available for band roles.",
+        );
+      }
+
+      // Verify caller is band creator
+      if (gig.postedBy !== clientUser._id) {
+        throw new Error(
+          "PERMISSION_DENIED: Only the band creator can book musicians.",
+        );
+      }
+
+      // Get band category and specific role
+      if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) {
+        throw new Error(
+          "INVALID_ROLE: This band role does not exist. Please refresh the page.",
+        );
+      }
+
+      const role = gig.bandCategory[bandRoleIndex];
+
+      if (role.filledSlots >= role.maxSlots) {
+        throw new Error(
+          `ROLE_FULL:${role.role}:${role.filledSlots}:${role.maxSlots}`,
+        );
+      }
+
+      // Get musician details
+      const musician = await ctx.db.get(userId);
+      if (!musician) {
+        throw new Error(
+          "MUSICIAN_NOT_FOUND: This musician profile could not be found.",
+        );
+      }
+
+      // Check if user is already booked for this role
+      if (role.bookedUsers.includes(userId)) {
+        throw new Error(
+          "ALREADY_BOOKED: This musician is already booked for this role.",
+        );
+      }
+
+      // Check if user has applied for this role
+      const hasApplied = role.applicants.includes(userId);
+      if (!hasApplied) {
+        console.warn(
+          `User ${userId} has not applied for role ${role.role}, but booking anyway`,
+        );
+      }
+
+      // Create updated band category - move user from applicants to bookedUsers
+      const updatedBandCategory = [...gig.bandCategory];
+      updatedBandCategory[bandRoleIndex] = {
+        ...role,
+        filledSlots: (role.filledSlots || 0) + 1,
+        bookedUsers: [...role.bookedUsers, userId],
+        applicants: role.applicants.filter((id) => id !== userId),
+        bookedPrice: bookedPrice || role.price || 0,
+        currentApplicants: Math.max(0, role.applicants.length - 1), // Update applicant count
+      };
+
+      // Check if all roles are now filled
+      const allRolesFilled = updatedBandCategory.every(
+        (r) => r.filledSlots >= r.maxSlots,
+      );
+
+      // Calculate final price
+      const finalPrice = bookedPrice || role.price || 0;
+
+      const bandBookingEntry = {
+        bandRole: role.role,
+        bandRoleIndex,
+        userId,
+        userName: musician.firstname || musician.username || "Musician",
+        appliedAt: Date.now(),
+        applicationStatus: "accepted" as const,
+        bookedAt: Date.now(),
+        bookedPrice: finalPrice,
+        contractSigned: false,
+        paymentStatus: "pending" as const,
+        bookedBy: clientUser._id,
+        bookingNotes: reason || `Booked as ${role.role}`,
+        ratingGiven: undefined,
+        applicationNotes: undefined,
+        completedAt: undefined,
+        completionNotes: undefined,
+        paymentDate: undefined,
+        paymentAmount: undefined,
+      };
+
+      // Create regular booking history entry
+      const bookingEntry = {
+        entryId: `${gigId}_${bandRoleIndex}_${userId}_${Date.now()}`,
+        timestamp: Date.now(),
+        userId,
+        userRole: "musician",
+        bandRole: role.role,
+        bandRoleIndex,
+        status: "booked" as const,
+        gigType: "band" as const,
+        proposedPrice: role.price,
+        agreedPrice: finalPrice,
+        currency: role.currency,
+        actionBy: clientUser._id,
+        actionFor: userId,
+        notes: reason || `Booked for ${role.role} role`,
+        metadata: {
+          wasApplicant: hasApplied,
+          clientName: clientUser.firstname || clientUser.username,
+          clientEmail: clientUser.email,
+          musicianName: musician.firstname || musician.username,
+          roleFilledSlots: role.filledSlots + 1,
+          roleMaxSlots: role.maxSlots,
+          allRolesFilled: allRolesFilled,
+        },
+      };
+
+      // Update gig
+      await ctx.db.patch(gigId, {
+        bandCategory: updatedBandCategory,
+        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+        bandBookingHistory: [
+          ...(gig.bandBookingHistory || []),
+          bandBookingEntry,
+        ],
+        updatedAt: Date.now(),
+        ...(allRolesFilled && {
+          isTaken: true,
+          isActive: true,
+        }),
+        isPending: !allRolesFilled,
+      });
+
+      // NOTIFY MUSICIAN THAT THEY'VE BEEN BOOKED
+      await createNotificationInternal(ctx, {
+        userDocumentId: userId,
+        type: "band_booking",
+        title: "🎉 You've Been Booked!",
+        message: `Congratulations! You've been booked as ${role.role} for "${gig.title}"`,
+        image: clientUser.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: clientUser._id,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          role: role.role,
+          bandRoleIndex,
+          bookedPrice: finalPrice,
+          clientName: clientUser.firstname || clientUser.username,
+          clientEmail: clientUser.email,
+          reason: reason || "",
+          gigDate: gig.date,
+          gigLocation: gig.location,
+        },
+      });
+
+      // Notify the band creator/leader
+      await createNotificationInternal(ctx, {
+        userDocumentId: clientUser._id,
+        type: "musician_booked",
+        title: "✅ Musician Booked Successfully",
+        message: `You've booked ${musician.firstname || musician.username} as ${role.role} for "${gig.title}"`,
+        image: musician.picture,
+        actionUrl: `/gigs/${gigId}/manage`,
+        relatedUserDocumentId: userId,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          role: role.role,
+          musicianName: musician.firstname || musician.username,
+          bookedPrice: finalPrice,
+          remainingSlots: role.maxSlots - (role.filledSlots + 1),
+          allRolesFilled: allRolesFilled,
+        },
+      });
+
+      // Update trust scores for both parties
+      try {
+        await updateUserTrust(ctx, musician._id);
+        await updateUserTrust(ctx, clientUser._id);
+      } catch (error) {
+        console.error("Failed to update trust scores:", error);
+      }
+
+      return {
+        success: true,
+        booked: {
+          userId,
+          musicianName: musician.firstname || musician.username,
+          role: role.role,
+          price: finalPrice,
+          bookingDate: new Date().toISOString(),
+        },
+        gigStatus: allRolesFilled ? "fully_booked" : "partially_booked",
+        remainingSlots: role.maxSlots - (role.filledSlots + 1),
+        totalSlots: role.maxSlots,
+        totalRoles: gig.bandCategory.length,
+        filledRoles: updatedBandCategory.filter(
+          (r) => r.filledSlots >= r.maxSlots,
+        ).length,
+        metadata: {
+          allRolesFilled,
+          wasFromApplicants: hasApplied,
+          clientName: clientUser.firstname || clientUser.username,
+          musicianEmail: musician.email,
+        },
+      };
+    } catch (error: any) {
+      console.error("Error in bookForBandRole:", error);
+
+      if (
+        error.message.startsWith("CLIENT_NOT_FOUND") ||
+        error.message.startsWith("GIG_NOT_FOUND") ||
+        error.message.startsWith("NOT_BAND_GIG") ||
+        error.message.startsWith("PERMISSION_DENIED") ||
+        error.message.startsWith("INVALID_ROLE") ||
+        error.message.startsWith("ROLE_FULL") ||
+        error.message.startsWith("MUSICIAN_NOT_FOUND") ||
+        error.message.startsWith("ALREADY_BOOKED")
+      ) {
+        throw error;
+      }
+
+      throw new Error(
+        "BOOKING_FAILED: Unable to complete booking. Please try again or contact support.",
+      );
     }
-
-    // Verify caller is band creator
-    if (gig.postedBy !== clientUser._id) {
-      throw new Error("Only the band creator can mark payments as complete");
-    }
-
-    // Get band category and specific role
-    if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) {
-      throw new Error("Invalid band role");
-    }
-
-    const role = gig.bandCategory[bandRoleIndex];
-
-    // Check if user is booked for this role
-    if (!role.bookedUsers.includes(userId)) {
-      throw new Error("User is not booked for this role");
-    }
-
-    const bandBookingEntry = {
-      bandRole: role.role,
-      bandRoleIndex,
-      userId,
-      userName: "Musician", // Would need to fetch user name
-      appliedAt: Date.now(), // ADD THIS
-      applicationStatus: "pending_review" as const, // ADD THIS
-      paymentStatus: "paid" as const,
-      paymentAmount,
-      paymentDate,
-      completedAt: Date.now(),
-      completionNotes: "Payment completed",
-    };
-
-    // Create regular booking history entry
-    const paymentEntry = {
-      entryId: `${gigId}_${bandRoleIndex}_${userId}_${Date.now()}`,
-      timestamp: Date.now(),
-      userId,
-      userRole: "musician",
-      bandRole: role.role,
-      bandRoleIndex,
-
-      status: "completed" as const,
-      gigType: "band" as const,
-      actionBy: clientUser._id,
-      actionFor: userId,
-      reason: "Payment completed",
-      metadata: {
-        paymentAmount,
-        paymentDate,
-        bookedPrice: role.bookedPrice || role.price,
-      },
-    };
-
-    // Add to band booking history
-    await ctx.db.patch(gigId, {
-      bookingHistory: [...(gig.bookingHistory || []), paymentEntry],
-      bandBookingHistory: [...(gig.bandBookingHistory || []), bandBookingEntry],
-      updatedAt: Date.now(),
-    });
-
-    return { success: true };
   },
 });
 
@@ -709,8 +874,35 @@ export const unbookFromBandRole = mutation({
       applicants: [...role.applicants, userId], // Add back to applicants
     };
 
-    // Create band booking history entry - REMOVED the extra 'bookedBy' field
-    const bandBookingEntry = {
+    // Helper function to convert price to number safely
+    const getSafeBookedPrice = (): number | undefined => {
+      // First check bookedPrice
+      if (role.bookedPrice !== undefined && role.bookedPrice !== null) {
+        if (typeof role.bookedPrice === "number") {
+          return role.bookedPrice;
+        }
+        if (typeof role.bookedPrice === "string") {
+          const parsed = parseFloat(role.bookedPrice);
+          return isNaN(parsed) ? undefined : parsed;
+        }
+      }
+      // Then check price
+      if (role.price !== undefined && role.price !== null) {
+        if (typeof role.price === "number") {
+          return role.price;
+        }
+        if (typeof role.price === "string") {
+          const parsed = parseFloat(role.price);
+          return isNaN(parsed) ? undefined : parsed;
+        }
+      }
+      return undefined;
+    };
+
+    const safeBookedPrice = getSafeBookedPrice();
+
+    // Create band booking history entry
+    const bandBookingEntry: any = {
       bandRole: role.role,
       bandRoleIndex,
       userId,
@@ -718,12 +910,15 @@ export const unbookFromBandRole = mutation({
       appliedAt: Date.now(),
       applicationStatus: "pending_review" as const,
       bookedAt: Date.now(),
-      // REMOVED: bookedBy: clientUser._id, // This field doesn't exist in schema
-      bookedPrice: role.bookedPrice || role.price,
       completedAt: Date.now(),
       completionNotes: reason || "Unbooked by client",
       paymentStatus: "cancelled" as const,
     };
+
+    // Only add bookedPrice if we have a valid number
+    if (safeBookedPrice !== undefined) {
+      bandBookingEntry.bookedPrice = safeBookedPrice;
+    }
 
     const unbookingEntry = {
       entryId: `${gigId}_${bandRoleIndex}_${userId}_${Date.now()}`,
@@ -738,9 +933,8 @@ export const unbookFromBandRole = mutation({
       actionFor: userId,
       reason: reason || "Unbooked from role",
       metadata: {
-        previousPrice: role.bookedPrice || role.price,
+        previousPrice: safeBookedPrice,
         movedBackToApplicants: true,
-        // Add client info in metadata instead
         clientId: clientUser._id,
         clientName: clientUser.firstname || clientUser.username,
       },
@@ -775,275 +969,89 @@ export const unbookFromBandRole = mutation({
     return { success: true };
   },
 });
-// convex/bookings.ts
 
-export const bookForBandRole = mutation({
+export const completeBandPayment = mutation({
   args: {
     gigId: v.id("gigs"),
     userId: v.id("users"),
     bandRoleIndex: v.number(),
     clerkId: v.string(),
-    bookedPrice: v.optional(v.number()),
-    reason: v.optional(v.string()),
+    paymentAmount: v.number(),
+    paymentDate: v.number(),
   },
   handler: async (ctx, args) => {
-    const { gigId, userId, bandRoleIndex, clerkId, bookedPrice, reason } = args;
+    const {
+      gigId,
+      userId,
+      bandRoleIndex,
+      clerkId,
+      paymentAmount,
+      paymentDate,
+    } = args;
 
-    try {
-      // Get client user from Clerk ID
-      const clientUser = await getUserByClerkId(ctx, clerkId);
-      if (!clientUser) {
-        throw new Error(
-          "CLIENT_NOT_FOUND: Your account was not found. Please sign in again."
-        );
-      }
+    const clientUser = await getUserByClerkId(ctx, clerkId);
+    if (!clientUser) throw new Error("Client not found");
 
-      const gig = await ctx.db.get(gigId);
-      if (!gig) {
-        throw new Error(
-          "GIG_NOT_FOUND: This gig does not exist or has been deleted."
-        );
-      }
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
 
-      // Verify this is a band gig
-      if (!gig.isClientBand || gig.bussinesscat !== "other") {
-        throw new Error(
-          "NOT_BAND_GIG: This is not a band gig. Booking is only available for band roles."
-        );
-      }
-
-      // Verify caller is band creator
-      if (gig.postedBy !== clientUser._id) {
-        throw new Error(
-          "PERMISSION_DENIED: Only the band creator can book musicians."
-        );
-      }
-
-      // Get band category and specific role
-      if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) {
-        throw new Error(
-          "INVALID_ROLE: This band role does not exist. Please refresh the page."
-        );
-      }
-
-      const role = gig.bandCategory[bandRoleIndex];
-
-      // In your bookForBandRole mutation (around line 810)
-      if (role.filledSlots >= role.maxSlots) {
-        throw new Error(
-          `ROLE_FULL:${role.role}:${role.filledSlots}:${role.maxSlots}`
-        );
-      }
-
-      // Get musician details
-      const musician = await ctx.db.get(userId);
-      if (!musician) {
-        throw new Error(
-          "MUSICIAN_NOT_FOUND: This musician profile could not be found."
-        );
-      }
-
-      // Check if user is already booked for this role
-      if (role.bookedUsers.includes(userId)) {
-        throw new Error(
-          "ALREADY_BOOKED: This musician is already booked for this role."
-        );
-      }
-
-      // Check if user has applied for this role
-      const hasApplied = role.applicants.includes(userId);
-      if (!hasApplied) {
-        console.warn(
-          `User ${userId} has not applied for role ${role.role}, but booking anyway`
-        );
-      }
-
-      // Create updated band category - move user from applicants to bookedUsers
-      const updatedBandCategory = [...gig.bandCategory];
-      updatedBandCategory[bandRoleIndex] = {
-        ...role,
-        filledSlots: (role.filledSlots || 0) + 1,
-        bookedUsers: [...role.bookedUsers, userId],
-        applicants: role.applicants.filter((id) => id !== userId),
-        bookedPrice: bookedPrice || role.price || 0,
-        currentApplicants: Math.max(0, role.applicants.length - 1), // Update applicant count
-      };
-
-      // Check if all roles are now filled
-      const allRolesFilled = updatedBandCategory.every(
-        (r) => r.filledSlots >= r.maxSlots
-      );
-
-      // Calculate final price
-      const finalPrice = bookedPrice || role.price || 0;
-
-      const bandBookingEntry = {
-        bandRole: role.role,
-        bandRoleIndex,
-        userId,
-        userName: musician.firstname || musician.username || "Musician",
-        appliedAt: Date.now(),
-        applicationStatus: "accepted" as const, // Use "accepted" instead of "booked"
-        bookedAt: Date.now(),
-        bookedPrice: finalPrice,
-        contractSigned: false,
-        paymentStatus: "pending" as const,
-        bookedBy: clientUser._id,
-        bookingNotes: reason || `Booked as ${role.role}`,
-        // Add any other required fields from your schema
-        ratingGiven: undefined, // Optional field
-        applicationNotes: undefined, // Optional field
-        completedAt: undefined, // Optional field
-        completionNotes: undefined, // Optional field
-        paymentDate: undefined, // Optional field
-        paymentAmount: undefined, // Optional field
-        // Make sure all required schema fields are included
-      };
-
-      // Create regular booking history entry
-      const bookingEntry = {
-        entryId: `${gigId}_${bandRoleIndex}_${userId}_${Date.now()}`,
-        timestamp: Date.now(),
-        userId,
-        userRole: "musician",
-        bandRole: role.role,
-        bandRoleIndex,
-        status: "booked" as const, // This is OK for bookingHistory
-        gigType: "band" as const,
-        proposedPrice: role.price,
-        agreedPrice: finalPrice,
-        currency: role.currency,
-        actionBy: clientUser._id,
-        actionFor: userId,
-        notes: reason || `Booked for ${role.role} role`,
-        metadata: {
-          wasApplicant: hasApplied,
-          clientName: clientUser.firstname || clientUser.username,
-          clientEmail: clientUser.email,
-          musicianName: musician.firstname || musician.username,
-          roleFilledSlots: role.filledSlots + 1,
-          roleMaxSlots: role.maxSlots,
-          allRolesFilled: allRolesFilled,
-        },
-      };
-
-      // Update gig - FIXED: Ensure all fields match schema
-      await ctx.db.patch(gigId, {
-        bandCategory: updatedBandCategory,
-        bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
-        bandBookingHistory: [
-          ...(gig.bandBookingHistory || []),
-          bandBookingEntry,
-        ],
-        updatedAt: Date.now(),
-        // Only set isTaken and isActive if ALL roles are filled
-        ...(allRolesFilled && {
-          isTaken: true,
-          isActive: true,
-        }),
-        // Always set isPending based on whether any slots are open
-        isPending: !allRolesFilled,
-      });
-
-      // NOTIFY MUSICIAN THAT THEY'VE BEEN BOOKED
-      await createNotificationInternal(ctx, {
-        userDocumentId: userId,
-        type: "band_booking",
-        title: "🎉 You've Been Booked!",
-        message: `Congratulations! You've been booked as ${role.role} for "${gig.title}"`,
-        image: clientUser.picture,
-        actionUrl: `/gigs/${gigId}`,
-        relatedUserDocumentId: clientUser._id,
-        metadata: {
-          gigId,
-          gigTitle: gig.title,
-          role: role.role,
-          bandRoleIndex,
-          bookedPrice: finalPrice,
-          clientName: clientUser.firstname || clientUser.username,
-          clientEmail: clientUser.email,
-          reason: reason || "",
-          gigDate: gig.date,
-          gigLocation: gig.location,
-        },
-      });
-
-      // Notify the band creator/leader
-      await createNotificationInternal(ctx, {
-        userDocumentId: clientUser._id,
-        type: "musician_booked",
-        title: "✅ Musician Booked Successfully",
-        message: `You've booked ${musician.firstname || musician.username} as ${role.role} for "${gig.title}"`,
-        image: musician.picture,
-        actionUrl: `/gigs/${gigId}/manage`,
-        relatedUserDocumentId: userId,
-        metadata: {
-          gigId,
-          gigTitle: gig.title,
-          role: role.role,
-          musicianName: musician.firstname || musician.username,
-          bookedPrice: finalPrice,
-          remainingSlots: role.maxSlots - (role.filledSlots + 1),
-          allRolesFilled: allRolesFilled,
-        },
-      });
-
-      // Update trust scores for both parties
-      try {
-        // Update musician's trust score (new booking)
-        await updateUserTrust(ctx, musician._id);
-
-        // Update client's trust score (made a booking)
-        await updateUserTrust(ctx, clientUser._id);
-      } catch (error) {
-        console.error("Failed to update trust scores:", error);
-        // Don't throw - trust scores are secondary to booking
-      }
-
-      return {
-        success: true,
-        booked: {
-          userId,
-          musicianName: musician.firstname || musician.username,
-          role: role.role,
-          price: finalPrice,
-          bookingDate: new Date().toISOString(),
-        },
-        gigStatus: allRolesFilled ? "fully_booked" : "partially_booked",
-        remainingSlots: role.maxSlots - (role.filledSlots + 1),
-        totalSlots: role.maxSlots,
-        totalRoles: gig.bandCategory.length,
-        filledRoles: updatedBandCategory.filter(
-          (r) => r.filledSlots >= r.maxSlots
-        ).length,
-        metadata: {
-          allRolesFilled,
-          wasFromApplicants: hasApplied,
-          clientName: clientUser.firstname || clientUser.username,
-          musicianEmail: musician.email,
-        },
-      };
-    } catch (error: any) {
-      console.error("Error in bookForBandRole:", error);
-
-      // Re-throw with proper error type for frontend handling
-      if (
-        error.message.startsWith("CLIENT_NOT_FOUND") ||
-        error.message.startsWith("GIG_NOT_FOUND") ||
-        error.message.startsWith("NOT_BAND_GIG") ||
-        error.message.startsWith("PERMISSION_DENIED") ||
-        error.message.startsWith("INVALID_ROLE") ||
-        error.message.startsWith("ROLE_FULL") ||
-        error.message.startsWith("MUSICIAN_NOT_FOUND") ||
-        error.message.startsWith("ALREADY_BOOKED")
-      ) {
-        throw error; // Pass through our formatted errors
-      }
-
-      // For unexpected errors
-      throw new Error(
-        "BOOKING_FAILED: Unable to complete booking. Please try again or contact support."
-      );
+    if (!gig.isClientBand || gig.bussinesscat !== "other") {
+      throw new Error("This is not a band gig");
     }
+
+    if (gig.postedBy !== clientUser._id) {
+      throw new Error("Only the band creator can mark payments as complete");
+    }
+
+    if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) {
+      throw new Error("Invalid band role");
+    }
+
+    const role = gig.bandCategory[bandRoleIndex];
+
+    if (!role.bookedUsers.includes(userId)) {
+      throw new Error("User is not booked for this role");
+    }
+
+    const bandBookingEntry = {
+      bandRole: role.role,
+      bandRoleIndex,
+      userId,
+      userName: "Musician",
+      appliedAt: Date.now(),
+      applicationStatus: "pending_review" as const,
+      paymentStatus: "paid" as const,
+      paymentAmount,
+      paymentDate,
+      completedAt: Date.now(),
+      completionNotes: "Payment completed",
+    };
+
+    const paymentEntry = {
+      entryId: `${gigId}_${bandRoleIndex}_${userId}_${Date.now()}`,
+      timestamp: Date.now(),
+      userId,
+      userRole: "musician",
+      bandRole: role.role,
+      bandRoleIndex,
+      status: "completed" as const,
+      gigType: "band" as const,
+      actionBy: clientUser._id,
+      actionFor: userId,
+      reason: "Payment completed",
+      metadata: {
+        paymentAmount,
+        paymentDate,
+        bookedPrice: role.bookedPrice || role.price,
+      },
+    };
+
+    await ctx.db.patch(gigId, {
+      bookingHistory: [...(gig.bookingHistory || []), paymentEntry],
+      bandBookingHistory: [...(gig.bandBookingHistory || []), bandBookingEntry],
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });

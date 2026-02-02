@@ -256,6 +256,7 @@ export const gigModel = defineTable({
   // === INTEREST PERIOD ===
   acceptInterestStartTime: v.optional(v.number()), // When interest opens
   acceptInterestEndTime: v.optional(v.number()), // When interest closes
+  interestWindowDays: v.optional(v.number()),
   cancellationReason: v.optional(v.string()),
 
   // === PAYMENT CONFIRMATION SYSTEM (DUAL-CONFIRMATION) ===
