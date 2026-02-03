@@ -70,6 +70,7 @@ import { getInterestWindowStatus } from "@/utils";
 import { cn } from "@/lib/utils";
 import { getUserGigStatus, type GigUserStatus } from "@/utils";
 import { isUserQualifiedForRole } from "../../utils";
+import { CountdownTimer } from "./CountDown";
 
 // Types
 interface PerformingMember {
@@ -191,6 +192,11 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
 
   if (!status.hasWindow) return null;
 
+  // Parse the start date
+  const startDate = gig.acceptInterestStartTime
+    ? new Date(gig.acceptInterestStartTime)
+    : null;
+
   const getBadgeProps = () => {
     switch (status.status) {
       case "not_open":
@@ -247,32 +253,77 @@ const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge
-            variant={badgeProps.variant}
-            className={clsx(
-              "inline-flex items-center gap-1 text-xs font-medium px-2 py-1",
-              badgeProps.className,
+          <div className="flex flex-col gap-1">
+            {/* Badge */}
+            <Badge
+              variant={badgeProps.variant}
+              className={clsx(
+                "inline-flex items-center gap-1 text-xs font-medium px-2 py-1",
+                badgeProps.className,
+              )}
+            >
+              <Icon className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate max-w-[80px]">{status.message}</span>
+            </Badge>
+
+            {/* Clean, Text-only Countdown */}
+            {status.status === "not_open" && startDate && (
+              <div className="flex items-center gap-3 px-1 py-1 transition-all duration-300">
+                {/* Status Indicator Glow */}
+                <div className="relative flex items-center justify-center h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400/60 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                </div>
+                <CountdownTimer
+                  targetDate={startDate}
+                  className={"text-neutral-300 font-bold"}
+                />
+              </div>
             )}
-          >
-            <Icon className="w-3 h-3 flex-shrink-0" />
-            <span className="hidden sm:inline truncate max-w-[80px]">
-              {status.message}
-            </span>
-            <span className="sm:hidden">!</span>
-          </Badge>
+          </div>
         </TooltipTrigger>
-        <TooltipContent>
-          <p className="font-medium">{status.message}</p>
-          {gig.acceptInterestStartTime && (
-            <p className="text-xs text-gray-500 mt-1">
-              Opens: {formatDate(gig.acceptInterestStartTime)}
-            </p>
-          )}
-          {gig.acceptInterestEndTime && (
-            <p className="text-xs text-gray-500 mt-1">
-              Closes: {formatDate(gig.acceptInterestEndTime)}
-            </p>
-          )}
+        <TooltipContent className="max-w-xs">
+          <div className="space-y-2">
+            <p className="font-medium">{status.message}</p>
+
+            {gig.acceptInterestStartTime && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  <span className="text-sm font-medium">Opens:</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 pl-4">
+                  {formatDate(gig.acceptInterestStartTime)}
+                </p>
+              </div>
+            )}
+
+            {gig.acceptInterestEndTime && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  <span className="text-sm font-medium">Closes:</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 pl-4">
+                  {formatDate(gig.acceptInterestEndTime)}
+                </p>
+              </div>
+            )}
+
+            {status.status === "not_open" && startDate && (
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-blue-600">
+                    Countdown to opening:
+                  </span>
+                </div>
+                <div className="flex items-center justify-center gap-3 mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                  <CountdownTimer targetDate={startDate} className="text-xs" />
+                </div>
+              </div>
+            )}
+          </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -306,6 +357,9 @@ const GigCard: React.FC<GigCardProps> = ({
   const [showRoleSelectionModal, setShowRoleSelectionModal] = useState(false);
   const [selectedRoleForApplication, setSelectedRoleForApplication] =
     useState<BandRole | null>(null);
+
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningReason, setWarningReason] = useState("");
   // Add this to your existing state declarations
   const [showRolesModal, setShowRolesModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
@@ -553,6 +607,7 @@ const GigCard: React.FC<GigCardProps> = ({
     gig.interestedUsers,
     gig.maxSlots,
   ]);
+
   const getActionButtonConfig = (
     userStatus: GigUserStatus,
     gigInfo: {
@@ -562,6 +617,23 @@ const GigCard: React.FC<GigCardProps> = ({
       maxSlots?: number;
     },
   ) => {
+    // Add this check at the top of getActionButtonConfig
+    const windowStatus = getInterestWindowStatus(gig);
+    const isWindowLocked =
+      windowStatus.hasWindow && windowStatus.status !== "open";
+
+    if (isWindowLocked) {
+      return {
+        label:
+          windowStatus.status === "not_open"
+            ? "Opening Soon"
+            : "Applications Closed",
+        variant: "secondary" as const,
+        disabled: true, // This stops the click
+        icon: <Lock className="w-4 h-4" />,
+        action: "none" as const,
+      };
+    }
     if (gig.isTaken) {
       return {
         label: "Booked",
@@ -832,38 +904,38 @@ const GigCard: React.FC<GigCardProps> = ({
       setShowRoleSelectionModal(true);
     }
   };
-
   const handleRegularInterest = async (notes?: string) => {
-    console.log("=== DEBUG handleRegularInterest ===");
-    console.log("Current User (from useCurrentUser):", currentUser);
-    console.log("Current User Convex ID:", currentUser?._id);
-    console.log("Clerk userId:", userId);
-    console.log("Gig interestedUsers:", gig.interestedUsers);
-
-    if (!currentUserId) {
-      // This is the Convex ID
-      toast.error("Sign in to show interest");
+    // 1. Time Lock Check
+    const windowStatus = getInterestWindowStatus(gig);
+    if (windowStatus.hasWindow && windowStatus.status !== "open") {
+      toast.error("This window is not yet open.");
       return;
     }
 
+    // 2. Qualification Check
+    const qualified = isUserQualifiedForRole(currentUser, gig);
+
+    if (!qualified) {
+      setWarningReason(
+        `This gig is looking for a ${gig.bussinesscat}, but your profile is set as a ${currentUser?.roleType}.`,
+      );
+      setShowWarningModal(true);
+      return; // Stop the process here
+    }
+
+    // 3. Proceed if all checks pass
     setLoading(true);
     try {
-      // Send the Convex ID
-      const result = await showInterestInGig({
+      await showInterestInGig({
         gigId: gig._id,
-        userId: currentUserId, // Should be "jn7a6b3wrh8c4v1ex5hs6hz5357tddr9"
-        notes: notes || undefined,
+        userId: currentUserId!,
+        notes: notes,
       });
-
-      console.log("Mutation result:", result);
-      toast.success("Interest shown!");
-    } catch (error) {
-      console.error("Mutation error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed");
+      toast.success("Interest sent successfully!");
+    } catch (err) {
+      toast.error("Something went wrong");
     } finally {
       setLoading(false);
-      setShowInterestModal(false);
-      setInterestNotes("");
     }
   };
   // Add this handleBandAction function after your other handlers
@@ -1881,9 +1953,9 @@ const GigCard: React.FC<GigCardProps> = ({
     const buttonConfig = getButtonConfig();
     if (!buttonConfig) return null;
 
-    // Check interest window
     const interestWindowStatus = getInterestWindowStatus(gig);
-    const isInterestWindowOpen = interestWindowStatus.status === "open";
+    const isLocked =
+      interestWindowStatus.hasWindow && interestWindowStatus.status !== "open";
 
     return (
       <Button
@@ -1893,35 +1965,19 @@ const GigCard: React.FC<GigCardProps> = ({
           e.stopPropagation();
           buttonConfig.action();
         }}
-        disabled={loading || !isInterestWindowOpen}
+        // RE-ADD THIS: It's your safety net!
+        disabled={loading || isLocked}
         className={clsx(
           responsiveButtonClasses,
-          "gap-2 shadow-sm hover:shadow transition-all duration-200 font-medium",
-          buttonConfig.variant === "default"
-            ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-            : "border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-          !isInterestWindowOpen && "opacity-50 cursor-not-allowed",
+          "gap-2 font-medium transition-all",
+          // If locked, make it look grayscale or subtle
+          isLocked
+            ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+            : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white",
         )}
       >
-        {loading ? (
-          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        ) : (
-          buttonConfig.icon
-        )}
-        <span className="ml-2">{buttonConfig.label}</span>
-
-        {interestWindowStatus.hasWindow && !isInterestWindowOpen && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Lock className="w-3 h-3 ml-1" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Interest window is {interestWindowStatus.status}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+        {isLocked ? <Lock className="w-4 h-4" /> : buttonConfig.icon}
+        <span>{isLocked ? "Opening Soon" : buttonConfig.label}</span>
       </Button>
     );
   };
@@ -2261,13 +2317,10 @@ const GigCard: React.FC<GigCardProps> = ({
               {gig.description}
             </p>
           )}
-
           {/* Band applications preview */}
           {renderBandApplicationsPreview()}
-
           {/* Progress bar */}
           {renderProgressBar()}
-
           {/* Location and time */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3 mb-3">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
@@ -2302,7 +2355,6 @@ const GigCard: React.FC<GigCardProps> = ({
               <span>{gig.viewCount?.length || 0}</span>
             </div>
           </div>
-
           {/* FOOTER */}
           <div
             className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t"
@@ -2448,7 +2500,6 @@ const GigCard: React.FC<GigCardProps> = ({
               </div>
             )}
           </div>
-
           {/* Mobile interest window badge */}
           {(gig.acceptInterestStartTime || gig.acceptInterestEndTime) && (
             <div className="sm:hidden mt-2 flex items-center gap-2 text-xs text-gray-500">
@@ -3699,6 +3750,46 @@ const GigCard: React.FC<GigCardProps> = ({
                 Update Profile
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
+        <DialogContent className="sm:max-w-[400px] border-orange-200 bg-orange-50/50 dark:bg-zinc-950 dark:border-orange-900/30">
+          <DialogHeader className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center mb-2">
+              <AlertCircle className="w-6 h-6 text-orange-600" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-orange-800 dark:text-orange-400">
+              Role Mismatch
+            </DialogTitle>
+            <DialogDescription className="text-zinc-600 dark:text-zinc-400 pt-2">
+              {warningReason}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-orange-100 dark:border-orange-900/20 my-2">
+            <p className="text-xs leading-relaxed text-zinc-500">
+              To maintain quality, clients prefer musicians who match the
+              requested category. If you have multiple skills, please update
+              your **Profile Settings** before applying.
+            </p>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push("/settings/profile")}
+              className="w-full border-orange-200 hover:bg-orange-100"
+            >
+              Update My Profile
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setShowWarningModal(false)}
+              className="w-full text-zinc-500"
+            >
+              Got it, thanks
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

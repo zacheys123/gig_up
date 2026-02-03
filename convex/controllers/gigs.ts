@@ -2241,68 +2241,68 @@ export const updateGig = mutation({
   },
 });
 
-export const getGigStats = query({
-  args: {
-    gigId: v.id("gigs"),
-    userId: v.id("users")
-  },
-  handler: async (ctx, args) => {
-    // If you need to get user from userId instead of clerkId, change the args
-    const { userId } = args; // Change this line based on what you're passing
-    const gig = await ctx.db.get(args.gigId);
+// export const getGigStats = query({
+//   args: {
+//     gigId: v.optional(v.id("gigs")),
+//     userId: v.optional(v.id("users")),
+//   },
+//   handler: async (ctx, args) => {
+//     // If you need to get user from userId instead of clerkId, change the args
+//     const { userId } = args; // Change this line based on what you're passing
+//     const gig = await ctx.db.get(args.gigId as Id<"gigs">);
 
-    if (!gig) {
-      throw new Error("Gig not found");
-    }
+//     if (!gig) {
+//       throw new Error("Gig not found");
+//     }
 
-    // Get user by userId directly (if that's what you have)
-    const user = await ctx.db.get(userId as Id<"users">);
-    if (!user) {
-      throw new Error("User not found");
-    }
+//     // Get user by userId directly (if that's what you have)
+//     const user = await ctx.db.get(userId as Id<"users">);
+//     if (!user) {
+//       throw new Error("User not found");
+//     }
 
-    // Check ownership
-    const isOwner = gig.postedBy === user._id;
-    if (!isOwner) {
-      throw new Error("Unauthorized");
-    }
+//     // Check ownership
+//     const isOwner = gig.postedBy === user._id;
+//     if (!isOwner) {
+//       throw new Error("Unauthorized");
+//     }
 
-    return {
-      basicStats: {
-        interestedUsers: gig.interestedUsers?.length || 0,
+//     return {
+//       basicStats: {
+//         interestedUsers: gig.interestedUsers?.length || 0,
 
-        totalViews: gig.viewCount || 0,
-      },
-      bandStats:
-        gig.bandCategory?.map((role) => ({
-          role: role.role,
-          maxSlots: role.maxSlots,
-          filledSlots: role.filledSlots || 0,
-          currentApplicants: role.currentApplicants || 0,
-          applicants: role.applicants?.length || 0,
-          bookedUsers: role.bookedUsers?.length || 0,
-          isLocked: role.isLocked || false,
-        })) || [],
-      interestWindow: {
-        acceptInterestStartTime: gig.acceptInterestStartTime,
-        acceptInterestEndTime: gig.acceptInterestEndTime,
-        isActive:
-          !gig.acceptInterestStartTime || !gig.acceptInterestEndTime
-            ? true // If no window set, it's always active
-            : Date.now() >= gig.acceptInterestStartTime &&
-              Date.now() <= gig.acceptInterestEndTime,
-        currentStatus:
-          !gig.acceptInterestStartTime || !gig.acceptInterestEndTime
-            ? "always open"
-            : Date.now() < gig.acceptInterestStartTime
-              ? `opens ${new Date(gig.acceptInterestStartTime).toLocaleString()}`
-              : Date.now() > gig.acceptInterestEndTime
-                ? `closed since ${new Date(gig.acceptInterestEndTime).toLocaleString()}`
-                : "open now",
-      },
-    };
-  },
-});
+//         totalViews: gig.viewCount || 0,
+//       },
+//       bandStats:
+//         gig.bandCategory?.map((role) => ({
+//           role: role.role,
+//           maxSlots: role.maxSlots,
+//           filledSlots: role.filledSlots || 0,
+//           currentApplicants: role.currentApplicants || 0,
+//           applicants: role.applicants?.length || 0,
+//           bookedUsers: role.bookedUsers?.length || 0,
+//           isLocked: role.isLocked || false,
+//         })) || [],
+//       interestWindow: {
+//         acceptInterestStartTime: gig.acceptInterestStartTime,
+//         acceptInterestEndTime: gig.acceptInterestEndTime,
+//         isActive:
+//           !gig.acceptInterestStartTime || !gig.acceptInterestEndTime
+//             ? true // If no window set, it's always active
+//             : Date.now() >= gig.acceptInterestStartTime &&
+//               Date.now() <= gig.acceptInterestEndTime,
+//         currentStatus:
+//           !gig.acceptInterestStartTime || !gig.acceptInterestEndTime
+//             ? "always open"
+//             : Date.now() < gig.acceptInterestStartTime
+//               ? `opens ${new Date(gig.acceptInterestStartTime).toLocaleString()}`
+//               : Date.now() > gig.acceptInterestEndTime
+//                 ? `closed since ${new Date(gig.acceptInterestEndTime).toLocaleString()}`
+//                 : "open now",
+//       },
+//     };
+//   },
+// });
 
 // Optional: Separate mutation for specific field updates
 export const updateGigField = mutation({

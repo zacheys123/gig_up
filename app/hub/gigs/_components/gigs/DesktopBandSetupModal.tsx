@@ -88,6 +88,7 @@ interface DesktopBandSetupModalProps {
 
 const commonRoles = [
   {
+    id: "vocalist",
     value: "Lead Vocalist",
     icon: Mic,
     color: "red",
@@ -95,6 +96,7 @@ const commonRoles = [
     popularity: 95,
   },
   {
+    id: "guitar",
     value: "Guitarist",
     icon: Guitar,
     color: "blue",
@@ -102,6 +104,7 @@ const commonRoles = [
     popularity: 90,
   },
   {
+    id: "bass",
     value: "Bassist",
     icon: Music,
     color: "green",
@@ -109,6 +112,7 @@ const commonRoles = [
     popularity: 85,
   },
   {
+    id: "drums",
     value: "Drummer",
     icon: Drum,
     color: "amber",
@@ -116,6 +120,7 @@ const commonRoles = [
     popularity: 88,
   },
   {
+    id: "piano",
     value: "Pianist/Keyboardist",
     icon: Piano,
     color: "purple",
@@ -123,6 +128,7 @@ const commonRoles = [
     popularity: 80,
   },
   {
+    id: "sax",
     value: "Saxophonist",
     icon: Music,
     color: "pink",
@@ -130,6 +136,7 @@ const commonRoles = [
     popularity: 70,
   },
   {
+    id: "trumpet",
     value: "Trumpeter",
     icon: Music,
     color: "cyan",
@@ -137,6 +144,7 @@ const commonRoles = [
     popularity: 65,
   },
   {
+    id: "violin",
     value: "Violinist",
     icon: Music,
     color: "indigo",
@@ -144,6 +152,7 @@ const commonRoles = [
     popularity: 75,
   },
   {
+    id: "backups",
     value: "Backup Vocalist",
     icon: Mic,
     color: "rose",
@@ -151,6 +160,7 @@ const commonRoles = [
     popularity: 82,
   },
   {
+    id: "percussion",
     value: "Percussionist",
     icon: Drum,
     color: "orange",
@@ -158,6 +168,7 @@ const commonRoles = [
     popularity: 72,
   },
   {
+    id: "dj",
     value: "DJ",
     icon: Volume2,
     color: "violet",
@@ -165,6 +176,7 @@ const commonRoles = [
     popularity: 88,
   },
   {
+    id: "mc",
     value: "MC/Host",
     icon: Mic,
     color: "teal",
@@ -222,9 +234,10 @@ const SlimRoleCard = React.memo(
     onRemoveRole: (roleName: string) => void;
   }) => {
     const { isDarkMode } = useThemeColors();
-    const roleInfo = commonRoles.find((r) => r.value === role.role);
+    // LOOKUP: Find the pretty name using the ID stored in role.role
+    const roleInfo = commonRoles.find((r) => r.id === role.role);
     const Icon = roleInfo?.icon || Music;
-
+    const displayLabel = roleInfo ? roleInfo.value : role.role;
     const handleUpdate = (field: keyof BandSetupRole, value: any) => {
       onRoleUpdate({ ...role, [field]: value });
     };
@@ -240,22 +253,17 @@ const SlimRoleCard = React.memo(
       >
         {/* 1. Identity */}
         <div className="flex items-center gap-4 min-w-[160px]">
-          <div
-            className={cn(
-              "p-3 rounded-xl transition-colors",
-              isDarkMode
-                ? "bg-zinc-800 text-orange-400"
-                : "bg-orange-50 text-orange-600",
-            )}
-          >
+          <div className={cn("p-3 rounded-xl ...")}>
             <Icon className="w-5 h-5" />
           </div>
           <div>
+            {/* Display the pretty label: "Pianist/Keyboardist" */}
             <h4 className="font-black text-sm uppercase tracking-tight leading-none mb-1">
-              {role.role}
+              {displayLabel}
             </h4>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-              Active Slot
+            {/* Optional: Show the DB key for clarity during testing */}
+            <p className="text-[9px] font-bold text-zinc-500 uppercase">
+              {role.role}
             </p>
           </div>
         </div>
@@ -393,7 +401,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
       const displayName = getDisplayName(role.role);
 
       return {
-        role: displayName, // Store as display name
+        role: role.role, // Store as display name
         maxSlots: role.maxSlots,
         maxApplicants: role.maxApplicants || 20,
         requiredSkills: role.requiredSkills || [],
@@ -451,16 +459,21 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     });
   }, [searchQuery, selectedCategory]);
 
-  const toggleRole = useCallback((roleName: string) => {
+  const toggleRole = useCallback((roleLabel: string) => {
+    // Find the role object by its display label
+    const roleInfo = commonRoles.find((r) => r.value === roleLabel);
+    // Use the ID for the DB, or the raw label if it's a custom role
+    const dbValue = roleInfo ? roleInfo.id : roleLabel.toLowerCase();
+
     setSelectedRoles((prev) => {
-      const existing = prev.find((r) => r.role === roleName);
+      const existing = prev.find((r) => r.role === dbValue);
       if (existing) {
-        return prev.filter((r) => r.role !== roleName);
+        return prev.filter((r) => r.role !== dbValue);
       } else {
         return [
           ...prev,
           {
-            role: roleName,
+            role: dbValue, // Stores "piano"
             maxSlots: 1,
             maxApplicants: 20,
             currentApplicants: 0,
@@ -506,8 +519,8 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
     }
   }, [customRole]);
 
-  const removeRole = useCallback((roleName: string) => {
-    setSelectedRoles((prev) => prev.filter((r) => r.role !== roleName));
+  const removeRole = useCallback((roleId: string) => {
+    setSelectedRoles((prev) => prev.filter((r) => r.role !== roleId));
   }, []);
 
   const toggleSkill = useCallback((roleName: string, skill: string) => {
@@ -531,7 +544,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
       const price = role.price ? parseFloat(role.price) : undefined;
 
       const formattedRole: BandRoleInput = {
-        role: getBackendValue(role.role), // This converts display name to backend value
+        role: role.role, // This converts display name to backend value
         maxSlots: role.maxSlots,
         maxApplicants: role.maxApplicants || 20,
         requiredSkills:
@@ -1321,33 +1334,45 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
             {/* Role List - Refined hover states */}
             <div className="flex-1 overflow-y-auto px-4 space-y-1.5 no-scrollbar">
               {filteredRoles.map((role) => {
+                // Check if this specific role ID is currently in our selected list
                 const isSelected = selectedRoles.some(
-                  (r) => r.role === role.value,
+                  (r) => r.role === role.id,
                 );
-                const Icon = role.icon;
+
                 return (
                   <button
-                    key={role.value}
+                    key={role.id}
                     onClick={() => toggleRole(role.value)}
                     className={cn(
-                      "w-full p-3 rounded-xl flex items-center gap-3 transition-all relative group",
+                      "flex items-center gap-3 p-3 rounded-xl transition-all border w-full text-left",
                       isSelected
-                        ? "bg-orange-500/5 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500/20"
-                        : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900",
+                        ? "bg-orange-500/10 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.1)]"
+                        : "bg-transparent border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800",
                     )}
                   >
                     <div
                       className={cn(
-                        "p-2 rounded-lg transition-all",
+                        "p-2 rounded-lg transition-colors",
                         isSelected
                           ? "bg-orange-500 text-white"
-                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100",
+                          : "bg-zinc-100 dark:bg-zinc-800",
                       )}
                     >
-                      <Icon className="w-4 h-4" />
+                      <role.icon className="w-4 h-4" />
                     </div>
-                    <span className="font-semibold text-sm">{role.value}</span>
-                    {isSelected && <Check className="ml-auto w-3.5 h-3.5" />}
+                    <span
+                      className={cn(
+                        "text-sm font-bold",
+                        isSelected
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-zinc-600 dark:text-zinc-400",
+                      )}
+                    >
+                      {role.value}
+                    </span>
+                    {isSelected && (
+                      <Check className="w-3 h-3 ml-auto text-orange-500" />
+                    )}
                   </button>
                 );
               })}

@@ -59,6 +59,7 @@ import {
   Plus,
   Check,
   Users as UsersIcon,
+  Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -921,89 +922,52 @@ const InterestWindowSection = React.memo(
                 Interest Window Duration
               </label>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-background border rounded-lg p-1">
                   <Button
                     type="button"
-                    size="sm"
-                    variant="outline"
+                    size="icon"
+                    variant="ghost"
                     onClick={() => {
                       const current = formValues.interestWindowDays || 7;
-                      const newValue = Math.max(1, current - 1);
-                      console.log("Decreasing days to:", newValue);
-                      onInterestWindowChange("interestWindowDays", newValue);
-                      onInterestWindowChange("enableInterestWindow", true);
+                      onInterestWindowChange(
+                        "interestWindowDays",
+                        Math.max(1, current - 1),
+                      );
                     }}
-                    className="h-10 w-10"
+                    className="h-8 w-8"
                   >
-                    -
+                    <Minus className="w-4 h-4" />
                   </Button>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      value={formValues.interestWindowDays || 7}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 7;
-                        console.log("Days changed to:", value);
-                        onInterestWindowChange("interestWindowDays", value);
-                        onInterestWindowChange("enableInterestWindow", true);
-                      }}
-                      min="1"
-                      max="90"
-                      className="w-20 text-center"
-                    />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                      days
-                    </span>
+
+                  <div className="w-12 text-center font-bold">
+                    {formValues.interestWindowDays || 7}
                   </div>
+
                   <Button
                     type="button"
-                    size="sm"
-                    variant="outline"
+                    size="icon"
+                    variant="ghost"
                     onClick={() => {
                       const current = formValues.interestWindowDays || 7;
-                      const newValue = current + 1;
-                      console.log("Increasing days to:", newValue);
-                      onInterestWindowChange("interestWindowDays", newValue);
-                      onInterestWindowChange("enableInterestWindow", true);
+                      onInterestWindowChange(
+                        "interestWindowDays",
+                        Math.min(30, current + 1),
+                      );
                     }}
-                    className="h-10 w-10"
+                    className="h-8 w-8"
                   >
-                    +
+                    <Plus className="w-4 h-4" />
                   </Button>
                 </div>
-
-                <div className="flex-1">
-                  <p className={cn("text-sm", colors.textMuted)}>
-                    Musicians can show interest for{" "}
-                    <span className="font-semibold">
-                      {formValues.interestWindowDays || 7} days
-                    </span>{" "}
-                    after posting
-                  </p>
-                </div>
+                <span className={cn("text-sm font-medium", colors.textMuted)}>
+                  days after posting
+                </span>
               </div>
-
-              <div className="flex flex-wrap gap-2 mt-3">
-                {[1, 3, 7, 14, 30].map((days) => (
-                  <Button
-                    key={days}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log("Setting days to:", days);
-                      onInterestWindowChange("interestWindowDays", days);
-                      onInterestWindowChange("enableInterestWindow", true);
-                    }}
-                    className={cn(
-                      formValues.interestWindowDays === days &&
-                        "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
-                    )}
-                  >
-                    {days} {days === 1 ? "day" : "days"}
-                  </Button>
-                ))}
-              </div>
+              <p className={cn("text-xs mt-3", colors.textMuted)}>
+                Musicians will be able to show interest for{" "}
+                {formValues.interestWindowDays || 7} days once this gig is
+                published.
+              </p>
             </div>
           )}
 
@@ -1038,7 +1002,7 @@ const InterestWindowSection = React.memo(
             </p>
           </div>
         </div>
-        {/* Add this at the bottom of the expanded section for debugging */}
+        {/* Add this at the bottom of the expanded section for debugging
         <div className="mt-4 p-4 rounded-lg bg-gray-100 dark:bg-gray-800">
           <h4 className="text-sm font-medium mb-2">Debug Info</h4>
           <pre className="text-xs overflow-auto">
@@ -1057,7 +1021,7 @@ const InterestWindowSection = React.memo(
               2,
             )}
           </pre>
-        </div>
+        </div> */}
       </motion.div>
     );
   },
@@ -1273,26 +1237,6 @@ export default function EditGigForm({
     [activeTalentType],
   );
 
-  useEffect(() => {
-    if (gig) {
-      console.log("=== GIG DATA LOADED ===");
-      console.log("Gig interest window data:", {
-        acceptInterestStartTime: gig.acceptInterestStartTime,
-        acceptInterestEndTime: gig.acceptInterestEndTime,
-      });
-
-      if (gig.acceptInterestStartTime) {
-        console.log("Start time details:", {
-          raw: gig.acceptInterestStartTime,
-          date: new Date(gig.acceptInterestStartTime),
-          iso: new Date(gig.acceptInterestStartTime).toISOString(),
-          local: new Date(gig.acceptInterestStartTime).toLocaleString(),
-        });
-      }
-
-      debugInterestWindowData();
-    }
-  }, [gig]);
   // In your EditGigForm component
   useEffect(() => {
     if (gig && !formValues) {
@@ -1363,18 +1307,6 @@ export default function EditGigForm({
         maxSlots: gig.maxSlots || 1,
       };
 
-      console.log("=== DEBUG: Initialized Form Values ===");
-      console.log("Interest window dates:", {
-        start: formattedValues.acceptInterestStartTime,
-        end: formattedValues.acceptInterestEndTime,
-        days: formattedValues.interestWindowDays,
-        rawGigData: {
-          start: gig.acceptInterestStartTime,
-          end: gig.acceptInterestEndTime,
-          days: gig.interestWindowDays,
-        },
-      });
-
       setFormValues(formattedValues);
       setOriginalValues(formattedValues);
       setBussinessCategory(gig.bussinesscat as BusinessCategory);
@@ -1418,35 +1350,56 @@ export default function EditGigForm({
       setIsLoading(false);
     }
   }, [gig, initialCustomization, initialLogo, formValues]);
-
   const validateForm = useCallback(() => {
     const errors: Record<string, string> = {};
 
-    // Basic required fields
+    console.log("=== DEBUG: Form Values for Validation ===");
+    console.log("Form values:", formValues);
+
+    // Basic required fields with better logging
     if (!formValues?.title?.trim()) {
       errors.title = "Title is required";
+      console.log("❌ Title missing");
     }
+
     if (!formValues?.description?.trim()) {
       errors.description = "Description is required";
+      console.log("❌ Description missing");
     }
+
     if (!formValues?.location?.trim()) {
       errors.location = "Location is required";
+      console.log("❌ Location missing");
     }
+
     if (!formValues?.bussinesscat) {
       errors.bussinesscat = "Business category is required";
+      console.log("❌ Business category missing");
     }
 
     // Category-specific validations
     if (formValues?.bussinesscat === "mc") {
-      if (!formValues.mcType) errors.mcType = "MC type is required";
-      if (!formValues.mcLanguages)
+      if (!formValues.mcType) {
+        errors.mcType = "MC type is required";
+        console.log("❌ MC type missing");
+      }
+      if (!formValues.mcLanguages) {
         errors.mcLanguages = "Languages are required";
+        console.log("❌ MC languages missing");
+      }
     } else if (formValues?.bussinesscat === "dj") {
-      if (!formValues.djGenre) errors.djGenre = "DJ genre is required";
-      if (!formValues.djEquipment) errors.djEquipment = "Equipment is required";
+      if (!formValues.djGenre) {
+        errors.djGenre = "DJ genre is required";
+        console.log("❌ DJ genre missing");
+      }
+      if (!formValues.djEquipment) {
+        errors.djEquipment = "Equipment is required";
+        console.log("❌ DJ equipment missing");
+      }
     } else if (formValues?.bussinesscat === "vocalist") {
       if (!formValues.vocalistGenre || formValues.vocalistGenre.length === 0) {
         errors.vocalistGenre = "At least one genre is required";
+        console.log("❌ Vocalist genre missing");
       }
     }
 
@@ -1456,18 +1409,32 @@ export default function EditGigForm({
       (!bandRoles || bandRoles.length === 0)
     ) {
       errors.bandRoles = "At least one band role is required";
+      console.log("❌ Band roles missing for 'other' category");
     }
 
     // Timeline validations
-    if (formValues?.gigtimeline === "once" && !formValues.date) {
-      errors.date = "Event date is required for one-time events";
-    } else if (formValues?.gigtimeline !== "once" && !formValues.day) {
-      errors.day = "Day of week is required for recurring events";
+    console.log("Timeline check:", {
+      gigtimeline: formValues?.gigtimeline,
+      date: formValues?.date,
+      day: formValues?.day,
+    });
+
+    if (formValues?.gigtimeline === "once") {
+      if (!formValues.date) {
+        errors.date = "Event date is required for one-time events";
+        console.log("❌ Date missing for one-time event");
+      }
+    } else if (formValues?.gigtimeline && formValues.gigtimeline !== "once") {
+      if (!formValues.day) {
+        errors.day = "Day of week is required for recurring events";
+        console.log("❌ Day missing for recurring event");
+      }
     }
 
     // Secret validation
     if (!formValues?.secret?.trim() || formValues.secret.length < 4) {
       errors.secret = "Secret passphrase is required (minimum 4 characters)";
+      console.log("❌ Secret invalid:", formValues?.secret);
     }
 
     // Price validation for non-"other" categories
@@ -1475,50 +1442,73 @@ export default function EditGigForm({
       const price = parseFloat(formValues.price);
       if (isNaN(price) || price < 0) {
         errors.price = "Please enter a valid price";
+        console.log("❌ Price invalid:", formValues.price);
       }
     }
 
-    // Interest window validation
-    // Only validate if at least one date is set
-    const hasStartTime = formValues?.acceptInterestStartTime;
-    const hasEndTime = formValues?.acceptInterestEndTime;
+    // Interest window validation - only validate if window is enabled
+    const hasInterestWindow = formValues?.enableInterestWindow;
 
-    if (hasStartTime || hasEndTime) {
-      // If one is set, both should be set
-      if (hasStartTime && !hasEndTime) {
-        errors.acceptInterestEndTime =
-          "End time is required when start time is set";
-      }
-      if (!hasStartTime && hasEndTime) {
-        errors.acceptInterestStartTime =
-          "Start time is required when end time is set";
-      }
+    if (hasInterestWindow) {
+      const hasStartTime = formValues?.acceptInterestStartTime;
+      const hasEndTime = formValues?.acceptInterestEndTime;
+      const hasDays = formValues?.interestWindowDays;
 
-      // Validate dates if both are set
-      if (hasStartTime && hasEndTime) {
-        const start = new Date(formValues.acceptInterestStartTime);
-        const end = new Date(formValues.acceptInterestEndTime);
+      console.log("Interest window check:", {
+        enabled: hasInterestWindow,
+        startTime: hasStartTime,
+        endTime: hasEndTime,
+        days: hasDays,
+        interestWindowType: formValues?.interestWindowType,
+      });
 
-        if (isNaN(start.getTime())) {
-          errors.acceptInterestStartTime = "Invalid start date";
+      // If using dates
+      if (hasStartTime || hasEndTime) {
+        if (hasStartTime && !hasEndTime) {
+          errors.acceptInterestEndTime =
+            "End time is required when start time is set";
+          console.log("❌ Interest end time missing");
+        }
+        if (!hasStartTime && hasEndTime) {
+          errors.acceptInterestStartTime =
+            "Start time is required when end time is set";
+          console.log("❌ Interest start time missing");
         }
 
-        if (isNaN(end.getTime())) {
-          errors.acceptInterestEndTime = "Invalid end date";
-        }
+        // Validate dates if both are set
+        if (hasStartTime && hasEndTime) {
+          const start = new Date(formValues.acceptInterestStartTime);
+          const end = new Date(formValues.acceptInterestEndTime);
 
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end <= start) {
-          errors.acceptInterestEndTime = "End time must be after start time";
+          if (isNaN(start.getTime())) {
+            errors.acceptInterestStartTime = "Invalid start date";
+            console.log("❌ Invalid start date");
+          }
+
+          if (isNaN(end.getTime())) {
+            errors.acceptInterestEndTime = "Invalid end date";
+            console.log("❌ Invalid end date");
+          }
+
+          if (
+            !isNaN(start.getTime()) &&
+            !isNaN(end.getTime()) &&
+            end <= start
+          ) {
+            errors.acceptInterestEndTime = "End time must be after start time";
+            console.log("❌ End time not after start time");
+          }
         }
       }
-    }
 
-    // Interest window days validation
-    if (formValues?.interestWindowDays) {
-      const days = parseInt(formValues.interestWindowDays);
-      if (isNaN(days) || days < 1 || days > 90) {
-        errors.interestWindowDays =
-          "Interest window must be between 1 and 90 days";
+      // If using days
+      if (hasDays) {
+        const days = parseInt(formValues.interestWindowDays);
+        if (isNaN(days) || days < 1 || days > 90) {
+          errors.interestWindowDays =
+            "Interest window must be between 1 and 90 days";
+          console.log("❌ Interest window days invalid:", days);
+        }
       }
     }
 
@@ -1527,6 +1517,7 @@ export default function EditGigForm({
       const slots = parseInt(formValues.maxSlots);
       if (isNaN(slots) || slots < 1) {
         errors.maxSlots = "At least 1 slot is required";
+        console.log("❌ Max slots invalid:", slots);
       }
     }
 
@@ -1535,37 +1526,60 @@ export default function EditGigForm({
       const phoneRegex = /^[+]?[\d\s\-()]{10,}$/;
       if (!phoneRegex.test(formValues.phoneNo)) {
         errors.phoneNo = "Please enter a valid phone number";
+        console.log("❌ Phone invalid:", formValues.phoneNo);
       }
     }
 
-    console.log("=== DEBUG: Form Validation ===");
+    console.log("=== DEBUG: Validation Complete ===");
+    console.log("Total errors:", Object.keys(errors).length);
     console.log("Errors:", errors);
-    console.log("Interest window state:", {
-      start: formValues?.acceptInterestStartTime,
-      end: formValues?.acceptInterestEndTime,
-      days: formValues?.interestWindowDays,
-    });
+
+    // Show toast with specific errors
+    if (Object.keys(errors).length > 0) {
+      const errorMessages = Object.values(errors);
+      const firstError = errorMessages[0];
+
+      console.log("First error to show:", firstError);
+
+      // You can also show all errors in console for debugging
+      errorMessages.forEach((error, index) => {
+        console.log(`Error ${index + 1}: ${error}`);
+      });
+    }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }, [formValues, bandRoles]);
   // Check for changes
+  // Check for changes - FIXED VERSION
   useEffect(() => {
     if (formValues && originalValues && gig) {
-      const hasChanges =
-        JSON.stringify(formValues) !== JSON.stringify(originalValues) ||
-        JSON.stringify(gigcustom) !==
+      console.log("=== Checking for changes ===");
+
+      // Compare each field individually for debugging
+      const changes = {
+        formValuesChanged:
+          JSON.stringify(formValues) !== JSON.stringify(originalValues),
+        gigCustomChanged:
+          JSON.stringify(gigcustom) !==
           JSON.stringify(
             initialCustomization || {
               fontColor: gig.fontColor || "",
               font: gig.font || "",
               backgroundColor: gig.backgroundColor || "",
             },
-          ) ||
-        JSON.stringify(bandRoles) !== JSON.stringify(gig?.bandCategory || []) ||
-        imageUrl !== (initialLogo || gig.logo || "");
+          ),
+        bandRolesChanged:
+          JSON.stringify(bandRoles) !== JSON.stringify(gig?.bandCategory || []),
+        imageUrlChanged: imageUrl !== (initialLogo || gig.logo || ""),
+      };
 
-      setHasChanges(hasChanges);
+      console.log("Change detection:", changes);
+
+      const hasAnyChanges = Object.values(changes).some((change) => change);
+      console.log("Has any changes?", hasAnyChanges);
+
+      setHasChanges(hasAnyChanges);
     }
   }, [
     formValues,
@@ -1833,10 +1847,47 @@ export default function EditGigForm({
       router.back();
     }
   }, [hasChanges, router]);
-  // Update your handleSave function to remove bookedPrice
+  // COMPLETE handleSave function - replace your current one
   const handleSave = useCallback(async () => {
-    if (!validateForm()) {
-      toast.error("Please fix all errors before saving");
+    console.log("=== SAVE ATTEMPT STARTED ===");
+    console.log("Current state:", {
+      hasChanges,
+      fieldErrors: Object.keys(fieldErrors).length,
+      formValues,
+    });
+
+    const isValid = validateForm();
+
+    if (!isValid) {
+      console.log("Validation failed!");
+
+      const errorFields = Object.keys(fieldErrors);
+      if (errorFields.length > 0) {
+        const firstError = fieldErrors[errorFields[0]];
+        toast.error(`Please fix: ${firstError}`, {
+          description: `There are ${errorFields.length} field(s) that need attention`,
+          duration: 5000,
+        });
+
+        // Scroll to first error
+        const firstErrorElement = document.querySelector(
+          `[name="${errorFields[0]}"]`,
+        );
+        if (firstErrorElement) {
+          firstErrorElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          (firstErrorElement as HTMLElement).focus();
+        }
+      }
+
+      return;
+    }
+
+    if (!hasChanges) {
+      toast.info("No changes to save");
+      setShowSaveConfirm(false);
       return;
     }
 
@@ -1846,181 +1897,85 @@ export default function EditGigForm({
     }
 
     setIsSaving(true);
+
     try {
-      console.log("=== DEBUG: Form Values Before Save ===");
+      console.log("=== DEBUG: Saving gig data ===");
       console.log("Form values:", formValues);
-      console.log("Interest window values:", {
-        acceptInterestStartTime: formValues?.acceptInterestStartTime,
-        acceptInterestEndTime: formValues?.acceptInterestEndTime,
-        interestWindowDays: formValues?.interestWindowDays,
-      });
 
-      // DEBUG: Log the parsed dates
-      if (formValues?.acceptInterestStartTime) {
-        const startDate = new Date(formValues.acceptInterestStartTime);
-        console.log("Start date parsed:", {
-          raw: formValues.acceptInterestStartTime,
-          date: startDate,
-          timestamp: startDate.getTime(),
-          isValid: !isNaN(startDate.getTime()),
-        });
-      }
-
-      if (formValues?.acceptInterestEndTime) {
-        const endDate = new Date(formValues.acceptInterestEndTime);
-        console.log("End date parsed:", {
-          raw: formValues.acceptInterestEndTime,
-          date: endDate,
-          timestamp: endDate.getTime(),
-          isValid: !isNaN(endDate.getTime()),
-        });
-      }
+      // Convert band role data properly
       const convertBandRoleForConvex = (role: BandRoleInput) => {
-        // Create a new object without bookedPrice
+        // Remove bookedPrice if it exists
         const { bookedPrice, ...roleWithoutBookedPrice } = role as any;
 
-        const formattedRole: any = {
+        return {
           role: roleWithoutBookedPrice.role,
           maxSlots: roleWithoutBookedPrice.maxSlots || 1,
           maxApplicants: roleWithoutBookedPrice.maxApplicants || 20,
           currentApplicants: roleWithoutBookedPrice.currentApplicants || 0,
           filledSlots: roleWithoutBookedPrice.filledSlots || 0,
-          applicants: (roleWithoutBookedPrice.applicants || []).map(
-            (app: any) => (typeof app === "string" ? app : app._id || ""),
-          ),
-          bookedUsers: (roleWithoutBookedPrice.bookedUsers || []).map(
-            (user: any) => (typeof user === "string" ? user : user._id || ""),
-          ),
+          applicants: roleWithoutBookedPrice.applicants || [],
+          bookedUsers: roleWithoutBookedPrice.bookedUsers || [],
           requiredSkills: roleWithoutBookedPrice.requiredSkills || [],
           description: roleWithoutBookedPrice.description || "",
-          isLocked: roleWithoutBookedPrice.isLocked || false,
+          price: roleWithoutBookedPrice.price || undefined,
           currency: roleWithoutBookedPrice.currency || "KES",
-          negotiable:
-            roleWithoutBookedPrice.negotiable !== undefined
-              ? roleWithoutBookedPrice.negotiable
-              : true,
+          negotiable: roleWithoutBookedPrice.negotiable ?? true,
+          isLocked: roleWithoutBookedPrice.isLocked || false,
         };
-
-        // Handle price
-        if (
-          roleWithoutBookedPrice.price !== undefined &&
-          roleWithoutBookedPrice.price !== null
-        ) {
-          const price = roleWithoutBookedPrice.price;
-          if (typeof price === "number" && !isNaN(price)) {
-            formattedRole.price = price;
-          } else if (typeof price === "string") {
-            const parsed = parseFloat(price);
-            if (!isNaN(parsed)) {
-              formattedRole.price = parsed;
-            }
-          }
-        }
-
-        // Remove undefined values
-        Object.keys(formattedRole).forEach((key) => {
-          if (formattedRole[key] === undefined) {
-            delete formattedRole[key];
-          }
-        });
-
-        return formattedRole;
       };
 
-      // Format band roles properly before sending
+      // Format band roles
       const formattedBandRoles =
         bussinesscat === "other" && bandRoles.length > 0
           ? bandRoles.map(convertBandRoleForConvex)
           : undefined;
 
-      // Convert talent arrays to strings for Convex
+      // Convert talent arrays to strings
       const mcLanguagesString = Array.isArray(formValues.mcLanguages)
         ? formValues.mcLanguages.join(", ")
-        : typeof formValues.mcLanguages === "string"
-          ? formValues.mcLanguages
-          : "";
+        : formValues.mcLanguages || "";
 
       const djGenreString = Array.isArray(formValues.djGenre)
         ? formValues.djGenre.join(", ")
-        : typeof formValues.djGenre === "string"
-          ? formValues.djGenre
-          : "";
+        : formValues.djGenre || "";
 
       const djEquipmentString = Array.isArray(formValues.djEquipment)
         ? formValues.djEquipment.join(", ")
-        : typeof formValues.djEquipment === "string"
-          ? formValues.djEquipment
-          : "";
+        : formValues.djEquipment || "";
 
       const vocalistGenreString = Array.isArray(formValues.vocalistGenre)
         ? formValues.vocalistGenre.join(", ")
-        : typeof formValues.vocalistGenre === "string"
-          ? formValues.vocalistGenre
-          : "";
-      console.log("=== DEBUG: Before Sending to Convex ===");
-      console.log("Raw dates from form:", {
-        startTimeRaw: formValues.acceptInterestStartTime,
-        endTimeRaw: formValues.acceptInterestEndTime,
-      });
+        : formValues.vocalistGenre || "";
 
-      // In your handleSave function, update parseDateTimeLocal:
+      // Parse date/time values
       const parseDateTimeLocal = (dateTimeStr: string | undefined) => {
         if (!dateTimeStr) return undefined;
-
-        // datetime-local format: "YYYY-MM-DDTHH:mm"
-        // We need to ensure it's parsed correctly in local timezone
         const date = new Date(dateTimeStr);
-
-        // Check if date is valid
-        if (isNaN(date.getTime())) {
-          console.error("Invalid date:", dateTimeStr);
-          return undefined;
-        }
-
-        // Return timestamp
-        return date.getTime();
+        return isNaN(date.getTime()) ? undefined : date.getTime();
       };
 
-      // Add validation for dates
-      const acceptInterestStartTime = formValues.acceptInterestStartTime
-        ? parseDateTimeLocal(formValues.acceptInterestStartTime)
-        : undefined;
+      const acceptInterestStartTime = parseDateTimeLocal(
+        formValues.acceptInterestStartTime,
+      );
+      const acceptInterestEndTime = parseDateTimeLocal(
+        formValues.acceptInterestEndTime,
+      );
 
-      const acceptInterestEndTime = formValues.acceptInterestEndTime
-        ? parseDateTimeLocal(formValues.acceptInterestEndTime)
-        : undefined;
-
-      // Validate that end time is after start time if both exist
-      if (acceptInterestStartTime && acceptInterestEndTime) {
-        if (acceptInterestEndTime <= acceptInterestStartTime) {
-          toast.error("Interest end time must be after start time");
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      console.log("Parsed timestamps:", {
-        startTime: acceptInterestStartTime,
-        endTime: acceptInterestEndTime,
-        startDate: acceptInterestStartTime
-          ? new Date(acceptInterestStartTime).toLocaleString()
-          : "none",
-        endDate: acceptInterestEndTime
-          ? new Date(acceptInterestEndTime).toLocaleString()
-          : "none",
-      });
-      // Prepare update data - include gigcustom fields
-      const updateData = {
+      // Prepare update data - DO NOT include gigId in the object to be cleaned
+      const updateData: any = {
+        // REQUIRED fields - don't filter these out
         gigId: gigId as Id<"gigs">,
         clerkId: user.clerkId,
         title: formValues.title,
         description: formValues.description,
-        phone: formValues.phoneNo || undefined,
-        price: formValues.price ? parseFloat(formValues.price) : undefined,
-        category: formValues.category || undefined,
         location: formValues.location,
         secret: formValues.secret,
         bussinesscat: formValues.bussinesscat,
+
+        // OPTIONAL fields - can be undefined
+        phone: formValues.phoneNo || undefined,
+        price: formValues.price ? parseFloat(formValues.price) : undefined,
+        category: formValues.category || undefined,
         otherTimeline: formValues.otherTimeline || undefined,
         gigtimeline: formValues.gigtimeline || undefined,
         day: formValues.day || undefined,
@@ -2033,40 +1988,51 @@ export default function EditGigForm({
         djGenre: djGenreString || undefined,
         djEquipment: djEquipmentString || undefined,
         vocalistGenre: vocalistGenreString || undefined,
-        acceptInterestEndTime: acceptInterestEndTime,
-        acceptInterestStartTime: acceptInterestStartTime,
+        acceptInterestStartTime,
+        acceptInterestEndTime,
+        interestWindowDays: formValues.interestWindowDays || undefined,
         maxSlots: formValues.maxSlots
           ? parseInt(formValues.maxSlots)
           : undefined,
-        // Add customization fields
         font: gigcustom.font || undefined,
         fontColor: gigcustom.fontColor || undefined,
         backgroundColor: gigcustom.backgroundColor || undefined,
         logo: imageUrl || undefined,
         bandCategory: formattedBandRoles,
         time: {
-          start: formValues.start,
-          end: formValues.end,
-          durationFrom: formValues.durationfrom,
-          durationTo: formValues.durationto,
+          start: formValues.start || "",
+          end: formValues.end || "",
+          durationFrom: formValues.durationfrom || "am",
+          durationTo: formValues.durationto || "pm",
         },
       };
 
-      // Remove undefined values
+      // Clean up undefined values but keep required fields
       const cleanUpdateData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, v]) => v !== undefined),
-      );
-      // In your handleSave function, add this before calling updateGig:
-      console.log("=== DEBUG: Band roles being sent to Convex ===");
-      formattedBandRoles?.forEach((role, index) => {
-        console.log(`Role ${index}:`, JSON.stringify(role, null, 2));
-        console.log("Has bookedPrice property?", "bookedPrice" in role);
-        if ("bookedPrice" in role) {
-          console.log("bookedPrice value:", role.bookedPrice);
-        }
-      });
-      // Use the helper utility
-      await updateGig(cleanUpdateData as any);
+        Object.entries(updateData).filter(([_, v]) => {
+          // Always keep these required fields even if empty
+          const requiredFields = [
+            "gigId",
+            "clerkId",
+            "title",
+            "description",
+            "location",
+            "secret",
+            "bussinesscat",
+          ];
+          if (requiredFields.includes(_ as string)) {
+            return true;
+          }
+          // For other fields, only keep if not undefined
+          return v !== undefined;
+        }),
+      ) as any; // Cast to any to satisfy TypeScript
+
+      console.log("Sending update data:", cleanUpdateData);
+      console.log("Has gigId?", !!cleanUpdateData.gigId);
+
+      // Call the update function
+      await updateGig(cleanUpdateData);
 
       // Update original values
       setOriginalValues(formValues);
@@ -2081,12 +2047,14 @@ export default function EditGigForm({
       }, 1000);
     } catch (error) {
       console.error("Error updating gig:", error);
-      toast.error("Failed to update gig");
-      throw error;
+      toast.error("Failed to update gig. Please try again.");
     } finally {
       setIsSaving(false);
     }
   }, [
+    validateForm,
+    fieldErrors,
+    hasChanges,
     formValues,
     gigcustom,
     imageUrl,
@@ -2094,7 +2062,6 @@ export default function EditGigForm({
     bussinesscat,
     user,
     gigId,
-    validateForm,
     updateGig,
     router,
   ]);
@@ -3664,15 +3631,106 @@ export default function EditGigForm({
           <DialogHeader>
             <DialogTitle className={colors.text}>Save Changes</DialogTitle>
             <DialogDescription>
-              Are you sure you want to save all changes to this gig?
+              {hasChanges
+                ? "Are you sure you want to save all changes to this gig?"
+                : "No changes detected to save."}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Status indicators */}
+          <div className="space-y-4 py-4">
+            {/* Change status */}
+            <div
+              className={`p-3 rounded-lg ${hasChanges ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" : "bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"}`}
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${hasChanges ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}
+                />
+                <span
+                  className={`text-sm font-medium ${hasChanges ? "text-green-700 dark:text-green-300" : "text-gray-600 dark:text-gray-400"}`}
+                >
+                  {hasChanges ? "Changes detected" : "No changes detected"}
+                </span>
+              </div>
+              {hasChanges && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1 ml-4">
+                  Ready to save your modifications
+                </p>
+              )}
+            </div>
+
+            {/* Error status */}
+            {Object.keys(fieldErrors).length > 0 && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                    Please fix {Object.keys(fieldErrors).length} error
+                    {Object.keys(fieldErrors).length !== 1 ? "s" : ""} before
+                    saving:
+                  </p>
+                </div>
+                <ul className="mt-2 space-y-1 ml-6">
+                  {Object.entries(fieldErrors).map(([field, error]) => (
+                    <li key={field} className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5" />
+                      <span className="text-sm text-red-600 dark:text-red-400">
+                        {error}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Save status */}
+            {isSaving && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Saving changes...
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSaveConfirm(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
+            <Button
+              onClick={handleSave}
+              disabled={
+                isSaving || Object.keys(fieldErrors).length > 0 || !hasChanges
+              }
+              className={cn(
+                "transition-all duration-200",
+                isSaving && "bg-blue-600 hover:bg-blue-700",
+                !hasChanges &&
+                  "bg-gray-400 hover:bg-gray-400 cursor-not-allowed",
+                Object.keys(fieldErrors).length > 0 &&
+                  "bg-red-400 hover:bg-red-400 cursor-not-allowed",
+                hasChanges &&
+                  Object.keys(fieldErrors).length === 0 &&
+                  !isSaving &&
+                  "bg-green-600 hover:bg-green-700 text-white",
+              )}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : !hasChanges ? (
+                "No Changes"
+              ) : Object.keys(fieldErrors).length > 0 ? (
+                "Fix Errors First"
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

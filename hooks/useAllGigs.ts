@@ -25,10 +25,7 @@ export const useGigs = (userId?: Id<"users">, gigId?: Id<"gigs">) => {
   // Queries with stable args
   const userGigs = useQuery(api.controllers.gigs.getUserGigs, userGigsArgs);
   const exploreGigs = useQuery(api.controllers.gigs.exploreGigs, {});
-  const gigStats = useQuery(api.controllers.gigs.getGigStats, {
-    gigId: gigId as Id<"gigs">,
-    userId: user?._id as Id<"users">, // Pass userId instead of clerkId
-  });
+
   const userApplications = useQuery(
     api.controllers.gigs.getUserApplications,
     userApplicationsArgs,
@@ -72,14 +69,13 @@ export const useGigs = (userId?: Id<"users">, gigId?: Id<"gigs">) => {
       // Data
       gigs: userGigs || [],
       exploreGigs: exploreGigs || [],
-      gigStats: gigStats || null,
+
       userApplications: userApplications || [],
 
       // Loading states
       isLoading: {
         gigs: userGigs === undefined,
         explore: exploreGigs === undefined,
-        stats: gigStats === undefined,
         applications: userApplications === undefined,
       },
 
@@ -91,15 +87,7 @@ export const useGigs = (userId?: Id<"users">, gigId?: Id<"gigs">) => {
 
       deleteGig,
     }),
-    [
-      userGigs,
-      exploreGigs,
-      gigStats,
-      userApplications,
-      mutationState,
-
-      deleteGig,
-    ],
+    [userGigs, exploreGigs, userApplications, mutationState, deleteGig],
   );
 
   return result;

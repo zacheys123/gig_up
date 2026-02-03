@@ -53,11 +53,11 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
 
     const filled = selectedGigData.gig.bandCategory.reduce(
       (total, role) => total + (role.filledSlots || 0),
-      0
+      0,
     );
     const total = selectedGigData.gig.bandCategory.reduce(
       (total, role) => total + (role.maxSlots || 1),
-      0
+      0,
     );
 
     return {
@@ -94,7 +94,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
   };
 
   const handleViewAll = () => {
-    router.push(`/gigs/client/${selectedGigData.gig._id}/band-applicants`);
+    router.push(`/hub/gigs/client/${selectedGigData.gig._id}/band-applicants`);
   };
 
   const handleViewGigDetails = () => {
@@ -143,7 +143,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
           "overflow-hidden border-0 shadow-sm",
           isDarkMode
             ? "bg-gray-800/50 border-gray-700"
-            : "bg-white border-gray-200"
+            : "bg-white border-gray-200",
         )}
       >
         <CardContent className="p-4">
@@ -155,7 +155,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                     "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
                     isDarkMode
                       ? "bg-purple-900/30 text-purple-300"
-                      : "bg-purple-100 text-purple-600"
+                      : "bg-purple-100 text-purple-600",
                   )}
                 >
                   <Music className="w-4 h-4" />
@@ -202,7 +202,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                 "px-3 py-1 text-sm font-semibold flex-shrink-0",
                 isDarkMode
                   ? "bg-purple-900/30 text-purple-300 border-purple-700/50"
-                  : "bg-purple-100 text-purple-800 border-purple-200"
+                  : "bg-purple-100 text-purple-800 border-purple-200",
               )}
             >
               {roleCompletion.percentage}% Complete
@@ -241,7 +241,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
           "overflow-hidden border-0 shadow-sm",
           isDarkMode
             ? "bg-gray-800/50 border-gray-700"
-            : "bg-white border-gray-200"
+            : "bg-white border-gray-200",
         )}
       >
         <CardContent className="p-4">
@@ -253,7 +253,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                 "text-xs",
                 isDarkMode
                   ? "border-gray-600 text-gray-300"
-                  : "border-gray-300 text-gray-600"
+                  : "border-gray-300 text-gray-600",
               )}
             >
               {selectedGigData.gig.bandCategory?.length || 0} Roles
@@ -264,7 +264,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
             {selectedGigData.gig.bandCategory?.map((role, index) => {
               const roleApplicants =
                 filteredApplicants?.filter(
-                  (applicant) => applicant.bandRoleIndex === index
+                  (applicant) => applicant.bandRoleIndex === index,
                 ) || [];
 
               // Calculate current applicants (this should come from the role itself)
@@ -283,7 +283,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                   variants={itemVariants}
                   className={cn(
                     "flex items-center justify-between p-2 rounded-lg",
-                    isDarkMode ? "hover:bg-gray-700/50" : "hover:bg-gray-50"
+                    isDarkMode ? "hover:bg-gray-700/50" : "hover:bg-gray-50",
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                         "w-6 h-6 rounded-md flex items-center justify-center",
                         isDarkMode
                           ? "bg-gray-700 text-gray-300"
-                          : "bg-gray-100 text-gray-600"
+                          : "bg-gray-100 text-gray-600",
                       )}
                     >
                       <Music className="w-3 h-3" />
@@ -388,7 +388,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
           "overflow-hidden border-0 shadow-sm",
           isDarkMode
             ? "bg-gray-800/50 border-gray-700"
-            : "bg-white border-gray-200"
+            : "bg-white border-gray-200",
         )}
       >
         <CardContent className="p-4">
@@ -399,7 +399,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                   "w-8 h-8 rounded-lg flex items-center justify-center",
                   isDarkMode
                     ? "bg-blue-900/30 text-blue-300"
-                    : "bg-blue-100 text-blue-600"
+                    : "bg-blue-100 text-blue-600",
                 )}
               >
                 <Users className="w-4 h-4" />
@@ -427,7 +427,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                 "w-full justify-between group",
                 isDarkMode
                   ? "bg-gray-700 hover:bg-gray-600 border-gray-600"
-                  : "bg-gray-100 hover:bg-gray-200 border-gray-200"
+                  : "bg-gray-100 hover:bg-gray-200 border-gray-200",
               )}
               variant="outline"
             >
@@ -437,7 +437,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                   "text-xs px-2 py-1 rounded",
                   isDarkMode
                     ? "bg-gray-600 group-hover:bg-gray-500"
-                    : "bg-gray-200 group-hover:bg-gray-300"
+                    : "bg-gray-200 group-hover:bg-gray-300",
                 )}
               >
                 {totalApplicants}
@@ -450,7 +450,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
                 "w-full",
                 isDarkMode
                   ? "bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 border-purple-700/50"
-                  : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-200"
+                  : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-200",
               )}
               variant="outline"
             >
@@ -464,7 +464,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
               <div
                 className={cn(
                   "text-center p-2 rounded",
-                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50"
+                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50",
                 )}
               >
                 <div className="text-xs text-gray-500">Roles Open</div>
@@ -475,21 +475,21 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
               <div
                 className={cn(
                   "text-center p-2 rounded",
-                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50"
+                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50",
                 )}
               >
                 <div className="text-xs text-gray-500">Max Apps</div>
                 <div className="font-bold">
                   {selectedGigData.gig.bandCategory?.reduce(
                     (sum, role) => sum + (role.maxApplicants || 20),
-                    0
+                    0,
                   )}
                 </div>
               </div>
               <div
                 className={cn(
                   "text-center p-2 rounded",
-                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50"
+                  isDarkMode ? "bg-gray-700/50" : "bg-gray-50",
                 )}
               >
                 <div className="text-xs text-gray-500">Status</div>
@@ -509,7 +509,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
             "overflow-hidden border-0 shadow-sm",
             isDarkMode
               ? "bg-gradient-to-r from-blue-900/20 to-cyan-900/20 border-blue-800/30"
-              : "bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200"
+              : "bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200",
           )}
         >
           <CardContent className="p-3">

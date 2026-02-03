@@ -2136,62 +2136,61 @@ export const updateWeeklyGigCount = (currentWeeklyData: any) => {
   };
 };
 // Create or update this function
-export const getInterestWindowStatus = (gig: any) => {
-  const now = Date.now();
 
-  // Handle undefined or null values
-  const startTime = gig.acceptInterestStartTime;
-  const endTime = gig.acceptInterestEndTime;
-
-  console.log("=== getInterestWindowStatus ===");
-  console.log("Gig ID:", gig._id);
-  console.log("Start Time:", startTime, typeof startTime);
-  console.log("End Time:", endTime, typeof endTime);
-  console.log("Now:", now, new Date(now).toLocaleString());
-
-  // If no window is set, return open
-  if (!startTime && !endTime) {
+export const getInterestWindowStatus = (gig: {
+  acceptInterestStartTime?: string | number | Date;
+  acceptInterestEndTime?: string | number | Date;
+}) => {
+  if (!gig.acceptInterestStartTime && !gig.acceptInterestEndTime) {
     return {
       hasWindow: false,
-      status: "open",
-      message: "Always open",
+      status: "always_open",
+      message: "Always Open",
     };
   }
 
-  // Parse timestamps if they exist
-  const startTimestamp = startTime ? new Date(startTime).getTime() : null;
-  const endTimestamp = endTime ? new Date(endTime).getTime() : null;
+  const now = Date.now();
+  let startTime = 0;
+  let endTime = 0;
 
-  console.log("Parsed timestamps:", {
-    startTimestamp,
-    endTimestamp,
-    startDate: startTimestamp
-      ? new Date(startTimestamp).toLocaleString()
-      : "none",
-    endDate: endTimestamp ? new Date(endTimestamp).toLocaleString() : "none",
-  });
+  // Parse start time
+  if (gig.acceptInterestStartTime) {
+    startTime =
+      typeof gig.acceptInterestStartTime === "number"
+        ? gig.acceptInterestStartTime
+        : new Date(gig.acceptInterestStartTime).getTime();
+  }
 
-  if (startTimestamp && now < startTimestamp) {
+  // Parse end time
+  if (gig.acceptInterestEndTime) {
+    endTime =
+      typeof gig.acceptInterestEndTime === "number"
+        ? gig.acceptInterestEndTime
+        : new Date(gig.acceptInterestEndTime).getTime();
+  }
+
+  if (now < startTime) {
+    // Window hasn't opened yet
     return {
       hasWindow: true,
       status: "not_open",
-      message: `Opens ${new Date(startTimestamp).toLocaleDateString()}`,
+      message: "Opens Soon",
     };
-  }
-
-  if (endTimestamp && now > endTimestamp) {
+  } else if (endTime && now > endTime) {
+    // Window has closed
     return {
       hasWindow: true,
       status: "closed",
       message: "Closed",
     };
+  } else {
+    // Window is open
+    return {
+      hasWindow: true,
+      status: "open",
+      message: "Open Now",
+    };
   }
-
-  return {
-    hasWindow: true,
-    status: "open",
-    message: "Open for interest",
-  };
 };
 
 export function formatTimeAgo(date: Date): string {

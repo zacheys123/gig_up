@@ -37,7 +37,7 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
     for (const gig of allGigs) {
       if (gig.bookCount && gig.bookCount.length > 0) {
         const userApplications = gig.bookCount.filter(
-          (app: any) => app.appliedBy === userData._id
+          (app: any) => app.appliedBy === userData._id,
         );
         count += userApplications.length;
       }

@@ -29,27 +29,38 @@ interface BandRole {
   maxSlots: number;
   requiredSkills?: string[];
 }
-// Simple exact match qualification
-export const isUserQualifiedForRole = (
-  user: Doc<"users">,
-  bandRole: BandRole,
-): boolean => {
-  const backendRole = bandRole.role.toLowerCase(); // e.g., "guitar"
-  const userInstrument = user.instrument?.toLowerCase() || "";
-  const userRoleType = user.roleType?.toLowerCase() || "";
-
-  // For vocal roles
-  if (backendRole === "vocalist" && userRoleType === "vocalist") {
-    return true;
+export const isUserQualifiedForRole = (user: any, role: any): boolean => {
+  if (!user || !role) {
+    console.log("❌ Missing user or role");
+    return false;
   }
 
-  // For DJ/MC
-  if (["dj", "mc"].includes(backendRole)) {
-    return userRoleType === backendRole;
+  if (role.filledSlots >= role.maxSlots) {
+    console.log(
+      `❌ Role "${role.role}" is full (${role.filledSlots}/${role.maxSlots})`,
+    );
+    return false;
   }
 
-  // For instruments - exact match
-  return userInstrument === backendRole;
+  const roleName = (role.role || "").toLowerCase().trim();
+  const userInstrument = (user.instrument || "").toLowerCase().trim();
+  const userRoleType = (user.roleType || "").toLowerCase().trim();
+
+  console.log(`=== Qualification Check ===`);
+  console.log(`Role: "${role.role}" (${roleName})`);
+  console.log(`User instrument: "${user.instrument}" -> "${userInstrument}"`);
+  console.log(`User roleType: "${user.roleType}" -> "${userRoleType}"`);
+
+  const instrumentMatch = userInstrument === roleName;
+  const roleTypeMatch = userRoleType === roleName;
+
+  console.log(`Instrument exact match: ${instrumentMatch}`);
+  console.log(`RoleType exact match: ${roleTypeMatch}`);
+
+  const qualified = instrumentMatch || roleTypeMatch;
+  console.log(`Result: ${qualified ? "✅ QUALIFIED" : "❌ NOT QUALIFIED"}\n`);
+
+  return qualified;
 };
 // utils/index.ts - Add this function
 export const getDisplayName = (backendValue: string): string => {
