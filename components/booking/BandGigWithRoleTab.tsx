@@ -69,28 +69,58 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
 
   const roleCompletion = getRoleCompletion();
   const totalApplicants = filteredApplicants?.length || 0;
+  const formatDate = (timestamp: number | undefined | null) => {
+    // Handle undefined/null
+    if (timestamp === undefined || timestamp === null) {
+      return "Date not set";
+    }
 
-  // Format date and time
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
+    // Convert to number
+    const ts = Number(timestamp);
+
+    // Check if it's a valid number
+    if (isNaN(ts)) {
+      return "Invalid date";
+    }
+
+    // Handle seconds vs milliseconds
+    const date = ts < 10000000000 ? new Date(ts * 1000) : new Date(ts);
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
+
+    return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       weekday: "short",
     });
   };
 
-  const formatTime = (timeString: string | undefined) => {
-    if (!timeString) return "TBD";
+  const formatTimeRange = (timeObj: any) => {
+    if (!timeObj || !timeObj.start) return "Time not set";
 
-    try {
-      const [hours, minutes] = timeString.split(":");
-      const hour = parseInt(hours);
-      const suffix = hour >= 12 ? "PM" : "AM";
-      const displayHour = hour % 12 || 12;
-      return `${displayHour}:${minutes} ${suffix}`;
-    } catch {
-      return timeString;
-    }
+    const formatSingleTime = (time: string) => {
+      if (!time) return "";
+      if (time.includes("PM") || time.includes("AM")) return time;
+
+      try {
+        const [hours, minutes] = time.split(":");
+        const hour = parseInt(hours, 10);
+        const suffix = hour >= 12 ? "PM" : "AM";
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${minutes} ${suffix}`;
+      } catch {
+        return time;
+      }
+    };
+
+    const start = formatSingleTime(timeObj.start);
+    const end = timeObj.end ? formatSingleTime(timeObj.end) : "";
+    const from = timeObj.durationFrom;
+    const to = timeObj.durationTo;
+    return end ? `${start}${from} - ${end}${to}` : start;
   };
 
   const handleViewAll = () => {
@@ -175,15 +205,18 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
               <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3 h-3 text-gray-500" />
-                  <span className={colors.text}>
-                    {formatDate(selectedGigData.gig.date)}
-                  </span>
+                  <div>
+                    {selectedGigData.gig.date
+                      ? formatDate(selectedGigData.gig.date)
+                      : "Date not set"}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3 text-gray-500" />
                   <span className={colors.text}>
-                    {formatTime(selectedGigData.gig.time?.start)}
+                    {formatTimeRange(selectedGigData.gig.time)}
                   </span>
+                  ;
                 </div>
                 {selectedGigData.gig.location && (
                   <div className="flex items-center gap-1">
@@ -419,31 +452,7 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
             )}
           </div>
 
-          {/* Action Buttons */}
           <div className="space-y-3">
-            <Button
-              onClick={handleViewAll}
-              className={cn(
-                "w-full justify-between group",
-                isDarkMode
-                  ? "bg-gray-700 hover:bg-gray-600 border-gray-600"
-                  : "bg-gray-100 hover:bg-gray-200 border-gray-200",
-              )}
-              variant="outline"
-            >
-              <span className="font-medium">View All Applicants</span>
-              <span
-                className={cn(
-                  "text-xs px-2 py-1 rounded",
-                  isDarkMode
-                    ? "bg-gray-600 group-hover:bg-gray-500"
-                    : "bg-gray-200 group-hover:bg-gray-300",
-                )}
-              >
-                {totalApplicants}
-              </span>
-            </Button>
-
             <Button
               onClick={handleViewGigDetails}
               className={cn(
@@ -458,7 +467,6 @@ export const BandRolesTab: React.FC<BandRolesTabProps> = ({
               View Gig Details
             </Button>
 
-            {/* Quick Stats */}
             {/* Quick Stats */}
             <div className="grid grid-cols-3 gap-2 pt-3 border-t">
               <div

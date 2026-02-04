@@ -666,7 +666,6 @@ export const bookForBandRole = mutation({
 
       // Calculate final price
       const finalPrice = bookedPrice || role.price || 0;
-
       const bandBookingEntry = {
         bandRole: role.role,
         bandRoleIndex,
@@ -674,18 +673,11 @@ export const bookForBandRole = mutation({
         userName: musician.firstname || musician.username || "Musician",
         appliedAt: Date.now(),
         applicationStatus: "accepted" as const,
+        applicationNotes: reason || `Booked as ${role.role}`, // Use this field
         bookedAt: Date.now(),
         bookedPrice: finalPrice,
         contractSigned: false,
         paymentStatus: "pending" as const,
-        bookedBy: clientUser._id,
-        bookingNotes: reason || `Booked as ${role.role}`,
-        ratingGiven: undefined,
-        applicationNotes: undefined,
-        completedAt: undefined,
-        completionNotes: undefined,
-        paymentDate: undefined,
-        paymentAmount: undefined,
       };
 
       // Create regular booking history entry

@@ -44,6 +44,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrustStarsDisplay } from "../trust/TrustStarsDisplay";
+import { getRateSummary } from "@/lib/rates";
+import { RemoveInterestButton } from "./RemoveInterest";
+import { useAuth } from "@clerk/nextjs";
+import { ClientRemoveInterestButton } from "./ClientRemove";
 
 interface RegularGigsTabProps {
   selectedGigData: GigWithApplicants;
@@ -52,16 +57,16 @@ interface RegularGigsTabProps {
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
     bandRole?: string,
-    bandRoleIndex?: number
+    bandRoleIndex?: number,
   ) => Promise<void>;
   handleRemoveFromShortlist: (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
-    bandRoleIndex?: number
+    bandRoleIndex?: number,
   ) => Promise<void>;
   handleViewProfile: (
     gigId: Id<"gigs">,
-    applicantId: Id<"users">
+    applicantId: Id<"users">,
   ) => Promise<void>;
   handleBookMusician: (userId: Id<"users">, userName: string) => void;
   getStatusColor: (status: string) => string;
@@ -80,13 +85,13 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
 }) => {
   const { colors, isDarkMode, mounted } = useThemeColors();
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
-    null
+    null,
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("recent");
-
+  const { userId: clerkId } = useAuth();
   // Get user details for the selected applicant
   const selectedUserData = useMemo(() => {
     if (!selectedApplicant) return null;
@@ -116,7 +121,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
     // Apply status filter
     if (statusFilter !== "all") {
       results = results.filter(
-        (applicant) => applicant.status === statusFilter
+        (applicant) => applicant.status === statusFilter,
       );
     }
 
@@ -244,7 +249,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
   // Check if applicant is shortlisted
   const isShortlisted = (applicantId: Id<"users">) => {
     return selectedGigData.shortlisted.some(
-      (item: any) => item.userId === applicantId
+      (item: any) => item.userId === applicantId,
     );
   };
 
@@ -413,7 +418,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
             >
               {processedApplicants.map((applicant) => {
                 const userData = selectedGigData.userDetails.get(
-                  applicant.userId
+                  applicant.userId,
                 );
                 if (!userData) return null;
 
@@ -436,7 +441,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                         "group cursor-pointer transition-all duration-300",
                         colors.border,
                         "hover:shadow-lg",
-                        isSelected && "ring-2 ring-orange-500 shadow-xl"
+                        isSelected && "ring-2 ring-orange-500 shadow-xl",
                       )}
                     >
                       <CardContent className="p-4">
@@ -453,7 +458,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                                     ? "from-purple-500 to-violet-500"
                                     : userData.roleType?.toLowerCase() === "mc"
                                       ? "from-orange-500 to-amber-500"
-                                      : "from-blue-500 to-cyan-500"
+                                      : "from-blue-500 to-cyan-500",
                               )}
                             >
                               {userData.firstname?.charAt(0)?.toUpperCase() ||
@@ -467,7 +472,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <h4 className="font-semibold text-sm">
-                                    {userData.firstname || userData.username}
+                                    {`${userData.firstname}  ${userData.username}`}
                                   </h4>
                                   {userData.verifiedIdentity && (
                                     <CheckCircle className="w-3 h-3 text-green-500" />
@@ -479,10 +484,10 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                                     className="text-xs"
                                     style={{
                                       backgroundColor: getRoleBg(
-                                        userData.roleType
+                                        userData.roleType,
                                       ),
                                       borderColor: getRoleBorder(
-                                        userData.roleType
+                                        userData.roleType,
                                       ),
                                       color: getRoleColor(userData.roleType),
                                     }}
@@ -493,7 +498,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                                     variant="secondary"
                                     className={cn(
                                       "text-xs",
-                                      getStatusColor(applicant.status)
+                                      getStatusColor(applicant.status),
                                     )}
                                   >
                                     {applicant.status}
@@ -512,7 +517,13 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                                 <div className="flex items-center justify-center gap-1">
                                   <Star className="w-3 h-3 text-yellow-500" />
                                   <span className="text-xs font-bold">
-                                    {userData.avgRating?.toFixed(1) || "4.5"}
+                                    <TrustStarsDisplay
+                                      trustStars={
+                                        userData.trustStars?.toFixed(1) || "4.5"
+                                      }
+                                      size="sm"
+                                      className="-ml-5 text-orange-400"
+                                    />
                                   </span>
                                 </div>
                                 <span className="text-[10px] text-gray-500">
@@ -532,17 +543,66 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                                 </span>
                               </div>
 
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <DollarSign className="w-3 h-3 text-green-500" />
-                                  <span className="text-xs font-bold">
-                                    ${userData.rate?.baseRate || "N/A"}
-                                  </span>
+                              {selectedUserData?.rate && (
+                                <div className="space-y-2 mt-4">
+                                  <h4 className="font-bold text-sm">
+                                    Rate Summary
+                                  </h4>
+                                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                                    {(() => {
+                                      const summary = getRateSummary(
+                                        selectedUserData.rate,
+                                      ); // Function to round up to nearest thousand
+                                      // Complete solution
+                                      const formatRateSummary = () => {
+                                        // Get the value - it might be a string like "8,900" or "KES 8,900"
+                                        const rawValue =
+                                          summary.formattedAverage;
+
+                                        // Convert to number
+                                        let numericValue = 0;
+
+                                        if (typeof rawValue === "number") {
+                                          numericValue = rawValue;
+                                        } else if (
+                                          typeof rawValue === "string"
+                                        ) {
+                                          // Remove any non-numeric characters except decimal point
+                                          const cleaned = rawValue.replace(
+                                            /[^\d.]/g,
+                                            "",
+                                          );
+                                          numericValue =
+                                            parseFloat(cleaned) || 0;
+                                        }
+
+                                        // Round up to nearest thousand
+                                        const roundedValue =
+                                          Math.ceil(numericValue / 1000) * 1000;
+
+                                        // Format for display
+                                        return `KES ${roundedValue.toLocaleString()}`;
+                                      };
+
+                                      return (
+                                        <>
+                                          <div className="text-2xl font-bold">
+                                            {formatRateSummary()}
+                                          </div>
+
+                                          <div className="flex justify-between text-xs text-gray-500">
+                                            <span>Range:</span>
+                                            <span>
+                                              {summary.formattedMin} -{" "}
+                                              {summary.formattedMax}
+                                            </span>
+                                          </div>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
                                 </div>
-                                <span className="text-[10px] text-gray-500">
-                                  Rate
-                                </span>
-                              </div>
+                              )}
 
                               <div className="text-center">
                                 <div className="flex items-center justify-center gap-1">
@@ -569,7 +629,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                               e.stopPropagation();
                               handleViewProfile(
                                 selectedGigData.gig._id,
-                                applicant.userId
+                                applicant.userId,
                               );
                             }}
                           >
@@ -585,11 +645,11 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                               shortlisted
                                 ? handleRemoveFromShortlist(
                                     selectedGigData.gig._id,
-                                    applicant.userId
+                                    applicant.userId,
                                   )
                                 : handleAddToShortlist(
                                     selectedGigData.gig._id,
-                                    applicant.userId
+                                    applicant.userId,
                                   );
                             }}
                           >
@@ -605,6 +665,21 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                               </>
                             )}
                           </Button>
+                        </div>
+                        <div className="w-full flex justify-center items-center">
+                          <ClientRemoveInterestButton
+                            gigId={selectedGigData.gig._id}
+                            userIdToRemove={applicant.userId}
+                            clerkId={clerkId || ""}
+                            musicianName={
+                              userData.firstname || userData.username
+                            }
+                            gigTitle={selectedGigData.gig.title}
+                            variant="destructive"
+                            size="sm"
+                            showText={true}
+                            className="h-8 w-8 p-0 p-3 rounded-lg text-white bg-red-600 w-full hover:bg-red-400 "
+                          />
                         </div>
                       </CardContent>
                     </Card>
@@ -652,7 +727,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                             ? "from-purple-500 to-violet-500"
                             : selectedUserData.roleType?.toLowerCase() === "mc"
                               ? "from-orange-500 to-amber-500"
-                              : "from-blue-500 to-cyan-500"
+                              : "from-blue-500 to-cyan-500",
                       )}
                     >
                       {selectedUserData.firstname?.charAt(0)?.toUpperCase() ||
@@ -700,10 +775,10 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Star className="w-5 h-5 text-yellow-500" />
                       <span className="text-2xl font-bold">
-                        {selectedUserData.avgRating?.toFixed(1) || "4.5"}
+                        {selectedUserData.trustStars?.toFixed(1) || "4.5"}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500">Average Rating</p>
+                    <p className="text-sm text-gray-500">Trust Rating/Stars</p>
                   </div>
 
                   <div className="text-center p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
@@ -722,10 +797,10 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                   <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-green-500" />
-                      <span className="font-medium">Hourly Rate</span>
+                      <span className="font-medium">Avg Rate</span>
                     </div>
                     <span className="font-bold text-lg">
-                      ${selectedUserData.rate?.baseRate || "Contact for rate"}
+                      {formatRateSummary()}
                     </span>
                   </div>
 
@@ -746,7 +821,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                     </div>
                     <span className="font-medium">
                       {new Date(
-                        selectedApplicant.appliedAt
+                        selectedApplicant.appliedAt,
                       ).toLocaleDateString()}
                     </span>
                   </div>
@@ -772,7 +847,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                       onClick={() =>
                         handleViewProfile(
                           selectedGigData.gig._id,
-                          selectedApplicant.userId
+                          selectedApplicant.userId,
                         )
                       }
                     >
@@ -792,12 +867,12 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                     className={cn(
                       "w-full h-12 text-white font-bold",
                       colors.gradientPrimary,
-                      "hover:shadow-xl transition-all"
+                      "hover:shadow-xl transition-all",
                     )}
                     onClick={() =>
                       handleBookMusician(
                         selectedApplicant.userId,
-                        selectedUserData.firstname || selectedUserData.username
+                        selectedUserData.firstname || selectedUserData.username,
                       )
                     }
                   >
@@ -812,11 +887,11 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                       isShortlisted(selectedApplicant.userId)
                         ? handleRemoveFromShortlist(
                             selectedGigData.gig._id,
-                            selectedApplicant.userId
+                            selectedApplicant.userId,
                           )
                         : handleAddToShortlist(
                             selectedGigData.gig._id,
-                            selectedApplicant.userId
+                            selectedApplicant.userId,
                           )
                     }
                   >

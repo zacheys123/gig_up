@@ -337,7 +337,107 @@ export const selectMusicianFromInterested = mutation({
     return { success: true };
   },
 });
+// convex/controllers/gigs.ts
+export const removeUserInterest = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    userIdToRemove: v.id("users"), // ID of musician to remove
+    clerkId: v.string(), // Client's Clerk ID
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, userIdToRemove, clerkId, reason } = args;
 
+    // Get client user from Clerk ID
+    const client = await getUserByClerkId(ctx, clerkId);
+    if (!client) throw new Error("CLIENT_NOT_FOUND: Client not found");
+
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("GIG_NOT_FOUND: Gig not found");
+
+    // Verify client owns this gig
+    if (gig.postedBy !== client._id) {
+      throw new Error("PERMISSION_DENIED: Only gig owner can remove interest");
+    }
+
+    if (gig.isClientBand) {
+      throw new Error(
+        "BAND_GIG: This is a band gig - manage through band roles",
+      );
+    }
+
+    const currentInterestedUsers = gig.interestedUsers || [];
+    const musician = await ctx.db.get(userIdToRemove);
+
+    if (!musician) {
+      throw new Error("USER_NOT_FOUND: Musician not found");
+    }
+
+    if (!currentInterestedUsers.includes(userIdToRemove)) {
+      throw new Error("NOT_INTERESTED: This user hasn't shown interest");
+    }
+
+    const updatedInterestedUsers = currentInterestedUsers.filter(
+      (id) => id !== userIdToRemove,
+    );
+
+    const maxSlots = gig.maxSlots || 10;
+    const isStillFull = updatedInterestedUsers.length >= maxSlots;
+
+    const removalEntry = {
+      entryId: `${gigId}_${userIdToRemove}_${Date.now()}`,
+      timestamp: Date.now(),
+      userId: userIdToRemove,
+      userRole: "musician",
+      bandRole: musician.roleType || gig.category || "musician",
+      status: "rejected" as const,
+      gigType: "regular" as const,
+      actionBy: client._id, // Client performed the action
+      actionFor: userIdToRemove, // Action was for musician
+      reason: reason || "Interest removed by gig owner",
+      metadata: {
+        action: "interest_removed_by_client",
+        gigTitle: gig.title,
+        musicianName: musician.firstname || musician.username,
+        clientName: client.firstname || client.username,
+        previousInterestedCount: currentInterestedUsers.length,
+        remainingInterestedCount: updatedInterestedUsers.length,
+      },
+    };
+
+    await ctx.db.patch(gigId, {
+      interestedUsers: updatedInterestedUsers,
+      bookingHistory: [...(gig.bookingHistory || []), removalEntry],
+      updatedAt: Date.now(),
+      isPending: isStillFull,
+      ...(gig.isTaken && { isTaken: false }),
+    });
+
+    // NOTIFY MUSICIAN
+    await createNotificationInternal(ctx, {
+      userDocumentId: userIdToRemove,
+      type: "interest_removed_by_client",
+      title: "❌ Interest Removed",
+      message: `Your interest in "${gig.title}" was removed by the gig owner`,
+      image: client.picture,
+      actionUrl: `/gigs/${gigId}`,
+      relatedUserDocumentId: client._id,
+      metadata: {
+        gigId,
+        gigTitle: gig.title,
+        clientName: client.firstname || client.username,
+        reason: reason || "",
+      },
+    });
+
+    return {
+      success: true,
+      removedUserId: userIdToRemove,
+      musicianName: musician.firstname || musician.username,
+      remainingCount: updatedInterestedUsers.length,
+    };
+  },
+});
 // =================== SAVE/FAVORITE/VIEW MUTATIONS ===================
 
 /**
@@ -2012,9 +2112,11 @@ export const updateGig = mutation({
     djEquipment: v.optional(v.string()),
     vocalistGenre: v.optional(v.array(v.string())),
 
-    // Interest window
-    acceptInterestEndTime: v.optional(v.number()),
+    // Interest window - ADD THIS
     acceptInterestStartTime: v.optional(v.number()),
+    acceptInterestEndTime: v.optional(v.number()),
+    interestWindowDays: v.optional(v.number()), // <-- ADD THIS LINE
+    enableInterestWindow: v.optional(v.boolean()), // <-- OPTIONAL: Also add this if needed
 
     // Capacity
     maxSlots: v.optional(v.number()),
@@ -2045,6 +2147,7 @@ export const updateGig = mutation({
     console.log("Interest window data:", {
       acceptInterestStartTime: args.acceptInterestStartTime,
       acceptInterestEndTime: args.acceptInterestEndTime,
+      interestWindowDays: args.interestWindowDays, // <-- Now logging this
       startDate: args.acceptInterestStartTime
         ? new Date(args.acceptInterestStartTime).toLocaleString()
         : null,
@@ -2069,6 +2172,7 @@ export const updateGig = mutation({
     console.log("Existing interest window:", {
       start: existingGig.acceptInterestStartTime,
       end: existingGig.acceptInterestEndTime,
+      days: existingGig.interestWindowDays, // <-- Now logging this
       startDate: existingGig.acceptInterestStartTime
         ? new Date(existingGig.acceptInterestStartTime).toLocaleString()
         : null,
@@ -2176,6 +2280,7 @@ export const updateGig = mutation({
     console.log("Updated interest window:", {
       start: updatedGig?.acceptInterestStartTime,
       end: updatedGig?.acceptInterestEndTime,
+      days: updatedGig?.interestWindowDays, // <-- Now logging this
       startDate: updatedGig?.acceptInterestStartTime
         ? new Date(updatedGig.acceptInterestStartTime).toLocaleString()
         : null,
@@ -2205,7 +2310,9 @@ export const updateGig = mutation({
         ),
         bandRolesUpdated: bandCategory ? bandCategory.length : 0,
         interestWindowUpdated: !!(
-          args.acceptInterestStartTime || args.acceptInterestEndTime
+          args.acceptInterestStartTime ||
+          args.acceptInterestEndTime ||
+          args.interestWindowDays // <-- Include this
         ),
       },
     };
@@ -2224,12 +2331,13 @@ export const updateGig = mutation({
       updatedAt: payload.updatedAt,
       bandRolesUpdated: bandCategory ? bandCategory.length : 0,
       interestWindowUpdated: !!(
-        args.acceptInterestStartTime || args.acceptInterestEndTime
+        args.acceptInterestStartTime ||
+        args.acceptInterestEndTime ||
+        args.interestWindowDays // <-- Include this
       ),
       // Return current stats for debugging
       stats: {
         interestedUsers: updatedGig?.interestedUsers?.length || 0,
-
         bandRoles: updatedGig?.bandCategory?.length || 0,
         totalApplicants:
           updatedGig?.bandCategory?.reduce(

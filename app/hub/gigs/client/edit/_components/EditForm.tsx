@@ -783,16 +783,22 @@ const InterestWindowSection = React.memo(
               <Button
                 type="button"
                 variant={interestWindowType === "dates" ? "default" : "outline"}
+                // In InterestWindowSection, update the type switching logic:
+
                 onClick={() => {
-                  setInterestWindowType("dates");
-                  // When switching to dates, clear days
+                  setInterestWindowType("days");
+                  // When switching to days, clear dates AND disable interest window if dates were set
                   if (
-                    formValues?.interestWindowDays &&
-                    formValues.interestWindowDays !== 7
+                    formValues?.acceptInterestStartTime ||
+                    formValues?.acceptInterestEndTime
                   ) {
-                    onInterestWindowChange("interestWindowDays", undefined);
+                    onInterestWindowChange(
+                      "acceptInterestStartTime",
+                      undefined,
+                    );
+                    onInterestWindowChange("acceptInterestEndTime", undefined);
                   }
-                  // Ensure interest window is enabled
+                  // Ensure interest window is enabled if we're setting days
                   onInterestWindowChange("enableInterestWindow", true);
                 }}
                 className={cn(
@@ -1847,6 +1853,13 @@ export default function EditGigForm({
       router.back();
     }
   }, [hasChanges, router]);
+
+  // Parse date/time values
+  const parseDateTimeLocal = (dateTimeStr: string | undefined) => {
+    if (!dateTimeStr) return undefined;
+    const date = new Date(dateTimeStr);
+    return isNaN(date.getTime()) ? undefined : date.getTime();
+  };
   // COMPLETE handleSave function - replace your current one
   const handleSave = useCallback(async () => {
     console.log("=== SAVE ATTEMPT STARTED ===");
@@ -1901,7 +1914,52 @@ export default function EditGigForm({
     try {
       console.log("=== DEBUG: Saving gig data ===");
       console.log("Form values:", formValues);
+      const isUsingDates =
+        formValues.acceptInterestStartTime || formValues.acceptInterestEndTime;
+      const isUsingDays =
+        formValues.interestWindowDays && formValues.interestWindowDays !== 7;
+      const isEnabled = formValues.enableInterestWindow;
 
+      let interestWindowData: any = {};
+
+      if (isEnabled) {
+        if (isUsingDates) {
+          // Using specific dates mode
+          const acceptInterestStartTime = parseDateTimeLocal(
+            formValues.acceptInterestStartTime,
+          );
+          const acceptInterestEndTime = parseDateTimeLocal(
+            formValues.acceptInterestEndTime,
+          );
+
+          interestWindowData = {
+            acceptInterestStartTime,
+            acceptInterestEndTime,
+            interestWindowDays: undefined, // Clear days when using dates
+          };
+        } else if (isUsingDays) {
+          // Using days after posting mode
+          interestWindowData = {
+            acceptInterestStartTime: undefined, // Clear dates when using days
+            acceptInterestEndTime: undefined, // Clear dates when using days
+            interestWindowDays: formValues.interestWindowDays,
+          };
+        } else {
+          // Enabled but no mode selected - default to 7 days
+          interestWindowData = {
+            acceptInterestStartTime: undefined,
+            acceptInterestEndTime: undefined,
+            interestWindowDays: 7, // Default to 7 days
+          };
+        }
+      } else {
+        // Interest window disabled - clear all fields
+        interestWindowData = {
+          acceptInterestStartTime: undefined,
+          acceptInterestEndTime: undefined,
+          interestWindowDays: undefined,
+        };
+      }
       // Convert band role data properly
       const convertBandRoleForConvex = (role: BandRoleInput) => {
         // Remove bookedPrice if it exists
@@ -1947,13 +2005,6 @@ export default function EditGigForm({
         ? formValues.vocalistGenre.join(", ")
         : formValues.vocalistGenre || "";
 
-      // Parse date/time values
-      const parseDateTimeLocal = (dateTimeStr: string | undefined) => {
-        if (!dateTimeStr) return undefined;
-        const date = new Date(dateTimeStr);
-        return isNaN(date.getTime()) ? undefined : date.getTime();
-      };
-
       const acceptInterestStartTime = parseDateTimeLocal(
         formValues.acceptInterestStartTime,
       );
@@ -1963,6 +2014,9 @@ export default function EditGigForm({
 
       // Prepare update data - DO NOT include gigId in the object to be cleaned
       const updateData: any = {
+        //  OPTIONAL field - can be undefined
+        ...interestWindowData,
+
         // REQUIRED fields - don't filter these out
         gigId: gigId as Id<"gigs">,
         clerkId: user.clerkId,

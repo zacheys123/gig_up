@@ -79,7 +79,7 @@ export const getStatusIcon = (status: GigUserStatus) => {
 // Helper function to get action button configuration
 export const getActionButtonConfig = (
   status: GigUserStatus,
-  gig: { isClientBand?: boolean; isTaken?: boolean }
+  gig: { isClientBand?: boolean; isTaken?: boolean },
 ): ActionButtonConfig => {
   const isClientBand = gig.isClientBand || false;
 
@@ -159,7 +159,7 @@ export const AllGigs = ({ user }: { user: any }) => {
   const [isBooking, setIsBooking] = useState(false);
   const [isSavedMap, setIsSavedMap] = useState<Record<string, boolean>>({});
   const [isFavoriteMap, setIsFavoriteMap] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
 
   // Convex mutations
@@ -218,7 +218,7 @@ export const AllGigs = ({ user }: { user: any }) => {
         gig.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         gig.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         gig.tags?.some((tag) =>
-          tag.toLowerCase().includes(searchQuery.toLowerCase())
+          tag.toLowerCase().includes(searchQuery.toLowerCase()),
         );
 
       // Apply filters from panel
@@ -345,7 +345,7 @@ export const AllGigs = ({ user }: { user: any }) => {
   // Get stats for display
   const stats = useMemo(() => {
     const available = filteredGigs.filter(
-      (g) => !g.isTaken && !g.isPending
+      (g) => !g.isTaken && !g.isPending,
     ).length;
     const booked = filteredGigs.filter((g) => g.isTaken).length;
     const pending = filteredGigs.filter((g) => g.isPending).length;
@@ -477,7 +477,7 @@ export const AllGigs = ({ user }: { user: any }) => {
       (entry: any) => ({
         ...entry,
         // Handle any type mismatches here
-      })
+      }),
     );
 
     // DO NOT convert bookCount - keep it as band applications
@@ -545,6 +545,7 @@ export const AllGigs = ({ user }: { user: any }) => {
       </div>
     );
   }
+  const [showHeader, setShowHeader] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -558,7 +559,6 @@ export const AllGigs = ({ user }: { user: any }) => {
         onFavorite={handleFavoriteGig}
         currentUserId={user?._id}
       />
-
       {/* Filters Panel */}
       <FiltersPanel
         isOpen={showFiltersPanel}
@@ -568,12 +568,12 @@ export const AllGigs = ({ user }: { user: any }) => {
         availableCategories={categories}
         availableLocations={locations}
       />
-
       {/* Header Section with Gradient */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`
+      {!showHeader && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`
     relative overflow-hidden rounded-2xl p-6 md:p-8 border
     ${
       isDarkMode
@@ -581,54 +581,65 @@ export const AllGigs = ({ user }: { user: any }) => {
         : "bg-gradient-to-br from-orange-50 via-white to-gray-100 border-gray-200"
     }
   `}
-      >
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
-            <div className="space-y-2">
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-                Discover Amazing Gigs
-              </h1>
-              <p
-                className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} max-w-2xl`}
-              >
-                Find the perfect gig opportunity or talent for your next event.
-                {filteredGigs.length > 0 &&
-                  ` ${filteredGigs.length} amazing opportunities available now!`}
-              </p>
+        >
+          <div className="relative z-10">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+              <div className="space-y-2 flex justify-between items-center w-full">
+                <div className="flex flex-col gap-3">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                    Discover Amazing Gigs
+                  </h1>
+                  <p
+                    className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} max-w-2xl`}
+                  >
+                    Find the perfect gig opportunity or talent for your next
+                    event.
+                    {filteredGigs.length > 0 &&
+                      ` ${filteredGigs.length} amazing opportunities available now!`}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="m-1 border-red-400 bg-gradient-to-r from-red-500/10 to-orange-500/5"
+                  onClick={() => setShowHeader((prev) => !prev)}
+                >
+                  {" "}
+                  Collapse Header
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {[
-              {
-                label: "Available",
-                value: stats.available,
-                icon: Sparkles,
-                color: "green",
-              },
-              {
-                label: "Booked",
-                value: stats.booked,
-                icon: Calendar,
-                color: "blue",
-              },
-              {
-                label: "Avg. Price",
-                value: `$${stats.avgPrice}`,
-                icon: DollarSign,
-                color: "purple",
-              },
-              {
-                label: "Locations",
-                value: locations.length,
-                icon: MapPin,
-                color: "amber",
-              },
-            ].map((item) => (
-              <Card
-                key={item.label}
-                className={`
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {[
+                {
+                  label: "Available",
+                  value: stats.available,
+                  icon: Sparkles,
+                  color: "green",
+                },
+                {
+                  label: "Booked",
+                  value: stats.booked,
+                  icon: Calendar,
+                  color: "blue",
+                },
+                {
+                  label: "Avg. Price",
+                  value: `$${stats.avgPrice}`,
+                  icon: DollarSign,
+                  color: "purple",
+                },
+                {
+                  label: "Locations",
+                  value: locations.length,
+                  icon: MapPin,
+                  color: "amber",
+                },
+              ].map((item) => (
+                <Card
+                  key={item.label}
+                  className={`
             backdrop-blur-sm
             ${
               isDarkMode
@@ -636,23 +647,23 @@ export const AllGigs = ({ user }: { user: any }) => {
                 : "bg-white/80 border-gray-200"
             }
           `}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p
-                        className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
-                      >
-                        {item.label}
-                      </p>
-                      <p
-                        className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}
-                      >
-                        {item.value}
-                      </p>
-                    </div>
-                    <div
-                      className={`
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p
+                          className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                        >
+                          {item.label}
+                        </p>
+                        <p
+                          className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}
+                        >
+                          {item.value}
+                        </p>
+                      </div>
+                      <div
+                        className={`
                 p-2 rounded-lg
                 ${
                   isDarkMode
@@ -660,9 +671,9 @@ export const AllGigs = ({ user }: { user: any }) => {
                     : `bg-${item.color}-100`
                 }
               `}
-                    >
-                      <item.icon
-                        className={`
+                      >
+                        <item.icon
+                          className={`
                   w-5 h-5
                   ${
                     isDarkMode
@@ -670,23 +681,23 @@ export const AllGigs = ({ user }: { user: any }) => {
                       : `text-${item.color}-600`
                   }
                 `}
-                      />
+                        />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-          {/* Search Bar with Advanced Options */}
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                placeholder="Search gigs by title, description, location, or tags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`
+            {/* Search Bar with Advanced Options */}
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  placeholder="Search gigs by title, description, location, or tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`
             pl-12 pr-12 h-12 rounded-xl text-lg backdrop-blur-sm
             ${
               isDarkMode
@@ -694,27 +705,27 @@ export const AllGigs = ({ user }: { user: any }) => {
                 : "border-gray-300 bg-white/90 text-gray-900"
             }
           `}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className={`
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className={`
               absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full
               ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}
             `}
-                >
-                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </button>
-              )}
-            </div>
+                  >
+                    <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </button>
+                )}
+              </div>
 
-            {/* Quick Filter Bar */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                onClick={() => setShowFiltersPanel(true)}
-                variant="outline"
-                size="sm"
-                className={`
+              {/* Quick Filter Bar */}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  onClick={() => setShowFiltersPanel(true)}
+                  variant="outline"
+                  size="sm"
+                  className={`
             gap-2
             ${
               isDarkMode
@@ -722,19 +733,19 @@ export const AllGigs = ({ user }: { user: any }) => {
                 : "border-gray-300 hover:bg-gray-50 text-gray-700"
             }
           `}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>Filters</span>
-                {activeFiltersCount > 0 && (
-                  <Badge className="ml-1 px-2 py-0.5 bg-gradient-to-r from-orange-500 to-red-500 text-white">
-                    {activeFiltersCount}
-                  </Badge>
-                )}
-              </Button>
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Filters</span>
+                  {activeFiltersCount > 0 && (
+                    <Badge className="ml-1 px-2 py-0.5 bg-gradient-to-r from-orange-500 to-red-500 text-white">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
 
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger
-                  className={`
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger
+                    className={`
             w-[180px]
             ${
               isDarkMode
@@ -742,24 +753,28 @@ export const AllGigs = ({ user }: { user: any }) => {
                 : "border-gray-300 bg-white text-gray-900"
             }
           `}
-                >
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="popular">Most Popular</SelectItem>
-                </SelectContent>
-              </Select>
+                  >
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="price-high">
+                      Price: High to Low
+                    </SelectItem>
+                    <SelectItem value="price-low">
+                      Price: Low to High
+                    </SelectItem>
+                    <SelectItem value="popular">Most Popular</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                variant="ghost"
-                size="sm"
-                className={`
+                <Button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  variant="ghost"
+                  size="sm"
+                  className={`
             gap-2
             ${
               isDarkMode
@@ -767,19 +782,19 @@ export const AllGigs = ({ user }: { user: any }) => {
                 : "text-gray-700 hover:bg-gray-100"
             }
           `}
-              >
-                <RefreshCw
-                  className={cn("w-4 h-4", isRefreshing && "animate-spin")}
-                />
-                Refresh
-              </Button>
+                >
+                  <RefreshCw
+                    className={cn("w-4 h-4", isRefreshing && "animate-spin")}
+                  />
+                  Refresh
+                </Button>
 
-              {(searchQuery || activeFiltersCount > 0) && (
-                <Button
-                  onClick={handleClearAll}
-                  variant="ghost"
-                  size="sm"
-                  className={`
+                {(searchQuery || activeFiltersCount > 0) && (
+                  <Button
+                    onClick={handleClearAll}
+                    variant="ghost"
+                    size="sm"
+                    className={`
               gap-2
               ${
                 isDarkMode
@@ -787,15 +802,16 @@ export const AllGigs = ({ user }: { user: any }) => {
                   : "text-red-500 hover:text-red-600 hover:bg-gray-100"
               }
             `}
-                >
-                  <X className="w-4 h-4" />
-                  Clear All
-                </Button>
-              )}
+                  >
+                    <X className="w-4 h-4" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}{" "}
       {/* Active Filters Display */}
       {(searchQuery || activeFiltersCount > 0) && (
         <motion.div
@@ -876,9 +892,8 @@ export const AllGigs = ({ user }: { user: any }) => {
           </div>
         </motion.div>
       )}
-
       {/* View Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 my-4">
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2">
             <span
@@ -948,6 +963,16 @@ export const AllGigs = ({ user }: { user: any }) => {
         </div>
 
         <div className="flex items-center gap-3">
+          {showHeader && (
+            <Button
+              variant="outline"
+              className="m-1 border-red-400 bg-gradient-to-r from-red-500/10 to-orange-500/5"
+              onClick={() => setShowHeader((prev) => !prev)}
+            >
+              {" "}
+              Show Header
+            </Button>
+          )}
           <span
             className={`text-sm hidden sm:inline ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
           >
@@ -1051,7 +1076,6 @@ export const AllGigs = ({ user }: { user: any }) => {
           </Select>
         </div>
       </div>
-
       {/* Results Section */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -1059,11 +1083,11 @@ export const AllGigs = ({ user }: { user: any }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 1.6 }}
           className={cn(
             viewMode === "grid"
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              : "space-y-4"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 h-full  relative h-full"
+              : "space-y-4",
           )}
         >
           {filteredGigs.length === 0 ? (
@@ -1120,7 +1144,11 @@ export const AllGigs = ({ user }: { user: any }) => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className={viewMode === "list" ? "w-full" : ""}
+                  className={
+                    viewMode === "list"
+                      ? "w-full  overflow-y-auto"
+                      : " overflow-y-auto"
+                  }
                   whileHover={{ scale: viewMode === "grid" ? 1.02 : 1 }}
                 >
                   <GigCard
@@ -1136,7 +1164,6 @@ export const AllGigs = ({ user }: { user: any }) => {
           )}
         </motion.div>
       </AnimatePresence>
-
       {/* Pagination / Load More */}
       {filteredGigs.length > 0 && filteredGigs.length < allGigs.length && (
         <div className="flex justify-center mt-8">
@@ -1148,7 +1175,6 @@ export const AllGigs = ({ user }: { user: any }) => {
           </Button>
         </div>
       )}
-
       {/* Fixed Action Buttons for Mobile */}
       {/* <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 md:hidden">
         <Button

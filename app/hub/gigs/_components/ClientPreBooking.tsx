@@ -96,12 +96,12 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   // Queries
   const userGigs = useQuery(
     api.controllers.gigs.getGigsByUser,
-    clerkId ? { clerkId: clerkId } : "skip"
+    clerkId ? { clerkId: clerkId } : "skip",
   );
 
   // State
   const [activeTab, setActiveTab] = useState<"applicants" | "history">(
-    "applicants"
+    "applicants",
   );
   const [activeGigTab, setActiveGigTab] = useState<GigTabType>("regular");
   const [loading, setLoading] = useState(true);
@@ -151,7 +151,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       // Band roles count
       if (typedGig.isClientBand && typedGig.bandCategory) {
         const hasRoleApplicants = typedGig.bandCategory.some(
-          (role: any) => role.applicants && role.applicants.length > 0
+          (role: any) => role.applicants && role.applicants.length > 0,
         );
         if (hasRoleApplicants) counts.bandRoles++;
       }
@@ -178,14 +178,14 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   // Mutations
   const addToShortlist = useMutation(api.controllers.prebooking.addToShortlist);
   const removeFromShortlist = useMutation(
-    api.controllers.prebooking.removeFromShortlist
+    api.controllers.prebooking.removeFromShortlist,
   );
   const bookMusician = useMutation(api.controllers.prebooking.bookMusician);
   const removeApplicant = useMutation(
-    api.controllers.prebooking.removeApplicant
+    api.controllers.prebooking.removeApplicant,
   );
   const markApplicantViewed = useMutation(
-    api.controllers.prebooking.markApplicantViewed
+    api.controllers.prebooking.markApplicantViewed,
   );
 
   // Effects
@@ -219,10 +219,16 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             return !gig.isClientBand && hasInterested && isNotTaken;
           case "band-roles":
             if (!gig.isClientBand || !gig.bandCategory) return false;
-            const hasRoleApplicants = gig.bandCategory.some(
-              (role) => role.applicants && role.applicants.length > 0
+
+            // Show if there are roles, regardless of applicants/booked status
+            const hasRoles = gig.bandCategory.length > 0;
+
+            // Maybe also check if gig is still open/not fully booked
+            const isNotFullyBooked = gig.bandCategory.some(
+              (role) => role.filledSlots < role.maxSlots,
             );
-            return hasRoleApplicants && isNotTaken;
+
+            return hasRoles && (isNotTaken || isNotFullyBooked);
           case "full-band":
             return gig.isClientBand && hasBandApplications && isNotTaken;
           case "shortlist":
@@ -243,7 +249,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             applicants = (typedGig.interestedUsers || []).map(
               (userId: Id<"users">) => {
                 const statusHistory = bookingHistory.filter(
-                  (entry: any) => entry.userId === userId
+                  (entry: any) => entry.userId === userId,
                 );
 
                 let status: Applicant["status"] = "pending";
@@ -253,20 +259,20 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   status = "booked";
                 } else if (
                   typedGig.shortlistedUsers?.some(
-                    (item: any) => item.userId === userId
+                    (item: any) => item.userId === userId,
                   )
                 ) {
                   status = "shortlisted";
                 } else if (
                   statusHistory.some(
-                    (entry: any) => entry.status === "rejected"
+                    (entry: any) => entry.status === "rejected",
                   )
                 ) {
                   status = "rejected";
                 } else if (
                   statusHistory.some(
                     (entry: any) =>
-                      entry.status === "updated" || entry.status === "viewed"
+                      entry.status === "updated" || entry.status === "viewed",
                   )
                 ) {
                   status = "viewed";
@@ -278,7 +284,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   status,
                   gigId: typedGig._id,
                 };
-              }
+              },
             );
             break;
 
@@ -289,13 +295,13 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   const statusHistory = bookingHistory.filter(
                     (entry: any) =>
                       entry.userId === userId &&
-                      entry.bandRoleIndex === roleIndex
+                      entry.bandRoleIndex === roleIndex,
                   );
 
                   let status: Applicant["status"] = "pending";
                   if (
                     statusHistory.some(
-                      (entry: any) => entry.status === "booked"
+                      (entry: any) => entry.status === "booked",
                     )
                   ) {
                     status = "booked";
@@ -303,7 +309,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                     typedGig.shortlistedUsers?.some(
                       (item: any) =>
                         item.userId === userId &&
-                        item.bandRoleIndex === roleIndex
+                        item.bandRoleIndex === roleIndex,
                     )
                   ) {
                     status = "shortlisted";
@@ -370,7 +376,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
     bandRole?: string,
-    bandRoleIndex?: number
+    bandRoleIndex?: number,
   ) => {
     try {
       await addToShortlist({
@@ -392,7 +398,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const handleRemoveFromShortlist = async (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
-    bandRoleIndex?: number
+    bandRoleIndex?: number,
   ) => {
     if (!clerkId) {
       toast.error("Authentication required");
@@ -418,7 +424,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     userName: string,
     source?: "regular" | "band-role" | "full-band" | "shortlisted",
     bandId?: Id<"bands">,
-    bandRoleIndex?: number
+    bandRoleIndex?: number,
   ) => {
     setSelectedMusician({
       userId,
@@ -482,7 +488,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       await bookMusician(bookingData);
 
       toast.success(
-        `Booked ${selectedMusician?.userName || selectedBand?.bandName || "Unknown"}!`
+        `Booked ${selectedMusician?.userName || selectedBand?.bandName || "Unknown"}!`,
       );
 
       setShowBookDialog(false);
@@ -497,7 +503,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
 
   const handleViewProfile = async (
     gigId: Id<"gigs">,
-    applicantId: Id<"users">
+    applicantId: Id<"users">,
   ) => {
     try {
       await markApplicantViewed({ gigId, applicantId });
@@ -642,7 +648,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         user?.roleType?.toLowerCase().includes(term) ||
         shortlistItem.bandRole?.toLowerCase().includes(term)
       );
-    }
+    },
   );
 
   // Get applicant count for gig card
@@ -812,7 +818,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                         isSelected
                           ? "ring-2 ring-orange-500 shadow-xl"
                           : "shadow-md hover:shadow-lg",
-                        "overflow-hidden"
+                        "overflow-hidden",
                       )}
                     >
                       <CardContent className="p-4">
@@ -824,7 +830,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                                 "p-2 rounded-lg",
                                 isSelected
                                   ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                                  : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900"
+                                  : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900",
                               )}
                             >
                               {getGigIcon(gigData.gig)}
@@ -833,7 +839,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                               <Badge
                                 className={cn(
                                   "text-xs font-medium",
-                                  categoryColor
+                                  categoryColor,
                                 )}
                               >
                                 {category}
@@ -844,7 +850,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                             variant="outline"
                             className={cn(
                               "text-xs",
-                              getGigStatusColor(gigData.gig)
+                              getGigStatusColor(gigData.gig),
                             )}
                           >
                             {gigData.gig.isTaken ? "Booked" : "Active"}
@@ -925,7 +931,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                             "absolute bottom-0 left-0 right-0 h-1 rounded-b-lg transition-all duration-300",
                             isSelected
                               ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                              : "bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 group-hover:bg-gradient-to-r group-hover:from-orange-400 group-hover:to-amber-400"
+                              : "bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 group-hover:bg-gradient-to-r group-hover:from-orange-400 group-hover:to-amber-400",
                           )}
                         />
                       </CardContent>
@@ -993,7 +999,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   size="sm"
                   onClick={() => {
                     router.push(
-                      `/hub/gigs/client/edit/${selectedGigData.gig._id}`
+                      `/hub/gigs/client/edit/${selectedGigData.gig._id}`,
                     );
                   }}
                   className="flex items-center gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
@@ -1143,7 +1149,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                 {gigsWithApplicants.length} gigs available •{" "}
                 {gigsWithApplicants.reduce(
                   (acc, gig) => acc + gig.applicants.length,
-                  0
+                  0,
                 )}{" "}
                 total applicants
               </span>
@@ -1199,7 +1205,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   value={bookingPrice}
                   onChange={(e) =>
                     setBookingPrice(
-                      e.target.value ? Number(e.target.value) : ""
+                      e.target.value ? Number(e.target.value) : "",
                     )
                   }
                   className="pl-9"
@@ -1261,7 +1267,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               gig={selectedGigData.gig}
               musiciansCount={selectedGigData.gig.bandCategory.reduce(
                 (total, role) => total + (role.bookedUsers?.length || 0),
-                0
+                0,
               )}
             />
           </div>
