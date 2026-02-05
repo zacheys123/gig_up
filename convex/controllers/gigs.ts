@@ -1848,28 +1848,305 @@ export const getGigsWithUsers = query({
   },
 });
 
-// Query for user's gig applications
+// convex/controllers/gigs.ts - COMPLETE FIXED VERSION
 export const getUserApplications = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) return [];
+    if (!user) {
+      return {
+        all: [],
+        interested: [],
+        applied: [],
+        shortlisted: [],
+        history: [],
+      };
+    }
 
-    // Get all gigs where user is in appliedUsers array
-    const gigs = await ctx.db
-      .query("gigs")
-      .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+    // Get ALL gigs from database
+    const allGigs = await ctx.db.query("gigs").collect();
 
-    const userApplications = gigs
-      .filter((gig) => gig.appliedUsers?.includes(args.userId))
-      .map((gig) => ({
-        gig,
-        appliedAt: gig.updatedAt,
-        status: "pending",
-      }));
+    const result = {
+      all: [] as any[],
+      interested: [] as any[],
+      applied: [] as any[],
+      shortlisted: [] as any[],
+      history: [] as any[],
+    };
 
-    return userApplications;
+    const currentTime = Date.now();
+
+    for (const gig of allGigs) {
+      // ============================================
+      // PART 1: CHECK FOR HISTORICAL ENTRIES
+      // ============================================
+      let historicalEntries = [];
+
+      // Check regular bookingHistory
+      if (gig.bookingHistory) {
+        const userHistoryEntries = gig.bookingHistory.filter(
+          (entry: any) => entry.userId === args.userId,
+        );
+
+        if (userHistoryEntries.length > 0) {
+          historicalEntries.push(
+            ...userHistoryEntries.map((entry: any) => ({
+              ...gig,
+              isHistorical: true,
+              userStatus: entry.status || "completed",
+              gigType: entry.isBandRole ? "band-role" : "regular",
+              applicationDetails: {
+                type: "history",
+                entryId: entry.entryId,
+                status: entry.status,
+                timestamp: entry.timestamp,
+                bandRole: entry.bandRole,
+                bandRoleIndex: entry.bandRoleIndex,
+                gigType: entry.gigType,
+                proposedPrice: entry.proposedPrice,
+                agreedPrice: entry.agreedPrice,
+                notes: entry.notes,
+                actionBy: entry.actionBy,
+                rating: entry.ratingGiven, // From bandBookingHistory
+              },
+            })),
+          );
+        }
+      }
+
+      // Check bandBookingHistory (for band role applications)
+      if (gig.bandBookingHistory) {
+        const userBandHistoryEntries = gig.bandBookingHistory.filter(
+          (entry: any) => entry.userId === args.userId,
+        );
+
+        if (userBandHistoryEntries.length > 0) {
+          historicalEntries.push(
+            ...userBandHistoryEntries.map((entry: any) => ({
+              ...gig,
+              isHistorical: true,
+              userStatus:
+                entry.applicationStatus || entry.status || "completed",
+              gigType: "band-role",
+              applicationDetails: {
+                type: "band-history",
+                bandRole: entry.bandRole,
+                bandRoleIndex: entry.bandRoleIndex,
+                appliedAt: entry.appliedAt,
+                bookedAt: entry.bookedAt,
+                completedAt: entry.completedAt,
+                applicationStatus: entry.applicationStatus,
+                bookedPrice: entry.bookedPrice,
+                ratingGiven: entry.ratingGiven,
+                reviewLeft: entry.reviewLeft,
+                paymentStatus: entry.paymentStatus,
+                paymentAmount: entry.paymentAmount,
+              },
+            })),
+          );
+        }
+      }
+
+      // Check band applications in bookCount for history
+      if (gig.bookCount) {
+        const userBandApplications = gig.bookCount.filter(
+          (bandApp: any) =>
+            bandApp.appliedBy === args.userId &&
+            (bandApp.status === "completed" || bandApp.status === "cancelled"),
+        );
+
+        if (userBandApplications.length > 0) {
+          historicalEntries.push(
+            ...userBandApplications.map((bandApp: any) => ({
+              ...gig,
+              isHistorical: true,
+              userStatus: bandApp.status,
+              gigType: "full-band",
+              applicationDetails: {
+                type: "full-band-history",
+                bandId: bandApp.bandId,
+                bandName: bandApp.bandName,
+                status: bandApp.status,
+                appliedAt: bandApp.appliedAt,
+                bookedAt: bandApp.bookedAt,
+                agreedFee: bandApp.agreedFee,
+                proposedFee: bandApp.proposedFee,
+                performingMembers: bandApp.performingMembers,
+              },
+            })),
+          );
+        }
+      }
+
+      // Add historical entries to result.history
+      if (historicalEntries.length > 0) {
+        result.history.push(...historicalEntries);
+      }
+
+      // ============================================
+      // PART 2: CHECK FOR AVAILABLE GIGS (isTaken: false)
+      // ============================================
+      // Skip if gig is taken or already in history
+      if (gig.isTaken === true) continue;
+
+      let userInGig = false;
+      let status = "";
+      let gigType = "";
+      let applicationDetails: any = {};
+
+      // 1. Check regular gig applications (interestedUsers)
+      if (gig.interestedUsers?.includes(args.userId)) {
+        userInGig = true;
+        gigType = "regular";
+
+        // Check if shortlisted
+        const isShortlisted = gig.shortlistedUsers?.some(
+          (su: any) => su.userId === args.userId && su.status === "active",
+        );
+        status = isShortlisted ? "shortlisted" : "interested";
+
+        applicationDetails = { type: "regular" };
+      }
+
+      // 2. Check band role applications (in bandCategory.applicants)
+      if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
+        gig.bandCategory.forEach((role: any, index: number) => {
+          if (role.applicants?.includes(args.userId)) {
+            userInGig = true;
+            gigType = "band-role";
+            status = "applied";
+
+            // Check if shortlisted for this specific role
+            const isShortlisted = gig.shortlistedUsers?.some(
+              (su: any) =>
+                su.userId === args.userId &&
+                su.bandRoleIndex === index &&
+                su.status === "active",
+            );
+            if (isShortlisted) status = "shortlisted";
+
+            applicationDetails = {
+              type: "band-role",
+              role: role.role || "Unknown Role",
+              roleIndex: index,
+              roleSlots: `${role.filledSlots || 0}/${role.maxSlots || 0}`,
+              requiredSkills: role.requiredSkills || [],
+              price: role.price,
+              negotiable: role.negotiable,
+            };
+          }
+        });
+      }
+
+      // 3. Check full band applications (in bookCount.appliedBy)
+      if (gig.bookCount && Array.isArray(gig.bookCount)) {
+        for (const bandApp of gig.bookCount) {
+          if (
+            bandApp.appliedBy === args.userId &&
+            bandApp.status === "applied"
+          ) {
+            userInGig = true;
+            gigType = "full-band";
+            status = "applied";
+
+            // Check if shortlisted as band
+            const isShortlisted = gig.shortlistedUsers?.some(
+              (su: any) => su.userId === args.userId && su.status === "active",
+            );
+            if (isShortlisted) status = "shortlisted";
+
+            applicationDetails = {
+              type: "full-band",
+              bandId: bandApp.bandId,
+              bandName: bandApp.bandName || "Band Application",
+              memberCount: bandApp.performingMembers?.length || 0,
+              status: bandApp.status,
+              proposedFee: bandApp.proposedFee,
+            };
+            break;
+          }
+        }
+      }
+
+      // 4. Check if shortlisted (even if not applied yet)
+      const shortlistEntry = gig.shortlistedUsers?.find(
+        (su: any) => su.userId === args.userId && su.status === "active",
+      );
+
+      if (shortlistEntry && !userInGig) {
+        userInGig = true;
+        status = "shortlisted";
+
+        // Determine gig type based on shortlist entry
+        if (
+          shortlistEntry.bandRoleIndex !== undefined ||
+          shortlistEntry.bandRole
+        ) {
+          gigType = "band-role";
+          applicationDetails = {
+            type: "shortlisted-band-role",
+            bandRole: shortlistEntry.bandRole,
+            bandRoleIndex: shortlistEntry.bandRoleIndex,
+            shortlistedAt: shortlistEntry.shortlistedAt,
+            notes: shortlistEntry.notes || "",
+          };
+        } else {
+          gigType = "regular";
+          applicationDetails = {
+            type: "shortlisted-regular",
+            shortlistedAt: shortlistEntry.shortlistedAt,
+            notes: shortlistEntry.notes || "",
+          };
+        }
+      }
+
+      if (userInGig) {
+        const gigWithUserData = {
+          ...gig,
+          userStatus: status,
+          gigType,
+          applicationDetails,
+          isHistorical: false,
+          hasApplied: status === "applied" || status === "shortlisted",
+          isShortlisted: status === "shortlisted",
+          isCompleted: false,
+        };
+
+        result.all.push(gigWithUserData);
+
+        if (status === "interested") result.interested.push(gigWithUserData);
+        if (status === "applied") result.applied.push(gigWithUserData);
+        if (status === "shortlisted") result.shortlisted.push(gigWithUserData);
+      }
+    }
+
+    // Sort available gigs by date (most recent first)
+    ["all", "interested", "applied", "shortlisted"].forEach((key) => {
+      result[key as keyof typeof result].sort((a: any, b: any) => {
+        const dateA = a.createdAt || a.date || 0;
+        const dateB = b.createdAt || b.date || 0;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
+    });
+
+    // Sort history by timestamp (most recent first)
+    result.history.sort((a: any, b: any) => {
+      const timeA =
+        a.applicationDetails?.timestamp ||
+        a.applicationDetails?.completedAt ||
+        a.applicationDetails?.bookedAt ||
+        a.date ||
+        0;
+      const timeB =
+        b.applicationDetails?.timestamp ||
+        b.applicationDetails?.completedAt ||
+        b.applicationDetails?.bookedAt ||
+        b.date ||
+        0;
+      return new Date(timeB).getTime() - new Date(timeA).getTime();
+    });
+
+    return result;
   },
 });
 

@@ -245,7 +245,34 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
         return colors.defaultBorder;
     }
   };
+  const formatRateSummary = (userData?: any) => {
+    // Use the provided userData or fall back to selectedUserData
+    const targetUserData = userData || selectedUserData;
 
+    // Get the average rate from the user's rate data
+    const avgRate =
+      targetUserData?.rate?.baseRate ||
+      targetUserData?.rate?.averageRate ||
+      targetUserData?.averageRate ||
+      0;
+
+    // Convert to number if it's a string
+    let numericValue = 0;
+
+    if (typeof avgRate === "number") {
+      numericValue = avgRate;
+    } else if (typeof avgRate === "string") {
+      // Remove any formatting (commas, currency symbols)
+      const cleaned = avgRate.replace(/[^\d.]/g, "");
+      numericValue = parseFloat(cleaned) || 0;
+    }
+
+    // Round up to nearest thousand
+    const roundedValue = Math.ceil(numericValue / 1000) * 1000;
+
+    // Format with KES currency
+    return `KES ${roundedValue.toLocaleString()}`;
+  };
   // Check if applicant is shortlisted
   const isShortlisted = (applicantId: Id<"users">) => {
     return selectedGigData.shortlisted.some(
@@ -425,28 +452,6 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                 const shortlisted = isShortlisted(applicant.userId);
                 const isSelected =
                   selectedApplicant?.userId === applicant.userId;
-                // Add this function to format the rate summary
-                const formatRateSummary = () => {
-                  // Get the average rate from summary
-                  const avgRate = summary?.formattedAverage || 0;
-
-                  // Convert to number if it's a string
-                  let numericValue = 0;
-
-                  if (typeof avgRate === "number") {
-                    numericValue = avgRate;
-                  } else if (typeof avgRate === "string") {
-                    // Remove any formatting (commas, currency symbols)
-                    const cleaned = avgRate.replace(/[^\d.]/g, "");
-                    numericValue = parseFloat(cleaned) || 0;
-                  }
-
-                  // Round up to nearest thousand
-                  const roundedValue = Math.ceil(numericValue / 1000) * 1000;
-
-                  // Format with KES currency
-                  return `KES ${roundedValue.toLocaleString()}`;
-                };
 
                 return (
                   <motion.div
@@ -817,16 +822,14 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                 {/* Details */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                   // In your JSX, use it like this:
-<div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-  <div className="flex items-center gap-2">
-    <DollarSign className="w-4 h-4 text-green-500" />
-    <span className="font-medium">Avg Rate</span>
-  </div>
-  <span className="font-bold text-lg">
-    {formatRateSummary()}
-  </span>
-</div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-green-500" />
+                      <span className="font-medium">Avg Rate</span>
+                    </div>
+                    <span className="font-bold text-lg">
+                      {formatRateSummary()}
+                    </span>
+                  </div>
 
                   <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
                     <div className="flex items-center gap-2">
