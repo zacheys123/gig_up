@@ -6,7 +6,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   ActiveProjects,
   AllGigs,
-  BookedGigs,
   ClientPreBooking,
   CrewManagement,
   MyGigs,
