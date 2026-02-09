@@ -23,7 +23,7 @@ const createBookingEntry = (
     | "rejected"
     | "updated",
   notes?: string,
-  extraFields?: any
+  extraFields?: any,
 ) => {
   return {
     entryId: `${gig._id}-${applicantId}-${Date.now()}`,
@@ -42,7 +42,7 @@ const createBookingEntry = (
 // Shared logic for adding to shortlist
 const addToShortlistLogic = async (
   ctx: any,
-  args: { gigId: any; applicantId: any; notes?: string; clerkId: string }
+  args: { gigId: any; applicantId: any; notes?: string; clerkId: string },
 ) => {
   // Get current user (client)
   const user = await ctx.db
@@ -65,7 +65,7 @@ const addToShortlistLogic = async (
   // Check if already in shortlist
   const existingShortlist = gig.shortlistedUsers || [];
   const alreadyShortlisted = existingShortlist.some(
-    (item: any) => item.userId === args.applicantId
+    (item: any) => item.userId === args.applicantId,
   );
 
   if (alreadyShortlisted) {
@@ -73,7 +73,7 @@ const addToShortlistLogic = async (
     const updatedShortlist = existingShortlist.map((item: any) =>
       item.userId === args.applicantId
         ? { ...item, shortlistedAt: Date.now(), notes: args.notes }
-        : item
+        : item,
     );
 
     await ctx.db.patch(args.gigId, {
@@ -99,7 +99,7 @@ const addToShortlistLogic = async (
     applicantUser,
     user,
     "shortlisted",
-    args.notes || "Added to shortlist"
+    args.notes || "Added to shortlist",
   );
 
   await ctx.db.patch(args.gigId, {
@@ -146,7 +146,7 @@ export const addToShortlist = mutation({
 
     const existingShortlist = gig.shortlistedUsers || [];
     const alreadyShortlisted = existingShortlist.some(
-      (item) => item.userId === args.applicantId
+      (item) => item.userId === args.applicantId,
     );
 
     let updatedShortlist;
@@ -163,7 +163,7 @@ export const addToShortlist = mutation({
               bandRole: args.bandRole,
               bandRoleIndex: args.bandRoleIndex,
             }
-          : item
+          : item,
       );
     } else {
       // Add new shortlist entry with band role info
@@ -178,7 +178,7 @@ export const addToShortlist = mutation({
 
       // Remove from interestedUsers
       updatedInterestedUsers = updatedInterestedUsers.filter(
-        (userId) => userId !== args.applicantId
+        (userId) => userId !== args.applicantId,
       );
     }
 
@@ -256,7 +256,7 @@ export const removeFromShortlist = mutation({
     // Remove from shortlist
     const updatedShortlist =
       gig.shortlistedUsers?.filter(
-        (item) => item.userId !== args.applicantId
+        (item) => item.userId !== args.applicantId,
       ) || [];
 
     await ctx.db.patch(args.gigId, {
@@ -273,7 +273,7 @@ export const removeFromShortlist = mutation({
       applicantUser,
       user,
       "rejected",
-      "Removed from shortlist"
+      "Removed from shortlist",
     );
 
     await ctx.db.patch(args.gigId, {
@@ -312,7 +312,7 @@ export const removeApplicant = mutation({
     // Remove from shortlist if present
     const updatedShortlist =
       gig.shortlistedUsers?.filter(
-        (item) => item.userId !== args.applicantId
+        (item) => item.userId !== args.applicantId,
       ) || [];
 
     // Get applicant user
@@ -326,7 +326,7 @@ export const removeApplicant = mutation({
       applicantUser,
       user,
       "rejected",
-      "Applicant removed from consideration"
+      "Applicant removed from consideration",
     );
 
     // Update gig
@@ -379,7 +379,7 @@ export const markApplicantViewed = mutation({
       applicantUser,
       user,
       "updated",
-      "Profile viewed by client"
+      "Profile viewed by client",
     );
 
     await ctx.db.patch(args.gigId, {
@@ -399,7 +399,7 @@ export const bookMusician = mutation({
       v.literal("regular"),
       v.literal("band-role"),
       v.literal("full-band"),
-      v.literal("shortlisted")
+      v.literal("shortlisted"),
     ),
     bandId: v.optional(v.id("bands")),
     bandRoleIndex: v.optional(v.number()),
@@ -470,7 +470,7 @@ export const bookMusician = mutation({
           interestedUsers: [],
           shortlistedUsers:
             gig.shortlistedUsers?.filter(
-              (item: any) => item.userId !== args.musicianId
+              (item: any) => item.userId !== args.musicianId,
             ) || [],
           bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
           updatedAt: Date.now(),
@@ -504,7 +504,7 @@ export const bookMusician = mutation({
         // If role is full and we're not replacing, error
         if (roleFilled && !args.replaceExisting) {
           throw new Error(
-            `The role "${role.role}" is already filled. Use replaceExisting=true to replace.`
+            `The role "${role.role}" is already filled. Use replaceExisting=true to replace.`,
           );
         }
 
@@ -620,7 +620,7 @@ export const bookMusician = mutation({
 
         // Check if all roles are filled
         allRolesFilled = updatedBandCategory.every(
-          (r) => r.filledSlots >= r.maxSlots
+          (r) => r.filledSlots >= r.maxSlots,
         );
 
         updatedGigData = {
@@ -641,13 +641,13 @@ export const bookMusician = mutation({
         // Remove from interestedUsers and shortlistedUsers
         if (gig.interestedUsers?.includes(args.musicianId)) {
           updatedGigData.interestedUsers = gig.interestedUsers.filter(
-            (id) => id !== args.musicianId
+            (id) => id !== args.musicianId,
           );
         }
 
         if (gig.shortlistedUsers) {
           updatedGigData.shortlistedUsers = gig.shortlistedUsers.filter(
-            (item: any) => item.userId !== args.musicianId
+            (item: any) => item.userId !== args.musicianId,
           );
         }
 
@@ -670,7 +670,7 @@ export const bookMusician = mutation({
 
         // Check if this band has applied
         const bandHasApplied = gig.bookCount?.some(
-          (item: any) => item.bandId === args.bandId
+          (item: any) => item.bandId === args.bandId,
         );
         if (!bandHasApplied) {
           throw new Error("This band has not applied to this gig");
@@ -681,11 +681,11 @@ export const bookMusician = mutation({
         if (!band) throw new Error("Band not found");
 
         const isBandMember = band.members?.some(
-          (member: any) => member.userId === args.musicianId
+          (member: any) => member.userId === args.musicianId,
         );
         if (!isBandMember) {
           throw new Error(
-            "This musician is not a member of the specified band"
+            "This musician is not a member of the specified band",
           );
         }
 
@@ -713,7 +713,7 @@ export const bookMusician = mutation({
         const updatedBookCount = (gig.bookCount || []).map((item: any) =>
           item.bandId === args.bandId
             ? { ...item, status: "booked" as const }
-            : item
+            : item,
         );
 
         updatedGigData = {
@@ -726,7 +726,7 @@ export const bookMusician = mutation({
           interestedUsers: [],
           shortlistedUsers:
             gig.shortlistedUsers?.filter(
-              (item: any) => item.userId !== args.musicianId
+              (item: any) => item.userId !== args.musicianId,
             ) || [],
           bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
           updatedAt: Date.now(),
@@ -736,7 +736,7 @@ export const bookMusician = mutation({
       case "shortlisted":
         // Check if musician is in shortlist
         const isInShortlist = gig.shortlistedUsers?.some(
-          (item: any) => item.userId === args.musicianId
+          (item: any) => item.userId === args.musicianId,
         );
         if (!isInShortlist) {
           throw new Error("Musician is not in shortlist");
@@ -769,7 +769,7 @@ export const bookMusician = mutation({
           interestedUsers: [],
           shortlistedUsers:
             gig.shortlistedUsers?.filter(
-              (item: any) => item.userId !== args.musicianId
+              (item: any) => item.userId !== args.musicianId,
             ) || [],
           bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
           updatedAt: Date.now(),
@@ -880,7 +880,7 @@ export const bookMusician = mutation({
   },
 });
 
-// Add band to gig (when a band applies to a gig)
+// Add band to gig (when a band applies to a gig) - FIXED VERSION
 export const addBandToGig = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -912,7 +912,7 @@ export const addBandToGig = mutation({
 
     // Check if band has already applied
     const existingApplication = gig.bookCount?.find(
-      (item) => item.bandId === args.bandId
+      (item) => item.bandId === args.bandId,
     );
     if (existingApplication) {
       throw new Error("Band has already applied to this gig");
@@ -927,18 +927,20 @@ export const addBandToGig = mutation({
         instrument: member.instrument || member.role || "",
       })) || [];
 
-    // Add band to bookCount with performingMembers
+    // Add band to bookCount with performingMembers - FIXED
     const newApplication = {
       bandId: args.bandId,
+      bandName: band.name, // ADD THIS FIELD - REQUIRED by schema
       appliedAt: Date.now(),
-      status: "applied" as const,
       appliedBy: user._id,
+      status: "applied" as const,
+      performingMembers,
       proposedFee: args.proposedFee,
       notes: args.notes,
-      performingMembers,
+      // Optional fields
       bookedAt: undefined,
-      contractSigned: false,
       agreedFee: args.proposedFee,
+      contractSigned: false,
       shortlistedAt: undefined,
       shortlistNotes: undefined,
     };
@@ -1007,7 +1009,7 @@ export const getBandChat = query({
           bandRole: role,
           isClient: gig.postedBy === user._id,
         };
-      })
+      }),
     );
 
     return {
@@ -1150,7 +1152,7 @@ export const removeFromBandChat = mutation({
 
     // Remove musician from chat participantIds
     const updatedParticipantIds = chat.participantIds.filter(
-      (id) => id !== args.musicianId
+      (id) => id !== args.musicianId,
     );
 
     await ctx.db.patch(chat._id, {
@@ -1196,7 +1198,7 @@ export const removeFromBandChat = mutation({
 const checkRemovePermission = async (
   ctx: any,
   gig: any,
-  userId: Id<"users">
+  userId: Id<"users">,
 ) => {
   // Client can remove if they're admin
   if (gig.postedBy === userId) {
@@ -1221,7 +1223,7 @@ export const updateCrewChatSettings = mutation({
           canAddMembers: v.optional(v.boolean()),
           canRemoveMembers: v.optional(v.boolean()),
           canEditChatInfo: v.optional(v.boolean()),
-        })
+        }),
       ),
     }),
   },
@@ -1348,7 +1350,7 @@ export const getUserCrewChats = query({
 
     // Sort by most recent activity
     return crewChats.sort(
-      (a: any, b: any) => b.lastMessageAt - a.lastMessageAt
+      (a: any, b: any) => b.lastMessageAt - a.lastMessageAt,
     );
   },
 });
@@ -1417,7 +1419,7 @@ export const canCreateCrewChat = query({
 
     // 4. Check if band roles are defined (1 point)
     const hasBandRoles = Boolean(
-      gig.bandCategory && gig.bandCategory.length > 0
+      gig.bandCategory && gig.bandCategory.length > 0,
     ); // Explicit boolean
     score += hasBandRoles ? 1 : 0;
     requirements.push({
@@ -1435,7 +1437,7 @@ export const canCreateCrewChat = query({
 
     if (hasBandRoles && gig.bandCategory) {
       allRolesFilled = gig.bandCategory.every(
-        (role: any) => (role.filledSlots || 0) >= (role.maxSlots || 1)
+        (role: any) => (role.filledSlots || 0) >= (role.maxSlots || 1),
       );
 
       if (!allRolesFilled) {
@@ -1461,7 +1463,7 @@ export const canCreateCrewChat = query({
     let hasBookedMusicians = false;
     if (hasBandRoles && gig.bandCategory) {
       hasBookedMusicians = gig.bandCategory.some(
-        (role: any) => role.bookedUsers && role.bookedUsers.length > 0
+        (role: any) => role.bookedUsers && role.bookedUsers.length > 0,
       );
     }
     score += hasBookedMusicians ? 1 : 0;
@@ -1521,18 +1523,18 @@ export const bookAndCreateCrewChat = mutation({
     }
 
     const allRolesFilled = gig.bandCategory.every(
-      (role: any) => role.filledSlots >= role.maxSlots
+      (role: any) => role.filledSlots >= role.maxSlots,
     );
 
     if (!allRolesFilled) {
       const unfilledRoles = gig.bandCategory
         .filter((role: any) => role.filledSlots < role.maxSlots)
         .map(
-          (role: any) => `${role.role} (${role.filledSlots}/${role.maxSlots})`
+          (role: any) => `${role.role} (${role.filledSlots}/${role.maxSlots})`,
         );
 
       throw new Error(
-        `All roles must be filled. Still need: ${unfilledRoles.join(", ")}`
+        `All roles must be filled. Still need: ${unfilledRoles.join(", ")}`,
       );
     }
 

@@ -86,9 +86,9 @@ export const MyGigs = ({ user }: { user: any }) => {
         let noBandBookings = true;
         if (gig.bandCategory && gig.bandCategory.length > 0) {
           noBandBookings = gig.bandCategory.every(
-            (role) =>
+            (role: any) =>
               role.filledSlots === 0 &&
-              (!role.applicants || role.applicants.length === 0)
+              (!role.applicants || role.applicants.length === 0),
           );
         }
 
@@ -144,7 +144,7 @@ export const MyGigs = ({ user }: { user: any }) => {
       const noBandBookings =
         !gig.bandCategory ||
         gig.bandCategory.every(
-          (role) => role.filledSlots === 0 && role.applicants.length === 0
+          (role: any) => role.filledSlots === 0 && role.applicants.length === 0,
         );
 
       return (
@@ -164,7 +164,7 @@ export const MyGigs = ({ user }: { user: any }) => {
           gig.title?.toLowerCase().includes(query) ||
           gig.description?.toLowerCase().includes(query) ||
           gig.location?.toLowerCase().includes(query) ||
-          gig.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+          gig.tags?.some((tag: string) => tag.toLowerCase().includes(query)),
       );
     }
 
@@ -264,7 +264,7 @@ export const MyGigs = ({ user }: { user: any }) => {
   const getNoGigsMessage = (
     searchQuery: string,
     statusFilter: string,
-    counts: typeof gigCounts
+    counts: typeof gigCounts,
   ): string => {
     if (searchQuery) {
       return "No matching gigs found";
@@ -308,7 +308,7 @@ export const MyGigs = ({ user }: { user: any }) => {
   const getNoGigsDescription = (
     searchQuery: string,
     statusFilter: string,
-    counts: typeof gigCounts
+    counts: typeof gigCounts,
   ): string => {
     if (searchQuery) {
       return "Try adjusting your search terms to find what you're looking for.";
@@ -396,7 +396,7 @@ export const MyGigs = ({ user }: { user: any }) => {
         className={clsx(
           "relative overflow-hidden rounded-2xl p-6 md:p-8 border shadow-sm",
           colors.background,
-          colors.border
+          colors.border,
         )}
         style={{
           background: isDarkMode
@@ -412,7 +412,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                   "text-3xl md:text-4xl font-bold bg-clip-text text-transparent",
                   isDarkMode
                     ? "bg-gradient-to-r from-orange-400 to-red-400"
-                    : "bg-gradient-to-r from-orange-600 to-red-600"
+                    : "bg-gradient-to-r from-orange-600 to-red-600",
                 )}
               >
                 My Posted Gigs
@@ -430,7 +430,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                 size="sm"
                 className={clsx(
                   "gap-2 text-white shadow-lg hover:shadow-xl transition-all duration-300",
-                  colors.gradientPrimary
+                  colors.gradientPrimary,
                 )}
               >
                 <Plus className="w-4 h-4" />
@@ -511,7 +511,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                       <p
                         className={clsx(
                           "text-2xl font-bold",
-                          isDarkMode ? "text-white" : "text-gray-900"
+                          isDarkMode ? "text-white" : "text-gray-900",
                         )}
                       >
                         {stat.value}
@@ -541,7 +541,7 @@ export const MyGigs = ({ user }: { user: any }) => {
               <Search
                 className={clsx(
                   "absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5",
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               />
               <Input
@@ -551,7 +551,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                 className={clsx(
                   "pl-12 pr-12 h-12 rounded-xl backdrop-blur-sm text-lg",
                   colors.border,
-                  colors.background
+                  colors.background,
                 )}
               />
               {searchQuery && (
@@ -559,7 +559,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                   onClick={() => setSearchQuery("")}
                   className={clsx(
                     "absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full",
-                    colors.hoverBg
+                    colors.hoverBg,
                   )}
                 >
                   <X className={clsx("w-4 h-4", colors.textMuted)} />
@@ -640,7 +640,7 @@ export const MyGigs = ({ user }: { user: any }) => {
               <TabsList
                 className={clsx(
                   "p-1",
-                  isDarkMode ? "bg-gray-800" : "bg-gray-100"
+                  isDarkMode ? "bg-gray-800" : "bg-gray-100",
                 )}
               >
                 <TabsTrigger
@@ -649,7 +649,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                     "px-4 py-2 data-[state=active]:shadow-sm rounded-lg",
                     isDarkMode
                       ? "data-[state=active]:bg-gray-900"
-                      : "data-[state=active]:bg-white"
+                      : "data-[state=active]:bg-white",
                   )}
                 >
                   <Grid3x3 className="w-4 h-4" />
@@ -660,7 +660,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                     "px-4 py-2 data-[state=active]:shadow-sm rounded-lg",
                     isDarkMode
                       ? "data-[state=active]:bg-gray-900"
-                      : "data-[state=active]:bg-white"
+                      : "data-[state=active]:bg-white",
                   )}
                 >
                   <List className="w-4 h-4" />
@@ -729,7 +729,7 @@ export const MyGigs = ({ user }: { user: any }) => {
           className={clsx(
             viewMode === "grid"
               ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              : "space-y-4"
+              : "space-y-4",
           )}
         >
           {filteredGigs.length === 0 ? (
@@ -751,7 +751,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                     <Music
                       className={clsx(
                         "w-12 h-12",
-                        isDarkMode ? "text-gray-600" : "text-gray-400"
+                        isDarkMode ? "text-gray-600" : "text-gray-400",
                       )}
                     />
                   </div>
@@ -791,7 +791,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                   onClick={handleCreateGig}
                   className={clsx(
                     "gap-2 text-white shadow-lg hover:shadow-xl transition-all duration-300",
-                    colors.gradientPrimary
+                    colors.gradientPrimary,
                   )}
                 >
                   <Plus className="w-4 h-4" />
@@ -810,7 +810,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                       <div
                         className={clsx(
                           "p-3 rounded-lg text-center",
-                          colors.backgroundMuted
+                          colors.backgroundMuted,
                         )}
                       >
                         <div className={clsx("text-lg font-bold", colors.text)}>
@@ -825,7 +825,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                       <div
                         className={clsx(
                           "p-3 rounded-lg text-center",
-                          colors.backgroundMuted
+                          colors.backgroundMuted,
                         )}
                       >
                         <div className={clsx("text-lg font-bold", colors.text)}>
@@ -840,7 +840,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                       <div
                         className={clsx(
                           "p-3 rounded-lg text-center",
-                          colors.backgroundMuted
+                          colors.backgroundMuted,
                         )}
                       >
                         <div className={clsx("text-lg font-bold", colors.text)}>
@@ -855,7 +855,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                       <div
                         className={clsx(
                           "p-3 rounded-lg text-center",
-                          colors.backgroundMuted
+                          colors.backgroundMuted,
                         )}
                       >
                         <div className={clsx("text-lg font-bold", colors.text)}>

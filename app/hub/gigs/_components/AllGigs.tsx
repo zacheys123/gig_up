@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 // Hooks
 import { useThemeColors } from "@/hooks/useTheme";
-import { useGigs } from "@/hooks/useAllGigs";
+
 // Convex
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -55,6 +55,7 @@ import FiltersPanel from "./gigs/FilterPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { ActionButtonConfig, getUserGigStatus, GigUserStatus } from "@/utils";
+import { useAllGigs, useGigs } from "@/hooks/useAllGigs";
 
 // Helper function to get status icon
 export const getStatusIcon = (status: GigUserStatus) => {
@@ -138,7 +139,6 @@ export const getActionButtonConfig = (
 
 // Main Component
 export const AllGigs = ({ user }: { user: any }) => {
-  const { gigs: userGigs, exploreGigs, isLoading } = useGigs(user?._id);
   const { colors, isDarkMode } = useThemeColors();
   const router = useRouter();
   // State variables
@@ -169,10 +169,31 @@ export const AllGigs = ({ user }: { user: any }) => {
   const unfavoriteGig = useMutation(api.controllers.gigs.unfavoriteGig);
   const bookGigMutation = useMutation(api.controllers.gigs.showInterestInGig);
 
-  // Combine and process gigs
-  const allGigs = useMemo(() => {
-    return [...(userGigs || []), ...(exploreGigs || [])];
-  }, [userGigs, exploreGigs]);
+  const { allGigs, isLoading } = useAllGigs({ limit: 100 });
+
+  // Still use the old hook for user's posted gigs and applications
+  const { gigs: userGigs } = useGigs(user?._id);
+
+  // Combine with user's posted gigs (to ensure they're included)
+  const combinedGigs = useMemo(() => {
+    const allGigsArray = allGigs || [];
+    const userGigsArray = userGigs || [];
+
+    // Merge and remove duplicates
+    const combined = [...userGigsArray, ...allGigsArray];
+    const unique = combined.filter(
+      (gig, index, self) => index === self.findIndex((g) => g._id === gig._id),
+    );
+
+    return unique;
+  }, [allGigs, userGigs]);
+
+  // Then use combinedGigs instead of allGigs in your component
+  const categories = useMemo(() => {
+    const unique = new Set<string>();
+    combinedGigs.forEach((gig) => gig.category && unique.add(gig.category));
+    return Array.from(unique);
+  }, [combinedGigs]);
 
   // Initialize saved/favorite maps
   useEffect(() => {
@@ -192,13 +213,6 @@ export const AllGigs = ({ user }: { user: any }) => {
     setIsFavoriteMap(favoriteMap);
   }, [allGigs, user?._id]);
 
-  // Extract unique categories and locations for filters panel
-  const categories = useMemo(() => {
-    const unique = new Set<string>();
-    allGigs.forEach((gig) => gig.category && unique.add(gig.category));
-    return Array.from(unique);
-  }, [allGigs]);
-
   const locations = useMemo(() => {
     const unique = new Set<string>();
     allGigs.forEach((gig) => gig.location && unique.add(gig.location));
@@ -217,7 +231,7 @@ export const AllGigs = ({ user }: { user: any }) => {
         gig.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         gig.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         gig.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gig.tags?.some((tag) =>
+        gig.tags?.some((tag: any) =>
           tag.toLowerCase().includes(searchQuery.toLowerCase()),
         );
 
@@ -513,8 +527,10 @@ export const AllGigs = ({ user }: { user: any }) => {
     const convertedGig = convertGigToGigProps(gig);
     return getUserGigStatus(convertedGig, user?._id);
   };
-  // Loading skeleton with gradient animation
-  if (isLoading.gigs || isLoading.explore) {
+  const [showHeader, setShowHeader] = useState(false);
+
+  if (isLoading) {
+    // Changed from isLoading.gigs || isLoading.explore
     return (
       <div className="space-y-8">
         {/* Header Skeleton */}
@@ -545,7 +561,6 @@ export const AllGigs = ({ user }: { user: any }) => {
       </div>
     );
   }
-  const [showHeader, setShowHeader] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -956,7 +971,7 @@ export const AllGigs = ({ user }: { user: any }) => {
             <span
               className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}
             >
-              {allGigs.length}
+              {combinedGigs.length} {/* Use combinedGigs instead of allGigs */}
             </span>{" "}
             gigs
           </div>

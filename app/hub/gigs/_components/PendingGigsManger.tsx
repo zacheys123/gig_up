@@ -43,6 +43,8 @@ import {
   CalendarDays,
   Kanban,
 } from "lucide-react";
+
+import { filterUserApplications } from "@/utils";
 import { useUserApplications } from "@/hooks/useAllGigs";
 
 interface PendingGigsManagerProps {
@@ -70,17 +72,17 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
 
   const { categorizedApplications, isLoading } = useUserApplications(user?._id);
 
+  // Then use directly:
   const safeCategorizedApplications = useMemo(
     () => ({
-      all: categorizedApplications?.all || [],
-      interested: categorizedApplications?.interested || [],
-      applied: categorizedApplications?.applied || [],
-      shortlisted: categorizedApplications?.shortlisted || [],
-      history: categorizedApplications?.history || [],
+      all: categorizedApplications.all || [],
+      interested: categorizedApplications.interested || [],
+      applied: categorizedApplications.applied || [],
+      shortlisted: categorizedApplications.shortlisted || [],
+      history: categorizedApplications.history || [],
     }),
     [categorizedApplications],
   );
-
   const filteredGigs = useMemo(() => {
     let gigs = [];
 

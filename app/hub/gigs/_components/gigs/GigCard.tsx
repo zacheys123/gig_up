@@ -594,12 +594,23 @@ const GigCard: React.FC<GigCardProps> = ({
         const maxBands = gig.maxSlots || 1; // Usually 1 full band needed
         return bandCount >= maxBands;
 
+      // Replace the isFull calculation for client_band_creation
       case "client_band_creation":
-        // Client band creation: each role has its own slots
         if (!gig.bandCategory || gig.bandCategory.length === 0) return false;
-        return gig.bandCategory.every(
-          (role) => role.filledSlots >= role.maxSlots,
-        );
+
+        // TEMPORARY: Only consider full if there are actually slots defined
+        const hasDefinedSlots = gig.bandCategory.some((role) => {
+          const max = Number(role.maxSlots) || 0;
+          return max > 0;
+        });
+
+        if (!hasDefinedSlots) return false;
+
+        return gig.bandCategory.every((role) => {
+          const max = Number(role.maxSlots) || 0;
+          const filled = Number(role.filledSlots) || 0;
+          return max === 0 || filled >= max;
+        });
 
       case "individual_musician":
       case "mc":
@@ -829,13 +840,14 @@ const GigCard: React.FC<GigCardProps> = ({
   const getUserQualifiedRoles = useMemo(() => {
     if (!currentUser || !gig.bandCategory) return [];
 
-    return gig.bandCategory.filter(
-      (role) =>
-        role.filledSlots < role.maxSlots &&
-        isUserQualifiedForRole(currentUser, role),
-    );
-  }, [currentUser, gig.bandCategory]);
+    return gig.bandCategory.filter((role) => {
+      const max = Number(role.maxSlots) || 0;
+      const filled = Number(role.filledSlots) || 0;
+      const hasAvailableSlots = max === 0 || filled < max;
 
+      return hasAvailableSlots && isUserQualifiedForRole(currentUser, role);
+    });
+  }, [currentUser, gig.bandCategory]);
   const handleBandApplication = () => {
     if (!currentUser) {
       toast.error("Please sign in first");
@@ -918,40 +930,283 @@ const GigCard: React.FC<GigCardProps> = ({
     }
   };
   const handleRegularInterest = async (notes?: string) => {
-    // 1. Time Lock Check
-    const windowStatus = getInterestWindowStatus(gig);
-    if (windowStatus.hasWindow && windowStatus.status !== "open") {
-      toast.error("This window is not yet open.");
+    console.log("=== CLIENT DEBUG: handleRegularInterest START ===");
+
+    // Get the correct user ID - use Convex ID, not Clerk ID
+    const convexUserId = currentUser?._id;
+    console.log("1. User IDs:", {
+      clerkId: userId, // From useAuth()
+      convexId: convexUserId,
+      currentUserHasId: !!convexUserId,
+    });
+
+    if (!convexUserId) {
+      console.error("No convex user ID found");
+      toast.error("Please sign in to show interest");
       return;
     }
 
-    // 2. Qualification Check
-    const qualified = isUserQualifiedForRole(currentUser, gig);
+    if (!currentUser) {
+      console.error("No current user data");
+      toast.error("User data not loaded. Please try again.");
+      return;
+    }
+
+    console.log("2. Gig details:", {
+      gigId: gig._id,
+      title: gig.title,
+      gigType: gigType,
+      category: gig.category,
+      isTaken: gig.isTaken,
+      isPending: gig.isPending,
+      interestedUsers: gig.interestedUsers?.length || 0,
+      maxSlots: gig.maxSlots || 10,
+    });
+
+    console.log("3. User status:", {
+      isGigPoster: userStatus.isGigPoster,
+      hasShownInterest: userStatus.hasShownInterest,
+      isInApplicants: userStatus.isInApplicants,
+      isInBandApplication: userStatus.isInBandApplication,
+      position: userStatus.position,
+    });
+
+    // Check if user is the gig poster
+    if (userStatus.isGigPoster) {
+      console.log("DEBUG: User is gig poster");
+      toast.error("You cannot show interest in your own gig");
+      return;
+    }
+
+    // Check if user already showed interest
+    if (userHasInterest) {
+      console.log("DEBUG: User already has interest");
+      toast.info("You have already shown interest in this gig");
+      return;
+    }
+
+    // Check if gig is taken or full
+    if (gig.isTaken) {
+      console.log("DEBUG: Gig is already taken");
+      toast.error("This gig has already been booked");
+      return;
+    }
+
+    if (gig.isPending) {
+      console.log("DEBUG: Gig is pending/fully booked");
+      toast.error("This gig is no longer accepting applications");
+      return;
+    }
+
+    // Time Lock Check
+    const windowStatus = getInterestWindowStatus(gig);
+    console.log("4. Interest window:", windowStatus);
+
+    if (windowStatus.hasWindow && windowStatus.status !== "open") {
+      toast.error(
+        `Interest window is ${windowStatus.status}. ${windowStatus.message}`,
+      );
+      return;
+    }
+
+    // Qualification Check
+    console.log("5. Qualification check starting...");
+    console.log("User profile:", {
+      isMusician: currentUser.isMusician,
+      instrument: currentUser.instrument,
+      roleType: currentUser.roleType,
+    });
+
+    let qualified = false;
+    let reason = "";
+
+    if (gigType === "client_band_creation") {
+      // For band gigs, check specific roles
+      if (gig.bandCategory && gig.bandCategory.length > 0) {
+        const qualifiedRoles = userQualifiedRoles(
+          currentUser as Doc<"users">,
+          gig.bandCategory || [],
+        );
+        qualified = qualifiedRoles.some(
+          (role) => role.isQualified && !role.isFull,
+        );
+        console.log(
+          "Band gig - qualified roles:",
+          qualifiedRoles.filter((r) => r.isQualified).length,
+        );
+
+        if (!qualified) {
+          reason = `This band gig requires specific roles. You play: ${currentUser?.instrument || "no instrument specified"}.`;
+        }
+      } else {
+        // No roles defined, any musician can apply
+        qualified = currentUser?.isMusician || false;
+        if (!qualified) {
+          reason = "You need to be a musician to apply for band gigs.";
+        }
+      }
+    } else if (gigType === "individual_musician") {
+      // For individual musician gigs
+      if (!currentUser?.isMusician) {
+        qualified = false;
+        reason =
+          "You need to be registered as a musician to apply for this gig.";
+      } else if (gig.category) {
+        // Gig has specific instrument requirement
+        const gigInstrument = gig.category.toLowerCase();
+        const userInstrument = (currentUser?.instrument || "").toLowerCase();
+
+        console.log("Instrument match:", {
+          gigInstrument,
+          userInstrument,
+          includesGig: userInstrument.includes(gigInstrument),
+          includesUser: gigInstrument.includes(userInstrument),
+        });
+
+        qualified =
+          userInstrument.includes(gigInstrument) ||
+          gigInstrument.includes(userInstrument) ||
+          userInstrument === gigInstrument;
+
+        if (!qualified) {
+          reason = `This gig is looking for a ${gig.category}, but your profile shows: ${currentUser?.instrument || "no instrument specified"}.`;
+        }
+      } else {
+        // No specific requirement - any musician can apply
+        qualified = currentUser?.isMusician || false;
+        console.log("No category requirement, qualified:", qualified);
+      }
+    } else if (gigType === "mc" || gigType === "dj" || gigType === "vocalist") {
+      // For specific role gigs
+      const gigRole = gigType;
+      const userRole = currentUser?.roleType?.toLowerCase();
+
+      console.log(`Role check - Gig needs: ${gigRole}, User is: ${userRole}`);
+
+      qualified = userRole === gigRole;
+
+      if (!qualified) {
+        if (gigRole === "mc") {
+          reason =
+            "This gig is looking for an MC. You need to be registered as an MC to apply.";
+        } else if (gigRole === "dj") {
+          reason =
+            "This gig is looking for a DJ. You need to be registered as a DJ to apply.";
+        } else if (gigRole === "vocalist") {
+          reason =
+            "This gig is looking for a vocalist. You need to be registered as a vocalist to apply.";
+        }
+      }
+    } else {
+      // Default case
+      qualified = isUserQualifiedForRole(currentUser, gig);
+      if (!qualified) {
+        reason = "You don't meet the requirements for this gig.";
+      }
+    }
+
+    console.log("6. Qualification result:", { qualified, reason });
 
     if (!qualified) {
-      setWarningReason(
-        `This gig is looking for a ${gig.bussinesscat}, but your profile is set as a ${currentUser?.roleType}.`,
-      );
+      console.log("Showing qualification warning");
+      setWarningReason(reason);
       setShowWarningModal(true);
-      return; // Stop the process here
+      return;
     }
 
-    // 3. Proceed if all checks pass
+    // Check available slots for non-band gigs
+    if (gigType !== "client_band_creation" && gigType !== "full_band") {
+      const interestedCount = gig.interestedUsers?.length || 0;
+      const maxSlots = gig.maxSlots || 10;
+      const availableSlots = Math.max(0, maxSlots - interestedCount);
+
+      console.log("7. Slot availability:", {
+        interestedCount,
+        maxSlots,
+        availableSlots,
+      });
+
+      if (availableSlots <= 0) {
+        toast.error("No available slots for this gig");
+        return;
+      }
+    }
+
+    // All checks passed - proceed
+    console.log("8. All checks passed, calling mutation...");
+
     setLoading(true);
     try {
-      await showInterestInGig({
+      console.log("9. Calling showInterestInGig with:", {
         gigId: gig._id,
-        userId: currentUserId!,
-        notes: notes,
+        userId: convexUserId,
+        notes: notes || "",
       });
-      toast.success("Interest sent successfully!");
-    } catch (err) {
-      toast.error("Something went wrong");
+
+      const result = await showInterestInGig({
+        gigId: gig._id,
+        userId: convexUserId, // Use Convex ID here!
+        notes: notes || "",
+      });
+
+      console.log("10. Mutation successful:", result);
+
+      // Show success message
+      toast.success(
+        <div className="flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-green-500" />
+          <div>
+            <p className="font-semibold">Interest shown successfully!</p>
+            <p className="text-sm">
+              You are now in position #{gig.interestedUsers?.length || 0 + 1}
+            </p>
+          </div>
+        </div>,
+      );
+
+      // Close the modal if open
+      setShowInterestModal(false);
+
+      // Refresh the page or update state
+      setTimeout(() => {
+        router.refresh(); // If using Next.js
+      }, 1000);
+    } catch (err: any) {
+      console.error("11. Mutation error:", err);
+      console.error("Error details:", {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+      });
+
+      // Handle specific error messages
+      if (
+        err.message?.includes("already shown interest") ||
+        err.message?.includes("already interested")
+      ) {
+        toast.info("You have already shown interest in this gig");
+      } else if (err.message?.includes("Gig not found")) {
+        toast.error("This gig no longer exists");
+      } else if (
+        err.message?.includes("User not found") ||
+        err.message?.includes("logged in")
+      ) {
+        toast.error("Please log in to show interest");
+      } else if (err.message?.includes("maximum capacity")) {
+        toast.error("This gig has reached maximum capacity");
+      } else if (err.message?.includes("your own gig")) {
+        toast.error("You cannot show interest in your own gig");
+      } else {
+        toast.error(
+          err.message || "Failed to show interest. Please try again.",
+        );
+      }
     } finally {
       setLoading(false);
+      console.log("=== CLIENT DEBUG: handleRegularInterest END ===");
     }
   };
-  // Add this handleBandAction function after your other handlers
+
   const handleBandAction = useCallback(
     (bandRoleIndex: number): BandAction | null => {
       if (!gig.bandCategory || !gig.bandCategory[bandRoleIndex]) return null;
@@ -964,7 +1219,13 @@ const GigCard: React.FC<GigCardProps> = ({
       const isGigPoster = currentUserId === gig.postedBy;
       const hasApplied = role.applicants.includes(currentUserId);
       const isBooked = role.bookedUsers.includes(currentUserId);
-      const isRoleFull = role.filledSlots >= role.maxSlots;
+      const isRoleFull = (() => {
+        if (!role) return false;
+        const max = Number(role.maxSlots) || 0;
+        const filled = Number(role.filledSlots) || 0;
+        // Role is only full if it has slots defined AND they're all filled
+        return max > 0 && filled >= max;
+      })();
       const hasApplicants = role.applicants.length > 0;
       const hasBookedUsers = role.bookedUsers.length > 0;
 
@@ -2026,7 +2287,6 @@ const GigCard: React.FC<GigCardProps> = ({
         }}
         className={clsx(
           responsiveButtonClasses,
-          "gap-2 transition-all duration-200 font-medium",
           buttonConfig.className,
           showPosition && "relative",
         )}
@@ -2225,28 +2485,126 @@ const GigCard: React.FC<GigCardProps> = ({
   // ===== Helper Functions =====
 
   const getAppliedUserButtonConfig = () => {
+    const isMusician = currentUser?.isMusician || false;
+    const isClient = currentUser?.isClient || false;
+    const roleType = currentUser?.roleType || "";
+
+    // Determine user type with fallbacks
+    const determineUserType = () => {
+      if (isMusician) return "musician";
+      if (isClient) return "client";
+
+      // Fallback: check role type
+      if (["instrumentalist", "vocalist", "mc", "dj"].includes(roleType)) {
+        return "musician";
+      }
+
+      // Check if user is gig poster
+      if (userStatus.isGigPoster) {
+        return "client";
+      }
+
+      // Default to musician if they have instrument
+      if (currentUser?.instrument) {
+        return "musician";
+      }
+
+      return "unknown";
+    };
+
+    const userType = determineUserType();
+
     const handleManageClick = () => {
-      if (gigType === "client_band_creation" && userStatus.isInApplicants) {
-        router.push(`/hub/gigs/client/${gig._id}/band-applicants`);
-      } else if (gigType === "full_band" && userStatus.isInBandApplication) {
-        router.push(`/hub/gigs/client/${gig._id}/band-applicants`);
-      } else {
-        router.push("/hub/gigs?tab=pending+");
+      switch (userType) {
+        case "musician":
+          // Musicians go to their pending applications
+          router.push("/hub/gigs?tab=pending");
+          break;
+
+        case "client":
+          // Clients (gig posters) go to manage applicants
+          switch (gigType) {
+            case "client_band_creation":
+              router.push(`/hub/gigs/client/${gig._id}/band-applicants`);
+              break;
+            case "full_band":
+              router.push(`/hub/gigs/client/${gig._id}/band-applicants`);
+              break;
+            default:
+              router.push(`/hub/gigs/client/${gig._id}/applicants`);
+              break;
+          }
+          break;
+
+        default:
+          // Fallback route
+          if (userStatus.isGigPoster) {
+            router.push(`/hub/gigs/client/${gig._id}/applicants`);
+          } else {
+            router.push("/hub/gigs?tab=pending");
+          }
+          break;
       }
     };
 
-    const config = {
-      label: "View Application",
-      icon: <UserCheck className="w-4 h-4" />,
-      variant: "outline" as const,
-      className: "",
-      onClick: handleManageClick,
-      position: null as number | null,
-      showPosition: false,
-    };
+    // Determine button appearance
+    let label = "View Application";
+    let icon = <UserCheck className="w-4 h-4" />;
+    let className = "";
+    let position = null;
+    let showPosition = false;
+    let variant: "outline" | "default" | "secondary" = "outline";
 
-    // Add logic for different gig types and statuses
-    // (Extracted from your original code)
+    // Customize based on user type and status
+    if (userType === "musician") {
+      if (userStatus.isBooked) {
+        label = "Booked ✓";
+        icon = <CheckCircle className="w-4 h-4" />;
+        className =
+          "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20";
+        variant = "outline";
+      } else if (userStatus.position && userStatus.position > 0) {
+        label = `Position #${userStatus.position}`;
+        position = userStatus.position;
+        showPosition = true;
+        className =
+          "relative border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20";
+        variant = "outline";
+      } else if (userStatus.hasShownInterest || userStatus.isInApplicants) {
+        label = "Application Pending";
+        icon = <Clock className="w-4 h-4" />;
+        className =
+          "border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20";
+        variant = "outline";
+      }
+    } else if (userType === "client") {
+      label = "Manage Applicants";
+      icon = <Users className="w-4 h-4" />;
+      className =
+        "border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20";
+      variant = "outline";
+
+      // If gig is taken, show different label
+      if (gig.isTaken) {
+        label = "Manage Booking";
+        icon = <UserCheck className="w-4 h-4" />;
+        className =
+          "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20";
+      }
+    }
+
+    const config = {
+      label,
+      icon,
+      variant,
+      className: clsx(
+        "gap-2 transition-all duration-200 font-medium",
+        className,
+      ),
+      onClick: handleManageClick,
+      position,
+      showPosition,
+    };
 
     return { buttonConfig: config, showPosition: config.showPosition };
   };

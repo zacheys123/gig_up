@@ -1,16 +1,16 @@
 // components/gigs/ClientRemoveInterestButton.tsx
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { XCircle, UserMinus, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ClientRemoveInterestButtonProps {
   gigId: Id<"gigs">;
   userIdToRemove: Id<"users">;
-  clerkId: string;
   musicianName: string;
   gigTitle: string;
   onSuccess?: () => void;
@@ -34,7 +34,6 @@ export const ClientRemoveInterestButton: React.FC<
 > = ({
   gigId,
   userIdToRemove,
-  clerkId,
   musicianName,
   gigTitle,
   onSuccess,
@@ -47,9 +46,13 @@ export const ClientRemoveInterestButton: React.FC<
   const removeUserInterest = useMutation(
     api.controllers.gigs.removeUserInterest,
   );
+  const { user: currentUser } = useCurrentUser(); // Get current user with Convex ID
 
   const handleRemoveInterest = async () => {
-    if (!clerkId) {
+    // Check if we have the current user's Convex ID
+    const clientId = currentUser?._id;
+
+    if (!clientId) {
       toast.error("Authentication Required", {
         description: "Please sign in to perform this action",
       });
@@ -70,7 +73,7 @@ export const ClientRemoveInterestButton: React.FC<
       const result = await removeUserInterest({
         gigId,
         userIdToRemove,
-        clerkId,
+        clientId, // Pass Convex ID, not Clerk ID
         reason: `Interest removed by client`,
       });
 

@@ -113,6 +113,7 @@ const bookingHistoryEntry = v.object({
 
 const bandApplicationEntry = v.object({
   bandId: v.id("bands"),
+  bandName: v.string(), // Store band name for quick access
   appliedAt: v.number(),
   appliedBy: v.id("users"), // Band representative who applied
   status: v.union(

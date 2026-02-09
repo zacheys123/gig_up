@@ -92,7 +92,7 @@ const renderGigContent = (
   user: any,
   activeTab: string,
   colors: any,
-  isInGracePeriod: boolean
+  isInGracePeriod: boolean,
 ) => {
   const userTier = user?.tier || "free";
   const isFreeUser = userTier === "free";
@@ -162,7 +162,7 @@ const renderGigContent = (
       case "my-gigs":
         return <MyGigs user={user} />;
       case "pre-booking":
-        return <PendingGig user={user} />;
+        return <ClientPreBooking user={user} />;
       case "booked":
         return <BookedGigs user={user} />;
       case "reviewed":
@@ -375,7 +375,7 @@ export default function GigsHub() {
       user?.isBooker,
       user?.tier,
       isInGracePeriod,
-    ]
+    ],
   );
 
   // Memoize tabs configuration
@@ -384,7 +384,7 @@ export default function GigsHub() {
       memoizedUser
         ? getUserGigTabs(memoizedUser)
         : { tabs: [], defaultTab: "all" },
-    [memoizedUser]
+    [memoizedUser],
   );
 
   // Sync with URL params - optimized with proper cleanup
@@ -406,7 +406,7 @@ export default function GigsHub() {
       newParams.set("tab", tab);
       router.push(`/hub/gigs?${newParams.toString()}`, { scroll: false });
     },
-    [searchParams, router]
+    [searchParams, router],
   );
 
   // Memoize theme modal handlers
@@ -450,13 +450,13 @@ export default function GigsHub() {
                   "group flex items-center justify-center w-10 h-10 rounded-xl border transition-all duration-200",
                   colors.border,
                   colors.hoverBg,
-                  "hover:border-blue-400 hover:shadow-md"
+                  "hover:border-blue-400 hover:shadow-md",
                 )}
               >
                 <ArrowLeft
                   className={cn(
                     "w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5",
-                    colors.text
+                    colors.text,
                   )}
                 />
               </button>
@@ -466,7 +466,7 @@ export default function GigsHub() {
                 <h1
                   className={cn(
                     "text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent",
-                    "mb-1 drop-shadow-sm"
+                    "mb-1 drop-shadow-sm",
                   )}
                 >
                   Gig Hub
@@ -474,7 +474,7 @@ export default function GigsHub() {
                 <p
                   className={cn(
                     "text-base lg:text-lg font-normal",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   {subtitle}
@@ -488,7 +488,7 @@ export default function GigsHub() {
                 className={cn(
                   "hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl border text-sm",
                   colors.border,
-                  colors.backgroundMuted
+                  colors.backgroundMuted,
                 )}
               >
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -523,7 +523,7 @@ export default function GigsHub() {
                   "p-2 rounded-lg border transition-all duration-200 hover:shadow-md",
                   colors.border,
                   colors.hoverBg,
-                  "hover:border-blue-300"
+                  "hover:border-blue-300",
                 )}
               >
                 {isDarkMode ? (
@@ -557,7 +557,7 @@ export default function GigsHub() {
           <nav
             className={cn(
               "-mb-px flex space-x-8 overflow-x-auto scrollbar-hide flex items-center",
-              colors.background
+              colors.background,
             )}
           >
             <Link
@@ -569,7 +569,7 @@ export default function GigsHub() {
 
                 " hover:border-gray-300 hover:shadow-md hover:scale-105 transition-all duration-200 hover:opacity-80",
                 colors.warningHover,
-                colors.hoverBg
+                colors.hoverBg,
               )}
             >
               <Video /> Community
@@ -587,8 +587,8 @@ export default function GigsHub() {
 
                         " hover:border-gray-300 hover:shadow-md hover:scale-105 transition-all duration-200 hover:opacity-80",
                         colors.warningHover,
-                        colors.hoverBg
-                      )
+                        colors.hoverBg,
+                      ),
                 )}
               >
                 {tab.label}

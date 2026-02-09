@@ -2557,3 +2557,28 @@ export const getUserGigStats = (
 
   return stats;
 };
+
+// utils/gigFilters.ts - Simple filtering helpers
+export const filterUserApplications = (userApplications: any[]) => {
+  if (!userApplications || !Array.isArray(userApplications)) {
+    return {
+      all: [],
+      interested: [],
+      applied: [],
+      shortlisted: [],
+      history: [],
+    };
+  }
+
+  return {
+    all: userApplications,
+    interested: userApplications.filter(
+      (gig) => gig.userStatus === "interested",
+    ),
+    applied: userApplications.filter((gig) => gig.userStatus === "applied"),
+    shortlisted: userApplications.filter(
+      (gig) => gig.userStatus === "shortlisted",
+    ),
+    history: userApplications.filter((gig) => gig.isHistorical === true),
+  };
+};
