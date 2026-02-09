@@ -39,6 +39,7 @@ import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { UpgradeBanner } from "./_components/UpgradeBlock";
 import Link from "next/link";
 import { PendingGig } from "./_components/PendingGig";
+import { InvolvedGigs } from "./_components/BookedGigs";
 
 // Enhanced version with tier info
 const getUserSubtitle = (user: any) => {
@@ -86,7 +87,6 @@ const getUserSubtitle = (user: any) => {
     ? `Manage your gigs and opportunities • ${tierDisplay} Plan • Upgrade for premium features`
     : `Manage your gigs and opportunities • ${tierDisplay} Plan`;
 };
-// Add this UpgradeBanner component
 
 const renderGigContent = (
   user: any,
@@ -97,7 +97,6 @@ const renderGigContent = (
   const userTier = user?.tier || "free";
   const isFreeUser = userTier === "free";
 
-  // Check if feature requires upgrade - FREE users NOT in grace period need upgrade
   const requiresUpgrade = (feature: string) => {
     return isFreeUser && !isInGracePeriod;
   };
@@ -109,6 +108,8 @@ const renderGigContent = (
         return <AllGigs user={user} />;
       case "client":
         return <MyGigs user={user} />;
+      case "involved": // ADD THIS NEW TAB
+        return <InvolvedGigs user={user} />; // ADD THIS
       case "booker":
         if (requiresUpgrade("applications")) {
           return (
@@ -151,6 +152,8 @@ const renderGigContent = (
           );
         }
         return <GigInvites user={user} />;
+      case "involved": // ADD THIS
+        return <InvolvedGigs user={user} />; // ADD THIS
       default:
         return <AllGigs user={user} />;
     }
@@ -200,6 +203,8 @@ const renderGigContent = (
           );
         }
         return <InstantGigs user={user} />;
+      case "involved": // ADD THIS
+        return <InvolvedGigs user={user} />; // ADD THIS
       default:
         return <MyGigs user={user} />;
     }
@@ -245,6 +250,8 @@ const renderGigContent = (
         return <AllGigs user={user} />;
       case "payments":
         return <PaymentHistory user={user} />;
+      case "involved": // ADD THIS
+        return <InvolvedGigs user={user} />; // ADD THIS
       default:
         if (requiresUpgrade("applications")) {
           return (
@@ -263,6 +270,7 @@ const renderGigContent = (
 };
 
 // Update the getUserGigTabs function to show lock icons for restricted tabs
+
 const getUserGigTabs = (user: any) => {
   const userTier = user?.tier || "free";
   const isFreeUser = userTier === "free";
@@ -275,6 +283,7 @@ const getUserGigTabs = (user: any) => {
         { id: "pending", label: "⏳ Pending" },
         { id: "booked", label: "✅ Booked" },
         { id: "all", label: "🎵 All Gigs" },
+        { id: "involved", label: "👥 My Involvements" }, // ADD THIS
         { id: "favorites", label: "⭐ Favorites" },
         { id: "saved", label: "💾 Saved" },
         { id: "payments", label: "💰 Payments" },
@@ -293,6 +302,7 @@ const getUserGigTabs = (user: any) => {
         { id: "my-gigs", label: "📋 My Gigs" },
         { id: "pre-booking", label: "👥 Pre-Booking" },
         { id: "booked", label: "✅ Booked" },
+        { id: "involved", label: "👥 My Involvements" }, // ADD THIS
         { id: "reviewed", label: "⭐ Reviewed" },
         {
           id: "invites",
@@ -337,6 +347,7 @@ const getUserGigTabs = (user: any) => {
             : "👥 Crew Management",
         },
         { id: "available-gigs", label: "🎵 Available Gigs" },
+        { id: "involved", label: "👥 My Involvements" }, // ADD THIS
         { id: "payments", label: "💰 Payments" },
       ],
       defaultTab: "applications",
@@ -349,6 +360,7 @@ const getUserGigTabs = (user: any) => {
       { id: "musician", label: "🎵 As Musician" },
       { id: "client", label: "🎯 As Client" },
       { id: "booker", label: "📊 As Booker" },
+      { id: "involved", label: "👥 My Involvements" }, // ADD THIS
     ],
     defaultTab: "musician",
   };

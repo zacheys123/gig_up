@@ -195,24 +195,33 @@ export const AllGigs = ({ user }: { user: any }) => {
     return Array.from(unique);
   }, [combinedGigs]);
 
-  // Initialize saved/favorite maps
+  // Optimized version - only update when gig IDs actually change
   useEffect(() => {
-    const savedMap: Record<string, boolean> = {};
-    const favoriteMap: Record<string, boolean> = {};
+    // Create arrays of gig IDs for comparison
+    const currentGigIds = allNewGigs.map((gig) => gig._id).sort();
+    const savedGigIds = Object.keys(isSavedMap).sort();
+    const favoriteGigIds = Object.keys(isFavoriteMap).sort();
 
-    allNewGigs.forEach((gig) => {
-      if (user?._id) {
-        // Check if user has saved/favorited this gig
-        // You might need to adjust this based on your data structure
-        savedMap[gig._id] = false; // Replace with actual check
-        favoriteMap[gig._id] = false; // Replace with actual check
-      }
-    });
+    // Only update if gig IDs have changed
+    const hasNewGigs =
+      JSON.stringify(currentGigIds) !== JSON.stringify(savedGigIds);
+    const hasNewFavorites =
+      JSON.stringify(currentGigIds) !== JSON.stringify(favoriteGigIds);
 
-    setIsSavedMap(savedMap);
-    setIsFavoriteMap(favoriteMap);
-  }, [allNewGigs, user?._id]);
+    if (hasNewGigs || hasNewFavorites) {
+      const savedMap: Record<string, boolean> = {};
+      const favoriteMap: Record<string, boolean> = {};
 
+      allNewGigs.forEach((gig) => {
+        // Preserve existing saved/favorite status if gig already exists
+        savedMap[gig._id] = isSavedMap[gig._id] || false;
+        favoriteMap[gig._id] = isFavoriteMap[gig._id] || false;
+      });
+
+      setIsSavedMap(savedMap);
+      setIsFavoriteMap(favoriteMap);
+    }
+  }, [allNewGigs]); // Remove user?._id dependency if it's not needed for the check
   const locations = useMemo(() => {
     const unique = new Set<string>();
     allNewGigs.forEach((gig) => gig.location && unique.add(gig.location));
