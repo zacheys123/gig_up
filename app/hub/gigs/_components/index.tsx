@@ -2,7 +2,7 @@
 export { AllGigs } from "./AllGigs";
 export { MyGigs } from "./MGigs";
 export { MusicianPreBooking } from "./MusicianPendingGigs";
-export { InvolvedGigs } from "./BookedGigs";
+export { BookedGigs } from "./BookedGigs";
 export { FavoriteGigs } from "./FavouriteGigs";
 export { SavedGigs } from "./SavedGigs";
 export { PaymentHistory } from "./PaymentHistory";

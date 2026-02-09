@@ -38,7 +38,7 @@ import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { UpgradeBanner } from "./_components/UpgradeBlock";
 import Link from "next/link";
 import { PendingGig } from "./_components/PendingGig";
-import { InvolvedGigs } from "./_components/BookedGigs";
+import { BookedGigs } from "./_components/BookedGigs";
 
 // Enhanced version with tier info
 const getUserSubtitle = (user: any) => {
@@ -131,7 +131,7 @@ const renderGigContent = (
       case "pending":
         return <PendingGig user={user} />;
       case "booked":
-        return <BookedGigs user={user} />;
+        return <InvolvedGigs user={user} />;
       case "all":
         return <AllGigs user={user} />;
       case "favorites":
@@ -166,7 +166,7 @@ const renderGigContent = (
       case "pre-booking":
         return <ClientPreBooking user={user} />;
       case "booked":
-        return <BookedGigs user={user} />;
+        return <InvolvedGigs user={user} />;
       case "reviewed":
         return <ReviewedGigs user={user} />;
       case "crew-management":

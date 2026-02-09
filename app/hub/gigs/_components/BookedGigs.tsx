@@ -1,4 +1,4 @@
-// app/hub/gigs/_components/InvolvedGigs.tsx
+// app/hub/gigs/_components/BookedGigs.tsx - SHOW ONLY isTaken GIGS
 
 "use client";
 
@@ -9,19 +9,19 @@ import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
-  Filter,
-  Search,
   MapPin,
   Calendar,
   Users,
   Briefcase,
   User,
-  Clock,
   CheckCircle,
-  XCircle,
+  Filter,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useThemeColors } from "@/hooks/useTheme";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -29,16 +29,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { useThemeColors } from "@/hooks/useTheme";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const InvolvedGigs = ({ user }: { user: any }) => {
+export const BookedGigs = ({ user }: { user: any }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [viewFilter, setViewFilter] = useState("all");
+  const [viewFilter, setViewFilter] = useState<"all" | "client" | "musician">(
+    "all",
+  );
+  const [dateFilter, setDateFilter] = useState<"all" | "upcoming" | "past">(
+    "all",
+  );
   const { colors } = useThemeColors();
 
   // Fetch all gigs from Convex
@@ -46,68 +45,41 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
     limit: 100,
   });
 
-  // Fetch user's applications from Convex
-  const userApplications = useQuery(api.controllers.gigs.getUserApplications, {
-    userId: user?._id,
-  });
-
-  // Filter gigs based on user involvement
-  const involvedGigs = useMemo(() => {
+  // Filter ONLY gigs that are isTaken AND user is involved
+  const bookedGigs = useMemo(() => {
     if (!allGigs || !user) return [];
 
     const userId = user._id;
 
-    return allGigs.filter((gig: any) => {
-      // Check user involvement
+    // First, filter only isTaken gigs
+    const takenGigs = allGigs.filter((gig: any) => gig.isTaken === true);
+
+    // Then filter where user is involved
+    return takenGigs.filter((gig: any) => {
       const isClient = gig.postedBy === userId;
       const isBookedMusician = gig.bookedBy === userId;
       const isInBookedUsers =
         Array.isArray(gig.bookedUsers) && gig.bookedUsers.includes(userId);
 
-      // Check band involvement
+      // For band gigs, check if user is booked in any role
       let isBookedInBand = false;
-      let hasAppliedToBand = false;
-      let appliedRole = "";
-
       if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
-        gig.bandCategory.forEach((role: any) => {
-          if (
+        isBookedInBand = gig.bandCategory.some(
+          (role: any) =>
             Array.isArray(role.bookedUsers) &&
-            role.bookedUsers.includes(userId)
-          ) {
-            isBookedInBand = true;
-          }
-          if (
-            Array.isArray(role.applicants) &&
-            role.applicants.includes(userId)
-          ) {
-            hasAppliedToBand = true;
-            appliedRole = role.role;
-          }
-        });
+            role.bookedUsers.includes(userId),
+        );
       }
 
-      // Check regular applications from userApplications
-      const isInterested =
-        Array.isArray(gig.interestedUsers) &&
-        gig.interestedUsers.includes(userId);
-
-      return (
-        isClient ||
-        isBookedMusician ||
-        isInBookedUsers ||
-        isBookedInBand ||
-        hasAppliedToBand ||
-        isInterested
-      );
+      return isClient || isBookedMusician || isInBookedUsers || isBookedInBand;
     });
   }, [allGigs, user]);
 
   // Apply additional filters
   const filteredGigs = useMemo(() => {
-    if (!involvedGigs || involvedGigs.length === 0) return [];
+    if (!bookedGigs || bookedGigs.length === 0) return [];
 
-    let filtered = [...involvedGigs];
+    let filtered = [...bookedGigs];
 
     // Apply search filter
     if (searchTerm) {
@@ -120,39 +92,7 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
       );
     }
 
-    // Apply location filter
-    if (locationFilter) {
-      filtered = filtered.filter(
-        (gig: any) =>
-          gig.location &&
-          gig.location.toLowerCase().includes(locationFilter.toLowerCase()),
-      );
-    }
-
-    // Apply category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((gig: any) => gig.category === categoryFilter);
-    }
-
-    // Apply date filter
-    if (dateFilter !== "all") {
-      const now = new Date();
-      filtered = filtered.filter((gig: any) => {
-        const gigDate = new Date(gig.date);
-        switch (dateFilter) {
-          case "upcoming":
-            return gigDate > now;
-          case "past":
-            return gigDate < now;
-          case "today":
-            return gigDate.toDateString() === now.toDateString();
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Apply view filter
+    // Apply view filter (client vs musician)
     if (viewFilter !== "all" && user) {
       const userId = user._id;
       filtered = filtered.filter((gig: any) => {
@@ -162,83 +102,73 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
           Array.isArray(gig.bookedUsers) && gig.bookedUsers.includes(userId);
 
         let isBookedInBand = false;
-        let hasAppliedToBand = false;
-
-        if (gig.bandCategory) {
-          gig.bandCategory.forEach((role: any) => {
-            if (
+        if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
+          isBookedInBand = gig.bandCategory.some(
+            (role: any) =>
               Array.isArray(role.bookedUsers) &&
-              role.bookedUsers.includes(userId)
-            ) {
-              isBookedInBand = true;
-            }
-            if (
-              Array.isArray(role.applicants) &&
-              role.applicants.includes(userId)
-            ) {
-              hasAppliedToBand = true;
-            }
-          });
+              role.bookedUsers.includes(userId),
+          );
         }
 
-        const isInterested =
-          Array.isArray(gig.interestedUsers) &&
-          gig.interestedUsers.includes(userId);
+        const isMusician =
+          isBookedMusician || isInBookedUsers || isBookedInBand;
 
-        switch (viewFilter) {
-          case "posted":
-            return isClient;
-          case "booked":
-            return isBookedMusician || isInBookedUsers || isBookedInBand;
-          case "applied":
-            return hasAppliedToBand || isInterested;
-          default:
-            return true;
-        }
+        if (viewFilter === "client") return isClient;
+        if (viewFilter === "musician") return isMusician;
+        return true;
       });
     }
 
-    // Sort by date (newest first)
+    // Apply date filter
+    if (dateFilter !== "all") {
+      const now = new Date();
+      filtered = filtered.filter((gig: any) => {
+        const gigDate = new Date(gig.date);
+        if (dateFilter === "upcoming") return gigDate >= now;
+        if (dateFilter === "past") return gigDate < now;
+        return true;
+      });
+    }
+
+    // Sort by date (upcoming first)
     return filtered.sort(
       (a: any, b: any) =>
-        new Date(b.date || b.createdAt).getTime() -
-        new Date(a.date || a.createdAt).getTime(),
+        new Date(a.date || a.createdAt).getTime() -
+        new Date(b.date || b.createdAt).getTime(),
     );
-  }, [
-    involvedGigs,
-    searchTerm,
-    locationFilter,
-    categoryFilter,
-    dateFilter,
-    viewFilter,
-    user,
-  ]);
+  }, [bookedGigs, searchTerm, viewFilter, dateFilter, user]);
 
-  // Get user's role in a gig
-  const getUserRoleInGig = (gig: any): { role: string; badgeColor: string } => {
+  // Get user's role in a booked gig
+  const getUserRoleInGig = (
+    gig: any,
+  ): { role: string; badgeColor: string; icon: React.ReactNode } => {
     const userId = user._id;
 
     if (gig.postedBy === userId) {
       return {
-        role: "Posted",
-        badgeColor: "bg-blue-100 text-blue-800",
+        role: "Client",
+        badgeColor: "bg-blue-100 text-blue-800 border-blue-200",
+        icon: <Briefcase className="w-4 h-4" />,
       };
     }
 
     if (gig.bookedBy === userId) {
       return {
-        role: "Booked",
-        badgeColor: "bg-green-100 text-green-800",
+        role: "Booked Musician",
+        badgeColor: "bg-green-100 text-green-800 border-green-200",
+        icon: <User className="w-4 h-4" />,
       };
     }
 
     if (Array.isArray(gig.bookedUsers) && gig.bookedUsers.includes(userId)) {
       return {
         role: "Band Member",
-        badgeColor: "bg-purple-100 text-purple-800",
+        badgeColor: "bg-purple-100 text-purple-800 border-purple-200",
+        icon: <Users className="w-4 h-4" />,
       };
     }
 
+    // Check for band role booking
     if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
       for (const role of gig.bandCategory) {
         if (
@@ -246,63 +176,72 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
           role.bookedUsers.includes(userId)
         ) {
           return {
-            role: `Band ${role.role}`,
-            badgeColor: "bg-purple-100 text-purple-800",
-          };
-        }
-        if (
-          Array.isArray(role.applicants) &&
-          role.applicants.includes(userId)
-        ) {
-          return {
-            role: `Applied (${role.role})`,
-            badgeColor: "bg-yellow-100 text-yellow-800",
+            role: `${role.role}`,
+            badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
+            icon: <Users className="w-4 h-4" />,
           };
         }
       }
     }
 
-    if (
-      Array.isArray(gig.interestedUsers) &&
-      gig.interestedUsers.includes(userId)
-    ) {
-      return {
-        role: "Interested",
-        badgeColor: "bg-yellow-100 text-yellow-800",
-      };
-    }
-
     return {
-      role: "Involved",
-      badgeColor: "bg-gray-100 text-gray-800",
+      role: "Booked",
+      badgeColor: "bg-gray-100 text-gray-800 border-gray-200",
+      icon: <CheckCircle className="w-4 h-4" />,
     };
   };
 
-  // Get gig status badge
-  const getGigStatusBadge = (gig: any) => {
-    const now = new Date();
-    const gigDate = new Date(gig.date);
-
-    if (gig.isTaken) {
-      return <Badge className="bg-green-100 text-green-800">✅ Booked</Badge>;
+  // Get gig type
+  const getGigType = (gig: any): string => {
+    if (gig.isClientBand) {
+      const bandRoles = gig.bandCategory?.length || 0;
+      return `Band Gig (${bandRoles} roles)`;
     }
-
-    if (gig.isPending) {
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800">⏳ Pending</Badge>
-      );
-    }
-
-    if (gigDate < now) {
-      return <Badge className="bg-gray-100 text-gray-800">📅 Past</Badge>;
-    }
-
-    if (gigDate.toDateString() === now.toDateString()) {
-      return <Badge className="bg-blue-100 text-blue-800">📅 Today</Badge>;
-    }
-
-    return <Badge className="bg-green-100 text-green-800">📅 Upcoming</Badge>;
+    return "Regular Gig";
   };
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    if (!bookedGigs.length) return null;
+
+    const userId = user?._id;
+    const now = new Date();
+
+    const clientGigs = bookedGigs.filter(
+      (g: any) => g.postedBy === userId,
+    ).length;
+    const musicianGigs = bookedGigs.filter((g: any) => {
+      const isBookedMusician = g.bookedBy === userId;
+      const isInBookedUsers =
+        Array.isArray(g.bookedUsers) && g.bookedUsers.includes(userId);
+      let isBookedInBand = false;
+      if (g.bandCategory) {
+        isBookedInBand = g.bandCategory.some(
+          (r: any) =>
+            Array.isArray(r.bookedUsers) && r.bookedUsers.includes(userId),
+        );
+      }
+      return isBookedMusician || isInBookedUsers || isBookedInBand;
+    }).length;
+
+    const upcomingGigs = bookedGigs.filter(
+      (g: any) => new Date(g.date) >= now,
+    ).length;
+
+    const pastGigs = bookedGigs.filter(
+      (g: any) => new Date(g.date) < now,
+    ).length;
+
+    return {
+      total: bookedGigs.length,
+      client: clientGigs,
+      musician: musicianGigs,
+      upcoming: upcomingGigs,
+      past: pastGigs,
+      regularGigs: bookedGigs.filter((g: any) => !g.isClientBand).length,
+      bandGigs: bookedGigs.filter((g: any) => g.isClientBand).length,
+    };
+  }, [bookedGigs, user]);
 
   // Loading state
   if (!allGigs || !user) {
@@ -330,188 +269,158 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
     <div className="p-4 md:p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">My Involved Gigs</h2>
+        <div className="flex items-center gap-2 mb-2">
+          <CheckCircle className="w-6 h-6 text-green-500" />
+          <h2 className="text-2xl font-bold">Booked Gigs</h2>
+        </div>
         <p className={cn("text-muted-foreground", colors.textMuted)}>
-          Gigs where you're involved as a client, musician, or applicant
+          ✅ Successfully booked gigs where you're involved as a client or
+          musician
         </p>
       </div>
 
+      {/* Stats Cards */}
+      {stats && (
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Booked
+                </p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  As Client
+                </p>
+                <p className="text-2xl font-bold">{stats.client}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  As Musician
+                </p>
+                <p className="text-2xl font-bold">{stats.musician}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Upcoming
+                </p>
+                <p className="text-2xl font-bold">{stats.upcoming}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Regular
+                </p>
+                <p className="text-2xl font-bold">{stats.regularGigs}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Band
+                </p>
+                <p className="text-2xl font-bold">{stats.bandGigs}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder="Search gigs..."
+            placeholder="Search booked gigs..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
+          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         </div>
 
-        {/* Location filter */}
-        <div className="relative">
-          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Location"
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        {/* Category filter */}
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        {/* Role filter */}
+        <Select
+          value={viewFilter}
+          onValueChange={(value: any) => setViewFilter(value)}
+        >
           <SelectTrigger>
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder="Filter by role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="wedding">Wedding</SelectItem>
-            <SelectItem value="corporate">Corporate</SelectItem>
-            <SelectItem value="private">Private Party</SelectItem>
-            <SelectItem value="festival">Festival</SelectItem>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="client">Client Only</SelectItem>
+            <SelectItem value="musician">Musician Only</SelectItem>
           </SelectContent>
         </Select>
 
         {/* Date filter */}
-        <Select value={dateFilter} onValueChange={setDateFilter}>
+        <Select
+          value={dateFilter}
+          onValueChange={(value: any) => setDateFilter(value)}
+        >
           <SelectTrigger>
-            <SelectValue placeholder="Date" />
+            <SelectValue placeholder="Filter by date" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Dates</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
             <SelectItem value="upcoming">Upcoming</SelectItem>
             <SelectItem value="past">Past</SelectItem>
           </SelectContent>
         </Select>
-
-        {/* View filter */}
-        <Select value={viewFilter} onValueChange={setViewFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="My Role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="posted">Posted (Client)</SelectItem>
-            <SelectItem value="booked">Booked (Musician)</SelectItem>
-            <SelectItem value="applied">Applied</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Stats */}
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Involved
-                </p>
-                <p className="text-2xl font-bold">{involvedGigs.length}</p>
-              </div>
-              <Users className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  As Client
-                </p>
-                <p className="text-2xl font-bold">
-                  {
-                    involvedGigs.filter((g: any) => g.postedBy === user._id)
-                      .length
-                  }
-                </p>
-              </div>
-              <Briefcase className="w-8 h-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  As Musician
-                </p>
-                <p className="text-2xl font-bold">
-                  {
-                    involvedGigs.filter(
-                      (g: any) =>
-                        g.bookedBy === user._id ||
-                        (Array.isArray(g.bookedUsers) &&
-                          g.bookedUsers.includes(user._id)) ||
-                        (g.bandCategory &&
-                          g.bandCategory.some(
-                            (r: any) =>
-                              Array.isArray(r.bookedUsers) &&
-                              r.bookedUsers.includes(user._id),
-                          )),
-                    ).length
-                  }
-                </p>
-              </div>
-              <User className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Applied To
-                </p>
-                <p className="text-2xl font-bold">
-                  {
-                    involvedGigs.filter(
-                      (g: any) =>
-                        (Array.isArray(g.interestedUsers) &&
-                          g.interestedUsers.includes(user._id)) ||
-                        (g.bandCategory &&
-                          g.bandCategory.some(
-                            (r: any) =>
-                              Array.isArray(r.applicants) &&
-                              r.applicants.includes(user._id),
-                          )),
-                    ).length
-                  }
-                </p>
-              </div>
-              <Clock className="w-8 h-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Gig List */}
       {filteredGigs.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
-            <Users className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Gigs Found</h3>
+            <CheckCircle className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              {bookedGigs.length === 0
+                ? "No Booked Gigs Yet"
+                : "No Gigs Match Filters"}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              {searchTerm || locationFilter || viewFilter !== "all"
-                ? "Try adjusting your filters"
-                : "You're not involved in any gigs yet"}
+              {bookedGigs.length === 0
+                ? "You haven't booked or been booked for any gigs yet"
+                : "Try adjusting your filters to see more results"}
             </p>
-            {!searchTerm && !locationFilter && viewFilter === "all" && (
-              <Button
-                onClick={() => (window.location.href = "/gigs/explore")}
-                variant="outline"
-              >
-                Explore Available Gigs
-              </Button>
+            {bookedGigs.length === 0 && (
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={() => (window.location.href = "/gigs/explore")}
+                  variant="outline"
+                >
+                  Explore Gigs
+                </Button>
+                <Button onClick={() => (window.location.href = "/gigs/create")}>
+                  Create a Gig
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -522,6 +431,7 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
             const gigDate = new Date(gig.date);
             const now = new Date();
             const isPast = gigDate < now;
+            const gigType = getGigType(gig);
 
             return (
               <motion.div
@@ -532,30 +442,53 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
               >
                 <Card
                   className={cn(
-                    "h-full hover:shadow-md transition-shadow",
-                    isPast && "opacity-70",
+                    "h-full hover:shadow-md transition-shadow border-2",
+                    isPast ? "border-gray-200" : "border-green-200",
                   )}
                 >
                   <CardHeader>
                     <div className="flex justify-between items-start mb-2">
-                      <Badge className={userRole.badgeColor}>
+                      <Badge
+                        className={cn(
+                          userRole.badgeColor,
+                          "flex items-center gap-1 border",
+                        )}
+                      >
+                        {userRole.icon}
                         {userRole.role}
                       </Badge>
-                      {getGigStatusBadge(gig)}
+
+                      <Badge
+                        variant={isPast ? "outline" : "default"}
+                        className={
+                          isPast
+                            ? "bg-gray-100 text-gray-800"
+                            : "bg-green-100 text-green-800"
+                        }
+                      >
+                        {isPast ? "✅ Completed" : "📅 Upcoming"}
+                      </Badge>
                     </div>
+
                     <CardTitle className="text-lg font-semibold line-clamp-1">
                       {gig.title}
                     </CardTitle>
-                    <div className="flex items-center text-sm text-muted-foreground">
+
+                    <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <Calendar className="w-4 h-4 mr-1" />
                       {gigDate.toLocaleDateString()} •{" "}
                       {gig.time?.start || "N/A"}
                     </div>
+
+                    <Badge variant="outline" className="mt-2 w-fit">
+                      {gigType}
+                    </Badge>
                   </CardHeader>
+
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex items-center text-sm">
-                        <MapPin className="w-4 h-4 mr-2 text-gray-500" />
+                        <MapPin className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                         <span className="line-clamp-1">
                           {gig.location || "Location not specified"}
                         </span>
@@ -563,44 +496,51 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
 
                       {gig.bussinesscat && (
                         <div className="flex items-center text-sm">
-                          <Briefcase className="w-4 h-4 mr-2 text-gray-500" />
+                          <Briefcase className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                           <span>{gig.bussinesscat}</span>
                         </div>
                       )}
 
+                      {/* Show booked price */}
                       {gig.price > 0 && (
-                        <div className="flex items-center text-sm">
-                          <span className="font-semibold">
+                        <div className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
+                          <span className="font-medium">Booked Price:</span>
+                          <span className="font-bold">
                             {gig.currency || "KES"} {gig.price.toLocaleString()}
                           </span>
-                          {gig.negotiable && (
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              Negotiable
-                            </Badge>
-                          )}
                         </div>
                       )}
 
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      {/* Show booked users count for band gigs */}
+                      {gig.isClientBand && gig.bandCategory && (
+                        <div className="flex items-center text-sm">
+                          <Users className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                          <span>
+                            {gig.bandCategory.reduce(
+                              (total: number, role: any) =>
+                                total + (role.bookedUsers?.length || 0),
+                              0,
+                            )}{" "}
+                            musicians booked
+                          </span>
+                        </div>
+                      )}
+
+                      <p className="text-sm text-muted-foreground line-clamp-2 pt-2 border-t">
                         {gig.description || "No description provided"}
                       </p>
 
-                      <div className="pt-4 flex justify-between items-center">
+                      <div className="pt-4">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="w-full"
                           onClick={() =>
                             (window.location.href = `/gigs/${gig._id}`)
                           }
                         >
-                          View Details
+                          View Booking Details
                         </Button>
-
-                        {isPast && (
-                          <Badge variant="outline" className="text-xs">
-                            Completed
-                          </Badge>
-                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -613,23 +553,29 @@ export const InvolvedGigs = ({ user }: { user: any }) => {
 
       {/* Legend */}
       <div className="mt-8 pt-6 border-t">
-        <h4 className="text-sm font-semibold mb-3">Role Legend</h4>
-        <div className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-1">
+        <h4 className="text-sm font-semibold mb-3">Booking Status</h4>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span className="text-xs">Posted (Client)</span>
+            <span className="text-xs">Client - You posted this gig</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-xs">Booked (Musician)</span>
+            <span className="text-xs">Booked Musician - You were hired</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-            <span className="text-xs">Band Member</span>
+            <span className="text-xs">
+              Band Member - Part of a band booking
+            </span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <span className="text-xs">Applied/Interested</span>
+          <div className="flex items-center gap-2">
+            <div className="border-2 border-green-200 w-3 h-3 rounded"></div>
+            <span className="text-xs">Upcoming gig</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="border-2 border-gray-200 w-3 h-3 rounded"></div>
+            <span className="text-xs">Completed gig</span>
           </div>
         </div>
       </div>
