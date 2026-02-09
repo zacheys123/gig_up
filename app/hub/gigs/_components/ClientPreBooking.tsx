@@ -1135,7 +1135,10 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                         handleAddToShortlist={handleAddToShortlist}
                         handleRemoveFromShortlist={handleRemoveFromShortlist}
                         handleViewProfile={handleViewProfile}
-                        handleBookMusician={handleBookMusician}
+                        handleBookMusician={(
+                          userId: Id<"users">,
+                          userName: string,
+                        ) => handleBookMusician(userId, userName, "regular")}
                         getStatusColor={getStatusColor}
                       />
                     )}

@@ -41,9 +41,9 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrustStarsDisplay } from "../trust/TrustStarsDisplay";
 import { getRateSummary } from "@/lib/rates";
-import { ClientRemoveInterestButton } from "./ClientRemoveInterestButton"; // Updated import
 import { SelectMusicianButton } from "./SelectMusicianButton";
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Added import
+import { ClientRemoveInterestButton } from "./ClientRemove";
 
 interface RegularGigsTabProps {
   selectedGigData: GigWithApplicants;
@@ -63,6 +63,7 @@ interface RegularGigsTabProps {
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
   ) => Promise<void>;
+  handleBookMusician: (userId: Id<"users">, userName: string) => void; // Add this line
   getStatusColor: (status: string) => string;
   isLoading?: boolean;
 }
@@ -73,6 +74,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
   handleAddToShortlist,
   handleRemoveFromShortlist,
   handleViewProfile,
+  handleBookMusician, // Add this
   getStatusColor,
   isLoading = false,
 }) => {
