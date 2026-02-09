@@ -169,14 +169,14 @@ export const AllGigs = ({ user }: { user: any }) => {
   const unfavoriteGig = useMutation(api.controllers.gigs.unfavoriteGig);
   const bookGigMutation = useMutation(api.controllers.gigs.showInterestInGig);
 
-  const { allGigs, isLoading } = useAllGigs({ limit: 100 });
-
+  const { allGigs: gigs, isLoading } = useAllGigs({ limit: 100 });
+  const allNewGigs = gigs.filter((gig: any) => gig.isTaken === false);
   // Still use the old hook for user's posted gigs and applications
   const { gigs: userGigs } = useGigs(user?._id);
 
   // Combine with user's posted gigs (to ensure they're included)
   const combinedGigs = useMemo(() => {
-    const allGigsArray = allGigs || [];
+    const allGigsArray = allNewGigs || [];
     const userGigsArray = userGigs || [];
 
     // Merge and remove duplicates
@@ -186,9 +186,9 @@ export const AllGigs = ({ user }: { user: any }) => {
     );
 
     return unique;
-  }, [allGigs, userGigs]);
+  }, [allNewGigs, userGigs]);
 
-  // Then use combinedGigs instead of allGigs in your component
+  // Then use combinedGigs instead of allNewGigs in your component
   const categories = useMemo(() => {
     const unique = new Set<string>();
     combinedGigs.forEach((gig) => gig.category && unique.add(gig.category));
@@ -200,7 +200,7 @@ export const AllGigs = ({ user }: { user: any }) => {
     const savedMap: Record<string, boolean> = {};
     const favoriteMap: Record<string, boolean> = {};
 
-    allGigs.forEach((gig) => {
+    allNewGigs.forEach((gig) => {
       if (user?._id) {
         // Check if user has saved/favorited this gig
         // You might need to adjust this based on your data structure
@@ -211,17 +211,17 @@ export const AllGigs = ({ user }: { user: any }) => {
 
     setIsSavedMap(savedMap);
     setIsFavoriteMap(favoriteMap);
-  }, [allGigs, user?._id]);
+  }, [allNewGigs, user?._id]);
 
   const locations = useMemo(() => {
     const unique = new Set<string>();
-    allGigs.forEach((gig) => gig.location && unique.add(gig.location));
+    allNewGigs.forEach((gig) => gig.location && unique.add(gig.location));
     return Array.from(unique);
-  }, [allGigs]);
+  }, [allNewGigs]);
 
   // Filter gigs based on search and panel filters
   const filteredGigs = useMemo(() => {
-    let result = allGigs.filter((gig) => {
+    let result = allNewGigs.filter((gig) => {
       // Apply search filter
       if (gig.isPending) {
         return false;
@@ -340,7 +340,7 @@ export const AllGigs = ({ user }: { user: any }) => {
     });
 
     return result;
-  }, [allGigs, searchQuery, filters, sortBy]);
+  }, [allNewGigs, searchQuery, filters, sortBy]);
   // Calculate active filters count (excluding search)
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -478,7 +478,7 @@ export const AllGigs = ({ user }: { user: any }) => {
       toast.error(errorMessage);
     }
   };
-  // In AllGigs.tsx, add this converter:
+  // In allNewGigs.tsx, add this converter:
   const convertGigToGigProps = (gig: any): GigProps => {
     // Cast the bookingHistory entries to fix status types
     const convertedBookingHistory = gig.bookingHistory?.map((entry: any) => ({
@@ -971,7 +971,8 @@ export const AllGigs = ({ user }: { user: any }) => {
             <span
               className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}
             >
-              {combinedGigs.length} {/* Use combinedGigs instead of allGigs */}
+              {combinedGigs.length}{" "}
+              {/* Use combinedGigs instead of allNewGigs */}
             </span>{" "}
             gigs
           </div>
@@ -1125,7 +1126,7 @@ export const AllGigs = ({ user }: { user: any }) => {
                 No gigs found
               </h3>
               <p className="text-gray-600 dark:text-gray-400 max-w-md mb-8">
-                {allGigs.length === 0
+                {allNewGigs.length === 0
                   ? "Be the first to post a gig and start connecting with amazing talent!"
                   : "Try adjusting your search or filters to find what you're looking for."}
               </p>
@@ -1138,7 +1139,7 @@ export const AllGigs = ({ user }: { user: any }) => {
                   Clear Search & Filters
                 </Button>
               )}
-              {allGigs.length === 0 && (
+              {allNewGigs.length === 0 && (
                 <Button
                   onClick={() => router.push("/hub/gigs?tab=invites")}
                   className="gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
@@ -1180,7 +1181,7 @@ export const AllGigs = ({ user }: { user: any }) => {
         </motion.div>
       </AnimatePresence>
       {/* Pagination / Load More */}
-      {filteredGigs.length > 0 && filteredGigs.length < allGigs.length && (
+      {filteredGigs.length > 0 && filteredGigs.length < allNewGigs.length && (
         <div className="flex justify-center mt-8">
           <Button
             variant="outline"
