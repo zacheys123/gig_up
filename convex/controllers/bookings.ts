@@ -2,7 +2,7 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { createNotificationInternal } from "../createNotificationInternal";
-import { updateUserTrust } from "../trustHelper";
+import { applyTrustScoreUpdate, updateUserTrust } from "../trustHelper";
 
 // Helper to get Convex user ID from Clerk ID
 export const getUserByClerkId = async (ctx: any, clerkId: string) => {
@@ -827,9 +827,11 @@ export const unbookFromBandRole = mutation({
     bandRoleIndex: v.number(),
     clerkId: v.string(),
     reason: v.optional(v.string()),
+    isFromBooked: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { gigId, userId, bandRoleIndex, clerkId, reason } = args;
+    const { gigId, userId, bandRoleIndex, clerkId, reason, isFromBooked } =
+      args;
 
     const clientUser = await getUserByClerkId(ctx, clerkId);
     if (!clientUser) throw new Error("Client not found");
@@ -857,18 +859,42 @@ export const unbookFromBandRole = mutation({
       throw new Error("User is not booked for this role");
     }
 
+    // Check if within 3 days and apply trust penalty if coming from booked section
+    let trustPenaltyApplied = 0;
+    if (isFromBooked) {
+      const gigDateTime = new Date(gig.date);
+      const now = new Date();
+      const hoursDifference =
+        (gigDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (hoursDifference < 24) {
+        trustPenaltyApplied = 20; // Last-minute cancellation
+      } else if (hoursDifference < 72) {
+        trustPenaltyApplied = 10; // Within 3 days
+      }
+
+      if (trustPenaltyApplied > 0) {
+        await applyTrustScoreUpdate(
+          ctx,
+          userId,
+          -trustPenaltyApplied,
+          `Cancelled band role booking (${hoursDifference < 24 ? "last-minute" : "within 3 days"}): ${gig.title}`,
+          "band_booking_cancellation",
+        );
+      }
+    }
+
     // Move user from bookedUsers back to applicants
     const updatedBandCategory = [...gig.bandCategory];
     updatedBandCategory[bandRoleIndex] = {
       ...role,
       filledSlots: Math.max(0, (role.filledSlots || 0) - 1),
       bookedUsers: role.bookedUsers.filter((id) => id !== userId),
-      applicants: [...role.applicants, userId], // Add back to applicants
+      applicants: [...role.applicants, userId],
     };
 
     // Helper function to convert price to number safely
     const getSafeBookedPrice = (): number | undefined => {
-      // First check bookedPrice
       if (role.bookedPrice !== undefined && role.bookedPrice !== null) {
         if (typeof role.bookedPrice === "number") {
           return role.bookedPrice;
@@ -878,7 +904,6 @@ export const unbookFromBandRole = mutation({
           return isNaN(parsed) ? undefined : parsed;
         }
       }
-      // Then check price
       if (role.price !== undefined && role.price !== null) {
         if (typeof role.price === "number") {
           return role.price;
@@ -905,6 +930,13 @@ export const unbookFromBandRole = mutation({
       completedAt: Date.now(),
       completionNotes: reason || "Unbooked by client",
       paymentStatus: "cancelled" as const,
+      trustPenaltyApplied,
+      cancelledFrom: isFromBooked ? "booked_section" : "other",
+      hoursUntilGig: isFromBooked
+        ? Math.floor(
+            (new Date(gig.date).getTime() - Date.now()) / (1000 * 60 * 60),
+          )
+        : null,
     };
 
     // Only add bookedPrice if we have a valid number
@@ -929,6 +961,13 @@ export const unbookFromBandRole = mutation({
         movedBackToApplicants: true,
         clientId: clientUser._id,
         clientName: clientUser.firstname || clientUser.username,
+        trustPenaltyApplied,
+        isFromBooked,
+        hoursUntilGig: isFromBooked
+          ? Math.floor(
+              (new Date(gig.date).getTime() - Date.now()) / (1000 * 60 * 60),
+            )
+          : null,
       },
     };
 
@@ -946,7 +985,7 @@ export const unbookFromBandRole = mutation({
       userDocumentId: userId,
       type: "band_member_removed",
       title: "⚠️ Booking Cancelled",
-      message: `Your booking as ${role.role} for "${gig.title}" has been cancelled`,
+      message: `Your booking as ${role.role} for "${gig.title}" has been cancelled${trustPenaltyApplied > 0 ? ` (-${trustPenaltyApplied} trust score)` : ""}`,
       actionUrl: `/gigs/${gigId}`,
       relatedUserDocumentId: clientUser._id,
       metadata: {
@@ -955,10 +994,17 @@ export const unbookFromBandRole = mutation({
         role: role.role,
         reason: reason || "",
         clientName: clientUser.firstname || clientUser.username,
+        trustPenaltyApplied,
+        trustScoreUpdate: true,
       },
     });
 
-    return { success: true };
+    return {
+      success: true,
+      trustPenaltyApplied,
+      isFromBooked,
+      updatedTrust: true, // Indicates trust score was updated
+    };
   },
 });
 

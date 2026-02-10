@@ -9,7 +9,7 @@ import { applyFirstGigBonusInternal } from "./trustScore";
 import { Doc, Id } from "../_generated/dataModel";
 import { checkGigLimit, updateWeeklyGigCount } from "../gigsLimit";
 import { getUserByClerkId } from "./bookings";
-import { updateUserTrust } from "../trustHelper";
+import { applyTrustScoreUpdate, updateUserTrust } from "../trustHelper";
 interface ProcessedBandRole {
   role: string;
   maxSlots: number;
@@ -190,17 +190,49 @@ export const showInterestInGig = mutation({
 /**
  * Remove interest from a gig
  */
+// convex/gigs.ts
+
+// Add this helper function at the top
+const checkIfWithin3Days = (gigDate: string | number | Date): boolean => {
+  const gigDateTime = new Date(gigDate);
+  const now = new Date();
+  const hoursDifference =
+    (gigDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  return hoursDifference < 72; // 3 days = 72 hours
+};
+
+const checkIfLastMinute = (gigDate: string | number | Date): boolean => {
+  const gigDateTime = new Date(gigDate);
+  const now = new Date();
+  const hoursDifference =
+    (gigDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  return hoursDifference < 24;
+};
+
+const calculateTrustPenalty = (gigDate: string | number | Date): number => {
+  const gigDateTime = new Date(gigDate);
+  const now = new Date();
+  const hoursDifference =
+    (gigDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  if (hoursDifference < 24) {
+    return 20; // Last-minute cancellation
+  } else if (hoursDifference < 72) {
+    return 10; // Within 3 days
+  }
+  return 0; // More than 3 days - no penalty
+};
+
+// Update removeInterestFromGig mutation
 export const removeInterestFromGig = mutation({
   args: {
     gigId: v.id("gigs"),
-    userId: v.id("users"), // Musician's Convex ID
+    userId: v.id("users"),
     reason: v.optional(v.string()),
+    isFromBooked: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { gigId, userId, reason } = args;
-
-    console.log("=== DEBUG removeInterestFromGig ===");
-    console.log("Args:", { gigId, userId, reason });
+    const { gigId, userId, reason, isFromBooked } = args;
 
     const user = await ctx.db.get(userId);
     const gig = await ctx.db.get(gigId);
@@ -208,30 +240,44 @@ export const removeInterestFromGig = mutation({
     if (!user) throw new Error("User not found");
     if (!gig) throw new Error("Gig not found");
 
-    console.log("Gig:", {
-      title: gig.title,
-      isClientBand: gig.isClientBand,
-      interestedUsers: gig.interestedUsers?.length || 0,
-    });
-
     if (gig.isClientBand) {
       throw new Error("This is a band gig - use leaveBandRole instead");
     }
 
     const currentInterested = gig.interestedUsers || [];
-    console.log("Current interested:", currentInterested);
-    console.log("User in array?", currentInterested.includes(userId));
 
     if (!currentInterested.includes(userId)) {
       throw new Error("You haven't shown interest in this gig");
     }
 
+    // Check if within 3 days and apply trust penalty if coming from booked section
+    let trustPenaltyApplied = 0;
+    if (isFromBooked) {
+      const gigDateTime = new Date(gig.date);
+      const now = new Date();
+      const hoursDifference =
+        (gigDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (hoursDifference < 24) {
+        trustPenaltyApplied = 20; // Last-minute cancellation
+      } else if (hoursDifference < 72) {
+        trustPenaltyApplied = 10; // Within 3 days
+      }
+
+      if (trustPenaltyApplied > 0) {
+        await applyTrustScoreUpdate(
+          ctx,
+          userId,
+          -trustPenaltyApplied,
+          `Cancelled gig interest (${hoursDifference < 24 ? "last-minute" : "within 3 days"}): ${gig.title}`,
+          "gig_interest_cancellation",
+        );
+      }
+    }
+
     const updatedInterested = currentInterested.filter((id) => id !== userId);
     const maxSlots = gig.maxSlots || 10;
     const isStillFull = updatedInterested.length >= maxSlots;
-
-    console.log("Updated interested:", updatedInterested.length);
-    console.log("Is still full?", isStillFull);
 
     const removalEntry = {
       entryId: `${gigId}_${userId}_${Date.now()}`,
@@ -251,6 +297,13 @@ export const removeInterestFromGig = mutation({
         remainingInterestedCount: updatedInterested.length,
         wasFull: currentInterested.length >= maxSlots,
         isStillFull: isStillFull,
+        trustPenaltyApplied,
+        isFromBooked,
+        hoursUntilGig: isFromBooked
+          ? Math.floor(
+              (new Date(gig.date).getTime() - Date.now()) / (1000 * 60 * 60),
+            )
+          : null,
       },
     };
 
@@ -259,7 +312,7 @@ export const removeInterestFromGig = mutation({
       bookingHistory: [...(gig.bookingHistory || []), removalEntry],
       updatedAt: Date.now(),
       isPending: isStillFull,
-      ...(gig.isTaken && { isTaken: false }), // Reset if gig was taken
+      ...(gig.isTaken && { isTaken: false }),
     });
 
     // Notify gig poster
@@ -268,7 +321,7 @@ export const removeInterestFromGig = mutation({
         userDocumentId: gig.postedBy,
         type: "interest_withdrawn",
         title: "🔄 Interest Withdrawn",
-        message: `${user.firstname || user.username} withdrew interest from "${gig.title}"`,
+        message: `${user.firstname || user.username} withdrew interest from "${gig.title}"${trustPenaltyApplied > 0 ? ` (-${trustPenaltyApplied} trust score)` : ""}`,
         image: user.picture,
         actionUrl: `/gigs/${gigId}`,
         relatedUserDocumentId: userId,
@@ -279,22 +332,141 @@ export const removeInterestFromGig = mutation({
           musicianName: user.firstname || user.username,
           reason: reason || "",
           remainingInterested: updatedInterested.length,
+          trustPenaltyApplied,
+          trustScoreUpdate: trustPenaltyApplied > 0,
         },
       });
     } catch (error) {
       console.error("Failed to create notification:", error);
     }
 
-    console.log("=== removeInterestFromGig SUCCESS ===");
-
     return {
       success: true,
       remainingCount: updatedInterested.length,
       musicianName: user.firstname || user.username,
+      trustPenaltyApplied,
+      isFromBooked,
+      updatedTrust: trustPenaltyApplied > 0,
     };
   },
 });
+// export const markGigAsCompleted = mutation({
+//   args: {
+//     gigId: v.id("gigs"),
+//     userId: v.id("users"),
+//     completionNotes: v.optional(v.string()),
+//   },
+//   handler: async (ctx, args) => {
+//     const { gigId, userId, completionNotes } = args;
 
+//     const user = await ctx.db.get(userId);
+//     const gig = await ctx.db.get(gigId);
+
+//     if (!user) throw new Error("User not found");
+//     if (!gig) throw new Error("Gig not found");
+
+//     // Check if user was actually booked/involved in this gig
+//     let isInvolved = false;
+
+//     if (gig.isClientBand && gig.bandCategory) {
+//       // Check band roles
+//       isInvolved = gig.bandCategory.some(
+//         (role: any) =>
+//           Array.isArray(role.bookedUsers) && role.bookedUsers.includes(userId),
+//       );
+//     } else {
+//       // Check regular gig bookings
+//       isInvolved = gig.bookedBy === userId;
+//     }
+
+//     if (!isInvolved) {
+//       throw new Error("You were not booked for this gig");
+//     }
+
+//     // Check if gig date has passed
+//     const gigDate = new Date(gig.date);
+//     const now = new Date();
+//     if (gigDate > now) {
+//       throw new Error("Cannot mark gig as completed before the gig date");
+//     }
+
+//     // Apply +1 trust score for successful completion
+//     await applyTrustScoreUpdate(
+//       ctx,
+//       userId,
+//       1, // Positive bonus
+//       `Successfully completed gig: ${gig.title}`,
+//       "gig_completion",
+//     );
+
+//     // Add completion entry
+//     const completionEntry = {
+//       entryId: `${gigId}_${userId}_${Date.now()}`,
+//       timestamp: Date.now(),
+//       userId,
+//       userName: user.firstname || user.username,
+//       completionNotes: completionNotes || "Successfully completed",
+//       trustBonusApplied: 1,
+//     };
+
+//     const updatedCompletionHistory = [...completionHistory, completionEntry];
+
+//     await ctx.db.patch(gigId, {
+//       completionHistory: updatedCompletionHistory,
+//       updatedAt: Date.now(),
+//     });
+
+//     // Add to booking history
+//     const completionBookingEntry = {
+//       entryId: `${gigId}_${userId}_completed_${Date.now()}`,
+//       timestamp: Date.now(),
+//       userId,
+//       userRole: user.roleType || "musician",
+//       status: "completed" as const,
+//       gigType: gig.isClientBand ? "band" : "regular",
+//       actionBy: userId,
+//       actionFor: userId,
+//       reason: "Marked gig as completed",
+//       metadata: {
+//         gigTitle: gig.title,
+//         completionNotes: completionNotes || "",
+//         trustBonusApplied: 1,
+//       },
+//     };
+
+//     await ctx.db.patch(gigId, {
+//       bookingHistory: [...(gig.bookingHistory || []), completionBookingEntry],
+//     });
+
+//     // Notify the gig poster about completion
+//     try {
+//       await createNotificationInternal(ctx, {
+//         userDocumentId: gig.postedBy,
+//         type: "gig_completed",
+//         title: "🎉 Gig Completed!",
+//         message: `${user.firstname || user.username} marked "${gig.title}" as completed (+1 trust score)`,
+//         image: user.picture,
+//         actionUrl: `/gigs/${gigId}`,
+//         relatedUserDocumentId: userId,
+//         metadata: {
+//           gigId,
+//           gigTitle: gig.title,
+//           musicianId: userId,
+//           musicianName: user.firstname || user.username,
+//           trustBonus: 1,
+//         },
+//       });
+//     } catch (error) {
+//       console.error("Failed to create completion notification:", error);
+//     }
+
+//     return {
+//       success: true,
+//       trustBonusApplied: 1,
+//       completionEntry,
+//     };
+//   },
+// });
 export const selectMusicianFromInterested = mutation({
   args: {
     gigId: v.id("gigs"),

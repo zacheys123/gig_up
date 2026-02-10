@@ -1,4 +1,3 @@
-// app/hub/gigs/page.tsx - UPDATED WITH ALL UPGRADE BANNERS
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -108,7 +107,7 @@ const renderGigContent = (
       case "client":
         return <MyGigs user={user} />;
       case "involved": // ADD THIS NEW TAB
-        return <InvolvedGigs user={user} />; // ADD THIS
+        return <BookedGigs user={user} />; // ADD THIS
       case "booker":
         if (requiresUpgrade("applications")) {
           return (
@@ -131,7 +130,7 @@ const renderGigContent = (
       case "pending":
         return <PendingGig user={user} />;
       case "booked":
-        return <InvolvedGigs user={user} />;
+        return <BookedGigs user={user} />;
       case "all":
         return <AllGigs user={user} />;
       case "favorites":
@@ -152,7 +151,7 @@ const renderGigContent = (
         }
         return <GigInvites user={user} />;
       case "involved": // ADD THIS
-        return <InvolvedGigs user={user} />; // ADD THIS
+        return <BookedGigs user={user} />; // ADD THIS
       default:
         return <AllGigs user={user} />;
     }
@@ -166,7 +165,7 @@ const renderGigContent = (
       case "pre-booking":
         return <ClientPreBooking user={user} />;
       case "booked":
-        return <InvolvedGigs user={user} />;
+        return <BookedGigs user={user} />;
       case "reviewed":
         return <ReviewedGigs user={user} />;
       case "crew-management":
@@ -203,7 +202,7 @@ const renderGigContent = (
         }
         return <InstantGigs user={user} />;
       case "involved": // ADD THIS
-        return <InvolvedGigs user={user} />; // ADD THIS
+        return <BookedGigs user={user} />; // ADD THIS
       default:
         return <MyGigs user={user} />;
     }
@@ -250,7 +249,7 @@ const renderGigContent = (
       case "payments":
         return <PaymentHistory user={user} />;
       case "involved": // ADD THIS
-        return <InvolvedGigs user={user} />; // ADD THIS
+        return <BookedGigs user={user} />; // ADD THIS
       default:
         if (requiresUpgrade("applications")) {
           return (
@@ -282,7 +281,6 @@ const getUserGigTabs = (user: any) => {
         { id: "pending", label: "⏳ Pending" },
         { id: "booked", label: "✅ Booked" },
         { id: "all", label: "🎵 All Gigs" },
-        { id: "involved", label: "👥 My Involvements" }, // ADD THIS
         { id: "favorites", label: "⭐ Favorites" },
         { id: "saved", label: "💾 Saved" },
         { id: "payments", label: "💰 Payments" },
@@ -301,7 +299,6 @@ const getUserGigTabs = (user: any) => {
         { id: "my-gigs", label: "📋 My Gigs" },
         { id: "pre-booking", label: "👥 Pre-Booking" },
         { id: "booked", label: "✅ Booked" },
-        { id: "involved", label: "👥 My Involvements" }, // ADD THIS
         { id: "reviewed", label: "⭐ Reviewed" },
         {
           id: "invites",
@@ -346,7 +343,6 @@ const getUserGigTabs = (user: any) => {
             : "👥 Crew Management",
         },
         { id: "available-gigs", label: "🎵 Available Gigs" },
-        { id: "involved", label: "👥 My Involvements" }, // ADD THIS
         { id: "payments", label: "💰 Payments" },
       ],
       defaultTab: "applications",
@@ -359,7 +355,6 @@ const getUserGigTabs = (user: any) => {
       { id: "musician", label: "🎵 As Musician" },
       { id: "client", label: "🎯 As Client" },
       { id: "booker", label: "📊 As Booker" },
-      { id: "involved", label: "👥 My Involvements" }, // ADD THIS
     ],
     defaultTab: "musician",
   };
@@ -564,50 +559,156 @@ export default function GigsHub() {
         </div>
 
         {/* Tab Navigation - Hidden Scroll */}
-        <div className={cn("border-b mb-8", colors.border)}>
-          <nav
+        <div className="mb-8 w-full">
+          {/* Enhanced container with subtle gradient border */}
+          <div
             className={cn(
-              "-mb-px flex space-x-8 overflow-x-auto scrollbar-hide flex items-center",
-              colors.background,
+              "p-1.5 rounded-2xl",
+              "bg-gradient-to-r from-blue-50/30 via-transparent to-cyan-50/20",
+              "dark:from-blue-900/10 dark:via-transparent dark:to-cyan-900/10",
+              "border border-blue-100/30 dark:border-blue-800/20",
+              "backdrop-blur-sm",
             )}
           >
-            <Link
-              href="/community?tab=videos"
-              className={cn(
-                "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0",
-
-                "border-transparent text-gray-700 dark:text-gray-300  flex gap-1 items-center",
-
-                " hover:border-gray-300 hover:shadow-md hover:scale-105 transition-all duration-200 hover:opacity-80",
-                colors.warningHover,
-                colors.hoverBg,
-              )}
-            >
-              <Video /> Community
-            </Link>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
+            <div className="flex items-center w-full gap-2">
+              {/* Community section - Enhanced pill */}
+              <Link
+                href="/community?tab=videos"
                 className={cn(
-                  "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0",
-                  activeTab === tab.id
-                    ? cn("border-neutral-300 text-blue-600", colors.primary)
-                    : cn(
-                        "border-transparent text-gray-700 dark:text-gray-300 ",
-
-                        " hover:border-gray-300 hover:shadow-md hover:scale-105 transition-all duration-200 hover:opacity-80",
-                        colors.warningHover,
-                        colors.hoverBg,
-                      ),
+                  "flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300",
+                  "text-sm font-semibold min-w-[140px] group",
+                  "bg-gradient-to-r from-blue-100/80 to-cyan-100/80",
+                  "dark:from-blue-900/30 dark:to-cyan-900/20",
+                  "border-2 border-blue-200/50 dark:border-blue-700/30",
+                  "shadow-sm hover:shadow-md",
+                  isDarkMode
+                    ? "text-blue-300 hover:text-white"
+                    : "text-blue-700 hover:text-blue-900",
+                  "hover:scale-[1.02] active:scale-[0.98]",
+                  // Glow on hover
+                  "hover:shadow-blue-500/20 dark:hover:shadow-blue-600/20",
+                  // Border animation
+                  "hover:border-blue-300 dark:hover:border-blue-500",
+                  // Smooth transform
+                  "transform-gpu",
                 )}
               >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+                <Video
+                  size={18}
+                  className={cn(
+                    "transition-all duration-300",
+                    isDarkMode
+                      ? "text-blue-400 group-hover:text-blue-300 group-hover:scale-110"
+                      : "text-blue-600 group-hover:text-blue-800 group-hover:scale-110",
+                  )}
+                />
+                <span>Community</span>
+              </Link>
 
+              {/* Animated gradient divider */}
+              <div className="relative h-6 w-px mx-2">
+                <div
+                  className={cn(
+                    "absolute inset-0 w-px",
+                    "bg-gradient-to-b from-transparent via-blue-400/50 to-transparent",
+                    "dark:via-blue-500/50",
+                    "animate-gradient-y",
+                  )}
+                />
+              </div>
+
+              {/* Enhanced tabs with better animations */}
+              <div className="flex-1 flex gap-1.5">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => handleTabChange(tab.id)}
+                      className={cn(
+                        "flex-1 px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-400 relative",
+                        "group overflow-hidden transform-gpu",
+                        isActive
+                          ? cn(
+                              "shadow-lg shadow-blue-500/25 dark:shadow-blue-600/25",
+                              "bg-gradient-to-r from-blue-500 via-blue-500 to-cyan-500",
+                              "dark:from-blue-600 dark:via-blue-600 dark:to-cyan-600",
+                              "text-white font-semibold",
+                              "scale-[1.02]",
+                              "ring-2 ring-blue-400/30 dark:ring-blue-500/30",
+                              // Animated gradient background
+                              "before:absolute before:inset-0 before:rounded-full",
+                              "before:bg-gradient-to-r before:from-blue-400 before:via-blue-500 before:to-cyan-500",
+                              "before:dark:from-blue-500 before:dark:via-blue-600 before:dark:to-cyan-600",
+                              "before:opacity-0 before:hover:opacity-30",
+                              "before:transition-opacity before:duration-500",
+                              // Active dot with animation
+                              "after:absolute after:-top-1 after:-right-1 after:w-2.5 after:h-2.5",
+                              "after:rounded-full after:bg-white after:shadow-sm after:shadow-blue-500",
+                              "after:animate-pulse",
+                            )
+                          : cn(
+                              "hover:scale-[1.02] active:scale-[0.98]",
+                              isDarkMode
+                                ? "text-gray-400 hover:text-blue-300 hover:bg-blue-500/15"
+                                : "text-gray-600 hover:text-blue-700 hover:bg-blue-100/70",
+                              "border border-transparent hover:border-blue-300/40 dark:hover:border-blue-600/40",
+                              // Subtle hover gradient
+                              "before:absolute before:inset-0 before:rounded-full",
+                              "before:bg-gradient-to-r before:from-blue-500/0 before:via-blue-500/5 before:to-cyan-500/0",
+                              "before:dark:from-blue-500/10 before:dark:via-blue-500/5 before:dark:to-cyan-500/10",
+                              "before:opacity-0 before:group-hover:opacity-100",
+                              "before:transition-opacity before:duration-300",
+                            ),
+                      )}
+                      // Add smooth transition animation
+                      style={{
+                        transition: "all 400ms cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    >
+                      {/* Background animation for active state */}
+                      {isActive && (
+                        <span
+                          className={cn(
+                            "absolute inset-0 rounded-full -z-10",
+                            "animate-gradient-x",
+                            "bg-gradient-to-r from-blue-400/20 via-blue-500/30 to-cyan-400/20",
+                            "dark:from-blue-500/20 dark:via-blue-600/30 dark:to-cyan-500/20",
+                          )}
+                        />
+                      )}
+
+                      {/* Ripple effect on click */}
+                      <span
+                        className={cn(
+                          "absolute inset-0 rounded-full -z-20 opacity-0",
+                          "bg-gradient-to-r from-blue-400 to-cyan-400",
+                          "group-active:opacity-20 group-active:animate-ripple",
+                        )}
+                      />
+
+                      <span className="relative z-10">{tab.label}</span>
+
+                      {/* Hover indicator line */}
+                      {!isActive && (
+                        <span
+                          className={cn(
+                            "absolute bottom-1 left-1/4 right-1/4 h-0.5 rounded-full",
+                            "bg-gradient-to-r from-blue-400/0 via-blue-400/50 to-cyan-400/0",
+                            "dark:from-blue-500/0 dark:via-blue-500/50 dark:to-cyan-500/0",
+                            "opacity-0 group-hover:opacity-100",
+                            "transition-all duration-300",
+                            "group-hover:left-1/3 group-hover:right-1/3",
+                          )}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
         {/* Tab Content */}
         <div className={cn("rounded-lg", colors.card, colors.border, "border")}>
           {tabContent}

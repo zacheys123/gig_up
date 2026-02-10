@@ -48,6 +48,7 @@ import GigCard from "./gigs/GigCard";
 import { useRouter } from "next/navigation";
 import { useGigs } from "@/hooks/useAllGigs";
 import clsx from "clsx";
+import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
 export const MyGigs = ({ user }: { user: any }) => {
   const router = useRouter();
   const { colors, isDarkMode } = useThemeColors();
@@ -76,7 +77,7 @@ export const MyGigs = ({ user }: { user: any }) => {
     return {
       total: gigs.length,
       available: gigs.filter((gig) => {
-        const isAvailable = gig.isActive && !gig.isTaken && !gig.isPending;
+        const isAvailable = gig.isActive && !gig.isTaken;
         const noInterests =
           !gig.interestedUsers || gig.interestedUsers.length === 0;
         const noApplications =
@@ -102,7 +103,7 @@ export const MyGigs = ({ user }: { user: any }) => {
       }).length,
 
       withInterests: gigs.filter((gig) => {
-        const isAvailable = gig.isActive && !gig.isTaken && !gig.isPending;
+        const isAvailable = gig.isActive && !gig.isTaken;
         const hasInterests =
           gig.interestedUsers && gig.interestedUsers.length > 0;
         const noApplications =
@@ -112,7 +113,7 @@ export const MyGigs = ({ user }: { user: any }) => {
       }).length,
 
       withApplications: gigs.filter((gig) => {
-        const isAvailable = gig.isActive && !gig.isTaken && !gig.isPending;
+        const isAvailable = gig.isActive && !gig.isTaken;
         const hasApplications = gig.appliedUsers && gig.appliedUsers.length > 0;
 
         return isAvailable && hasApplications;
@@ -232,7 +233,7 @@ export const MyGigs = ({ user }: { user: any }) => {
       gigs.length > 0
         ? gigs.reduce((sum, gig) => sum + (gig.gigRating || 0), 0) / gigs.length
         : 0;
-
+    const clientsScore = user?.trustStars || 0;
     return {
       total: gigs.length,
       active: activeGigs.length,
@@ -240,6 +241,7 @@ export const MyGigs = ({ user }: { user: any }) => {
       pending: pendingGigs.length,
       totalEarnings,
       averageRating: parseFloat(averageRating.toFixed(1)),
+      clientsScore: clientsScore || 0,
     };
   }, [gigs]);
 
@@ -485,7 +487,12 @@ export const MyGigs = ({ user }: { user: any }) => {
                 gradientTo: isDarkMode ? "#9ca3af" : "#6b7280",
               },
               {
-                value: `${stats.averageRating}/5`,
+                value: (
+                  <TrustStarsDisplay
+                    trustStars={stats.clientsScore}
+                    size="sm"
+                  />
+                ),
                 label: "Avg. Rating",
                 icon: Sparkles,
                 color: "pink",

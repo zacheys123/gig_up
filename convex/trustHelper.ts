@@ -259,7 +259,7 @@ export const ROLE_THRESHOLD_OVERRIDES = {
 
 // Get user role
 function getUserRole(
-  user: Doc<"users">
+  user: Doc<"users">,
 ): keyof typeof ROLE_THRESHOLD_OVERRIDES {
   if (user.isMusician) {
     return user.roleType === "teacher" ? "teacher" : "musician";
@@ -284,7 +284,7 @@ function getFeatureThreshold(feature: FeatureName, user: Doc<"users">): number {
 // Check if feature is available for role
 function isFeatureAvailableForRole(
   feature: FeatureName,
-  user: Doc<"users">
+  user: Doc<"users">,
 ): boolean {
   const role = getUserRole(user);
   const roleThresholds = ROLE_THRESHOLD_OVERRIDES[role];
@@ -360,7 +360,7 @@ function calculateActivityPoints(user: Doc<"users">): number {
     const completedGigs = user.completedGigsCount || 0;
     points += Math.min(
       completedGigs * SCORING_CONSTANTS.GIGS_COMPLETED_PER_POINT,
-      SCORING_CONSTANTS.GIGS_COMPLETED_MAX
+      SCORING_CONSTANTS.GIGS_COMPLETED_MAX,
     );
 
     if (
@@ -381,7 +381,7 @@ function calculateActivityPoints(user: Doc<"users">): number {
 
     if (user.bookingHistory) {
       const successfulBookings = user.bookingHistory.filter(
-        (b: any) => b.status === "completed"
+        (b: any) => b.status === "completed",
       ).length;
       points += Math.min(successfulBookings * 0.5, 10);
     }
@@ -435,7 +435,7 @@ function calculateQualityPoints(user: Doc<"users">): number {
 // Calculate points for content section
 async function calculateContentPoints(
   ctx: any,
-  user: Doc<"users">
+  user: Doc<"users">,
 ): Promise<number> {
   let points = 0;
 
@@ -464,7 +464,7 @@ async function calculateContentPoints(
       const videoCount = userVideos.length;
       const totalVideoLikes = userVideos.reduce(
         (sum: number, video: any) => sum + (video.likes || 0),
-        0
+        0,
       );
 
       // Video presence
@@ -479,13 +479,14 @@ async function calculateContentPoints(
 
       // Profile video
       const hasProfileVideo = userVideos.some(
-        (video: any) => video.isProfileVideo
+        (video: any) => video.isProfileVideo,
       );
       if (hasProfileVideo) points += SCORING_CONSTANTS.PROFILE_VIDEO;
 
       // Gig videos
       const gigVideoCount = userVideos.filter(
-        (video: any) => video.videoType === "gig" || video.videoType === "promo"
+        (video: any) =>
+          video.videoType === "gig" || video.videoType === "promo",
       ).length;
       if (gigVideoCount >= 1) points += 1;
       if (gigVideoCount >= 3) points += 1;
@@ -599,7 +600,7 @@ function calculatePenalties(user: Doc<"users">): number {
   // 14. ACTION HISTORY PENALTY (Multiple offenses)
   if (user.actionHistory && user.actionHistory.length > 0) {
     const recentActions = user.actionHistory.filter(
-      (action: any) => Date.now() - action.timestamp < 90 * 24 * 60 * 60 * 1000
+      (action: any) => Date.now() - action.timestamp < 90 * 24 * 60 * 60 * 1000,
     ).length;
     penalty += Math.min(recentActions * 2, 8);
   }
@@ -662,7 +663,7 @@ export function checkProfileCompleteness(user: Doc<"users">): boolean {
 
 export async function calculateRoleSpecificScore(
   ctx: any,
-  user: Doc<"users">
+  user: Doc<"users">,
 ): Promise<number> {
   let totalScore = 0;
   let penalty = 0;
@@ -698,7 +699,7 @@ export async function calculateRoleSpecificScore(
 
 export async function calculateUserTrust(
   ctx: any,
-  userId: Id<"users">
+  userId: Id<"users">,
 ): Promise<TrustScoreResult> {
   const user = await ctx.db.get(userId);
   if (!user) throw new Error("User not found");
@@ -733,7 +734,7 @@ export async function calculateUserTrust(
       profileComplete: isProfileComplete,
       mpesaPhoneNumber: !!user.mpesaPhoneNumber,
       accountAgeDays: Math.floor(
-        (Date.now() - user._creationTime) / (1000 * 60 * 60 * 24)
+        (Date.now() - user._creationTime) / (1000 * 60 * 60 * 24),
       ),
       completedGigs: user.completedGigsCount || 0,
       avgRating: user.avgRating || 0,
@@ -747,7 +748,7 @@ export async function calculateUserTrust(
 
 export async function updateUserTrust(
   ctx: any,
-  userId: Id<"users">
+  userId: Id<"users">,
 ): Promise<TrustScoreResult> {
   const user = await ctx.db.get(userId);
   if (!user) throw new Error("User not found");
@@ -793,11 +794,48 @@ export async function updateUserTrust(
   await ctx.db.patch(userId, updates);
   return result;
 }
+// convex/helpers/trustScoreHelpers.ts (or wherever your updateUserTrust is)
 
+// Helper function to apply trust score penalty/bonus
+export const applyTrustScoreUpdate = async (
+  ctx: any,
+  userId: Id<"users">,
+  penaltyAmount: number,
+  reason: string,
+  context: string,
+): Promise<void> => {
+  const user = await ctx.db.get(userId);
+  if (!user) throw new Error("User not found");
+
+  // If penalty, also update cancellation count
+  if (penaltyAmount < 0) {
+    await ctx.db.patch(userId, {
+      cancellationCount: (user.cancellationCount || 0) + 1,
+      lastCancellation: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+
+  // Now update the trust score using your existing function
+  await updateUserTrust(ctx, userId);
+
+  // Log the penalty/bonus in trust history
+  const trustHistoryEntry = {
+    timestamp: Date.now(),
+    amount: penaltyAmount,
+    reason,
+    context,
+  };
+
+  await ctx.db.insert("trustScoreHistory", {
+    userId,
+    ...trustHistoryEntry,
+  });
+};
 // ========== LEGACY COMPATIBILITY ==========
 export async function calculateTrustScore(
   ctx: any,
-  userId: Id<"users">
+  userId: Id<"users">,
 ): Promise<TrustScoreResult> {
   return calculateUserTrust(ctx, userId);
 }
