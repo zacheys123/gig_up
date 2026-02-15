@@ -13,14 +13,16 @@ import {
   Briefcase,
   User,
   CheckCircle,
-  Filter,
   Clock,
   Search,
   Loader2,
   AlertCircle,
-  Bookmark,
   XCircle,
   AlertTriangle,
+  Star,
+  Music,
+  GraduationCap,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,17 +49,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-// Import date utilities
 import {
   getGigDateStatus,
   formatGigDate,
   calculateGigDateStats,
   formatTimeWithDuration,
 } from "../helper/getGigDateStatus";
-
-// Define proper types for Framer Motion variants
 import type { Variants } from "framer-motion";
-import { formatDistanceToNow, differenceInHours } from "date-fns";
+import { differenceInHours } from "date-fns";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -71,32 +70,18 @@ const containerVariants: Variants = {
 };
 
 const cardVariants: Variants = {
-  hidden: {
-    opacity: 0,
-    y: 20,
-    scale: 0.95,
-  },
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      type: "spring",
-      stiffness: 400,
-      damping: 30,
-    },
+    transition: { type: "spring", stiffness: 400, damping: 30 },
   },
   hover: {
     scale: 1.02,
-    transition: {
-      type: "spring",
-      stiffness: 400,
-      damping: 20,
-    },
+    transition: { type: "spring", stiffness: 400, damping: 20 },
   },
-  tap: {
-    scale: 0.98,
-  },
+  tap: { scale: 0.98 },
 };
 
 const statsVariants: Variants = {
@@ -118,11 +103,7 @@ const filterVariants: Variants = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
+    transition: { type: "spring", stiffness: 400, damping: 30 },
   },
 };
 
@@ -131,11 +112,7 @@ const emptyStateVariants: Variants = {
   visible: {
     opacity: 1,
     scale: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 25,
-    },
+    transition: { type: "spring", stiffness: 300, damping: 25 },
   },
 };
 
@@ -159,12 +136,11 @@ export const BookedGigs = ({ user }: { user: any }) => {
 
   const { colors, isDarkMode } = useThemeColors();
 
-  // Fetch all gigs from Convex
-  const allGigs = useQuery(api.controllers.gigs.getAllActiveGigs, {
+  const allGigs = useQuery(api.controllers.gigs.getAllGigs, {
+    includeInactive: true,
     limit: 100,
   });
 
-  // Define mutations
   const removeInterestFromGig = useMutation(
     api.controllers.gigs.removeInterestFromGig,
   );
@@ -172,58 +148,19 @@ export const BookedGigs = ({ user }: { user: any }) => {
     api.controllers.bookings.unbookFromBandRole,
   );
 
-  const timeSinceSaved = (dateString: string | Date): string => {
-    if (!dateString) return "Just now";
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-  };
-
-  // Check if cancellation is within 3 days
-  const isWithinThreeDayCancellation = (gig: any): boolean => {
-    const gigDate = new Date(gig.date);
-    const now = new Date();
-    const hoursDifference = differenceInHours(gigDate, now);
-    return hoursDifference < 72; // 3 days = 72 hours
-  };
-
-  // Check if it's last-minute cancellation (less than 24 hours)
-  const isLastMinuteCancellation = (gig: any): boolean => {
-    const gigDate = new Date(gig.date);
-    const now = new Date();
-    const hoursDifference = differenceInHours(gigDate, now);
-    return hoursDifference < 24;
-  };
-
-  // Calculate trust score penalty based on timing
-  const calculateTrustPenalty = (gig: any): number => {
-    const gigDate = new Date(gig.date);
-    const now = new Date();
-    const hoursDifference = differenceInHours(gigDate, now);
-
-    if (hoursDifference < 24) {
-      return 20; // Last-minute cancellation
-    } else if (hoursDifference < 72) {
-      return 10; // Within 3 days
-    }
-    return 0; // More than 3 days - NO PENALTY
-  };
-
-  // Filter ONLY gigs that are isTaken AND user is involved
+  // Filter booked gigs where user is involved
   const bookedGigs = useMemo(() => {
     if (!allGigs || !user) return [];
 
     const userId = user._id;
-
-    // Filter only isTaken gigs (all booked gigs)
     const takenGigs = allGigs.filter((gig: any) => gig.isTaken === true);
 
-    // Then filter where user is involved
     return takenGigs.filter((gig: any) => {
       const isClient = gig.postedBy === userId;
       const isBookedMusician = gig.bookedBy === userId;
       const isInBookedUsers =
         Array.isArray(gig.bookedUsers) && gig.bookedUsers.includes(userId);
 
-      // For band gigs, check if user is booked in any role
       let isBookedInBand = false;
       if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
         isBookedInBand = gig.bandCategory.some(
@@ -237,24 +174,22 @@ export const BookedGigs = ({ user }: { user: any }) => {
     });
   }, [allGigs, user]);
 
-  // Update filtered gigs with animations
+  // Apply filters
   const filteredGigs = useMemo(() => {
-    if (!bookedGigs || bookedGigs.length === 0) return [];
+    if (!bookedGigs.length) return [];
 
     let filtered = [...bookedGigs];
 
-    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (gig: any) =>
           gig.title.toLowerCase().includes(term) ||
-          gig.description.toLowerCase().includes(term) ||
-          (gig.location && gig.location.toLowerCase().includes(term)),
+          gig.description?.toLowerCase().includes(term) ||
+          gig.location?.toLowerCase().includes(term),
       );
     }
 
-    // Apply view filter (client vs musician)
     if (viewFilter !== "all" && user) {
       const userId = user._id;
       filtered = filtered.filter((gig: any) => {
@@ -281,11 +216,9 @@ export const BookedGigs = ({ user }: { user: any }) => {
       });
     }
 
-    // Apply date filter using gig date AND time
     if (dateFilter !== "all") {
       filtered = filtered.filter((gig: any) => {
         const dateStatus = getGigDateStatus(gig.date, gig.time);
-
         if (dateFilter === "upcoming") return !dateStatus.exactPast;
         if (dateFilter === "past") return dateStatus.exactPast;
         if (dateFilter === "today") return dateStatus.isToday;
@@ -293,7 +226,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
       });
     }
 
-    // Apply payment filter
     if (paymentFilter !== "all") {
       filtered = filtered.filter((gig: any) => {
         if (paymentFilter === "paid") return gig.isActive === false;
@@ -302,40 +234,31 @@ export const BookedGigs = ({ user }: { user: any }) => {
       });
     }
 
-    // Sort by date (upcoming first, then past)
     return filtered.sort((a: any, b: any) => {
       const statusA = getGigDateStatus(a.date, a.time);
       const statusB = getGigDateStatus(b.date, b.time);
 
-      // Upcoming gigs first
       if (!statusA.exactPast && statusB.exactPast) return -1;
       if (statusA.exactPast && !statusB.exactPast) return 1;
 
-      // Then sort by date (closest first for upcoming, most recent first for past)
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
 
       if (!statusA.exactPast) {
-        // For upcoming: earliest date first
         return dateA - dateB;
       } else {
-        // For past: most recent first
         return dateB - dateA;
       }
     });
   }, [bookedGigs, searchTerm, viewFilter, dateFilter, paymentFilter, user]);
 
-  // Handle initial load animation
   useEffect(() => {
     if (allGigs && user) {
-      const timer = setTimeout(() => {
-        setIsInitialLoad(false);
-      }, 300);
+      const timer = setTimeout(() => setIsInitialLoad(false), 300);
       return () => clearTimeout(timer);
     }
   }, [allGigs, user]);
 
-  // Trigger animation when filters change
   useEffect(() => {
     setFilterAnimationKey((prev) => prev + 1);
   }, [searchTerm, viewFilter, dateFilter, paymentFilter]);
@@ -344,24 +267,38 @@ export const BookedGigs = ({ user }: { user: any }) => {
     gig: any,
   ): {
     role: string;
+    roleIcon: React.ReactNode;
     badgeColor: string;
     icon: React.ReactNode;
     isPaid: boolean;
     paymentStatus: "paid" | "pending";
     canCancel: boolean;
     cancellationType: "regular" | "band" | "client";
+    counterpartyInfo?: {
+      id: string;
+      name: string;
+      picture?: string;
+      role: string;
+    };
   } => {
     const userId = user._id;
     const isPaid = gig.isActive === false;
     const paymentStatus = isPaid ? "paid" : "pending";
-
-    // Determine if user can cancel (only for upcoming gigs)
     const dateStatus = getGigDateStatus(gig.date, gig.time);
     const canCancel = !dateStatus.exactPast;
 
+    // User is the client (posted the gig)
     if (gig.postedBy === userId) {
+      // Find the booked musician info
+      let bookedMusician = null;
+      if (gig.bookedBy) {
+        // Find musician from allGigs or pass through from query
+        bookedMusician = gig.bookedMusician || null;
+      }
+
       return {
         role: "Client",
+        roleIcon: <Briefcase className="w-4 h-4" />,
         badgeColor: isPaid
           ? "bg-blue-100 text-blue-800 border-blue-300"
           : "bg-blue-100 text-blue-800 border-blue-200",
@@ -370,12 +307,22 @@ export const BookedGigs = ({ user }: { user: any }) => {
         paymentStatus,
         canCancel,
         cancellationType: "client",
+        counterpartyInfo: bookedMusician
+          ? {
+              id: gig.bookedBy,
+              name: bookedMusician.firstname || bookedMusician.username,
+              picture: bookedMusician.picture,
+              role: "Booked Musician",
+            }
+          : undefined,
       };
     }
 
+    // User is the booked musician (regular gig)
     if (gig.bookedBy === userId) {
       return {
         role: "Booked Musician",
+        roleIcon: <User className="w-4 h-4" />,
         badgeColor: isPaid
           ? "bg-green-100 text-green-800 border-green-300"
           : "bg-green-100 text-green-800 border-green-200",
@@ -384,12 +331,22 @@ export const BookedGigs = ({ user }: { user: any }) => {
         paymentStatus,
         canCancel,
         cancellationType: "regular",
+        counterpartyInfo: gig.poster
+          ? {
+              id: gig.postedBy,
+              name: gig.poster.firstname || "Client",
+              picture: gig.poster.picture,
+              role: "Client",
+            }
+          : undefined,
       };
     }
 
+    // User is in bookedUsers array (band member)
     if (Array.isArray(gig.bookedUsers) && gig.bookedUsers.includes(userId)) {
       return {
         role: "Band Member",
+        roleIcon: <Users className="w-4 h-4" />,
         badgeColor: isPaid
           ? "bg-purple-100 text-purple-800 border-purple-300"
           : "bg-purple-100 text-purple-800 border-purple-200",
@@ -398,10 +355,18 @@ export const BookedGigs = ({ user }: { user: any }) => {
         paymentStatus,
         canCancel,
         cancellationType: gig.isClientBand ? "band" : "regular",
+        counterpartyInfo: gig.poster
+          ? {
+              id: gig.postedBy,
+              name: gig.poster.firstname || "Client",
+              picture: gig.poster.picture,
+              role: "Client",
+            }
+          : undefined,
       };
     }
 
-    // Check for band role booking
+    // Check for specific band role
     if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
       for (const role of gig.bandCategory) {
         if (
@@ -409,13 +374,22 @@ export const BookedGigs = ({ user }: { user: any }) => {
           role.bookedUsers.includes(userId)
         ) {
           return {
-            role: `${role.role}`,
+            role: role.role,
+            roleIcon: <Music className="w-4 h-4" />,
             badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
             icon: <Users className="w-4 h-4" />,
             isPaid,
             paymentStatus,
             canCancel,
             cancellationType: "band",
+            counterpartyInfo: gig.poster
+              ? {
+                  id: gig.postedBy,
+                  name: gig.poster.firstname || "Client",
+                  picture: gig.poster.picture,
+                  role: "Client",
+                }
+              : undefined,
           };
         }
       }
@@ -423,6 +397,7 @@ export const BookedGigs = ({ user }: { user: any }) => {
 
     return {
       role: "Booked",
+      roleIcon: <CheckCircle className="w-4 h-4" />,
       badgeColor: "bg-gray-100 text-gray-800 border-gray-200",
       icon: <CheckCircle className="w-4 h-4" />,
       isPaid,
@@ -432,7 +407,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
     };
   };
 
-  // Get gig type
   const getGigType = (gig: any): string => {
     if (gig.isClientBand) {
       const bandRoles = gig.bandCategory?.length || 0;
@@ -446,7 +420,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
     return "Regular Gig";
   };
 
-  // Calculate stats with payment status
   const stats = useMemo(() => {
     if (!bookedGigs.length) return null;
 
@@ -470,8 +443,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
     }).length;
 
     const dateStats = calculateGigDateStats(bookedGigs);
-
-    // Payment stats
     const paidGigs = bookedGigs.filter((g: any) => g.isActive === false).length;
     const pendingPaymentGigs = bookedGigs.filter(
       (g: any) => g.isActive === true,
@@ -491,7 +462,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
     };
   }, [bookedGigs, user]);
 
-  // Handle cancellation based on user role and gig type
   const handleCancelBooking = async () => {
     if (!selectedGig || !cancellationReason.trim()) {
       toast.error("Please provide a cancellation reason");
@@ -501,19 +471,11 @@ export const BookedGigs = ({ user }: { user: any }) => {
     setIsCancelling(true);
     try {
       const userRole = getUserRoleInGig(selectedGig);
-      const within3Days = isWithinThreeDayCancellation(selectedGig);
-      const lastMinute = isLastMinuteCancellation(selectedGig);
-      const penaltyAmount = calculateTrustPenalty(selectedGig);
-
-      let result;
+      const warning = getCancellationWarning(selectedGig);
 
       if (userRole.cancellationType === "client") {
-        // Client cancelling the entire gig
         toast.info("Client cancellation logic would go here");
-        // You would need a separate mutation for client cancellation
       } else if (userRole.cancellationType === "band") {
-        // Musician cancelling from a band gig
-        // Find the band role index for this user
         const roleIndex = selectedGig.bandCategory?.findIndex(
           (role: any) =>
             Array.isArray(role.bookedUsers) &&
@@ -521,7 +483,7 @@ export const BookedGigs = ({ user }: { user: any }) => {
         );
 
         if (roleIndex !== -1 && roleIndex !== undefined) {
-          result = await unbookFromBandRole({
+          await unbookFromBandRole({
             gigId: selectedGig._id,
             userId: user._id,
             bandRoleIndex: roleIndex,
@@ -533,8 +495,7 @@ export const BookedGigs = ({ user }: { user: any }) => {
           throw new Error("Could not find band role");
         }
       } else {
-        // Regular musician cancelling from a regular gig
-        result = await removeInterestFromGig({
+        await removeInterestFromGig({
           gigId: selectedGig._id,
           userId: user._id,
           reason: cancellationReason,
@@ -542,19 +503,14 @@ export const BookedGigs = ({ user }: { user: any }) => {
         });
       }
 
-      // Show appropriate message based on penalty
-      if (within3Days && penaltyAmount > 0) {
-        toast.warning(
-          `Booking cancelled. Trust score penalty applied: -${penaltyAmount} points${
-            lastMinute ? " (last-minute cancellation)" : " (within 3 days)"
-          }`,
-          { duration: 5000 },
-        );
+      if (warning.severity !== "none") {
+        toast.warning(`Booking cancelled. ${warning.message}`, {
+          duration: 5000,
+        });
       } else {
         toast.success("Booking cancelled. No trust score penalty applied.");
       }
 
-      // Reset form and close dialog
       setCancellationReason("");
       setSelectedGig(null);
       setCancelDialogOpen(false);
@@ -568,29 +524,65 @@ export const BookedGigs = ({ user }: { user: any }) => {
     }
   };
 
-  // Open cancellation dialog
   const openCancelDialog = (gig: any) => {
-    const userRole = getUserRoleInGig(gig);
-    const within3Days = isWithinThreeDayCancellation(gig);
-    const lastMinute = isLastMinuteCancellation(gig);
-    const penaltyAmount = calculateTrustPenalty(gig);
-
+    const warning = getCancellationWarning(gig);
     setSelectedGig(gig);
     setCancellationReason("");
     setCancelDialogOpen(true);
 
-    // Show warning if within 3 days
-    if (within3Days) {
+    if (warning.severity !== "none") {
       setTimeout(() => {
-        toast.warning(
-          `⚠️ Cancelling within ${lastMinute ? "24 hours" : "3 days"} will result in a trust score penalty of -${penaltyAmount} points`,
-          { duration: 6000 },
-        );
+        toast.warning(warning.message, { duration: 6000 });
       }, 300);
     }
   };
 
-  // Get cancellation button label based on user role
+  const getCancellationWarning = (gig: any) => {
+    const hoursUntil = differenceInHours(new Date(gig.date), new Date());
+
+    if (hoursUntil < 24) {
+      return {
+        severity: "high",
+        message:
+          "Last-minute cancellation will significantly impact your trust score",
+        description:
+          "Cancelling within 24 hours will be recorded as a last-minute cancellation and affect your reliability score",
+        color: "text-red-500",
+        bgColor: isDarkMode
+          ? "bg-red-950/30 border-red-800/50"
+          : "bg-red-50 border-red-200",
+        icon: <AlertTriangle className="w-4 h-4" />,
+        warning: true,
+      };
+    } else if (hoursUntil < 72) {
+      return {
+        severity: "medium",
+        message: "Cancelling within 3 days will affect your trust score",
+        description:
+          "Cancelling within 3 days will be recorded and may impact future booking opportunities",
+        color: "text-yellow-500",
+        bgColor: isDarkMode
+          ? "bg-yellow-950/30 border-yellow-800/50"
+          : "bg-yellow-50 border-yellow-200",
+        icon: <AlertTriangle className="w-4 h-4" />,
+        warning: true,
+      };
+    }
+
+    return {
+      severity: "none",
+      message: "No trust score penalty",
+      description:
+        "Cancelling more than 3 days in advance has no impact on your trust score",
+      color: "text-green-500",
+      bgColor: isDarkMode
+        ? "bg-green-950/30 border-green-800/50"
+        : "bg-green-50 border-green-200",
+      icon: <CheckCircle className="w-4 h-4" />,
+      warning: false,
+    };
+  };
+
   const getCancelButtonLabel = (gig: any) => {
     const userRole = getUserRoleInGig(gig);
 
@@ -603,40 +595,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
     }
   };
 
-  // Get cancellation penalty info
-  const getCancellationPenaltyInfo = (gig: any) => {
-    const within3Days = isWithinThreeDayCancellation(gig);
-    const lastMinute = isLastMinuteCancellation(gig);
-    const penaltyAmount = calculateTrustPenalty(gig);
-
-    if (!within3Days || penaltyAmount === 0) {
-      return {
-        penalty: 0,
-        description:
-          "No trust score penalty (cancelled more than 3 days in advance)",
-        color: "text-green-500",
-        warning: false,
-      };
-    }
-
-    if (lastMinute) {
-      return {
-        penalty: penaltyAmount,
-        description: `Significant penalty: -${penaltyAmount} points (last-minute cancellation)`,
-        color: "text-red-500",
-        warning: true,
-      };
-    }
-
-    return {
-      penalty: penaltyAmount,
-      description: `Moderate penalty: -${penaltyAmount} points (within 3 days)`,
-      color: "text-yellow-500",
-      warning: true,
-    };
-  };
-
-  // Loading skeleton
   if (isInitialLoad && (!allGigs || !user)) {
     return (
       <div className="p-6">
@@ -652,7 +610,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
           <Skeleton className="h-4 w-96 max-w-full" />
         </motion.div>
 
-        {/* Animated skeleton stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
           {[...Array(8)].map((_, i) => (
             <motion.div
@@ -666,7 +623,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
           ))}
         </div>
 
-        {/* Animated skeleton filters */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           {[...Array(5)].map((_, i) => (
             <motion.div
@@ -680,7 +636,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
           ))}
         </div>
 
-        {/* Animated skeleton cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <motion.div
@@ -697,7 +652,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
     );
   }
 
-  // Data loaded but no gigs
   if (bookedGigs.length === 0) {
     return (
       <motion.div
@@ -827,7 +781,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
         animate="visible"
         className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4"
       >
-        {/* Search */}
         <motion.div variants={filterVariants}>
           <div className="relative">
             <Input
@@ -840,7 +793,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
           </div>
         </motion.div>
 
-        {/* Role filter */}
         <motion.div variants={filterVariants}>
           <Select
             value={viewFilter}
@@ -857,7 +809,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
           </Select>
         </motion.div>
 
-        {/* Date filter */}
         <motion.div variants={filterVariants}>
           <Select
             value={dateFilter}
@@ -875,7 +826,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
           </Select>
         </motion.div>
 
-        {/* Payment status filter */}
         <motion.div variants={filterVariants}>
           <Select
             value={paymentFilter}
@@ -892,7 +842,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
           </Select>
         </motion.div>
 
-        {/* Clear filters button */}
         <AnimatePresence>
           {(searchTerm ||
             viewFilter !== "all" ||
@@ -935,8 +884,7 @@ export const BookedGigs = ({ user }: { user: any }) => {
             const userRole = getUserRoleInGig(gig);
             const dateStatus = getGigDateStatus(gig.date, gig.time);
             const gigType = getGigType(gig);
-            const isAvailable = gig.isActive && !gig.isTaken;
-            const penaltyInfo = getCancellationPenaltyInfo(gig);
+            const cancellationWarning = getCancellationWarning(gig);
             const canCancel = userRole.canCancel && !dateStatus.exactPast;
             const cancelButtonLabel = getCancelButtonLabel(gig);
 
@@ -958,187 +906,271 @@ export const BookedGigs = ({ user }: { user: any }) => {
               >
                 <Card
                   className={cn(
-                    "h-full transition-all duration-200 border-2 relative hover:shadow-lg",
+                    "h-full transition-all duration-300 relative overflow-hidden group",
                     isDarkMode
-                      ? dateStatus.exactPast
-                        ? "border-gray-700/30 hover:border-gray-600/50 bg-gray-900/30"
-                        : isAvailable
-                          ? "border-green-700/30 hover:border-green-600/50 bg-gray-900/50"
-                          : "border-blue-700/30 hover:border-blue-600/50 bg-gray-900/30"
-                      : dateStatus.exactPast
-                        ? "border-gray-200 hover:border-gray-300 bg-gray-50/50"
-                        : isAvailable
-                          ? "border-green-200 hover:border-green-300 bg-white"
-                          : "border-blue-200 hover:border-blue-300 bg-white",
-                    !gig.isActive && "opacity-90",
+                      ? "bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800/50 hover:border-gray-700/80"
+                      : "bg-gradient-to-br from-white via-white to-gray-50/50 border-gray-200/80 hover:border-gray-300/80",
+                    !dateStatus.exactPast &&
+                      !dateStatus.isToday &&
+                      isDarkMode &&
+                      "hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]",
+                    !dateStatus.exactPast &&
+                      !dateStatus.isToday &&
+                      !isDarkMode &&
+                      "hover:shadow-[0_0_30px_rgba(59,130,246,0.1)]",
+                    dateStatus.isToday &&
+                      isDarkMode &&
+                      "hover:shadow-[0_0_30px_rgba(34,197,94,0.15)]",
+                    dateStatus.isToday &&
+                      !isDarkMode &&
+                      "hover:shadow-[0_0_30px_rgba(34,197,94,0.1)]",
+                    dateStatus.exactPast &&
+                      isDarkMode &&
+                      "hover:shadow-[0_0_30px_rgba(107,114,128,0.1)]",
+                    dateStatus.exactPast &&
+                      !isDarkMode &&
+                      "hover:shadow-[0_0_30px_rgba(107,114,128,0.05)]",
+                    !gig.isActive && "opacity-80",
                   )}
                 >
-                  {/* Cancellation warning if within 3 days */}
-                  {canCancel && penaltyInfo.warning && (
-                    <div className="absolute top-2 right-2 z-10">
+                  {/* Animated gradient overlay */}
+                  <motion.div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{
+                      background: isDarkMode
+                        ? "radial-gradient(circle at 50% 0%, rgba(59,130,246,0.1), transparent 70%)"
+                        : "radial-gradient(circle at 50% 0%, rgba(59,130,246,0.05), transparent 70%)",
+                    }}
+                  />
+
+                  {/* Top gradient bar */}
+                  <div
+                    className={cn(
+                      "absolute top-0 left-0 right-0 h-1",
+                      dateStatus.exactPast
+                        ? isDarkMode
+                          ? "bg-gradient-to-r from-gray-700 to-gray-600"
+                          : "bg-gradient-to-r from-gray-400 to-gray-300"
+                        : dateStatus.isToday
+                          ? isDarkMode
+                            ? "bg-gradient-to-r from-green-600 to-green-500"
+                            : "bg-gradient-to-r from-green-500 to-green-400"
+                          : isDarkMode
+                            ? "bg-gradient-to-r from-blue-600 to-blue-500"
+                            : "bg-gradient-to-r from-blue-500 to-blue-400",
+                    )}
+                  />
+
+                  {/* Cancellation warning badge */}
+                  {canCancel && cancellationWarning.severity !== "none" && (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 20,
+                      }}
+                      className="absolute -top-1 -right-1 z-20"
+                    >
                       <div
                         className={cn(
-                          "px-2 py-1 rounded-full text-xs font-medium",
-                          isDarkMode
-                            ? "bg-red-900/50 text-red-300 border border-red-700/50"
-                            : "bg-red-100 text-red-700 border border-red-300",
+                          "px-3 py-1.5 rounded-bl-xl rounded-tr-xl text-xs font-bold flex items-center gap-1.5 shadow-lg",
+                          cancellationWarning.severity === "high"
+                            ? isDarkMode
+                              ? "bg-gradient-to-r from-red-600 to-red-500 text-white border border-red-400/30"
+                              : "bg-gradient-to-r from-red-500 to-red-400 text-white border border-red-300/50"
+                            : isDarkMode
+                              ? "bg-gradient-to-r from-yellow-600 to-yellow-500 text-white border border-yellow-400/30"
+                              : "bg-gradient-to-r from-yellow-500 to-yellow-400 text-white border border-yellow-300/50",
                         )}
                       >
-                        ⚠️ Penalty
+                        {cancellationWarning.icon}
+                        <span>
+                          {cancellationWarning.severity === "high"
+                            ? "URGENT"
+                            : "WARNING"}
+                        </span>
                       </div>
-                    </div>
+                    </motion.div>
                   )}
 
-                  {/* Bookmark indicator - only if it's a saved gig */}
-                  {gig.savedAt && (
-                    <div className="absolute top-4 right-4">
-                      <Bookmark className="w-5 h-5 text-blue-500 fill-blue-500" />
-                    </div>
-                  )}
-
-                  {/* Saved time indicator */}
-                  {gig.savedAt && (
-                    <div className="absolute top-4 left-4">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-xs backdrop-blur-sm",
-                          isDarkMode
-                            ? "bg-gray-800/80 text-gray-300 border-gray-700"
-                            : "bg-white/90 text-gray-700 border-gray-300",
-                        )}
-                      >
-                        {timeSinceSaved(gig.savedAt || gig.updatedAt)}
-                      </Badge>
-                    </div>
-                  )}
-
-                  {/* Poster info */}
-                  {gig.poster && (
-                    <div className="absolute top-10 left-4">
+                  {/* Counterparty Info (shows the other person involved) */}
+                  {userRole.counterpartyInfo && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="absolute top-4 left-4 z-10"
+                    >
                       <div className="flex items-center gap-2">
-                        {gig.poster.picture && (
-                          <img
-                            src={gig.poster.picture}
-                            alt={gig.poster.firstname}
-                            className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
-                          />
+                        {userRole.counterpartyInfo.picture ? (
+                          <div className="relative">
+                            <img
+                              src={userRole.counterpartyInfo.picture}
+                              alt={userRole.counterpartyInfo.name}
+                              className={cn(
+                                "w-8 h-8 rounded-full ring-2 ring-offset-2 ring-offset-transparent",
+                                isDarkMode
+                                  ? "ring-blue-500/50"
+                                  : "ring-blue-500/30",
+                              )}
+                            />
+                            <div
+                              className={cn(
+                                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2",
+                                isDarkMode ? "ring-gray-900" : "ring-white",
+                                userRole.role === "Client"
+                                  ? "bg-purple-500"
+                                  : "bg-green-500",
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-full ring-2 ring-offset-2 ring-offset-transparent flex items-center justify-center",
+                              isDarkMode
+                                ? "bg-gray-800 ring-blue-500/50"
+                                : "bg-gray-200 ring-blue-500/30",
+                            )}
+                          >
+                            {userRole.role === "Client" ? (
+                              <Briefcase className="w-4 h-4 text-gray-500" />
+                            ) : (
+                              <User className="w-4 h-4 text-gray-500" />
+                            )}
+                          </div>
                         )}
                         <Badge
                           variant="outline"
                           className={cn(
-                            "text-xs backdrop-blur-sm",
+                            "text-xs font-medium backdrop-blur-md border",
                             isDarkMode
-                              ? "bg-gray-800/80 text-gray-300 border-gray-700"
-                              : "bg-white/90 text-gray-700 border-gray-300",
+                              ? "bg-gray-900/70 text-gray-200 border-gray-700/50"
+                              : "bg-white/70 text-gray-700 border-gray-300/50",
                           )}
                         >
-                          {gig.poster.firstname}
+                          <span className="flex items-center gap-1">
+                            {userRole.role === "Client" ? (
+                              <Building2 className="w-3 h-3" />
+                            ) : (
+                              <Music className="w-3 h-3" />
+                            )}
+                            {userRole.counterpartyInfo.name}
+                          </span>
                         </Badge>
                       </div>
-                    </div>
+                    </motion.div>
                   )}
 
                   <CardHeader
                     className={cn(
-                      gig.savedAt ? "pt-14" : "pt-6",
-                      canCancel && penaltyInfo.warning ? "pb-2" : "",
+                      "pt-14 pb-4 px-5",
+                      canCancel && cancellationWarning.warning ? "pt-16" : "",
                     )}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Role badge */}
                         <Badge
                           className={cn(
+                            "flex items-center gap-1.5 px-3 py-1 border shadow-sm",
                             userRole.badgeColor,
-                            "flex items-center gap-1 border",
-                            isDarkMode && userRole.badgeColor.includes("bg-")
-                              ? userRole.badgeColor.replace(
-                                  "bg-",
-                                  "bg-gray-800/30 dark:",
-                                )
-                              : "",
+                            isDarkMode && {
+                              "bg-blue-500/20 text-blue-300 border-blue-500/30":
+                                userRole.role === "Client",
+                              "bg-green-500/20 text-green-300 border-green-500/30":
+                                userRole.role === "Booked Musician",
+                              "bg-purple-500/20 text-purple-300 border-purple-500/30":
+                                userRole.role === "Band Member",
+                            },
                           )}
                         >
-                          {userRole.icon}
-                          {userRole.role}
+                          {userRole.roleIcon}
+                          <span>{userRole.role}</span>
                         </Badge>
 
                         {/* Payment status badge */}
-                        {gig.isActive === false ? (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 500 }}
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            delay: 0.1,
+                          }}
+                        >
+                          <Badge
+                            className={cn(
+                              "px-3 py-1 border-0 shadow-sm",
+                              gig.isActive === false
+                                ? isDarkMode
+                                  ? "bg-gradient-to-r from-green-600/20 to-green-500/20 text-green-300"
+                                  : "bg-gradient-to-r from-green-100 to-green-50 text-green-700"
+                                : isDarkMode
+                                  ? "bg-gradient-to-r from-yellow-600/20 to-yellow-500/20 text-yellow-300"
+                                  : "bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-700",
+                            )}
                           >
-                            <Badge
-                              className={cn(
-                                isDarkMode
-                                  ? "bg-green-900/30 text-green-400 border-green-800"
-                                  : "bg-green-100 text-green-800 border-green-300",
-                              )}
-                            >
-                              ✅ Paid
-                            </Badge>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 500 }}
-                          >
-                            <Badge
-                              className={cn(
-                                isDarkMode
-                                  ? "bg-yellow-900/30 text-yellow-400 border-yellow-800"
-                                  : "bg-yellow-100 text-yellow-800 border-yellow-300",
-                              )}
-                            >
-                              ⏳ Pending
-                            </Badge>
-                          </motion.div>
-                        )}
+                            {gig.isActive === false ? (
+                              <span className="flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Paid
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                Pending
+                              </span>
+                            )}
+                          </Badge>
+                        </motion.div>
                       </div>
 
                       {/* Date status badge */}
                       <Badge
                         variant="outline"
                         className={cn(
-                          "border-2",
+                          "px-3 py-1 border-2 font-medium backdrop-blur-sm",
                           dateStatus.exactPast
                             ? isDarkMode
-                              ? "bg-gray-800 text-gray-400 border-gray-700"
-                              : "bg-gray-100 text-gray-800 border-gray-300"
+                              ? "bg-gray-800/50 text-gray-400 border-gray-700"
+                              : "bg-gray-100/80 text-gray-600 border-gray-300"
                             : dateStatus.isToday
                               ? isDarkMode
-                                ? "bg-green-900/30 text-green-400 border-green-800"
-                                : "bg-green-100 text-green-800 border-green-300"
+                                ? "bg-green-500/20 text-green-300 border-green-500/30"
+                                : "bg-green-100/80 text-green-700 border-green-300"
                               : isDarkMode
-                                ? "bg-blue-900/30 text-blue-400 border-blue-800"
-                                : "bg-blue-100 text-blue-800 border-blue-300",
+                                ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                                : "bg-blue-100/80 text-blue-700 border-blue-300",
                         )}
                       >
                         {dateStatus.exactPast ? (
-                          <>
-                            <Clock className="w-3 h-3 mr-1" />
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
                             {dateStatus.isToday ? "Completed" : "Past"}
-                          </>
+                          </span>
                         ) : dateStatus.isToday ? (
-                          <>
-                            <Calendar className="w-3 h-3 mr-1" />
+                          <span className="flex items-center gap-1">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                            </span>
                             Today
-                          </>
+                          </span>
                         ) : (
-                          <>
-                            <Calendar className="w-3 h-3 mr-1" />
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
                             Upcoming
-                          </>
+                          </span>
                         )}
                       </Badge>
                     </div>
 
                     <CardTitle
                       className={cn(
-                        "text-lg font-semibold line-clamp-1",
+                        "text-xl font-bold line-clamp-1 mb-1",
                         isDarkMode ? "text-white" : "text-gray-900",
                       )}
                     >
@@ -1147,169 +1179,224 @@ export const BookedGigs = ({ user }: { user: any }) => {
 
                     <motion.div
                       className={cn(
-                        "flex items-center text-sm mt-1",
-                        isDarkMode ? "text-gray-400" : "text-muted-foreground",
+                        "flex items-center text-sm",
+                        isDarkMode ? "text-gray-400" : "text-gray-600",
                       )}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.1 }}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
                     >
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {formatGigDate(gig.date, gig.time)}
+                      <Calendar className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                      <span className="truncate">
+                        {formatGigDate(gig.date, gig.time)}
+                      </span>
                     </motion.div>
 
                     {(dateStatus.startTime || dateStatus.endTime) && (
-                      <div
+                      <motion.div
                         className={cn(
                           "flex items-center text-xs mt-1",
-                          isDarkMode ? "text-gray-500" : "text-gray-600",
+                          isDarkMode ? "text-gray-500" : "text-gray-500",
                         )}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.25 }}
                       >
-                        <Clock className="w-3 h-3 mr-1" />
-                        {dateStatus.startTime &&
-                          formatTimeWithDuration(
-                            dateStatus.startTime,
-                            dateStatus.durationFrom,
-                          )}
-                        {dateStatus.endTime &&
-                          ` - ${formatTimeWithDuration(dateStatus.endTime, dateStatus.durationTo)}`}
-                      </div>
+                        <Clock className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                        <span>
+                          {dateStatus.startTime &&
+                            formatTimeWithDuration(
+                              dateStatus.startTime,
+                              dateStatus.durationFrom,
+                            )}
+                          {dateStatus.endTime &&
+                            ` - ${formatTimeWithDuration(
+                              dateStatus.endTime,
+                              dateStatus.durationTo,
+                            )}`}
+                        </span>
+                      </motion.div>
                     )}
 
                     <Badge
                       variant="outline"
                       className={cn(
-                        "mt-2 w-fit",
+                        "mt-3 w-fit px-3 py-1 text-xs font-medium",
                         isDarkMode
                           ? gig.isClientBand
-                            ? "border-purple-800 text-purple-400 bg-purple-900/20"
-                            : "border-gray-700 text-gray-400 bg-gray-800/20"
+                            ? "bg-purple-500/10 text-purple-300 border-purple-500/30"
+                            : "bg-gray-800/50 text-gray-400 border-gray-700"
                           : gig.isClientBand
-                            ? "border-purple-300 text-purple-700 bg-purple-50"
-                            : "border-gray-300 text-gray-700",
+                            ? "bg-purple-50 text-purple-700 border-purple-300"
+                            : "bg-gray-100 text-gray-600 border-gray-300",
                       )}
                     >
-                      {gig.isClientBand && <Users className="w-3 h-3 mr-1" />}
-                      {gigType}
+                      <span className="flex items-center gap-1.5">
+                        {gig.isClientBand && <Users className="w-3 h-3" />}
+                        {gigType}
+                      </span>
                     </Badge>
                   </CardHeader>
 
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center text-sm">
+                  <CardContent className="px-5 pb-5">
+                    <div className="space-y-4">
+                      {/* Location */}
+                      <motion.div
+                        className="flex items-start text-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                      >
                         <MapPin
                           className={cn(
-                            "w-4 h-4 mr-2 flex-shrink-0",
-                            isDarkMode ? "text-gray-500" : "text-gray-500",
+                            "w-4 h-4 mr-2 mt-0.5 flex-shrink-0",
+                            isDarkMode ? "text-gray-500" : "text-gray-400",
                           )}
                         />
                         <span
                           className={cn(
                             "line-clamp-1",
-                            isDarkMode ? "text-gray-300" : "text-gray-700",
+                            isDarkMode ? "text-gray-300" : "text-gray-600",
                           )}
                         >
                           {gig.location || "Location not specified"}
                         </span>
-                      </div>
+                      </motion.div>
 
+                      {/* Business category */}
                       {gig.bussinesscat && (
-                        <div className="flex items-center text-sm">
+                        <motion.div
+                          className="flex items-start text-sm"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.35 }}
+                        >
                           <Briefcase
                             className={cn(
-                              "w-4 h-4 mr-2 flex-shrink-0",
-                              isDarkMode ? "text-gray-500" : "text-gray-500",
+                              "w-4 h-4 mr-2 mt-0.5 flex-shrink-0",
+                              isDarkMode ? "text-gray-500" : "text-gray-400",
                             )}
                           />
                           <span
-                            className={
-                              isDarkMode ? "text-gray-300" : "text-gray-700"
-                            }
+                            className={cn(
+                              "line-clamp-1",
+                              isDarkMode ? "text-gray-300" : "text-gray-600",
+                            )}
                           >
                             {gig.bussinesscat}
                           </span>
-                        </div>
+                        </motion.div>
                       )}
 
-                      {/* Show booked price */}
+                      {/* Price */}
                       {gig.price > 0 && (
                         <motion.div
                           className={cn(
-                            "flex items-center justify-between text-sm p-2 rounded",
+                            "flex items-center justify-between text-sm p-3 rounded-xl border",
                             isDarkMode
-                              ? "bg-gray-800/50 text-gray-300"
-                              : "bg-gray-50 text-gray-700",
+                              ? "bg-gray-800/50 text-gray-300 border-gray-700/50 backdrop-blur-sm"
+                              : "bg-gray-50 text-gray-700 border-gray-200",
                           )}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.2 }}
+                          transition={{ delay: 0.4 }}
                         >
-                          <span className="font-medium">Booked Price:</span>
-                          <span className="font-bold">
+                          <span className="font-medium flex items-center gap-1">
+                            <span
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                isDarkMode ? "bg-green-500" : "bg-green-400",
+                              )}
+                            />
+                            Booked Price
+                          </span>
+                          <span className="font-bold text-lg">
                             {gig.currency || "KES"} {gig.price.toLocaleString()}
                           </span>
                         </motion.div>
                       )}
 
-                      {/* Show booked users count for band gigs */}
+                      {/* Band members count */}
                       {gig.isClientBand && gig.bandCategory && (
-                        <div className="flex items-center text-sm">
+                        <motion.div
+                          className="flex items-center text-sm"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.45 }}
+                        >
                           <Users
                             className={cn(
                               "w-4 h-4 mr-2 flex-shrink-0",
-                              isDarkMode ? "text-gray-500" : "text-gray-500",
+                              isDarkMode ? "text-gray-500" : "text-gray-400",
                             )}
                           />
                           <span
-                            className={
-                              isDarkMode ? "text-gray-300" : "text-gray-700"
-                            }
+                            className={cn(
+                              "flex items-center gap-1",
+                              isDarkMode ? "text-gray-300" : "text-gray-600",
+                            )}
                           >
                             {gig.bandCategory.reduce(
                               (total: number, role: any) =>
                                 total + (role.bookedUsers?.length || 0),
                               0,
                             )}{" "}
-                            musicians booked
+                            <span
+                              className={
+                                isDarkMode ? "text-gray-400" : "text-gray-500"
+                              }
+                            >
+                              musicians booked
+                            </span>
                           </span>
-                        </div>
+                        </motion.div>
                       )}
 
-                      <p
+                      {/* Description */}
+                      <div
                         className={cn(
-                          "text-sm line-clamp-2 pt-2 border-t",
-                          isDarkMode
-                            ? "text-gray-400 border-gray-800"
-                            : "text-muted-foreground border-gray-200",
+                          "pt-3 border-t",
+                          isDarkMode ? "border-gray-800" : "border-gray-200",
                         )}
                       >
-                        {gig.description || "No description provided"}
-                      </p>
+                        <p
+                          className={cn(
+                            "text-sm line-clamp-2 leading-relaxed",
+                            isDarkMode ? "text-gray-400" : "text-gray-600",
+                          )}
+                        >
+                          {gig.description || "No description provided"}
+                        </p>
+                      </div>
 
-                      <div className="pt-4 flex gap-2">
+                      {/* Action buttons */}
+                      <div className="pt-2 flex gap-2">
                         <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           className="flex-1"
                         >
                           <Button
                             variant="outline"
                             size="sm"
                             className={cn(
-                              "w-full",
+                              "w-full font-medium transition-all duration-200",
                               isDarkMode
-                                ? "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
-                                : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900",
+                                ? "bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-600"
+                                : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-400",
                             )}
                             onClick={() =>
                               (window.location.href = `/gigs/${gig._id}`)
                             }
                           >
-                            View Details
+                            <span className="flex items-center gap-2">
+                              <span>View Details</span>
+                              <span className="text-xs opacity-60">→</span>
+                            </span>
                           </Button>
                         </motion.div>
 
-                        {/* Cancel Button - Only for upcoming gigs */}
+                        {/* Cancel Button */}
                         {canCancel && (
                           <AlertDialog
                             open={
@@ -1319,110 +1406,210 @@ export const BookedGigs = ({ user }: { user: any }) => {
                           >
                             <AlertDialogTrigger asChild>
                               <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                               >
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   className={cn(
-                                    "text-red-500 border-red-300 hover:bg-red-50 hover:text-red-700",
-                                    isDarkMode &&
-                                      "border-red-700 hover:bg-red-900/30 hover:text-red-300",
+                                    "font-medium border-2 transition-all duration-200",
+                                    isDarkMode
+                                      ? "border-red-800/50 text-red-400 hover:bg-red-950/50 hover:text-red-300 hover:border-red-700"
+                                      : "border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-400",
                                   )}
                                   onClick={() => openCancelDialog(gig)}
                                 >
-                                  <XCircle className="w-4 h-4 mr-1" />
+                                  <XCircle className="w-4 h-4 mr-1.5" />
                                   {cancelButtonLabel}
                                 </Button>
                               </motion.div>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+
+                            {/* Alert Dialog */}
+                            <AlertDialogContent
+                              className={cn(
+                                "max-w-md border-2",
+                                isDarkMode
+                                  ? "bg-gradient-to-b from-gray-900 to-gray-900/95 border-gray-800"
+                                  : "bg-white border-gray-200",
+                              )}
+                            >
                               <AlertDialogHeader>
-                                <AlertDialogTitle className="flex items-center gap-2">
-                                  <AlertTriangle className="w-5 h-5 text-amber-500" />
-                                  Cancel Booking
+                                <AlertDialogTitle className="flex items-center gap-3 text-xl">
+                                  <div
+                                    className={cn(
+                                      "p-2 rounded-full",
+                                      isDarkMode
+                                        ? "bg-red-900/30"
+                                        : "bg-red-50",
+                                    )}
+                                  >
+                                    <AlertTriangle
+                                      className={cn(
+                                        "w-5 h-5",
+                                        isDarkMode
+                                          ? "text-red-400"
+                                          : "text-red-500",
+                                      )}
+                                    />
+                                  </div>
+                                  <span>Cancel Booking</span>
                                 </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  <div className="space-y-3">
-                                    <p>
-                                      Are you sure you want to cancel your
-                                      booking for "{selectedGig?.title}"?
-                                    </p>
+                                <AlertDialogDescription className="space-y-4 pt-2">
+                                  <p
+                                    className={cn(
+                                      "text-sm",
+                                      isDarkMode
+                                        ? "text-gray-300"
+                                        : "text-gray-600",
+                                    )}
+                                  >
+                                    Are you sure you want to cancel your booking
+                                    for "
+                                    <span className="font-semibold">
+                                      {selectedGig?.title}
+                                    </span>
+                                    "?
+                                  </p>
 
-                                    {penaltyInfo.warning && (
-                                      <div
-                                        className={cn(
-                                          "p-3 rounded-lg",
-                                          isDarkMode
-                                            ? "bg-red-900/20 border border-red-800/50"
-                                            : "bg-red-50 border border-red-200",
-                                        )}
-                                      >
-                                        <div className="flex items-start gap-2">
-                                          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                                          <div>
-                                            <p className="font-medium text-red-700 dark:text-red-300">
-                                              ⚠️ Trust Score Penalty
-                                            </p>
-                                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                                              {penaltyInfo.description}
-                                            </p>
-                                            <p className="text-xs text-red-500 dark:text-red-400 mt-2">
-                                              Tip: Cancelling more than 3 days
-                                              in advance avoids penalties.
-                                            </p>
-                                          </div>
+                                  {/* Penalty warning */}
+                                  {cancellationWarning.warning ? (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: -10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      className={cn(
+                                        "p-4 rounded-xl border",
+                                        cancellationWarning.bgColor,
+                                      )}
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <div
+                                          className={cn(
+                                            "p-1.5 rounded-full",
+                                            isDarkMode
+                                              ? "bg-red-900/50"
+                                              : "bg-red-100",
+                                          )}
+                                        >
+                                          {cancellationWarning.icon}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p
+                                            className={cn(
+                                              "font-semibold mb-1",
+                                              cancellationWarning.color,
+                                            )}
+                                          >
+                                            ⚠️ Trust Score Impact
+                                          </p>
+                                          <p
+                                            className={cn(
+                                              "text-sm",
+                                              cancellationWarning.color,
+                                            )}
+                                          >
+                                            {cancellationWarning.description}
+                                          </p>
+                                          <p
+                                            className={cn(
+                                              "text-xs mt-2",
+                                              cancellationWarning.color.replace(
+                                                "500",
+                                                "400",
+                                              ),
+                                            )}
+                                          >
+                                            💡 Cancelling more than 3 days in
+                                            advance avoids any impact.
+                                          </p>
                                         </div>
                                       </div>
-                                    )}
-
-                                    {!penaltyInfo.warning && (
-                                      <div
-                                        className={cn(
-                                          "p-3 rounded-lg",
-                                          isDarkMode
-                                            ? "bg-green-900/20 border border-green-800/50"
-                                            : "bg-green-50 border border-green-200",
-                                        )}
-                                      >
-                                        <div className="flex items-start gap-2">
-                                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                          <div>
-                                            <p className="font-medium text-green-700 dark:text-green-300">
-                                              ✅ No Penalty Applied
-                                            </p>
-                                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                                              {penaltyInfo.description}
-                                            </p>
-                                          </div>
+                                    </motion.div>
+                                  ) : (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: -10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      className={cn(
+                                        "p-4 rounded-xl border",
+                                        cancellationWarning.bgColor,
+                                      )}
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <div
+                                          className={cn(
+                                            "p-1.5 rounded-full",
+                                            isDarkMode
+                                              ? "bg-green-900/50"
+                                              : "bg-green-100",
+                                          )}
+                                        >
+                                          {cancellationWarning.icon}
+                                        </div>
+                                        <div>
+                                          <p
+                                            className={cn(
+                                              "font-semibold mb-1",
+                                              cancellationWarning.color,
+                                            )}
+                                          >
+                                            ✅ No Trust Score Impact
+                                          </p>
+                                          <p
+                                            className={cn(
+                                              "text-sm",
+                                              cancellationWarning.color,
+                                            )}
+                                          >
+                                            {cancellationWarning.description}
+                                          </p>
                                         </div>
                                       </div>
-                                    )}
+                                    </motion.div>
+                                  )}
 
-                                    <div className="mt-4">
-                                      <label className="text-sm font-medium">
-                                        Cancellation Reason (required)
-                                      </label>
-                                      <Textarea
-                                        placeholder="Please provide a reason for cancellation..."
-                                        value={cancellationReason}
-                                        onChange={(e) =>
-                                          setCancellationReason(e.target.value)
-                                        }
-                                        className="mt-1 min-h-[100px]"
-                                        required
-                                      />
-                                    </div>
+                                  {/* Cancellation reason */}
+                                  <div className="space-y-2">
+                                    <label
+                                      className={cn(
+                                        "text-sm font-medium flex items-center gap-1",
+                                        isDarkMode
+                                          ? "text-gray-300"
+                                          : "text-gray-700",
+                                      )}
+                                    >
+                                      <span>Cancellation Reason</span>
+                                      <span className="text-red-500">*</span>
+                                    </label>
+                                    <Textarea
+                                      placeholder="Please provide a reason for cancellation..."
+                                      value={cancellationReason}
+                                      onChange={(e) =>
+                                        setCancellationReason(e.target.value)
+                                      }
+                                      className={cn(
+                                        "min-h-[100px] resize-none transition-all",
+                                        isDarkMode
+                                          ? "bg-gray-800 border-gray-700 text-gray-200 placeholder:text-gray-500 focus:border-red-500/50"
+                                          : "bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-red-400",
+                                      )}
+                                      required
+                                    />
                                   </div>
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <AlertDialogFooter>
+                              <AlertDialogFooter className="gap-2">
                                 <AlertDialogCancel
                                   onClick={() => {
                                     setCancellationReason("");
                                     setSelectedGig(null);
                                   }}
+                                  className={cn(
+                                    "border-2 font-medium",
+                                    isDarkMode
+                                      ? "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50",
+                                  )}
                                 >
                                   Keep Booking
                                 </AlertDialogCancel>
@@ -1431,13 +1618,18 @@ export const BookedGigs = ({ user }: { user: any }) => {
                                   disabled={
                                     isCancelling || !cancellationReason.trim()
                                   }
-                                  className="bg-red-600 hover:bg-red-700"
+                                  className={cn(
+                                    "font-medium border-2 transition-all",
+                                    isDarkMode
+                                      ? "bg-red-600 border-red-700 text-white hover:bg-red-700 disabled:opacity-50"
+                                      : "bg-red-600 border-red-700 text-white hover:bg-red-700 disabled:opacity-50",
+                                  )}
                                 >
                                   {isCancelling ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    <span className="flex items-center gap-2">
+                                      <Loader2 className="w-4 h-4 animate-spin" />
                                       Cancelling...
-                                    </>
+                                    </span>
                                   ) : (
                                     "Yes, Cancel Booking"
                                   )}
@@ -1449,6 +1641,24 @@ export const BookedGigs = ({ user }: { user: any }) => {
                       </div>
                     </div>
                   </CardContent>
+
+                  {/* Bottom gradient accent */}
+                  <div
+                    className={cn(
+                      "absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r",
+                      dateStatus.exactPast
+                        ? isDarkMode
+                          ? "from-gray-800 to-gray-700"
+                          : "from-gray-300 to-gray-200"
+                        : dateStatus.isToday
+                          ? isDarkMode
+                            ? "from-green-600/50 to-green-500/30"
+                            : "from-green-400/50 to-green-300/30"
+                          : isDarkMode
+                            ? "from-blue-600/50 to-blue-500/30"
+                            : "from-blue-400/50 to-blue-300/30",
+                    )}
+                  />
                 </Card>
               </motion.div>
             );

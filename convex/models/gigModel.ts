@@ -174,6 +174,7 @@ export const gigModel = defineTable({
 
   // === BAND-RELATED FIELDS ===
   bandCategory: v.optional(v.array(bandRoleSchema)),
+   previousBandCategory: v.optional(v.array(bandRoleSchema)),
   isClientBand: v.optional(v.boolean()), // true for "other" category
   bussinesscat: v.string(),
 
@@ -205,6 +206,7 @@ export const gigModel = defineTable({
   // === USER ENGAGEMENT ===
   bookCount: v.optional(v.array(bandApplicationEntry)),
   interestedUsers: v.optional(v.array(v.id("users"))),
+  previousInterestedUsers: v.optional(v.array(v.id("users"))),
   appliedUsers: v.optional(v.array(v.id("users"))),
   viewCount: v.optional(v.array(v.id("users"))),
 

@@ -250,8 +250,8 @@ export const updateUserProfile = mutation({
           v.object({
             platform: v.string(),
             handle: v.string(),
-          })
-        )
+          }),
+        ),
       ),
       musiciangenres: v.optional(v.array(v.string())),
       talentbio: v.optional(v.string()),
@@ -272,8 +272,8 @@ export const updateUserProfile = mutation({
               v.literal("per_session"),
               v.literal("per_gig"),
               v.literal("monthly"),
-              v.literal("custom")
-            )
+              v.literal("custom"),
+            ),
           ),
           currency: v.optional(v.string()),
 
@@ -285,8 +285,8 @@ export const updateUserProfile = mutation({
                 rate: v.string(),
                 rateType: v.optional(v.string()),
                 description: v.optional(v.string()),
-              })
-            )
+              }),
+            ),
           ),
 
           // Modifiers
@@ -300,7 +300,7 @@ export const updateUserProfile = mutation({
           function: v.optional(v.string()),
           concert: v.optional(v.string()),
           corporate: v.optional(v.string()),
-        })
+        }),
       ),
 
       openToBandWork: v.optional(v.boolean()),
@@ -312,11 +312,11 @@ export const updateUserProfile = mutation({
           v.literal("individual_client"),
           v.literal("event_planner_client"),
           v.literal("venue_client"),
-          v.literal("corporate_client")
-        )
+          v.literal("corporate_client"),
+        ),
       ), // ADDED: For client accounts
       bookerType: v.optional(
-        v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+        v.union(v.literal("talent_agent"), v.literal("booking_manager")),
       ), // ADDED: For booker accounts
       djGenre: v.optional(v.string()),
       djEquipment: v.optional(v.string()),
@@ -347,23 +347,90 @@ export const updateUserProfile = mutation({
 
     // Filter out undefined values
     const cleanUpdates = Object.fromEntries(
-      Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+      Object.entries(args.updates).filter(([_, value]) => value !== undefined),
     );
 
     console.log("Clean updates:", cleanUpdates);
 
+    // Store previous trust metrics BEFORE updates
+    const previousTrustScore = user.trustScore || 0;
+    const previousTrustStars = user.trustStars || 0;
+    const previousTier = user.trustTier || "new";
+
+    // Apply profile updates
     await ctx.db.patch(args.userId, {
       ...cleanUpdates,
       lastActive: Date.now(),
+
+      updatedAt: Date.now(),
     });
+
+    // Run your algorithm-based trust calculation
+    // This will calculate new score AND log to history automatically
     const updatedTrust = await updateUserTrust(ctx, args.userId);
+
+    // Get updated user to see final metrics
+    const updatedUser = await ctx.db.get(args.userId);
+    if (!updatedUser) throw new Error("User not found after update");
+
+    // Calculate profile completion stats
+    const profileFieldsBefore = {
+      firstname: user.firstname,
+      lastname: user.lastname,
+      instrument: user.instrument,
+      experience: user.experience,
+      city: user.city,
+      talentbio: user.talentbio,
+      email: user.email,
+      phone: user.phone,
+      roleType: user.roleType,
+    };
+
+    const profileFieldsAfter = {
+      firstname: cleanUpdates.firstname ?? user.firstname,
+      lastname: cleanUpdates.lastname ?? user.lastname,
+      instrument: cleanUpdates.instrument ?? user.instrument,
+      experience: cleanUpdates.experience ?? user.experience,
+      city: cleanUpdates.city ?? user.city,
+      talentbio: cleanUpdates.talentbio ?? user.talentbio,
+      email: cleanUpdates.email ?? user.email,
+      phone: cleanUpdates.phone ?? user.phone,
+      roleType: cleanUpdates.roleType ?? user.roleType,
+    };
+
+    const countCompletedFields = (fields: any) => {
+      return Object.values(fields).filter(
+        (value) => value && value.toString().trim().length > 0,
+      ).length;
+    };
+
+    const completedBefore = countCompletedFields(profileFieldsBefore);
+    const completedAfter = countCompletedFields(profileFieldsAfter);
+    const fieldsChanged = completedAfter - completedBefore;
 
     return {
       success: true,
-      trustScore: updatedTrust.trustScore,
-      trustStars: updatedTrust.trustStars,
-      tier: updatedTrust.tier,
-      isProfileComplete: updatedTrust.isProfileComplete,
+      profileUpdated: true,
+      trustMetrics: {
+        previousScore: previousTrustScore,
+        newScore: updatedUser.trustScore || 0,
+        change: (updatedUser.trustScore || 0) - previousTrustScore,
+        previousStars: previousTrustStars,
+        newStars: updatedUser.trustStars || 0,
+        previousTier,
+        newTier: updatedUser.trustTier || "new",
+        isProfileComplete: updatedTrust.isProfileComplete,
+      },
+      profileCompletion: {
+        completedFields: completedAfter,
+        totalFields: Object.keys(profileFieldsAfter).length,
+        percentage: Math.round(
+          (completedAfter / Object.keys(profileFieldsAfter).length) * 100,
+        ),
+        fieldsChanged,
+      },
+      // Pass through the full trust result
+      trustResult: updatedTrust,
     };
   },
 });
@@ -437,7 +504,7 @@ export const getBookers = query({
     // Filter by city if provided
     if (args.city) {
       bookers = bookers.filter((booker) =>
-        booker.city?.toLowerCase().includes(args.city!.toLowerCase())
+        booker.city?.toLowerCase().includes(args.city!.toLowerCase()),
       );
     }
 
@@ -445,8 +512,8 @@ export const getBookers = query({
     if (args.skills && args.skills.length > 0) {
       bookers = bookers.filter((booker) =>
         booker.bookerSkills?.some((skill: string) =>
-          args.skills!.includes(skill)
-        )
+          args.skills!.includes(skill),
+        ),
       );
     }
 
@@ -487,11 +554,11 @@ export const updateUserAsMusician = mutation({
           v.literal("individual"),
           v.literal("event_planner"),
           v.literal("venue"),
-          v.literal("corporate")
-        )
+          v.literal("corporate"),
+        ),
       ),
       bookerType: v.optional(
-        v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+        v.union(v.literal("talent_agent"), v.literal("booking_manager")),
       ),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
@@ -502,7 +569,7 @@ export const updateUserAsMusician = mutation({
         v.object({
           count: v.number(),
           weekStart: v.number(),
-        })
+        }),
       ),
       lastBookingDate: v.optional(v.number()),
       earnings: v.optional(v.number()),
@@ -515,7 +582,7 @@ export const updateUserAsMusician = mutation({
       bannedAt: v.optional(v.number()),
       lastAdminAction: v.optional(v.number()),
       theme: v.optional(
-        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
       ),
     }),
   },
@@ -532,7 +599,9 @@ export const updateUserAsMusician = mutation({
 
       // Filter out undefined values and ensure proper types
       const cleanUpdates = Object.fromEntries(
-        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+        Object.entries(args.updates).filter(
+          ([_, value]) => value !== undefined,
+        ),
       );
 
       await ctx.db.patch(user._id, {
@@ -563,8 +632,8 @@ export const updateUserAsClient = mutation({
           v.literal("individual"),
           v.literal("event_planner"),
           v.literal("venue"),
-          v.literal("corporate")
-        )
+          v.literal("corporate"),
+        ),
       ),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
@@ -575,7 +644,7 @@ export const updateUserAsClient = mutation({
         v.object({
           count: v.number(),
           weekStart: v.number(),
-        })
+        }),
       ),
       lastBookingDate: v.optional(v.number()),
       earnings: v.optional(v.number()),
@@ -588,7 +657,7 @@ export const updateUserAsClient = mutation({
       bannedAt: v.optional(v.number()),
       lastAdminAction: v.optional(v.number()),
       theme: v.optional(
-        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
       ),
     }),
   },
@@ -604,7 +673,9 @@ export const updateUserAsClient = mutation({
       }
 
       const cleanUpdates = Object.fromEntries(
-        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+        Object.entries(args.updates).filter(
+          ([_, value]) => value !== undefined,
+        ),
       );
 
       await ctx.db.patch(user._id, {
@@ -635,7 +706,7 @@ export const updateUserAsBooker = mutation({
       talentbio: v.string(),
       // NEW: Booker type
       bookerType: v.optional(
-        v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+        v.union(v.literal("talent_agent"), v.literal("booking_manager")),
       ),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
@@ -646,7 +717,7 @@ export const updateUserAsBooker = mutation({
         v.object({
           count: v.number(),
           weekStart: v.number(),
-        })
+        }),
       ),
       lastBookingDate: v.optional(v.number()),
       earnings: v.optional(v.number()),
@@ -659,7 +730,7 @@ export const updateUserAsBooker = mutation({
       bannedAt: v.optional(v.number()),
       lastAdminAction: v.optional(v.number()),
       theme: v.optional(
-        v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
+        v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
       ),
     }),
   },
@@ -675,7 +746,9 @@ export const updateUserAsBooker = mutation({
       }
 
       const cleanUpdates = Object.fromEntries(
-        Object.entries(args.updates).filter(([_, value]) => value !== undefined)
+        Object.entries(args.updates).filter(
+          ([_, value]) => value !== undefined,
+        ),
       );
 
       await ctx.db.patch(user._id, {
@@ -719,7 +792,7 @@ export const searchUsers = query({
           user.instrument?.toLowerCase().includes(searchTerm) ||
           user.organization?.toLowerCase().includes(searchTerm) || // For bookers
           user.bookerSkills?.some((skill: string) =>
-            skill.toLowerCase().includes(searchTerm)
+            skill.toLowerCase().includes(searchTerm),
           ); // For booker skills
 
         const matchesMusician =
@@ -742,7 +815,7 @@ export const searchUsers = query({
           !args.bookerSkills ||
           args.bookerSkills.length === 0 ||
           user.bookerSkills?.some((skill: string) =>
-            args.bookerSkills!.includes(skill)
+            args.bookerSkills!.includes(skill),
           );
 
         return (
@@ -846,7 +919,7 @@ export const followUser = mutation({
       // Cancel pending request
       await ctx.db.patch(args.tId, {
         pendingFollowRequests: targetPendingRequests.filter(
-          (id) => id !== currentUser._id
+          (id) => id !== currentUser._id,
         ),
         lastActive: Date.now(),
       });
@@ -897,7 +970,7 @@ export const followUser = mutation({
         } catch (notificationError) {
           console.error(
             "Failed to create follow request notification:",
-            notificationError
+            notificationError,
           );
         }
 
@@ -941,7 +1014,7 @@ export const followUser = mutation({
         } catch (notificationError) {
           console.error(
             "Failed to create follow notification:",
-            notificationError
+            notificationError,
           );
         }
 
@@ -981,7 +1054,7 @@ export const acceptFollowRequest = mutation({
     await ctx.db.patch(currentUser._id, {
       followers: [...currentFollowers, args.requesterId],
       pendingFollowRequests: currentPendingRequests.filter(
-        (id) => id !== args.requesterId
+        (id) => id !== args.requesterId,
       ),
       lastActive: Date.now(),
     });
@@ -996,12 +1069,12 @@ export const acceptFollowRequest = mutation({
       await deleteFollowRequestNotification(
         ctx,
         currentUser._id,
-        args.requesterId
+        args.requesterId,
       );
     } catch (cleanupError) {
       console.error(
         "Failed to cleanup follow request notification:",
-        cleanupError
+        cleanupError,
       );
     }
 
@@ -1028,7 +1101,7 @@ export const acceptFollowRequest = mutation({
     } catch (notificationError) {
       console.error(
         "Failed to create follow accepted notification:",
-        notificationError
+        notificationError,
       );
     }
 
@@ -1064,7 +1137,7 @@ export const declineFollowRequest = mutation({
     // Remove from pending requests
     await ctx.db.patch(currentUser._id, {
       pendingFollowRequests: currentPendingRequests.filter(
-        (id) => id !== args.requesterId
+        (id) => id !== args.requesterId,
       ),
       lastActive: Date.now(),
     });
@@ -1074,12 +1147,12 @@ export const declineFollowRequest = mutation({
       await deleteFollowRequestNotification(
         ctx,
         currentUser._id,
-        args.requesterId
+        args.requesterId,
       );
     } catch (cleanupError) {
       console.error(
         "Failed to cleanup follow request notification:",
-        cleanupError
+        cleanupError,
       );
     }
 
@@ -1107,7 +1180,7 @@ export const declineFollowRequest = mutation({
     } catch (notificationError) {
       console.error(
         "Failed to create follow declined notification:",
-        notificationError
+        notificationError,
       );
     }
 
@@ -1282,7 +1355,7 @@ export const deleteUserAccount = mutation({
       // Remove from interestedUsers if present
       if (gig.interestedUsers?.includes(user._id)) {
         const updatedInterestedUsers = gig.interestedUsers.filter(
-          (id) => id !== user._id
+          (id) => id !== user._id,
         );
 
         await ctx.db.patch(gig._id, {
@@ -1316,14 +1389,14 @@ export const deleteUserAccount = mutation({
         const updatedBandCategory = gig.bandCategory.map((role: any) => ({
           ...role,
           applicants: role.applicants.filter(
-            (id: Id<"users">) => id !== user._id
+            (id: Id<"users">) => id !== user._id,
           ),
           bookedUsers: role.bookedUsers.filter(
-            (id: Id<"users">) => id !== user._id
+            (id: Id<"users">) => id !== user._id,
           ),
           filledSlots: Math.max(
             0,
-            role.filledSlots - (role.bookedUsers.includes(user._id) ? 1 : 0)
+            role.filledSlots - (role.bookedUsers.includes(user._id) ? 1 : 0),
           ),
         }));
 
@@ -1394,13 +1467,13 @@ export const deleteUserAccount = mutation({
     // Remove user from chats they're in
     const allChats = await ctx.db.query("chats").collect();
     const userChats = allChats.filter((chat) =>
-      chat.participantIds.includes(user._id)
+      chat.participantIds.includes(user._id),
     );
 
     for (const chat of userChats) {
       // Remove user from participant list
       const updatedParticipants = chat.participantIds.filter(
-        (id) => id !== user._id
+        (id) => id !== user._id,
       );
 
       if (updatedParticipants.length > 0) {
@@ -1566,21 +1639,21 @@ export const deleteUserAccount = mutation({
       // Remove from followers
       if (otherUser.followers?.includes(userIdString)) {
         updates.followers = otherUser.followers.filter(
-          (id) => id !== userIdString
+          (id) => id !== userIdString,
         );
       }
 
       // Remove from followings
       if (otherUser.followings?.includes(userIdString)) {
         updates.followings = otherUser.followings.filter(
-          (id) => id !== userIdString
+          (id) => id !== userIdString,
         );
       }
 
       // Remove from references (note the typo in your schema: "refferences" not "references")
       if (otherUser.refferences?.includes(userIdString)) {
         updates.refferences = otherUser.refferences.filter(
-          (id) => id !== userIdString
+          (id) => id !== userIdString,
         );
       }
 
@@ -1596,8 +1669,8 @@ export const deleteUserAccount = mutation({
       .filter((q) =>
         q.or(
           q.eq(q.field("reportedUserId"), user.clerkId), // Use clerkId, not user._id.toString()
-          q.eq(q.field("reporterId"), user.clerkId) // Use clerkId, not user._id.toString()
-        )
+          q.eq(q.field("reporterId"), user.clerkId), // Use clerkId, not user._id.toString()
+        ),
       )
       .collect();
 
@@ -1686,7 +1759,7 @@ export const getPendingFollowRequests = query({
     const requests = await Promise.all(
       user.pendingFollowRequests.map(async (requesterId) => {
         return await ctx.db.get(requesterId);
-      })
+      }),
     );
 
     return requests.filter(Boolean);
@@ -1706,7 +1779,7 @@ export const getUsersByIds = query({
     if (args.userIds.length === 0) return [];
 
     const users = await Promise.all(
-      args.userIds.map((userId) => ctx.db.get(userId))
+      args.userIds.map((userId) => ctx.db.get(userId)),
     );
 
     return users.filter(Boolean);

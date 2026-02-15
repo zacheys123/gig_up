@@ -1,6 +1,8 @@
 // ========== DUAL SYSTEM THRESHOLDS ==========
 
+import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
+import { mutation } from "./_generated/server";
 import {
   TrustScoreResult,
   TrustTier,
@@ -357,6 +359,43 @@ function calculateActivityPoints(user: Doc<"users">): number {
   let points = 0;
 
   if (user.isMusician) {
+    // Count only non-cancelled bookings
+    let successfulBookings = 0;
+    if (user.bookedByClients) {
+      successfulBookings = user.bookedByClients.filter(
+        (booking: any) => !booking.cancelled,
+      ).length;
+    }
+
+    const bookingsCount = Math.max(user.bookingsCount || 0, successfulBookings);
+    const completedGigs = user.completedGigsCount || 0;
+
+    // Points for successful (non-cancelled) bookings
+    if (bookingsCount >= 20) points += 25;
+    else if (bookingsCount >= 10) points += 20;
+    else if (bookingsCount >= 5) points += 15;
+    else if (bookingsCount >= 3) points += 10;
+    else if (bookingsCount >= 1) points += 5;
+
+    // Points for completed gigs (actual work done)
+    points += Math.min(completedGigs * 1.0, 15); // Higher weight for completed
+
+    // Points for recent booking activity (non-cancelled)
+    if (user.bookedByClients) {
+      const recentSuccessful = user.bookedByClients
+        .filter((b: any) => !b.cancelled)
+        .sort((a: any, b: any) => b.date - a.date)[0];
+
+      if (recentSuccessful) {
+        const daysSince =
+          (Date.now() - recentSuccessful.date) / (1000 * 60 * 60 * 24);
+        if (daysSince < 7) points += 5;
+        else if (daysSince < 30) points += 3;
+        else if (daysSince < 90) points += 1;
+      }
+    }
+  }
+  if (user.isMusician) {
     const completedGigs = user.completedGigsCount || 0;
     points += Math.min(
       completedGigs * SCORING_CONSTANTS.GIGS_COMPLETED_PER_POINT,
@@ -389,7 +428,6 @@ function calculateActivityPoints(user: Doc<"users">): number {
 
   return Math.min(points, SECTION_CAPS.ACTIVITY);
 }
-
 // Calculate points for quality section
 function calculateQualityPoints(user: Doc<"users">): number {
   let points = 0;
@@ -753,15 +791,21 @@ export async function updateUserTrust(
   const user = await ctx.db.get(userId);
   if (!user) throw new Error("User not found");
 
+  // Store previous values
+  const previousScore = user.trustScore || 0;
+  const previousStars = user.trustStars || 0;
+  const previousTier = user.trustTier || "new";
+
+  // Your algorithm calculates new trust
   const result = await calculateUserTrust(ctx, userId);
   const featureEligibility = getFeatureEligibility(result.trustScore, user);
 
   const updates: Partial<Doc<"users">> = {
-    // Store BOTH
     trustScore: result.trustScore,
     trustStars: result.trustStars,
     trustScoreLastUpdated: Date.now(),
     trustTier: result.tier,
+    updatedAt: Date.now(),
   };
 
   // AUTO-VERIFICATION: When score reaches 40
@@ -792,45 +836,170 @@ export async function updateUserTrust(
   }
 
   await ctx.db.patch(userId, updates);
+
+  // Log to trust history if score changed
+  const scoreChanged = result.trustScore !== previousScore;
+  const starsChanged = result.trustStars !== previousStars;
+  const tierChanged = result.tier !== previousTier;
+
+  if (scoreChanged || starsChanged || tierChanged) {
+    // Create a detailed reason based on what changed
+    let reason = "Profile update triggered trust recalculation";
+    let note = "";
+
+    if (scoreChanged) {
+      note += `Score: ${previousScore} → ${result.trustScore} `;
+    }
+    if (starsChanged) {
+      note += `Stars: ${previousStars} → ${result.trustStars} `;
+    }
+    if (tierChanged) {
+      note += `Tier: ${previousTier} → ${result.tier}`;
+    }
+
+    // Check for milestones unlocked
+    const milestones = [];
+    if (featureEligibility.canVerifiedBadge && !user.verified) {
+      milestones.push("Verified badge");
+    }
+    if (featureEligibility.canCreateBand && !user.bandCreationUnlockedAt) {
+      milestones.push("Band creation");
+    }
+    if (featureEligibility.canVideoCall && !user.videoCallUnlockedAt) {
+      milestones.push("Video calls");
+    }
+
+    if (milestones.length > 0) {
+      reason = `Unlocked: ${milestones.join(", ")}`;
+    }
+
+    await ctx.db.insert("trustScoreHistory", {
+      userId,
+      timestamp: Date.now(),
+      amount: result.trustScore - previousScore,
+      previousScore,
+      newScore: result.trustScore,
+      reason,
+      context: "profile_algorithm_update",
+      note: note.trim(),
+      metadata: {
+        previousStars,
+        newStars: result.trustStars,
+        previousTier,
+        newTier: result.tier,
+        algorithmVersion: "1.0", // Version your algorithm
+        milestonesUnlocked: milestones,
+        profileFieldsConsidered: [
+          "firstname",
+          "lastname",
+          "instrument",
+          "experience",
+          "city",
+          "talentbio",
+          "email",
+          "phone",
+          "roleType",
+        ],
+      },
+    });
+  }
+
   return result;
 }
 // convex/helpers/trustScoreHelpers.ts (or wherever your updateUserTrust is)
 
-// Helper function to apply trust score penalty/bonus
+// trustScore.ts - Regular helper function
 export const applyTrustScoreUpdate = async (
   ctx: any,
-  userId: Id<"users">,
-  penaltyAmount: number,
-  reason: string,
-  context: string,
-): Promise<void> => {
-  const user = await ctx.db.get(userId);
-  if (!user) throw new Error("User not found");
+  args: {
+    userId: Id<"users">;
+    amount: number;
+    reason: string;
+    context: string;
+    metadata?: {
+      gigId?: Id<"gigs">;
+      gigTitle?: string;
+      actionBy?: Id<"users">;
+      note?: string;
+      bandRole?: string;
+      musicianName?: string;
+      clientName?: string;
+      hoursUntilGig?: number;
+    };
+  },
+): Promise<{
+  success: boolean;
+  previousScore: number;
+  newScore: number;
+  change: number;
+}> => {
+  const user = await ctx.db.get(args.userId);
+  if (!user) throw new Error(`User ${args.userId} not found`);
 
-  // If penalty, also update cancellation count
-  if (penaltyAmount < 0) {
-    await ctx.db.patch(userId, {
-      cancellationCount: (user.cancellationCount || 0) + 1,
-      lastCancellation: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
+  const previousScore = user.trustScore || 0;
+  const rawNewScore = previousScore + args.amount;
+  const newScore = Math.max(0, Math.min(100, rawNewScore));
+  const actualChange = newScore - previousScore;
 
-  // Now update the trust score using your existing function
-  await updateUserTrust(ctx, userId);
-
-  // Log the penalty/bonus in trust history
-  const trustHistoryEntry = {
-    timestamp: Date.now(),
-    amount: penaltyAmount,
-    reason,
-    context,
+  const updates: any = {
+    trustScore: newScore,
+    updatedAt: Date.now(),
   };
 
+  // Update cancellation count for penalties
+  if (args.amount < 0) {
+    updates.cancelgigCount = (user.cancelgigCount || 0) + 1;
+    updates.lastCancellation = Date.now();
+  }
+
+  // Context-specific updates
+  if (args.context.includes("booking")) {
+    updates.lastBooking = Date.now();
+  }
+  if (args.context.includes("gig_posted")) {
+    updates.lastGigPosted = Date.now();
+  }
+  if (args.context.includes("completed")) {
+    updates.lastHired = Date.now();
+  }
+
+  await ctx.db.patch(args.userId, updates);
+
+  const now = Date.now();
+
+  // Log to trust history - ADD createdAt field
   await ctx.db.insert("trustScoreHistory", {
-    userId,
-    ...trustHistoryEntry,
+    userId: args.userId,
+    timestamp: now,
+    amount: actualChange,
+    previousScore,
+    newScore,
+    reason: args.reason,
+    context: args.context,
+    gigId: args.metadata?.gigId,
+    actionBy: args.metadata?.actionBy,
+    note: args.metadata?.note,
+    metadata: {
+      ...args.metadata,
+      directBonus: args.amount,
+      clamped: rawNewScore !== newScore,
+      userType: user.roleType || "user",
+      previousCancellations: user.cancelgigCount || 0,
+      previousBookings: user.bookingsCount || 0,
+      previousGigsPosted: user.gigsPosted || 0,
+    },
+    createdAt: now, // ADD THIS REQUIRED FIELD
   });
+
+  // Also run algorithm update
+  await updateUserTrust(ctx, args.userId);
+
+  return {
+    success: true,
+    previousScore,
+    newScore,
+    change: actualChange,
+  };
 };
 // ========== LEGACY COMPATIBILITY ==========
 export async function calculateTrustScore(

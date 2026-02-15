@@ -567,7 +567,6 @@ export const applyForBandRole = mutation({
     };
   },
 });
-
 export const bookForBandRole = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -656,7 +655,7 @@ export const bookForBandRole = mutation({
         bookedUsers: [...role.bookedUsers, userId],
         applicants: role.applicants.filter((id) => id !== userId),
         bookedPrice: bookedPrice || role.price || 0,
-        currentApplicants: Math.max(0, role.applicants.length - 1), // Update applicant count
+        currentApplicants: Math.max(0, role.applicants.length - 1),
       };
 
       // Check if all roles are now filled
@@ -666,6 +665,8 @@ export const bookForBandRole = mutation({
 
       // Calculate final price
       const finalPrice = bookedPrice || role.price || 0;
+      const now = Date.now();
+
       const bandBookingEntry = {
         bandRole: role.role,
         bandRoleIndex,
@@ -673,7 +674,7 @@ export const bookForBandRole = mutation({
         userName: musician.firstname || musician.username || "Musician",
         appliedAt: Date.now(),
         applicationStatus: "accepted" as const,
-        applicationNotes: reason || `Booked as ${role.role}`, // Use this field
+        applicationNotes: reason || `Booked as ${role.role}`,
         bookedAt: Date.now(),
         bookedPrice: finalPrice,
         contractSigned: false,
@@ -682,8 +683,8 @@ export const bookForBandRole = mutation({
 
       // Create regular booking history entry
       const bookingEntry = {
-        entryId: `${gigId}_${bandRoleIndex}_${userId}_${Date.now()}`,
-        timestamp: Date.now(),
+        entryId: `${gigId}_${bandRoleIndex}_${userId}_${now}`,
+        timestamp: now,
         userId,
         userRole: "musician",
         bandRole: role.role,
@@ -715,13 +716,81 @@ export const bookForBandRole = mutation({
           ...(gig.bandBookingHistory || []),
           bandBookingEntry,
         ],
-        updatedAt: Date.now(),
+        updatedAt: now,
         ...(allRolesFilled && {
           isTaken: true,
           isActive: true,
         }),
         isPending: !allRolesFilled,
       });
+
+      // Create booking entries for relationship tracking
+      const musicianBookingEntry = {
+        clientId: clientUser._id,
+        gigId: gig._id,
+        date: now,
+        ratingReceived: undefined, // Use undefined instead of null
+        cancelled: false,
+        cancelledAt: undefined,
+        cancellationReason: undefined,
+        trustPenalty: undefined,
+      };
+
+      const clientBookingEntry = {
+        musicianId: musician._id,
+        gigId: gig._id,
+        date: now,
+        ratingGiven: undefined, // Use undefined instead of null
+        cancelled: false,
+        cancelledAt: undefined,
+        cancellationReason: undefined,
+        trustPenalty: undefined,
+      };
+
+      // Update musician - Add to bookedByClientIds (always add when booking)
+      const updatedMusicianBookedByClientIds = [
+        ...(musician.bookedByClientIds || []),
+        clientUser._id,
+      ];
+
+      await ctx.db.patch(musician._id, {
+        updatedAt: now,
+        lastActive: now,
+        bookingsCount: (musician.bookingsCount || 0) + 1,
+        lastBooking: now,
+        bookedByClients: [
+          ...(musician.bookedByClients || []),
+          musicianBookingEntry,
+        ],
+        bookedByClientIds: updatedMusicianBookedByClientIds,
+      });
+
+      // Update client - Add to bookedMusicianIds (always add when booking)
+      const updatedClientBookedMusicianIds = [
+        ...(clientUser.bookedMusicianIds || []),
+        musician._id,
+      ];
+
+      const clientUpdates: any = {
+        updatedAt: now,
+        lastActive: now,
+        hiredCount: (clientUser.hiredCount || 0) + 1,
+        lastHired: now,
+        bookedMusicians: [
+          ...(clientUser.bookedMusicians || []),
+          clientBookingEntry,
+        ],
+        bookedMusicianIds: updatedClientBookedMusicianIds,
+      };
+
+      // Update weekly bookings tracking
+      if (!clientUser.bookingsThisWeek) {
+        clientUpdates.bookingsThisWeek = 1;
+      } else {
+        clientUpdates.bookingsThisWeek = (clientUser.bookingsThisWeek || 0) + 1;
+      }
+
+      await ctx.db.patch(clientUser._id, clientUpdates);
 
       // NOTIFY MUSICIAN THAT THEY'VE BEEN BOOKED
       await createNotificationInternal(ctx, {
@@ -743,6 +812,7 @@ export const bookForBandRole = mutation({
           reason: reason || "",
           gigDate: gig.date,
           gigLocation: gig.location,
+          bookingNumber: (musician.bookingsCount || 0) + 1,
         },
       });
 
@@ -751,7 +821,7 @@ export const bookForBandRole = mutation({
         userDocumentId: clientUser._id,
         type: "musician_booked",
         title: "✅ Musician Booked Successfully",
-        message: `You've booked ${musician.firstname || musician.username} as ${role.role} for "${gig.title}"`,
+        message: `You've booked ${musician.firstname || musician.username} as ${role.role} for "${gig.title}" (Your ${(clientUser.hiredCount || 0) + 1} hire)`,
         image: musician.picture,
         actionUrl: `/gigs/${gigId}/manage`,
         relatedUserDocumentId: userId,
@@ -763,15 +833,46 @@ export const bookForBandRole = mutation({
           bookedPrice: finalPrice,
           remainingSlots: role.maxSlots - (role.filledSlots + 1),
           allRolesFilled: allRolesFilled,
+          hireNumber: (clientUser.hiredCount || 0) + 1,
         },
       });
 
-      // Update trust scores for both parties
+      // Update trust scores using your comprehensive algorithm
       try {
-        await updateUserTrust(ctx, musician._id);
-        await updateUserTrust(ctx, clientUser._id);
+        // Run algorithm for musician (will consider new bookingsCount)
+        const musicianTrustResult = await updateUserTrust(ctx, musician._id);
+
+        // Run algorithm for client (will consider new hiredCount)
+        const clientTrustResult = await updateUserTrust(ctx, clientUser._id);
+
+        console.log("🎯 Trust algorithm results after booking:", {
+          musician: {
+            name: musician.firstname,
+            previousScore: musician.trustScore || 0,
+            newScore: musicianTrustResult.trustScore,
+            change: musicianTrustResult.trustScore - (musician.trustScore || 0),
+            stars: musicianTrustResult.trustStars,
+            tier: musicianTrustResult.tier,
+            bookingsCount: (musician.bookingsCount || 0) + 1,
+          },
+          client: {
+            name: clientUser.firstname,
+            previousScore: clientUser.trustScore || 0,
+            newScore: clientTrustResult.trustScore,
+            change: clientTrustResult.trustScore - (clientUser.trustScore || 0),
+            stars: clientTrustResult.trustStars,
+            tier: clientTrustResult.tier,
+            hiredCount: (clientUser.hiredCount || 0) + 1,
+          },
+          bookingDetails: {
+            role: role.role,
+            price: finalPrice,
+            wasFromApplicants: hasApplied,
+          },
+        });
       } catch (error) {
         console.error("Failed to update trust scores:", error);
+        // Don't fail the whole booking if trust updates fail
       }
 
       return {
@@ -782,6 +883,7 @@ export const bookForBandRole = mutation({
           role: role.role,
           price: finalPrice,
           bookingDate: new Date().toISOString(),
+          bookingNumber: (musician.bookingsCount || 0) + 1,
         },
         gigStatus: allRolesFilled ? "fully_booked" : "partially_booked",
         remainingSlots: role.maxSlots - (role.filledSlots + 1),
@@ -795,6 +897,9 @@ export const bookForBandRole = mutation({
           wasFromApplicants: hasApplied,
           clientName: clientUser.firstname || clientUser.username,
           musicianEmail: musician.email,
+          musicianBookingsCount: (musician.bookingsCount || 0) + 1,
+          clientHiredCount: (clientUser.hiredCount || 0) + 1,
+          trustUpdated: true,
         },
       };
     } catch (error: any) {
@@ -819,7 +924,6 @@ export const bookForBandRole = mutation({
     }
   },
 });
-
 export const unbookFromBandRole = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -859,29 +963,71 @@ export const unbookFromBandRole = mutation({
       throw new Error("User is not booked for this role");
     }
 
-    // Check if within 3 days and apply trust penalty if coming from booked section
+    // ALWAYS check time for penalties when cancelling booked musicians
+    const gigDateTime = new Date(gig.date);
+    const now = Date.now();
+    const hoursDifference = (gigDateTime.getTime() - now) / (1000 * 60 * 60);
+
     let trustPenaltyApplied = 0;
-    if (isFromBooked) {
-      const gigDateTime = new Date(gig.date);
-      const now = new Date();
-      const hoursDifference =
-        (gigDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    let context:
+      | "last_minute_band_booking_cancellation"
+      | "within_3_days_band_booking_cancellation"
+      | "band_gig_cancellation" = "band_gig_cancellation";
 
-      if (hoursDifference < 24) {
-        trustPenaltyApplied = 20; // Last-minute cancellation
-      } else if (hoursDifference < 72) {
-        trustPenaltyApplied = 10; // Within 3 days
-      }
+    // Apply penalty based on timing
+    if (hoursDifference < 24) {
+      trustPenaltyApplied = 20;
+      context = "last_minute_band_booking_cancellation";
+    } else if (hoursDifference < 72) {
+      trustPenaltyApplied = 10;
+      context = "within_3_days_band_booking_cancellation";
+    }
 
-      if (trustPenaltyApplied > 0) {
-        await applyTrustScoreUpdate(
-          ctx,
-          userId,
-          -trustPenaltyApplied,
-          `Cancelled band role booking (${hoursDifference < 24 ? "last-minute" : "within 3 days"}): ${gig.title}`,
-          "band_booking_cancellation",
-        );
-      }
+    // DO NOT decrement bookingsCount or hiredCount
+    // DO update cancellation count and apply penalty
+
+    if (trustPenaltyApplied > 0) {
+      // Update musician's cancellation count
+      await ctx.db.patch(musician._id, {
+        cancelgigCount: (musician.cancelgigCount || 0) + 1,
+        lastCancellation: now,
+        updatedAt: now,
+      });
+
+      // Apply trust penalty using your algorithm
+      await updateUserTrust(ctx, musician._id);
+
+      // Log to trust history WITH metadata
+      await ctx.db.insert("trustScoreHistory", {
+        userId: userId,
+        timestamp: now,
+        amount: -trustPenaltyApplied,
+        previousScore: musician.trustScore || 0,
+        newScore: Math.max(0, (musician.trustScore || 0) - trustPenaltyApplied),
+        reason: `Band booking cancelled by client (${hoursDifference < 24 ? "last-minute" : "within 3 days"}): ${gig.title}`,
+        context,
+        gigId: gig._id,
+        actionBy: clientUser._id,
+        note: `Cancelled by ${clientUser.firstname || clientUser.username}. Hours until gig: ${Math.floor(hoursDifference)}`,
+        metadata: {
+          gigTitle: gig.title,
+          bandRole: role.role,
+          clientName: clientUser.firstname || clientUser.username,
+          musicianName: musician.firstname || musician.username,
+          hoursUntilGig: Math.floor(hoursDifference),
+          cancellationTiming:
+            hoursDifference < 24
+              ? "last_minute"
+              : hoursDifference < 72
+                ? "within_3_days"
+                : "more_than_3_days",
+          penaltyAmount: trustPenaltyApplied,
+          cancellationSource: "unbookFromBandRole",
+          isFromBookedSection: isFromBooked || false,
+          reason: reason || "",
+        },
+        createdAt: now,
+      });
     }
 
     // Move user from bookedUsers back to applicants
@@ -927,16 +1073,13 @@ export const unbookFromBandRole = mutation({
       appliedAt: Date.now(),
       applicationStatus: "pending_review" as const,
       bookedAt: Date.now(),
-      completedAt: Date.now(),
+      completedAt: now,
       completionNotes: reason || "Unbooked by client",
       paymentStatus: "cancelled" as const,
       trustPenaltyApplied,
-      cancelledFrom: isFromBooked ? "booked_section" : "other",
-      hoursUntilGig: isFromBooked
-        ? Math.floor(
-            (new Date(gig.date).getTime() - Date.now()) / (1000 * 60 * 60),
-          )
-        : null,
+      cancelledFrom: "booked_section",
+      hoursUntilGig: Math.floor(hoursDifference),
+      cancellationReason: reason || "",
     };
 
     // Only add bookedPrice if we have a valid number
@@ -945,8 +1088,8 @@ export const unbookFromBandRole = mutation({
     }
 
     const unbookingEntry = {
-      entryId: `${gigId}_${bandRoleIndex}_${userId}_${Date.now()}`,
-      timestamp: Date.now(),
+      entryId: `${gigId}_${bandRoleIndex}_${userId}_${now}`,
+      timestamp: now,
       userId,
       userRole: "musician",
       bandRole: role.role,
@@ -955,19 +1098,27 @@ export const unbookFromBandRole = mutation({
       gigType: "band" as const,
       actionBy: clientUser._id,
       actionFor: userId,
-      reason: reason || "Unbooked from role",
+      reason: reason || "Unbooked from role by client",
       metadata: {
         previousPrice: safeBookedPrice,
         movedBackToApplicants: true,
         clientId: clientUser._id,
         clientName: clientUser.firstname || clientUser.username,
         trustPenaltyApplied,
-        isFromBooked,
-        hoursUntilGig: isFromBooked
-          ? Math.floor(
-              (new Date(gig.date).getTime() - Date.now()) / (1000 * 60 * 60),
-            )
-          : null,
+        cancellationSource: "booked_gigs_page",
+        hoursUntilGig: Math.floor(hoursDifference),
+        penaltyApplied: trustPenaltyApplied > 0,
+        penaltyAmount: trustPenaltyApplied,
+        cancellationTiming:
+          hoursDifference < 24
+            ? "last_minute"
+            : hoursDifference < 72
+              ? "within_3_days"
+              : "more_than_3_days",
+        // Track that counts were NOT decremented
+        statsPreserved: true,
+        bookingsCountPreserved: true,
+        hiredCountPreserved: true,
       },
     };
 
@@ -975,10 +1126,75 @@ export const unbookFromBandRole = mutation({
       bandCategory: updatedBandCategory,
       bookingHistory: [...(gig.bookingHistory || []), unbookingEntry],
       bandBookingHistory: [...(gig.bandBookingHistory || []), bandBookingEntry],
-      updatedAt: Date.now(),
+      updatedAt: now,
       isTaken: false,
       isPending: false,
     });
+
+    // Update the booking relationship arrays to mark as cancelled
+    // Update musician's bookedByClients entry
+    if (musician.bookedByClients) {
+      const updatedBookings = musician.bookedByClients.map((booking: any) => {
+        if (booking.gigId === gig._id && booking.clientId === clientUser._id) {
+          return {
+            ...booking,
+            cancelled: true,
+            cancelledAt: now,
+            cancellationReason: reason || "Cancelled by client",
+            trustPenalty: trustPenaltyApplied,
+          };
+        }
+        return booking;
+      });
+
+      // Check if musician still has active bookings with this client
+      const musicianStillHasActiveBookings = updatedBookings.some(
+        (booking) => booking.clientId === clientUser._id && !booking.cancelled,
+      );
+
+      const updatedMusicianBookedByClientIds = musicianStillHasActiveBookings
+        ? musician.bookedByClientIds || []
+        : musician.bookedByClientIds?.filter((id) => id !== clientUser._id) ||
+          [];
+
+      await ctx.db.patch(musician._id, {
+        bookedByClients: updatedBookings,
+        bookedByClientIds: updatedMusicianBookedByClientIds,
+        updatedAt: now,
+      });
+    }
+
+    // Update client's bookedMusicians entry
+    if (clientUser.bookedMusicians) {
+      const updatedHires = clientUser.bookedMusicians.map((hire: any) => {
+        if (hire.gigId === gig._id && hire.musicianId === userId) {
+          return {
+            ...hire,
+            cancelled: true,
+            cancelledAt: now,
+            cancellationReason: reason || "Cancelled booking",
+            trustPenalty: trustPenaltyApplied,
+          };
+        }
+        return hire;
+      });
+
+      // Check if client still has active bookings with this musician
+      const clientStillHasActiveBookings = updatedHires.some(
+        (hiring: any) => hiring.musicianId === userId && !hiring.cancelled,
+      );
+
+      const updatedClientBookedMusicianIds = clientStillHasActiveBookings
+        ? clientUser.bookedMusicianIds || []
+        : clientUser.bookedMusicianIds?.filter((id: any) => id !== userId) ||
+          [];
+
+      await ctx.db.patch(clientUser._id, {
+        bookedMusicians: updatedHires,
+        bookedMusicianIds: updatedClientBookedMusicianIds,
+        updatedAt: now,
+      });
+    }
 
     // Notify musician
     await createNotificationInternal(ctx, {
@@ -995,19 +1211,38 @@ export const unbookFromBandRole = mutation({
         reason: reason || "",
         clientName: clientUser.firstname || clientUser.username,
         trustPenaltyApplied,
-        trustScoreUpdate: true,
+        trustScoreUpdate: trustPenaltyApplied > 0,
+        hoursUntilGig: Math.floor(hoursDifference),
+        penaltyNotice:
+          trustPenaltyApplied > 0
+            ? `Trust score decreased by ${trustPenaltyApplied} points due to ${hoursDifference < 24 ? "last-minute" : "within 3 days"} cancellation`
+            : "No trust penalty applied",
+        // Important: Let user know stats aren't lost
+        statsNote: "Your booking history has been preserved.",
       },
     });
 
     return {
       success: true,
       trustPenaltyApplied,
-      isFromBooked,
-      updatedTrust: true, // Indicates trust score was updated
+      hoursUntilGig: Math.floor(hoursDifference),
+      cancellationTiming:
+        hoursDifference < 24
+          ? "last_minute"
+          : hoursDifference < 72
+            ? "within_3_days"
+            : "more_than_3_days",
+      musicianPenalty: trustPenaltyApplied,
+      updatedTrust: trustPenaltyApplied > 0,
+      // Important: Tell frontend counts were NOT changed
+      statsPreserved: true,
+      message:
+        trustPenaltyApplied > 0
+          ? `Booking cancelled with ${trustPenaltyApplied} point trust penalty. Booking count preserved.`
+          : "Booking cancelled. No trust penalty applied. Booking count preserved.",
     };
   },
 });
-
 export const completeBandPayment = mutation({
   args: {
     gigId: v.id("gigs"),

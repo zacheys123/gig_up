@@ -22,7 +22,6 @@ export const userModel = defineTable({
   isClient: v.boolean(),
   isBoth: v.optional(v.boolean()),
   isAdmin: v.optional(v.boolean()),
-  // In your user schema, update the adminRole field to match all possible roles
   adminRole: v.optional(
     v.union(
       v.literal("super"),
@@ -31,8 +30,8 @@ export const userModel = defineTable({
       v.literal("analytics"),
       v.literal("admin"),
       v.literal("security"),
-      v.literal("infrastructure")
-    )
+      v.literal("infrastructure"),
+    ),
   ),
   adminPermissions: v.optional(
     v.array(
@@ -53,12 +52,12 @@ export const userModel = defineTable({
         v.literal("moderation"),
         v.literal("user_support"),
         v.literal("reports"),
-        v.literal("data_export")
-      )
-    )
+        v.literal("data_export"),
+      ),
+    ),
   ),
   adminAccessLevel: v.optional(
-    v.union(v.literal("full"), v.literal("limited"), v.literal("restricted"))
+    v.union(v.literal("full"), v.literal("limited"), v.literal("restricted")),
   ),
   canManageUsers: v.optional(v.boolean()),
   canManageContent: v.optional(v.boolean()),
@@ -72,9 +71,9 @@ export const userModel = defineTable({
           adminId: v.string(),
           note: v.string(),
           timestamp: v.number(),
-        })
-      )
-    )
+        }),
+      ),
+    ),
   ),
   adminDashboardAccess: v.optional(v.boolean()),
   lastAdminAction: v.optional(v.number()),
@@ -113,11 +112,11 @@ export const userModel = defineTable({
       v.literal("individual_client"),
       v.literal("event_planner_client"),
       v.literal("venue_client"),
-      v.literal("corporate_client")
-    )
+      v.literal("corporate_client"),
+    ),
   ),
   bookerType: v.optional(
-    v.union(v.literal("talent_agent"), v.literal("booking_manager"))
+    v.union(v.literal("talent_agent"), v.literal("booking_manager")),
   ),
   // Profile and social
   bio: v.optional(v.string()),
@@ -129,8 +128,8 @@ export const userModel = defineTable({
       v.object({
         platform: v.string(),
         handle: v.string(),
-      })
-    )
+      }),
+    ),
   ),
   dualRoleUnlockedAt: v.optional(v.number()),
   videoCallUnlockedAt: v.optional(v.number()),
@@ -147,8 +146,8 @@ export const userModel = defineTable({
         gigId: v.optional(v.string()),
         updatedAt: v.optional(v.number()),
         createdAt: v.optional(v.number()),
-      })
-    )
+      }),
+    ),
   ),
 
   myreviews: v.optional(
@@ -163,8 +162,8 @@ export const userModel = defineTable({
         videoId: v.optional(v.array(v.string())),
         updatedAt: v.optional(v.number()),
         createdAt: v.optional(v.number()),
-      })
-    )
+      }),
+    ),
   ),
 
   // Social connections
@@ -178,15 +177,15 @@ export const userModel = defineTable({
     v.literal("free"),
     v.literal("pro"),
     v.literal("premium"),
-    v.literal("elite")
+    v.literal("elite"),
   ),
   tierStatus: v.optional(
     v.union(
       v.literal("active"),
       v.literal("pending"),
       v.literal("canceled"),
-      v.literal("expired")
-    )
+      v.literal("expired"),
+    ),
   ),
   earnings: v.number(),
   totalSpent: v.number(),
@@ -200,19 +199,20 @@ export const userModel = defineTable({
     v.object({
       count: v.number(),
       weekStart: v.number(),
-    })
+    }),
   ),
   gigsPostedThisWeek: v.optional(
     v.object({
       count: v.number(),
       weekStart: v.number(),
-    })
+    }),
   ),
   weeklyGigLimit: v.optional(v.number()), // Dynamic limit based on tier + trust score
   lastBookingDate: v.optional(v.number()),
   cancelgigCount: v.number(),
   completedGigsCount: v.optional(v.number()),
 
+  lastCancellation: v.optional(v.number()),
   // Booking history
   bookingHistory: v.optional(
     v.array(
@@ -223,14 +223,12 @@ export const userModel = defineTable({
         date: v.number(),
         role: v.string(),
         notes: v.optional(v.string()),
-      })
-    )
+      }),
+    ),
   ),
   // Replace the current rate field with this more flexible structure:
-  // In your user schema, update the rate field:
   rate: v.optional(
     v.object({
-      // Basic rate structure
       baseRate: v.optional(v.string()),
       rateType: v.optional(
         v.union(
@@ -239,8 +237,8 @@ export const userModel = defineTable({
           v.literal("per_session"),
           v.literal("per_gig"),
           v.literal("monthly"),
-          v.literal("custom")
-        )
+          v.literal("custom"),
+        ),
       ),
       currency: v.optional(v.string()),
 
@@ -252,8 +250,8 @@ export const userModel = defineTable({
             rate: v.string(),
             rateType: v.optional(v.string()),
             description: v.optional(v.string()),
-          })
-        )
+          }),
+        ),
       ),
 
       // Rate modifiers
@@ -267,7 +265,7 @@ export const userModel = defineTable({
       function: v.optional(v.string()),
       concert: v.optional(v.string()),
       corporate: v.optional(v.string()),
-    })
+    }),
   ),
 
   // Saved content
@@ -315,7 +313,7 @@ export const userModel = defineTable({
       clientSatisfaction: v.number(),
       responseTime: v.optional(v.number()),
       lastUpdated: v.optional(v.number()),
-    })
+    }),
   ),
   badgeMilestones: v.optional(
     v.object({
@@ -323,7 +321,7 @@ export const userModel = defineTable({
       earlyCompletions: v.number(),
       perfectRatings: v.number(),
       cancellationFreeStreak: v.number(),
-    })
+    }),
   ),
   gigsBooked: v.optional(v.number()),
   gigsPosted: v.optional(v.number()),
@@ -339,8 +337,8 @@ export const userModel = defineTable({
       }),
       v.object({
         firstGigDate: v.number(),
-      })
-    )
+      }),
+    ),
   ),
 
   userearnings: v.optional(v.number()),
@@ -354,10 +352,10 @@ export const userModel = defineTable({
           userId: v.string(),
           timestamp: v.number(),
           anonymous: v.optional(v.boolean()),
-        })
+        }),
       ),
       lastUpdated: v.optional(v.number()),
-    })
+    }),
   ),
   viewedProfiles: v.optional(v.array(v.string())),
   isPrivate: v.optional(v.boolean()),
@@ -372,13 +370,13 @@ export const userModel = defineTable({
         status: v.union(
           v.literal("pending"),
           v.literal("accepted"),
-          v.literal("rejected")
+          v.literal("rejected"),
         ),
         canBeBooked: v.boolean(),
         utoBookable: v.optional(v.boolean()),
         dateAdded: v.number(),
-      })
-    )
+      }),
+    ),
   ),
 
   backUpFor: v.optional(
@@ -390,17 +388,17 @@ export const userModel = defineTable({
         status: v.union(
           v.literal("pending"),
           v.literal("accepted"),
-          v.literal("rejected")
+          v.literal("rejected"),
         ),
         dateAdded: v.number(),
-      })
-    )
+      }),
+    ),
   ),
   backUpCount: v.optional(v.number()),
 
   confirmedReferredGigs: v.optional(v.number()),
   availability: v.optional(
-    v.union(v.literal("available"), v.literal("notavailable"))
+    v.union(v.literal("available"), v.literal("notavailable")),
   ),
 
   bannedBy: v.optional(v.string()),
@@ -419,8 +417,8 @@ export const userModel = defineTable({
         resolved: v.boolean(),
         resolvedBy: v.optional(v.string()),
         resolvedAt: v.optional(v.number()),
-      })
-    )
+      }),
+    ),
   ),
 
   warnings: v.optional(
@@ -430,8 +428,8 @@ export const userModel = defineTable({
         adminId: v.string(),
         timestamp: v.number(),
         acknowledged: v.boolean(),
-      })
-    )
+      }),
+    ),
   ),
   latePaymentsCount: v.optional(v.number()), // Number of late payments
   disputesCount: v.optional(v.number()), // Number of disputes
@@ -444,8 +442,8 @@ export const userModel = defineTable({
         adminId: v.string(),
         timestamp: v.number(),
         details: v.optional(v.string()),
-      })
-    )
+      }),
+    ),
   ),
   companyName: v.optional(v.string()),
   managedArtists: v.optional(v.array(v.string())),
@@ -464,14 +462,13 @@ export const userModel = defineTable({
   trustScore: v.optional(v.number()), // 0-100 score
   trustScoreLastUpdated: v.optional(v.number()), // When last calculated
   trustTier: v.optional(
-    // Auto-calculated tier
     v.union(
       v.literal("new"),
       v.literal("basic"),
       v.literal("verified"),
       v.literal("trusted"),
-      v.literal("elite")
-    )
+      v.literal("elite"),
+    ),
   ),
   // Track client-musician relationships for collusion detection
   bookedMusicians: v.optional(
@@ -481,8 +478,13 @@ export const userModel = defineTable({
         gigId: v.id("gigs"),
         date: v.number(),
         ratingGiven: v.optional(v.number()),
-      })
-    )
+        // Add these fields for cancellation tracking
+        cancelled: v.optional(v.boolean()),
+        cancelledAt: v.optional(v.number()),
+        cancellationReason: v.optional(v.string()),
+        trustPenalty: v.optional(v.number()),
+      }),
+    ),
   ),
   bookedByClients: v.optional(
     v.array(
@@ -491,9 +493,22 @@ export const userModel = defineTable({
         gigId: v.id("gigs"),
         date: v.number(),
         ratingReceived: v.optional(v.number()),
-      })
-    )
+        // Add these fields for cancellation tracking
+        cancelled: v.optional(v.boolean()),
+        cancelledAt: v.optional(v.number()),
+        cancellationReason: v.optional(v.string()),
+        trustPenalty: v.optional(v.number()),
+      }),
+    ),
   ),
+  // Flat arrays for indexing - store IDs separately for better querying
+  bookedMusicianIds: v.optional(v.array(v.id("users"))),
+  bookedByClientIds: v.optional(v.array(v.id("users"))),
+
+  bookingsCount: v.optional(v.number()), // For musicians: number of times booked
+  hiredCount: v.optional(v.number()), // For clients: number of musicians hired
+  lastBooking: v.optional(v.number()), // Last time musician was booked
+  lastHired: v.optional(v.number()), // Last time client hired someone
   bookingsThisWeek: v.optional(v.number()),
   maxWeeklyBookings: v.optional(v.number()),
   updatedAt: v.optional(v.number()),
@@ -532,10 +547,9 @@ export const userModel = defineTable({
     "reliabilityScore",
   ])
   .index("by_trust_tier", ["trustTier"])
-
   .index("by_trustscore", ["trustScore"])
-
   .index("by_is_suspended", ["isSuspended"])
-
   .index("by_role", ["isMusician", "isClient", "isBooker"])
-  .index("by_reported_count", ["reportedCount"]);
+  .index("by_reported_count", ["reportedCount"])
+  .index("by_booked_musician_ids", ["bookedMusicianIds"])
+  .index("by_booked_by_client_ids", ["bookedByClientIds"]);

@@ -67,8 +67,8 @@ export default defineSchema({
         v.literal("free"),
         v.literal("pro"),
         v.literal("premium"),
-        v.literal("elite")
-      )
+        v.literal("elite"),
+      ),
     ),
     targetRoles: v.optional(v.array(v.string())), // UserRole[]
     rolloutPercentage: v.number(), // 0-100
@@ -100,7 +100,7 @@ export default defineSchema({
         isCrewChat: v.optional(v.boolean()),
         gigId: v.optional(v.id("gigs")),
         clientRole: v.optional(
-          v.union(v.literal("admin"), v.literal("member"))
+          v.union(v.literal("admin"), v.literal("member")),
         ),
         permissions: v.optional(
           v.object({
@@ -108,13 +108,13 @@ export default defineSchema({
             canAddMembers: v.optional(v.boolean()),
             canRemoveMembers: v.optional(v.boolean()),
             canEditChatInfo: v.optional(v.boolean()),
-          })
+          }),
         ),
         lastUpdated: v.optional(v.number()),
         chatPurpose: v.optional(v.string()),
         gigTitle: v.optional(v.string()),
         gigDate: v.optional(v.number()),
-      })
+      }),
     ),
   })
     .index("by_participants", ["participantIds"])
@@ -130,7 +130,7 @@ export default defineSchema({
       v.literal("text"),
       v.literal("image"),
       v.literal("file"),
-      v.literal("audio")
+      v.literal("audio"),
     ),
     attachments: v.optional(
       v.array(
@@ -139,8 +139,8 @@ export default defineSchema({
           type: v.string(),
           name: v.optional(v.string()),
           size: v.optional(v.number()),
-        })
-      )
+        }),
+      ),
     ),
     repliedTo: v.optional(v.id("messages")),
     readBy: v.array(v.id("users")),
@@ -149,7 +149,7 @@ export default defineSchema({
       // Remove optional
       v.literal("sent"),
       v.literal("delivered"),
-      v.literal("read")
+      v.literal("read"),
     ),
     isDeleted: v.boolean(),
     _creationTime: v.number(),
@@ -199,7 +199,7 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("accepted"),
       v.literal("rejected"),
-      v.literal("blocked")
+      v.literal("blocked"),
     ),
     initiatedBy: v.id("users"),
     createdAt: v.number(),
@@ -250,12 +250,12 @@ export default defineSchema({
       v.literal("forming"),
       v.literal("active"),
       v.literal("inactive"),
-      v.literal("archived")
+      v.literal("archived"),
     ),
     type: v.union(
       v.literal("permanent"),
       v.literal("ad-hoc"),
-      v.literal("cover")
+      v.literal("cover"),
     ),
     creatorId: v.id("users"),
 
@@ -269,9 +269,9 @@ export default defineSchema({
         status: v.union(
           v.literal("active"),
           v.literal("former"),
-          v.literal("invited")
+          v.literal("invited"),
         ),
-      })
+      }),
     ),
 
     // Band statistics
@@ -287,8 +287,8 @@ export default defineSchema({
         v.object({
           platform: v.string(),
           url: v.string(),
-        })
-      )
+        }),
+      ),
     ),
 
     // Availability
@@ -314,7 +314,7 @@ export default defineSchema({
       v.literal("applied"),
       v.literal("shortlisted"),
       v.literal("booked"),
-      v.literal("rejected")
+      v.literal("rejected"),
     ),
     appliedAt: v.number(),
     proposedFee: v.optional(v.number()),
@@ -355,6 +355,42 @@ export default defineSchema({
     .index("by_action", ["action"]),
 
   reports: reports,
+
+  // Update your trustScoreHistory schema to include more specific contexts:
+  // Update your trustScoreHistory schema:
+  trustScoreHistory: defineTable({
+    userId: v.id("users"),
+    amount: v.number(),
+    newScore: v.number(),
+    previousScore: v.number(),
+    reason: v.string(),
+    context: v.union(
+      v.literal("gig_booking_cancellation"),
+      v.literal("gig_completion"),
+      v.literal("review_received"),
+      v.literal("on_time_payment"),
+      v.literal("late_payment"),
+      v.literal("account_verification"),
+      v.literal("referral_bonus"),
+      v.literal("system_adjustment"),
+      v.literal("other"),
+      v.literal("last_minute_band_booking_cancellation"),
+      v.literal("within_3_days_band_booking_cancellation"),
+      v.literal("regular_gig_cancellation"),
+      v.literal("band_gig_cancellation"),
+    ),
+
+    gigId: v.optional(v.id("gigs")),
+    bookingId: v.optional(v.id("bookings")),
+    reviewId: v.optional(v.id("reviews")),
+    actionBy: v.optional(v.id("users")),
+
+    note: v.optional(v.string()),
+    metadata: v.optional(v.any()), // Add this line for flexible metadata
+
+    timestamp: v.number(),
+    createdAt: v.number(),
+  }),
   // // Add this to track who can create bands
   // userBandEligibility: defineTable({
   //   userId: v.id("users"),
