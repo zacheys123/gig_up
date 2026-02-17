@@ -56,7 +56,9 @@ import {
   Briefcase,
   Target,
   Award,
-  Edit, // Add Edit icon
+  Edit,
+  Archive,
+  AlertCircle,
 } from "lucide-react";
 
 // Custom Components
@@ -88,29 +90,31 @@ interface ClientPreBookingProps {
 
 export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const router = useRouter();
-  const { userId: authClerkId } = useAuth(); // Renamed for clarity
+  const { userId: authClerkId } = useAuth();
   const { colors, isDarkMode } = useThemeColors();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // FIX 1: Define active tab states
+  // Tab states
   const [activeGigTab, setActiveGigTab] = useState<GigTabType>("regular");
   const [activeTab, setActiveTab] = useState<"applicants" | "history">(
     "applicants",
   );
+  const [applicantView, setApplicantView] = useState<"active" | "history">(
+    "active",
+  );
 
-  // FIX 3: Correct query parameters
+  // Queries
   const userGigs = useQuery(
     api.controllers.gigs.getGigsByUser,
-    user?.clerkId // clerkId is already a string or undefined
+    user?.clerkId
       ? {
-          clerkId: user?.clerkId, // Pass as string
+          clerkId: user?.clerkId,
           status: "all",
           gigType: "all",
         }
       : "skip",
   );
 
-  // FIX 4: Get all users for mapping
   const allUsers = useQuery(api.controllers.user.getAllUsers);
 
   // Mutations
@@ -162,17 +166,14 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     userGigs.forEach((gig) => {
       const typedGig = gig as any;
 
-      // Check if gig is not taken
       if (typedGig.isTaken) return;
 
-      // Regular gigs count
       if (!typedGig.isClientBand) {
         const hasInterested =
           typedGig.interestedUsers && typedGig.interestedUsers.length > 0;
         if (hasInterested) counts.regular++;
       }
 
-      // Band roles count
       if (typedGig.isClientBand && typedGig.bandCategory) {
         const hasRoleApplicants = typedGig.bandCategory.some(
           (role: any) => role.applicants && role.applicants.length > 0,
@@ -180,14 +181,12 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         if (hasRoleApplicants) counts.bandRoles++;
       }
 
-      // Full band count
       if (typedGig.isClientBand) {
         const hasBandApplications =
           typedGig.bookCount && typedGig.bookCount.length > 0;
         if (hasBandApplications) counts.fullBand++;
       }
 
-      // Shortlist count
       const hasShortlisted =
         typedGig.shortlistedUsers && typedGig.shortlistedUsers.length > 0;
       if (hasShortlisted) counts.shortlist++;
@@ -198,7 +197,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
 
   const tabCounts = getTabCounts();
 
-  // FIX 5: Process gigs with proper null checks
+  // Process gigs with proper null checks
   const processGigsWithApplicants = () => {
     if (!userGigs || !allUsers) {
       console.log("No gigs or users data available");
@@ -216,7 +215,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       .filter((gig) => {
         const typedGig = gig as any;
 
-        // Defensive checks for all arrays
         const interestedUsers = typedGig.interestedUsers || [];
         const shortlistedUsers = typedGig.shortlistedUsers || [];
         const bookCount = typedGig.bookCount || [];
@@ -248,7 +246,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         let shortlisted: ShortlistedUser[] = [];
         const bookingHistory = typedGig.bookingHistory || [];
 
-        // Get arrays with fallbacks
         const interestedUsers = typedGig.interestedUsers || [];
         const shortlistedUsers = typedGig.shortlistedUsers || [];
         const bandCategory = typedGig.bandCategory || [];
@@ -262,25 +259,43 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               );
 
               let status: Applicant["status"] = "pending";
-              if (
-                statusHistory.some((entry: any) => entry.status === "booked")
-              ) {
-                status = "booked";
-              } else if (
-                shortlistedUsers.some((item: any) => item.userId === userId)
-              ) {
-                status = "shortlisted";
-              } else if (
-                statusHistory.some((entry: any) => entry.status === "rejected")
-              ) {
+
+              const hasCancelled = statusHistory.some(
+                (entry: any) => entry.status === "cancelled",
+              );
+              const hasRejected = statusHistory.some(
+                (entry: any) => entry.status === "rejected",
+              );
+
+              if (hasCancelled) {
+                status = "cancelled";
+              } else if (hasRejected) {
                 status = "rejected";
-              } else if (
-                statusHistory.some(
-                  (entry: any) =>
-                    entry.status === "updated" || entry.status === "viewed",
-                )
-              ) {
-                status = "viewed";
+              } else {
+                if (statusHistory.length > 0) {
+                  const sortedHistory = [...statusHistory].sort(
+                    (a, b) => (b.timestamp || 0) - (a.timestamp || 0),
+                  );
+                  const latestEntry = sortedHistory[0];
+
+                  if (latestEntry.status === "booked") {
+                    status = "booked";
+                  } else if (
+                    latestEntry.status === "updated" ||
+                    latestEntry.status === "viewed"
+                  ) {
+                    status = "viewed";
+                  }
+                }
+
+                if (status !== "booked") {
+                  const isShortlisted = shortlistedUsers.some(
+                    (item: any) => item.userId === userId,
+                  );
+                  if (isShortlisted) {
+                    status = "shortlisted";
+                  }
+                }
               }
 
               return {
@@ -305,18 +320,40 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                 );
 
                 let status: Applicant["status"] = "pending";
-                if (
-                  statusHistory.some((entry: any) => entry.status === "booked")
-                ) {
-                  status = "booked";
-                } else if (
-                  shortlistedUsers.some(
-                    (item: any) =>
-                      item.userId === userId &&
-                      item.bandRoleIndex === roleIndex,
-                  )
-                ) {
-                  status = "shortlisted";
+
+                const hasCancelled = statusHistory.some(
+                  (entry: any) => entry.status === "cancelled",
+                );
+                const hasRejected = statusHistory.some(
+                  (entry: any) => entry.status === "rejected",
+                );
+
+                if (hasCancelled) {
+                  status = "cancelled";
+                } else if (hasRejected) {
+                  status = "rejected";
+                } else {
+                  if (statusHistory.length > 0) {
+                    const sortedHistory = [...statusHistory].sort(
+                      (a, b) => (b.timestamp || 0) - (a.timestamp || 0),
+                    );
+                    const latestEntry = sortedHistory[0];
+
+                    if (latestEntry.status === "booked") {
+                      status = "booked";
+                    }
+                  }
+
+                  if (status !== "booked") {
+                    const isShortlisted = shortlistedUsers.some(
+                      (item: any) =>
+                        item.userId === userId &&
+                        item.bandRoleIndex === roleIndex,
+                    );
+                    if (isShortlisted) {
+                      status = "shortlisted";
+                    }
+                  }
                 }
 
                 applicants.push({
@@ -330,10 +367,32 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               });
 
               roleBookedUsers.forEach((userId: Id<"users">) => {
+                const hasCancelled = bookingHistory.some(
+                  (entry: any) =>
+                    entry.userId === userId &&
+                    entry.status === "cancelled" &&
+                    entry.bandRoleIndex === roleIndex,
+                );
+
+                const hasRejected = bookingHistory.some(
+                  (entry: any) =>
+                    entry.userId === userId &&
+                    entry.status === "rejected" &&
+                    entry.bandRoleIndex === roleIndex,
+                );
+
+                let status: Applicant["status"] = "booked";
+
+                if (hasCancelled) {
+                  status = "cancelled";
+                } else if (hasRejected) {
+                  status = "rejected";
+                }
+
                 applicants.push({
                   userId,
                   appliedAt: typedGig.createdAt,
-                  status: "booked",
+                  status,
                   gigId: typedGig._id,
                   bandRole: role.role,
                   bandRoleIndex: roleIndex,
@@ -343,12 +402,52 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             break;
 
           case "full-band":
-            // Process full band applications
             bookCount.forEach((bandApplication: any) => {
+              const bandId = bandApplication.bandId;
+
+              const statusHistory = bookingHistory.filter(
+                (entry: any) => entry.userId === bandId,
+              );
+
+              let status: Applicant["status"] = "pending";
+
+              const hasCancelled = statusHistory.some(
+                (entry: any) => entry.status === "cancelled",
+              );
+              const hasRejected = statusHistory.some(
+                (entry: any) => entry.status === "rejected",
+              );
+
+              if (hasCancelled) {
+                status = "cancelled";
+              } else if (hasRejected) {
+                status = "rejected";
+              } else {
+                if (statusHistory.length > 0) {
+                  const sortedHistory = [...statusHistory].sort(
+                    (a, b) => (b.timestamp || 0) - (a.timestamp || 0),
+                  );
+                  const latestEntry = sortedHistory[0];
+
+                  if (latestEntry.status === "booked") {
+                    status = "booked";
+                  }
+                }
+
+                if (status !== "booked") {
+                  const isShortlisted = shortlistedUsers.some(
+                    (item: any) => item.userId === bandId,
+                  );
+                  if (isShortlisted) {
+                    status = "shortlisted";
+                  }
+                }
+              }
+
               applicants.push({
-                userId: bandApplication.bandId,
+                userId: bandId,
                 appliedAt: typedGig.createdAt,
-                status: "pending",
+                status,
                 gigId: typedGig._id,
               });
             });
@@ -388,7 +487,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   };
 
-  // FIX 6: Use clerkId in mutation calls
+  // Handlers
   const handleAddToShortlist = async (
     gigId: Id<"gigs">,
     applicantId: Id<"users">,
@@ -405,7 +504,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         gigId,
         applicantId,
         notes: bandRole ? `Interested for ${bandRole} role` : undefined,
-        clerkId: user?.clerkId, // Use clerkId
+        clerkId: user?.clerkId,
         bandRole,
         bandRoleIndex,
       });
@@ -431,7 +530,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       await removeFromShortlist({
         gigId,
         applicantId,
-        clerkId: user?.clerkId, // Use clerkId
+        clerkId: user?.clerkId,
       });
       toast.success("Removed from shortlist");
       processGigsWithApplicants();
@@ -460,7 +559,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     setShowBookDialog(true);
   };
 
-  // FIX 7: Single handleConfirmBooking function
   const handleConfirmBooking = async () => {
     if (!selectedGig || !user?.clerkId) {
       toast.error("No gig selected or authentication required");
@@ -480,7 +578,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         source: source,
         agreedPrice: bookingPrice ? Number(bookingPrice) : undefined,
         notes: `Booked from ${activeGigTab} tab`,
-        clerkId: user?.clerkId, // Use clerkId
+        clerkId: user?.clerkId,
       };
 
       if (selectedMusician) {
@@ -537,22 +635,12 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   };
 
-  // FIX 8: Update effects to use correct dependencies
   useEffect(() => {
     if (userGigs !== undefined && allUsers !== undefined) {
       processGigsWithApplicants();
       setLoading(false);
     }
   }, [userGigs, allUsers, activeGigTab]);
-
-  // Add debugging useEffect
-  useEffect(() => {
-    console.log("=== DEBUG INFO ===");
-    console.log("User:", user);
-    console.log("Clerk ID:", user?.clerkId);
-    console.log("User Gigs loaded:", userGigs !== undefined);
-    console.log("Number of gigs:", userGigs?.length || 0);
-  }, [user, user?.clerkId, userGigs]);
 
   // Format helpers
   const formatDate = (timestamp: number) => {
@@ -580,6 +668,10 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         return "bg-blue-100 text-blue-800 border-blue-200";
       case "booked":
         return "bg-purple-100 text-purple-800 border-purple-200";
+      case "cancelled":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "updated":
+        return "bg-cyan-100 text-cyan-800 border-cyan-200";
       default:
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
     }
@@ -594,7 +686,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       return <Users2 className="w-5 h-5 text-blue-500" />;
     }
 
-    // Check for specific talent types
     if (gig.bussinesscat === "mc") {
       return <Mic className="w-5 h-5 text-red-500" />;
     }
@@ -664,10 +755,21 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     ? gigsWithApplicants.find((g) => g.gig._id === selectedGig)
     : gigsWithApplicants[0];
 
-  // Filter functions
-  const filteredApplicants = selectedGigData?.applicants.filter((applicant) => {
+  // Split applicants into active and history
+  const activeApplicants =
+    selectedGigData?.applicants.filter((applicant) => {
+      return !["cancelled", "rejected"].includes(applicant.status);
+    }) || [];
+
+  const historyApplicants =
+    selectedGigData?.applicants.filter((applicant) => {
+      return ["cancelled", "rejected"].includes(applicant.status);
+    }) || [];
+
+  // Apply search filter
+  const filterBySearch = (applicant: Applicant) => {
     if (!searchTerm) return true;
-    const user = selectedGigData.userDetails.get(applicant.userId);
+    const user = selectedGigData?.userDetails.get(applicant.userId);
     const term = searchTerm.toLowerCase();
     return (
       user?.firstname?.toLowerCase().includes(term) ||
@@ -675,10 +777,12 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       user?.roleType?.toLowerCase().includes(term) ||
       applicant.bandRole?.toLowerCase().includes(term)
     );
-  });
+  };
 
-  const filteredShortlist = selectedGigData?.shortlisted.filter(
-    (shortlistItem) => {
+  const filteredActiveApplicants = activeApplicants.filter(filterBySearch);
+  const filteredHistoryApplicants = historyApplicants.filter(filterBySearch);
+  const filteredShortlist =
+    selectedGigData?.shortlisted.filter((shortlistItem) => {
       if (!searchTerm) return true;
       const user = selectedGigData.userDetails.get(shortlistItem.userId);
       const term = searchTerm.toLowerCase();
@@ -688,8 +792,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         user?.roleType?.toLowerCase().includes(term) ||
         shortlistItem.bandRole?.toLowerCase().includes(term)
       );
-    },
-  );
+    }) || [];
 
   // Get applicant count for gig card
   const getGigApplicantCount = (gigData: GigWithApplicants) => {
@@ -737,7 +840,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="space-y-6">
-          {/* Horizontal cards skeleton */}
           <ScrollArea>
             <div className="flex gap-3 pb-4">
               {[1, 2, 3, 4].map((i) => (
@@ -770,6 +872,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               setActiveGigTab(v);
               setSelectedGig(null);
               setSearchTerm("");
+              setApplicantView("active"); // Reset to active view when switching gig tabs
             }}
             className="w-full"
           >
@@ -807,7 +910,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search gigs..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -821,7 +924,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search gigs..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -836,10 +939,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               {gigsWithApplicants.map((gigData) => {
                 const isSelected = selectedGig === gigData.gig._id;
                 const applicantCount = getGigApplicantCount(gigData);
-                const shortlistedCount = gigData.shortlisted.length;
-                const hasShortlisted = shortlistedCount > 0;
-                const category = getGigCategoryLabel(gigData.gig);
-                const categoryColor = getGigCategoryColor(gigData.gig);
 
                 return (
                   <motion.div
@@ -847,134 +946,107 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                     variants={cardVariants}
                     initial="hidden"
                     animate="visible"
-                    whileHover="hover"
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedGig(gigData.gig._id)}
-                    className="flex-shrink-0 w-72 md:w-80"
+                    className="flex-shrink-0 w-64"
                   >
                     <Card
                       className={cn(
-                        "cursor-pointer transition-all duration-300 group h-full",
-                        colors.border,
+                        "cursor-pointer transition-all duration-300",
                         isSelected
                           ? "ring-2 ring-orange-500 shadow-xl"
                           : "shadow-md hover:shadow-lg",
-                        "overflow-hidden",
                       )}
                     >
-                      <CardContent className="p-4">
-                        {/* Header with icon and category */}
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "p-2 rounded-lg",
-                                isSelected
-                                  ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                                  : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900",
-                              )}
-                            >
-                              {getGigIcon(gigData.gig)}
+                      <CardContent className="p-5">
+                        {!isSelected ? (
+                          <div className="text-center">
+                            <div className="text-3xl font-bold text-gray-800 mb-1">
+                              {applicantCount}
                             </div>
-                            <div>
-                              <Badge
-                                className={cn(
-                                  "text-xs font-medium",
-                                  categoryColor,
-                                )}
-                              >
-                                {category}
-                              </Badge>
+                            <div className="text-xs uppercase tracking-wider text-gray-500 mb-3">
+                              Applicants
                             </div>
+                            <h3 className="font-semibold text-lg line-clamp-2 mb-2">
+                              {gigData.gig.title}
+                            </h3>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              getGigStatusColor(gigData.gig),
-                            )}
-                          >
-                            {gigData.gig.isTaken ? "Booked" : "Active"}
-                          </Badge>
-                        </div>
-
-                        {/* Gig Title */}
-                        <h3 className="font-bold text-lg mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">
-                          {gigData.gig.title}
-                        </h3>
-
-                        {/* Stats row */}
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1">
-                              <Users className="w-4 h-4 text-blue-500" />
-                              <span className="font-semibold text-sm">
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="text-center border-b pb-3">
+                              <div className="text-4xl font-bold text-orange-500">
                                 {applicantCount}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                applied
-                              </span>
+                              </div>
+                              <div className="text-xs uppercase tracking-wider text-gray-500">
+                                Total Applicants
+                              </div>
                             </div>
-                            {hasShortlisted && (
-                              <div className="flex items-center gap-1">
-                                <Bookmark className="w-4 h-4 text-green-500" />
-                                <span className="font-semibold text-sm">
-                                  {shortlistedCount}
+
+                            <div>
+                              <h3 className="font-bold text-lg mb-2">
+                                {gigData.gig.title}
+                              </h3>
+
+                              <div className="space-y-2 text-sm">
+                                {gigData.gig.time?.start &&
+                                  gigData.gig.time?.end && (
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4 text-gray-400" />
+                                      <span>
+                                        {gigData.gig.time.start}
+                                        {gigData.gig.time.durationFrom} -{" "}
+                                        {gigData.gig.time.end}
+                                        {gigData.gig.time.durationTo}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                {gigData.gig.location && (
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-gray-400" />
+                                    <span className="truncate">
+                                      {gigData.gig.location}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {gigData?.gig?.price &&
+                                  gigData?.gig?.price > 0 && (
+                                    <div className="flex items-center gap-2 font-semibold text-green-600">
+                                      <DollarSign className="w-4 h-4" />
+                                      <span>${gigData.gig.price}</span>
+                                    </div>
+                                  )}
+                              </div>
+                            </div>
+
+                            {gigData.shortlisted.length > 0 && (
+                              <div className="flex items-center justify-between pt-2 border-t">
+                                <span className="text-sm text-gray-600">
+                                  Shortlisted
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  shortlisted
-                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-green-100 text-green-700"
+                                >
+                                  {gigData.shortlisted.length}
+                                </Badge>
                               </div>
                             )}
-                          </div>
-                          {isSelected && (
-                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                          )}
-                        </div>
 
-                        {/* Date and Location */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className="text-gray-600">
-                              {formatDate(gigData.gig.date)}
-                            </span>
-                            {gigData.gig.time?.start && (
-                              <>
-                                <Clock className="w-4 h-4 text-gray-400" />
-                                <span className="text-gray-600">
-                                  {gigData.gig.time.start}
-                                </span>
-                              </>
-                            )}
+                            <Badge
+                              className={cn(
+                                "w-full justify-center",
+                                gigData.gig.isTaken
+                                  ? "bg-gray-100 text-gray-700"
+                                  : "bg-orange-100 text-orange-700",
+                              )}
+                            >
+                              {gigData.gig.isTaken ? "Booked" : "Active"}
+                            </Badge>
                           </div>
-                          {gigData.gig.location && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <MapPin className="w-4 h-4 text-gray-400" />
-                              <span className="text-gray-600 truncate">
-                                {gigData.gig.location.split(",")[0]}
-                              </span>
-                            </div>
-                          )}
-                          {gigData.gig.price && gigData.gig.price > 0 && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <DollarSign className="w-4 h-4 text-green-500" />
-                              <span className="font-semibold text-green-600">
-                                ${gigData.gig.price}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Bottom gradient bar */}
-                        <div
-                          className={cn(
-                            "absolute bottom-0 left-0 right-0 h-1 rounded-b-lg transition-all duration-300",
-                            isSelected
-                              ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                              : "bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 group-hover:bg-gradient-to-r group-hover:from-orange-400 group-hover:to-amber-400",
-                          )}
-                        />
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -1005,7 +1077,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         <Card>
           <CardContent className="p-4 md:p-6">
             <div className="space-y-6">
-              {/* Gig Header - Updated with Edit Button */}
+              {/* Gig Header */}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -1023,18 +1095,11 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Calendar className="w-4 h-4" />
                           {formatDate(selectedGigData.gig.date)}
-                          {selectedGigData.gig.time?.start && (
-                            <>
-                              <Clock className="w-4 h-4 ml-2" />
-                              {selectedGigData.gig.time.start}
-                            </>
-                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                {/* Edit Button - Added here */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1056,11 +1121,11 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <Users className="w-5 h-5 text-blue-500" />
                     <span className="text-lg font-bold">
-                      {selectedGigData.applicants.length}
+                      {activeApplicants.length}
                     </span>
                   </div>
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Applicants
+                    Active
                   </span>
                 </div>
                 <div className="text-center p-3 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
@@ -1085,15 +1150,15 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                     Budget
                   </span>
                 </div>
-                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20">
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <MapPin className="w-5 h-5 text-orange-500" />
-                    <span className="text-lg font-bold truncate">
-                      {selectedGigData.gig.location?.split(",")[0] || "Remote"}
+                    <Archive className="w-5 h-5 text-gray-500" />
+                    <span className="text-lg font-bold">
+                      {historyApplicants.length}
                     </span>
                   </div>
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Location
+                    History
                   </span>
                 </div>
               </div>
@@ -1102,7 +1167,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               {activeGigTab === "shortlist" ? (
                 <ShortlistTab
                   selectedGigData={selectedGigData}
-                  filteredShortlist={filteredShortlist || []}
+                  filteredShortlist={filteredShortlist}
                   handleRemoveFromShortlist={handleRemoveFromShortlist}
                   handleViewProfile={handleViewProfile}
                   handleBookMusician={handleBookMusician}
@@ -1115,49 +1180,198 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                   className="mt-6"
                 >
                   <TabsList className="grid grid-cols-2">
-                    <TabsTrigger value="applicants">
+                    <TabsTrigger value="applicants" className="relative">
                       <Users className="w-4 h-4 mr-2" />
-                      {activeGigTab === "full-band"
-                        ? `Bands (${selectedGigData.gig.bookCount?.length || 0})`
-                        : `Applicants (${filteredApplicants?.length || 0})`}
+                      Applicants
+                      {activeApplicants.length > 0 && (
+                        <Badge className="ml-2 bg-blue-500 text-white text-xs px-1.5">
+                          {activeApplicants.length}
+                        </Badge>
+                      )}
                     </TabsTrigger>
-                    <TabsTrigger value="history">
+                    <TabsTrigger value="history" className="relative">
                       <History className="w-4 h-4 mr-2" />
                       History
+                      {historyApplicants.length > 0 && (
+                        <Badge className="ml-2 bg-gray-500 text-white text-xs px-1.5">
+                          {historyApplicants.length}
+                        </Badge>
+                      )}
                     </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="applicants" className="space-y-4">
-                    {activeGigTab === "regular" && (
-                      <RegularGigsTab
-                        selectedGigData={selectedGigData}
-                        filteredApplicants={filteredApplicants || []}
-                        handleAddToShortlist={handleAddToShortlist}
-                        handleRemoveFromShortlist={handleRemoveFromShortlist}
-                        handleViewProfile={handleViewProfile}
-                        handleBookMusician={(
-                          userId: Id<"users">,
-                          userName: string,
-                        ) => handleBookMusician(userId, userName, "regular")}
-                        getStatusColor={getStatusColor}
-                      />
-                    )}
-                    {activeGigTab === "band-roles" && (
-                      <BandRolesTab
-                        selectedGigData={selectedGigData}
-                        filteredApplicants={filteredApplicants || []}
-                        clerkId={user?.clerkId!}
-                      />
-                    )}
-                    {activeGigTab === "full-band" && (
-                      <FullBandTab
-                        selectedGigData={selectedGigData}
-                        handleAddToShortlist={handleAddToShortlist}
-                        handleRemoveFromShortlist={handleRemoveFromShortlist}
-                        handleViewProfile={handleViewProfile}
-                        handleBookMusician={handleBookMusician}
-                        getStatusColor={getStatusColor}
-                      />
+                    {/* Applicant View Toggle */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={
+                            applicantView === "active" ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() => setApplicantView("active")}
+                          className={cn(
+                            "text-xs",
+                            applicantView === "active" && "bg-blue-600",
+                          )}
+                        >
+                          <Users className="w-3 h-3 mr-1" />
+                          Active ({filteredActiveApplicants.length})
+                        </Button>
+                        <Button
+                          variant={
+                            applicantView === "history" ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() => setApplicantView("history")}
+                          className={cn(
+                            "text-xs",
+                            applicantView === "history" && "bg-gray-600",
+                          )}
+                        >
+                          <Archive className="w-3 h-3 mr-1" />
+                          History ({filteredHistoryApplicants.length})
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Content based on view */}
+                    {applicantView === "active" ? (
+                      <>
+                        {activeGigTab === "regular" && (
+                          <RegularGigsTab
+                            selectedGigData={{
+                              ...selectedGigData,
+                              applicants: filteredActiveApplicants,
+                            }}
+                            filteredApplicants={filteredActiveApplicants}
+                            handleAddToShortlist={handleAddToShortlist}
+                            handleRemoveFromShortlist={
+                              handleRemoveFromShortlist
+                            }
+                            handleViewProfile={handleViewProfile}
+                            handleBookMusician={(
+                              userId: Id<"users">,
+                              userName: string,
+                            ) =>
+                              handleBookMusician(userId, userName, "regular")
+                            }
+                            getStatusColor={getStatusColor}
+                          />
+                        )}
+                        {activeGigTab === "band-roles" && (
+                          <BandRolesTab
+                            selectedGigData={{
+                              ...selectedGigData,
+                              applicants: filteredActiveApplicants,
+                            }}
+                            filteredApplicants={filteredActiveApplicants}
+                            clerkId={user?.clerkId!}
+                          />
+                        )}
+                        {activeGigTab === "full-band" && (
+                          <FullBandTab
+                            selectedGigData={selectedGigData}
+                            handleAddToShortlist={handleAddToShortlist}
+                            handleRemoveFromShortlist={
+                              handleRemoveFromShortlist
+                            }
+                            handleViewProfile={handleViewProfile}
+                            handleBookMusician={handleBookMusician}
+                            getStatusColor={getStatusColor}
+                          />
+                        )}
+                      </>
+                    ) : (
+                      /* History View - Show cancelled/rejected applicants */
+                      <div className="space-y-3">
+                        {filteredHistoryApplicants.length > 0 ? (
+                          filteredHistoryApplicants.map((applicant) => {
+                            const userData = selectedGigData.userDetails.get(
+                              applicant.userId,
+                            );
+                            if (!userData) return null;
+
+                            return (
+                              <Card
+                                key={applicant.userId}
+                                className="opacity-75 hover:opacity-100 transition-opacity"
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="w-10 h-10">
+                                      <AvatarImage src={userData.picture} />
+                                      <AvatarFallback>
+                                        {userData.firstname?.charAt(0) || "U"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="font-medium">
+                                          {userData.firstname}{" "}
+                                          {userData.username}
+                                        </h4>
+                                        {applicant.bandRole && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {applicant.bandRole}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Badge
+                                          className={getStatusColor(
+                                            applicant.status,
+                                          )}
+                                        >
+                                          {applicant.status === "cancelled"
+                                            ? "Cancelled"
+                                            : "Rejected"}
+                                        </Badge>
+                                        <span className="text-xs text-gray-500">
+                                          {formatDate(applicant.appliedAt)}
+                                        </span>
+                                      </div>
+                                      {applicant.status === "cancelled" && (
+                                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                          <AlertCircle className="w-3 h-3" />
+                                          Booking was cancelled
+                                        </p>
+                                      )}
+                                      {applicant.status === "rejected" && (
+                                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                          <XCircle className="w-3 h-3" />
+                                          Application was not accepted
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() =>
+                                        handleViewProfile(
+                                          selectedGigData.gig._id,
+                                          applicant.userId,
+                                        )
+                                      }
+                                      className="flex-shrink-0"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <Archive className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                            <p>No cancelled or rejected applicants</p>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </TabsContent>
 
@@ -1190,12 +1404,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             <div className="flex items-center justify-center gap-3">
               <Award className="w-5 h-5 text-orange-500" />
               <span className="text-sm font-medium text-gray-600">
-                {gigsWithApplicants.length} gigs available •{" "}
-                {gigsWithApplicants.reduce(
-                  (acc, gig) => acc + gig.applicants.length,
-                  0,
-                )}{" "}
-                total applicants
+                {gigsWithApplicants.length} gigs available
               </span>
             </div>
           </CardContent>
@@ -1300,14 +1509,14 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         </DialogContent>
       </Dialog>
 
-      {/* Band Booking Options Section - Only show for client-created band gigs */}
+      {/* Band Booking Options Section */}
       {selectedGigData?.gig.isClientBand &&
         selectedGigData?.gig.bandCategory &&
         selectedGigData?.gig.bandCategory.length > 0 && (
           <div className="mt-8 border-t pt-8">
             <BookingOptionsSection
               gigId={selectedGigData.gig._id}
-              clerkId={user?.clerkId!} // Use clerkId
+              clerkId={user?.clerkId!}
               gig={selectedGigData.gig}
               musiciansCount={selectedGigData.gig.bandCategory.reduce(
                 (total, role) => total + (role.bookedUsers?.length || 0),

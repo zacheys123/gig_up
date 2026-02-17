@@ -39,23 +39,27 @@ import {
   UserPlus,
   AlertCircle,
   Building2,
+  Bookmark,
+  Heart,
+  Users,
 } from "lucide-react";
 // Hooks
 import { useThemeColors } from "@/hooks/useTheme";
 
 // Convex
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 // Types & Components
 import { GigProps } from "@/types/gig";
 import GigDescription from "./gigs/GigDescription";
-import GigCard from "./gigs/GigCard";
+import GigCard, { BandApplication, BandRole } from "./gigs/GigCard";
 import FiltersPanel from "./gigs/FilterPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { ActionButtonConfig, getUserGigStatus, GigUserStatus } from "@/utils";
 import { useAllGigs, useGigs } from "@/hooks/useAllGigs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Helper function to get status icon
 export const getStatusIcon = (status: GigUserStatus) => {
@@ -537,6 +541,54 @@ export const AllGigs = ({ user }: { user: any }) => {
     return getUserGigStatus(convertedGig, user?._id);
   };
   const [showHeader, setShowHeader] = useState(false);
+  type ChildData = {
+    _id: Id<"gigs">;
+    title: string;
+    description?: string;
+    location?: string;
+    date: number;
+    time: {
+      start: string;
+      end: string;
+      durationFrom: string;
+      durationTo: string;
+    };
+    price?: number;
+    logo: string;
+    postedBy: Id<"users">;
+    isClientBand?: boolean;
+    isTaken?: boolean;
+    isPending?: boolean;
+    isActive?: boolean;
+    interestedUsers?: Id<"users">[];
+    bookCount?: BandApplication[];
+    maxSlots?: number;
+    tags?: string[];
+    category?: string;
+    bussinesscat?: string;
+    negotiable?: boolean;
+    paymentStatus?: string;
+    viewCount?: Id<"users">[];
+    bookingHistory?: any[];
+    acceptInterestStartTime?: number;
+    acceptInterestEndTime?: number;
+    bandCategory?: BandRole[];
+    createdAt: number;
+    updatedAt: number;
+    font?: string;
+    fontColor?: string;
+    backgroundColor?: string;
+    fontFamily?: string;
+  };
+  const [selectedModalGig, setSelectedModalGig] = useState<ChildData | null>(
+    null,
+  );
+  const [showGigModal, setShowGigModal] = useState(false);
+
+  const handleShowGigDetails = (gig: ChildData) => {
+    setSelectedModalGig(gig);
+    setShowGigModal(true);
+  };
 
   if (isLoading) {
     // Changed from isLoading.gigs || isLoading.explore
@@ -574,15 +626,19 @@ export const AllGigs = ({ user }: { user: any }) => {
   return (
     <div className="space-y-6">
       {/* GigDescription Modal */}
-      <GigDescription
-        gig={selectedGig}
-        isOpen={showGigDescription}
-        onClose={handleCloseGigDescription}
-        onBook={handleBookGig}
-        onSave={handleSaveGig}
-        onFavorite={handleFavoriteGig}
-        currentUserId={user?._id}
-      />
+      {showGigModal && selectedModalGig && (
+        <GigDescription
+          gig={selectedModalGig}
+          isOpen={showGigModal}
+          onClose={() => setShowGigModal(false)}
+          currentUserId={user?._id}
+          user={user}
+          isSaved={isSavedMap[selectedModalGig?._id]}
+          isFavorite={isFavoriteMap[selectedModalGig?._id]}
+          onSave={handleSaveGig}
+          onFavorite={handleFavoriteGig}
+        />
+      )}
       {/* Filters Panel */}
       <FiltersPanel
         isOpen={showFiltersPanel}
@@ -1111,7 +1167,7 @@ export const AllGigs = ({ user }: { user: any }) => {
           transition={{ duration: 1.6 }}
           className={cn(
             viewMode === "grid"
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 h-full  relative h-full"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" // Remove h-full
               : "space-y-4",
           )}
         >
@@ -1169,11 +1225,7 @@ export const AllGigs = ({ user }: { user: any }) => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className={
-                    viewMode === "list"
-                      ? "w-full  overflow-y-auto"
-                      : " overflow-y-auto"
-                  }
+                  className={viewMode === "list" ? "w-full " : " "}
                   whileHover={{ scale: viewMode === "grid" ? 1.02 : 1 }}
                 >
                   <GigCard
@@ -1182,6 +1234,7 @@ export const AllGigs = ({ user }: { user: any }) => {
                     userStatus={userStatus}
                     onClick={() => handleOpenGigDescription(gig)}
                     showFullGigs={false}
+                    getGigFromChild={handleShowGigDetails}
                   />
                 </motion.div>
               );

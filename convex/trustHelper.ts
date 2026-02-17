@@ -796,10 +796,10 @@ export async function updateUserTrust(
   const previousStars = user.trustStars || 0;
   const previousTier = user.trustTier || "new";
 
-  // Your algorithm calculates new trust
+  // Calculate new trust score
   const result = await calculateUserTrust(ctx, userId);
-  const featureEligibility = getFeatureEligibility(result.trustScore, user);
 
+  // Update user with new trust values only
   const updates: Partial<Doc<"users">> = {
     trustScore: result.trustScore,
     trustStars: result.trustStars,
@@ -808,31 +808,11 @@ export async function updateUserTrust(
     updatedAt: Date.now(),
   };
 
-  // AUTO-VERIFICATION: When score reaches 40
-  if (featureEligibility.canVerifiedBadge && !user.verified) {
+  // AUTO-VERIFICATION: When score reaches 40 (threshold for verified badge)
+  if (result.trustScore >= 40 && !user.verified) {
     updates.verified = true;
     updates.verifiedAt = Date.now();
     updates.verificationMethod = "trust_score_auto";
-
-    const currentBadges = user.badges || [];
-    if (!currentBadges.includes("verified")) {
-      updates.badges = [...currentBadges, "verified"];
-    }
-  }
-
-  // Track band creation milestone (score 70 for musicians)
-  if (featureEligibility.canCreateBand && !user.bandCreationUnlockedAt) {
-    updates.bandCreationUnlockedAt = Date.now();
-
-    const currentBadges = user.badges || [];
-    if (!currentBadges.includes("band_leader")) {
-      updates.badges = [...currentBadges, "band_leader"];
-    }
-  }
-
-  // Track video call milestone (score 65)
-  if (featureEligibility.canVideoCall && !user.videoCallUnlockedAt) {
-    updates.videoCallUnlockedAt = Date.now();
   }
 
   await ctx.db.patch(userId, updates);
@@ -843,9 +823,9 @@ export async function updateUserTrust(
   const tierChanged = result.tier !== previousTier;
 
   if (scoreChanged || starsChanged || tierChanged) {
-    // Create a detailed reason based on what changed
-    let reason = "Profile update triggered trust recalculation";
+    let reason = "Trust score recalculation";
     let note = "";
+    const now = Date.now(); // Use the same timestamp for both fields
 
     if (scoreChanged) {
       note += `Score: ${previousScore} → ${result.trustScore} `;
@@ -857,49 +837,38 @@ export async function updateUserTrust(
       note += `Tier: ${previousTier} → ${result.tier}`;
     }
 
-    // Check for milestones unlocked
+    // Check for tier milestone reached
     const milestones = [];
-    if (featureEligibility.canVerifiedBadge && !user.verified) {
-      milestones.push("Verified badge");
-    }
-    if (featureEligibility.canCreateBand && !user.bandCreationUnlockedAt) {
-      milestones.push("Band creation");
-    }
-    if (featureEligibility.canVideoCall && !user.videoCallUnlockedAt) {
-      milestones.push("Video calls");
+    if (result.tier === "verified" && previousTier !== "verified") {
+      milestones.push("Verified tier");
+    } else if (result.tier === "trusted" && previousTier !== "trusted") {
+      milestones.push("Trusted tier");
+    } else if (result.tier === "elite" && previousTier !== "elite") {
+      milestones.push("Elite tier");
     }
 
     if (milestones.length > 0) {
-      reason = `Unlocked: ${milestones.join(", ")}`;
+      reason = `Reached ${milestones.join(", ")}`;
     }
 
+    // FIX: Add createdAt field (same as timestamp)
     await ctx.db.insert("trustScoreHistory", {
       userId,
-      timestamp: Date.now(),
+      timestamp: now,
+      createdAt: now, // Add this required field
       amount: result.trustScore - previousScore,
       previousScore,
       newScore: result.trustScore,
       reason,
-      context: "profile_algorithm_update",
+      context: "system_adjustment",
       note: note.trim(),
       metadata: {
         previousStars,
         newStars: result.trustStars,
         previousTier,
         newTier: result.tier,
-        algorithmVersion: "1.0", // Version your algorithm
-        milestonesUnlocked: milestones,
-        profileFieldsConsidered: [
-          "firstname",
-          "lastname",
-          "instrument",
-          "experience",
-          "city",
-          "talentbio",
-          "email",
-          "phone",
-          "roleType",
-        ],
+        algorithmVersion: "1.0",
+        milestonesReached: milestones,
       },
     });
   }

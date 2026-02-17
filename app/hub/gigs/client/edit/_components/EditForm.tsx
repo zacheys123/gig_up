@@ -1242,7 +1242,7 @@ export default function EditGigForm({
     },
     [activeTalentType],
   );
-
+  console.log(gig?.font, "gigcustom in form");
   // In your EditGigForm component
   useEffect(() => {
     if (gig && !formValues) {
@@ -1910,6 +1910,10 @@ export default function EditGigForm({
     }
 
     setIsSaving(true);
+    const isResettingDefaults =
+      gigcustom.font === "" &&
+      gigcustom.fontColor === "" &&
+      gigcustom.backgroundColor === "";
 
     try {
       console.log("=== DEBUG: Saving gig data ===");
@@ -2012,12 +2016,9 @@ export default function EditGigForm({
         formValues.acceptInterestEndTime,
       );
 
-      // Prepare update data - DO NOT include gigId in the object to be cleaned
+      // Prepare update data
       const updateData: any = {
-        //  OPTIONAL field - can be undefined
         ...interestWindowData,
-
-        // REQUIRED fields - don't filter these out
         gigId: gigId as Id<"gigs">,
         clerkId: user.clerkId,
         title: formValues.title,
@@ -2025,8 +2026,6 @@ export default function EditGigForm({
         location: formValues.location,
         secret: formValues.secret,
         bussinesscat: formValues.bussinesscat,
-
-        // OPTIONAL fields - can be undefined
         phone: formValues.phoneNo || undefined,
         price: formValues.price ? parseFloat(formValues.price) : undefined,
         category: formValues.category || undefined,
@@ -2048,10 +2047,12 @@ export default function EditGigForm({
         maxSlots: formValues.maxSlots
           ? parseInt(formValues.maxSlots)
           : undefined,
-        font: gigcustom.font || undefined,
-        fontColor: gigcustom.fontColor || undefined,
-        backgroundColor: gigcustom.backgroundColor || undefined,
-        logo: imageUrl || undefined,
+        font: isResettingDefaults ? "" : gigcustom.font || undefined,
+        fontColor: isResettingDefaults ? "" : gigcustom.fontColor || undefined,
+        backgroundColor: isResettingDefaults
+          ? ""
+          : gigcustom.backgroundColor || undefined,
+        logo: isResettingDefaults ? "" : imageUrl || undefined,
         bandCategory: formattedBandRoles,
         time: {
           start: formValues.start || "",
@@ -2061,10 +2062,10 @@ export default function EditGigForm({
         },
       };
 
-      // Clean up undefined values but keep required fields
+      // Filter out undefined values but keep required fields
       const cleanUpdateData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, v]) => {
-          // Always keep these required fields even if empty
+        Object.entries(updateData).filter(([key, value]) => {
+          // Always keep required fields
           const requiredFields = [
             "gigId",
             "clerkId",
@@ -2074,18 +2075,24 @@ export default function EditGigForm({
             "secret",
             "bussinesscat",
           ];
-          if (requiredFields.includes(_ as string)) {
+          if (requiredFields.includes(key)) {
             return true;
           }
+
+          // If we're resetting defaults, keep empty strings for styling fields
+          if (
+            isResettingDefaults &&
+            ["font", "fontColor", "backgroundColor", "logo"].includes(key)
+          ) {
+            return true; // Keep empty strings
+          }
+
           // For other fields, only keep if not undefined
-          return v !== undefined;
+          return value !== undefined;
         }),
-      ) as any; // Cast to any to satisfy TypeScript
+      ) as any; // ✅ Type assertion to any
 
-      console.log("Sending update data:", cleanUpdateData);
-      console.log("Has gigId?", !!cleanUpdateData.gigId);
-
-      // Call the update function
+      // Call the mutation
       await updateGig(cleanUpdateData);
 
       // Update original values
@@ -2672,14 +2679,41 @@ export default function EditGigForm({
       {/* Customization Modal */}
       <AnimatePresence>
         {showCustomizationModal && (
-          <GigCustomization
-            customization={gigcustom}
-            setCustomization={setGigCustom}
-            closeModal={() => setShowCustomizationModal(false)}
-            logo={imageUrl}
-            handleFileChange={handleCustomizationFileChange}
-            isUploading={isUploading}
-          />
+          <AnimatePresence>
+            {showCustomizationModal && (
+              // In EditGigForm.tsx - Update the onApply handler
+              // In EditGigForm.tsx - Update the onApply handler
+              <GigCustomization
+                customization={gigcustom}
+                setCustomization={setGigCustom}
+                closeModal={() => setShowCustomizationModal(false)}
+                logo={imageUrl}
+                handleFileChange={handleCustomizationFileChange}
+                isUploading={isUploading}
+                onApply={(values: CustomProps & { resetStyling?: boolean }) => {
+                  console.log("onApply called with:", values);
+
+                  // Check if this is a reset to defaults
+                  if (values.resetStyling) {
+                    // This is a reset action - we need to explicitly clear styling
+                    setGigCustom({
+                      font: "",
+                      fontColor: "",
+                      backgroundColor: "",
+                    });
+                    // Also clear logo if needed
+                    setUrl(user?.picture || "");
+                  } else {
+                    // Normal update - remove the resetStyling flag before saving
+                    const { resetStyling, ...cleanValues } = values;
+                    setGigCustom(cleanValues);
+                  }
+
+                  setHasChanges(true);
+                }}
+              />
+            )}
+          </AnimatePresence>
         )}
       </AnimatePresence>
 

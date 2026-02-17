@@ -396,10 +396,12 @@ export interface CategoryVisibility {
 }
 
 // Custom styling properties for gig card
+// In your types/gig.ts file
 export interface CustomProps {
-  fontColor: string;
   font: string;
+  fontColor: string;
   backgroundColor: string;
+  resetStyling?: boolean; // Add this optional flag
 }
 
 // User information for gig creation

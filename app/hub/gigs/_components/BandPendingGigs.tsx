@@ -75,7 +75,13 @@ interface BandApplication {
   bandId: Id<"bands">;
   bandDetails?: any;
   clientDetails?: any;
-  status: "applied" | "shortlisted" | "booked" | "rejected" | "pending_review";
+  status:
+    | "applied"
+    | "shortlisted"
+    | "booked"
+    | "rejected"
+    | "pending_review"
+    | "cancelled";
   appliedAt: number;
   appliedBy: Id<"users">;
   proposedFee?: number;
@@ -99,7 +105,7 @@ export const BandPendingGigs: React.FC<BandPendingGigsProps> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<BandGigTabType>("all");
   const [loading, setLoading] = useState(true);
   const [bandApplications, setBandApplications] = useState<BandApplication[]>(
-    []
+    [],
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedApplication, setSelectedApplication] =
@@ -124,7 +130,7 @@ export const BandPendingGigs: React.FC<BandPendingGigsProps> = ({ user }) => {
   // Query band details for bands user leads
   const bandDetailsList = useQuery(
     api.controllers.bands.getBandsByIds,
-    bandIds.length > 0 ? { bandIds } : "skip"
+    bandIds.length > 0 ? { bandIds } : "skip",
   );
 
   // Process band applications
@@ -230,7 +236,7 @@ export const BandPendingGigs: React.FC<BandPendingGigsProps> = ({ user }) => {
           app.gig.title.toLowerCase().includes(term) ||
           app.clientDetails?.firstname?.toLowerCase().includes(term) ||
           app.clientDetails?.username?.toLowerCase().includes(term) ||
-          app.bandDetails?.name?.toLowerCase().includes(term)
+          app.bandDetails?.name?.toLowerCase().includes(term),
       );
     }
 
@@ -242,10 +248,10 @@ export const BandPendingGigs: React.FC<BandPendingGigsProps> = ({ user }) => {
     const stats = {
       total: bandApplications.length,
       pending: bandApplications.filter(
-        (app) => app.status === "applied" || app.status === "pending_review"
+        (app) => app.status === "applied" || app.status === "pending_review",
       ).length,
       shortlisted: bandApplications.filter(
-        (app) => app.status === "shortlisted"
+        (app) => app.status === "shortlisted",
       ).length,
       booked: bandApplications.filter((app) => app.status === "booked").length,
       rejected: bandApplications.filter((app) => app.status === "rejected")
@@ -792,7 +798,7 @@ export const BandPendingGigs: React.FC<BandPendingGigsProps> = ({ user }) => {
                       />
                       <AvatarFallback>
                         {selectedApplication.clientDetails?.firstname?.charAt(
-                          0
+                          0,
                         )}
                       </AvatarFallback>
                     </Avatar>

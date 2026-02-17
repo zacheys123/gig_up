@@ -235,6 +235,7 @@ export const removeInterestFromGig = mutation({
     const { gigId, userId, reason, isFromBooked } = args;
 
     const user = await ctx.db.get(userId);
+
     const gig = await ctx.db.get(gigId);
 
     if (!user) throw new Error("User not found");
@@ -272,17 +273,18 @@ export const removeInterestFromGig = mutation({
         timestamp: now,
         userId: userId,
         userRole: user.roleType || "musician",
-        status: "cancelled" as const,
+        status: "cancelled" as const, // ✅ Add 'as const'
         gigType: "regular" as const,
         actionBy: userId,
         reason: reason || "Cancelled booking",
         metadata: {
           hoursUntilGig: Math.floor(hoursDifference),
-          type: hoursDifference < 24 
-            ? "last_minute" 
-            : hoursDifference < 72 
-              ? "within_3_days" 
-              : "regular",
+          type:
+            hoursDifference < 24
+              ? "last_minute"
+              : hoursDifference < 72
+                ? "within_3_days"
+                : "regular",
         },
       };
 
@@ -290,36 +292,13 @@ export const removeInterestFromGig = mutation({
         bookingHistory: [...(gig.bookingHistory || []), cancellationEntry],
       });
 
-      // Update user's cancellation count
+      // Update user's cancellation count for trust score calculation
       await ctx.db.patch(userId, {
         cancelgigCount: (user.cancelgigCount || 0) + 1,
       });
 
-      // Add to client's bookingHistory as notification
-      const clientCancellationEntry = {
-        entryId: `${gigId}_${userId}_client_notification_${now}`,
-        timestamp: now,
-        userId: client._id,
-        userRole: "client",
-        status: "cancelled" as const,
-        gigType: "regular" as const,
-        actionBy: userId,
-        reason: `Musician cancelled: ${reason || "No reason provided"}`,
-        metadata: {
-          musicianId: userId,
-          musicianName: user.firstname || user.username,
-          hoursUntilGig: Math.floor(hoursDifference),
-          type: hoursDifference < 24 
-            ? "last_minute" 
-            : hoursDifference < 72 
-              ? "within_3_days" 
-              : "regular",
-        },
-      };
-
-      await ctx.db.patch(client._id, {
-        bookingHistory: [...(client.bookingHistory || []), clientCancellationEntry],
-      });
+      // Trigger trust recalculation
+      await updateUserTrust(ctx, userId);
 
       // Send notification to client
       try {
@@ -327,7 +306,11 @@ export const removeInterestFromGig = mutation({
           userDocumentId: client._id,
           type: "booking_cancelled",
           title: "❌ Booking Cancelled",
-          message: `${user.firstname || user.username} cancelled their booking for "${gig.title}"${hoursDifference < 72 ? ` (${hoursDifference < 24 ? 'last-minute' : 'within 3 days'} cancellation)` : ''}`,
+          message: `${user.firstname || user.username} cancelled their booking for "${gig.title}"${
+            hoursDifference < 72
+              ? ` (${hoursDifference < 24 ? "last-minute" : "within 3 days"} cancellation)`
+              : ""
+          }`,
           image: user.picture,
           actionUrl: `/gigs/${gigId}`,
           relatedUserDocumentId: userId,
@@ -338,15 +321,19 @@ export const removeInterestFromGig = mutation({
             musicianName: user.firstname || user.username,
             reason: reason || "",
             hoursUntilGig: Math.floor(hoursDifference),
-            cancellationType: hoursDifference < 24 
-              ? "last_minute" 
-              : hoursDifference < 72 
-                ? "within_3_days" 
-                : "regular",
+            cancellationType:
+              hoursDifference < 24
+                ? "last_minute"
+                : hoursDifference < 72
+                  ? "within_3_days"
+                  : "regular",
           },
         });
       } catch (error) {
-        console.error("Failed to send cancellation notification to client:", error);
+        console.error(
+          "Failed to send cancellation notification to client:",
+          error,
+        );
       }
     }
 
@@ -370,6 +357,10 @@ export const removeInterestFromGig = mutation({
       ...updatedInterestedUsers,
     ];
     const isStillFull = totalInterested.length >= maxSlots;
+    // Explicitly type the status variable
+    const statusValue: "cancelled" | "rejected" = isBookedMusician
+      ? "cancelled"
+      : "rejected";
 
     // Create removal entry for history
     const removalEntry = {
@@ -377,7 +368,7 @@ export const removeInterestFromGig = mutation({
       timestamp: now,
       userId: userId,
       userRole: user.roleType || "musician",
-      status: "cancelled" as const,
+      status: statusValue, // Now correctly typed
       gigType: "regular" as const,
       actionBy: userId,
       actionFor: userId,
@@ -511,9 +502,6 @@ export const removeInterestFromGig = mutation({
         console.error("Failed to create notification:", error);
       }
     }
-
-    // Trigger trust recalculation
-    await updateUserTrust(ctx, userId);
 
     return {
       success: true,
@@ -840,7 +828,6 @@ export const selectMusicianFromInterested = mutation({
     };
   },
 });
-// convex/controllers/gigs.ts
 export const removeUserInterest = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -874,6 +861,9 @@ export const removeUserInterest = mutation({
 
     const now = Date.now();
 
+    // Determine status based on whether they were booked or just interested
+    const status = isBooked ? "cancelled" : ("rejected" as const); // ✅ Add 'as const'
+
     // Prepare updates object with proper typing
     const updates: Record<string, any> = {
       updatedAt: now,
@@ -884,15 +874,19 @@ export const removeUserInterest = mutation({
           timestamp: now,
           userId: userIdToRemove,
           userRole: musician.roleType || "musician",
-          status: "rejected" as const,
+          status: status, // Now correctly typed as "cancelled" | "rejected"
           gigType: "regular" as const,
           actionBy: clientId,
           actionFor: userIdToRemove,
-          reason: reason || "Removed by gig owner",
+          reason:
+            reason ||
+            (isBooked
+              ? "Booking cancelled by client"
+              : "Interest rejected by client"),
           metadata: {
             action: isBooked
-              ? "booking_removed_by_client"
-              : "interest_removed_by_client",
+              ? "booking_cancelled_by_client"
+              : "interest_rejected_by_client",
             gigTitle: gig.title,
             musicianName: musician.firstname || musician.username,
             clientName: client.firstname || client.username,
@@ -908,7 +902,6 @@ export const removeUserInterest = mutation({
       updates.interestedUsers =
         gig.interestedUsers?.filter((id) => id !== userIdToRemove) || [];
     } else {
-      // Keep existing interestedUsers if not modifying
       updates.interestedUsers = gig.interestedUsers || [];
     }
 
@@ -926,7 +919,7 @@ export const removeUserInterest = mutation({
                 ...booking,
                 cancelled: true,
                 cancelledAt: now,
-                cancellationReason: reason || "Removed by gig owner",
+                cancellationReason: reason || "Booking cancelled by client",
               };
             }
             return booking;
@@ -946,10 +939,12 @@ export const removeUserInterest = mutation({
           bookedByClients: updatedMusicianBookings,
           bookedByClientIds: updatedMusicianBookedByClientIds,
           updatedAt: now,
+          // Increment cancellation count
+          cancelgigCount: (musician.cancelgigCount || 0) + 1,
         });
       }
 
-      // Update client's bookedMusicians array to mark as cancelled
+      // Update client's bookedMusicians array
       if (client.bookedMusicians) {
         const updatedClientBookings = client.bookedMusicians.map((hiring) => {
           if (
@@ -960,7 +955,7 @@ export const removeUserInterest = mutation({
               ...hiring,
               cancelled: true,
               cancelledAt: now,
-              cancellationReason: reason || "Removed by gig owner",
+              cancellationReason: reason || "Booking cancelled by client",
             };
           }
           return hiring;
@@ -983,7 +978,6 @@ export const removeUserInterest = mutation({
         });
       }
     } else {
-      // Keep existing bookedBy if not modifying
       updates.bookedBy = gig.bookedBy;
       updates.isTaken = gig.isTaken;
     }
@@ -996,14 +990,19 @@ export const removeUserInterest = mutation({
 
     await ctx.db.patch(gigId, updates);
 
+    // Trigger trust recalculation for the musician if cancelled
+    if (isBooked) {
+      await updateUserTrust(ctx, userIdToRemove);
+    }
+
     // Notify musician
     const notificationType = isBooked
-      ? "booking_removed_by_client"
-      : "interest_removed_by_client";
-    const title = isBooked ? "❌ Booking Removed" : "❌ Interest Removed";
+      ? "booking_cancelled_by_client"
+      : "interest_rejected_by_client";
+    const title = isBooked ? "❌ Booking Cancelled" : "❌ Interest Rejected";
     const message = isBooked
-      ? `Your booking for "${gig.title}" was removed by the gig owner`
-      : `Your interest in "${gig.title}" was removed by the gig owner`;
+      ? `Your booking for "${gig.title}" was cancelled by the gig owner`
+      : `Your interest in "${gig.title}" was not accepted at this time`;
 
     await createNotificationInternal(ctx, {
       userDocumentId: userIdToRemove,
@@ -1027,6 +1026,7 @@ export const removeUserInterest = mutation({
       removedUserId: userIdToRemove,
       musicianName: musician.firstname || musician.username,
       wasBooked: isBooked,
+      status: status,
       remainingCount: updates.interestedUsers.length,
     };
   },
@@ -1869,8 +1869,8 @@ export const createGig = mutation({
     time: v.object({
       start: v.string(),
       end: v.string(),
-      durationFrom: v.optional(v.string()),
-      durationTo: v.optional(v.string()),
+      durationFrom: v.string(),
+      durationTo: v.string(),
     }),
     logo: v.string(),
     description: v.optional(v.string()),
@@ -3039,8 +3039,8 @@ export const updateGig = mutation({
       v.object({
         start: v.string(),
         end: v.string(),
-        durationFrom: v.optional(v.string()),
-        durationTo: v.optional(v.string()),
+        durationFrom: v.string(),
+        durationTo: v.string(),
       }),
     ),
 
@@ -3065,16 +3065,16 @@ export const updateGig = mutation({
     djEquipment: v.optional(v.string()),
     vocalistGenre: v.optional(v.array(v.string())),
 
-    // Interest window - ADD THIS
+    // Interest window
     acceptInterestStartTime: v.optional(v.number()),
     acceptInterestEndTime: v.optional(v.number()),
-    interestWindowDays: v.optional(v.number()), // <-- ADD THIS LINE
-    enableInterestWindow: v.optional(v.boolean()), // <-- OPTIONAL: Also add this if needed
+    interestWindowDays: v.optional(v.number()),
+    enableInterestWindow: v.optional(v.boolean()),
 
     // Capacity
     maxSlots: v.optional(v.number()),
 
-    // Styling
+    // Styling - these can now accept empty strings
     font: v.optional(v.string()),
     fontColor: v.optional(v.string()),
     backgroundColor: v.optional(v.string()),
@@ -3094,21 +3094,7 @@ export const updateGig = mutation({
   handler: async (ctx, args) => {
     const { gigId, bandCategory, ...otherArgs } = args;
 
-    // DEBUG: Log incoming arguments
-    console.log("=== DEBUG: updateGig Mutation ===");
-    console.log("Gig ID:", gigId);
-    console.log("Interest window data:", {
-      acceptInterestStartTime: args.acceptInterestStartTime,
-      acceptInterestEndTime: args.acceptInterestEndTime,
-      interestWindowDays: args.interestWindowDays, // <-- Now logging this
-      startDate: args.acceptInterestStartTime
-        ? new Date(args.acceptInterestStartTime).toLocaleString()
-        : null,
-      endDate: args.acceptInterestEndTime
-        ? new Date(args.acceptInterestEndTime).toLocaleString()
-        : null,
-    });
-    console.log("Band category data:", bandCategory);
+    console.log("Custom data:", otherArgs);
 
     // Get current user with clerkId
     const { dbUser } = await getCurrentUser(ctx, args.clerkId);
@@ -3125,7 +3111,7 @@ export const updateGig = mutation({
     console.log("Existing interest window:", {
       start: existingGig.acceptInterestStartTime,
       end: existingGig.acceptInterestEndTime,
-      days: existingGig.interestWindowDays, // <-- Now logging this
+      days: existingGig.interestWindowDays,
       startDate: existingGig.acceptInterestStartTime
         ? new Date(existingGig.acceptInterestStartTime).toLocaleString()
         : null,
@@ -3143,11 +3129,28 @@ export const updateGig = mutation({
       updatedAt: Date.now(),
     };
 
-    // Add regular fields
+    // Add regular fields - now including empty strings for styling fields
     Object.keys(otherArgs).forEach((key) => {
       const value = otherArgs[key as keyof typeof otherArgs];
+
+      // Check if the field is a styling field that should accept empty strings
+      const isStylingField = [
+        "font",
+        "fontColor",
+        "backgroundColor",
+        "logo",
+      ].includes(key);
+
       if (value !== undefined && key !== "clerkId") {
-        payload[key] = value;
+        // For styling fields, allow empty strings to be passed through
+        if (isStylingField) {
+          payload[key] = value; // Allow empty strings
+        } else {
+          // For other fields, only add if value is not an empty string
+          if (value !== "") {
+            payload[key] = value;
+          }
+        }
       }
     });
 
@@ -3233,7 +3236,7 @@ export const updateGig = mutation({
     console.log("Updated interest window:", {
       start: updatedGig?.acceptInterestStartTime,
       end: updatedGig?.acceptInterestEndTime,
-      days: updatedGig?.interestWindowDays, // <-- Now logging this
+      days: updatedGig?.interestWindowDays,
       startDate: updatedGig?.acceptInterestStartTime
         ? new Date(updatedGig.acceptInterestStartTime).toLocaleString()
         : null,
@@ -3265,7 +3268,7 @@ export const updateGig = mutation({
         interestWindowUpdated: !!(
           args.acceptInterestStartTime ||
           args.acceptInterestEndTime ||
-          args.interestWindowDays // <-- Include this
+          args.interestWindowDays
         ),
       },
     };
@@ -3286,7 +3289,7 @@ export const updateGig = mutation({
       interestWindowUpdated: !!(
         args.acceptInterestStartTime ||
         args.acceptInterestEndTime ||
-        args.interestWindowDays // <-- Include this
+        args.interestWindowDays
       ),
       // Return current stats for debugging
       stats: {

@@ -174,7 +174,7 @@ export const gigModel = defineTable({
 
   // === BAND-RELATED FIELDS ===
   bandCategory: v.optional(v.array(bandRoleSchema)),
-   previousBandCategory: v.optional(v.array(bandRoleSchema)),
+  previousBandCategory: v.optional(v.array(bandRoleSchema)),
   isClientBand: v.optional(v.boolean()), // true for "other" category
   bussinesscat: v.string(),
 
@@ -184,8 +184,8 @@ export const gigModel = defineTable({
   time: v.object({
     start: v.string(),
     end: v.string(),
-    durationFrom: v.optional(v.string()),
-    durationTo: v.optional(v.string()),
+    durationFrom: v.string(),
+    durationTo: v.string(),
   }),
 
   // === BAND BOOKINGS ===

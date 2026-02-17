@@ -64,7 +64,8 @@ interface MusicianGigWithStatus {
     | "shortlisted"
     | "booked"
     | "rejected"
-    | "viewed";
+    | "viewed"
+    | "cancelled";
   appliedAt?: number;
   bandRole?: string;
   bandRoleIndex?: number;
@@ -165,7 +166,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // 3. Check full-band applications
       if (gig.bookCount) {
         const bandApplication = gig.bookCount.find(
-          (app: any) => app.appliedBy.toString() === userData._id.toString()
+          (app: any) => app.appliedBy.toString() === userData._id.toString(),
         );
         if (bandApplication) {
           status = "applied";
@@ -176,7 +177,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // 4. Check shortlisted status
       if (gig.shortlistedUsers) {
         const shortlistEntry = gig.shortlistedUsers.find(
-          (item: any) => item.userId.toString() === userData._id.toString()
+          (item: any) => item.userId.toString() === userData._id.toString(),
         );
         if (shortlistEntry) {
           status = "shortlisted";
@@ -244,7 +245,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
 
     // Filter out booked/rejected gigs for pending applications
     const pendingGigs = filtered.filter((g) =>
-      ["interested", "applied", "shortlisted", "viewed"].includes(g.status)
+      ["interested", "applied", "shortlisted", "viewed"].includes(g.status),
     );
 
     setMusicianGigs(pendingGigs);
@@ -277,7 +278,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // Regular gig interest - UPDATE
       if (gig.interestedUsers && Array.isArray(gig.interestedUsers)) {
         const userInterested = gig.interestedUsers.some(
-          (userId: any) => userId.toString() === userData._id.toString()
+          (userId: any) => userId.toString() === userData._id.toString(),
         );
         if (userInterested) {
           stats.regular++;
@@ -291,7 +292,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
           if (role.applicants && Array.isArray(role.applicants)) {
             return role.applicants.some(
               (applicantId: any) =>
-                applicantId.toString() === userData._id.toString()
+                applicantId.toString() === userData._id.toString(),
             );
           }
           return false;
@@ -305,7 +306,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // Full band applications - UPDATE
       if (gig.bookCount) {
         const userBandApplications = gig.bookCount.filter(
-          (app: any) => app.appliedBy.toString() === userData._id.toString()
+          (app: any) => app.appliedBy.toString() === userData._id.toString(),
         );
         if (userBandApplications.length > 0) {
           stats.fullBand += userBandApplications.length;
@@ -317,7 +318,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
       // Shortlisted - UPDATE
       if (gig.shortlistedUsers) {
         const isShortlisted = gig.shortlistedUsers.some(
-          (item: any) => item.userId.toString() === userData._id.toString()
+          (item: any) => item.userId.toString() === userData._id.toString(),
         );
         if (isShortlisted) {
           stats.shortlisted++;
@@ -555,7 +556,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
                     value={selectedGig || ""}
                     onValueChange={(value) =>
                       setSelectedGig(
-                        value === "" ? null : (value as Id<"gigs">)
+                        value === "" ? null : (value as Id<"gigs">),
                       )
                     }
                   >
@@ -615,7 +616,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
                             <div className="flex items-center gap-4">
                               <Badge
                                 className={getStatusColor(
-                                  selectedGigData.status
+                                  selectedGigData.status,
                                 )}
                               >
                                 {getStatusText(selectedGigData.status)}
@@ -701,7 +702,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
                               />
                               <AvatarFallback>
                                 {selectedGigData.clientDetails?.firstname?.charAt(
-                                  0
+                                  0,
                                 ) || "C"}
                               </AvatarFallback>
                             </Avatar>
@@ -807,7 +808,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
                         {/* Add booking history entries if available */}
                         {selectedGigData.gig.bookingHistory
                           ?.filter(
-                            (entry: any) => entry.userId === userData?._id
+                            (entry: any) => entry.userId === userData?._id,
                           )
                           .map((entry: any, index: number) => (
                             <div

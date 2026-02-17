@@ -7,9 +7,17 @@ import {
   BsPaletteFill,
   BsFonts,
   BsFillBrushFill,
+  BsEraser,
+  BsStars,
 } from "react-icons/bs";
-import { TbColorFilter, TbPaletteOff } from "react-icons/tb";
-import { MdColorLens, MdFormatColorText, MdPalette } from "react-icons/md";
+import { TbColorFilter, TbPaletteOff, TbSparkles } from "react-icons/tb";
+import {
+  MdColorLens,
+  MdFormatColorText,
+  MdPalette,
+  MdAutoFixHigh,
+} from "react-icons/md";
+import { FaRegEye, FaRegTrashAlt } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
 import { CustomProps } from "@/types/gig";
@@ -17,9 +25,12 @@ import {
   fonts,
   colorPalettes,
   fontCategories,
+  colorCategories,
   getContrastColor,
+  getColorCategory,
+  getFontCategory,
 } from "@/lib/gigColors";
-import { Box, CircularProgress, Divider } from "@mui/material";
+import { Box, CircularProgress, Divider, Tooltip } from "@mui/material";
 
 interface GigCustomizationProps {
   customization: CustomProps;
@@ -47,8 +58,21 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
   const [activePalette, setActivePalette] = useState<
     "vibrant" | "professional" | "pastel" | "dark" | "earthy" | "monochrome"
   >("vibrant");
+  const [activeColorCategory, setActiveColorCategory] = useState<
+    "all" | "primary" | "success" | "warning" | "danger" | "background" | "text"
+  >("all");
+  const [activeFontCategory, setActiveFontCategory] = useState<
+    | "all"
+    | "modern"
+    | "classic"
+    | "elegant"
+    | "creative"
+    | "monospace"
+    | "display"
+  >("all");
   const [localCustomization, setLocalCustomization] =
     useState<CustomProps>(customization);
+  const [showAllColors, setShowAllColors] = useState(false);
 
   // Update local state when prop changes
   useEffect(() => {
@@ -64,6 +88,29 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
     setLocalCustomization(resetValues);
     setCustomization(resetValues);
   };
+
+  //  Add a flag when using default
+  const handleUseDefault = () => {
+    const defaultValues: CustomProps = {
+      font: "",
+      fontColor: "",
+      backgroundColor: "",
+    };
+
+    setLocalCustomization(defaultValues);
+    setCustomization(defaultValues);
+
+    if (onApply) {
+      // Pass a flag indicating this is a reset to defaults
+      onApply({ ...defaultValues, resetStyling: true });
+    }
+  };
+
+  // Also make sure your useEffect is properly syncing
+  useEffect(() => {
+    console.log("Syncing local customization with props:", customization);
+    setLocalCustomization(customization);
+  }, [customization]);
 
   const handleApply = () => {
     // Update parent state
@@ -90,6 +137,29 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
       fontFamily: fontName,
       fontSize: "14px",
     };
+  };
+
+  // Flatten all colors for display
+  const getAllColors = () => {
+    let allColors: string[] = [];
+    Object.values(colorPalettes).forEach((palette) => {
+      allColors = [...allColors, ...palette];
+    });
+    return allColors;
+  };
+
+  const getFilteredColors = () => {
+    if (activeColorCategory === "all") {
+      return getAllColors();
+    }
+    return colorCategories[activeColorCategory] || [];
+  };
+
+  const getFilteredFonts = () => {
+    if (activeFontCategory === "all") {
+      return fonts;
+    }
+    return fontCategories[activeFontCategory] || [];
   };
 
   return (
@@ -197,7 +267,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                     ),
               )}
             >
-              <BsFillBrushFill className="w-4 h-4" />
+              <FaRegEye className="w-4 h-4" />
               <span>Preview</span>
             </button>
           </div>
@@ -206,6 +276,64 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
         <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(95vh-180px)]">
           {activeTab === "colors" && (
             <div className="space-y-6">
+              {/* Default Button */}
+              <div className="flex items-center justify-end">
+                <Tooltip title="Use default system styling">
+                  <button
+                    onClick={handleUseDefault}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
+                      "bg-gradient-to-r from-gray-500 to-gray-600 text-white",
+                      "hover:from-gray-600 hover:to-gray-700 shadow-lg",
+                    )}
+                  >
+                    <BsEraser className="w-4 h-4" />
+                    <span>Use Default</span>
+                  </button>
+                </Tooltip>
+              </div>
+
+              {/* Color Category Filters */}
+              <div>
+                <label
+                  className={cn(
+                    "block text-sm font-semibold mb-3",
+                    themeColors.text,
+                  )}
+                >
+                  Color Categories
+                </label>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[
+                    "all",
+                    "primary",
+                    "success",
+                    "warning",
+                    "danger",
+                    "background",
+                    "text",
+                  ].map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setActiveColorCategory(category as any)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize",
+                        activeColorCategory === category
+                          ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md"
+                          : cn(
+                              themeColors.hoverBg,
+                              themeColors.text,
+                              "border",
+                              themeColors.border,
+                            ),
+                      )}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Color Palette Selection */}
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -271,86 +399,105 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                     </button>
                   ))}
                 </div>
+              </div>
 
-                {/* Selected Palette Colors */}
-                <div>
+              {/* Selected Palette Colors */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
                   <label
                     className={cn(
-                      "block text-sm font-semibold mb-3",
+                      "block text-sm font-semibold",
                       themeColors.text,
                     )}
                   >
                     Font Color
                   </label>
-                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-3">
-                    {colorPalettes[activePalette].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() =>
-                          updateLocalCustomization({ fontColor: color })
-                        }
-                        className="group relative"
-                        title={color}
-                      >
-                        <div
-                          className={cn(
-                            "w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110",
-                            localCustomization.fontColor === color
-                              ? `border-white ring-4 ring-orange-500 ${isDarkMode ? "border-gray-900" : ""}`
-                              : "border-transparent",
-                          )}
-                          style={{ backgroundColor: color }}
-                        />
-                        <div
-                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
-                          style={{
-                            backgroundColor: getContrastColor(color),
-                            borderColor: isDarkMode ? "#111827" : "white",
-                          }}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <label
+                  <button
+                    onClick={() => setShowAllColors(!showAllColors)}
                     className={cn(
-                      "block text-sm font-semibold mb-3",
+                      "text-xs px-2 py-1 rounded-lg transition-colors",
+                      themeColors.hoverBg,
                       themeColors.text,
                     )}
                   >
-                    Background Color
-                  </label>
-                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-3">
-                    {colorPalettes[activePalette].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() =>
-                          updateLocalCustomization({ backgroundColor: color })
-                        }
-                        className="group relative"
-                        title={color}
-                      >
-                        <div
-                          className={cn(
-                            "w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110",
-                            localCustomization.backgroundColor === color
-                              ? `border-white ring-4 ring-green-500 ${isDarkMode ? "border-gray-900" : ""}`
-                              : "border-transparent",
-                          )}
-                          style={{ backgroundColor: color }}
-                        />
-                        <div
-                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
-                          style={{
-                            backgroundColor: getContrastColor(color),
-                            borderColor: isDarkMode ? "#111827" : "white",
-                          }}
-                        />
-                      </button>
-                    ))}
-                  </div>
+                    {showAllColors ? "Show Palettes" : "Show All Colors"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-3">
+                  {(showAllColors
+                    ? getFilteredColors()
+                    : colorPalettes[activePalette as keyof typeof colorPalettes]
+                  ).map((color, index) => (
+                    <button
+                      key={`font-${color}-${index}`} // Unique key with prefix and index
+                      onClick={() =>
+                        updateLocalCustomization({ fontColor: color })
+                      }
+                      className="group relative"
+                      title={color}
+                    >
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110",
+                          localCustomization.fontColor === color
+                            ? `border-white ring-4 ring-orange-500 ${isDarkMode ? "border-gray-900" : ""}`
+                            : "border-transparent",
+                        )}
+                        style={{ backgroundColor: color }}
+                      />
+                      <div
+                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
+                        style={{
+                          backgroundColor: getContrastColor(color),
+                          borderColor: isDarkMode ? "#111827" : "white",
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label
+                  className={cn(
+                    "block text-sm font-semibold mb-3",
+                    themeColors.text,
+                  )}
+                >
+                  Background Color
+                </label>
+                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-3">
+                  {(showAllColors
+                    ? getFilteredColors()
+                    : colorPalettes[activePalette as keyof typeof colorPalettes]
+                  ).map((color, index) => (
+                    <button
+                      key={`bg-${color}-${index}`} // Different prefix + index for uniqueness
+                      onClick={() =>
+                        updateLocalCustomization({ backgroundColor: color })
+                      }
+                      className="group relative"
+                      title={color}
+                    >
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full transition-all border-2 shadow-lg hover:scale-110",
+                          localCustomization.backgroundColor === color
+                            ? `border-white ring-4 ring-green-500 ${isDarkMode ? "border-gray-900" : ""}`
+                            : "border-transparent",
+                        )}
+                        style={{ backgroundColor: color }}
+                      />
+                      <div
+                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
+                        style={{
+                          backgroundColor: getContrastColor(color),
+                          borderColor: isDarkMode ? "#111827" : "white",
+                        }}
+                      />
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -411,6 +558,23 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
 
           {activeTab === "fonts" && (
             <div className="space-y-6">
+              {/* Default Button */}
+              <div className="flex items-center justify-end">
+                <Tooltip title="Use default system fonts">
+                  <button
+                    onClick={handleUseDefault}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
+                      "bg-gradient-to-r from-gray-500 to-gray-600 text-white",
+                      "hover:from-gray-600 hover:to-gray-700 shadow-lg",
+                    )}
+                  >
+                    <BsEraser className="w-4 h-4" />
+                    <span>Use Default</span>
+                  </button>
+                </Tooltip>
+              </div>
+
               {/* Font Category Selection */}
               <div>
                 <label
@@ -421,6 +585,36 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                 >
                   Font Categories
                 </label>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {[
+                    "all",
+                    "modern",
+                    "classic",
+                    "elegant",
+                    "creative",
+                    "monospace",
+                    "display",
+                  ].map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setActiveFontCategory(category as any)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize",
+                        activeFontCategory === category
+                          ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md"
+                          : cn(
+                              themeColors.hoverBg,
+                              themeColors.text,
+                              "border",
+                              themeColors.border,
+                            ),
+                      )}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
                   {Object.entries(fontCategories).map(
                     ([category, fontList]) => (
@@ -476,8 +670,8 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                   >
                     Select Font
                   </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {fonts.map((font) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2">
+                    {getFilteredFonts().map((font) => (
                       <button
                         key={font}
                         onClick={() => updateLocalCustomization({ font })}
@@ -526,6 +720,23 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
 
           {activeTab === "preview" && (
             <div className="space-y-6">
+              {/* Default Button in Preview */}
+              <div className="flex items-center justify-end">
+                <Tooltip title="Use default styling">
+                  <button
+                    onClick={handleUseDefault}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
+                      "bg-gradient-to-r from-gray-500 to-gray-600 text-white",
+                      "hover:from-gray-600 hover:to-gray-700 shadow-lg",
+                    )}
+                  >
+                    <BsEraser className="w-4 h-4" />
+                    <span>Use Default</span>
+                  </button>
+                </Tooltip>
+              </div>
+
               {/* Logo Upload */}
               <div>
                 <label
@@ -637,7 +848,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                           themeColors.destructiveHover,
                         )}
                       >
-                        Remove
+                        <FaRegTrashAlt className="w-4 h-4" />
                       </button>
                     </div>
                   )}
@@ -1061,17 +1272,31 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
           )}
         >
           <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              className={cn(
-                "border-amber-500 text-amber-600 hover:bg-amber-50",
-                isDarkMode ? "hover:bg-amber-900/20" : "",
-                themeColors.border,
-              )}
-            >
-              Reset All
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className={cn(
+                  "border-amber-500 text-amber-600 hover:bg-amber-50",
+                  isDarkMode ? "hover:bg-amber-900/20" : "",
+                  themeColors.border,
+                )}
+              >
+                Reset
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleUseDefault}
+                className={cn(
+                  "border-gray-500 text-gray-600 hover:bg-gray-50",
+                  isDarkMode ? "hover:bg-gray-800" : "",
+                  themeColors.border,
+                )}
+              >
+                <BsEraser className="w-4 h-4 mr-2" />
+                Use Default
+              </Button>
+            </div>
             <div className="flex gap-3">
               <Button
                 variant="outline"

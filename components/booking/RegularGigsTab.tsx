@@ -23,6 +23,7 @@ import {
   TrendingUp,
   User,
   Briefcase,
+  ChevronDown,
 } from "lucide-react";
 import { ChatIcon } from "@/components/chat/ChatIcon";
 import { motion, AnimatePresence, Variants } from "framer-motion";
@@ -459,7 +460,6 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                     animate="visible"
                     whileHover="hover"
                     layout
-                    onClick={() => setSelectedApplicant(applicant)}
                   >
                     <Card
                       className={cn(
@@ -469,10 +469,11 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                         isSelected && "ring-2 ring-orange-500 shadow-xl",
                       )}
                     >
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-start gap-3">
+                      <CardContent className="p-4">
+                        {/* Minimal Card View - Always Visible */}
+                        <div className="flex items-center gap-3">
                           {/* Avatar */}
-                          <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
+                          <Avatar className="w-12 h-12 border-2 border-white shadow-lg flex-shrink-0">
                             <AvatarImage src={userData.picture} />
                             <AvatarFallback
                               className={cn(
@@ -491,196 +492,223 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                             </AvatarFallback>
                           </Avatar>
 
-                          {/* Info */}
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-semibold text-sm">
-                                    {`${userData.firstname || ""} ${userData.username || ""}`.trim()}
-                                  </h4>
-                                  {userData.verifiedIdentity && (
-                                    <CheckCircle className="w-3 h-3 text-green-500" />
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs"
-                                    style={{
-                                      backgroundColor: getRoleBg(
-                                        userData.roleType,
-                                      ),
-                                      borderColor: getRoleBorder(
-                                        userData.roleType,
-                                      ),
-                                      color: getRoleColor(userData.roleType),
-                                    }}
-                                  >
-                                    {userData.roleType || "Musician"}
-                                  </Badge>
-                                  <Badge
-                                    variant="secondary"
-                                    className={cn(
-                                      "text-xs",
-                                      getStatusColor(applicant.status),
-                                    )}
-                                  >
-                                    {applicant.status}
-                                  </Badge>
-                                </div>
-                              </div>
-
+                          {/* Minimal Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold text-sm truncate">
+                                {`${userData.firstname || ""} ${userData.username || ""}`.trim()}
+                              </h4>
+                              {userData.verifiedIdentity && (
+                                <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                              )}
                               {shortlisted && (
-                                <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                                <Heart className="w-3 h-3 fill-red-500 text-red-500 flex-shrink-0" />
                               )}
                             </div>
 
-                            {/* Stats */}
-                            <div className="grid grid-cols-4 gap-2 mt-3">
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <Star className="w-3 h-3 text-yellow-500" />
-                                  <span className="text-xs font-bold">
-                                    <TrustStarsDisplay
-                                      trustStars={
-                                        userData.trustStars?.toFixed(1) || "4.5"
-                                      }
-                                      size="sm"
-                                      className="-ml-5 text-orange-400"
-                                    />
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-gray-500">
-                                  Rating
-                                </span>
-                              </div>
-
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <Briefcase className="w-3 h-3 text-blue-500" />
-                                  <span className="text-xs font-bold">
-                                    {userData.completedGigsCount || 0}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-gray-500">
-                                  Gigs
-                                </span>
-                              </div>
-
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <DollarSign className="w-3 h-3 text-green-500" />
-                                  <span className="text-xs font-bold">
-                                    {formatRateSummary(userData)
-                                      .split(" ")[1]
-                                      ?.slice(0, 3) || "N/A"}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-gray-500">
-                                  Rate
-                                </span>
-                              </div>
-
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <MapPin className="w-3 h-3 text-purple-500" />
-                                  <span className="text-xs font-bold truncate">
-                                    {userData.city?.slice(0, 3) || "RMT"}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-gray-500">
-                                  Loc
-                                </span>
-                              </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge
+                                variant="outline"
+                                className="text-xs"
+                                style={{
+                                  backgroundColor: getRoleBg(userData.roleType),
+                                  borderColor: getRoleBorder(userData.roleType),
+                                  color: getRoleColor(userData.roleType),
+                                }}
+                              >
+                                {userData.roleType || "Musician"}
+                              </Badge>
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  "text-xs",
+                                  getStatusColor(applicant.status),
+                                )}
+                              >
+                                {applicant.status}
+                              </Badge>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Action Buttons - Three columns layout */}
-                        <div className="grid grid-cols-3 gap-2 mt-3">
-                          {/* View Profile */}
+                          {/* More Icon - Click to Expand */}
                           <Button
-                            size="sm"
                             variant="ghost"
-                            className="h-8 text-xs"
+                            size="icon"
+                            className="h-8 w-8 rounded-full flex-shrink-0"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleViewProfile(
-                                selectedGigData.gig._id,
-                                applicant.userId,
+                              setSelectedApplicant(
+                                isSelected ? null : applicant,
                               );
                             }}
                           >
-                            <Eye className="w-3 h-3 mr-1" />
-                            View
+                            <motion.div
+                              animate={{ rotate: isSelected ? 180 : 0 }}
+                              transition={{ duration: 0.3 }}
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </motion.div>
                           </Button>
-
-                          {/* Shortlist/Unshortlist */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              shortlisted
-                                ? handleRemoveFromShortlist(
-                                    selectedGigData.gig._id,
-                                    applicant.userId,
-                                  )
-                                : handleAddToShortlist(
-                                    selectedGigData.gig._id,
-                                    applicant.userId,
-                                  );
-                            }}
-                          >
-                            {shortlisted ? (
-                              <>
-                                <XCircle className="w-3 h-3 mr-1" />
-                                Unlist
-                              </>
-                            ) : (
-                              <>
-                                <Heart className="w-3 h-3 mr-1" />
-                                Shortlist
-                              </>
-                            )}
-                          </Button>
-
-                          {/* Select Musician */}
-                          <SelectMusicianButton
-                            gigId={selectedGigData.gig._id}
-                            musicianId={applicant.userId}
-                            musicianName={
-                              userData.firstname || userData.username
-                            }
-                            gigTitle={selectedGigData.gig.title}
-                            variant="default"
-                            size="sm"
-                            showText={true}
-                            className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
-                          />
                         </div>
 
-                        {/* Remove Interest Button - Full width */}
-                        <div className="mt-2">
-                          <ClientRemoveInterestButton
-                            gigId={selectedGigData.gig._id}
-                            userIdToRemove={applicant.userId}
-                            musicianName={
-                              userData.firstname || userData.username
-                            }
-                            gigTitle={selectedGigData.gig.title}
-                            variant="destructive"
-                            size="sm"
-                            showText={true}
-                            className="w-full h-8 text-xs"
-                            onSuccess={() => {
-                              // Refresh or update state after removal
-                              setSelectedApplicant(null);
-                            }}
-                          />
-                        </div>
+                        {/* Expanded View - Shows when selected */}
+                        <AnimatePresence>
+                          {isSelected && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pt-4 mt-3 border-t space-y-3">
+                                {/* Stats */}
+                                <div className="grid grid-cols-4 gap-2">
+                                  <div className="text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Star className="w-3 h-3 text-yellow-500" />
+                                      <span className="text-xs font-bold">
+                                        <TrustStarsDisplay
+                                          trustStars={
+                                            userData.trustStars?.toFixed(1) ||
+                                            "4.5"
+                                          }
+                                          size="sm"
+                                          className="-ml-5 text-orange-400"
+                                        />
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">
+                                      Rating
+                                    </span>
+                                  </div>
+
+                                  <div className="text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Briefcase className="w-3 h-3 text-blue-500" />
+                                      <span className="text-xs font-bold">
+                                        {userData.completedGigsCount || 0}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">
+                                      Gigs
+                                    </span>
+                                  </div>
+
+                                  <div className="text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <DollarSign className="w-3 h-3 text-green-500" />
+                                      <span className="text-xs font-bold">
+                                        {formatRateSummary(userData)
+                                          .split(" ")[1]
+                                          ?.slice(0, 3) || "N/A"}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">
+                                      Rate
+                                    </span>
+                                  </div>
+
+                                  <div className="text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <MapPin className="w-3 h-3 text-purple-500" />
+                                      <span className="text-xs font-bold truncate">
+                                        {userData.city?.slice(0, 3) || "RMT"}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">
+                                      Loc
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons - Three columns layout */}
+                                <div className="grid grid-cols-3 gap-2">
+                                  {/* View Profile */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 text-xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewProfile(
+                                        selectedGigData.gig._id,
+                                        applicant.userId,
+                                      );
+                                    }}
+                                  >
+                                    <Eye className="w-3 h-3 mr-1" />
+                                    View
+                                  </Button>
+
+                                  {/* Select Musician */}
+                                  <SelectMusicianButton
+                                    gigId={selectedGigData.gig._id}
+                                    musicianId={applicant.userId}
+                                    musicianName={
+                                      userData.firstname || userData.username
+                                    }
+                                    gigTitle={selectedGigData.gig.title}
+                                    variant="default"
+                                    size="sm"
+                                    showText={true}
+                                    className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                  />
+                                </div>
+
+                                {/* Remove Interest Button - Full width */}
+                                <div className="mt-2 flex  gap-2">
+                                  {/* Shortlist/Unshortlist */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 text-xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      shortlisted
+                                        ? handleRemoveFromShortlist(
+                                            selectedGigData.gig._id,
+                                            applicant.userId,
+                                          )
+                                        : handleAddToShortlist(
+                                            selectedGigData.gig._id,
+                                            applicant.userId,
+                                          );
+                                    }}
+                                  >
+                                    {shortlisted ? (
+                                      <>
+                                        <XCircle className="w-3 h-3 mr-1" />
+                                        Unlist
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Heart className="w-3 h-3 mr-1" />
+                                        Shortlist
+                                      </>
+                                    )}
+                                  </Button>
+                                  <ClientRemoveInterestButton
+                                    gigId={selectedGigData.gig._id}
+                                    userIdToRemove={applicant.userId}
+                                    musicianName={
+                                      userData.firstname || userData.username
+                                    }
+                                    gigTitle={selectedGigData.gig.title}
+                                    variant="destructive"
+                                    size="sm"
+                                    showText={true}
+                                    className="w-full h-8 text-xs"
+                                    onSuccess={() => {
+                                      // Refresh or update state after removal
+                                      setSelectedApplicant(null);
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </CardContent>
                     </Card>
                   </motion.div>

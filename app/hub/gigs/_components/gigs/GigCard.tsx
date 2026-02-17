@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react"; // Add
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 // Add ChevronRight to the imports
 import {
@@ -84,6 +84,7 @@ import {
 } from "../../utils";
 import { CountdownTimer } from "./CountDown";
 import { MdMusicOff } from "react-icons/md";
+import { createPortal } from "react-dom";
 
 // Types
 interface PerformingMember {
@@ -93,7 +94,7 @@ interface PerformingMember {
   instrument: string;
 }
 
-interface BandApplication {
+export interface BandApplication {
   bandId: Id<"bands">;
   appliedAt: number;
   appliedBy: Id<"users">;
@@ -108,7 +109,7 @@ interface BandApplication {
   shortlistNotes?: string;
 }
 
-interface BandRole {
+export interface BandRole {
   role: string;
   maxSlots: number;
   filledSlots: number;
@@ -123,7 +124,7 @@ interface BandRole {
   bookedPrice?: number;
 }
 
-interface GigCardProps {
+export interface GigCardProps {
   gig: {
     _id: Id<"gigs">;
     title: string;
@@ -163,6 +164,7 @@ interface GigCardProps {
   compact?: boolean;
   userStatus?: GigUserStatus;
   showFullGigs?: boolean; // Add this prop
+  getGigFromChild?: (gig: any) => void; // Add this callback prop
 }
 
 type BandActionType =
@@ -199,148 +201,9 @@ type ActionButtonConfig = {
   disabled: boolean;
   className?: string;
 };
-
-const InterestWindowBadge = ({ gig }: { gig: GigCardProps["gig"] }) => {
-  const status = getInterestWindowStatus(gig);
-
-  if (!status.hasWindow) return null;
-
-  // Parse the start date
-  const startDate = gig.acceptInterestStartTime
-    ? new Date(gig.acceptInterestStartTime)
-    : null;
-
-  const getBadgeProps = () => {
-    switch (status.status) {
-      case "not_open":
-        return {
-          variant: "outline" as const,
-          className:
-            "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800",
-          icon: Calendar,
-        };
-      case "closed":
-        return {
-          variant: "outline" as const,
-          className:
-            "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
-          icon: Lock,
-        };
-      case "open":
-        return {
-          variant: "outline" as const,
-          className:
-            "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800",
-          icon: Clock,
-        };
-      default:
-        return {
-          variant: "outline" as const,
-          className: "bg-gray-50 text-gray-600 border-gray-200",
-          icon: Clock,
-        };
-    }
-  };
-
-  const badgeProps = getBadgeProps();
-  const Icon = badgeProps.icon;
-
-  const formatDate = (dateValue: string | number | Date | undefined) => {
-    if (!dateValue) return "Not set";
-
-    try {
-      const date =
-        typeof dateValue === "string"
-          ? new Date(dateValue)
-          : typeof dateValue === "number"
-            ? new Date(dateValue)
-            : dateValue;
-
-      return date.toLocaleString();
-    } catch (error) {
-      return "Invalid date";
-    }
-  };
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex flex-col gap-1">
-            {/* Badge */}
-            <Badge
-              variant={badgeProps.variant}
-              className={clsx(
-                "inline-flex items-center gap-1 text-xs font-medium px-2 py-1",
-                badgeProps.className,
-              )}
-            >
-              <Icon className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate max-w-[80px]">{status.message}</span>
-            </Badge>
-
-            {/* Clean, Text-only Countdown */}
-            {status.status === "not_open" && startDate && (
-              <div className="flex items-center gap-3 px-1 py-1 transition-all duration-300">
-                {/* Status Indicator Glow */}
-                <div className="relative flex items-center justify-center h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400/60 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
-                </div>
-                <CountdownTimer
-                  targetDate={startDate}
-                  className={"text-neutral-300 font-bold"}
-                />
-              </div>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          <div className="space-y-2">
-            <p className="font-medium">{status.message}</p>
-
-            {gig.acceptInterestStartTime && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  <span className="text-sm font-medium">Opens:</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 pl-4">
-                  {formatDate(gig.acceptInterestStartTime)}
-                </p>
-              </div>
-            )}
-
-            {gig.acceptInterestEndTime && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  <span className="text-sm font-medium">Closes:</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 pl-4">
-                  {formatDate(gig.acceptInterestEndTime)}
-                </p>
-              </div>
-            )}
-
-            {status.status === "not_open" && startDate && (
-              <div className="pt-2 border-t">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-blue-600">
-                    Countdown to opening:
-                  </span>
-                </div>
-                <div className="flex items-center justify-center gap-3 mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">
-                  <CountdownTimer targetDate={startDate} className="text-xs" />
-                </div>
-              </div>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+type myGig = {
+  acceptInterestStartTime?: number;
+  acceptInterestEndTime?: number;
 };
 
 const GigCard: React.FC<GigCardProps> = ({
@@ -350,6 +213,7 @@ const GigCard: React.FC<GigCardProps> = ({
   compact = false,
   userStatus: propUserStatus,
   showFullGigs = false, // Default to false (hide fully booked gigs)
+  getGigFromChild, // Add this prop
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -642,7 +506,7 @@ const GigCard: React.FC<GigCardProps> = ({
     },
   ) => {
     // Add this check at the top of getActionButtonConfig
-    const windowStatus = getInterestWindowStatus(gig);
+    const windowStatus = getInterestWindowStatus(gig as myGig);
     const isWindowLocked =
       windowStatus.hasWindow && windowStatus.status !== "open";
 
@@ -800,6 +664,8 @@ const GigCard: React.FC<GigCardProps> = ({
       }
     }
   }, [userData, gig._id]);
+  // Add this state
+  const [modalVisible, setModalVisible] = useState(false);
 
   // Handle view increment
   useEffect(() => {
@@ -999,7 +865,7 @@ const GigCard: React.FC<GigCardProps> = ({
     }
 
     // Time Lock Check
-    const windowStatus = getInterestWindowStatus(gig);
+    const windowStatus = getInterestWindowStatus(gig as myGig);
     console.log("4. Interest window:", windowStatus);
 
     if (windowStatus.hasWindow && windowStatus.status !== "open") {
@@ -2449,7 +2315,7 @@ const GigCard: React.FC<GigCardProps> = ({
     const buttonConfig = getDefaultButtonConfig();
     if (!buttonConfig) return null;
 
-    const interestWindowStatus = getInterestWindowStatus(gig);
+    const interestWindowStatus = getInterestWindowStatus(gig as myGig);
     const isLocked =
       interestWindowStatus.hasWindow && interestWindowStatus.status !== "open";
 
@@ -2608,12 +2474,6 @@ const GigCard: React.FC<GigCardProps> = ({
 
     return { buttonConfig: config, showPosition: config.showPosition };
   };
-
-  // Additional helper functions for button configurations...
-  // Check interest window status
-  const interestWindowStatus = getInterestWindowStatus(gig);
-  const isInterestWindowOpen = interestWindowStatus.status === "open";
-  // Add this useEffect to debug
   useEffect(() => {
     if (currentUser && gig.bandCategory) {
       console.log("=== DEBUG: Role Qualification ===");
@@ -2701,111 +2561,12 @@ const GigCard: React.FC<GigCardProps> = ({
       </div>
     );
   };
-  // Add this function to debug interest window specifically
-  const debugInterestWindowDetails = () => {
-    console.log("=== DEBUG: Interest Window Details ===");
-    console.log("Gig ID:", gig._id);
 
-    // Check if gig has interest window properties
-    console.log("acceptInterestStartTime:", gig.acceptInterestStartTime);
-    console.log("acceptInterestEndTime:", gig.acceptInterestEndTime);
+  const interestWindowStatus = getInterestWindowStatus(gig as myGig);
+  const isNotOpen =
+    interestWindowStatus.hasWindow &&
+    interestWindowStatus.status === "not_open";
 
-    // Parse dates if they exist
-    if (gig.acceptInterestStartTime) {
-      const startDate = new Date(gig.acceptInterestStartTime);
-      console.log("Start Date parsed:", {
-        ISO: startDate.toISOString(),
-        Local: startDate.toLocaleString(),
-        Timestamp: startDate.getTime(),
-        Now: Date.now(),
-        IsPast: startDate.getTime() < Date.now(),
-        IsFuture: startDate.getTime() > Date.now(),
-      });
-    }
-
-    if (gig.acceptInterestEndTime) {
-      const endDate = new Date(gig.acceptInterestEndTime);
-      console.log("End Date parsed:", {
-        ISO: endDate.toISOString(),
-        Local: endDate.toLocaleString(),
-        Timestamp: endDate.getTime(),
-        Now: Date.now(),
-        IsPast: endDate.getTime() < Date.now(),
-        IsFuture: endDate.getTime() > Date.now(),
-      });
-    }
-
-    // Check getInterestWindowStatus result
-    const windowStatus = getInterestWindowStatus(gig);
-    console.log("Window Status Result:", windowStatus);
-
-    // Manual check
-    const now = Date.now();
-    console.log("Manual Check:", {
-      hasStartTime: !!gig.acceptInterestStartTime,
-      hasEndTime: !!gig.acceptInterestEndTime,
-      now: new Date(now).toLocaleString(),
-      nowTimestamp: now,
-    });
-
-    if (gig.acceptInterestStartTime) {
-      const start = new Date(gig.acceptInterestStartTime).getTime();
-      console.log("Start vs Now:", {
-        start,
-        now,
-        difference: start - now,
-        isOpen: now >= start,
-      });
-    }
-
-    if (gig.acceptInterestEndTime) {
-      const end = new Date(gig.acceptInterestEndTime).getTime();
-      console.log("End vs Now:", {
-        end,
-        now,
-        difference: now - end,
-        isClosed: now > end,
-      });
-    }
-  };
-  // Add this function near your other debug functions
-  const debugInterestWindow = () => {
-    console.log("=== DEBUG Interest Window ===");
-    console.log("Gig:", {
-      id: gig._id,
-      startTime: gig.acceptInterestStartTime,
-      endTime: gig.acceptInterestEndTime,
-    });
-
-    const now = new Date();
-    console.log("Current time:", now.toISOString());
-
-    if (gig.acceptInterestStartTime) {
-      const start = new Date(gig.acceptInterestStartTime);
-      console.log("Start time parsed:", start.toISOString());
-      console.log("Is now >= start?", now >= start);
-    }
-
-    if (gig.acceptInterestEndTime) {
-      const end = new Date(gig.acceptInterestEndTime);
-      console.log("End time parsed:", end.toISOString());
-      console.log("Is now <= end?", now <= end);
-    }
-
-    const status = getInterestWindowStatus(gig);
-    console.log("Window status:", status);
-    return status;
-  };
-
-  // Call it in useEffect
-  useEffect(() => {
-    debugInterestWindow();
-  }, [gig]);
-  // Call it in useEffect
-  useEffect(() => {
-    debugGigState();
-    debugInterestWindowDetails(); // Add this
-  }, [currentUser, gig]);
   // ===== MAIN RETURN STATEMENT =====
   return (
     <>
@@ -2818,324 +2579,238 @@ const GigCard: React.FC<GigCardProps> = ({
           "group relative rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200",
           "cursor-pointer overflow-hidden w-full",
           {
+            // Status rings
             "ring-1 ring-purple-500":
               isClientBand && userStatus.isInBandApplication,
             "ring-1 ring-green-500":
               !isClientBand && userStatus.hasShownInterest,
+            "opacity-60": isPending || gig.isTaken || isFull,
+            "border border-dashed border-blue-300 bg-blue-50/30":
+              isNotOpen && !isDarkMode,
+            "border border-dashed border-blue-700 bg-blue-950/20":
+              isNotOpen && isDarkMode,
+
+            // Default theme classes when no custom colors
+            "bg-white": !gig.backgroundColor && !isDarkMode,
+            "bg-gray-800": !gig.backgroundColor && isDarkMode,
+            "text-gray-900": !gig.fontColor && !isDarkMode,
+            "text-gray-100": !gig.fontColor && isDarkMode,
+            "border border-gray-200":
+              !gig.backgroundColor && !gig.fontColor && !isDarkMode,
+            "border border-gray-700":
+              !gig.backgroundColor && !gig.fontColor && isDarkMode,
           },
         )}
         onClick={handleClick}
         style={getCardStyles()}
       >
-        {/* Status indicator */}
+        {/* Status indicator line - now conditionally colored based on isDarkMode when no custom colors */}
         <div
-          className={clsx("absolute top-0 left-0 h-1 w-full", {
-            "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
-            "bg-gradient-to-r from-green-500 to-emerald-600":
-              !isClientBand && !isFull && !gig.isTaken,
-            "bg-gradient-to-r from-yellow-500 to-orange-600": gig.isPending,
-            "bg-gradient-to-r from-red-500 to-rose-600": isFull || gig.isTaken,
-          })}
+          className={clsx(
+            "absolute top-0 left-0 h-1 w-full",
+            !gig.fontColor &&
+              !gig.backgroundColor &&
+              !isClientBand &&
+              !isFull &&
+              !gig.isTaken &&
+              !gig.isPending && {
+                "bg-gradient-to-r from-gray-300 to-gray-400": !isDarkMode,
+                "bg-gradient-to-r from-gray-600 to-gray-700": isDarkMode,
+              },
+            {
+              "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
+              "bg-gradient-to-r from-green-500 to-emerald-600":
+                !isClientBand && !isFull && !gig.isTaken,
+              "bg-gradient-to-r from-yellow-500 to-orange-600": gig.isPending,
+              "bg-gradient-to-r from-red-500 to-rose-600":
+                isFull || gig.isTaken,
+            },
+          )}
         />
 
         <div className="flex flex-col h-full">
-          {/* HEADER */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-start gap-2 mb-2">
+          {/* Header Row */}
+          <div className="flex items-start justify-between gap-3">
+            {/* Left side - Avatar and minimal info */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Avatar className="w-10 h-10 border-2 border-white shadow-md flex-shrink-0">
+                <AvatarImage src={gigPoster?.picture} />
+                <AvatarFallback
+                  className={clsx(
+                    "bg-gradient-to-br text-white text-xs",
+                    !gig.fontColor &&
+                      !gig.backgroundColor &&
+                      !isDarkMode &&
+                      "from-gray-500 to-gray-600",
+                    !gig.fontColor &&
+                      !gig.backgroundColor &&
+                      isDarkMode &&
+                      "from-gray-600 to-gray-700",
+                    (gig.fontColor || gig.backgroundColor) &&
+                      "from-orange-500 to-amber-500",
+                  )}
+                >
+                  {gigPoster?.firstname?.charAt(0) || "G"}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex-1 min-w-0">
                 <h3
-                  className="text-base sm:text-lg font-semibold truncate flex-1"
-                  style={{ color: gig.fontColor || undefined }}
+                  className={clsx(
+                    "font-semibold text-sm truncate",
+                    !gig.fontColor && !isDarkMode && "text-gray-900",
+                    !gig.fontColor && isDarkMode && "text-gray-100",
+                  )}
+                  style={gig.fontColor ? { color: gig.fontColor } : undefined}
                 >
                   {gig.title}
                 </h3>
-                <div className="flex flex-wrap gap-1 sm:gap-2">
-                  {getStatusBadge()}
-                  {isClientBand && (
-                    <Badge
-                      variant="outline"
-                      className="border-purple-500 text-purple-600 dark:text-purple-400 text-xs"
-                    >
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      Band
-                    </Badge>
-                  )}
-                  {(gig.acceptInterestStartTime ||
-                    gig.acceptInterestEndTime) && (
-                    <div className="hidden sm:block">
-                      <InterestWindowBadge gig={gig} />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Tags - Responsive */}
-              {(gig.bussinesscat || gig.category) && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {gig.bussinesscat && (
-                    <Badge
-                      variant="secondary"
-                      className="text-xs"
-                      style={{
-                        backgroundColor: gig.backgroundColor
-                          ? `${gig.backgroundColor}30`
-                          : undefined,
-                        color: gig.fontColor || undefined,
-                      }}
-                    >
-                      {gig.bussinesscat}
-                    </Badge>
-                  )}
-                  {gig.category && (
-                    <Badge variant="secondary" className="text-xs">
-                      {gig.category}
-                    </Badge>
-                  )}
-                  {gig.negotiable && (
-                    <Badge
-                      variant="outline"
-                      className="text-xs"
-                      style={{
-                        borderColor: gig.fontColor
-                          ? `${gig.fontColor}50`
-                          : undefined,
-                        color: gig.fontColor || undefined,
-                      }}
-                    >
-                      Negotiable
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Price */}
-            <div className="flex-shrink-0 self-end sm:self-start">
-              <div
-                className="text-xl sm:text-2xl font-bold whitespace-nowrap"
-                style={{ color: gig.fontColor || undefined }}
-              >
-                {gig.price ? `$${gig.price}` : "Contact"}
-              </div>
-              {gig.paymentStatus && (
-                <Badge
-                  variant="outline"
-                  className={clsx("text-xs mt-1 w-full justify-center", {
-                    "border-green-500 text-green-600":
-                      gig.paymentStatus === "paid",
-                    "border-yellow-500 text-yellow-600":
-                      gig.paymentStatus === "pending",
-                    "border-red-500 text-red-600":
-                      gig.paymentStatus === "refunded",
-                  })}
-                >
-                  {gig.paymentStatus}
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          {!compact && gig.description && (
-            <p
-              className="text-sm mb-3 line-clamp-2"
-              style={{
-                color: gig.fontColor ? `${gig.fontColor}CC` : undefined,
-              }}
-            >
-              {gig.description}
-            </p>
-          )}
-          {/* Band applications preview */}
-          {renderBandApplicationsPreview()}
-          {/* Progress bar */}
-          {renderProgressBar()}
-          {/* Location and time */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3 mb-3">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              {gig.location && (
-                <div className="flex items-center gap-1 min-w-0">
-                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span
-                    className="truncate max-w-[120px] sm:max-w-[150px]"
-                    style={{
-                      color: gig.fontColor ? `${gig.fontColor}CC` : undefined,
-                    }}
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Badge
+                    variant="outline"
+                    className={clsx(
+                      "text-[10px] px-1.5 py-0 h-4",
+                      !gig.fontColor &&
+                        !gig.backgroundColor &&
+                        !isDarkMode &&
+                        "border-gray-300 text-gray-700",
+                      !gig.fontColor &&
+                        !gig.backgroundColor &&
+                        isDarkMode &&
+                        "border-gray-600 text-gray-300",
+                    )}
                   >
-                    {gig.location}
+                    {gig.bussinesscat || "Gig"}
+                  </Badge>
+                  <span
+                    className={clsx(
+                      "text-[10px] truncate",
+                      !isDarkMode ? "text-gray-500" : "text-gray-400",
+                    )}
+                  >
+                    {gigPoster?.firstname || "User"}
                   </span>
                 </div>
-              )}
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">{formattedDate}</span>
               </div>
-              {gig.time?.start && (
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap">{formattedTime}</span>
-                </div>
-              )}
             </div>
 
-            {/* View count */}
-            <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 self-start sm:self-center">
-              <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span>{gig.viewCount?.length || 0}</span>
+            {isNotOpen && (
+              <div className="absolute -top-1 -right-1">
+                <Badge
+                  className={clsx(
+                    "text-white text-[8px] px-1.5 py-0.5 rotate-12 shadow-lg",
+                    isDarkMode ? "bg-blue-600" : "bg-blue-500",
+                  )}
+                >
+                  <Clock className="w-2 h-2 mr-0.5" />
+                  Soon
+                </Badge>
+              </div>
+            )}
+
+            {/* Price - Compact */}
+            <div className="text-right flex-shrink-0">
+              <div
+                className={clsx(
+                  "text-sm font-bold",
+                  !isDarkMode ? "text-green-600" : "text-green-400",
+                )}
+              >
+                {gig.price ? `$${gig.price}` : "—"}
+              </div>
             </div>
           </div>
-          {/* FOOTER */}
+
+          {/* Quick Info Row */}
           <div
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t"
-            style={{
-              borderTopColor: gig.fontColor ? `${gig.fontColor}20` : undefined,
-            }}
+            className={clsx(
+              "flex items-center gap-2 mt-2 text-[10px]",
+              !isDarkMode ? "text-gray-500" : "text-gray-400",
+            )}
           >
-            {/* Poster info */}
-            <div className="flex items-center gap-2 min-w-0">
-              <Avatar className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0">
-                <AvatarImage src={gigPoster?.picture} />
-                <AvatarFallback className="text-xs">
-                  {gigPoster?.firstname?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <p
-                  className="text-xs sm:text-sm font-medium truncate"
-                  style={{
-                    color: gig.fontColor ? `${gig.fontColor}CC` : undefined,
-                  }}
-                >
-                  {gigPoster?.firstname || "User"}
-                </p>
-                {gigPoster?.city && (
-                  <p className="text-xs text-gray-500 truncate">
-                    {gigPoster.city}
-                  </p>
-                )}
-              </div>
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" />
+              <span className="truncate max-w-[60px]">
+                {gig.location?.split(",")[0] || "Remote"}
+              </span>
             </div>
-
-            {/* Actions */}
-            {showActions && (
-              <div className="flex items-center gap-2 self-stretch sm:self-center">
-                {/* Save/Favorite - Hidden on mobile */}
-                <div className="hidden sm:flex items-center gap-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSave();
-                          }}
-                          className="p-1.5 rounded-md transition-colors"
-                          title={isSaved ? "Remove from saved" : "Save"}
-                          style={{
-                            backgroundColor: gig.backgroundColor
-                              ? `${gig.backgroundColor}20`
-                              : undefined,
-                            color: gig.fontColor
-                              ? `${gig.fontColor}80`
-                              : undefined,
-                          }}
-                          onMouseEnter={(e) => {
-                            if (gig.backgroundColor) {
-                              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}40`;
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (gig.backgroundColor) {
-                              e.currentTarget.style.backgroundColor = `${gig.backgroundColor}20`;
-                            } else {
-                              e.currentTarget.style.backgroundColor = "";
-                            }
-                          }}
-                        >
-                          {isSaved ? (
-                            <Bookmark
-                              className="w-4 h-4"
-                              style={{ fill: gig.fontColor || "#fbbf24" }}
-                            />
-                          ) : (
-                            <Bookmark className="w-4 h-4" />
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {isSaved ? "Remove from saved" : "Save"}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFavorite();
-                          }}
-                          className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
-                          title={isFavorite ? "Remove favorite" : "Favorite"}
-                        >
-                          {isFavorite ? (
-                            <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                          ) : (
-                            <Heart className="w-4 h-4" />
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {isFavorite ? "Remove favorite" : "Favorite"}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
-                {/* Mobile save/favorite button */}
-                <div className="sm:hidden">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSave();
-                          }}
-                          className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
-                        >
-                          {isSaved ? (
-                            <Bookmark className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                          ) : (
-                            <Bookmark className="w-4 h-4" />
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {isSaved ? "Remove saved" : "Save"}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
-                {/* Primary action */}
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 sm:flex-none"
-                >
-                  {renderActionButton()}
-                </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              <span>
+                {new Date(gig.date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+            {gig.time?.start && (
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span>{gig.time.start}</span>
               </div>
             )}
           </div>
-          {/* Mobile interest window badge */}
-          {(gig.acceptInterestStartTime || gig.acceptInterestEndTime) && (
-            <div className="sm:hidden mt-2 flex items-center gap-2 text-xs text-gray-500">
-              <Clock className="w-3 h-3" />
-              <span className="truncate">{interestWindowStatus.message}</span>
+
+          {/* Action Buttons Row */}
+          <div
+            className={clsx(
+              "flex items-center justify-between mt-3 pt-2 border-t",
+              !isDarkMode ? "border-gray-100" : "border-gray-800",
+            )}
+          >
+            {/* Applicant count */}
+            <div className="flex items-center gap-1 text-xs">
+              <Users className="w-3 h-3 text-orange-500" />
+              <span className="font-medium">
+                {gigType === "client_band_creation"
+                  ? gig.bandCategory?.reduce(
+                      (acc, role) => acc + role.applicants.length,
+                      0,
+                    ) || 0
+                  : gig.interestedUsers?.length || 0}
+              </span>
+              <span
+                className={clsx(
+                  "text-[10px]",
+                  !isDarkMode ? "text-gray-500" : "text-gray-400",
+                )}
+              >
+                applied
+              </span>
             </div>
-          )}
+
+            {/* Action Buttons */}
+            <div
+              className="flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {renderActionButton()}
+
+              {/* More button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={clsx(
+                  "h-6 w-6 rounded-full",
+                  !isDarkMode
+                    ? "hover:bg-orange-100"
+                    : "hover:bg-orange-900/20",
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  e.nativeEvent.stopImmediatePropagation();
+                  if (getGigFromChild) {
+                    getGigFromChild(gig);
+                  }
+                }}
+                onMouseEnter={(e) => e.stopPropagation()}
+                onMouseLeave={(e) => e.stopPropagation()}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
         </div>
       </motion.div>
       <Dialog open={showInterestModal} onOpenChange={setShowInterestModal}>
@@ -3307,7 +2982,6 @@ const GigCard: React.FC<GigCardProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
         <DialogContent
           className={cn(
@@ -3642,7 +3316,6 @@ const GigCard: React.FC<GigCardProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Role Selection Modal */}
       <Dialog
         open={showRoleSelectionModal}
@@ -3826,7 +3499,6 @@ const GigCard: React.FC<GigCardProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Application Modal */}
       <Dialog
         open={showApplicationModal}

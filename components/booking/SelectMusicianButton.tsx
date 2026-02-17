@@ -120,7 +120,7 @@ export const SelectMusicianButton: React.FC<SelectMusicianButtonProps> = ({
       size={size}
       onClick={handleSelectMusician}
       disabled={isLoading}
-      className={`gap-2 ${className}`}
+      className={`gap-2 px-4 min-w-[150px] ${className}`}
       title={`Select ${musicianName} for this gig`}
     >
       {isLoading ? (
@@ -131,7 +131,7 @@ export const SelectMusicianButton: React.FC<SelectMusicianButtonProps> = ({
       ) : (
         <>
           <CheckCircle className="w-4 h-4" />
-          {showText && "Select Musician"}
+          {showText && `Select ${musicianName}`}
         </>
       )}
     </Button>

@@ -10,7 +10,8 @@ export interface Applicant {
     | "rejected"
     | "viewed"
     | "booked"
-    | "updated";
+    | "updated"
+    | "cancelled"; // ADD THIS
   notes?: string;
   gigId: Id<"gigs">;
   bandRole?: string;
@@ -26,7 +27,7 @@ export interface BookingHistoryEntry {
   bandRole?: string;
   bandRoleIndex?: number;
 
-  // ADD THE MISSING STATUSES HERE
+  // ADD "cancelled" to the status list
   status:
     | "applied"
     | "shortlisted"
@@ -35,10 +36,10 @@ export interface BookingHistoryEntry {
     | "booked"
     | "confirmed"
     | "completed"
-    | "cancelled"
+    | "cancelled" // Already here - good!
     | "rejected"
     | "updated"
-    | "viewed"; // Add this
+    | "viewed";
 
   gigType: "regular" | "band";
   proposedPrice?: number;
@@ -58,7 +59,7 @@ export interface ShortlistedUser {
   userId: Id<"users">;
   shortlistedAt: number;
   notes?: string;
-  status?: "active" | "booked" | "removed";
+  status?: "active" | "booked" | "removed" | "cancelled"; // ADD THIS if needed
   bandRole?: string;
   bandRoleIndex?: number;
   bookedAt?: number;
@@ -94,10 +95,10 @@ export interface BandMember {
     | "booked"
     | "confirmed"
     | "completed"
-    | "cancelled"
+    | "cancelled" // Already here - good!
     | "rejected"
     | "updated"
-    | "viewed"; // Add this
+    | "viewed";
   appliedBy: Id<"users">;
   proposedFee?: number;
   notes?: string;

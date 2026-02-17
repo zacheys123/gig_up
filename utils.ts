@@ -1716,12 +1716,10 @@ export const prepareGigDataForConvex = (
     }
   }
 
-  // 4. FIX TIME OBJECT - MUST HAVE ALL REQUIRED PROPERTIES
+  // 4. FIX TIME OBJECT - durationFrom/durationTo are NOT in time object
   const time = {
     start: formValues.start?.trim() || "19:00",
     end: formValues.end?.trim() || "22:00",
-    durationFrom: durationFrom || formValues.durationfrom || "pm",
-    durationTo: durationTo || formValues.durationto || "pm",
   };
 
   // 5. CALCULATE TOTAL SLOTS
@@ -1734,7 +1732,7 @@ export const prepareGigDataForConvex = (
     totalSlots = formValues.maxSlots || 1;
   }
 
-  // 6. PROCESS INTEREST WINDOW - FIXED VERSION
+  // 6. PROCESS INTEREST WINDOW
   let acceptInterestStartTime: number | undefined;
   let acceptInterestEndTime: number | undefined;
 
@@ -1750,23 +1748,9 @@ export const prepareGigDataForConvex = (
     // Convert string dates to timestamps
     if (formValues.acceptInterestStartTime) {
       try {
-        // The datetime-local input gives format: "YYYY-MM-DDTHH:MM"
         const startDate = new Date(formValues.acceptInterestStartTime);
-
-        if (isNaN(startDate.getTime())) {
-          console.warn(
-            "Invalid start date string:",
-            formValues.acceptInterestStartTime,
-          );
-        } else {
+        if (!isNaN(startDate.getTime())) {
           acceptInterestStartTime = startDate.getTime();
-          console.log(
-            "Start time converted:",
-            acceptInterestStartTime,
-            "(",
-            new Date(acceptInterestStartTime).toISOString(),
-            ")",
-          );
         }
       } catch (error) {
         console.warn("Error parsing acceptInterestStartTime:", error);
@@ -1776,20 +1760,8 @@ export const prepareGigDataForConvex = (
     if (formValues.acceptInterestEndTime) {
       try {
         const endDate = new Date(formValues.acceptInterestEndTime);
-        if (isNaN(endDate.getTime())) {
-          console.warn(
-            "Invalid end date string:",
-            formValues.acceptInterestEndTime,
-          );
-        } else {
+        if (!isNaN(endDate.getTime())) {
           acceptInterestEndTime = endDate.getTime();
-          console.log(
-            "End time converted:",
-            acceptInterestEndTime,
-            "(",
-            new Date(acceptInterestEndTime).toISOString(),
-            ")",
-          );
         }
       } catch (error) {
         console.warn("Error parsing acceptInterestEndTime:", error);
@@ -1801,15 +1773,12 @@ export const prepareGigDataForConvex = (
       const startTime = acceptInterestStartTime || Date.now();
       acceptInterestEndTime =
         startTime + formValues.interestWindowDays * 24 * 60 * 60 * 1000;
-      console.log("Calculated end time from days:", acceptInterestEndTime);
     }
 
     // Validate window is sensible
     if (acceptInterestStartTime && acceptInterestEndTime) {
       if (acceptInterestEndTime <= acceptInterestStartTime) {
-        console.warn(
-          "Invalid interest window: end time must be after start time",
-        );
+        console.warn("Invalid interest window: end time must be after start time");
         acceptInterestStartTime = undefined;
         acceptInterestEndTime = undefined;
       }
@@ -1841,16 +1810,16 @@ export const prepareGigDataForConvex = (
     // 🔴 REQUIRED FIELDS (Convex checks these)
     postedBy: userId,
     title: formValues.title.trim(),
-    secret: formValues.secret.trim(), // Must be non-empty
+    secret: formValues.secret.trim(),
     bussinesscat: formValues.bussinesscat,
-    date: scheduleDate, // Must be number timestamp
-    time: time, // Must have start, end, durationFrom, durationTo
-    logo: logoUrl, // Must be non-empty string
+    date: scheduleDate,
+    time: time, // Now only has start and end
+    logo: logoUrl,
 
     // Optional fields with defaults
     description: formValues.description?.trim() || "",
-    phone: formValues.phoneNo?.trim() || "", // Note: Convex expects 'phone' not 'phoneNo'
-    phoneNo: formValues.phoneNo?.trim() || "", // For compatibility
+    phone: formValues.phoneNo?.trim() || "",
+    phoneNo: formValues.phoneNo?.trim() || "",
     price: parseFloat(formValues.price) || 0,
     category: formValues.category?.trim() || "",
     location: formValues.location?.trim() || "",
@@ -1874,33 +1843,32 @@ export const prepareGigDataForConvex = (
     scheduleDate: scheduleDate,
     schedulingProcedure: publishType,
 
-    // 🔴 CRITICAL FIX: INTEREST WINDOW FIELDS
+    // Interest window fields
     ...(acceptInterestStartTime && { acceptInterestStartTime }),
     ...(acceptInterestEndTime && { acceptInterestEndTime }),
 
     // Band setup
     isClientBand: formValues.bussinesscat === "other",
-    maxSlots: formValues.maxSlots || totalSlots,
+    maxSlots: totalSlots,
     bandCategory: bandCategory,
 
     // Negotiable
     negotiable: formValues.negotiable || false,
 
-    // Duration fields (for Convex schema)
+    // 🔴 ADD DURATION FIELDS AT TOP LEVEL (as per your mutation schema)
     durationFrom: durationFrom || formValues.durationfrom || "pm",
     durationTo: durationTo || formValues.durationto || "pm",
   };
 
   console.log("=== DEBUG: Final prepared data ===");
+  console.log("Time object:", result.time);
+  console.log("Duration fields:", {
+    durationFrom: result.durationFrom,
+    durationTo: result.durationTo,
+  });
   console.log("Interest window fields:", {
     hasStartTime: !!result.acceptInterestStartTime,
     hasEndTime: !!result.acceptInterestEndTime,
-    startTime: result.acceptInterestStartTime
-      ? new Date(result.acceptInterestStartTime).toISOString()
-      : "undefined",
-    endTime: result.acceptInterestEndTime
-      ? new Date(result.acceptInterestEndTime).toISOString()
-      : "undefined",
   });
 
   return result;
@@ -2138,8 +2106,8 @@ export const updateWeeklyGigCount = (currentWeeklyData: any) => {
 // Create or update this function
 
 export const getInterestWindowStatus = (gig: {
-  acceptInterestStartTime?: string | number | Date;
-  acceptInterestEndTime?: string | number | Date;
+  acceptInterestStartTime?: number;
+  acceptInterestEndTime?: number;
 }) => {
   if (!gig.acceptInterestStartTime && !gig.acceptInterestEndTime) {
     return {
