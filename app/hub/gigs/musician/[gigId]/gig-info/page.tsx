@@ -148,7 +148,7 @@ export default function GigDetailsPage({ params }: PageProps) {
   const router = useRouter();
   const { colors, isDarkMode } = useThemeColors();
   const { user: currentUser } = useCurrentUser();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("all");
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(
@@ -588,82 +588,75 @@ export default function GigDetailsPage({ params }: PageProps) {
       </Badge>
     );
   };
-  // Group applicants by type for the competitors tab
-  const competitors = useMemo(() => {
-    if (!gig || !userMap) return [];
 
-    const allUsers = new Map<
-      Id<"users">,
-      { user: UserWithTrust; role: string; type: string }
-    >();
+  // Group applicants by type
+  const groupedApplicants = useMemo(() => {
+    if (!gig || !userMap)
+      return {
+        interested: [],
+        applied: [],
+        shortlisted: [],
+        booked: [],
+        bandApplicants: [],
+      };
 
-    // Add interested users
+    const groups = {
+      interested: [] as UserWithTrust[],
+      applied: [] as UserWithTrust[],
+      shortlisted: [] as UserWithTrust[],
+      booked: [] as UserWithTrust[],
+      bandApplicants: [] as UserWithTrust[],
+    };
+
     gig.interestedUsers?.forEach((id) => {
       const user = userMap.get(id as Id<"users">);
-      if (user && id !== currentUser?._id) {
-        allUsers.set(id as Id<"users">, {
-          user,
-          role: "interested",
-          type: "Interested",
-        });
-      }
+      if (user) groups.interested.push(user);
     });
 
-    // Add applied users
     gig.appliedUsers?.forEach((id) => {
       const user = userMap.get(id as Id<"users">);
-      if (user && id !== currentUser?._id) {
-        allUsers.set(id as Id<"users">, {
-          user,
-          role: "applied",
-          type: "Applied",
-        });
-      }
+      if (user) groups.applied.push(user);
     });
 
-    // Add shortlisted users
     gig.shortlistedUsers?.forEach((item) => {
       const user = userMap.get(item.userId as Id<"users">);
-      if (user && item.userId !== currentUser?._id) {
-        allUsers.set(item.userId as Id<"users">, {
-          user,
-          role: "shortlisted",
-          type: "Shortlisted",
-        });
-      }
+      if (user) groups.shortlisted.push(user);
     });
 
-    // Add band applicants
+    if (gig.bookedBy) {
+      const user = userMap.get(gig.bookedBy as Id<"users">);
+      if (user) groups.booked.push(user);
+    }
+
     gig.bandCategory?.forEach((role) => {
       role.applicants?.forEach((id) => {
         const user = userMap.get(id as Id<"users">);
-        if (user && id !== currentUser?._id) {
-          allUsers.set(id as Id<"users">, {
-            user,
-            role: "band-applicant",
-            type: `Applied for ${role.role}`,
-          });
-        }
+        if (user) groups.bandApplicants.push(user);
       });
     });
 
-    return Array.from(allUsers.values());
+    // Filter out current user
+    Object.keys(groups).forEach((key) => {
+      groups[key as keyof typeof groups] = groups[
+        key as keyof typeof groups
+      ].filter((user) => user._id !== currentUser?._id);
+    });
+
+    return groups;
   }, [gig, userMap, currentUser]);
 
-  // Filter competitors based on search
-  const filteredCompetitors = useMemo(() => {
-    if (!competitors) return [];
-    if (!searchQuery) return competitors;
-
+  // Filtered applicants based on search
+  const filterUsers = (users: UserWithTrust[]) => {
+    if (!searchQuery) return users;
     const query = searchQuery.toLowerCase();
-    return competitors.filter(
-      ({ user }) =>
+    return users.filter(
+      (user) =>
         user.firstname?.toLowerCase().includes(query) ||
         user.username?.toLowerCase().includes(query) ||
         user.roleType?.toLowerCase().includes(query) ||
         user.city?.toLowerCase().includes(query),
     );
-  }, [competitors, searchQuery]);
+  };
 
   // Loading state
   if (!gig || !users) {
@@ -671,10 +664,9 @@ export default function GigDetailsPage({ params }: PageProps) {
       <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-64 w-full rounded-xl" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-96 rounded-xl lg:col-span-1" />
             <Skeleton className="h-96 rounded-xl lg:col-span-2" />
-            <Skeleton className="h-96 rounded-xl" />
           </div>
         </div>
       </div>
@@ -730,7 +722,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                     isDarkMode ? "text-slate-400" : "text-slate-500",
                   )}
                 >
-                  Posted by {poster?.firstname || poster?.username}
+                  Viewing all applicants and gig details
                 </p>
               </div>
             </div>
@@ -776,10 +768,374 @@ export default function GigDetailsPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Two Column Layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Gig Details */}
+          {/* LEFT COLUMN - All Musicians/Applicants */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card
+              className={cn(
+                "border shadow-sm",
+                isDarkMode
+                  ? "bg-slate-900/50 border-slate-800"
+                  : "bg-white border-slate-200",
+              )}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3
+                    className={cn(
+                      "font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    All Applicants
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      isDarkMode
+                        ? "border-slate-700 text-slate-300"
+                        : "border-slate-200 text-slate-600",
+                    )}
+                  >
+                    {userIds.length - 1} total
+                  </Badge>
+                </div>
+
+                {/* Search */}
+                <div className="relative mb-4">
+                  <Search
+                    className={cn(
+                      "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
+                      isDarkMode ? "text-slate-500" : "text-slate-400",
+                    )}
+                  />
+                  <Input
+                    placeholder="Search applicants..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn(
+                      "pl-9",
+                      isDarkMode
+                        ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                        : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+                    )}
+                  />
+                </div>
+
+                {/* Tabs for different applicant types */}
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
+                  <TabsList className="grid grid-cols-5 mb-4">
+                    <TabsTrigger value="all" className="text-xs">
+                      All
+                    </TabsTrigger>
+                    <TabsTrigger value="interested" className="text-xs">
+                      Interested
+                    </TabsTrigger>
+                    <TabsTrigger value="applied" className="text-xs">
+                      Applied
+                    </TabsTrigger>
+                    <TabsTrigger value="shortlisted" className="text-xs">
+                      Shortlisted
+                    </TabsTrigger>
+                    <TabsTrigger value="booked" className="text-xs">
+                      Booked
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <ScrollArea className="h-[500px] pr-4">
+                    {/* All Tab */}
+                    <TabsContent value="all" className="space-y-3 mt-0">
+                      {Object.entries(groupedApplicants).map(
+                        ([category, users]) => {
+                          const filtered = filterUsers(users);
+                          if (filtered.length === 0) return null;
+
+                          return (
+                            <div key={category} className="space-y-2">
+                              <h4
+                                className={cn(
+                                  "text-xs font-medium uppercase tracking-wider sticky top-0 py-1",
+                                  isDarkMode
+                                    ? "text-slate-400"
+                                    : "text-slate-500",
+                                )}
+                              >
+                                {category === "interested" && "Interested"}
+                                {category === "applied" && "Applied"}
+                                {category === "shortlisted" && "Shortlisted"}
+                                {category === "booked" && "Booked"}
+                                {category === "bandApplicants" &&
+                                  "Band Applicants"}
+                                <span className="ml-2 text-xs font-normal">
+                                  ({filtered.length})
+                                </span>
+                              </h4>
+                              {filtered.map((user) => {
+                                const statusBadge = getUserStatusBadge(
+                                  user._id,
+                                );
+                                return (
+                                  <div
+                                    key={user._id}
+                                    className={cn(
+                                      "flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer group",
+                                      isDarkMode
+                                        ? "bg-slate-800/50 hover:bg-slate-800"
+                                        : "bg-slate-50 hover:bg-slate-100",
+                                    )}
+                                    onClick={() => handleViewProfile(user._id)}
+                                  >
+                                    <Avatar className="w-10 h-10">
+                                      <AvatarImage src={user.picture} />
+                                      <AvatarFallback
+                                        className={cn(
+                                          isDarkMode
+                                            ? "bg-slate-700 text-slate-300"
+                                            : "bg-slate-200 text-slate-600",
+                                        )}
+                                      >
+                                        {user.firstname?.charAt(0) || "U"}
+                                      </AvatarFallback>
+                                    </Avatar>
+
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p
+                                          className={cn(
+                                            "font-medium text-sm truncate",
+                                            isDarkMode
+                                              ? "text-white"
+                                              : "text-slate-900",
+                                          )}
+                                        >
+                                          {user.firstname || user.username}
+                                        </p>
+                                        <TrustStarsDisplay
+                                          trustStars={user.trustStars || 0}
+                                          size="sm"
+                                        />
+                                      </div>
+
+                                      <div className="flex items-center gap-2 mt-1">
+                                        {statusBadge && (
+                                          <span
+                                            className={statusBadge.className}
+                                          >
+                                            {statusBadge.icon}
+                                            {statusBadge.label}
+                                          </span>
+                                        )}
+                                        {user.roleType && (
+                                          <span
+                                            className={cn(
+                                              "text-xs",
+                                              isDarkMode
+                                                ? "text-slate-500"
+                                                : "text-slate-400",
+                                            )}
+                                          >
+                                            • {user.roleType}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleViewProfile(user._id);
+                                        }}
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                      {canMessageUser(user._id) && (
+                                        <ChatIcon
+                                          userId={user._id}
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8"
+                                        />
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        },
+                      )}
+
+                      {Object.values(groupedApplicants).every(
+                        (arr) => arr.length === 0,
+                      ) && (
+                        <div className="text-center py-8">
+                          <Users
+                            className={cn(
+                              "w-12 h-12 mx-auto mb-3",
+                              isDarkMode ? "text-slate-700" : "text-slate-300",
+                            )}
+                          />
+                          <p
+                            className={cn(
+                              "text-sm",
+                              isDarkMode ? "text-slate-400" : "text-slate-500",
+                            )}
+                          >
+                            No applicants yet
+                          </p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Individual Tabs */}
+                    {["interested", "applied", "shortlisted", "booked"].map(
+                      (tab) => (
+                        <TabsContent
+                          key={tab}
+                          value={tab}
+                          className="space-y-3 mt-0"
+                        >
+                          {filterUsers(
+                            groupedApplicants[
+                              tab as keyof typeof groupedApplicants
+                            ],
+                          ).length > 0 ? (
+                            filterUsers(
+                              groupedApplicants[
+                                tab as keyof typeof groupedApplicants
+                              ],
+                            ).map((user) => {
+                              const statusBadge = getUserStatusBadge(user._id);
+                              return (
+                                <div
+                                  key={user._id}
+                                  className={cn(
+                                    "flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer group",
+                                    isDarkMode
+                                      ? "bg-slate-800/50 hover:bg-slate-800"
+                                      : "bg-slate-50 hover:bg-slate-100",
+                                  )}
+                                  onClick={() => handleViewProfile(user._id)}
+                                >
+                                  <Avatar className="w-10 h-10">
+                                    <AvatarImage src={user.picture} />
+                                    <AvatarFallback
+                                      className={cn(
+                                        isDarkMode
+                                          ? "bg-slate-700 text-slate-300"
+                                          : "bg-slate-200 text-slate-600",
+                                      )}
+                                    >
+                                      {user.firstname?.charAt(0) || "U"}
+                                    </AvatarFallback>
+                                  </Avatar>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p
+                                        className={cn(
+                                          "font-medium text-sm truncate",
+                                          isDarkMode
+                                            ? "text-white"
+                                            : "text-slate-900",
+                                        )}
+                                      >
+                                        {user.firstname || user.username}
+                                      </p>
+                                      <TrustStarsDisplay
+                                        trustStars={user.trustStars || 0}
+                                        size="sm"
+                                      />
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-1">
+                                      {statusBadge && (
+                                        <span className={statusBadge.className}>
+                                          {statusBadge.icon}
+                                          {statusBadge.label}
+                                        </span>
+                                      )}
+                                      {user.city && (
+                                        <span
+                                          className={cn(
+                                            "text-xs",
+                                            isDarkMode
+                                              ? "text-slate-500"
+                                              : "text-slate-400",
+                                          )}
+                                        >
+                                          • {user.city}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewProfile(user._id);
+                                      }}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    {canMessageUser(user._id) && (
+                                      <ChatIcon
+                                        userId={user._id}
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-center py-8">
+                              <Users
+                                className={cn(
+                                  "w-12 h-12 mx-auto mb-3",
+                                  isDarkMode
+                                    ? "text-slate-700"
+                                    : "text-slate-300",
+                                )}
+                              />
+                              <p
+                                className={cn(
+                                  "text-sm",
+                                  isDarkMode
+                                    ? "text-slate-400"
+                                    : "text-slate-500",
+                                )}
+                              >
+                                No {tab} applicants
+                              </p>
+                            </div>
+                          )}
+                        </TabsContent>
+                      ),
+                    )}
+                  </ScrollArea>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* RIGHT COLUMN - Gig Details & Poster */}
           <div className="lg:col-span-2 space-y-6">
             {/* Gig Card */}
             <Card
@@ -905,6 +1261,149 @@ export default function GigDetailsPage({ params }: PageProps) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Poster Card */}
+            {poster && (
+              <Card
+                className={cn(
+                  "border shadow-sm",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
+                <CardContent className="p-6">
+                  <h3
+                    className={cn(
+                      "font-semibold mb-4",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    Gig Owner
+                  </h3>
+
+                  <div className="flex items-center gap-4">
+                    <Avatar className="w-16 h-16 border-2 border-slate-200 dark:border-slate-700">
+                      <AvatarImage src={poster.picture} />
+                      <AvatarFallback
+                        className={cn(
+                          "bg-gradient-to-br from-slate-700 to-slate-800 text-white",
+                          isDarkMode
+                            ? "from-slate-700 to-slate-800"
+                            : "from-slate-200 to-slate-300",
+                        )}
+                      >
+                        {poster.firstname?.charAt(0) ||
+                          poster.username?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h4
+                          className={cn(
+                            "font-semibold",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          {poster.firstname || poster.username}
+                        </h4>
+                        {canMessageUser(poster._id) && (
+                          <ChatIcon
+                            userId={poster._id}
+                            size="sm"
+                            variant="ghost"
+                            showPulse
+                          />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <TrustStarsDisplay
+                          trustStars={poster.trustStars || 0}
+                          size="sm"
+                        />
+                        {poster.verifiedIdentity && (
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                        )}
+                        {getTrustTierIcon(poster.trustTier)}
+                      </div>
+                      <div className="mt-2 text-sm">
+                        {poster.city && (
+                          <div className="flex items-center gap-1 text-slate-500">
+                            <MapPin className="w-3 h-3" />
+                            {poster.city}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-3 gap-2">
+                    <div className="text-center">
+                      <div
+                        className={cn(
+                          "text-lg font-semibold",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {poster.completedGigsCount || 0}
+                      </div>
+                      <div
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        Gigs
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div
+                        className={cn(
+                          "text-lg font-semibold",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {poster.followers?.length || 0}
+                      </div>
+                      <div
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        Followers
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div
+                        className={cn(
+                          "text-lg font-semibold",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {new Date().getFullYear() -
+                          new Date(poster._creationTime).getFullYear()}
+                      </div>
+                      <div
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        Years
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full mt-4"
+                    variant="outline"
+                    onClick={() => handleViewProfile(poster._id)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Full Profile
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Requirements */}
             {gig.requirements && gig.requirements.length > 0 && (
@@ -1050,363 +1549,6 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </CardContent>
               </Card>
             )}
-          </div>
-
-          {/* Right Column - Poster & Competitors */}
-          <div className="space-y-6">
-            {/* Poster Card */}
-            {poster && (
-              <Card
-                className={cn(
-                  "border shadow-sm",
-                  isDarkMode
-                    ? "bg-slate-900/50 border-slate-800"
-                    : "bg-white border-slate-200",
-                )}
-              >
-                <CardContent className="p-6">
-                  <h3
-                    className={cn(
-                      "font-semibold mb-4",
-                      isDarkMode ? "text-white" : "text-slate-900",
-                    )}
-                  >
-                    Gig Owner
-                  </h3>
-
-                  <div className="flex items-center gap-4 mb-4">
-                    <Avatar className="w-16 h-16 border-2 border-slate-200 dark:border-slate-700">
-                      <AvatarImage src={poster.picture} />
-                      <AvatarFallback
-                        className={cn(
-                          "bg-gradient-to-br from-slate-700 to-slate-800 text-white",
-                          isDarkMode
-                            ? "from-slate-700 to-slate-800"
-                            : "from-slate-200 to-slate-300",
-                        )}
-                      >
-                        {poster.firstname?.charAt(0) ||
-                          poster.username?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4
-                          className={cn(
-                            "font-semibold",
-                            isDarkMode ? "text-white" : "text-slate-900",
-                          )}
-                        >
-                          {poster.firstname || poster.username}
-                        </h4>
-                        {canMessageUser(poster._id) && (
-                          <ChatIcon
-                            userId={poster._id}
-                            size="sm"
-                            variant="ghost"
-                            showPulse
-                          />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 mt-1">
-                        <TrustStarsDisplay
-                          trustStars={poster.trustStars || 0}
-                          size="sm"
-                        />
-                        {poster.verifiedIdentity && (
-                          <CheckCircle className="w-4 h-4 text-emerald-500" />
-                        )}
-                        {getTrustTierIcon(poster.trustTier)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => handleViewProfile(poster._id)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Profile
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Your Competition - Other Applicants */}
-            <Card
-              className={cn(
-                "border shadow-sm",
-                isDarkMode
-                  ? "bg-slate-900/50 border-slate-800"
-                  : "bg-white border-slate-200",
-              )}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3
-                    className={cn(
-                      "font-semibold",
-                      isDarkMode ? "text-white" : "text-slate-900",
-                    )}
-                  >
-                    Your Competition
-                  </h3>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      isDarkMode
-                        ? "border-slate-700 text-slate-300"
-                        : "border-slate-200 text-slate-600",
-                    )}
-                  >
-                    {competitors.length} others
-                  </Badge>
-                </div>
-
-                {/* Search */}
-                <div className="relative mb-4">
-                  <Search
-                    className={cn(
-                      "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
-                      isDarkMode ? "text-slate-500" : "text-slate-400",
-                    )}
-                  />
-                  <Input
-                    placeholder="Search competitors..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className={cn(
-                      "pl-9",
-                      isDarkMode
-                        ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-                        : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
-                    )}
-                  />
-                </div>
-
-                {filteredCompetitors.length > 0 ? (
-                  <ScrollArea className="h-[350px] pr-4">
-                    <div className="space-y-3">
-                      {filteredCompetitors.map(({ user, type }) => {
-                        const statusBadge = getUserStatusBadge(user._id);
-
-                        return (
-                          <div
-                            key={user._id}
-                            className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer group",
-                              isDarkMode
-                                ? "bg-slate-800/50 hover:bg-slate-800"
-                                : "bg-slate-50 hover:bg-slate-100",
-                            )}
-                            onClick={() => handleViewProfile(user._id)}
-                          >
-                            <Avatar className="w-10 h-10">
-                              <AvatarImage src={user.picture} />
-                              <AvatarFallback
-                                className={cn(
-                                  isDarkMode
-                                    ? "bg-slate-700 text-slate-300"
-                                    : "bg-slate-200 text-slate-600",
-                                )}
-                              >
-                                {user.firstname?.charAt(0) || "U"}
-                              </AvatarFallback>
-                            </Avatar>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p
-                                  className={cn(
-                                    "font-medium text-sm truncate",
-                                    isDarkMode
-                                      ? "text-white"
-                                      : "text-slate-900",
-                                  )}
-                                >
-                                  {user.firstname || user.username}
-                                </p>
-                                <TrustStarsDisplay
-                                  trustStars={user.trustStars || 0}
-                                  size="xs"
-                                />
-                              </div>
-
-                              <div className="flex items-center gap-2 mt-1">
-                                {statusBadge && (
-                                  <span className={statusBadge.className}>
-                                    {statusBadge.icon}
-                                    {statusBadge.label}
-                                  </span>
-                                )}
-                                {user.city && (
-                                  <span
-                                    className={cn(
-                                      "text-xs",
-                                      isDarkMode
-                                        ? "text-slate-500"
-                                        : "text-slate-400",
-                                    )}
-                                  >
-                                    • {user.city}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewProfile(user._id);
-                                }}
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              {canMessageUser(user._id) && (
-                                <ChatIcon
-                                  userId={user._id}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                />
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="text-center py-8">
-                    <Users
-                      className={cn(
-                        "w-12 h-12 mx-auto mb-3",
-                        isDarkMode ? "text-slate-700" : "text-slate-300",
-                      )}
-                    />
-                    <p
-                      className={cn(
-                        "text-sm",
-                        isDarkMode ? "text-slate-400" : "text-slate-500",
-                      )}
-                    >
-                      {searchQuery
-                        ? "No matches found"
-                        : "No other applicants yet"}
-                    </p>
-                    {!searchQuery && (
-                      <p
-                        className={cn(
-                          "text-xs mt-1",
-                          isDarkMode ? "text-slate-500" : "text-slate-400",
-                        )}
-                      >
-                        You're the first!
-                      </p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Stats Card */}
-            <Card
-              className={cn(
-                "border shadow-sm",
-                isDarkMode
-                  ? "bg-slate-900/50 border-slate-800"
-                  : "bg-white border-slate-200",
-              )}
-            >
-              <CardContent className="p-6">
-                <h3
-                  className={cn(
-                    "font-semibold mb-4",
-                    isDarkMode ? "text-white" : "text-slate-900",
-                  )}
-                >
-                  Gig Stats
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span
-                      className={
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      }
-                    >
-                      Total Applicants
-                    </span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      {competitors.length + (userApplication ? 1 : 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span
-                      className={
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      }
-                    >
-                      Shortlisted
-                    </span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      {gig.shortlistedUsers?.length || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span
-                      className={
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      }
-                    >
-                      Views
-                    </span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      {gig.viewCount?.length || 0}
-                    </span>
-                  </div>
-                  <Separator
-                    className={isDarkMode ? "bg-slate-800" : "bg-slate-200"}
-                  />
-                  <div className="flex justify-between text-sm">
-                    <span
-                      className={
-                        isDarkMode ? "text-slate-500" : "text-slate-400"
-                      }
-                    >
-                      Posted
-                    </span>
-                    <span
-                      className={
-                        isDarkMode ? "text-slate-300" : "text-slate-600"
-                      }
-                    >
-                      {formatRelativeTime(gig._creationTime)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
