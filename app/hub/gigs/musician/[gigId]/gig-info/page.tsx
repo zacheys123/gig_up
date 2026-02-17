@@ -588,22 +588,6 @@ export default function GigDetailsPage({ params }: PageProps) {
       </Badge>
     );
   };
-
-  // Filter competitors based on search
-  const filteredCompetitors = useMemo(() => {
-    if (!competitors) return [];
-    if (!searchQuery) return competitors;
-
-    const query = searchQuery.toLowerCase();
-    return competitors.filter(
-      ({ user }) =>
-        user.firstname?.toLowerCase().includes(query) ||
-        user.username?.toLowerCase().includes(query) ||
-        user.roleType?.toLowerCase().includes(query) ||
-        user.city?.toLowerCase().includes(query),
-    );
-  }, [competitors, searchQuery]);
-
   // Group applicants by type for the competitors tab
   const competitors = useMemo(() => {
     if (!gig || !userMap) return [];
@@ -665,6 +649,21 @@ export default function GigDetailsPage({ params }: PageProps) {
 
     return Array.from(allUsers.values());
   }, [gig, userMap, currentUser]);
+
+  // Filter competitors based on search
+  const filteredCompetitors = useMemo(() => {
+    if (!competitors) return [];
+    if (!searchQuery) return competitors;
+
+    const query = searchQuery.toLowerCase();
+    return competitors.filter(
+      ({ user }) =>
+        user.firstname?.toLowerCase().includes(query) ||
+        user.username?.toLowerCase().includes(query) ||
+        user.roleType?.toLowerCase().includes(query) ||
+        user.city?.toLowerCase().includes(query),
+    );
+  }, [competitors, searchQuery]);
 
   // Loading state
   if (!gig || !users) {
