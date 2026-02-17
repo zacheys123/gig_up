@@ -3223,9 +3223,7 @@ export const updateGig = mutation({
       };
     }
 
-    // DEBUG: Log final payload
-    console.log("=== Final Update Payload ===");
-    console.log("Payload to update:", JSON.stringify(payload, null, 2));
+    console.log("Payload to update:", otherArgs);
 
     // Update the gig
     await ctx.db.patch(gigId, payload);

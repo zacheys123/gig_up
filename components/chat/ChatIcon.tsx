@@ -37,7 +37,7 @@ export function ChatIcon({
   const pathname = usePathname();
   const { colors, isDarkMode, mounted } = useThemeColors();
   const getOrCreateChat = useMutation(
-    api.controllers.chat.getOrCreateDirectChat
+    api.controllers.chat.getOrCreateDirectChat,
   );
 
   const sizeClasses = {
@@ -53,11 +53,11 @@ export function ChatIcon({
     background: isDarkMode
       ? cn(
           colors.warningBg,
-          "hover:bg-amber-900/30" // Fallback hover
+          "hover:bg-amber-900/30", // Fallback hover
         )
       : cn(
           colors.warningBg,
-          "hover:bg-amber-100" // Fallback hover
+          "hover:bg-amber-100", // Fallback hover
         ),
     border: isDarkMode
       ? cn(colors.warningBorder, "hover:border-amber-400/50")
@@ -75,14 +75,14 @@ export function ChatIcon({
       cozyStyles.shadow,
       "border-2 transition-all duration-300",
       "hover:scale-105 active:scale-95",
-      "backdrop-blur-sm"
+      "backdrop-blur-sm",
     ),
     default: cn(
       colors.primaryBg,
       colors.primaryBgHover,
       "text-white",
       "shadow-lg hover:shadow-xl shadow-blue-500/25",
-      "transition-all duration-300 hover:scale-105 active:scale-95"
+      "transition-all duration-300 hover:scale-105 active:scale-95",
     ),
     secondary: cn(
       colors.secondaryBackground,
@@ -91,7 +91,7 @@ export function ChatIcon({
       "border",
       colors.border,
       "shadow-lg hover:shadow-xl shadow-gray-500/10",
-      "transition-all duration-300 hover:scale-105 active:scale-95"
+      "transition-all duration-300 hover:scale-105 active:scale-95",
     ),
     outline: cn(
       "border-2 bg-transparent",
@@ -99,14 +99,14 @@ export function ChatIcon({
       colors.text,
       colors.hoverBg,
       "hover:border-amber-400 hover:text-amber-300 dark:hover:text-amber-400", // Fallback hovers
-      "transition-all duration-300 hover:scale-105 active:scale-95"
+      "transition-all duration-300 hover:scale-105 active:scale-95",
     ),
     ghost: cn(
       "bg-transparent",
       colors.textSecondary,
       colors.hoverBg,
       "hover:text-amber-300 dark:hover:text-amber-400", // Fallback hovers
-      "transition-all duration-300 hover:scale-105 active:scale-95"
+      "transition-all duration-300 hover:scale-105 active:scale-95",
     ),
   };
 
@@ -159,7 +159,7 @@ export function ChatIcon({
           showText ? "w-full justify-start" : "rounded-full",
           "animate-pulse",
           colors.disabledBg,
-          className
+          className,
         )}
         disabled
       >
@@ -184,7 +184,7 @@ export function ChatIcon({
             "absolute inset-0 rounded-full animate-ping",
             variant === "cozy" && "bg-amber-400/30",
             variant === "default" && "bg-blue-400/30",
-            variant === "secondary" && colors.backgroundMuted
+            variant === "secondary" && colors.backgroundMuted,
           )}
         />
       )}
@@ -198,7 +198,7 @@ export function ChatIcon({
           "relative transition-all duration-300 font-medium",
           variantStyles[variant],
           showText && "px-4 py-2.5",
-          className
+          className,
         )}
         title="Start a conversation"
         disabled={!currentUser?._id}
@@ -213,7 +213,7 @@ export function ChatIcon({
                 variant === "default" && "text-white",
                 variant === "secondary" && colors.text,
                 variant === "outline" && colors.text,
-                variant === "ghost" && colors.text
+                variant === "ghost" && colors.text,
               )}
             >
               {text ? text : `Let's Chat`}

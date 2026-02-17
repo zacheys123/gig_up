@@ -903,7 +903,9 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/gigs/${gig._id}`);
+                              router.push(
+                                `/hub/gigs/musician/${gig._id}/gig-info`,
+                              );
                             }}
                           >
                             <Eye className="w-4 h-4 mr-2" />
