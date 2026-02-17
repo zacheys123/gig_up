@@ -1914,7 +1914,6 @@ export default function EditGigForm({
       gigcustom.font === "" &&
       gigcustom.fontColor === "" &&
       gigcustom.backgroundColor === "";
-
     try {
       console.log("=== DEBUG: Saving gig data ===");
       console.log("Form values:", formValues);
@@ -2681,8 +2680,6 @@ export default function EditGigForm({
         {showCustomizationModal && (
           <AnimatePresence>
             {showCustomizationModal && (
-              // In EditGigForm.tsx - Update the onApply handler
-              // In EditGigForm.tsx - Update the onApply handler
               <GigCustomization
                 customization={gigcustom}
                 setCustomization={setGigCustom}
@@ -2695,13 +2692,14 @@ export default function EditGigForm({
 
                   // Check if this is a reset to defaults
                   if (values.resetStyling) {
-                    // This is a reset action - we need to explicitly clear styling
+                    console.log("RESETTING STYLING TO DEFAULTS");
+                    // This is a reset action - explicitly clear styling
                     setGigCustom({
                       font: "",
                       fontColor: "",
                       backgroundColor: "",
                     });
-                    // Also clear logo if needed
+                    // Logo is handled separately
                     setUrl(user?.picture || "");
                   } else {
                     // Normal update - remove the resetStyling flag before saving

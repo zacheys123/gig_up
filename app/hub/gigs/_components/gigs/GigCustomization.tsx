@@ -90,6 +90,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
   };
 
   //  Add a flag when using default
+
   const handleUseDefault = () => {
     const defaultValues: CustomProps = {
       font: "",
@@ -101,8 +102,10 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
     setCustomization(defaultValues);
 
     if (onApply) {
-      // Pass a flag indicating this is a reset to defaults
-      onApply({ ...defaultValues, resetStyling: true });
+      // Pass the values AND a flag indicating this is a reset
+      onApply({ ...defaultValues, resetStyling: true } as CustomProps & {
+        resetStyling: boolean;
+      });
     }
   };
 
