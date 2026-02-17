@@ -1,4 +1,4 @@
-// app/hub/gigs/[gigId]/page.tsx
+// app/hub/gigs/musician/[gigId]/gig-info/page.tsx
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 // Icons
 import {
@@ -76,16 +78,45 @@ import {
   Facebook,
   Linkedin,
   Globe,
+  Mail,
+  Phone,
+  Github,
+  Camera,
+  Edit3,
+  MoreHorizontal,
+  Bookmark,
+  Share2,
+  Flag,
+  Ban,
+  Trash2,
+  ExternalLink,
+  Copy,
+  Check,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Plus,
+  Minus,
+  Filter,
+  Search,
+  SlidersHorizontal,
+  Grid,
+  List,
+  CalendarDays,
+  Clock3,
+  Timer,
+  UsersRound,
+  VerifiedIcon,
+  ThumbsUp,
 } from "lucide-react";
 
 // Trust components
 import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
 import { ChatIcon } from "@/components/chat/ChatIcon";
-import { Textarea } from "@/components/ui/textarea";
 
+// Types
 interface PageProps {
   params: Promise<{
-    // ✅ params is now a Promise
     gigId: string;
   }>;
 }
@@ -113,6 +144,7 @@ interface UserWithTrust {
 
 export default function GigDetailsPage({ params }: PageProps) {
   const { gigId } = React.use(params);
+
   const router = useRouter();
   const { colors, isDarkMode } = useThemeColors();
   const { user: currentUser } = useCurrentUser();
@@ -124,6 +156,7 @@ export default function GigDetailsPage({ params }: PageProps) {
   );
   const [loading, setLoading] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Mutations
   const removeInterestFromGig = useMutation(
@@ -132,7 +165,7 @@ export default function GigDetailsPage({ params }: PageProps) {
 
   // Fetch gig data
   const gig = useQuery(api.controllers.gigs.getGigById, {
-    gigId: gigId as Id<"gigs">, // ✅ Use unwrapped gigId
+    gigId: gigId as Id<"gigs">,
   });
 
   // Fetch ALL users that are involved in this gig (competitors)
@@ -288,61 +321,85 @@ export default function GigDetailsPage({ params }: PageProps) {
   const getUserStatusBadge = (userId: Id<"users">) => {
     const role = getUserRoleInGig(userId);
 
-    switch (role) {
-      case "poster":
-        return {
-          label: "Gig Owner",
-          color:
-            "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300",
-          icon: <Crown className="w-3 h-3 mr-1" />,
-        };
-      case "booked":
-        return {
-          label: "Booked",
-          color:
-            "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300",
-          icon: <CheckCircle className="w-3 h-3 mr-1" />,
-        };
-      case "shortlisted":
-        return {
-          label: "Shortlisted",
-          color:
-            "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300",
-          icon: <Star className="w-3 h-3 mr-1" />,
-        };
-      case "interested":
-        return {
-          label: "Interested",
-          color:
-            "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300",
-          icon: <Heart className="w-3 h-3 mr-1" />,
-        };
-      case "applied":
-      case "band-applicant":
-      case "band-booking":
-        return {
-          label: "Applied",
-          color:
-            "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300",
-          icon: <Briefcase className="w-3 h-3 mr-1" />,
-        };
-      case "band-booked":
-        return {
-          label: "Booked",
-          color:
-            "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300",
-          icon: <CheckCircle className="w-3 h-3 mr-1" />,
-        };
-      case "band-member":
-        return {
-          label: "Band Member",
-          color:
-            "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300",
-          icon: <Users className="w-3 h-3 mr-1" />,
-        };
-      default:
-        return null;
-    }
+    // Professional color palette - muted, sophisticated
+    const styles = {
+      poster: {
+        bg: isDarkMode ? "bg-indigo-900/30" : "bg-indigo-50",
+        text: isDarkMode ? "text-indigo-300" : "text-indigo-700",
+        border: isDarkMode ? "border-indigo-800" : "border-indigo-200",
+        icon: <Crown className="w-3 h-3 mr-1" />,
+        label: "Gig Owner",
+      },
+      booked: {
+        bg: isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50",
+        text: isDarkMode ? "text-emerald-300" : "text-emerald-700",
+        border: isDarkMode ? "border-emerald-800" : "border-emerald-200",
+        icon: <CheckCircle className="w-3 h-3 mr-1" />,
+        label: "Booked",
+      },
+      shortlisted: {
+        bg: isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50",
+        text: isDarkMode ? "text-emerald-300" : "text-emerald-700",
+        border: isDarkMode ? "border-emerald-800" : "border-emerald-200",
+        icon: <Star className="w-3 h-3 mr-1" />,
+        label: "Shortlisted",
+      },
+      interested: {
+        bg: isDarkMode ? "bg-sky-900/30" : "bg-sky-50",
+        text: isDarkMode ? "text-sky-300" : "text-sky-700",
+        border: isDarkMode ? "border-sky-800" : "border-sky-200",
+        icon: <Heart className="w-3 h-3 mr-1" />,
+        label: "Interested",
+      },
+      applied: {
+        bg: isDarkMode ? "bg-amber-900/30" : "bg-amber-50",
+        text: isDarkMode ? "text-amber-300" : "text-amber-700",
+        border: isDarkMode ? "border-amber-800" : "border-amber-200",
+        icon: <Briefcase className="w-3 h-3 mr-1" />,
+        label: "Applied",
+      },
+      "band-applicant": {
+        bg: isDarkMode ? "bg-amber-900/30" : "bg-amber-50",
+        text: isDarkMode ? "text-amber-300" : "text-amber-700",
+        border: isDarkMode ? "border-amber-800" : "border-amber-200",
+        icon: <Briefcase className="w-3 h-3 mr-1" />,
+        label: "Applied",
+      },
+      "band-booking": {
+        bg: isDarkMode ? "bg-amber-900/30" : "bg-amber-50",
+        text: isDarkMode ? "text-amber-300" : "text-amber-700",
+        border: isDarkMode ? "border-amber-800" : "border-amber-200",
+        icon: <Users2 className="w-3 h-3 mr-1" />,
+        label: "Band Applied",
+      },
+      "band-booked": {
+        bg: isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50",
+        text: isDarkMode ? "text-emerald-300" : "text-emerald-700",
+        border: isDarkMode ? "border-emerald-800" : "border-emerald-200",
+        icon: <CheckCircle className="w-3 h-3 mr-1" />,
+        label: "Booked",
+      },
+      "band-member": {
+        bg: isDarkMode ? "bg-sky-900/30" : "bg-sky-50",
+        text: isDarkMode ? "text-sky-300" : "text-sky-700",
+        border: isDarkMode ? "border-sky-800" : "border-sky-200",
+        icon: <Users className="w-3 h-3 mr-1" />,
+        label: "Band Member",
+      },
+    };
+
+    const style = styles[role as keyof typeof styles];
+    if (!style) return null;
+
+    return {
+      ...style,
+      className: cn(
+        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+        style.bg,
+        style.text,
+        style.border,
+      ),
+    };
   };
 
   // Check if user can message another user
@@ -362,9 +419,9 @@ export default function GigDetailsPage({ params }: PageProps) {
   // Format helpers
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
-      weekday: "long",
+      weekday: "short",
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
     });
   };
@@ -401,13 +458,13 @@ export default function GigDetailsPage({ params }: PageProps) {
   const getTrustTierIcon = (tier?: string) => {
     switch (tier) {
       case "elite":
-        return <Crown className="w-4 h-4 text-yellow-500" />;
+        return <Crown className="w-4 h-4 text-amber-500" />;
       case "trusted":
-        return <Medal className="w-4 h-4 text-blue-500" />;
+        return <Medal className="w-4 h-4 text-sky-500" />;
       case "verified":
-        return <BadgeCheck className="w-4 h-4 text-green-500" />;
+        return <BadgeCheck className="w-4 h-4 text-emerald-500" />;
       case "basic":
-        return <Shield className="w-4 h-4 text-gray-500" />;
+        return <Shield className="w-4 h-4 text-gray-400" />;
       default:
         return null;
     }
@@ -417,15 +474,15 @@ export default function GigDetailsPage({ params }: PageProps) {
   const getRoleIcon = (roleType?: string) => {
     switch (roleType?.toLowerCase()) {
       case "vocalist":
-        return <Mic className="w-4 h-4 text-pink-500" />;
+        return <Mic className="w-4 h-4 text-rose-500" />;
       case "dj":
-        return <Volume2 className="w-4 h-4 text-purple-500" />;
+        return <Volume2 className="w-4 h-4 text-violet-500" />;
       case "mc":
-        return <Mic className="w-4 h-4 text-red-500" />;
+        return <Mic className="w-4 h-4 text-amber-500" />;
       case "instrumentalist":
-        return <Music className="w-4 h-4 text-blue-500" />;
+        return <Music className="w-4 h-4 text-sky-500" />;
       default:
-        return <UserRound className="w-4 h-4 text-gray-500" />;
+        return <UserRound className="w-4 h-4 text-gray-400" />;
     }
   };
 
@@ -469,45 +526,51 @@ export default function GigDetailsPage({ params }: PageProps) {
     if (!userApplication) return null;
 
     const badges = {
+      poster: {
+        bg: "bg-indigo-100 dark:bg-indigo-900/30",
+        text: "text-indigo-700 dark:text-indigo-300",
+        icon: Crown,
+        label: "Gig Owner",
+      },
       interested: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
+        bg: "bg-sky-100 dark:bg-sky-900/30",
+        text: "text-sky-700 dark:text-sky-300",
         icon: Heart,
         label: "Interested",
       },
       applied: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
+        bg: "bg-amber-100 dark:bg-amber-900/30",
+        text: "text-amber-700 dark:text-amber-300",
         icon: Briefcase,
         label: "Applied",
       },
       shortlisted: {
-        bg: "bg-green-100",
-        text: "text-green-800",
+        bg: "bg-emerald-100 dark:bg-emerald-900/30",
+        text: "text-emerald-700 dark:text-emerald-300",
         icon: Star,
         label: "Shortlisted",
       },
       booked: {
-        bg: "bg-purple-100",
-        text: "text-purple-800",
+        bg: "bg-emerald-100 dark:bg-emerald-900/30",
+        text: "text-emerald-700 dark:text-emerald-300",
         icon: CheckCircle,
         label: "Booked",
       },
       "band-applicant": {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
+        bg: "bg-amber-100 dark:bg-amber-900/30",
+        text: "text-amber-700 dark:text-amber-300",
         icon: Briefcase,
         label: "Applied",
       },
       "band-booked": {
-        bg: "bg-purple-100",
-        text: "text-purple-800",
+        bg: "bg-emerald-100 dark:bg-emerald-900/30",
+        text: "text-emerald-700 dark:text-emerald-300",
         icon: CheckCircle,
         label: "Booked",
       },
       "band-booking": {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
+        bg: "bg-amber-100 dark:bg-amber-900/30",
+        text: "text-amber-700 dark:text-amber-300",
         icon: Users2,
         label: "Band Applied",
       },
@@ -518,7 +581,7 @@ export default function GigDetailsPage({ params }: PageProps) {
 
     const Icon = badge.icon;
     return (
-      <Badge className={`${badge.bg} ${badge.text} border-0`}>
+      <Badge className={cn(badge.bg, badge.text, "border-0")}>
         <Icon className="w-3 h-3 mr-1" />
         {badge.label}
         {userApplication.role && ` • ${userApplication.role}`}
@@ -526,21 +589,20 @@ export default function GigDetailsPage({ params }: PageProps) {
     );
   };
 
-  // Loading state
-  if (!gig || !users) {
-    return (
-      <div className="min-h-screen p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-64 w-full rounded-xl" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Skeleton className="h-96 rounded-xl lg:col-span-2" />
-            <Skeleton className="h-96 rounded-xl" />
-          </div>
-        </div>
-      </div>
+  // Filter competitors based on search
+  const filteredCompetitors = useMemo(() => {
+    if (!competitors) return [];
+    if (!searchQuery) return competitors;
+
+    const query = searchQuery.toLowerCase();
+    return competitors.filter(
+      ({ user }) =>
+        user.firstname?.toLowerCase().includes(query) ||
+        user.username?.toLowerCase().includes(query) ||
+        user.roleType?.toLowerCase().includes(query) ||
+        user.city?.toLowerCase().includes(query),
     );
-  }
+  }, [competitors, searchQuery]);
 
   // Group applicants by type for the competitors tab
   const competitors = useMemo(() => {
@@ -604,26 +666,71 @@ export default function GigDetailsPage({ params }: PageProps) {
     return Array.from(allUsers.values());
   }, [gig, userMap, currentUser]);
 
+  // Loading state
+  if (!gig || !users) {
+    return (
+      <div className="min-h-screen p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-96 rounded-xl lg:col-span-2" />
+            <Skeleton className="h-96 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div
+      className={cn(
+        "min-h-screen",
+        isDarkMode
+          ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
+          : "bg-gradient-to-br from-slate-50 via-white to-slate-50",
+      )}
+    >
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+      <div
+        className={cn(
+          "sticky top-0 z-40 border-b backdrop-blur-md",
+          isDarkMode
+            ? "bg-slate-900/80 border-slate-800"
+            : "bg-white/80 border-slate-200",
+        )}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 onClick={() => router.back()}
-                className="gap-2"
+                className={cn(
+                  "gap-2",
+                  isDarkMode
+                    ? "text-slate-300 hover:text-white hover:bg-slate-800"
+                    : "text-slate-700 hover:text-slate-900 hover:bg-slate-100",
+                )}
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1
+                  className={cn(
+                    "text-2xl font-semibold tracking-tight",
+                    isDarkMode ? "text-white" : "text-slate-900",
+                  )}
+                >
                   {gig.title}
                 </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p
+                  className={cn(
+                    "text-sm",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                  )}
+                >
                   Posted by {poster?.firstname || poster?.username}
                 </p>
               </div>
@@ -638,7 +745,12 @@ export default function GigDetailsPage({ params }: PageProps) {
                   <Button
                     variant="outline"
                     onClick={() => setShowWithdrawDialog(true)}
-                    className="gap-2 text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                    className={cn(
+                      "gap-2",
+                      isDarkMode
+                        ? "border-rose-800 text-rose-400 hover:bg-rose-950/30"
+                        : "border-rose-200 text-rose-600 hover:bg-rose-50",
+                    )}
                   >
                     <XCircle className="w-4 h-4" />
                     Withdraw
@@ -649,7 +761,12 @@ export default function GigDetailsPage({ params }: PageProps) {
                 <Button
                   variant="outline"
                   onClick={() => router.push(`/hub/gigs/edit/${gig._id}`)}
-                  className="gap-2"
+                  className={cn(
+                    "gap-2",
+                    isDarkMode
+                      ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-100",
+                  )}
                 >
                   <Eye className="w-4 h-4" />
                   Manage
@@ -666,32 +783,66 @@ export default function GigDetailsPage({ params }: PageProps) {
           {/* Left Column - Gig Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Gig Card */}
-            <Card>
+            <Card
+              className={cn(
+                "border shadow-sm overflow-hidden",
+                isDarkMode
+                  ? "bg-slate-900/50 border-slate-800"
+                  : "bg-white border-slate-200",
+              )}
+            >
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <Avatar className="w-16 h-16 rounded-lg border-2 border-orange-500">
+                  <Avatar className="w-16 h-16 rounded-lg border-2 border-slate-200 dark:border-slate-700">
                     <AvatarImage src={gig.logo} />
-                    <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white text-xl">
+                    <AvatarFallback
+                      className={cn(
+                        "bg-gradient-to-br from-slate-700 to-slate-800 text-white text-xl",
+                        isDarkMode
+                          ? "from-slate-700 to-slate-800"
+                          : "from-slate-200 to-slate-300",
+                      )}
+                    >
                       {gig.title?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h2
+                      className={cn(
+                        "text-2xl font-semibold tracking-tight mb-2",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {gig.title}
                     </h2>
 
                     <div className="flex flex-wrap gap-4 text-sm">
-                      <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <div
+                        className={cn(
+                          "flex items-center gap-1",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
                         <MapPin className="w-4 h-4" />
                         {gig.location || "Remote"}
                       </div>
-                      <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <div
+                        className={cn(
+                          "flex items-center gap-1",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
                         <Calendar className="w-4 h-4" />
                         {formatDate(gig.date)}
                       </div>
                       {gig.time?.start && (
-                        <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                        <div
+                          className={cn(
+                            "flex items-center gap-1",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
                           <Clock className="w-4 h-4" />
                           {formatTime(gig.time.start)} -{" "}
                           {formatTime(gig.time.end)}
@@ -701,11 +852,24 @@ export default function GigDetailsPage({ params }: PageProps) {
                   </div>
 
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-green-600">
+                    <div
+                      className={cn(
+                        "text-2xl font-semibold",
+                        isDarkMode ? "text-emerald-400" : "text-emerald-600",
+                      )}
+                    >
                       {formatCurrency(gig.price, gig.currency)}
                     </div>
                     {gig.negotiable && (
-                      <Badge variant="outline" className="mt-1">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "mt-1",
+                          isDarkMode
+                            ? "border-slate-700 text-slate-300"
+                            : "border-slate-200 text-slate-600",
+                        )}
+                      >
                         Negotiable
                       </Badge>
                     )}
@@ -713,7 +877,12 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </div>
 
                 <div className="mt-6">
-                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
+                  <p
+                    className={cn(
+                      "text-sm leading-relaxed whitespace-pre-line",
+                      isDarkMode ? "text-slate-300" : "text-slate-600",
+                    )}
+                  >
                     {gig.description}
                   </p>
                 </div>
@@ -721,7 +890,15 @@ export default function GigDetailsPage({ params }: PageProps) {
                 {gig.tags && gig.tags.length > 0 && (
                   <div className="mt-6 flex flex-wrap gap-2">
                     {gig.tags.map((tag, i) => (
-                      <Badge key={i} variant="secondary">
+                      <Badge
+                        key={i}
+                        variant="secondary"
+                        className={cn(
+                          isDarkMode
+                            ? "bg-slate-800 text-slate-300 border-slate-700"
+                            : "bg-slate-100 text-slate-600 border-slate-200",
+                        )}
+                      >
                         {tag}
                       </Badge>
                     ))}
@@ -732,17 +909,33 @@ export default function GigDetailsPage({ params }: PageProps) {
 
             {/* Requirements */}
             {gig.requirements && gig.requirements.length > 0 && (
-              <Card>
+              <Card
+                className={cn(
+                  "border shadow-sm",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
                 <CardContent className="p-6">
-                  <h3 className="font-bold mb-4 flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  <h3
+                    className={cn(
+                      "font-semibold mb-4 flex items-center gap-2",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    <CheckCircle className="w-5 h-5 text-emerald-500" />
                     Requirements
                   </h3>
                   <ul className="space-y-2">
                     {gig.requirements.map((req, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5" />
-                        <span className="text-gray-700 dark:text-gray-300">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5" />
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }
+                        >
                           {req}
                         </span>
                       </li>
@@ -754,10 +947,22 @@ export default function GigDetailsPage({ params }: PageProps) {
 
             {/* Band Roles */}
             {gig.bandCategory && gig.bandCategory.length > 0 && (
-              <Card>
+              <Card
+                className={cn(
+                  "border shadow-sm",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
                 <CardContent className="p-6">
-                  <h3 className="font-bold mb-4 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-purple-500" />
+                  <h3
+                    className={cn(
+                      "font-semibold mb-4 flex items-center gap-2",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    <Users className="w-5 h-5 text-violet-500" />
                     Available Roles
                   </h3>
 
@@ -769,17 +974,46 @@ export default function GigDetailsPage({ params }: PageProps) {
                       );
 
                       return (
-                        <div key={index} className="border rounded-lg p-4">
+                        <div
+                          key={index}
+                          className={cn(
+                            "border rounded-lg p-4",
+                            isDarkMode
+                              ? "border-slate-800"
+                              : "border-slate-200",
+                          )}
+                        >
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="font-semibold">{role.role}</h4>
+                              <h4
+                                className={cn(
+                                  "font-medium",
+                                  isDarkMode ? "text-white" : "text-slate-900",
+                                )}
+                              >
+                                {role.role}
+                              </h4>
                               {role.description && (
-                                <p className="text-sm text-gray-600 mt-1">
+                                <p
+                                  className={cn(
+                                    "text-sm mt-1",
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500",
+                                  )}
+                                >
                                   {role.description}
                                 </p>
                               )}
                             </div>
-                            <Badge variant="outline">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                isDarkMode
+                                  ? "border-slate-700 text-slate-300"
+                                  : "border-slate-200 text-slate-600",
+                              )}
+                            >
                               {applicantCount} applicant
                               {applicantCount !== 1 ? "s" : ""}
                             </Badge>
@@ -792,7 +1026,12 @@ export default function GigDetailsPage({ params }: PageProps) {
                                   <Badge
                                     key={i}
                                     variant="secondary"
-                                    className="text-xs"
+                                    className={cn(
+                                      "text-xs",
+                                      isDarkMode
+                                        ? "bg-slate-800 text-slate-300 border-slate-700"
+                                        : "bg-slate-100 text-slate-600 border-slate-200",
+                                    )}
                                   >
                                     {skill}
                                   </Badge>
@@ -801,7 +1040,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                             )}
 
                           {isUserApplied && (
-                            <Badge className="mt-3 bg-yellow-100 text-yellow-800">
+                            <Badge className="mt-3 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                               You've applied for this role
                             </Badge>
                           )}
@@ -818,14 +1057,35 @@ export default function GigDetailsPage({ params }: PageProps) {
           <div className="space-y-6">
             {/* Poster Card */}
             {poster && (
-              <Card>
+              <Card
+                className={cn(
+                  "border shadow-sm",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
                 <CardContent className="p-6">
-                  <h3 className="font-bold mb-4">Gig Owner</h3>
+                  <h3
+                    className={cn(
+                      "font-semibold mb-4",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    Gig Owner
+                  </h3>
 
                   <div className="flex items-center gap-4 mb-4">
-                    <Avatar className="w-16 h-16 border-2 border-orange-500">
+                    <Avatar className="w-16 h-16 border-2 border-slate-200 dark:border-slate-700">
                       <AvatarImage src={poster.picture} />
-                      <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white">
+                      <AvatarFallback
+                        className={cn(
+                          "bg-gradient-to-br from-slate-700 to-slate-800 text-white",
+                          isDarkMode
+                            ? "from-slate-700 to-slate-800"
+                            : "from-slate-200 to-slate-300",
+                        )}
+                      >
                         {poster.firstname?.charAt(0) ||
                           poster.username?.charAt(0)}
                       </AvatarFallback>
@@ -833,15 +1093,22 @@ export default function GigDetailsPage({ params }: PageProps) {
 
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-lg">
+                        <h4
+                          className={cn(
+                            "font-semibold",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
                           {poster.firstname || poster.username}
                         </h4>
-                        <ChatIcon
-                          userId={poster._id}
-                          size="sm"
-                          variant="ghost"
-                          showPulse
-                        />
+                        {canMessageUser(poster._id) && (
+                          <ChatIcon
+                            userId={poster._id}
+                            size="sm"
+                            variant="ghost"
+                            showPulse
+                          />
+                        )}
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <TrustStarsDisplay
@@ -849,7 +1116,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                           size="sm"
                         />
                         {poster.verifiedIdentity && (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
                         )}
                         {getTrustTierIcon(poster.trustTier)}
                       </div>
@@ -869,128 +1136,274 @@ export default function GigDetailsPage({ params }: PageProps) {
             )}
 
             {/* Your Competition - Other Applicants */}
-            <Card>
+            <Card
+              className={cn(
+                "border shadow-sm",
+                isDarkMode
+                  ? "bg-slate-900/50 border-slate-800"
+                  : "bg-white border-slate-200",
+              )}
+            >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold">Your Competition</h3>
-                  <Badge variant="outline">{competitors.length} others</Badge>
+                  <h3
+                    className={cn(
+                      "font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    Your Competition
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      isDarkMode
+                        ? "border-slate-700 text-slate-300"
+                        : "border-slate-200 text-slate-600",
+                    )}
+                  >
+                    {competitors.length} others
+                  </Badge>
                 </div>
 
-                {competitors.length > 0 ? (
-                  <ScrollArea className="h-[400px] pr-4">
-                    <div className="space-y-4">
-                      {competitors.map(({ user, type }) => (
-                        <div
-                          key={user._id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                          onClick={() => handleViewProfile(user._id)}
-                        >
-                          <Avatar className="w-12 h-12">
-                            <AvatarImage src={user.picture} />
-                            <AvatarFallback>
-                              {user.firstname?.charAt(0) || "U"}
-                            </AvatarFallback>
-                          </Avatar>
+                {/* Search */}
+                <div className="relative mb-4">
+                  <Search
+                    className={cn(
+                      "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
+                      isDarkMode ? "text-slate-500" : "text-slate-400",
+                    )}
+                  />
+                  <Input
+                    placeholder="Search competitors..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn(
+                      "pl-9",
+                      isDarkMode
+                        ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                        : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+                    )}
+                  />
+                </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">
-                                {user.firstname || user.username}
-                              </p>
-                              <TrustStarsDisplay
-                                trustStars={user.trustStars || 0}
-                                size="sm"
-                              />
+                {filteredCompetitors.length > 0 ? (
+                  <ScrollArea className="h-[350px] pr-4">
+                    <div className="space-y-3">
+                      {filteredCompetitors.map(({ user, type }) => {
+                        const statusBadge = getUserStatusBadge(user._id);
+
+                        return (
+                          <div
+                            key={user._id}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer group",
+                              isDarkMode
+                                ? "bg-slate-800/50 hover:bg-slate-800"
+                                : "bg-slate-50 hover:bg-slate-100",
+                            )}
+                            onClick={() => handleViewProfile(user._id)}
+                          >
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={user.picture} />
+                              <AvatarFallback
+                                className={cn(
+                                  isDarkMode
+                                    ? "bg-slate-700 text-slate-300"
+                                    : "bg-slate-200 text-slate-600",
+                                )}
+                              >
+                                {user.firstname?.charAt(0) || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p
+                                  className={cn(
+                                    "font-medium text-sm truncate",
+                                    isDarkMode
+                                      ? "text-white"
+                                      : "text-slate-900",
+                                  )}
+                                >
+                                  {user.firstname || user.username}
+                                </p>
+                                <TrustStarsDisplay
+                                  trustStars={user.trustStars || 0}
+                                  size="xs"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 mt-1">
+                                {statusBadge && (
+                                  <span className={statusBadge.className}>
+                                    {statusBadge.icon}
+                                    {statusBadge.label}
+                                  </span>
+                                )}
+                                {user.city && (
+                                  <span
+                                    className={cn(
+                                      "text-xs",
+                                      isDarkMode
+                                        ? "text-slate-500"
+                                        : "text-slate-400",
+                                    )}
+                                  >
+                                    • {user.city}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {type}
-                              </Badge>
-                              {user.roleType && (
-                                <Badge variant="outline" className="text-xs">
-                                  {user.roleType}
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                              <span>
-                                ⚡ {user.completedGigsCount || 0} gigs
-                              </span>
-                              {user.city && (
-                                <>
-                                  <span>•</span>
-                                  <span>{user.city}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewProfile(user._id);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            {canMessageUser(user._id) && (
-                              <ChatIcon
-                                userId={user._id}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
                                 size="sm"
                                 variant="ghost"
                                 className="h-8 w-8"
-                              />
-                            )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewProfile(user._id);
+                                }}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {canMessageUser(user._id) && (
+                                <ChatIcon
+                                  userId={user._id}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                />
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </ScrollArea>
                 ) : (
                   <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No other applicants yet</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      You're the first!
+                    <Users
+                      className={cn(
+                        "w-12 h-12 mx-auto mb-3",
+                        isDarkMode ? "text-slate-700" : "text-slate-300",
+                      )}
+                    />
+                    <p
+                      className={cn(
+                        "text-sm",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      {searchQuery
+                        ? "No matches found"
+                        : "No other applicants yet"}
                     </p>
+                    {!searchQuery && (
+                      <p
+                        className={cn(
+                          "text-xs mt-1",
+                          isDarkMode ? "text-slate-500" : "text-slate-400",
+                        )}
+                      >
+                        You're the first!
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Stats Card */}
-            <Card>
+            <Card
+              className={cn(
+                "border shadow-sm",
+                isDarkMode
+                  ? "bg-slate-900/50 border-slate-800"
+                  : "bg-white border-slate-200",
+              )}
+            >
               <CardContent className="p-6">
-                <h3 className="font-bold mb-4">Gig Stats</h3>
+                <h3
+                  className={cn(
+                    "font-semibold mb-4",
+                    isDarkMode ? "text-white" : "text-slate-900",
+                  )}
+                >
+                  Gig Stats
+                </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Total Applicants</span>
-                    <span className="font-bold">
+                    <span
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
+                      Total Applicants
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {competitors.length + (userApplication ? 1 : 0)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Shortlisted</span>
-                    <span className="font-bold">
+                    <span
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
+                      Shortlisted
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {gig.shortlistedUsers?.length || 0}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Views</span>
-                    <span className="font-bold">
+                    <span
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
+                      Views
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {gig.viewCount?.length || 0}
                     </span>
                   </div>
-                  <Separator />
+                  <Separator
+                    className={isDarkMode ? "bg-slate-800" : "bg-slate-200"}
+                  />
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Posted</span>
-                    <span>{formatRelativeTime(gig._creationTime)}</span>
+                    <span
+                      className={
+                        isDarkMode ? "text-slate-500" : "text-slate-400"
+                      }
+                    >
+                      Posted
+                    </span>
+                    <span
+                      className={
+                        isDarkMode ? "text-slate-300" : "text-slate-600"
+                      }
+                    >
+                      {formatRelativeTime(gig._creationTime)}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -1001,28 +1414,53 @@ export default function GigDetailsPage({ params }: PageProps) {
 
       {/* Profile Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className={cn(
+            "sm:max-w-md",
+            isDarkMode
+              ? "bg-slate-900 border-slate-800"
+              : "bg-white border-slate-200",
+          )}
+        >
           {selectedUser && (
             <>
               <DialogHeader>
-                <DialogTitle>User Profile</DialogTitle>
-                <DialogDescription>
+                <DialogTitle
+                  className={isDarkMode ? "text-white" : "text-slate-900"}
+                >
+                  User Profile
+                </DialogTitle>
+                <DialogDescription
+                  className={isDarkMode ? "text-slate-400" : "text-slate-500"}
+                >
                   {selectedUser.firstname || selectedUser.username}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-6 py-4">
                 <div className="flex items-center gap-4">
-                  <Avatar className="w-20 h-20 border-2 border-orange-500">
+                  <Avatar className="w-20 h-20 border-2 border-slate-200 dark:border-slate-700">
                     <AvatarImage src={selectedUser.picture} />
-                    <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white text-2xl">
+                    <AvatarFallback
+                      className={cn(
+                        "bg-gradient-to-br from-slate-700 to-slate-800 text-white text-2xl",
+                        isDarkMode
+                          ? "from-slate-700 to-slate-800"
+                          : "from-slate-200 to-slate-300",
+                      )}
+                    >
                       {selectedUser.firstname?.charAt(0) ||
                         selectedUser.username?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
 
                   <div>
-                    <h3 className="font-bold text-xl">
+                    <h3
+                      className={cn(
+                        "font-semibold text-xl",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {selectedUser.firstname || selectedUser.username}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
@@ -1031,39 +1469,79 @@ export default function GigDetailsPage({ params }: PageProps) {
                         size="sm"
                       />
                       {selectedUser.verifiedIdentity && (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <CheckCircle className="w-4 h-4 text-emerald-500" />
                       )}
                       {getTrustTierIcon(selectedUser.trustTier)}
                     </div>
                   </div>
                 </div>
 
-                <Separator />
+                <Separator
+                  className={isDarkMode ? "bg-slate-800" : "bg-slate-200"}
+                />
 
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <div className="text-lg font-bold">
+                    <div
+                      className={cn(
+                        "text-lg font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {selectedUser.completedGigsCount || 0}
                     </div>
-                    <div className="text-xs text-gray-500">Gigs</div>
+                    <div
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
+                      Gigs
+                    </div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold">
+                    <div
+                      className={cn(
+                        "text-lg font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {selectedUser.followers?.length || 0}
                     </div>
-                    <div className="text-xs text-gray-500">Followers</div>
+                    <div
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
+                      Followers
+                    </div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold">
+                    <div
+                      className={cn(
+                        "text-lg font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {selectedUser.avgRating?.toFixed(1) || "0.0"}
                     </div>
-                    <div className="text-xs text-gray-500">Rating</div>
+                    <div
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
+                      Rating
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   {selectedUser.roleType && (
-                    <div className="flex items-center gap-2 text-sm">
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 text-sm",
+                        isDarkMode ? "text-slate-300" : "text-slate-600",
+                      )}
+                    >
                       {getRoleIcon(selectedUser.roleType)}
                       <span className="capitalize">
                         {selectedUser.roleType}
@@ -1071,14 +1549,24 @@ export default function GigDetailsPage({ params }: PageProps) {
                     </div>
                   )}
                   {selectedUser.city && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="w-4 h-4 text-gray-400" />
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 text-sm",
+                        isDarkMode ? "text-slate-300" : "text-slate-600",
+                      )}
+                    >
+                      <MapPin className="w-4 h-4 text-slate-400" />
                       <span>{selectedUser.city}</span>
                     </div>
                   )}
                   {selectedUser.instrument && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Music className="w-4 h-4 text-gray-400" />
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 text-sm",
+                        isDarkMode ? "text-slate-300" : "text-slate-600",
+                      )}
+                    >
+                      <Music className="w-4 h-4 text-slate-400" />
                       <span>{selectedUser.instrument}</span>
                     </div>
                   )}
@@ -1112,10 +1600,22 @@ export default function GigDetailsPage({ params }: PageProps) {
 
       {/* Withdraw Dialog */}
       <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
-        <DialogContent>
+        <DialogContent
+          className={cn(
+            isDarkMode
+              ? "bg-slate-900 border-slate-800"
+              : "bg-white border-slate-200",
+          )}
+        >
           <DialogHeader>
-            <DialogTitle>Withdraw Application</DialogTitle>
-            <DialogDescription>
+            <DialogTitle
+              className={isDarkMode ? "text-white" : "text-slate-900"}
+            >
+              Withdraw Application
+            </DialogTitle>
+            <DialogDescription
+              className={isDarkMode ? "text-slate-400" : "text-slate-500"}
+            >
               Are you sure you want to withdraw your application? You can always
               reapply later.
             </DialogDescription>
@@ -1127,6 +1627,11 @@ export default function GigDetailsPage({ params }: PageProps) {
               value={withdrawReason}
               onChange={(e) => setWithdrawReason(e.target.value)}
               rows={3}
+              className={cn(
+                isDarkMode
+                  ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+              )}
             />
           </div>
 
@@ -1134,6 +1639,11 @@ export default function GigDetailsPage({ params }: PageProps) {
             <Button
               variant="outline"
               onClick={() => setShowWithdrawDialog(false)}
+              className={
+                isDarkMode
+                  ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                  : ""
+              }
             >
               Cancel
             </Button>
