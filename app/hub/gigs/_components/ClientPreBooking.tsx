@@ -1,11 +1,14 @@
-// components/gigs/ClientPreBooking.tsx (HORIZONTAL NAVIGATION VERSION)
-import React, { useState, useEffect, useMemo } from "react";
+// components/gigs/ClientPreBooking.tsx
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -24,6 +27,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Icons
 import {
@@ -39,7 +48,6 @@ import {
   History,
   CheckCircle,
   Eye,
-  Bookmark as BookmarkIcon,
   Star,
   XCircle,
   Clock,
@@ -59,6 +67,11 @@ import {
   Edit,
   Archive,
   AlertCircle,
+  Grid3x3,
+  List,
+  Kanban,
+  CalendarDays,
+  Activity,
 } from "lucide-react";
 
 // Custom Components
@@ -81,8 +94,10 @@ import { BookingOptionsSection } from "./BookingOptions";
 import { PreBookingStats } from "./gigs/PreBookingStats";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence, easeOut, easeInOut } from "framer-motion";
 import { useMediaQuery } from "@/hooks/use-media-query";
+
+// Types
+type DisplayMode = "grid" | "timeline" | "list" | "calendar" | "kanban";
 
 interface ClientPreBookingProps {
   user: any;
@@ -101,6 +116,111 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   );
   const [applicantView, setApplicantView] = useState<"active" | "history">(
     "active",
+  );
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("grid");
+
+  // Preferences
+  const userPreferences = useQuery(
+    api.controllers.userPrefferences.getUserPreferences,
+    user?._id ? { userId: user._id } : "skip",
+  );
+  const updateComponentPrefs = useMutation(
+    api.controllers.userPrefferences.updateComponentPreferences,
+  );
+
+  // Load preferences
+  useEffect(() => {
+    if (userPreferences?.preferences?.clientPreBooking) {
+      const prefs = userPreferences.preferences.clientPreBooking;
+      if (prefs.displayMode) setDisplayMode(prefs.displayMode as DisplayMode);
+      if (prefs.activeGigTab) setActiveGigTab(prefs.activeGigTab as GigTabType);
+      if (prefs.activeTab)
+        setActiveTab(prefs.activeTab as "applicants" | "history");
+      if (prefs.applicantView)
+        setApplicantView(prefs.applicantView as "active" | "history");
+    }
+  }, [userPreferences]);
+
+  // Save display mode
+  const handleDisplayModeChange = useCallback(
+    async (mode: DisplayMode) => {
+      setDisplayMode(mode);
+
+      if (!user?._id) return;
+
+      try {
+        await updateComponentPrefs({
+          userId: user._id,
+          component: "clientPreBooking",
+          settings: { displayMode: mode },
+        });
+      } catch (error) {
+        console.error("Error saving display mode:", error);
+      }
+    },
+    [user?._id, updateComponentPrefs],
+  );
+
+  // Save active gig tab
+  const handleGigTabChange = useCallback(
+    async (tab: GigTabType) => {
+      setActiveGigTab(tab);
+      setSelectedGig(null);
+      setSearchTerm("");
+
+      if (!user?._id) return;
+
+      try {
+        await updateComponentPrefs({
+          userId: user._id,
+          component: "clientPreBooking",
+          settings: { activeGigTab: tab },
+        });
+      } catch (error) {
+        console.error("Error saving gig tab:", error);
+      }
+    },
+    [user?._id, updateComponentPrefs],
+  );
+
+  // Save active tab
+  const handleTabChange = useCallback(
+    async (tab: "applicants" | "history") => {
+      setActiveTab(tab);
+
+      if (!user?._id) return;
+
+      try {
+        await updateComponentPrefs({
+          userId: user._id,
+          component: "clientPreBooking",
+          settings: { activeTab: tab },
+        });
+      } catch (error) {
+        console.error("Error saving tab:", error);
+      }
+    },
+    [user?._id, updateComponentPrefs],
+  );
+
+  // Save applicant view
+  const handleApplicantViewChange = useCallback(
+    async (view: "active" | "history") => {
+      setApplicantView(view);
+
+      if (!user?._id) return;
+
+      try {
+        await updateComponentPrefs({
+          userId: user._id,
+          component: "clientPreBooking",
+          settings: { applicantView: view },
+        });
+      } catch (error) {
+        console.error("Error saving applicant view:", error);
+      }
+    },
+    [user?._id, updateComponentPrefs],
   );
 
   // Queries
@@ -203,8 +323,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       console.log("No gigs or users data available");
       return;
     }
-
-    console.log("Processing gigs:", userGigs.length);
 
     const userMap = new Map();
     allUsers.forEach((user) => {
@@ -479,7 +597,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         return gigData.applicants.length > 0;
       });
 
-    console.log("Processed gigs:", processedGigs.length);
     setGigsWithApplicants(processedGigs);
 
     if (processedGigs.length > 0 && !selectedGig) {
@@ -821,7 +938,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       y: 0,
       transition: {
         duration: 0.3,
-        ease: easeOut,
       },
     },
     hover: {
@@ -829,7 +945,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       scale: 1.02,
       transition: {
         duration: 0.2,
-        ease: easeInOut,
       },
     },
   };
@@ -858,55 +973,162 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      {/* Header Stats */}
-      <PreBookingStats userGigs={userGigs || []} activeTab={activeGigTab} />
+    <TooltipProvider>
+      <div className="p-4 md:p-6 space-y-6">
+        {/* Header Stats */}
+        <PreBookingStats userGigs={userGigs || []} activeTab={activeGigTab} />
 
-      {/* HORIZONTAL GIG NAVIGATION CARDS */}
-      <div className="space-y-4">
-        {/* Tabs for gig types */}
+        {/* Display Mode Toggle */}
         <div className="flex items-center justify-between">
-          <Tabs
-            value={activeGigTab}
-            onValueChange={(v: any) => {
-              setActiveGigTab(v);
-              setSelectedGig(null);
-              setSearchTerm("");
-              setApplicantView("active"); // Reset to active view when switching gig tabs
-            }}
-            className="w-full"
-          >
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="regular" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline">Regular</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="band-roles"
-                className="flex items-center gap-2"
-              >
-                <Briefcase className="w-4 h-4" />
-                <span className="hidden sm:inline">Band Roles</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="full-band"
-                className="flex items-center gap-2"
-              >
-                <Users2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Full Band</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="shortlist"
-                className="flex items-center gap-2"
-              >
-                <Bookmark className="w-4 h-4" />
-                <span className="hidden sm:inline">Shortlist</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Display:</span>
+            <div className="flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "grid" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("grid")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Grid3x3 className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Grid View</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "list" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("list")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>List View</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "timeline" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("timeline")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Activity className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Timeline View</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "calendar" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("calendar")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Calendar View</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "kanban" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("kanban")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Kanban className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Kanban View</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
 
-          {/* Search */}
-          <div className="hidden md:block w-64">
+        {/* HORIZONTAL GIG NAVIGATION CARDS */}
+        <div className="space-y-4">
+          {/* Tabs for gig types */}
+          <div className="flex items-center justify-between">
+            <Tabs
+              value={activeGigTab}
+              onValueChange={(v: any) => handleGigTabChange(v)}
+              className="w-full"
+            >
+              <TabsList className="grid grid-cols-4">
+                <TabsTrigger
+                  value="regular"
+                  className="flex items-center gap-2"
+                >
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">Regular</span>
+                  {tabCounts.regular > 0 && (
+                    <Badge className="ml-1 bg-blue-500 text-white">
+                      {tabCounts.regular}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="band-roles"
+                  className="flex items-center gap-2"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  <span className="hidden sm:inline">Band Roles</span>
+                  {tabCounts.bandRoles > 0 && (
+                    <Badge className="ml-1 bg-purple-500 text-white">
+                      {tabCounts.bandRoles}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="full-band"
+                  className="flex items-center gap-2"
+                >
+                  <Users2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Full Band</span>
+                  {tabCounts.fullBand > 0 && (
+                    <Badge className="ml-1 bg-green-500 text-white">
+                      {tabCounts.fullBand}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="shortlist"
+                  className="flex items-center gap-2"
+                >
+                  <Bookmark className="w-4 h-4" />
+                  <span className="hidden sm:inline">Shortlist</span>
+                  {tabCounts.shortlist > 0 && (
+                    <Badge className="ml-1 bg-amber-500 text-white">
+                      {tabCounts.shortlist}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Search */}
+            <div className="hidden md:block w-64">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile search */}
+          <div className="md:hidden">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -917,614 +1139,604 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               />
             </div>
           </div>
-        </div>
 
-        {/* Mobile search */}
-        <div className="md:hidden">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
+          {/* Horizontal Gig Cards */}
+          {gigsWithApplicants.length > 0 ? (
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4">
+                {gigsWithApplicants.map((gigData) => {
+                  const isSelected = selectedGig === gigData.gig._id;
+                  const applicantCount = getGigApplicantCount(gigData);
 
-        {/* Horizontal Gig Cards */}
-        {gigsWithApplicants.length > 0 ? (
-          <ScrollArea className="w-full">
-            <div className="flex gap-4 pb-4">
-              {gigsWithApplicants.map((gigData) => {
-                const isSelected = selectedGig === gigData.gig._id;
-                const applicantCount = getGigApplicantCount(gigData);
-
-                return (
-                  <motion.div
-                    key={gigData.gig._id}
-                    variants={cardVariants}
-                    initial="hidden"
-                    animate="visible"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedGig(gigData.gig._id)}
-                    className="flex-shrink-0 w-64"
-                  >
-                    <Card
-                      className={cn(
-                        "cursor-pointer transition-all duration-300",
-                        isSelected
-                          ? "ring-2 ring-orange-500 shadow-xl"
-                          : "shadow-md hover:shadow-lg",
-                      )}
+                  return (
+                    <motion.div
+                      key={gigData.gig._id}
+                      variants={cardVariants}
+                      initial="hidden"
+                      animate="visible"
+                      whileHover="hover"
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setSelectedGig(gigData.gig._id)}
+                      className="flex-shrink-0 w-64"
                     >
-                      <CardContent className="p-5">
-                        {!isSelected ? (
-                          <div className="text-center">
-                            <div className="text-3xl font-bold text-gray-800 mb-1">
-                              {applicantCount}
-                            </div>
-                            <div className="text-xs uppercase tracking-wider text-gray-500 mb-3">
-                              Applicants
-                            </div>
-                            <h3 className="font-semibold text-lg line-clamp-2 mb-2">
-                              {gigData.gig.title}
-                            </h3>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="text-center border-b pb-3">
-                              <div className="text-4xl font-bold text-orange-500">
+                      <Card
+                        className={cn(
+                          "cursor-pointer transition-all duration-300",
+                          isSelected
+                            ? "ring-2 ring-orange-500 shadow-xl"
+                            : "shadow-md hover:shadow-lg",
+                        )}
+                      >
+                        <CardContent className="p-5">
+                          {!isSelected ? (
+                            <div className="text-center">
+                              <div className="text-3xl font-bold text-gray-800 mb-1">
                                 {applicantCount}
                               </div>
-                              <div className="text-xs uppercase tracking-wider text-gray-500">
-                                Total Applicants
+                              <div className="text-xs uppercase tracking-wider text-gray-500 mb-3">
+                                Applicants
                               </div>
-                            </div>
-
-                            <div>
-                              <h3 className="font-bold text-lg mb-2">
+                              <h3 className="font-semibold text-lg line-clamp-2 mb-2">
                                 {gigData.gig.title}
                               </h3>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="text-center border-b pb-3">
+                                <div className="text-4xl font-bold text-orange-500">
+                                  {applicantCount}
+                                </div>
+                                <div className="text-xs uppercase tracking-wider text-gray-500">
+                                  Total Applicants
+                                </div>
+                              </div>
 
-                              <div className="space-y-2 text-sm">
-                                {gigData.gig.time?.start &&
-                                  gigData.gig.time?.end && (
+                              <div>
+                                <h3 className="font-bold text-lg mb-2">
+                                  {gigData.gig.title}
+                                </h3>
+
+                                <div className="space-y-2 text-sm">
+                                  {gigData.gig.time?.start &&
+                                    gigData.gig.time?.end && (
+                                      <div className="flex items-center gap-2">
+                                        <Clock className="w-4 h-4 text-gray-400" />
+                                        <span>
+                                          {gigData.gig.time.start}
+                                          {gigData.gig.time.durationFrom} -{" "}
+                                          {gigData.gig.time.end}
+                                          {gigData.gig.time.durationTo}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                  {gigData.gig.location && (
                                     <div className="flex items-center gap-2">
-                                      <Clock className="w-4 h-4 text-gray-400" />
-                                      <span>
-                                        {gigData.gig.time.start}
-                                        {gigData.gig.time.durationFrom} -{" "}
-                                        {gigData.gig.time.end}
-                                        {gigData.gig.time.durationTo}
+                                      <MapPin className="w-4 h-4 text-gray-400" />
+                                      <span className="truncate">
+                                        {gigData.gig.location}
                                       </span>
                                     </div>
                                   )}
 
-                                {gigData.gig.location && (
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="w-4 h-4 text-gray-400" />
-                                    <span className="truncate">
-                                      {gigData.gig.location}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {gigData?.gig?.price &&
-                                  gigData?.gig?.price > 0 && (
-                                    <div className="flex items-center gap-2 font-semibold text-green-600">
-                                      <DollarSign className="w-4 h-4" />
-                                      <span>${gigData.gig.price}</span>
-                                    </div>
-                                  )}
+                                  {gigData?.gig?.price &&
+                                    gigData?.gig?.price > 0 && (
+                                      <div className="flex items-center gap-2 font-semibold text-green-600">
+                                        <DollarSign className="w-4 h-4" />
+                                        <span>${gigData.gig.price}</span>
+                                      </div>
+                                    )}
+                                </div>
                               </div>
-                            </div>
 
-                            {gigData.shortlisted.length > 0 && (
-                              <div className="flex items-center justify-between pt-2 border-t">
-                                <span className="text-sm text-gray-600">
-                                  Shortlisted
-                                </span>
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-green-100 text-green-700"
-                                >
-                                  {gigData.shortlisted.length}
-                                </Badge>
-                              </div>
-                            )}
-
-                            <Badge
-                              className={cn(
-                                "w-full justify-center",
-                                gigData.gig.isTaken
-                                  ? "bg-gray-100 text-gray-700"
-                                  : "bg-orange-100 text-orange-700",
+                              {gigData.shortlisted.length > 0 && (
+                                <div className="flex items-center justify-between pt-2 border-t">
+                                  <span className="text-sm text-gray-600">
+                                    Shortlisted
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-green-100 text-green-700"
+                                  >
+                                    {gigData.shortlisted.length}
+                                  </Badge>
+                                </div>
                               )}
-                            >
-                              {gigData.gig.isTaken ? "Booked" : "Active"}
-                            </Badge>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        ) : (
-          <Card className="text-center p-8">
-            <CardContent className="space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-                <Sparkles className="w-8 h-8 text-gray-500" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg mb-2">No Gigs Found</h3>
-                <p className="text-gray-500 text-sm">
-                  Share your gigs or check back later for applications.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
 
-      {/* MAIN CONTENT AREA */}
-      {selectedGigData ? (
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="space-y-6">
-              {/* Gig Header */}
-              <div className="flex items-start justify-between">
+                              <Badge
+                                className={cn(
+                                  "w-full justify-center",
+                                  gigData.gig.isTaken
+                                    ? "bg-gray-100 text-gray-700"
+                                    : "bg-orange-100 text-orange-700",
+                                )}
+                              >
+                                {gigData.gig.isTaken ? "Booked" : "Active"}
+                              </Badge>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          ) : (
+            <Card className="text-center p-8">
+              <CardContent className="space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                  <Sparkles className="w-8 h-8 text-gray-500" />
+                </div>
                 <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    {getGigIcon(selectedGigData.gig)}
-                    <div>
-                      <h1 className="text-xl md:text-2xl font-bold">
-                        {selectedGigData.gig.title}
-                      </h1>
-                      <div className="flex items-center gap-3 mt-1">
-                        <Badge
-                          className={getGigStatusColor(selectedGigData.gig)}
-                        >
-                          {selectedGigData.gig.isTaken ? "Booked" : "Active"}
-                        </Badge>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(selectedGigData.gig.date)}
+                  <h3 className="font-bold text-lg mb-2">No Gigs Found</h3>
+                  <p className="text-gray-500 text-sm">
+                    Share your gigs or check back later for applications.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* MAIN CONTENT AREA */}
+        {selectedGigData ? (
+          <Card>
+            <CardContent className="p-4 md:p-6">
+              <div className="space-y-6">
+                {/* Gig Header */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      {getGigIcon(selectedGigData.gig)}
+                      <div>
+                        <h1 className="text-xl md:text-2xl font-bold">
+                          {selectedGigData.gig.title}
+                        </h1>
+                        <div className="flex items-center gap-3 mt-1">
+                          <Badge
+                            className={getGigStatusColor(selectedGigData.gig)}
+                          >
+                            {selectedGigData.gig.isTaken ? "Booked" : "Active"}
+                          </Badge>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Calendar className="w-4 h-4" />
+                            {formatDate(selectedGigData.gig.date)}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      router.push(
+                        `/hub/gigs/client/edit/${selectedGigData.gig._id}`,
+                      );
+                    }}
+                    className="flex items-center gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span className="hidden sm:inline">Edit Gig</span>
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    router.push(
-                      `/hub/gigs/client/edit/${selectedGigData.gig._id}`,
-                    );
-                  }}
-                  className="flex items-center gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span className="hidden sm:inline">Edit Gig</span>
-                </Button>
-              </div>
 
-              {/* Gig Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Users className="w-5 h-5 text-blue-500" />
-                    <span className="text-lg font-bold">
-                      {activeApplicants.length}
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Active
-                  </span>
-                </div>
-                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Bookmark className="w-5 h-5 text-green-500" />
-                    <span className="text-lg font-bold">
-                      {selectedGigData.shortlisted.length}
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Shortlisted
-                  </span>
-                </div>
-                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <DollarSign className="w-5 h-5 text-purple-500" />
-                    <span className="text-lg font-bold">
-                      ${selectedGigData.gig.price || "0"}
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Budget
-                  </span>
-                </div>
-                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Archive className="w-5 h-5 text-gray-500" />
-                    <span className="text-lg font-bold">
-                      {historyApplicants.length}
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    History
-                  </span>
-                </div>
-              </div>
-
-              {/* Tab Content */}
-              {activeGigTab === "shortlist" ? (
-                <ShortlistTab
-                  selectedGigData={selectedGigData}
-                  filteredShortlist={filteredShortlist}
-                  handleRemoveFromShortlist={handleRemoveFromShortlist}
-                  handleViewProfile={handleViewProfile}
-                  handleBookMusician={handleBookMusician}
-                  formatTime={formatTime}
-                />
-              ) : (
-                <Tabs
-                  value={activeTab}
-                  onValueChange={(v: any) => setActiveTab(v)}
-                  className="mt-6"
-                >
-                  <TabsList className="grid grid-cols-2">
-                    <TabsTrigger value="applicants" className="relative">
-                      <Users className="w-4 h-4 mr-2" />
-                      Applicants
-                      {activeApplicants.length > 0 && (
-                        <Badge className="ml-2 bg-blue-500 text-white text-xs px-1.5">
-                          {activeApplicants.length}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="history" className="relative">
-                      <History className="w-4 h-4 mr-2" />
-                      History
-                      {historyApplicants.length > 0 && (
-                        <Badge className="ml-2 bg-gray-500 text-white text-xs px-1.5">
-                          {historyApplicants.length}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="applicants" className="space-y-4">
-                    {/* Applicant View Toggle */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant={
-                            applicantView === "active" ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setApplicantView("active")}
-                          className={cn(
-                            "text-xs",
-                            applicantView === "active" && "bg-blue-600",
-                          )}
-                        >
-                          <Users className="w-3 h-3 mr-1" />
-                          Active ({filteredActiveApplicants.length})
-                        </Button>
-                        <Button
-                          variant={
-                            applicantView === "history" ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setApplicantView("history")}
-                          className={cn(
-                            "text-xs",
-                            applicantView === "history" && "bg-gray-600",
-                          )}
-                        >
-                          <Archive className="w-3 h-3 mr-1" />
-                          History ({filteredHistoryApplicants.length})
-                        </Button>
-                      </div>
+                {/* Gig Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Users className="w-5 h-5 text-blue-500" />
+                      <span className="text-lg font-bold">
+                        {activeApplicants.length}
+                      </span>
                     </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Active
+                    </span>
+                  </div>
+                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Bookmark className="w-5 h-5 text-green-500" />
+                      <span className="text-lg font-bold">
+                        {selectedGigData.shortlisted.length}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Shortlisted
+                    </span>
+                  </div>
+                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <DollarSign className="w-5 h-5 text-purple-500" />
+                      <span className="text-lg font-bold">
+                        ${selectedGigData.gig.price || "0"}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Budget
+                    </span>
+                  </div>
+                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Archive className="w-5 h-5 text-gray-500" />
+                      <span className="text-lg font-bold">
+                        {historyApplicants.length}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      History
+                    </span>
+                  </div>
+                </div>
 
-                    {/* Content based on view */}
-                    {applicantView === "active" ? (
-                      <>
-                        {activeGigTab === "regular" && (
-                          <RegularGigsTab
-                            selectedGigData={{
-                              ...selectedGigData,
-                              applicants: filteredActiveApplicants,
-                            }}
-                            filteredApplicants={filteredActiveApplicants}
-                            handleAddToShortlist={handleAddToShortlist}
-                            handleRemoveFromShortlist={
-                              handleRemoveFromShortlist
-                            }
-                            handleViewProfile={handleViewProfile}
-                            handleBookMusician={(
-                              userId: Id<"users">,
-                              userName: string,
-                            ) =>
-                              handleBookMusician(userId, userName, "regular")
-                            }
-                            getStatusColor={getStatusColor}
-                          />
+                {/* Tab Content */}
+                {activeGigTab === "shortlist" ? (
+                  <ShortlistTab
+                    selectedGigData={selectedGigData}
+                    filteredShortlist={filteredShortlist}
+                    handleRemoveFromShortlist={handleRemoveFromShortlist}
+                    handleViewProfile={handleViewProfile}
+                    handleBookMusician={handleBookMusician}
+                    formatTime={formatTime}
+                  />
+                ) : (
+                  <Tabs
+                    value={activeTab}
+                    onValueChange={(v: any) => handleTabChange(v)}
+                    className="mt-6"
+                  >
+                    <TabsList className="grid grid-cols-2">
+                      <TabsTrigger value="applicants" className="relative">
+                        <Users className="w-4 h-4 mr-2" />
+                        Applicants
+                        {activeApplicants.length > 0 && (
+                          <Badge className="ml-2 bg-blue-500 text-white text-xs px-1.5">
+                            {activeApplicants.length}
+                          </Badge>
                         )}
-                        {activeGigTab === "band-roles" && (
-                          <BandRolesTab
-                            selectedGigData={{
-                              ...selectedGigData,
-                              applicants: filteredActiveApplicants,
-                            }}
-                            filteredApplicants={filteredActiveApplicants}
-                            clerkId={user?.clerkId!}
-                          />
+                      </TabsTrigger>
+                      <TabsTrigger value="history" className="relative">
+                        <History className="w-4 h-4 mr-2" />
+                        History
+                        {historyApplicants.length > 0 && (
+                          <Badge className="ml-2 bg-gray-500 text-white text-xs px-1.5">
+                            {historyApplicants.length}
+                          </Badge>
                         )}
-                        {activeGigTab === "full-band" && (
-                          <FullBandTab
-                            selectedGigData={selectedGigData}
-                            handleAddToShortlist={handleAddToShortlist}
-                            handleRemoveFromShortlist={
-                              handleRemoveFromShortlist
-                            }
-                            handleViewProfile={handleViewProfile}
-                            handleBookMusician={handleBookMusician}
-                            getStatusColor={getStatusColor}
-                          />
-                        )}
-                      </>
-                    ) : (
-                      /* History View - Show cancelled/rejected applicants */
-                      <div className="space-y-3">
-                        {filteredHistoryApplicants.length > 0 ? (
-                          filteredHistoryApplicants.map((applicant) => {
-                            const userData = selectedGigData.userDetails.get(
-                              applicant.userId,
-                            );
-                            if (!userData) return null;
+                      </TabsTrigger>
+                    </TabsList>
 
-                            return (
-                              <Card
-                                key={applicant.userId}
-                                className="opacity-75 hover:opacity-100 transition-opacity"
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex items-center gap-3">
-                                    <Avatar className="w-10 h-10">
-                                      <AvatarImage src={userData.picture} />
-                                      <AvatarFallback>
-                                        {userData.firstname?.charAt(0) || "U"}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <h4 className="font-medium">
-                                          {userData.firstname}{" "}
-                                          {userData.username}
-                                        </h4>
-                                        {applicant.bandRole && (
+                    <TabsContent value="applicants" className="space-y-4">
+                      {/* Applicant View Toggle */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant={
+                              applicantView === "active" ? "default" : "outline"
+                            }
+                            size="sm"
+                            onClick={() => handleApplicantViewChange("active")}
+                            className={cn(
+                              "text-xs",
+                              applicantView === "active" && "bg-blue-600",
+                            )}
+                          >
+                            <Users className="w-3 h-3 mr-1" />
+                            Active ({filteredActiveApplicants.length})
+                          </Button>
+                          <Button
+                            variant={
+                              applicantView === "history"
+                                ? "default"
+                                : "outline"
+                            }
+                            size="sm"
+                            onClick={() => handleApplicantViewChange("history")}
+                            className={cn(
+                              "text-xs",
+                              applicantView === "history" && "bg-gray-600",
+                            )}
+                          >
+                            <Archive className="w-3 h-3 mr-1" />
+                            History ({filteredHistoryApplicants.length})
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Content based on view */}
+                      {applicantView === "active" ? (
+                        <>
+                          {activeGigTab === "regular" && (
+                            <RegularGigsTab
+                              selectedGigData={{
+                                ...selectedGigData,
+                                applicants: filteredActiveApplicants,
+                              }}
+                              filteredApplicants={filteredActiveApplicants}
+                              handleAddToShortlist={handleAddToShortlist}
+                              handleRemoveFromShortlist={
+                                handleRemoveFromShortlist
+                              }
+                              handleViewProfile={handleViewProfile}
+                              handleBookMusician={(
+                                userId: Id<"users">,
+                                userName: string,
+                              ) =>
+                                handleBookMusician(userId, userName, "regular")
+                              }
+                              getStatusColor={getStatusColor}
+                            />
+                          )}
+                          {activeGigTab === "band-roles" && (
+                            <BandRolesTab
+                              selectedGigData={{
+                                ...selectedGigData,
+                                applicants: filteredActiveApplicants,
+                              }}
+                              filteredApplicants={filteredActiveApplicants}
+                              clerkId={user?.clerkId!}
+                            />
+                          )}
+                          {activeGigTab === "full-band" && (
+                            <FullBandTab
+                              selectedGigData={selectedGigData}
+                              handleAddToShortlist={handleAddToShortlist}
+                              handleRemoveFromShortlist={
+                                handleRemoveFromShortlist
+                              }
+                              handleViewProfile={handleViewProfile}
+                              handleBookMusician={handleBookMusician}
+                              getStatusColor={getStatusColor}
+                            />
+                          )}
+                        </>
+                      ) : (
+                        /* History View - Show cancelled/rejected applicants */
+                        <div className="space-y-3">
+                          {filteredHistoryApplicants.length > 0 ? (
+                            filteredHistoryApplicants.map((applicant) => {
+                              const userData = selectedGigData.userDetails.get(
+                                applicant.userId,
+                              );
+                              if (!userData) return null;
+
+                              return (
+                                <Card
+                                  key={applicant.userId}
+                                  className="opacity-75 hover:opacity-100 transition-opacity"
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="w-10 h-10">
+                                        <AvatarImage src={userData.picture} />
+                                        <AvatarFallback>
+                                          {userData.firstname?.charAt(0) || "U"}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="font-medium">
+                                            {userData.firstname}{" "}
+                                            {userData.username}
+                                          </h4>
+                                          {applicant.bandRole && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs"
+                                            >
+                                              {applicant.bandRole}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
                                           <Badge
-                                            variant="outline"
-                                            className="text-xs"
+                                            className={getStatusColor(
+                                              applicant.status,
+                                            )}
                                           >
-                                            {applicant.bandRole}
+                                            {applicant.status === "cancelled"
+                                              ? "Cancelled"
+                                              : "Rejected"}
                                           </Badge>
+                                          <span className="text-xs text-gray-500">
+                                            {formatDate(applicant.appliedAt)}
+                                          </span>
+                                        </div>
+                                        {applicant.status === "cancelled" && (
+                                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3" />
+                                            Booking was cancelled
+                                          </p>
+                                        )}
+                                        {applicant.status === "rejected" && (
+                                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                            <XCircle className="w-3 h-3" />
+                                            Application was not accepted
+                                          </p>
                                         )}
                                       </div>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <Badge
-                                          className={getStatusColor(
-                                            applicant.status,
-                                          )}
-                                        >
-                                          {applicant.status === "cancelled"
-                                            ? "Cancelled"
-                                            : "Rejected"}
-                                        </Badge>
-                                        <span className="text-xs text-gray-500">
-                                          {formatDate(applicant.appliedAt)}
-                                        </span>
-                                      </div>
-                                      {applicant.status === "cancelled" && (
-                                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                          <AlertCircle className="w-3 h-3" />
-                                          Booking was cancelled
-                                        </p>
-                                      )}
-                                      {applicant.status === "rejected" && (
-                                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                          <XCircle className="w-3 h-3" />
-                                          Application was not accepted
-                                        </p>
-                                      )}
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleViewProfile(
+                                            selectedGigData.gig._id,
+                                            applicant.userId,
+                                          )
+                                        }
+                                        className="flex-shrink-0"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
                                     </div>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() =>
-                                        handleViewProfile(
-                                          selectedGigData.gig._id,
-                                          applicant.userId,
-                                        )
-                                      }
-                                      className="flex-shrink-0"
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <Archive className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                            <p>No cancelled or rejected applicants</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </TabsContent>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })
+                          ) : (
+                            <div className="text-center py-8 text-gray-500">
+                              <Archive className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                              <p>No cancelled or rejected applicants</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </TabsContent>
 
-                  <TabsContent value="history">
-                    <HistoryTab
-                      selectedGigData={selectedGigData}
-                      formatTime={formatTime}
-                      getStatusColor={getStatusColor}
-                    />
-                  </TabsContent>
-                </Tabs>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        // Empty State when no gig selected
-        <Card className="text-center py-16">
-          <CardContent className="space-y-6">
-            <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20">
-              <Target className="w-12 h-12 text-orange-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold mb-3">Select a Gig</h3>
-              <p className="text-gray-500 text-lg max-w-md mx-auto">
-                Choose a gig from the cards above to view applicants and manage
-                bookings.
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-3">
-              <Award className="w-5 h-5 text-orange-500" />
-              <span className="text-sm font-medium text-gray-600">
-                {gigsWithApplicants.length} gigs available
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Book Now Dialog */}
-      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedBand ? "Book Band" : "Book Musician"}
-            </DialogTitle>
-            <DialogDescription>
-              Confirm booking for{" "}
-              {selectedBand?.bandName || selectedMusician?.userName}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-              <div className="flex items-center gap-3">
-                <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
-                  <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-500 text-white">
-                    {selectedBand?.bandName?.charAt(0) ||
-                      selectedMusician?.userName?.charAt(0) ||
-                      "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h4 className="font-semibold">
-                    {selectedBand?.bandName || selectedMusician?.userName}
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    {selectedBand ? "Band" : "Musician"} ready to book for{" "}
-                    {selectedGigData?.gig.title}
-                  </p>
-                </div>
+                    <TabsContent value="history">
+                      <HistoryTab
+                        selectedGigData={selectedGigData}
+                        formatTime={formatTime}
+                        getStatusColor={getStatusColor}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                )}
               </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Agreed Price (Optional)
-              </label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  type="number"
-                  placeholder="Enter agreed price"
-                  value={bookingPrice}
-                  onChange={(e) =>
-                    setBookingPrice(
-                      e.target.value ? Number(e.target.value) : "",
-                    )
-                  }
-                  className="pl-9"
-                />
+            </CardContent>
+          </Card>
+        ) : (
+          // Empty State when no gig selected
+          <Card className="text-center py-16">
+            <CardContent className="space-y-6">
+              <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20">
+                <Target className="w-12 h-12 text-orange-500" />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Leave empty to use the gig's listed price
-              </p>
-            </div>
-
-            <div className="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-blue-800">
-                    Booking Confirmation
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {selectedBand
-                      ? "The band members will receive notifications and can confirm the booking."
-                      : "The musician will receive a notification and can confirm the booking."}
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-2xl font-bold mb-3">Select a Gig</h3>
+                <p className="text-gray-500 text-lg max-w-md mx-auto">
+                  Choose a gig from the cards above to view applicants and
+                  manage bookings.
+                </p>
               </div>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowBookDialog(false);
-                setSelectedMusician(null);
-                setSelectedBand(null);
-              }}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmBooking}
-              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
-            >
-              <ShoppingBag className="w-4 h-4 mr-2" />
-              Confirm Booking
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Band Booking Options Section */}
-      {selectedGigData?.gig.isClientBand &&
-        selectedGigData?.gig.bandCategory &&
-        selectedGigData?.gig.bandCategory.length > 0 && (
-          <div className="mt-8 border-t pt-8">
-            <BookingOptionsSection
-              gigId={selectedGigData.gig._id}
-              clerkId={user?.clerkId!}
-              gig={selectedGigData.gig}
-              musiciansCount={selectedGigData.gig.bandCategory.reduce(
-                (total, role) => total + (role.bookedUsers?.length || 0),
-                0,
-              )}
-            />
-          </div>
+              <div className="flex items-center justify-center gap-3">
+                <Award className="w-5 h-5 text-orange-500" />
+                <span className="text-sm font-medium text-gray-600">
+                  {gigsWithApplicants.length} gigs available
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         )}
-    </div>
+
+        {/* Book Now Dialog */}
+        <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedBand ? "Book Band" : "Book Musician"}
+              </DialogTitle>
+              <DialogDescription>
+                Confirm booking for{" "}
+                {selectedBand?.bandName || selectedMusician?.userName}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
+                    <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-500 text-white">
+                      {selectedBand?.bandName?.charAt(0) ||
+                        selectedMusician?.userName?.charAt(0) ||
+                        "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4 className="font-semibold">
+                      {selectedBand?.bandName || selectedMusician?.userName}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {selectedBand ? "Band" : "Musician"} ready to book for{" "}
+                      {selectedGigData?.gig.title}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Agreed Price (Optional)
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type="number"
+                    placeholder="Enter agreed price"
+                    value={bookingPrice}
+                    onChange={(e) =>
+                      setBookingPrice(
+                        e.target.value ? Number(e.target.value) : "",
+                      )
+                    }
+                    className="pl-9"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Leave empty to use the gig's listed price
+                </p>
+              </div>
+
+              <div className="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">
+                      Booking Confirmation
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {selectedBand
+                        ? "The band members will receive notifications and can confirm the booking."
+                        : "The musician will receive a notification and can confirm the booking."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBookDialog(false);
+                  setSelectedMusician(null);
+                  setSelectedBand(null);
+                }}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmBooking}
+                className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+              >
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                Confirm Booking
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Band Booking Options Section */}
+        {selectedGigData?.gig.isClientBand &&
+          selectedGigData?.gig.bandCategory &&
+          selectedGigData?.gig.bandCategory.length > 0 && (
+            <div className="mt-8 border-t pt-8">
+              <BookingOptionsSection
+                gigId={selectedGigData.gig._id}
+                clerkId={user?.clerkId!}
+                gig={selectedGigData.gig}
+                musiciansCount={selectedGigData.gig.bandCategory.reduce(
+                  (total: number, role: any) =>
+                    total + (role.bookedUsers?.length || 0),
+                  0,
+                )}
+              />
+            </div>
+          )}
+      </div>
+    </TooltipProvider>
   );
 };

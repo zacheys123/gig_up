@@ -36,6 +36,7 @@ import type * as controllers_testimonials from "../controllers/testimonials.js";
 import type * as controllers_theme from "../controllers/theme.js";
 import type * as controllers_trustScore from "../controllers/trustScore.js";
 import type * as controllers_user from "../controllers/user.js";
+import type * as controllers_userPrefferences from "../controllers/userPrefferences.js";
 import type * as controllers_verifyGig from "../controllers/verifyGig.js";
 import type * as controllers_videos from "../controllers/videos.js";
 import type * as createNotificationInternal from "../createNotificationInternal.js";
@@ -97,6 +98,7 @@ declare const fullApi: ApiFromModules<{
   "controllers/theme": typeof controllers_theme;
   "controllers/trustScore": typeof controllers_trustScore;
   "controllers/user": typeof controllers_user;
+  "controllers/userPrefferences": typeof controllers_userPrefferences;
   "controllers/verifyGig": typeof controllers_verifyGig;
   "controllers/videos": typeof controllers_videos;
   createNotificationInternal: typeof createNotificationInternal;

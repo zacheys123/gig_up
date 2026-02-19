@@ -1,14 +1,22 @@
-// components/gigs/PendingGigsManager.tsx - Complete fixed version
-import React, { useMemo, useState } from "react";
+// components/gigs/PendingGigsManager.tsx
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
@@ -33,7 +41,6 @@ import {
   Sparkles,
   Filter,
   History,
-  Star as StarIcon,
   MessageSquare,
   FileText,
   MapPin as MapPinIcon,
@@ -42,15 +49,20 @@ import {
   List,
   CalendarDays,
   Kanban,
+  Activity,
+  X,
+  Share2,
+  Receipt,
+  Send,
 } from "lucide-react";
 
 import { filterUserApplications } from "@/utils";
 import { useUserApplications } from "@/hooks/useAllGigs";
+import { useThemeColors } from "@/hooks/useTheme";
+import { toast } from "sonner";
+import GigLoader from "@/components/(main)/GigLoader";
 
-interface PendingGigsManagerProps {
-  initialUser?: any;
-}
-
+// Types
 type DisplayMode = "grid" | "timeline" | "list" | "calendar" | "kanban";
 type GigStatus =
   | "interested"
@@ -59,6 +71,10 @@ type GigStatus =
   | "completed"
   | "history";
 
+interface PendingGigsManagerProps {
+  initialUser?: any;
+}
+
 export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
   initialUser,
 }) => {
@@ -66,13 +82,72 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
   const { user: currentUser } = useCurrentUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<GigStatus | "all">("all");
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("timeline");
-
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("grid");
+  const { isDarkMode } = useThemeColors();
   const user = currentUser || initialUser;
+
+  // Preferences
+  const userPreferences = useQuery(
+    api.controllers.userPrefferences.getUserPreferences,
+    user?._id ? { userId: user._id } : "skip",
+  );
+  const updateComponentPrefs = useMutation(
+    api.controllers.userPrefferences.updateComponentPreferences,
+  );
+
+  // Load preferences
+  useEffect(() => {
+    if (userPreferences?.preferences?.pendingGigs) {
+      const prefs = userPreferences.preferences.pendingGigs;
+      if (prefs.displayMode) setDisplayMode(prefs.displayMode as DisplayMode);
+      if (prefs.activeTab) setActiveTab(prefs.activeTab as GigStatus | "all");
+    }
+  }, [userPreferences]);
+
+  // Save display mode
+  const handleDisplayModeChange = useCallback(
+    async (mode: DisplayMode) => {
+      setDisplayMode(mode);
+
+      if (!user?._id) return;
+
+      try {
+        await updateComponentPrefs({
+          userId: user._id,
+          component: "pendingGigs",
+          settings: { displayMode: mode },
+        });
+        toast.success("Display mode saved");
+      } catch (error) {
+        console.error("Error saving display mode:", error);
+        toast.error("Failed to save display mode");
+      }
+    },
+    [user?._id, updateComponentPrefs],
+  );
+
+  // Save active tab
+  const handleTabChange = useCallback(
+    async (tab: string) => {
+      setActiveTab(tab as GigStatus | "all");
+
+      if (!user?._id) return;
+
+      try {
+        await updateComponentPrefs({
+          userId: user._id,
+          component: "pendingGigs",
+          settings: { activeTab: tab },
+        });
+      } catch (error) {
+        console.error("Error saving tab preference:", error);
+      }
+    },
+    [user?._id, updateComponentPrefs],
+  );
 
   const { categorizedApplications, isLoading } = useUserApplications(user?._id);
 
-  // Then use directly:
   const safeCategorizedApplications = useMemo(
     () => ({
       all: categorizedApplications.all || [],
@@ -83,6 +158,7 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
     }),
     [categorizedApplications],
   );
+
   const filteredGigs = useMemo(() => {
     let gigs = [];
 
@@ -119,33 +195,89 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
     return gigs;
   }, [activeTab, searchQuery, safeCategorizedApplications]);
 
-  const getStatusBadge = (gig: any) => {
+  const [isTabLoading, setIsTabLoading] = useState(true);
+  const showContentLoading = isLoading || isTabLoading;
+  // Update the filteredGigs useMemo to track loading
+  useEffect(() => {
+    setIsTabLoading(true);
+
+    // Small timeout to ensure loading state shows
+    const timer = setTimeout(() => {
+      setIsTabLoading(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeTab, searchQuery, categorizedApplications]);
+
+  const getStatusConfig = (gig: any) => {
     if (gig.isHistorical) {
       const status = gig.applicationDetails?.status || "completed";
       return {
         label: status.charAt(0).toUpperCase() + status.slice(1),
-        color: "bg-gray-100 text-gray-800 border-gray-200",
-        icon: <History className="w-3 h-3 mr-1" />,
+        color: isDarkMode
+          ? "bg-slate-700 text-slate-300 border-slate-600"
+          : "bg-slate-100 text-slate-700 border-slate-200",
+        icon: <History className="w-3.5 h-3.5" />,
+        badgeColor: isDarkMode ? "slate" : "slate",
+        gradient: isDarkMode
+          ? "from-slate-700 to-slate-600"
+          : "from-slate-500 to-slate-600",
+        lightColor: "text-slate-600",
+        darkColor: "text-slate-400",
+        bgLight: "bg-slate-100",
+        bgDark: "bg-slate-800",
+        borderLight: "border-slate-200",
+        borderDark: "border-slate-700",
       };
     }
 
     const { userStatus, gigType, applicationDetails } = gig;
 
-    const badges = {
+    const statusConfigs = {
       interested: {
-        label: "Shown Interest",
-        color: "bg-blue-100 text-blue-800 border-blue-200",
-        icon: <Heart className="w-3 h-3 mr-1" />,
+        label: "Interested",
+        color: isDarkMode
+          ? "bg-blue-900/50 text-blue-300 border-blue-800"
+          : "bg-blue-100 text-blue-700 border-blue-200",
+        icon: <Heart className="w-3.5 h-3.5" />,
+        badgeColor: "blue",
+        gradient: isDarkMode
+          ? "from-blue-600 to-blue-500"
+          : "from-blue-500 to-blue-600",
+        lightColor: "text-blue-600",
+        darkColor: "text-blue-400",
+        bgLight: "bg-blue-50",
+        bgDark: "bg-blue-950",
+        borderLight: "border-blue-200",
+        borderDark: "border-blue-800",
+        buttonGradient: isDarkMode
+          ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+          : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
       },
       applied: {
         label:
           gigType === "band-role"
-            ? `Applied: ${applicationDetails?.role || "Role"}`
+            ? `Applied for ${applicationDetails?.role || "Role"}`
             : gigType === "full-band"
               ? "Applied with Band"
               : "Applied",
-        color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        icon: <Briefcase className="w-3 h-3 mr-1" />,
+        color: isDarkMode
+          ? "bg-amber-900/50 text-amber-300 border-amber-800"
+          : "bg-amber-100 text-amber-700 border-amber-200",
+        icon: <Briefcase className="w-3.5 h-3.5" />,
+        badgeColor: "amber",
+        gradient: isDarkMode
+          ? "from-amber-600 to-amber-500"
+          : "from-amber-500 to-amber-600",
+        lightColor: "text-amber-600",
+        darkColor: "text-amber-400",
+        bgLight: "bg-amber-50",
+        bgDark: "bg-amber-950",
+        borderLight: "border-amber-200",
+        borderDark: "border-amber-800",
+        buttonGradient: isDarkMode
+          ? "bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600"
+          : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
       },
       shortlisted: {
         label:
@@ -154,68 +286,124 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
             : gigType === "full-band"
               ? "Band Shortlisted"
               : "Shortlisted",
-        color: "bg-green-100 text-green-800 border-green-200",
-        icon: <Star className="w-3 h-3 mr-1" />,
+        color: isDarkMode
+          ? "bg-emerald-900/50 text-emerald-300 border-emerald-800"
+          : "bg-emerald-100 text-emerald-700 border-emerald-200",
+        icon: <Star className="w-3.5 h-3.5" />,
+        badgeColor: "emerald",
+        gradient: isDarkMode
+          ? "from-emerald-600 to-emerald-500"
+          : "from-emerald-500 to-emerald-600",
+        lightColor: "text-emerald-600",
+        darkColor: "text-emerald-400",
+        bgLight: "bg-emerald-50",
+        bgDark: "bg-emerald-950",
+        borderLight: "border-emerald-200",
+        borderDark: "border-emerald-800",
+        buttonGradient: isDarkMode
+          ? "bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600"
+          : "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700",
       },
       completed: {
         label: "Completed",
-        color: "bg-gray-100 text-gray-800 border-gray-200",
-        icon: <CheckCircle className="w-3 h-3 mr-1" />,
+        color: isDarkMode
+          ? "bg-purple-900/50 text-purple-300 border-purple-800"
+          : "bg-purple-100 text-purple-700 border-purple-200",
+        icon: <CheckCircle className="w-3.5 h-3.5" />,
+        badgeColor: "purple",
+        gradient: isDarkMode
+          ? "from-purple-600 to-purple-500"
+          : "from-purple-500 to-purple-600",
+        lightColor: "text-purple-600",
+        darkColor: "text-purple-400",
+        bgLight: "bg-purple-50",
+        bgDark: "bg-purple-950",
+        borderLight: "border-purple-200",
+        borderDark: "border-purple-800",
+        buttonGradient: isDarkMode
+          ? "bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600"
+          : "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700",
       },
     };
 
     return (
-      badges[userStatus as keyof typeof badges] || {
-        label: "Involved",
-        color: "bg-gray-100 text-gray-800 border-gray-200",
-        icon: <UserIcon className="w-3 h-3 mr-1" />,
-      }
+      statusConfigs[userStatus as keyof typeof statusConfigs] ||
+      statusConfigs.applied
     );
   };
 
   const getGigIcon = (gig: any) => {
+    const iconClass = "w-5 h-5";
+
     if (gig.isHistorical) {
-      return <History className="w-5 h-5 text-gray-500" />;
+      return <History className={cn(iconClass, "text-slate-500")} />;
     }
 
     if (gig.gigType === "full-band") {
-      return <Users2 className="w-5 h-5 text-orange-500" />;
+      return <Users2 className={cn(iconClass, "text-orange-500")} />;
     }
 
     if (gig.gigType === "band-role") {
       const { applicationDetails } = gig;
       const role = applicationDetails?.role?.toLowerCase();
 
-      const roleIconMap: Record<string, React.ReactNode> = {
-        vocalist: <Mic className="w-5 h-5 text-pink-500" />,
-        dj: <Volume2 className="w-5 h-5 text-purple-500" />,
-        mc: <Mic className="w-5 h-5 text-red-500" />,
-        guitar: <Music className="w-5 h-5 text-blue-500" />,
-        drums: <Music className="w-5 h-5 text-amber-500" />,
-        piano: <Music className="w-5 h-5 text-green-500" />,
-        bass: <Music className="w-5 h-5 text-indigo-500" />,
-        saxophone: <Music className="w-5 h-5 text-teal-500" />,
-        trumpet: <Music className="w-5 h-5 text-yellow-500" />,
+      const roleIconMap: Record<
+        string,
+        { icon: React.ReactNode; color: string }
+      > = {
+        vocalist: {
+          icon: <Mic className={iconClass} />,
+          color: "text-pink-500",
+        },
+        dj: {
+          icon: <Volume2 className={iconClass} />,
+          color: "text-purple-500",
+        },
+        mc: { icon: <Mic className={iconClass} />, color: "text-red-500" },
+        guitarist: {
+          icon: <Music className={iconClass} />,
+          color: "text-blue-500",
+        },
+        drummer: {
+          icon: <Music className={iconClass} />,
+          color: "text-amber-500",
+        },
+        pianist: {
+          icon: <Music className={iconClass} />,
+          color: "text-green-500",
+        },
+        bassist: {
+          icon: <Music className={iconClass} />,
+          color: "text-indigo-500",
+        },
+        saxophonist: {
+          icon: <Music className={iconClass} />,
+          color: "text-teal-500",
+        },
+        trumpeter: {
+          icon: <Music className={iconClass} />,
+          color: "text-yellow-500",
+        },
       };
 
-      return (
-        roleIconMap[role || ""] || (
-          <Briefcase className="w-5 h-5 text-purple-500" />
-        )
-      );
+      const matchedRole = roleIconMap[role || ""];
+      if (matchedRole) {
+        return <span className={matchedRole.color}>{matchedRole.icon}</span>;
+      }
+      return <Briefcase className={cn(iconClass, "text-purple-500")} />;
     }
 
-    switch (gig.bussinesscat) {
+    switch (gig.bussinesscat?.toLowerCase()) {
       case "mc":
-        return <Mic className="w-5 h-5 text-red-500" />;
+        return <Mic className={cn(iconClass, "text-red-500")} />;
       case "dj":
-        return <Volume2 className="w-5 h-5 text-purple-500" />;
+        return <Volume2 className={cn(iconClass, "text-purple-500")} />;
       case "vocalist":
-        return <Music className="w-5 h-5 text-green-500" />;
+        return <Music className={cn(iconClass, "text-green-500")} />;
       case "full":
-        return <Users className="w-5 h-5 text-orange-500" />;
+        return <Users className={cn(iconClass, "text-orange-500")} />;
       default:
-        return <Briefcase className="w-5 h-5 text-blue-500" />;
+        return <Briefcase className={cn(iconClass, "text-blue-500")} />;
     }
   };
 
@@ -236,15 +424,23 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
     });
   };
 
-  // Helper function for price display
   const getPriceDisplay = (gig: any): { text: string; color: string } => {
     if (gig.price === undefined || gig.price === null) {
-      return { text: "Negotiable", color: "text-gray-600" };
+      return {
+        text: "Price negotiable",
+        color: isDarkMode ? "text-slate-400" : "text-slate-500",
+      };
     }
     if (gig.price === 0) {
-      return { text: "Free", color: "text-green-500" };
+      return {
+        text: "Free event",
+        color: "text-emerald-600 dark:text-emerald-400",
+      };
     }
-    return { text: `$${gig.price}`, color: "text-green-600" };
+    return {
+      text: `$${gig.price.toLocaleString()}`,
+      color: "text-emerald-600 dark:text-emerald-400",
+    };
   };
 
   const tabCounts = {
@@ -255,21 +451,941 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
     history: safeCategorizedApplications.history.length,
   };
 
+  // Empty State Component
+  const EmptyState = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card
+        className={cn(
+          "text-center py-16 border-2 border-dashed",
+          isDarkMode
+            ? "bg-slate-900/50 border-slate-800"
+            : "bg-white border-slate-200",
+        )}
+      >
+        <CardContent className="space-y-6">
+          <div
+            className={cn(
+              "w-20 h-20 mx-auto rounded-2xl flex items-center justify-center",
+              isDarkMode
+                ? "bg-gradient-to-br from-slate-800 to-slate-900"
+                : "bg-gradient-to-br from-slate-100 to-slate-200",
+            )}
+          >
+            <Search
+              className={cn(
+                "w-10 h-10",
+                isDarkMode ? "text-slate-600" : "text-slate-400",
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <h3
+              className={cn(
+                "text-xl font-bold",
+                isDarkMode ? "text-white" : "text-slate-900",
+              )}
+            >
+              No gigs found
+            </h3>
+            <p
+              className={cn(
+                "text-base max-w-md mx-auto",
+                isDarkMode ? "text-slate-400" : "text-slate-500",
+              )}
+            >
+              {searchQuery
+                ? `No results match "${searchQuery}"`
+                : `You don't have any ${activeTab === "all" ? "" : activeTab} gigs yet`}
+            </p>
+          </div>
+
+          {searchQuery && (
+            <Button
+              variant="outline"
+              onClick={() => setSearchQuery("")}
+              className={cn(
+                "h-10 px-6 font-medium border-2",
+                isDarkMode
+                  ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                  : "border-slate-200 text-slate-700 hover:bg-slate-100",
+              )}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Clear search
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+  // Render functions for different display modes
+  const renderGridView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <AnimatePresence mode="popLayout">
+        {filteredGigs.map((gig: any, index: number) => {
+          const statusConfig = getStatusConfig(gig);
+          const priceDisplay = getPriceDisplay(gig);
+
+          return (
+            <motion.div
+              key={gig._id}
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{
+                duration: 0.3,
+                delay: index * 0.05,
+              }}
+              whileHover={{ y: -4 }}
+            >
+              <Card
+                className={cn(
+                  "cursor-pointer hover:shadow-md transition-all",
+                  isDarkMode
+                    ? "bg-gray-900/50 border-gray-800"
+                    : "bg-white border-gray-200",
+                )}
+                onClick={() =>
+                  router.push(`/hub/gigs/musician/${gig._id}/gig-info`)
+                }
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "p-2 rounded-lg",
+                        isDarkMode ? "bg-gray-800" : "bg-gray-100",
+                      )}
+                    >
+                      {getGigIcon(gig)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className={cn(
+                          "font-semibold truncate",
+                          isDarkMode ? "text-white" : "text-gray-900",
+                        )}
+                      >
+                        {gig.title}
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm mt-1">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs px-2 py-0.5",
+                            statusConfig.color,
+                          )}
+                        >
+                          {statusConfig.label}
+                        </Badge>
+                        <span
+                          className={
+                            isDarkMode ? "text-gray-400" : "text-gray-500"
+                          }
+                        >
+                          {formatDate(gig.date)}
+                        </span>
+                      </div>
+                    </div>
+                    {!gig.isHistorical && gig.price > 0 && (
+                      <span className={cn("font-semibold", priceDisplay.color)}>
+                        {priceDisplay.text}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+
+  const renderListView = () => (
+    <Card
+      className={cn(
+        "overflow-hidden border-2",
+        isDarkMode
+          ? "bg-slate-900 border-slate-800"
+          : "bg-white border-slate-200",
+      )}
+    >
+      <div className="divide-y divide-slate-200 dark:divide-slate-800">
+        <AnimatePresence mode="popLayout">
+          {filteredGigs.map((gig: any, index: number) => {
+            const statusConfig = getStatusConfig(gig);
+            const priceDisplay = getPriceDisplay(gig);
+
+            return (
+              <motion.div
+                key={gig._id}
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{
+                  duration: 0.3,
+                  delay: index * 0.05,
+                  layout: { duration: 0.2 },
+                }}
+                className={cn(
+                  "p-4 transition-all duration-200",
+                  isDarkMode ? "hover:bg-slate-800/50" : "hover:bg-slate-50",
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  {/* Status indicator */}
+                  <div
+                    className={cn(
+                      "w-1.5 h-12 rounded-full bg-gradient-to-b",
+                      statusConfig.gradient,
+                    )}
+                  />
+
+                  {/* Icon */}
+                  <div
+                    className={cn(
+                      "p-3 rounded-xl",
+                      isDarkMode ? statusConfig.bgDark : statusConfig.bgLight,
+                    )}
+                  >
+                    {getGigIcon(gig)}
+                  </div>
+
+                  {/* Content - flex grow */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <h3
+                        className={cn(
+                          "font-semibold truncate",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {gig.title}
+                      </h3>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs px-2 py-0.5 font-medium shrink-0",
+                          statusConfig.color,
+                        )}
+                      >
+                        <span className="flex items-center gap-1">
+                          {statusConfig.icon}
+                          {statusConfig.label}
+                        </span>
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm mt-1">
+                      <span
+                        className={cn(
+                          "flex items-center gap-1",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        {formatDate(gig.date)}
+                      </span>
+
+                      <span
+                        className={cn(
+                          "flex items-center gap-1",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        {gig.location?.split(",")[0] || "Location TBD"}
+                      </span>
+
+                      {!gig.isHistorical && (
+                        <span
+                          className={cn(
+                            "flex items-center gap-1 font-medium",
+                            priceDisplay.color,
+                          )}
+                        >
+                          <DollarSign className="w-3.5 h-3.5" />
+                          {priceDisplay.text}
+                        </span>
+                      )}
+                    </div>
+
+                    {gig.applicationDetails?.role && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Tag
+                          className={cn(
+                            "w-3.5 h-3.5",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-xs",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
+                          Applied as: {gig.applicationDetails.role}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "h-9 px-4 font-medium shadow-sm hover:shadow transition-all",
+                        isDarkMode
+                          ? "bg-orange-600 hover:bg-orange-700 text-white"
+                          : "bg-orange-500 hover:bg-orange-600 text-white",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/hub/gigs/musician/${gig._id}/gig-info`);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        "h-9 px-4 font-medium border-2",
+                        isDarkMode
+                          ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-600"
+                          : "border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Handle message
+                      }}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Message
+                    </Button>
+
+                    {!gig.isHistorical && gig.userStatus === "interested" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={cn(
+                          "h-9 px-4 font-medium border-2",
+                          isDarkMode
+                            ? "border-rose-800 text-rose-400 hover:bg-rose-950/50 hover:text-rose-300"
+                            : "border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300",
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle withdraw
+                        }}
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Withdraw
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+    </Card>
+  );
+
+  const renderTimelineView = () => (
+    <div className="space-y-4">
+      <AnimatePresence mode="popLayout">
+        {filteredGigs.map((gig: any, index: number) => {
+          const statusConfig = getStatusConfig(gig);
+          const priceDisplay = getPriceDisplay(gig);
+
+          return (
+            <motion.div
+              key={gig._id}
+              layout
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{
+                duration: 0.3,
+                delay: index * 0.05,
+                layout: { duration: 0.2 },
+              }}
+              className="relative"
+            >
+              {/* Timeline connector */}
+              {index < filteredGigs.length - 1 && (
+                <div
+                  className={cn(
+                    "absolute left-5 top-12 bottom-0 w-0.5",
+                    isDarkMode ? "bg-slate-800" : "bg-slate-200",
+                  )}
+                />
+              )}
+
+              <Card
+                className={cn(
+                  "border-2 transition-all duration-200 hover:shadow-lg",
+                  isDarkMode
+                    ? "bg-slate-900 border-slate-800 hover:border-slate-700"
+                    : "bg-white border-slate-200 hover:border-orange-200",
+                )}
+              >
+                <CardContent className="p-6">
+                  <div className="flex gap-4">
+                    {/* Timeline dot */}
+                    <div className="relative">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center border-2",
+                          isDarkMode
+                            ? statusConfig.bgDark
+                            : statusConfig.bgLight,
+                          isDarkMode
+                            ? `border-${statusConfig.badgeColor}-800`
+                            : `border-${statusConfig.badgeColor}-200`,
+                        )}
+                      >
+                        {getGigIcon(gig)}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3
+                            className={cn(
+                              "text-lg font-semibold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            {gig.title}
+                          </h3>
+
+                          <div className="flex items-center gap-3 mt-1">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs px-2 py-0.5 font-medium",
+                                statusConfig.color,
+                              )}
+                            >
+                              <span className="flex items-center gap-1">
+                                {statusConfig.icon}
+                                {statusConfig.label}
+                              </span>
+                            </Badge>
+
+                            <span
+                              className={cn(
+                                "text-sm",
+                                isDarkMode
+                                  ? "text-slate-400"
+                                  : "text-slate-500",
+                              )}
+                            >
+                              {formatFullDate(gig.date)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!gig.isHistorical && (
+                          <div
+                            className={cn(
+                              "text-lg font-bold",
+                              priceDisplay.color,
+                            )}
+                          >
+                            {priceDisplay.text}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Details grid */}
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        {gig.location && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin
+                              className={cn(
+                                "w-4 h-4",
+                                isDarkMode
+                                  ? "text-slate-500"
+                                  : "text-slate-400",
+                              )}
+                            />
+                            <span
+                              className={
+                                isDarkMode ? "text-slate-300" : "text-slate-600"
+                              }
+                            >
+                              {gig.location}
+                            </span>
+                          </div>
+                        )}
+
+                        {gig.time?.start && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock
+                              className={cn(
+                                "w-4 h-4",
+                                isDarkMode
+                                  ? "text-slate-500"
+                                  : "text-slate-400",
+                              )}
+                            />
+                            <span
+                              className={
+                                isDarkMode ? "text-slate-300" : "text-slate-600"
+                              }
+                            >
+                              {gig.time.start} - {gig.time.end || "TBD"}
+                            </span>
+                          </div>
+                        )}
+
+                        {gig.applicationDetails?.role && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Tag
+                              className={cn(
+                                "w-4 h-4",
+                                isDarkMode
+                                  ? "text-slate-500"
+                                  : "text-slate-400",
+                              )}
+                            />
+                            <span
+                              className={
+                                isDarkMode ? "text-slate-300" : "text-slate-600"
+                              }
+                            >
+                              Role: {gig.applicationDetails.role}
+                            </span>
+                          </div>
+                        )}
+
+                        {gig.bussinesscat && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Briefcase
+                              className={cn(
+                                "w-4 h-4",
+                                isDarkMode
+                                  ? "text-slate-500"
+                                  : "text-slate-400",
+                              )}
+                            />
+                            <span
+                              className={
+                                isDarkMode ? "text-slate-300" : "text-slate-600"
+                              }
+                            >
+                              {gig.bussinesscat}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Progress indicator for active gigs */}
+                      {!gig.isHistorical && (
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between text-sm mb-2">
+                            <span
+                              className={
+                                isDarkMode ? "text-slate-400" : "text-slate-500"
+                              }
+                            >
+                              Application progress
+                            </span>
+                            <span
+                              className={cn(
+                                "font-medium",
+                                statusConfig.lightColor,
+                                isDarkMode && statusConfig.darkColor,
+                              )}
+                            >
+                              {gig.userStatus === "interested" &&
+                                "Interest shown"}
+                              {gig.userStatus === "applied" &&
+                                "Application submitted"}
+                              {gig.userStatus === "shortlisted" &&
+                                "Shortlisted!"}
+                            </span>
+                          </div>
+
+                          <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{
+                                width:
+                                  gig.userStatus === "interested"
+                                    ? "33%"
+                                    : gig.userStatus === "applied"
+                                      ? "66%"
+                                      : gig.userStatus === "shortlisted"
+                                        ? "100%"
+                                        : "0%",
+                              }}
+                              transition={{ duration: 0.5, delay: 0.2 }}
+                              className={cn(
+                                "h-full rounded-full bg-gradient-to-r",
+                                statusConfig.gradient,
+                              )}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <Button
+                          size="sm"
+                          className={cn(
+                            "h-9 px-4 font-medium shadow-sm hover:shadow transition-all",
+                            isDarkMode
+                              ? "bg-orange-600 hover:bg-orange-700 text-white"
+                              : "bg-orange-500 hover:bg-orange-600 text-white",
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(
+                              `/hub/gigs/musician/${gig._id}/gig-info`,
+                            );
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View details
+                        </Button>
+
+                        {!gig.isHistorical ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className={cn(
+                                "h-9 px-4 font-medium border-2",
+                                isDarkMode
+                                  ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                                  : "border-slate-200 text-slate-700 hover:bg-slate-100",
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle message
+                              }}
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2" />
+                              Message
+                            </Button>
+
+                            {gig.userStatus === "interested" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={cn(
+                                  "h-9 px-4 font-medium border-2",
+                                  isDarkMode
+                                    ? "border-rose-800 text-rose-400 hover:bg-rose-950/50 hover:text-rose-300"
+                                    : "border-rose-200 text-rose-600 hover:bg-rose-50",
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Handle withdraw
+                                }}
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Withdraw
+                              </Button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className={cn(
+                                "h-9 px-4 font-medium border-2",
+                                isDarkMode
+                                  ? "border-amber-800 text-amber-400 hover:bg-amber-950/50 hover:text-amber-300"
+                                  : "border-amber-200 text-amber-600 hover:bg-amber-50",
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle rating
+                              }}
+                            >
+                              <Star className="w-4 h-4 mr-2 fill-amber-500 text-amber-500" />
+                              Rate
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className={cn(
+                                "h-9 px-4 font-medium",
+                                isDarkMode
+                                  ? "text-slate-400 hover:text-white hover:bg-slate-800"
+                                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle receipt
+                              }}
+                            >
+                              <Receipt className="w-4 h-4 mr-2" />
+                              Receipt
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+
+  const renderCalendarView = () => {
+    // Group gigs by date
+    const groupedByDate = filteredGigs.reduce((acc: any, gig: any) => {
+      const dateKey = new Date(gig.date).toDateString();
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(gig);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-4">
+        {Object.entries(groupedByDate).map(([date, gigs]: [string, any]) => (
+          <Card
+            key={date}
+            className={cn(
+              "overflow-hidden border-2",
+              isDarkMode
+                ? "bg-slate-900 border-slate-800"
+                : "bg-white border-slate-200",
+            )}
+          >
+            <CardHeader
+              className={cn(
+                "py-3 px-4",
+                isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
+              )}
+            >
+              <CardTitle className="text-sm font-medium">
+                {new Date(date).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                {gigs.map((gig: any) => {
+                  const statusConfig = getStatusConfig(gig);
+                  return (
+                    <div
+                      key={gig._id}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                      onClick={() =>
+                        router.push(`/hub/gigs/musician/${gig._id}/gig-info`)
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge className={statusConfig.color}>
+                          {statusConfig.label}
+                        </Badge>
+                        <span
+                          className={cn(
+                            "font-medium",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          {gig.title}
+                        </span>
+                      </div>
+                      {gig.time?.start && (
+                        <span
+                          className={cn(
+                            "text-sm",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
+                          {gig.time.start}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  const renderKanbanView = () => {
+    const columns = [
+      { id: "interested", title: "Interested", icon: Heart },
+      { id: "applied", title: "Applied", icon: Briefcase },
+      { id: "shortlisted", title: "Shortlisted", icon: Star },
+      { id: "history", title: "History", icon: History },
+    ];
+
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {columns.map((column) => (
+          <div key={column.id} className="flex-shrink-0 w-80">
+            <Card
+              className={cn(
+                "h-full border-2",
+                isDarkMode
+                  ? "bg-slate-900 border-slate-800"
+                  : "bg-white border-slate-200",
+              )}
+            >
+              <CardHeader
+                className={cn(
+                  "py-3 px-4 border-b",
+                  isDarkMode ? "border-slate-800" : "border-slate-200",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <column.icon className="w-4 h-4" />
+                    <CardTitle className="text-sm font-medium">
+                      {column.title}
+                    </CardTitle>
+                  </div>
+                  <Badge variant="outline">
+                    {
+                      filteredGigs.filter((gig: any) =>
+                        column.id === "history"
+                          ? gig.isHistorical
+                          : gig.userStatus === column.id,
+                      ).length
+                    }
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-3 space-y-3 max-h-[600px] overflow-y-auto">
+                {filteredGigs
+                  .filter((gig: any) =>
+                    column.id === "history"
+                      ? gig.isHistorical
+                      : gig.userStatus === column.id,
+                  )
+                  .map((gig: any) => {
+                    const statusConfig = getStatusConfig(gig);
+                    return (
+                      <div
+                        key={gig._id}
+                        className="cursor-pointer"
+                        onClick={() =>
+                          router.push(`/hub/gigs/musician/${gig._id}/gig-info`)
+                        }
+                      >
+                        <Card
+                          className={cn(
+                            "p-3 border-2 hover:shadow-md transition-all",
+                            isDarkMode
+                              ? "bg-slate-800/50 border-slate-700 hover:border-slate-600"
+                              : "bg-white border-slate-200 hover:border-slate-300",
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div
+                              className={cn(
+                                "p-2 rounded-lg",
+                                isDarkMode
+                                  ? statusConfig.bgDark
+                                  : statusConfig.bgLight,
+                              )}
+                            >
+                              {getGigIcon(gig)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className={cn(
+                                  "font-medium text-sm line-clamp-1",
+                                  isDarkMode ? "text-white" : "text-slate-900",
+                                )}
+                              >
+                                {gig.title}
+                              </p>
+                              <p
+                                className={cn(
+                                  "text-xs mt-1",
+                                  isDarkMode
+                                    ? "text-slate-400"
+                                    : "text-slate-500",
+                                )}
+                              >
+                                {formatDate(gig.date)}
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      </div>
+                    );
+                  })}
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderGigs = () => {
+    switch (displayMode) {
+      case "list":
+        return renderListView();
+      case "timeline":
+        return renderTimelineView();
+      case "calendar":
+        return renderCalendarView();
+      case "kanban":
+        return renderKanbanView();
+      default:
+        return renderGridView();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-10 w-24" />
-            ))}
-          </div>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-32 rounded-lg" />
-            ))}
-          </div>
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-64" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-12 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-64 rounded-xl" />
+          ))}
         </div>
       </div>
     );
@@ -277,900 +1393,445 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
 
   if (safeCategorizedApplications.all.length === 0) {
     return (
-      <Card className="text-center py-12">
+      <Card
+        className={cn(
+          "text-center py-16 border-2 border-dashed",
+          isDarkMode
+            ? "bg-slate-900/50 border-slate-800"
+            : "bg-white border-slate-200",
+        )}
+      >
         <CardContent className="space-y-6">
-          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 mb-6">
-            <Sparkles className="w-10 h-10 text-gray-500" />
+          <div
+            className={cn(
+              "w-24 h-24 mx-auto rounded-2xl flex items-center justify-center",
+              isDarkMode
+                ? "bg-gradient-to-br from-slate-800 to-slate-900"
+                : "bg-gradient-to-br from-slate-100 to-slate-200",
+            )}
+          >
+            <Sparkles
+              className={cn(
+                "w-12 h-12",
+                isDarkMode ? "text-slate-600" : "text-slate-400",
+              )}
+            />
           </div>
-          <div>
-            <h3 className="text-xl font-bold mb-2">No Gig Applications Yet</h3>
-            <p className="text-gray-500 mb-6">
-              You haven't applied to or shown interest in any gigs yet.
+
+          <div className="space-y-2">
+            <h3
+              className={cn(
+                "text-2xl font-bold",
+                isDarkMode ? "text-white" : "text-slate-900",
+              )}
+            >
+              No gig applications yet
+            </h3>
+            <p
+              className={cn(
+                "text-base max-w-md mx-auto",
+                isDarkMode ? "text-slate-400" : "text-slate-500",
+              )}
+            >
+              Start exploring gigs and apply to opportunities that match your
+              skills
             </p>
           </div>
+
           <Button
             onClick={() => router.push("/hub/gigs")}
-            className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+            className={cn(
+              "h-12 px-8 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-300",
+              isDarkMode
+                ? "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white"
+                : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white",
+            )}
           >
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Browse Available Gigs
+            <TrendingUp className="w-5 h-5 mr-2" />
+            Browse available gigs
           </Button>
         </CardContent>
       </Card>
     );
   }
 
-  const renderGigsView = () => {
-    switch (displayMode) {
-      case "grid":
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredGigs.map((gig: any) => (
-              <motion.div
-                key={gig._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                whileHover={{ y: -4 }}
-              >
-                <Card
-                  className={cn(
-                    "h-full hover:shadow-lg transition-shadow cursor-pointer group",
-                    gig.isHistorical &&
-                      "bg-gradient-to-br from-gray-50 to-slate-50",
-                  )}
-                  onClick={() => router.push(`/gigs/${gig._id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={cn(
-                            "p-2 rounded-lg",
-                            gig.isHistorical
-                              ? "bg-gray-100"
-                              : "bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-orange-100 group-hover:to-orange-200",
-                          )}
-                        >
-                          {getGigIcon(gig)}
-                        </div>
-                        <div>
-                          <h3 className="font-bold line-clamp-1">
-                            {gig.title}
-                          </h3>
-                          <Badge
-                            className={cn(
-                              "text-xs mt-1",
-                              getStatusBadge(gig).color,
-                            )}
-                          >
-                            {getStatusBadge(gig).icon}
-                            {getStatusBadge(gig).label}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    {gig.isHistorical && gig.applicationDetails && (
-                      <div className="mb-3 space-y-2">
-                        <div className="text-sm">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">Completed:</span>
-                            <span className="text-gray-600">
-                              {formatFullDate(
-                                gig.applicationDetails.completedDate ||
-                                  gig.date,
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        {gig.applicationDetails.finalPrice && (
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium">Final Price:</span>
-                            <span className="font-bold text-green-600">
-                              ${gig.applicationDetails.finalPrice}
-                            </span>
-                          </div>
-                        )}
-
-                        {gig.applicationDetails.rating && (
-                          <div className="flex items-center gap-1">
-                            <StarIcon className="w-4 h-4 text-yellow-500" />
-                            <span className="text-sm">
-                              {gig.applicationDetails.rating}/5
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {!gig.isHistorical && gig.applicationDetails && (
-                      <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                        {gig.applicationDetails.type === "band-role" && (
-                          <div className="text-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">
-                                {gig.applicationDetails.role}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {gig.applicationDetails.roleSlots || "N/A"}{" "}
-                                slots
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {gig.applicationDetails.type === "full-band" && (
-                          <div className="text-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">
-                                {gig.applicationDetails.bandName}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {gig.applicationDetails.memberCount || 0}{" "}
-                                members
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>{formatDate(gig.date)}</span>
-                        {gig.time?.start && !gig.isHistorical && (
-                          <>
-                            <Clock className="w-4 h-4 text-gray-400 ml-2" />
-                            <span>{gig.time.start}</span>
-                          </>
-                        )}
-                      </div>
-
-                      {gig.location && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="w-4 h-4 text-gray-400" />
-                          <span className="truncate">{gig.location}</span>
-                        </div>
-                      )}
-
-                      {gig.price && gig.price > 0 && !gig.isHistorical && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <DollarSign className="w-4 h-4 text-green-500" />
-                          <span className="font-semibold">${gig.price}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/gigs/${gig._id}`);
-                        }}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View
-                      </Button>
-
-                      {gig.isHistorical ? (
-                        <>
-                          {gig.applicationDetails?.rating && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // View rating/feedback
-                              }}
-                            >
-                              <StarIcon className="w-4 h-4 mr-2" />
-                              Rating
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // View invoice/receipt
-                            }}
-                          >
-                            <FileText className="w-4 h-4 mr-2" />
-                            Receipt
-                          </Button>
-                        </>
-                      ) : (
-                        gig.userStatus === "interested" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Handle withdraw interest
-                            }}
-                          >
-                            <XCircle className="w-4 h-4 mr-2" />
-                            Withdraw
-                          </Button>
-                        )
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+  return (
+    <TooltipProvider>
+      <div
+        className={cn(
+          "p-4 md:p-6 space-y-6 min-h-screen transition-colors duration-300",
+          isDarkMode
+            ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
+            : "bg-gradient-to-br from-slate-50 via-white to-slate-50",
+        )}
+      >
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1
+              className={cn(
+                "text-3xl md:text-4xl font-bold tracking-tight",
+                isDarkMode ? "text-white" : "text-slate-900",
+              )}
+            >
+              My gig applications
+            </h1>
+            <p
+              className={cn(
+                "text-sm md:text-base mt-1",
+                isDarkMode ? "text-slate-400" : "text-slate-500",
+              )}
+            >
+              Track and manage all your gig opportunities in one place
+            </p>
           </div>
-        );
 
-      case "list":
-        return (
-          <Card>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {filteredGigs.map((gig: any) => (
-                  <div
-                    key={gig._id}
-                    className="p-4 hover:bg-gray-50 cursor-pointer flex items-center gap-4"
-                    onClick={() => router.push(`/gigs/${gig._id}`)}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="relative w-full sm:w-72">
+              <Search
+                className={cn(
+                  "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
+                  isDarkMode ? "text-slate-500" : "text-slate-400",
+                )}
+              />
+              <Input
+                placeholder="Search by title, location, role..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(
+                  "pl-9 h-11 rounded-xl border-2 transition-all duration-200",
+                  "focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500",
+                  isDarkMode
+                    ? "bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-800"
+                    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white",
+                )}
+              />
+            </div>
+
+            {/* Display mode toggle */}
+            <div
+              className={cn(
+                "flex gap-1 p-1 rounded-xl",
+                isDarkMode
+                  ? "bg-slate-800/50 border border-slate-700"
+                  : "bg-slate-100 border border-slate-200",
+              )}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "grid" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("grid")}
+                    className={cn(
+                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
+                      displayMode === "grid"
+                        ? isDarkMode
+                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
+                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                        : isDarkMode
+                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
+                    )}
                   >
-                    <div className="flex-1 flex items-center gap-4">
-                      {getGigIcon(gig)}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{gig.title}</span>
-                          <Badge
-                            variant="outline"
-                            className={getStatusBadge(gig).color}
-                          >
-                            {getStatusBadge(gig).label}
-                          </Badge>
-                          {gig.applicationDetails?.role && (
-                            <Badge variant="secondary">
-                              {gig.applicationDetails.role}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {formatDate(gig.date)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
-                            {gig.location || "Location not specified"}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="w-4 h-4" />
-                            {gig.price ? `$${gig.price}` : "Negotiable"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <Grid className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Grid view</p>
+                </TooltipContent>
+              </Tooltip>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/gigs/${gig._id}`);
-                        }}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle message
-                        }}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        );
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "list" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("list")}
+                    className={cn(
+                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
+                      displayMode === "list"
+                        ? isDarkMode
+                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
+                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                        : isDarkMode
+                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
+                    )}
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>List view</p>
+                </TooltipContent>
+              </Tooltip>
 
-      case "kanban":
-        return (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {[
-              {
-                id: "interested",
-                title: "Interested",
-                icon: Heart,
-                color: "blue",
-              },
-              {
-                id: "applied",
-                title: "Applied",
-                icon: Briefcase,
-                color: "yellow",
-              },
-              {
-                id: "shortlisted",
-                title: "Shortlisted",
-                icon: Star,
-                color: "green",
-              },
-              { id: "history", title: "History", icon: History, color: "gray" },
-            ].map((column) => (
-              <div key={column.id} className="flex-shrink-0 w-80">
-                <Card>
-                  <CardContent className="p-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "timeline" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("timeline")}
+                    className={cn(
+                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
+                      displayMode === "timeline"
+                        ? isDarkMode
+                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
+                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                        : isDarkMode
+                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
+                    )}
+                  >
+                    <Activity className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Timeline view</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "calendar" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("calendar")}
+                    className={cn(
+                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
+                      displayMode === "calendar"
+                        ? isDarkMode
+                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
+                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                        : isDarkMode
+                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
+                    )}
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Calendar view</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={displayMode === "kanban" ? "default" : "ghost"}
+                    onClick={() => handleDisplayModeChange("kanban")}
+                    className={cn(
+                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
+                      displayMode === "kanban"
+                        ? isDarkMode
+                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
+                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                        : isDarkMode
+                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
+                    )}
+                  >
+                    <Kanban className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Kanban view</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {[
+            {
+              label: "Total involved",
+              value: tabCounts.all,
+              icon: Briefcase,
+              gradient: "from-blue-500 to-cyan-500",
+            },
+            {
+              label: "Interested",
+              value: tabCounts.interested,
+              icon: Heart,
+              gradient: "from-sky-500 to-blue-500",
+            },
+            {
+              label: "Applied",
+              value: tabCounts.applied,
+              icon: Send,
+              gradient: "from-amber-500 to-yellow-500",
+            },
+            {
+              label: "Shortlisted",
+              value: tabCounts.shortlisted,
+              icon: Star,
+              gradient: "from-emerald-500 to-green-500",
+            },
+            {
+              label: "History",
+              value: tabCounts.history,
+              icon: History,
+              gradient: "from-purple-500 to-pink-500",
+            },
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              whileHover={{ y: -4 }}
+            >
+              <Card
+                className={cn(
+                  "overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300",
+                  isDarkMode
+                    ? "bg-slate-900 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p
+                        className={cn(
+                          "text-xs font-medium uppercase tracking-wider",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        {stat.label}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-2xl font-bold mt-1",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {stat.value}
+                      </p>
+                    </div>
                     <div
                       className={cn(
-                        "p-4 border-b flex items-center gap-2",
-                        column.color === "blue" && "bg-blue-50 border-blue-200",
-                        column.color === "yellow" &&
-                          "bg-yellow-50 border-yellow-200",
-                        column.color === "green" &&
-                          "bg-green-50 border-green-200",
-                        column.color === "gray" && "bg-gray-50 border-gray-200",
+                        "p-3 rounded-xl bg-gradient-to-br",
+                        stat.gradient,
+                        "bg-opacity-10 dark:bg-opacity-20",
                       )}
                     >
-                      <column.icon
+                      <stat.icon
                         className={cn(
                           "w-5 h-5",
-                          column.color === "blue" && "text-blue-600",
-                          column.color === "yellow" && "text-yellow-600",
-                          column.color === "green" && "text-green-600",
-                          column.color === "gray" && "text-gray-600",
+                          isDarkMode ? "text-white" : "text-slate-900",
                         )}
                       />
-                      <h3 className="font-bold">{column.title}</h3>
-                      <Badge className="ml-auto">
-                        {
-                          filteredGigs.filter((gig: any) =>
-                            column.id === "history"
-                              ? gig.isHistorical
-                              : gig.userStatus === column.id,
-                          ).length
-                        }
-                      </Badge>
                     </div>
+                  </div>
 
-                    <div className="p-2 space-y-2 max-h-[500px] overflow-y-auto">
-                      {filteredGigs
-                        .filter((gig: any) =>
-                          column.id === "history"
-                            ? gig.isHistorical
-                            : gig.userStatus === column.id,
-                        )
-                        .map((gig: any) => (
-                          <Card
-                            key={gig._id}
-                            className="cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() => router.push(`/gigs/${gig._id}`)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex items-start gap-2">
-                                {getGigIcon(gig)}
-                                <div className="flex-1">
-                                  <p className="font-medium text-sm line-clamp-1">
-                                    {gig.title}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {formatDate(gig.date)}
-                                  </p>
-                                  <div className="mt-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {gig.bussinesscat || "Gig"}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))}
-          </div>
-        );
-
-      case "calendar":
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center mb-6">
-                <CalendarDays className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="font-bold text-lg">Calendar View</h3>
-                <p className="text-gray-500">Organized by gig dates</p>
-              </div>
-
-              <div className="space-y-4">
-                {filteredGigs
-                  .sort(
-                    (a: any, b: any) =>
-                      new Date(a.date).getTime() - new Date(b.date).getTime(),
-                  )
-                  .map((gig: any) => (
-                    <div
-                      key={gig._id}
-                      className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => router.push(`/gigs/${gig._id}`)}
-                    >
-                      <div className="text-center min-w-16">
-                        <div className="text-sm font-bold">
-                          {new Date(gig.date).getDate()}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(gig.date).toLocaleDateString("en-US", {
-                            month: "short",
-                          })}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{gig.title}</span>
-                          <Badge className={getStatusBadge(gig).color}>
-                            {getStatusBadge(gig).label}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {gig.time?.start || "Time TBD"}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPinIcon className="w-3 h-3" />
-                            {gig.location || "Location TBD"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      case "timeline":
-      default:
-        return (
-          <div className="space-y-6">
-            {filteredGigs.map((gig: any, index: number) => (
-              <motion.div
-                key={gig._id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
+                  {/* Progress bar */}
+                  <div className="mt-3 h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${(stat.value / Math.max(tabCounts.all, 1)) * 100}%`,
+                      }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                      className={cn(
+                        "h-full rounded-full bg-gradient-to-r",
+                        stat.gradient,
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList
+            className={cn(
+              "grid grid-cols-5 gap-1 p-1 rounded-lg",
+              isDarkMode ? "bg-slate-800/50" : "bg-slate-100",
+            )}
+          >
+            {[
+              { value: "all", label: "All", icon: Filter },
+              { value: "interested", label: "Interested", icon: Heart },
+              { value: "applied", label: "Applied", icon: Send },
+              { value: "shortlisted", label: "Shortlisted", icon: Star },
+              { value: "history", label: "History", icon: History },
+            ].map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className={cn(
+                  "relative px-3 py-2 rounded-md text-sm font-medium transition-all",
+                  "data-[state=active]:shadow-sm",
+                  isDarkMode
+                    ? "data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                    : "data-[state=active]:bg-orange-500 data-[state=active]:text-white",
+                  !isDarkMode &&
+                    "data-[state=inactive]:text-slate-600 hover:text-slate-900 hover:bg-slate-200/50",
+                  isDarkMode &&
+                    "data-[state=inactive]:text-slate-400 hover:text-white hover:bg-slate-700",
+                )}
               >
-                <Card className="relative overflow-hidden">
-                  {index < filteredGigs.length - 1 && (
-                    <div className="absolute left-8 top-14 bottom-0 w-0.5 bg-gray-200" />
+                <div className="flex items-center justify-center gap-1.5">
+                  <tab.icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  {tabCounts[tab.value as keyof typeof tabCounts] > 0 && (
+                    <span
+                      className={cn(
+                        "ml-1 px-1.5 py-0.5 text-xs rounded-full",
+                        activeTab === tab.value
+                          ? "bg-white/20 text-white"
+                          : isDarkMode
+                            ? "bg-slate-700 text-slate-300"
+                            : "bg-slate-200 text-slate-600",
+                      )}
+                    >
+                      {tabCounts[tab.value as keyof typeof tabCounts]}
+                    </span>
                   )}
-
-                  <CardContent className="p-6">
-                    <div className="flex gap-4">
-                      <div className="relative">
-                        <div
-                          className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center",
-                            gig.isHistorical
-                              ? "bg-gray-200"
-                              : gig.userStatus === "shortlisted"
-                                ? "bg-green-100 border-2 border-green-500"
-                                : gig.userStatus === "applied"
-                                  ? "bg-yellow-100 border-2 border-yellow-500"
-                                  : "bg-blue-100 border-2 border-blue-500",
-                          )}
-                        >
-                          {gig.isHistorical ? (
-                            <CheckCircle className="w-4 h-4 text-gray-600" />
-                          ) : gig.userStatus === "shortlisted" ? (
-                            <Star className="w-4 h-4 text-green-600" />
-                          ) : (
-                            getGigIcon(gig)
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-bold text-lg">{gig.title}</h3>
-                            <div className="flex items-center gap-3 mt-1">
-                              <Badge className={getStatusBadge(gig).color}>
-                                {getStatusBadge(gig).icon}
-                                {getStatusBadge(gig).label}
-                              </Badge>
-                              <span className="text-sm text-gray-500">
-                                {formatDate(gig.date)}
-                              </span>
-                            </div>
-                          </div>
-                          {gig.price !== undefined && gig.price !== null && (
-                            <div className="flex items-center gap-1">
-                              <DollarSign
-                                className={cn(
-                                  "w-5 h-5",
-                                  gig.price === 0
-                                    ? "text-gray-500"
-                                    : "text-green-500",
-                                )}
-                              />
-                              <span className="font-bold">
-                                {gig.price === 0 ? "Free" : `$${gig.price}`}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-3 space-y-2">
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            {gig.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-4 h-4" />
-                                {gig.location}
-                              </span>
-                            )}
-                            {gig.time?.start && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-4 h-4" />
-                                {gig.time.start}
-                              </span>
-                            )}
-                          </div>
-
-                          {gig.applicationDetails && (
-                            <div className="text-sm">
-                              {gig.applicationDetails.type === "band-role" && (
-                                <div className="flex items-center gap-2">
-                                  <Tag className="w-4 h-4 text-purple-500" />
-                                  <span>
-                                    Role: {gig.applicationDetails.role}
-                                  </span>
-                                </div>
-                              )}
-                              {gig.applicationDetails.type === "full-band" && (
-                                <div className="flex items-center gap-2">
-                                  <Users2 className="w-4 h-4 text-orange-500" />
-                                  <span>
-                                    Band: {gig.applicationDetails.bandName}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {!gig.isHistorical && (
-                          <div className="mt-4">
-                            <div className="flex items-center justify-between text-sm">
-                              {[
-                                "Interested",
-                                "Applied",
-                                "Shortlisted",
-                                "Booked",
-                              ].map((step, i) => {
-                                const statusIndex = [
-                                  "interested",
-                                  "applied",
-                                  "shortlisted",
-                                  "completed",
-                                ].indexOf(gig.userStatus);
-                                return (
-                                  <div
-                                    key={step}
-                                    className="flex flex-col items-center"
-                                  >
-                                    <div
-                                      className={cn(
-                                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                                        i <= statusIndex
-                                          ? "bg-green-500 text-white"
-                                          : "bg-gray-200 text-gray-600",
-                                      )}
-                                    >
-                                      {i < statusIndex ? (
-                                        <CheckCircle className="w-4 h-4" />
-                                      ) : (
-                                        <span>{i + 1}</span>
-                                      )}
-                                    </div>
-                                    <span className="mt-1 text-xs">{step}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="mt-4 flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(
-                                `/hub/gigs/musician/${gig._id}/gig-info`,
-                              );
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </Button>
-
-                          {!gig.isHistorical && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Handle message
-                                }}
-                              >
-                                <MessageSquare className="w-4 h-4 mr-2" />
-                                Message
-                              </Button>
-
-                              {gig.userStatus === "interested" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-red-600 border-red-200 hover:bg-red-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Handle withdraw interest
-                                  }}
-                                >
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                  Withdraw
-                                </Button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                </div>
+              </TabsTrigger>
             ))}
-          </div>
-        );
-    }
-  };
+          </TabsList>
 
-  return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">My Gig Applications</h1>
-          <p className="text-gray-500">
-            Track all gigs you've applied to or shown interest in
-          </p>
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search gigs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
-            <Button
-              size="sm"
-              variant={displayMode === "timeline" ? "secondary" : "ghost"}
-              onClick={() => setDisplayMode("timeline")}
-              className="h-8 px-3"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={displayMode === "grid" ? "secondary" : "ghost"}
-              onClick={() => setDisplayMode("grid")}
-              className="h-8 px-3"
-            >
-              <Grid className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={displayMode === "kanban" ? "secondary" : "ghost"}
-              onClick={() => setDisplayMode("kanban")}
-              className="h-8 px-3"
-            >
-              <Kanban className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={displayMode === "calendar" ? "secondary" : "ghost"}
-              onClick={() => setDisplayMode("calendar")}
-              className="h-8 px-3"
-            >
-              <CalendarDays className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+          <TabsContent value={activeTab} className="mt-6">
+            {showContentLoading ? (
+              <div className="space-y-4">
+                {displayMode === "grid" ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, i) => (
+                      <Skeleton key={i} className="h-48 rounded-xl" />
+                    ))}
+                  </div>
+                ) : (
+                  <GigLoader title="Loader" size="md" />
+                )}
+              </div>
+            ) : filteredGigs.length > 0 ? (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`gigs-${displayMode}-${activeTab}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  {renderGigs()}
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <EmptyState />
+            )}
+          </TabsContent>
+        </Tabs>{" "}
+        {/* ← This was missing! */}
       </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Involved</p>
-                <p className="text-2xl font-bold">{tabCounts.all}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-blue-100">
-                <Briefcase className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Interested</p>
-                <p className="text-2xl font-bold">{tabCounts.interested}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-blue-100">
-                <Heart className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Applied</p>
-                <p className="text-2xl font-bold">{tabCounts.applied}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-yellow-100">
-                <Briefcase className="w-5 h-5 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Shortlisted</p>
-                <p className="text-2xl font-bold">{tabCounts.shortlisted}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-green-100">
-                <Star className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">History</p>
-                <p className="text-2xl font-bold">{tabCounts.history}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-gray-100">
-                <History className="w-5 h-5 text-gray-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as "all" | GigStatus)}
-      >
-        <TabsList className="grid grid-cols-5">
-          <TabsTrigger value="all">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              <span className="hidden sm:inline">All</span>
-              {tabCounts.all > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {tabCounts.all}
-                </Badge>
-              )}
-            </div>
-          </TabsTrigger>
-
-          <TabsTrigger value="interested">
-            <div className="flex items-center gap-2">
-              <Heart className="w-4 h-4" />
-              <span className="hidden sm:inline">Interested</span>
-              {tabCounts.interested > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {tabCounts.interested}
-                </Badge>
-              )}
-            </div>
-          </TabsTrigger>
-
-          <TabsTrigger value="applied">
-            <div className="flex items-center gap-2">
-              <Briefcase className="w-4 h-4" />
-              <span className="hidden sm:inline">Applied</span>
-              {tabCounts.applied > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {tabCounts.applied}
-                </Badge>
-              )}
-            </div>
-          </TabsTrigger>
-
-          <TabsTrigger value="shortlisted">
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4" />
-              <span className="hidden sm:inline">Shortlisted</span>
-              {tabCounts.shortlisted > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {tabCounts.shortlisted}
-                </Badge>
-              )}
-            </div>
-          </TabsTrigger>
-
-          <TabsTrigger value="history">
-            <div className="flex items-center gap-2">
-              <History className="w-4 h-4" />
-              <span className="hidden sm:inline">History</span>
-              {tabCounts.history > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {tabCounts.history}
-                </Badge>
-              )}
-            </div>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab} className="mt-6">
-          {filteredGigs.length > 0 ? (
-            renderGigsView()
-          ) : (
-            <Card className="text-center py-12">
-              <CardContent className="space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center bg-gray-100">
-                  <Search className="w-8 h-8 text-gray-500" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg mb-2">No gigs found</h3>
-                  <p className="text-gray-500">
-                    {searchQuery
-                      ? `No gigs match "${searchQuery}"`
-                      : `No gigs in "${activeTab}" category`}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+    </TooltipProvider>
   );
 };

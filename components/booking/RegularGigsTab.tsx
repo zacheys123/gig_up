@@ -657,7 +657,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                                 </div>
 
                                 {/* Remove Interest Button - Full width */}
-                                <div className="mt-2 flex  gap-2">
+                                <div className="mt-2 flex flex-col gap-2">
                                   {/* Shortlist/Unshortlist */}
                                   <Button
                                     size="sm"

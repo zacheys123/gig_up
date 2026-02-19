@@ -415,4 +415,57 @@ export default defineSchema({
   //   .index("by_user", ["userId"])
   //   .index("by_eligibility", ["canCreateBand"]),
   // In your Convex schema.ts
+  // convex/schema.ts
+  // convex/schema.ts
+  userPreferences: defineTable({
+    userId: v.string(),
+    preferences: v.object({
+      // Make ALL components optional at the top level
+      pendingGigs: v.optional(
+        v.object({
+          displayMode: v.optional(v.string()),
+          activeTab: v.optional(v.string()),
+        }),
+      ),
+      allGigs: v.optional(
+        v.object({
+          displayMode: v.optional(v.string()),
+          viewMode: v.optional(v.string()),
+          sortBy: v.optional(v.string()),
+          activeTab: v.optional(v.string()),
+        }),
+      ),
+      bookedGigs: v.optional(
+        v.object({
+          displayMode: v.optional(v.string()),
+          viewFilter: v.optional(v.string()),
+          dateFilter: v.optional(v.string()),
+          paymentFilter: v.optional(v.string()),
+        }),
+      ),
+      favoriteGigs: v.optional(
+        v.object({
+          displayMode: v.optional(v.string()),
+          statusFilter: v.optional(v.string()),
+          dateFilter: v.optional(v.string()),
+        }),
+      ),
+      savedGigs: v.optional(
+        v.object({
+          displayMode: v.optional(v.string()),
+          statusFilter: v.optional(v.string()),
+          dateFilter: v.optional(v.string()),
+        }),
+      ),
+      clientPreBooking: v.optional(
+        v.object({
+          displayMode: v.optional(v.string()),
+          activeGigTab: v.optional(v.string()),
+          activeTab: v.optional(v.string()),
+          applicantView: v.optional(v.string()),
+        }),
+      ),
+    }),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });
