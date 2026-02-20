@@ -224,11 +224,26 @@ export const AllGigs = ({ user }: { user: any }) => {
   const [showGigModal, setShowGigModal] = useState(false);
   const [showHeader, setShowHeader] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>("all"); // ADD THIS
-  // Preferences
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // In your component, combine all loading states
+  const { allGigs: gigs, isLoading: gigsLoading } = useAllGigs({ limit: 100 });
+  const { gigs: userGigs, isLoading: userGigsLoading } = useGigs(user?._id);
   const userPreferences = useQuery(
     api.controllers.userPrefferences.getUserPreferences,
     user?._id ? { userId: user._id } : "skip",
   );
+
+  // Set initial loading false when data is ready
+  useEffect(() => {
+    if (!gigsLoading && !userGigsLoading && userPreferences !== undefined) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [gigsLoading, userGigsLoading, userPreferences]);
   const updateComponentPrefs = useMutation(
     api.controllers.userPrefferences.updateComponentPreferences,
   );
@@ -327,9 +342,7 @@ export const AllGigs = ({ user }: { user: any }) => {
   const unfavoriteGig = useMutation(api.controllers.gigs.unfavoriteGig);
   const bookGigMutation = useMutation(api.controllers.gigs.showInterestInGig);
 
-  const { allGigs: gigs, isLoading } = useAllGigs({ limit: 100 });
   const allNewGigs = gigs.filter((gig: any) => gig.isTaken === false);
-  const { gigs: userGigs } = useGigs(user?._id);
 
   // Combine with user's posted gigs
   const combinedGigs = useMemo(() => {
@@ -1337,27 +1350,47 @@ export const AllGigs = ({ user }: { user: any }) => {
     }
   };
 
-  if (isLoading) {
+  // Show loading skeleton immediately - no blank space
+  if (isInitialLoading) {
     return (
-      <div className="space-y-8">
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-64 rounded-lg" />
-          <Skeleton className="h-14 w-full rounded-xl" />
+      <div className="space-y-6 p-4">
+        {/* Header Skeleton */}
+        <div className="rounded-2xl border p-6 space-y-4">
+          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+          <div className="h-4 w-96 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="h-24 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse"
+              />
+            ))}
+          </div>
+
+          {/* Search Bar */}
+          <div className="h-12 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse" />
+
+          {/* Filter Bar */}
+          <div className="flex gap-3">
+            <div className="h-9 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+            <div className="h-9 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+          </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-80 rounded-2xl" />
+
+        {/* Grid Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse"
+            />
           ))}
         </div>
       </div>
     );
   }
-
   return (
     <TooltipProvider>
       <div className="space-y-6">

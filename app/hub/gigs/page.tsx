@@ -94,6 +94,7 @@ const getUserGigTabs = (user: any) => {
         { id: "all", label: "🎵 All Gigs" },
         { id: "favorites", label: "⭐ Favorites" },
         { id: "saved", label: "💾 Saved" },
+        { id: "reviewed", label: "💾 Reviewed" },
         { id: "payments", label: "💰 Payments" },
         {
           id: "invites",
@@ -236,6 +237,9 @@ const renderGigContent = (
         return <FavoriteGigs user={user} />;
       case "saved":
         return <SavedGigs user={user} />;
+
+      case "reviewed":
+        return <ReviewedGigs user={user} />;
       case "payments":
         return <PaymentHistory user={user} />;
       case "invites":

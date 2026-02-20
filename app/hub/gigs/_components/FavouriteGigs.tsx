@@ -720,7 +720,7 @@ export const FavoriteGigs = ({ user }: { user: any }) => {
             </p>
           </div>
           <Button
-            onClick={() => (window.location.href = "/gigs/explore")}
+            onClick={() => (window.location.href = "/hub/gigs?tab=all")}
             className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white hover:from-yellow-600 hover:to-amber-600"
           >
             Explore Gigs

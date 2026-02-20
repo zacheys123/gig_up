@@ -2158,7 +2158,7 @@ export const BookedGigs = ({ user }: { user: any }) => {
                   whileTap={{ scale: 0.95 }}
                 >
                   <Button
-                    onClick={() => (window.location.href = "/gigs/explore")}
+                    onClick={() => (window.location.href = "/hub/gigs?tab=all")}
                     variant="outline"
                   >
                     Explore Gigs
