@@ -113,27 +113,27 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   const markAsRead = useMutation(api.controllers.chat.markAsRead);
   const markMessageAsRead = useMutation(api.controllers.chat.markMessageAsRead);
   const markAllMessagesAsRead = useMutation(
-    api.controllers.chat.markAllMessagesAsRead
+    api.controllers.chat.markAllMessagesAsRead,
   );
   const bulkMarkMessagesAsRead = useMutation(
-    api.controllers.chat.bulkMarkMessagesAsRead
+    api.controllers.chat.bulkMarkMessagesAsRead,
   );
   const startTyping = useMutation(api.controllers.chat.startTyping);
   const stopTyping = useMutation(api.controllers.chat.stopTyping);
   const markMessageAsDelivered = useMutation(
-    api.controllers.chat.markMessageAsDelivered
+    api.controllers.chat.markMessageAsDelivered,
   );
   const createActiveSession = useMutation(
-    api.controllers.chat.createActiveChatSession
+    api.controllers.chat.createActiveChatSession,
   );
   const deleteActiveSession = useMutation(
-    api.controllers.chat.deleteActiveChatSession
+    api.controllers.chat.deleteActiveChatSession,
   );
   const updateActiveSession = useMutation(
-    api.controllers.chat.updateActiveSession
+    api.controllers.chat.updateActiveSession,
   );
   const updateMessageStatus = useMutation(
-    api.controllers.chat.updateMessageStatus
+    api.controllers.chat.updateMessageStatus,
   );
 
   // Refs for typing management
@@ -239,7 +239,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
       const unreadMessages = messages.filter(
         (message) =>
           message.senderId !== currentUser._id &&
-          !message.readBy.includes(currentUser._id)
+          !message.readBy.includes(currentUser._id),
       );
 
       if (unreadMessages.length === 0) return;
@@ -260,10 +260,10 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
             }).catch((error) => {
               console.error(
                 `Failed to mark message ${message._id} as read:`,
-                error
+                error,
               );
               return null;
-            })
+            }),
           );
           await Promise.all(promises);
         }
@@ -428,7 +428,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
           className={cn(
             "max-w-xs lg:max-w-md px-4 py-3 rounded-2xl",
             colors.backgroundMuted,
-            colors.text
+            colors.text,
           )}
         >
           <div className="flex items-center gap-2">
@@ -457,7 +457,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
         <div
           className={cn(
             "w-20 h-20 rounded-full flex items-center justify-center mb-6",
-            colors.backgroundMuted
+            colors.backgroundMuted,
           )}
         >
           <MessageCircle className={cn("w-10 h-10", colors.textMuted)} />
@@ -475,7 +475,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
             <div
               className={cn(
                 "flex items-center gap-3 p-3 rounded-xl mb-4",
-                colors.backgroundMuted
+                colors.backgroundMuted,
               )}
             >
               <Search className={cn("w-4 h-4", colors.textMuted)} />
@@ -505,7 +505,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
         <div
           className={cn(
             "w-20 h-20 rounded-full flex items-center justify-center mb-6",
-            "bg-red-100 dark:bg-red-900/20"
+            "bg-red-100 dark:bg-red-900/20",
           )}
         >
           <AlertCircle className="w-10 h-10 text-red-500" />
@@ -539,7 +539,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
   }
 
   const otherParticipant = chat?.participants?.find(
-    (p) => p?._id !== currentUser?._id
+    (p) => p?._id !== currentUser?._id,
   );
 
   // Handle empty messages array properly
@@ -574,7 +574,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
             className={cn(
               "flex items-center gap-3 p-4 border-b",
               colors.border,
-              colors.card
+              colors.card,
             )}
           >
             <Button
@@ -589,7 +589,8 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
             <Avatar className="w-8 h-8">
               <AvatarImage src={otherParticipant?.picture} />
               <AvatarFallback className={cn("text-xs", colors.text)}>
-                {currentUser?.firstname?.[0]}
+                {otherParticipant?.firstname?.[0]}{" "}
+                {/* ✅ Correct - shows other user */}
                 {otherParticipant?.lastname?.[0]}
               </AvatarFallback>
             </Avatar>
@@ -599,7 +600,8 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                 <h3
                   className={cn("font-semibold text-sm truncate", colors.text)}
                 >
-                  {chat?.displayName}
+                  {`${otherParticipant?.firstname} ${otherParticipant?.lastname}` ||
+                    " Chat"}
                 </h3>
                 {otherParticipant?.verified && (
                   <Badge variant="secondary" className="h-4 px-1 text-xs">
@@ -663,7 +665,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                 <div
                   className={cn(
                     "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4",
-                    colors.backgroundMuted
+                    colors.backgroundMuted,
                   )}
                 >
                   <MessageCircle className={cn("w-8 h-8", colors.textMuted)} />
@@ -678,7 +680,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                   className={cn(
                     "px-4 py-3 rounded-xl text-sm max-w-md",
                     colors.backgroundMuted,
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   <div className="flex items-center gap-2 mb-2">
@@ -709,7 +711,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                 {messages.map((msg) => {
                   const isOwn = msg.senderId === currentUser?._id;
                   const sender = chat?.participants?.find(
-                    (p) => p?._id === msg.senderId
+                    (p) => p?._id === msg.senderId,
                   );
 
                   return (
@@ -737,7 +739,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                               ? "bg-blue-500 text-white rounded-br-md"
                               : colors.backgroundMuted
                           }`,
-                          !isOwn && colors.text
+                          !isOwn && colors.text,
                         )}
                       >
                         {!isOwn && chat?.type === "group" && (
@@ -752,7 +754,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                             className={cn(
                               `text-xs opacity-70 ${
                                 isOwn ? "text-blue-100" : colors.textMuted
-                              }`
+                              }`,
                             )}
                           >
                             {new Date(msg._creationTime).toLocaleTimeString(
@@ -760,7 +762,7 @@ export function ChatInterface({ chatId, onBack }: ChatInterfaceProps) {
                               {
                                 hour: "2-digit",
                                 minute: "2-digit",
-                              }
+                              },
                             )}
                           </p>
 

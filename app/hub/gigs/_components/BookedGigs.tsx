@@ -29,6 +29,17 @@ import {
   Kanban,
   CalendarDays,
   Activity,
+  DollarSign,
+  History,
+  X,
+  ArrowUp,
+  ArrowDown,
+  ChevronUp,
+  ChevronDown,
+  Plus,
+  Eye,
+  ChevronRight,
+  Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,7 +79,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Info } from "lucide-react";
+import { GiSpiralThrust } from "react-icons/gi";
 // Types
 type DisplayMode = "grid" | "timeline" | "list" | "calendar" | "kanban";
 type ViewFilter = "all" | "client" | "musician";
@@ -538,9 +556,11 @@ export const BookedGigs = ({ user }: { user: any }) => {
         ) {
           return {
             role: role.role,
-            roleIcon: <Music className="w-4 h-4" />,
-            badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
-            icon: <Users className="w-4 h-4" />,
+            roleIcon: <Music className="w-4 h-10" />,
+            badgeColor: isDarkMode
+              ? "bg-indigo-100 text-red-800 border-indigo-200"
+              : "bg-indigo-800 text-blue-200 border-indigo-700",
+            icon: <Music className="w-4 h-4" />,
             isPaid,
             paymentStatus,
             canCancel,
@@ -582,6 +602,8 @@ export const BookedGigs = ({ user }: { user: any }) => {
     }
     return "Regular Gig";
   };
+  const [legendOpen, setLegendOpen] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
 
   const stats = useMemo((): Stats | null => {
     if (!bookedGigs.length) return null;
@@ -758,789 +780,151 @@ export const BookedGigs = ({ user }: { user: any }) => {
     }
   };
 
-  // Render functions for different display modes
+  // Modern Grid View - Clean cards with subtle interactions
   const renderGridView = () => (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
     >
       {filteredGigs.map((gig: any, index) => {
         const userRole = getUserRoleInGig(gig);
         const dateStatus = getGigDateStatus(gig.date, gig.time);
-        const gigType = getGigType(gig);
-        const cancellationWarning = getCancellationWarning(gig);
-        const canCancel = userRole.canCancel && !dateStatus.exactPast;
-        const cancelButtonLabel = getCancelButtonLabel(gig);
 
         return (
           <motion.div
             key={gig._id}
-            layout
             variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            whileHover="hover"
-            whileTap="tap"
-            transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 30,
-              delay: index * 0.02,
-            }}
+            whileHover={{ y: -4 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             <Card
               className={cn(
-                "h-full transition-all duration-300 relative overflow-hidden group",
+                "group relative overflow-hidden transition-all duration-300",
+                "border-0 bg-gradient-to-b",
                 isDarkMode
-                  ? "bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800/50 hover:border-gray-700/80"
-                  : "bg-gradient-to-br from-white via-white to-gray-50/50 border-gray-200/80 hover:border-gray-300/80",
-                !dateStatus.exactPast &&
-                  !dateStatus.isToday &&
-                  isDarkMode &&
-                  "hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]",
-                !dateStatus.exactPast &&
-                  !dateStatus.isToday &&
-                  !isDarkMode &&
-                  "hover:shadow-[0_0_30px_rgba(59,130,246,0.1)]",
-                dateStatus.isToday &&
-                  isDarkMode &&
-                  "hover:shadow-[0_0_30px_rgba(34,197,94,0.15)]",
-                dateStatus.isToday &&
-                  !isDarkMode &&
-                  "hover:shadow-[0_0_30px_rgba(34,197,94,0.1)]",
-                dateStatus.exactPast &&
-                  isDarkMode &&
-                  "hover:shadow-[0_0_30px_rgba(107,114,128,0.1)]",
-                dateStatus.exactPast &&
-                  !isDarkMode &&
-                  "hover:shadow-[0_0_30px_rgba(107,114,128,0.05)]",
-                !gig.isActive && "opacity-80",
+                  ? "from-slate-900 to-slate-800/50 hover:from-slate-800 hover:to-slate-700/50"
+                  : "from-white to-slate-50/50 hover:from-white hover:to-slate-100/50",
+                "shadow-sm hover:shadow-md",
               )}
             >
-              {/* Animated gradient overlay */}
-              <motion.div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                style={{
-                  background: isDarkMode
-                    ? "radial-gradient(circle at 50% 0%, rgba(59,130,246,0.1), transparent 70%)"
-                    : "radial-gradient(circle at 50% 0%, rgba(59,130,246,0.05), transparent 70%)",
-                }}
-              />
-
-              {/* Top gradient bar */}
+              {/* Subtle status indicator line */}
               <div
                 className={cn(
                   "absolute top-0 left-0 right-0 h-1",
-                  dateStatus.exactPast
-                    ? isDarkMode
-                      ? "bg-gradient-to-r from-gray-700 to-gray-600"
-                      : "bg-gradient-to-r from-gray-400 to-gray-300"
-                    : dateStatus.isToday
-                      ? isDarkMode
-                        ? "bg-gradient-to-r from-green-600 to-green-500"
-                        : "bg-gradient-to-r from-green-500 to-green-400"
-                      : isDarkMode
-                        ? "bg-gradient-to-r from-blue-600 to-blue-500"
-                        : "bg-gradient-to-r from-blue-500 to-blue-400",
+                  dateStatus.isToday
+                    ? "bg-emerald-500"
+                    : dateStatus.exactPast
+                      ? "bg-slate-400"
+                      : "bg-blue-500",
                 )}
               />
 
-              {/* Cancellation warning badge */}
-              {canCancel && cancellationWarning.severity !== "none" && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 500,
-                    damping: 20,
-                  }}
-                  className="absolute -top-1 -right-1 z-20"
-                >
-                  <div
-                    className={cn(
-                      "px-3 py-1.5 rounded-bl-xl rounded-tr-xl text-xs font-bold flex items-center gap-1.5 shadow-lg",
-                      cancellationWarning.severity === "high"
-                        ? isDarkMode
-                          ? "bg-gradient-to-r from-red-600 to-red-500 text-white border border-red-400/30"
-                          : "bg-gradient-to-r from-red-500 to-red-400 text-white border border-red-300/50"
-                        : isDarkMode
-                          ? "bg-gradient-to-r from-yellow-600 to-yellow-500 text-white border border-yellow-400/30"
-                          : "bg-gradient-to-r from-yellow-500 to-yellow-400 text-white border border-yellow-300/50",
-                    )}
-                  >
-                    {cancellationWarning.icon}
-                    <span>
-                      {cancellationWarning.severity === "high"
-                        ? "URGENT"
-                        : "WARNING"}
-                    </span>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Counterparty Info */}
-              {userRole.counterpartyInfo && (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="absolute top-4 left-4 z-10"
-                >
+              <CardContent className="p-5">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    {userRole.counterpartyInfo.picture ? (
-                      <div className="relative">
-                        <img
-                          src={userRole.counterpartyInfo.picture}
-                          alt={userRole.counterpartyInfo.name}
-                          className={cn(
-                            "w-8 h-8 rounded-full ring-2 ring-offset-2 ring-offset-transparent",
-                            isDarkMode
-                              ? "ring-blue-500/50"
-                              : "ring-blue-500/30",
-                          )}
-                        />
-                        <div
-                          className={cn(
-                            "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2",
-                            isDarkMode ? "ring-gray-900" : "ring-white",
-                            userRole.role === "Client"
-                              ? "bg-purple-500"
-                              : "bg-green-500",
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full ring-2 ring-offset-2 ring-offset-transparent flex items-center justify-center",
-                          isDarkMode
-                            ? "bg-gray-800 ring-blue-500/50"
-                            : "bg-gray-200 ring-blue-500/30",
-                        )}
-                      >
-                        {userRole.role === "Client" ? (
-                          <Briefcase className="w-4 h-4 text-gray-500" />
-                        ) : (
-                          <User className="w-4 h-4 text-gray-500" />
-                        )}
-                      </div>
-                    )}
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs font-medium backdrop-blur-md border",
-                        isDarkMode
-                          ? "bg-gray-900/70 text-gray-200 border-gray-700/50"
-                          : "bg-white/70 text-gray-700 border-gray-300/50",
-                      )}
-                    >
-                      <span className="flex items-center gap-1">
-                        {userRole.role === "Client" ? (
-                          <Building2 className="w-3 h-3" />
-                        ) : (
-                          <Music className="w-3 h-3" />
-                        )}
-                        {userRole.counterpartyInfo.name}
-                      </span>
-                    </Badge>
-                  </div>
-                </motion.div>
-              )}
-
-              <CardHeader
-                className={cn(
-                  "pt-14 pb-4 px-5",
-                  canCancel && cancellationWarning.warning ? "pt-16" : "",
-                )}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Role badge */}
+                    {/* Role badge - minimal */}
                     <Badge
                       className={cn(
-                        "flex items-center gap-1.5 px-3 py-1 border shadow-sm",
+                        "px-2 py-0.5 text-xs font-normal border-0",
                         userRole.badgeColor,
-                        isDarkMode && {
-                          "bg-blue-500/20 text-blue-300 border-blue-500/30":
-                            userRole.role === "Client",
-                          "bg-green-500/20 text-green-300 border-green-500/30":
-                            userRole.role === "Booked Musician",
-                          "bg-purple-500/20 text-purple-300 border-purple-500/30":
-                            userRole.role === "Band Member",
-                        },
                       )}
                     >
-                      {userRole.roleIcon}
-                      <span>{userRole.role}</span>
+                      {userRole.role}
                     </Badge>
 
-                    {/* Payment status badge */}
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        delay: 0.1,
-                      }}
-                    >
-                      <Badge
-                        className={cn(
-                          "px-3 py-1 border-0 shadow-sm",
-                          gig.isActive === false
-                            ? isDarkMode
-                              ? "bg-gradient-to-r from-green-600/20 to-green-500/20 text-green-300"
-                              : "bg-gradient-to-r from-green-100 to-green-50 text-green-700"
-                            : isDarkMode
-                              ? "bg-gradient-to-r from-yellow-600/20 to-yellow-500/20 text-yellow-300"
-                              : "bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-700",
-                        )}
-                      >
-                        {gig.isActive === false ? (
-                          <span className="flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            Paid
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Pending
-                          </span>
-                        )}
-                      </Badge>
-                    </motion.div>
+                    {/* Payment indicator */}
+                    <div
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        gig.isActive === false
+                          ? "bg-emerald-500"
+                          : "bg-amber-500",
+                      )}
+                    />
                   </div>
 
-                  {/* Date status badge */}
-                  <Badge
-                    variant="outline"
+                  {/* Date - minimal */}
+                  <span
                     className={cn(
-                      "px-3 py-1 border-2 font-medium backdrop-blur-sm",
-                      dateStatus.exactPast
-                        ? isDarkMode
-                          ? "bg-gray-800/50 text-gray-400 border-gray-700"
-                          : "bg-gray-100/80 text-gray-600 border-gray-300"
-                        : dateStatus.isToday
-                          ? isDarkMode
-                            ? "bg-green-500/20 text-green-300 border-green-500/30"
-                            : "bg-green-100/80 text-green-700 border-green-300"
-                          : isDarkMode
-                            ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
-                            : "bg-blue-100/80 text-blue-700 border-blue-300",
+                      "text-xs",
+                      isDarkMode ? "text-slate-500" : "text-slate-400",
                     )}
                   >
-                    {dateStatus.exactPast ? (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {dateStatus.isToday ? "Completed" : "Past"}
-                      </span>
-                    ) : dateStatus.isToday ? (
-                      <span className="flex items-center gap-1">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                        </span>
-                        Today
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Upcoming
-                      </span>
-                    )}
-                  </Badge>
+                    {formatGigDate(gig.date, gig.time)}
+                  </span>
                 </div>
 
-                <CardTitle
+                {/* Title */}
+                <h3
                   className={cn(
-                    "text-xl font-bold line-clamp-1 mb-1",
-                    isDarkMode ? "text-white" : "text-gray-900",
+                    "font-semibold text-lg mb-3 line-clamp-1",
+                    isDarkMode ? "text-white" : "text-slate-900",
                   )}
                 >
                   {gig.title}
-                </CardTitle>
+                </h3>
 
-                <motion.div
-                  className={cn(
-                    "flex items-center text-sm",
-                    isDarkMode ? "text-gray-400" : "text-gray-600",
-                  )}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <Calendar className="w-4 h-4 mr-1.5 flex-shrink-0" />
-                  <span className="truncate">
-                    {formatGigDate(gig.date, gig.time)}
-                  </span>
-                </motion.div>
-
-                {(dateStatus.startTime || dateStatus.endTime) && (
-                  <motion.div
-                    className={cn(
-                      "flex items-center text-xs mt-1",
-                      isDarkMode ? "text-gray-500" : "text-gray-500",
-                    )}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.25 }}
-                  >
-                    <Clock className="w-3 h-3 mr-1.5 flex-shrink-0" />
-                    <span>
-                      {dateStatus.startTime &&
-                        formatTimeWithDuration(
-                          dateStatus.startTime,
-                          dateStatus.durationFrom,
-                        )}
-                      {dateStatus.endTime &&
-                        ` - ${formatTimeWithDuration(
-                          dateStatus.endTime,
-                          dateStatus.durationTo,
-                        )}`}
-                    </span>
-                  </motion.div>
-                )}
-
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "mt-3 w-fit px-3 py-1 text-xs font-medium",
-                    isDarkMode
-                      ? gig.isClientBand
-                        ? "bg-purple-500/10 text-purple-300 border-purple-500/30"
-                        : "bg-gray-800/50 text-gray-400 border-gray-700"
-                      : gig.isClientBand
-                        ? "bg-purple-50 text-purple-700 border-purple-300"
-                        : "bg-gray-100 text-gray-600 border-gray-300",
-                  )}
-                >
-                  <span className="flex items-center gap-1.5">
-                    {gig.isClientBand && <Users className="w-3 h-3" />}
-                    {gigType}
-                  </span>
-                </Badge>
-              </CardHeader>
-
-              <CardContent className="px-5 pb-5">
-                <div className="space-y-4">
-                  {/* Location */}
-                  <motion.div
-                    className="flex items-start text-sm"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <MapPin
-                      className={cn(
-                        "w-4 h-4 mr-2 mt-0.5 flex-shrink-0",
-                        isDarkMode ? "text-gray-500" : "text-gray-400",
-                      )}
-                    />
+                {/* Info grid - minimal */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
                     <span
                       className={cn(
-                        "line-clamp-1",
-                        isDarkMode ? "text-gray-300" : "text-gray-600",
+                        "truncate",
+                        isDarkMode ? "text-slate-300" : "text-slate-600",
                       )}
                     >
-                      {gig.location || "Location not specified"}
+                      {gig.location || "Location TBD"}
                     </span>
-                  </motion.div>
+                  </div>
 
-                  {/* Business category */}
-                  {gig.bussinesscat && (
-                    <motion.div
-                      className="flex items-start text-sm"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.35 }}
-                    >
-                      <Briefcase
-                        className={cn(
-                          "w-4 h-4 mr-2 mt-0.5 flex-shrink-0",
-                          isDarkMode ? "text-gray-500" : "text-gray-400",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "line-clamp-1",
-                          isDarkMode ? "text-gray-300" : "text-gray-600",
-                        )}
-                      >
-                        {gig.bussinesscat}
-                      </span>
-                    </motion.div>
-                  )}
-
-                  {/* Price */}
                   {gig.price > 0 && (
-                    <motion.div
-                      className={cn(
-                        "flex items-center justify-between text-sm p-3 rounded-xl border",
-                        isDarkMode
-                          ? "bg-gray-800/50 text-gray-300 border-gray-700/50 backdrop-blur-sm"
-                          : "bg-gray-50 text-gray-700 border-gray-200",
-                      )}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      <span className="font-medium flex items-center gap-1">
-                        <span
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            isDarkMode ? "bg-green-500" : "bg-green-400",
-                          )}
-                        />
-                        Booked Price
-                      </span>
-                      <span className="font-bold text-lg">
+                    <div className="flex items-center gap-2 text-sm">
+                      <DollarSign className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">
                         {gig.currency || "KES"} {gig.price.toLocaleString()}
                       </span>
-                    </motion.div>
+                    </div>
                   )}
+                </div>
 
-                  {/* Band members count */}
-                  {gig.isClientBand && gig.bandCategory && (
-                    <motion.div
-                      className="flex items-center text-sm"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.45 }}
-                    >
-                      <Users
-                        className={cn(
-                          "w-4 h-4 mr-2 flex-shrink-0",
-                          isDarkMode ? "text-gray-500" : "text-gray-400",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "flex items-center gap-1",
-                          isDarkMode ? "text-gray-300" : "text-gray-600",
-                        )}
-                      >
-                        {gig.bandCategory.reduce(
-                          (total: number, role: any) =>
-                            total + (role.bookedUsers?.length || 0),
-                          0,
-                        )}{" "}
-                        <span
-                          className={
-                            isDarkMode ? "text-gray-400" : "text-gray-500"
-                          }
-                        >
-                          musicians booked
-                        </span>
-                      </span>
-                    </motion.div>
-                  )}
-
-                  {/* Description */}
-                  <div
+                {/* Footer actions */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => (window.location.href = `/gigs/${gig._id}`)}
                     className={cn(
-                      "pt-3 border-t",
-                      isDarkMode ? "border-gray-800" : "border-gray-200",
+                      "text-xs gap-1 px-2",
+                      isDarkMode
+                        ? "text-slate-400 hover:text-white"
+                        : "text-slate-500 hover:text-slate-900",
                     )}
                   >
-                    <p
+                    View details
+                    <ChevronRight className="w-3 h-3" />
+                  </Button>
+
+                  {userRole.canCancel && !dateStatus.exactPast && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => openCancelDialog(gig)}
                       className={cn(
-                        "text-sm line-clamp-2 leading-relaxed",
-                        isDarkMode ? "text-gray-400" : "text-gray-600",
+                        "text-xs text-rose-500 hover:text-rose-600 px-2",
+                        isDarkMode
+                          ? "hover:bg-rose-950/30"
+                          : "hover:bg-rose-50",
                       )}
                     >
-                      {gig.description || "No description provided"}
-                    </p>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="pt-2 flex gap-2">
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex-1"
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "w-full font-medium transition-all duration-200",
-                          isDarkMode
-                            ? "bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-600"
-                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-400",
-                        )}
-                        onClick={() =>
-                          (window.location.href = `/gigs/${gig._id}`)
-                        }
-                      >
-                        <span className="flex items-center gap-2">
-                          <span>View Details</span>
-                          <span className="text-xs opacity-60">→</span>
-                        </span>
-                      </Button>
-                    </motion.div>
-
-                    {/* Cancel Button */}
-                    {canCancel && (
-                      <AlertDialog
-                        open={cancelDialogOpen && selectedGig?._id === gig._id}
-                        onOpenChange={setCancelDialogOpen}
-                      >
-                        <AlertDialogTrigger asChild>
-                          <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className={cn(
-                                "font-medium border-2 transition-all duration-200",
-                                isDarkMode
-                                  ? "border-red-800/50 text-red-400 hover:bg-red-950/50 hover:text-red-300 hover:border-red-700"
-                                  : "border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-400",
-                              )}
-                              onClick={() => openCancelDialog(gig)}
-                            >
-                              <XCircle className="w-4 h-4 mr-1.5" />
-                              {cancelButtonLabel}
-                            </Button>
-                          </motion.div>
-                        </AlertDialogTrigger>
-
-                        {/* Alert Dialog */}
-                        <AlertDialogContent
-                          className={cn(
-                            "max-w-md border-2",
-                            isDarkMode
-                              ? "bg-gradient-to-b from-gray-900 to-gray-900/95 border-gray-800"
-                              : "bg-white border-gray-200",
-                          )}
-                        >
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="flex items-center gap-3 text-xl">
-                              <div
-                                className={cn(
-                                  "p-2 rounded-full",
-                                  isDarkMode ? "bg-red-900/30" : "bg-red-50",
-                                )}
-                              >
-                                <AlertTriangle
-                                  className={cn(
-                                    "w-5 h-5",
-                                    isDarkMode
-                                      ? "text-red-400"
-                                      : "text-red-500",
-                                  )}
-                                />
-                              </div>
-                              <span>Cancel Booking</span>
-                            </AlertDialogTitle>
-                            <AlertDialogDescription className="space-y-4 pt-2">
-                              <p
-                                className={cn(
-                                  "text-sm",
-                                  isDarkMode
-                                    ? "text-gray-300"
-                                    : "text-gray-600",
-                                )}
-                              >
-                                Are you sure you want to cancel your booking for
-                                "
-                                <span className="font-semibold">
-                                  {selectedGig?.title}
-                                </span>
-                                "?
-                              </p>
-
-                              {/* Penalty warning */}
-                              {cancellationWarning.warning ? (
-                                <motion.div
-                                  initial={{ opacity: 0, y: -10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className={cn(
-                                    "p-4 rounded-xl border",
-                                    cancellationWarning.bgColor,
-                                  )}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div
-                                      className={cn(
-                                        "p-1.5 rounded-full",
-                                        isDarkMode
-                                          ? "bg-red-900/50"
-                                          : "bg-red-100",
-                                      )}
-                                    >
-                                      {cancellationWarning.icon}
-                                    </div>
-                                    <div className="flex-1">
-                                      <p
-                                        className={cn(
-                                          "font-semibold mb-1",
-                                          cancellationWarning.color,
-                                        )}
-                                      >
-                                        ⚠️ Trust Score Impact
-                                      </p>
-                                      <p
-                                        className={cn(
-                                          "text-sm",
-                                          cancellationWarning.color,
-                                        )}
-                                      >
-                                        {cancellationWarning.description}
-                                      </p>
-                                      <p
-                                        className={cn(
-                                          "text-xs mt-2",
-                                          cancellationWarning.color.replace(
-                                            "500",
-                                            "400",
-                                          ),
-                                        )}
-                                      >
-                                        💡 Cancelling more than 3 days in
-                                        advance avoids any impact.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              ) : (
-                                <motion.div
-                                  initial={{ opacity: 0, y: -10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className={cn(
-                                    "p-4 rounded-xl border",
-                                    cancellationWarning.bgColor,
-                                  )}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div
-                                      className={cn(
-                                        "p-1.5 rounded-full",
-                                        isDarkMode
-                                          ? "bg-green-900/50"
-                                          : "bg-green-100",
-                                      )}
-                                    >
-                                      {cancellationWarning.icon}
-                                    </div>
-                                    <div>
-                                      <p
-                                        className={cn(
-                                          "font-semibold mb-1",
-                                          cancellationWarning.color,
-                                        )}
-                                      >
-                                        ✅ No Trust Score Impact
-                                      </p>
-                                      <p
-                                        className={cn(
-                                          "text-sm",
-                                          cancellationWarning.color,
-                                        )}
-                                      >
-                                        {cancellationWarning.description}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-
-                              {/* Cancellation reason */}
-                              <div className="space-y-2">
-                                <label
-                                  className={cn(
-                                    "text-sm font-medium flex items-center gap-1",
-                                    isDarkMode
-                                      ? "text-gray-300"
-                                      : "text-gray-700",
-                                  )}
-                                >
-                                  <span>Cancellation Reason</span>
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <Textarea
-                                  placeholder="Please provide a reason for cancellation..."
-                                  value={cancellationReason}
-                                  onChange={(e) =>
-                                    setCancellationReason(e.target.value)
-                                  }
-                                  className={cn(
-                                    "min-h-[100px] resize-none transition-all",
-                                    isDarkMode
-                                      ? "bg-gray-800 border-gray-700 text-gray-200 placeholder:text-gray-500 focus:border-red-500/50"
-                                      : "bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-red-400",
-                                  )}
-                                  required
-                                />
-                              </div>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="gap-2">
-                            <AlertDialogCancel
-                              onClick={() => {
-                                setCancellationReason("");
-                                setSelectedGig(null);
-                              }}
-                              className={cn(
-                                "border-2 font-medium",
-                                isDarkMode
-                                  ? "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
-                                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50",
-                              )}
-                            >
-                              Keep Booking
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleCancelBooking}
-                              disabled={
-                                isCancelling || !cancellationReason.trim()
-                              }
-                              className={cn(
-                                "font-medium border-2 transition-all",
-                                isDarkMode
-                                  ? "bg-red-600 border-red-700 text-white hover:bg-red-700 disabled:opacity-50"
-                                  : "bg-red-600 border-red-700 text-white hover:bg-red-700 disabled:opacity-50",
-                              )}
-                            >
-                              {isCancelling ? (
-                                <span className="flex items-center gap-2">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  Cancelling...
-                                </span>
-                              ) : (
-                                "Yes, Cancel Booking"
-                              )}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
+                      Cancel Gig
+                    </Button>
+                  )}
                 </div>
               </CardContent>
-
-              {/* Bottom gradient accent */}
-              <div
-                className={cn(
-                  "absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r",
-                  dateStatus.exactPast
-                    ? isDarkMode
-                      ? "from-gray-800 to-gray-700"
-                      : "from-gray-300 to-gray-200"
-                    : dateStatus.isToday
-                      ? isDarkMode
-                        ? "from-green-600/50 to-green-500/30"
-                        : "from-green-400/50 to-green-300/30"
-                      : isDarkMode
-                        ? "from-blue-600/50 to-blue-500/30"
-                        : "from-blue-400/50 to-blue-300/30",
-                )}
-              />
             </Card>
           </motion.div>
         );
@@ -1548,292 +932,108 @@ export const BookedGigs = ({ user }: { user: any }) => {
     </motion.div>
   );
 
+  // Modern List View - Clean rows
   const renderListView = () => (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-4"
+      className="space-y-3"
     >
       {filteredGigs.map((gig: any, index) => {
         const userRole = getUserRoleInGig(gig);
         const dateStatus = getGigDateStatus(gig.date, gig.time);
-        const gigType = getGigType(gig);
-        const cancellationWarning = getCancellationWarning(gig);
-        const canCancel = userRole.canCancel && !dateStatus.exactPast;
-        const cancelButtonLabel = getCancelButtonLabel(gig);
 
         return (
           <motion.div
             key={gig._id}
             variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            whileHover={{ scale: 1.01 }}
-            transition={{ delay: index * 0.02 }}
+            whileHover={{ x: 4 }}
+            transition={{ type: "spring", stiffness: 300 }}
           >
             <Card
               className={cn(
-                "transition-all duration-200 relative overflow-hidden",
+                "border-0 bg-gradient-to-r transition-all duration-200",
                 isDarkMode
-                  ? "bg-gray-900/50 border-gray-800 hover:border-gray-700"
-                  : "bg-white border-gray-200 hover:border-gray-300",
-                !gig.isActive && "opacity-80",
+                  ? "from-slate-900 to-slate-800/50 hover:from-slate-800"
+                  : "from-white to-slate-50/50 hover:from-white",
+                "shadow-sm hover:shadow",
               )}
             >
-              <div className="p-4 flex items-center gap-4">
-                {/* Status indicator */}
-                <div
-                  className={cn(
-                    "w-1.5 h-12 rounded-full",
-                    dateStatus.exactPast
-                      ? "bg-gray-500"
-                      : dateStatus.isToday
-                        ? "bg-green-500"
-                        : "bg-blue-500",
-                  )}
-                />
-
-                {/* Role badge */}
-                <Badge
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1",
-                    userRole.badgeColor,
-                  )}
-                >
-                  {userRole.roleIcon}
-                  <span>{userRole.role}</span>
-                </Badge>
-
-                {/* Title */}
-                <div className="flex-1">
-                  <h3
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  {/* Status dot */}
+                  <div
                     className={cn(
-                      "font-semibold",
-                      isDarkMode ? "text-white" : "text-gray-900",
+                      "w-2 h-2 rounded-full",
+                      dateStatus.isToday
+                        ? "bg-emerald-500"
+                        : dateStatus.exactPast
+                          ? "bg-slate-400"
+                          : "bg-blue-500",
+                    )}
+                  />
+
+                  {/* Role badge */}
+                  <Badge
+                    className={cn(
+                      "px-2 py-0.5 text-xs font-normal border-0",
+                      userRole.badgeColor,
+                    )}
+                  >
+                    {userRole.role}
+                  </Badge>
+
+                  {/* Title */}
+                  <span
+                    className={cn(
+                      "font-medium flex-1",
+                      isDarkMode ? "text-white" : "text-slate-900",
                     )}
                   >
                     {gig.title}
-                  </h3>
-                  <div className="flex items-center gap-3 text-sm mt-1">
-                    <span
-                      className={cn(
-                        "flex items-center gap-1",
-                        isDarkMode ? "text-gray-400" : "text-gray-500",
-                      )}
-                    >
-                      <Calendar className="w-3 h-3" />
-                      {formatGigDate(gig.date, gig.time)}
-                    </span>
-                    <span
-                      className={cn(
-                        "flex items-center gap-1",
-                        isDarkMode ? "text-gray-400" : "text-gray-500",
-                      )}
-                    >
-                      <MapPin className="w-3 h-3" />
-                      {gig.location?.split(",")[0] || "TBD"}
-                    </span>
-                  </div>
-                </div>
+                  </span>
 
-                {/* Price */}
-                {gig.price > 0 && (
-                  <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    {gig.currency || "KES"} {gig.price.toLocaleString()}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => (window.location.href = `/gigs/${gig._id}`)}
+                  {/* Date */}
+                  <span
+                    className={cn(
+                      "text-sm",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
                   >
-                    View
-                  </Button>
+                    {formatGigDate(gig.date, gig.time)}
+                  </span>
 
-                  {canCancel && (
+                  {/* Price */}
+                  {gig.price > 0 && (
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      {gig.currency || "KES"} {gig.price.toLocaleString()}
+                    </span>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/30"
-                      onClick={() => openCancelDialog(gig)}
+                      variant="ghost"
+                      onClick={() =>
+                        (window.location.href = `/gigs/${gig._id}`)
+                      }
+                      className="h-8 w-8 p-0"
                     >
-                      <XCircle className="w-4 h-4 mr-1" />
-                      {cancelButtonLabel}
+                      <Eye className="w-4 h-4" />
                     </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        );
-      })}
-    </motion.div>
-  );
 
-  const renderTimelineView = () => (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
-    >
-      {filteredGigs.map((gig: any, index) => {
-        const userRole = getUserRoleInGig(gig);
-        const dateStatus = getGigDateStatus(gig.date, gig.time);
-        const cancelButtonLabel = getCancelButtonLabel(gig);
-        const canCancel = userRole.canCancel && !dateStatus.exactPast;
-
-        return (
-          <motion.div
-            key={gig._id}
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            className="relative"
-          >
-            {index < filteredGigs.length - 1 && (
-              <div
-                className={cn(
-                  "absolute left-5 top-12 bottom-0 w-0.5",
-                  isDarkMode ? "bg-gray-800" : "bg-gray-200",
-                )}
-              />
-            )}
-
-            <Card
-              className={cn(
-                "relative overflow-hidden",
-                isDarkMode
-                  ? "bg-gray-900/50 border-gray-800"
-                  : "bg-white border-gray-200",
-              )}
-            >
-              <CardContent className="p-6">
-                <div className="flex gap-4">
-                  {/* Timeline dot */}
-                  <div className="relative">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center border-2",
-                        dateStatus.exactPast
-                          ? "bg-gray-100 border-gray-300 dark:bg-gray-800 dark:border-gray-700"
-                          : dateStatus.isToday
-                            ? "bg-green-100 border-green-300 dark:bg-green-900/30 dark:border-green-700"
-                            : "bg-blue-100 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700",
-                      )}
-                    >
-                      {userRole.icon}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3
-                          className={cn(
-                            "text-lg font-semibold",
-                            isDarkMode ? "text-white" : "text-gray-900",
-                          )}
-                        >
-                          {gig.title}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-1">
-                          <Badge className={userRole.badgeColor}>
-                            {userRole.role}
-                          </Badge>
-                          <span
-                            className={cn(
-                              "text-sm",
-                              isDarkMode ? "text-gray-400" : "text-gray-500",
-                            )}
-                          >
-                            {formatGigDate(gig.date, gig.time)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {gig.price > 0 && (
-                        <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                          {gig.currency || "KES"} {gig.price.toLocaleString()}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin
-                          className={cn(
-                            "w-4 h-4",
-                            isDarkMode ? "text-gray-500" : "text-gray-400",
-                          )}
-                        />
-                        <span
-                          className={
-                            isDarkMode ? "text-gray-300" : "text-gray-600"
-                          }
-                        >
-                          {gig.location || "TBD"}
-                        </span>
-                      </div>
-
-                      {gig.bussinesscat && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Briefcase
-                            className={cn(
-                              "w-4 h-4",
-                              isDarkMode ? "text-gray-500" : "text-gray-400",
-                            )}
-                          />
-                          <span
-                            className={
-                              isDarkMode ? "text-gray-300" : "text-gray-600"
-                            }
-                          >
-                            {gig.bussinesscat}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                      <p
-                        className={cn(
-                          "text-sm line-clamp-2",
-                          isDarkMode ? "text-gray-400" : "text-gray-600",
-                        )}
-                      >
-                        {gig.description || "No description provided"}
-                      </p>
-                    </div>
-
-                    <div className="mt-4 flex gap-2">
+                    {userRole.canCancel && !dateStatus.exactPast && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          (window.location.href = `/gigs/${gig._id}`)
-                        }
+                        variant="ghost"
+                        onClick={() => openCancelDialog(gig)}
+                        className="h-8 w-8 p-0 text-rose-500"
                       >
-                        View Details
+                        <XCircle className="w-4 h-4" />
                       </Button>
-
-                      {canCancel && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/30"
-                          onClick={() => openCancelDialog(gig)}
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          {cancelButtonLabel}
-                        </Button>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -1844,8 +1044,152 @@ export const BookedGigs = ({ user }: { user: any }) => {
     </motion.div>
   );
 
+  // Modern Timeline View - Clean vertical flow
+  const renderTimelineView = () => (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="relative"
+    >
+      {filteredGigs.map((gig: any, index) => {
+        const userRole = getUserRoleInGig(gig);
+        const dateStatus = getGigDateStatus(gig.date, gig.time);
+
+        return (
+          <motion.div
+            key={gig._id}
+            variants={cardVariants}
+            className="relative pl-8 pb-8 last:pb-0"
+          >
+            {/* Timeline line */}
+            {index < filteredGigs.length - 1 && (
+              <div
+                className={cn(
+                  "absolute left-3 top-6 bottom-0 w-0.5",
+                  isDarkMode ? "bg-slate-800" : "bg-slate-200",
+                )}
+              />
+            )}
+
+            {/* Timeline dot */}
+            <div className="absolute left-0 top-1">
+              <div
+                className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center",
+                  dateStatus.isToday
+                    ? "bg-emerald-500/20"
+                    : dateStatus.exactPast
+                      ? "bg-slate-500/20"
+                      : "bg-blue-500/20",
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-2 h-2 rounded-full",
+                    dateStatus.isToday
+                      ? "bg-emerald-500"
+                      : dateStatus.exactPast
+                        ? "bg-slate-400"
+                        : "bg-blue-500",
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Content */}
+            <Card
+              className={cn(
+                "border-0 bg-gradient-to-br",
+                isDarkMode
+                  ? "from-slate-900 to-slate-800/50"
+                  : "from-white to-slate-50/50",
+                "shadow-sm",
+              )}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge
+                        className={cn(
+                          "px-2 py-0.5 text-xs font-normal border-0",
+                          userRole.badgeColor,
+                        )}
+                      >
+                        {userRole.role}
+                      </Badge>
+                      <span
+                        className={cn(
+                          "text-xs",
+                          isDarkMode ? "text-slate-500" : "text-slate-400",
+                        )}
+                      >
+                        {formatGigDate(gig.date, gig.time)}
+                      </span>
+                    </div>
+                    <h3
+                      className={cn(
+                        "font-semibold text-lg",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      {gig.title}
+                    </h3>
+                  </div>
+
+                  {gig.price > 0 && (
+                    <span className="text-lg font-medium text-emerald-600 dark:text-emerald-400">
+                      {gig.currency || "KES"} {gig.price.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+
+                <p
+                  className={cn(
+                    "text-sm line-clamp-2 mb-4",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                  )}
+                >
+                  {gig.description || "No description"}
+                </p>
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => (window.location.href = `/gigs/${gig._id}`)}
+                    className={cn(
+                      "text-xs",
+                      isDarkMode
+                        ? "border-slate-700 text-slate-300"
+                        : "border-slate-200 text-slate-600",
+                    )}
+                  >
+                    View details
+                  </Button>
+
+                  {userRole.canCancel && !dateStatus.exactPast && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openCancelDialog(gig)}
+                      className="text-xs text-rose-500"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+
+  // Modern Calendar View - Minimal date grouping
   const renderCalendarView = () => {
-    // Group gigs by date
     const groupedByDate = filteredGigs.reduce((acc: any, gig: any) => {
       const dateKey = new Date(gig.date).toDateString();
       if (!acc[dateKey]) acc[dateKey] = [];
@@ -1858,80 +1202,82 @@ export const BookedGigs = ({ user }: { user: any }) => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="space-y-4"
+        className="space-y-6"
       >
         {Object.entries(groupedByDate).map(([date, gigs]: [string, any]) => (
           <motion.div key={date} variants={cardVariants}>
-            <Card
-              className={cn(
-                "overflow-hidden",
-                isDarkMode
-                  ? "bg-gray-900/50 border-gray-800"
-                  : "bg-white border-gray-200",
-              )}
-            >
-              <CardHeader
+            <div className="mb-3">
+              <h3
                 className={cn(
-                  "py-3 px-4",
-                  isDarkMode ? "bg-gray-800/50" : "bg-gray-50",
+                  "text-sm font-medium",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
                 )}
               >
-                <CardTitle className="text-sm font-medium">
-                  {new Date(date).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  {gigs.map((gig: any) => {
-                    const userRole = getUserRoleInGig(gig);
-                    return (
-                      <div
-                        key={gig._id}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-                        onClick={() =>
-                          (window.location.href = `/gigs/${gig._id}`)
-                        }
-                      >
-                        <div className="flex items-center gap-3">
-                          <Badge className={userRole.badgeColor}>
-                            {userRole.role}
-                          </Badge>
-                          <span
-                            className={cn(
-                              "font-medium",
-                              isDarkMode ? "text-white" : "text-gray-900",
-                            )}
-                          >
-                            {gig.title}
-                          </span>
-                        </div>
+                {new Date(date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </h3>
+            </div>
+
+            <div className="space-y-2">
+              {gigs.map((gig: any) => {
+                const userRole = getUserRoleInGig(gig);
+                return (
+                  <Card
+                    key={gig._id}
+                    className={cn(
+                      "border-0 bg-gradient-to-r cursor-pointer",
+                      isDarkMode
+                        ? "from-slate-900 to-slate-800/50 hover:from-slate-800"
+                        : "from-white to-slate-50/50 hover:from-white",
+                      "shadow-sm",
+                    )}
+                    onClick={() => (window.location.href = `/gigs/${gig._id}`)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          className={cn(
+                            "px-2 py-0.5 text-xs font-normal border-0",
+                            userRole.badgeColor,
+                          )}
+                        >
+                          {userRole.role}
+                        </Badge>
+                        <span
+                          className={cn(
+                            "font-medium",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          {gig.title}
+                        </span>
                         {gig.time?.start && (
                           <span
                             className={cn(
-                              "text-sm",
-                              isDarkMode ? "text-gray-400" : "text-gray-500",
+                              "text-xs ml-auto",
+                              isDarkMode ? "text-slate-500" : "text-slate-400",
                             )}
                           >
                             {gig.time.start}
                           </span>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </motion.div>
         ))}
       </motion.div>
     );
   };
 
+  // Modern Kanban View - Clean column layout
   const renderKanbanView = () => {
     const columns = [
       { id: "today", title: "Today", icon: Calendar },
@@ -1951,100 +1297,139 @@ export const BookedGigs = ({ user }: { user: any }) => {
     };
 
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
         {columns.map((column) => (
-          <motion.div
-            key={column.id}
-            variants={cardVariants}
-            className="flex-shrink-0 w-80"
-          >
-            <Card
-              className={cn(
-                "h-full",
-                isDarkMode
-                  ? "bg-gray-900/50 border-gray-800"
-                  : "bg-white border-gray-200",
-              )}
-            >
-              <CardHeader
+          <div key={column.id} className="flex-shrink-0 w-72">
+            {/* Column header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <column.icon
+                  className={cn(
+                    "w-4 h-4",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                  )}
+                />
+                <h3
+                  className={cn(
+                    "text-sm font-medium",
+                    isDarkMode ? "text-slate-300" : "text-slate-700",
+                  )}
+                >
+                  {column.title}
+                </h3>
+              </div>
+              <span
                 className={cn(
-                  "py-3 px-4 border-b",
-                  isDarkMode ? "border-gray-800" : "border-gray-200",
+                  "text-xs px-2 py-0.5 rounded-full",
+                  isDarkMode
+                    ? "bg-slate-800 text-slate-300"
+                    : "bg-slate-100 text-slate-600",
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <column.icon className="w-4 h-4" />
-                    <CardTitle className="text-sm font-medium">
-                      {column.title}
-                    </CardTitle>
-                  </div>
-                  <Badge variant="outline">
-                    {getColumnGigs(column.id).length}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-3 space-y-3 max-h-[600px] overflow-y-auto">
-                {getColumnGigs(column.id).map((gig: any) => {
-                  const userRole = getUserRoleInGig(gig);
-                  return (
-                    <motion.div
-                      key={gig._id}
-                      whileHover={{ scale: 1.02 }}
-                      className="cursor-pointer"
+                {getColumnGigs(column.id).length}
+              </span>
+            </div>
+
+            {/* Column cards */}
+            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+              {getColumnGigs(column.id).map((gig: any) => {
+                const userRole = getUserRoleInGig(gig);
+                return (
+                  <motion.div
+                    key={gig._id}
+                    whileHover={{ x: 4 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <Card
+                      className={cn(
+                        "border-0 bg-gradient-to-r cursor-pointer",
+                        isDarkMode
+                          ? "from-slate-900 to-slate-800/50 hover:from-slate-800"
+                          : "from-white to-slate-50/50 hover:from-white",
+                        "shadow-sm",
+                      )}
                       onClick={() =>
                         (window.location.href = `/gigs/${gig._id}`)
                       }
                     >
-                      <Card
-                        className={cn(
-                          "p-3",
-                          isDarkMode
-                            ? "bg-gray-800/50 border-gray-700"
-                            : "bg-white border-gray-200",
-                        )}
-                      >
-                        <div className="flex items-start gap-2">
-                          <div
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge
                             className={cn(
-                              "p-2 rounded-lg",
+                              "px-2 py-0.5 text-xs font-normal border-0",
                               userRole.badgeColor,
                             )}
                           >
-                            {userRole.icon}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className={cn(
-                                "font-medium text-sm line-clamp-1",
-                                isDarkMode ? "text-white" : "text-gray-900",
-                              )}
-                            >
-                              {gig.title}
-                            </p>
-                            <p
-                              className={cn(
-                                "text-xs mt-1",
-                                isDarkMode ? "text-gray-400" : "text-gray-500",
-                              )}
-                            >
-                              {gig.time?.start || "Time TBD"}
-                            </p>
-                          </div>
+                            {userRole.role}
+                          </Badge>
                         </div>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </motion.div>
+                        <p
+                          className={cn(
+                            "text-sm font-medium line-clamp-2",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          {gig.title}
+                        </p>
+                        {gig.time?.start && (
+                          <p
+                            className={cn(
+                              "text-xs mt-2",
+                              isDarkMode ? "text-slate-500" : "text-slate-400",
+                            )}
+                          >
+                            {gig.time.start}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
     );
   };
 
+  // Main render function
   const renderGigs = () => {
+    if (filteredGigs.length === 0) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <div className="mb-4">
+            <Calendar
+              className={cn(
+                "w-12 h-12 mx-auto",
+                isDarkMode ? "text-slate-700" : "text-slate-300",
+              )}
+            />
+          </div>
+          <h3
+            className={cn(
+              "text-lg font-medium mb-2",
+              isDarkMode ? "text-white" : "text-slate-900",
+            )}
+          >
+            No gigs found
+          </h3>
+          <p
+            className={cn(
+              "text-sm",
+              isDarkMode ? "text-slate-400" : "text-slate-500",
+            )}
+          >
+            Try adjusting your filters
+          </p>
+        </motion.div>
+      );
+    }
+
     switch (displayMode) {
       case "list":
         return renderListView();
@@ -2119,292 +1504,665 @@ export const BookedGigs = ({ user }: { user: any }) => {
 
   if (bookedGigs.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-        className="p-6"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <CheckCircle className="w-8 h-8 text-green-500" />
-            <h2 className="text-2xl font-bold">Booked Gigs</h2>
-          </div>
-          <p className={cn("text-muted-foreground", colors.textMuted)}>
-            ✅ Successfully booked gigs where you're involved as a client or
-            musician
-          </p>
-        </motion.div>
-
-        <motion.div
-          variants={emptyStateVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <Card className="text-center py-12">
-            <CardContent>
-              <AlertCircle className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Booked Gigs Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                You haven't booked or been booked for any gigs yet
-              </p>
-              <div className="flex gap-3 justify-center">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    onClick={() => (window.location.href = "/hub/gigs?tab=all")}
-                    variant="outline"
-                  >
-                    Explore Gigs
-                  </Button>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    onClick={() => (window.location.href = "/gigs/create")}
-                  >
-                    Create a Gig
-                  </Button>
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
-    );
-  }
-
-  return (
-    <TooltipProvider>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="p-4 md:p-6"
-      >
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-6 h-6 text-green-500" />
-            <h2 className="text-2xl font-bold">Booked Gigs</h2>
-          </div>
-          <p className={cn("text-muted-foreground", colors.textMuted)}>
-            ✅ Successfully booked gigs where you're involved as a client or
-            musician
-          </p>
-        </motion.div>
-
-        {/* Stats Cards */}
-        {stats && (
+      <>
+        {showHeader && (
           <motion.div
-            key="stats"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="mb-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="min-h-[80vh] flex items-center justify-center p-4"
           >
-            {Object.entries(stats).map(([key, value], index) => (
+            <div className="w-full max-w-3xl mx-auto">
+              {/* Header with toggle */}
               <motion.div
-                key={key}
-                custom={index}
-                variants={statsVariants}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 text-center"
               >
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {key.charAt(0).toUpperCase() + key.slice(1)}
-                      </p>
-                      <p className="text-2xl font-bold">{value}</p>
-                    </div>
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-green-500/20 blur-xl rounded-full" />
+                    <CheckCircle
+                      className={cn(
+                        "w-10 h-10 relative",
+                        isDarkMode ? "text-emerald-400" : "text-emerald-600",
+                      )}
+                    />
+                  </div>
+                  <h2
+                    className={cn(
+                      "text-3xl md:text-4xl font-bold tracking-tight",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    Booked Gigs
+                  </h2>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowHeader(false)}
+                    className={cn(
+                      "p-1.5 rounded-full transition-colors",
+                      isDarkMode
+                        ? "hover:bg-slate-800 text-slate-400"
+                        : "hover:bg-slate-100 text-slate-500",
+                    )}
+                  >
+                    {showHeader ? (
+                      <ChevronUp className="w-5 h-5" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5" />
+                    )}
+                  </motion.button>
+                </div>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className={cn(
+                    "text-sm md:text-base max-w-lg mx-auto",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                  )}
+                >
+                  Successfully booked gigs where you're involved as a client or
+                  musician
+                </motion.p>
+              </motion.div>
+
+              {/* Empty State Card */}
+              <motion.div
+                variants={emptyStateVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <Card
+                  className={cn(
+                    "border-2 overflow-hidden",
+                    isDarkMode
+                      ? "bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-slate-800"
+                      : "bg-gradient-to-br from-white to-slate-50/50 border-slate-200",
+                  )}
+                >
+                  {/* Decorative top gradient */}
+                  <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+
+                  <CardContent className="p-8 md:p-12">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        delay: 0.2,
+                        type: "spring",
+                        stiffness: 200,
+                      }}
+                      className="relative mb-8"
+                    >
+                      {/* Animated background circles */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div
+                          className={cn(
+                            "w-32 h-32 rounded-full opacity-20 animate-pulse",
+                            isDarkMode ? "bg-blue-500/30" : "bg-blue-500/20",
+                          )}
+                        />
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center animate-spin-slow">
+                        <div
+                          className={cn(
+                            "w-40 h-40 rounded-full border-2 border-dashed",
+                            isDarkMode
+                              ? "border-slate-700"
+                              : "border-slate-200",
+                          )}
+                        />
+                      </div>
+
+                      {/* Main icon */}
+                      <div className="relative flex justify-center">
+                        <div
+                          className={cn(
+                            "w-24 h-24 rounded-full flex items-center justify-center",
+                            isDarkMode
+                              ? "bg-gradient-to-br from-slate-800 to-slate-700"
+                              : "bg-gradient-to-br from-slate-100 to-white",
+                          )}
+                        >
+                          <Calendar
+                            className={cn(
+                              "w-12 h-12",
+                              isDarkMode ? "text-slate-400" : "text-slate-400",
+                            )}
+                          />
+                        </div>
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.4 }}
+                          className="absolute -bottom-2 -right-2"
+                        >
+                          <div
+                            className={cn(
+                              "p-2 rounded-full",
+                              isDarkMode ? "bg-slate-800" : "bg-white",
+                              "shadow-lg",
+                            )}
+                          >
+                            <AlertCircle className="w-5 h-5 text-amber-500" />
+                          </div>
+                        </motion.div>
+                      </div>
+                    </motion.div>
+
+                    <motion.h3
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className={cn(
+                        "text-2xl md:text-3xl font-bold text-center mb-3",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      No Booked Gigs Yet
+                    </motion.h3>
+
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className={cn(
+                        "text-center mb-8 max-w-md mx-auto",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      You haven't booked or been booked for any gigs yet. Start
+                      exploring opportunities or create your own gig!
+                    </motion.p>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="flex flex-col sm:flex-row gap-3 justify-center"
+                    >
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button
+                          onClick={() =>
+                            (window.location.href = "/hub/gigs?tab=all")
+                          }
+                          variant="outline"
+                          size="lg"
+                          className={cn(
+                            "gap-2 px-6 py-5 text-base font-medium",
+                            "border-2 transition-all duration-200",
+                            isDarkMode
+                              ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
+                              : "border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300",
+                          )}
+                        >
+                          <Search className="w-5 h-5" />
+                          Explore Gigs
+                        </Button>
+                      </motion.div>
+
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button
+                          onClick={() =>
+                            (window.location.href = "/gigs/create")
+                          }
+                          size="lg"
+                          className={cn(
+                            "gap-2 px-6 py-5 text-base font-medium",
+                            "bg-gradient-to-r transition-all duration-200",
+                            isDarkMode
+                              ? "from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                              : "from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white",
+                          )}
+                        >
+                          <Plus className="w-5 h-5" />
+                          Create a Gig
+                        </Button>
+                      </motion.div>
+                    </motion.div>
+
+                    {/* Quick tips */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.6 }}
+                      className={cn(
+                        "mt-8 pt-6 border-t text-sm text-center",
+                        isDarkMode
+                          ? "border-slate-800 text-slate-500"
+                          : "border-slate-200 text-slate-400",
+                      )}
+                    >
+                      <p>💡 Quick tips:</p>
+                      <div className="flex flex-wrap gap-3 justify-center mt-3">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "px-3 py-1",
+                            isDarkMode
+                              ? "border-slate-700"
+                              : "border-slate-200",
+                          )}
+                        >
+                          Browse available gigs
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "px-3 py-1",
+                            isDarkMode
+                              ? "border-slate-700"
+                              : "border-slate-200",
+                          )}
+                        >
+                          Show interest in gigs
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "px-3 py-1",
+                            isDarkMode
+                              ? "border-slate-700"
+                              : "border-slate-200",
+                          )}
+                        >
+                          Wait for confirmation
+                        </Badge>
+                      </div>
+                    </motion.div>
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+            </div>
           </motion.div>
         )}
+      </>
+    );
+  }
 
-        {/* Display Mode Toggle */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Display:</span>
-            <div className="flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "grid" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("grid")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Grid3x3 className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Grid View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "list" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("list")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>List View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "timeline" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("timeline")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Activity className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Timeline View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "calendar" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("calendar")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Calendar View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "kanban" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("kanban")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Kanban className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Kanban View</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-
-          {/* Results count */}
-          <div className="text-sm text-muted-foreground">
-            Showing {filteredGigs.length} of {bookedGigs.length} gigs
-          </div>
-        </div>
-
-        {/* Filters */}
+return (
+  <TooltipProvider>
+    <div className="h-full flex flex-col">
+      {/* Sticky Header Section - Fixed at top */}
+      <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
         <motion.div
-          key={`filters-${filterAnimationKey}`}
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="px-3 py-2 md:px-6 md:py-3"
         >
-          <motion.div variants={filterVariants}>
-            <div className="relative">
-              <Input
-                placeholder="Search booked gigs..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
-          </motion.div>
-
-          <motion.div variants={filterVariants}>
-            <Select value={viewFilter} onValueChange={handleViewFilterChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="client">Client Only</SelectItem>
-                <SelectItem value="musician">Musician Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </motion.div>
-
-          <motion.div variants={filterVariants}>
-            <Select value={dateFilter} onValueChange={handleDateFilterChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Dates</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="upcoming">Upcoming</SelectItem>
-                <SelectItem value="past">Past</SelectItem>
-              </SelectContent>
-            </Select>
-          </motion.div>
-
-          <motion.div variants={filterVariants}>
-            <Select
-              value={paymentFilter}
-              onValueChange={handlePaymentFilterChange}
+          {/* Header with Chevron Toggle - More compact on mobile */}
+          <div className="flex items-start justify-between gap-2">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex-1 min-w-0"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Payment Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payments</SelectItem>
-                <SelectItem value="paid">Paid Only</SelectItem>
-                <SelectItem value="pending">Pending Payment</SelectItem>
-              </SelectContent>
-            </Select>
-          </motion.div>
-
-          <AnimatePresence>
-            {(searchTerm ||
-              viewFilter !== "all" ||
-              dateFilter !== "all" ||
-              paymentFilter !== "all") && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                variants={filterVariants}
-              >
-                <Button
-                  variant="outline"
-                  onClick={handleClearFilters}
-                  className="w-full"
+              <div className="flex items-center gap-1.5 md:gap-2 mb-0.5">
+                <div
+                  className={cn(
+                    "p-1.5 md:p-2 rounded-lg shrink-0",
+                    isDarkMode ? "bg-emerald-500/20" : "bg-emerald-100",
+                  )}
                 >
-                  Clear Filters
-                </Button>
+                  <CheckCircle
+                    className={cn(
+                      "w-4 h-4 md:w-5 md:h-5",
+                      isDarkMode ? "text-emerald-400" : "text-emerald-600",
+                    )}
+                  />
+                </div>
+                <h2
+                  className={cn(
+                    "text-base md:text-xl font-bold tracking-tight truncate",
+                    isDarkMode ? "text-white" : "text-slate-900",
+                  )}
+                >
+                  Booked Gigs
+                </h2>
+              </div>
+              <p
+                className={cn(
+                  "text-xs truncate",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                {showHeader ? "Manage your booked gigs" : "Tap to expand filters"}
+              </p>
+            </motion.div>
+
+            {/* Header Collapse Button with Chevron */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowHeader(!showHeader)}
+              className={cn(
+                "p-1.5 md:p-2 rounded-full transition-all duration-200 shrink-0",
+                isDarkMode
+                  ? "text-slate-400 hover:text-white hover:bg-slate-800"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
+              )}
+            >
+              {showHeader ? (
+                <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
+              ) : (
+                <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+              )}
+            </motion.button>
+          </div>
+
+          {/* Expandable Content */}
+          <AnimatePresence>
+            {showHeader && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 space-y-3">
+                  {/* Stats Cards - Horizontal scroll on mobile */}
+                  {stats && (
+                    <>
+                      {/* Desktop Grid - hidden on mobile */}
+                      <div className="hidden md:grid grid-cols-4 lg:grid-cols-8 gap-2">
+                        {Object.entries(stats).map(([key, value], index) => (
+                          <motion.div
+                            key={key}
+                            custom={index}
+                            variants={statsVariants}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Card
+                              className={cn(
+                                "border shadow-sm transition-all duration-200",
+                                isDarkMode
+                                  ? "bg-slate-900/80 border-slate-800"
+                                  : "bg-white border-slate-200",
+                              )}
+                            >
+                              <CardContent className="p-2 text-center">
+                                <p
+                                  className={cn(
+                                    "text-[10px] font-medium uppercase tracking-wider",
+                                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                                  )}
+                                >
+                                  {key === "total"
+                                    ? "Total"
+                                    : key === "upcoming"
+                                      ? "Upcoming"
+                                      : key === "past"
+                                        ? "Past"
+                                        : key === "today"
+                                          ? "Today"
+                                          : key === "client"
+                                            ? "Client"
+                                            : key === "musician"
+                                              ? "Artist"
+                                              : key === "paid"
+                                                ? "Paid"
+                                                : key === "pendingPayment"
+                                                  ? "Pending"
+                                                  : key}
+                                </p>
+                                <p
+                                  className={cn(
+                                    "text-lg font-bold",
+                                    isDarkMode ? "text-white" : "text-slate-900",
+                                    key === "paid" && (isDarkMode ? "text-emerald-400" : "text-emerald-600"),
+                                    key === "pendingPayment" && (isDarkMode ? "text-amber-400" : "text-amber-600"),
+                                  )}
+                                >
+                                  {value}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {/* Mobile Horizontal Scroll */}
+                      <div className="md:hidden -mx-3 px-3 overflow-x-auto scrollbar-hide">
+                        <div className="flex gap-2 pb-1 min-w-min">
+                          {Object.entries(stats).map(([key, value], index) => (
+                            <div
+                              key={key}
+                              className="flex-shrink-0 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800"
+                            >
+                              <span className="text-xs font-medium">
+                                <span className="text-slate-500 dark:text-slate-400 mr-1">
+                                  {key === "total"
+                                    ? "Total"
+                                    : key === "upcoming"
+                                      ? "Up"
+                                      : key === "past"
+                                        ? "Past"
+                                        : key === "today"
+                                          ? "Now"
+                                          : key === "client"
+                                            ? "Client"
+                                            : key === "musician"
+                                              ? "Art"
+                                              : key === "paid"
+                                                ? "Paid"
+                                                : key === "pendingPayment"
+                                                  ? "Due"
+                                                  : key}:
+                                </span>
+                                <span className="font-bold text-slate-900 dark:text-white">
+                                  {value}
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Search Bar - Compact */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <Input
+                      placeholder="Search by title, location, or artist..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 h-9 text-sm rounded-full"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2"
+                      >
+                        <X className="w-3.5 h-3.5 text-slate-400" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter Chips - Horizontal Scroll */}
+                  <div className="overflow-x-auto scrollbar-hide -mx-3 px-3">
+                    <div className="flex gap-2 pb-1 min-w-min">
+                      {/* Role Filter Chip */}
+                      <Select value={viewFilter} onValueChange={handleViewFilterChange}>
+                        <SelectTrigger className={cn(
+                          "w-auto h-8 rounded-full border text-xs gap-1 px-3",
+                          isDarkMode
+                            ? "bg-slate-900/90 border-slate-700 text-slate-200"
+                            : "bg-white border-slate-200 text-slate-700",
+                          viewFilter !== "all" && (isDarkMode ? "border-blue-500/50" : "border-blue-400")
+                        )}>
+                          <Users className="w-3.5 h-3.5" />
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Roles</SelectItem>
+                          <SelectItem value="client">Client Only</SelectItem>
+                          <SelectItem value="musician">Musician Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {/* Date Filter Chip */}
+                      <Select value={dateFilter} onValueChange={handleDateFilterChange}>
+                        <SelectTrigger className={cn(
+                          "w-auto h-8 rounded-full border text-xs gap-1 px-3",
+                          isDarkMode
+                            ? "bg-slate-900/90 border-slate-700 text-slate-200"
+                            : "bg-white border-slate-200 text-slate-700",
+                          dateFilter !== "all" && (
+                            dateFilter === "today" ? (isDarkMode ? "border-emerald-500/50" : "border-emerald-400") :
+                            dateFilter === "upcoming" ? (isDarkMode ? "border-blue-500/50" : "border-blue-400") :
+                            (isDarkMode ? "border-slate-500/50" : "border-slate-400")
+                          )
+                        )}>
+                          <Calendar className="w-3.5 h-3.5" />
+                          <SelectValue placeholder="Date" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Dates</SelectItem>
+                          <SelectItem value="today">Today</SelectItem>
+                          <SelectItem value="upcoming">Upcoming</SelectItem>
+                          <SelectItem value="past">Past</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {/* Payment Filter Chip */}
+                      <Select value={paymentFilter} onValueChange={handlePaymentFilterChange}>
+                        <SelectTrigger className={cn(
+                          "w-auto h-8 rounded-full border text-xs gap-1 px-3",
+                          isDarkMode
+                            ? "bg-slate-900/90 border-slate-700 text-slate-200"
+                            : "bg-white border-slate-200 text-slate-700",
+                          paymentFilter !== "all" && (
+                            paymentFilter === "paid" ? (isDarkMode ? "border-emerald-500/50" : "border-emerald-400") :
+                            (isDarkMode ? "border-amber-500/50" : "border-amber-400")
+                          )
+                        )}>
+                          <DollarSign className="w-3.5 h-3.5" />
+                          <SelectValue placeholder="Payment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Payments</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {/* Clear Filters - Only when active */}
+                      {(viewFilter !== "all" || dateFilter !== "all" || paymentFilter !== "all") && (
+                        <button
+                          onClick={handleClearFilters}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap",
+                            isDarkMode
+                              ? "bg-rose-950/30 text-rose-400 border border-rose-800/30"
+                              : "bg-rose-50 text-rose-600 border border-rose-200",
+                          )}
+                        >
+                          <X className="w-3 h-3 inline mr-1" />
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick filter stats */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                      {filteredGigs.length} of {bookedGigs.length} gigs
+                    </span>
+                    {(searchTerm || viewFilter !== "all" || dateFilter !== "all" || paymentFilter !== "all") && (
+                      <button
+                        onClick={handleClearFilters}
+                        className="text-rose-500 hover:text-rose-600 font-medium"
+                      >
+                        Reset all
+                      </button>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
+      </div>
 
-        {/* Gig List */}
+      {/* Display Mode Toggle - Below header */}
+      <div className="px-3 md:px-6 pt-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "text-xs font-medium",
+              isDarkMode ? "text-slate-400" : "text-slate-500"
+            )}>
+              View:
+            </span>
+            <div className={cn(
+              "flex p-0.5 rounded-lg",
+              isDarkMode ? "bg-slate-800/50" : "bg-slate-100"
+            )}>
+              {[
+                { mode: "grid", icon: Grid3x3 },
+                { mode: "list", icon: List },
+                { mode: "timeline", icon: Activity },
+                { mode: "calendar", icon: CalendarDays },
+                { mode: "kanban", icon: Kanban },
+              ].map(({ mode, icon: Icon }) => (
+                <Tooltip key={mode}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleDisplayModeChange(mode as any)}
+                      className={cn(
+                        "p-1.5 rounded-md transition-all",
+                        displayMode === mode
+                          ? isDarkMode
+                            ? "bg-blue-600 text-white"
+                            : "bg-blue-500 text-white"
+                          : isDarkMode
+                            ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                            : "text-slate-500 hover:text-slate-900 hover:bg-slate-200",
+                      )}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)} View
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </div>
+
+          {/* Results count pill */}
+          <div className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs",
+            isDarkMode ? "bg-slate-800/50 text-slate-300" : "bg-slate-100 text-slate-600"
+          )}>
+            <div className={cn(
+              "w-1.5 h-1.5 rounded-full animate-pulse",
+              isDarkMode ? "bg-emerald-400" : "bg-emerald-500"
+            )} />
+            <span>{filteredGigs.length} of {bookedGigs.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable Gig Cards Section */}
+      <div className="flex-1 overflow-y-auto px-3 md:px-6 pb-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={`gig-list-${displayMode}-${filterAnimationKey}`}
@@ -2412,78 +2170,82 @@ export const BookedGigs = ({ user }: { user: any }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            className="py-4"
           >
             {renderGigs()}
           </motion.div>
         </AnimatePresence>
+      </div>
 
-        {/* Legend */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 pt-6 border-t"
-        >
-          <h4 className="text-sm font-semibold mb-3">Status Legend</h4>
-          <div className="flex flex-wrap gap-4">
-            {[
-              {
-                badge: "bg-green-100 text-green-800 border-green-200",
-                text: "Gig happening today",
-              },
-              {
-                badge: "bg-blue-100 text-blue-800 border-blue-200",
-                text: "Future gig (after today)",
-              },
-              {
-                badge: "bg-gray-100 text-gray-800 border-gray-200",
-                text: "Gig date has passed or completed today",
-              },
-              {
-                badge: "bg-green-100 text-green-800 border-green-300",
-                text: "Payment completed",
-              },
-              {
-                badge: "bg-yellow-100 text-yellow-800 border-yellow-300",
-                text: "Awaiting payment completion",
-              },
-              {
-                badge: "bg-amber-100 text-amber-800 border-amber-300",
-                text: "⚠️ Cancelling within 3 days: Penalty applies",
-              },
-              {
-                badge: "bg-red-100 text-red-800 border-red-300",
-                text: "🚨 Cancelling within 24 hours: High penalty",
-              },
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                className="flex items-center gap-2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
-              >
-                <Badge className={item.badge}>
-                  {index === 0
-                    ? "Today"
-                    : index === 1
-                      ? "Upcoming"
-                      : index === 2
-                        ? "Past/Completed"
-                        : index === 3
-                          ? "✅ Paid"
-                          : index === 4
-                            ? "⏳ Pending"
-                            : index === 5
-                              ? "⚠️ 3 Days"
-                              : "🚨 24h"}
-                </Badge>
-                <span className="text-xs">{item.text}</span>
-              </motion.div>
-            ))}
+      {/* Gradient Legend Button - Fixed at Bottom Right */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setLegendOpen(true)}
+        className={cn(
+          "fixed bottom-4 right-4 z-50 gap-1.5 rounded-full",
+          "backdrop-blur-md border",
+          "transition-all duration-300",
+          "hover:scale-110 active:scale-95",
+          "shadow-lg hover:shadow-xl",
+          "group",
+          isDarkMode
+            ? "bg-slate-900/80 border-slate-700/50 text-slate-300 hover:bg-slate-800 hover:text-white"
+            : "bg-white/80 border-slate-200/50 text-slate-600 hover:bg-white hover:text-slate-900",
+        )}
+      >
+        <div className="relative">
+          <span className={cn(
+            "absolute inset-0 rounded-full opacity-0 group-hover:opacity-100",
+            "bg-gradient-to-r from-red-500/30 via-yellow-500/30 via-green-500/30 via-blue-500/30 to-purple-500/30",
+            "animate-ping",
+          )} />
+          <Info className="w-4 h-4" />
+        </div>
+        <span className="hidden sm:inline text-xs">Guide</span>
+      </Button>
+
+      {/* Legend Dialog */}
+      <Dialog open={legendOpen} onOpenChange={setLegendOpen}>
+        <DialogContent className={cn(
+          "sm:max-w-md p-0 overflow-hidden",
+          isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200",
+        )}>
+          <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+          <div className="p-4">
+            <DialogHeader className="mb-3">
+              <DialogTitle className={cn(
+                "text-base font-bold",
+                isDarkMode ? "text-white" : "text-slate-900"
+              )}>
+                Status Legend
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {[
+                { badge: "bg-green-100 text-green-800", icon: "🎤", text: "Gig happening today" },
+                { badge: "bg-blue-100 text-blue-800", icon: "📅", text: "Future gig" },
+                { badge: "bg-gray-100 text-gray-800", icon: "✅", text: "Past gig" },
+                { badge: "bg-green-100 text-green-800", icon: "💰", text: "Payment completed" },
+                { badge: "bg-yellow-100 text-yellow-800", icon: "⏳", text: "Payment pending" },
+                { badge: "bg-amber-100 text-amber-800", icon: "⚠️", text: "Cancel within 3 days" },
+                { badge: "bg-red-100 text-red-800", icon: "🚨", text: "Cancel within 24h" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <Badge className={cn(item.badge, "px-2 py-0")}>
+                    {i === 0 ? "Today" : i === 1 ? "Future" : i === 2 ? "Past" : 
+                     i === 3 ? "Paid" : i === 4 ? "Pending" : i === 5 ? "3d" : "24h"}
+                  </Badge>
+                  <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                    {item.icon} {item.text}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </TooltipProvider>
-  );
+        </DialogContent>
+      </Dialog>
+    </div>
+  </TooltipProvider>
+);
 };

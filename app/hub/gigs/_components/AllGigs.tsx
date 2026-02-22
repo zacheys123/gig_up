@@ -226,14 +226,58 @@ export const AllGigs = ({ user }: { user: any }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("all"); // ADD THIS
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // In your component, combine all loading states
+  // Get all gigs
   const { allGigs: gigs, isLoading: gigsLoading } = useAllGigs({ limit: 100 });
-  const { gigs: userGigs, isLoading: userGigsLoading } = useGigs(user?._id);
+
+  // Get user's gigs - FIXED: isLoading is an object
+  const { gigs: userGigs, isLoading: userGigsLoadingObject } = useGigs(
+    user?._id,
+  );
+
+  // Extract the correct loading state
+  const userGigsLoading = userGigsLoadingObject?.gigs ?? true;
+
   const userPreferences = useQuery(
     api.controllers.userPrefferences.getUserPreferences,
     user?._id ? { userId: user._id } : "skip",
   );
+  const [isDataReady, setIsDataReady] = useState(false);
 
+  useEffect(() => {
+    // Check if we have actual data
+    const hasGigs = Array.isArray(gigs);
+    const hasUserGigs = Array.isArray(userGigs);
+    const hasPreferences = userPreferences !== undefined;
+
+    // Check loading states correctly
+    const gigsDoneLoading = !gigsLoading;
+    const userGigsDoneLoading = !userGigsLoading; // Now this is a boolean
+
+    console.log("📊 Data Ready Check:", {
+      hasGigs,
+      hasUserGigs,
+      hasPreferences,
+      gigsDoneLoading,
+      userGigsDoneLoading,
+      ready:
+        hasGigs &&
+        hasUserGigs &&
+        hasPreferences &&
+        gigsDoneLoading &&
+        userGigsDoneLoading,
+    });
+
+    if (
+      hasGigs &&
+      hasUserGigs &&
+      hasPreferences &&
+      gigsDoneLoading &&
+      userGigsDoneLoading
+    ) {
+      console.log("✅ Data is ready! Showing content...");
+      setIsDataReady(true);
+    }
+  }, [gigs, userGigs, userPreferences, gigsLoading, userGigsLoading]);
   // Set initial loading false when data is ready
   useEffect(() => {
     if (!gigsLoading && !userGigsLoading && userPreferences !== undefined) {
@@ -970,23 +1014,6 @@ export const AllGigs = ({ user }: { user: any }) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge
-                        className={cn(
-                          userStatus.isBooked && "bg-green-100 text-green-700",
-                          userStatus.isPending &&
-                            "bg-yellow-100 text-yellow-700",
-                          userStatus.hasShownInterest &&
-                            "bg-blue-100 text-blue-700",
-                        )}
-                      >
-                        {userStatus.isBooked && "Booked"}
-                        {userStatus.isPending && "Pending"}
-                        {userStatus.hasShownInterest && "Interested"}
-                        {!userStatus.isBooked &&
-                          !userStatus.isPending &&
-                          !userStatus.hasShownInterest &&
-                          "Available"}
-                      </Badge>
                       {gig?.price && gig?.price > 0 && (
                         <span className="font-semibold text-emerald-600">
                           ${gig.price}
@@ -1350,8 +1377,8 @@ export const AllGigs = ({ user }: { user: any }) => {
     }
   };
 
-  // Show loading skeleton immediately - no blank space
-  if (isInitialLoading) {
+  // Show loading skeleton if data isn't ready
+  if (!isDataReady) {
     return (
       <div className="space-y-6 p-4">
         {/* Header Skeleton */}
@@ -1369,6 +1396,19 @@ export const AllGigs = ({ user }: { user: any }) => {
             ))}
           </div>
 
+          {/* Tabs Skeleton */}
+          <div className="mb-2">
+            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded mb-2 animate-pulse" />
+            <div className="flex gap-2">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-10 w-24 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse"
+                />
+              ))}
+            </div>
+          </div>
+
           {/* Search Bar */}
           <div className="h-12 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse" />
 
@@ -1377,6 +1417,15 @@ export const AllGigs = ({ user }: { user: any }) => {
             <div className="h-9 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
             <div className="h-9 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
           </div>
+        </div>
+
+        {/* View Controls Skeleton */}
+        <div className="flex justify-between items-center">
+          <div className="flex gap-4">
+            <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+            <div className="h-10 w-40 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+          </div>
+          <div className="h-10 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
         </div>
 
         {/* Grid Skeleton */}
@@ -1391,6 +1440,7 @@ export const AllGigs = ({ user }: { user: any }) => {
       </div>
     );
   }
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -1527,7 +1577,6 @@ export const AllGigs = ({ user }: { user: any }) => {
                       },
                       { value: "interested", label: "Interested", icon: Heart },
                       { value: "applied", label: "Applied", icon: Send },
-                      { value: "booked", label: "Booked", icon: CheckCircle },
                     ].map((tab) => (
                       <TabsTrigger
                         key={tab.value}

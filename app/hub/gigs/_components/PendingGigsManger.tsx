@@ -1369,6 +1369,7 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
     }
   };
 
+  const [showHeader, setShowHeader] = useState(false);
   if (isLoading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
@@ -1507,6 +1508,17 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
                     : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white",
                 )}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className={cn(
+                    "absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full",
+                    isDarkMode ? "hover:bg-slate-700" : "hover:bg-slate-100",
+                  )}
+                >
+                  <X className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              )}
             </div>
 
             {/* Display mode toggle */}
@@ -1645,6 +1657,7 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
             </div>
           </div>
         </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
@@ -1749,6 +1762,7 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
             </motion.div>
           ))}
         </div>
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList
@@ -1829,8 +1843,7 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
               <EmptyState />
             )}
           </TabsContent>
-        </Tabs>{" "}
-        {/* ← This was missing! */}
+        </Tabs>
       </div>
     </TooltipProvider>
   );

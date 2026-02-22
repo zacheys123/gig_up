@@ -44,7 +44,7 @@
 // text
 
 // app/hub/gigs/
-// ├── page.tsx                    # Main gig hub with role-based tabs
+// ├── page.tsx                    # Main gigUup with role-based tabs
 // ├── _components/
 // │   ├── InstantGigs.tsx         # Main InstantGig interface
 // │   ├── tabs/

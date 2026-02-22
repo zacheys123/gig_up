@@ -8,7 +8,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,9 @@ import {
   Kanban,
   CalendarDays,
   Activity,
+  ChevronUp,
+  ChevronDown,
+  X,
 } from "lucide-react";
 
 // Custom Components
@@ -95,6 +98,7 @@ import { PreBookingStats } from "./gigs/PreBookingStats";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { getGigDateStatus } from "../helper/getGigDateStatus";
 
 // Types
 type DisplayMode = "grid" | "timeline" | "list" | "calendar" | "kanban";
@@ -108,9 +112,24 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   const { userId: authClerkId } = useAuth();
   const { colors, isDarkMode } = useThemeColors();
   const isMobile = useMediaQuery("(max-width: 768px)");
-
-  // Tab states
-  const [activeGigTab, setActiveGigTab] = useState<GigTabType>("regular");
+  // Get preferences synchronously from localStorage first
+  const getInitialTab = (): GigTabType => {
+    try {
+      // Try to get from localStorage as a fallback
+      const savedPrefs = localStorage.getItem(`preferences_${user?._id}`);
+      if (savedPrefs) {
+        const parsed = JSON.parse(savedPrefs);
+        if (parsed?.clientPreBooking?.activeGigTab) {
+          return parsed.clientPreBooking.activeGigTab as GigTabType;
+        }
+      }
+    } catch (e) {
+      console.error("Error reading from localStorage:", e);
+    }
+    return "regular"; // default
+  };
+  // Tab states - initialize with saved preference
+  const [activeGigTab, setActiveGigTab] = useState<GigTabType>(getInitialTab());
   const [activeTab, setActiveTab] = useState<"applicants" | "history">(
     "applicants",
   );
@@ -118,6 +137,8 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     "active",
   );
   const [displayMode, setDisplayMode] = useState<DisplayMode>("grid");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showHeader, setShowHeader] = useState(false);
 
   // Preferences
   const userPreferences = useQuery(
@@ -128,18 +149,65 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     api.controllers.userPrefferences.updateComponentPreferences,
   );
 
-  // Load preferences
+  // Load preferences and update state if different
   useEffect(() => {
     if (userPreferences?.preferences?.clientPreBooking) {
       const prefs = userPreferences.preferences.clientPreBooking;
-      if (prefs.displayMode) setDisplayMode(prefs.displayMode as DisplayMode);
-      if (prefs.activeGigTab) setActiveGigTab(prefs.activeGigTab as GigTabType);
-      if (prefs.activeTab)
+
+      // Only update if different from current state
+      if (prefs.displayMode && prefs.displayMode !== displayMode) {
+        setDisplayMode(prefs.displayMode as DisplayMode);
+      }
+      if (prefs.activeGigTab && prefs.activeGigTab !== activeGigTab) {
+        setActiveGigTab(prefs.activeGigTab as GigTabType);
+      }
+      if (prefs.activeTab && prefs.activeTab !== activeTab) {
         setActiveTab(prefs.activeTab as "applicants" | "history");
-      if (prefs.applicantView)
+      }
+      if (prefs.applicantView && prefs.applicantView !== applicantView) {
         setApplicantView(prefs.applicantView as "active" | "history");
+      }
+
+      // Save to localStorage for next time
+      try {
+        localStorage.setItem(
+          `preferences_${user?._id}`,
+          JSON.stringify(userPreferences.preferences),
+        );
+      } catch (e) {
+        console.error("Error saving to localStorage:", e);
+      }
+
+      setIsInitialLoad(false);
     }
   }, [userPreferences]);
+
+  // Save to localStorage whenever preferences change
+  useEffect(() => {
+    if (!isInitialLoad && user?._id) {
+      const prefs = {
+        clientPreBooking: {
+          displayMode,
+          activeGigTab,
+          activeTab,
+          applicantView,
+        },
+      };
+
+      try {
+        localStorage.setItem(`preferences_${user?._id}`, JSON.stringify(prefs));
+      } catch (e) {
+        console.error("Error saving to localStorage:", e);
+      }
+    }
+  }, [
+    displayMode,
+    activeGigTab,
+    activeTab,
+    applicantView,
+    user?._id,
+    isInitialLoad,
+  ]);
 
   // Save display mode
   const handleDisplayModeChange = useCallback(
@@ -271,6 +339,24 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   } | null>(null);
   const [bookingPrice, setBookingPrice] = useState<number | "">("");
 
+  // Add this stats calculation
+  const stats = useMemo(() => {
+    if (!userGigs) return null;
+
+    const total = userGigs.length;
+    const active = userGigs.filter((g) => !g.isTaken).length;
+    const booked = userGigs.filter((g) => g.isTaken).length;
+    const applications = userGigs.reduce((acc, gig) => {
+      return acc + (gig.interestedUsers?.length || 0);
+    }, 0);
+
+    return {
+      total,
+      active,
+      booked,
+      applications,
+    };
+  }, [userGigs]);
   // Get tab counts
   const getTabCounts = () => {
     if (!userGigs)
@@ -931,23 +1017,38 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     return "bg-green-100 text-green-800";
   };
 
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        duration: 0.3,
-      },
+      scale: 1,
+      transition: { type: "spring", stiffness: 400, damping: 30 },
     },
     hover: {
-      y: -4,
       scale: 1.02,
-      transition: {
-        duration: 0.2,
-      },
+      transition: { type: "spring", stiffness: 400, damping: 20 },
     },
+    tap: { scale: 0.98 },
   };
+
+  // Add this - statsVariants for stats cards animation
+  // Clear all filters and reset to default state
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm("");
+    setActiveGigTab("regular");
+    setActiveTab("applicants");
+    setApplicantView("active");
+
+    // Optional: Reset selected gig if needed
+    // setSelectedGig(null);
+
+    // Optional: Show toast notification
+    toast.success("All filters cleared", {
+      icon: "🧹",
+      duration: 2000,
+    });
+  }, []);
 
   // Loading state
   if (loading) {
@@ -971,446 +1072,730 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       </div>
     );
   }
-
   return (
     <TooltipProvider>
-      <div className="p-4 md:p-6 space-y-6">
-        {/* Header Stats */}
-        <PreBookingStats userGigs={userGigs || []} activeTab={activeGigTab} />
+      <div className="h-full flex flex-col">
+        {/* Sticky Header Section - Fixed at top */}
+        <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="px-3 py-2 md:px-6 md:py-3"
+          >
+            {/* Header with Chevron Toggle - More compact on mobile */}
+            <div className="flex items-start justify-between gap-2">
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex-1 min-w-0"
+              >
+                <div className="flex items-center gap-1.5 md:gap-2 mb-0.5">
+                  <div
+                    className={cn(
+                      "p-1.5 md:p-2 rounded-lg shrink-0",
+                      isDarkMode ? "bg-blue-500/20" : "bg-blue-100",
+                    )}
+                  >
+                    <Briefcase
+                      className={cn(
+                        "w-4 h-4 md:w-5 md:h-5",
+                        isDarkMode ? "text-blue-400" : "text-blue-600",
+                      )}
+                    />
+                  </div>
+                  <h2
+                    className={cn(
+                      "text-base md:text-xl font-bold tracking-tight truncate",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    Client Pre-Booking
+                  </h2>
+                </div>
+                <p
+                  className={cn(
+                    "text-xs truncate",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                  )}
+                >
+                  {showHeader
+                    ? "Manage applications & bookings"
+                    : "Tap to expand filters"}
+                </p>
+              </motion.div>
 
-        {/* Display Mode Toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Display:</span>
-            <div className="flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "grid" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("grid")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Grid3x3 className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Grid View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "list" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("list")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>List View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "timeline" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("timeline")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Activity className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Timeline View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "calendar" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("calendar")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Calendar View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "kanban" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("kanban")}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Kanban className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Kanban View</TooltipContent>
-              </Tooltip>
+              {/* Header Collapse Button with Chevron */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowHeader(!showHeader)}
+                className={cn(
+                  "p-1.5 md:p-2 rounded-full transition-all duration-200 shrink-0",
+                  isDarkMode
+                    ? "text-slate-400 hover:text-white hover:bg-slate-800"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
+                )}
+              >
+                {showHeader ? (
+                  <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+                )}
+              </motion.button>
             </div>
-          </div>
+
+            {/* Expandable Content */}
+            <AnimatePresence>
+              {showHeader && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-3 space-y-3">
+                    {/* Header Stats - Horizontal scroll on mobile */}
+                    <div className="md:hidden -mx-3 px-3 overflow-x-auto scrollbar-hide">
+                      <div className="flex gap-2 pb-1 min-w-min">
+                        {stats &&
+                          Object.entries(stats).map(([key, value], index) => (
+                            <div
+                              key={key}
+                              className="flex-shrink-0 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800"
+                            >
+                              <span className="text-xs font-medium">
+                                <span className="text-slate-500 dark:text-slate-400 mr-1">
+                                  {key === "total"
+                                    ? "Total"
+                                    : key === "upcoming"
+                                      ? "Up"
+                                      : key === "past"
+                                        ? "Past"
+                                        : key === "today"
+                                          ? "Now"
+                                          : key === "client"
+                                            ? "Client"
+                                            : key === "musician"
+                                              ? "Art"
+                                              : key === "paid"
+                                                ? "Paid"
+                                                : key === "pendingPayment"
+                                                  ? "Due"
+                                                  : key}
+                                  :
+                                </span>
+                                <span className="font-bold text-slate-900 dark:text-white">
+                                  {value}
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Desktop Stats - hidden on mobile */}
+                    <div className="hidden md:block">
+                      <PreBookingStats
+                        userGigs={userGigs || []}
+                        activeTab={activeGigTab}
+                      />
+                    </div>
+
+                    {/* Tabs for gig types - Compact on mobile */}
+                    <div className="overflow-x-auto scrollbar-hide -mx-3 px-3">
+                      <div className="flex gap-1 pb-1 min-w-min">
+                        {[
+                          {
+                            value: "regular",
+                            label: "Regular",
+                            count: tabCounts.regular,
+                            color: "blue",
+                          },
+                          {
+                            value: "band-roles",
+                            label: "Band Roles",
+                            count: tabCounts.bandRoles,
+                            color: "purple",
+                          },
+                          {
+                            value: "full-band",
+                            label: "Full Band",
+                            count: tabCounts.fullBand,
+                            color: "green",
+                          },
+                          {
+                            value: "shortlist",
+                            label: "Shortlist",
+                            count: tabCounts.shortlist,
+                            color: "amber",
+                          },
+                        ].map((tab) => {
+                          const isActive = activeGigTab === tab.value;
+                          return (
+                            <button
+                              key={tab.value}
+                              onClick={() =>
+                                handleGigTabChange(tab.value as any)
+                              }
+                              className={cn(
+                                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                                isActive
+                                  ? isDarkMode
+                                    ? `bg-${tab.color}-600 text-white`
+                                    : `bg-${tab.color}-500 text-white`
+                                  : isDarkMode
+                                    ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                              )}
+                            >
+                              {tab.label}
+                              {tab.count > 0 && (
+                                <span
+                                  className={cn(
+                                    "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                                    isActive
+                                      ? "bg-white/20 text-white"
+                                      : isDarkMode
+                                        ? "bg-slate-700 text-slate-300"
+                                        : "bg-white text-slate-600",
+                                  )}
+                                >
+                                  {tab.count}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Search Bar - Compact */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <Input
+                        placeholder="Search gigs..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 h-9 text-sm rounded-full"
+                      />
+                      {searchTerm && (
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          <X className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Quick filter stats */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        {gigsWithApplicants.length} gigs available
+                      </span>
+                      {(searchTerm || activeGigTab !== "regular") && (
+                        <button
+                          onClick={handleClearFilters}
+                          className="text-rose-500 hover:text-rose-600 font-medium"
+                        >
+                          Clear filters
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
 
-        {/* HORIZONTAL GIG NAVIGATION CARDS */}
-        <div className="space-y-4">
-          {/* Tabs for gig types */}
-          <div className="flex items-center justify-between">
-            <Tabs
-              value={activeGigTab}
-              onValueChange={(v: any) => handleGigTabChange(v)}
-              className="w-full"
-            >
-              <TabsList className="grid grid-cols-4">
-                <TabsTrigger
-                  value="regular"
-                  className="flex items-center gap-2"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="hidden sm:inline">Regular</span>
-                  {tabCounts.regular > 0 && (
-                    <Badge className="ml-1 bg-blue-500 text-white">
-                      {tabCounts.regular}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="band-roles"
-                  className="flex items-center gap-2"
-                >
-                  <Briefcase className="w-4 h-4" />
-                  <span className="hidden sm:inline">Band Roles</span>
-                  {tabCounts.bandRoles > 0 && (
-                    <Badge className="ml-1 bg-purple-500 text-white">
-                      {tabCounts.bandRoles}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="full-band"
-                  className="flex items-center gap-2"
-                >
-                  <Users2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Full Band</span>
-                  {tabCounts.fullBand > 0 && (
-                    <Badge className="ml-1 bg-green-500 text-white">
-                      {tabCounts.fullBand}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="shortlist"
-                  className="flex items-center gap-2"
-                >
-                  <Bookmark className="w-4 h-4" />
-                  <span className="hidden sm:inline">Shortlist</span>
-                  {tabCounts.shortlist > 0 && (
-                    <Badge className="ml-1 bg-amber-500 text-white">
-                      {tabCounts.shortlist}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+        {/* Main Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto px-3 md:px-6 pb-6">
+          <div className="space-y-4 pt-3">
+            {/* Horizontal Gig Cards */}
+            {gigsWithApplicants.length > 0 ? (
+              <ScrollArea className="w-full">
+                <div className="flex gap-3 pb-2">
+                  {gigsWithApplicants.map((gigData) => {
+                    const isSelected = selectedGig === gigData.gig._id;
+                    const applicantCount = getGigApplicantCount(gigData);
+                    const dateStatus = getGigDateStatus?.(
+                      gigData.gig.date,
+                      gigData.gig.time,
+                    ) || { isToday: false, exactPast: false };
 
-            {/* Search */}
-            <div className="hidden md:block w-64">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile search */}
-          <div className="md:hidden">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-
-          {/* Horizontal Gig Cards */}
-          {gigsWithApplicants.length > 0 ? (
-            <ScrollArea className="w-full">
-              <div className="flex gap-4 pb-4">
-                {gigsWithApplicants.map((gigData) => {
-                  const isSelected = selectedGig === gigData.gig._id;
-                  const applicantCount = getGigApplicantCount(gigData);
-
-                  return (
-                    <motion.div
-                      key={gigData.gig._id}
-                      variants={cardVariants}
-                      initial="hidden"
-                      animate="visible"
-                      whileHover="hover"
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setSelectedGig(gigData.gig._id)}
-                      className="flex-shrink-0 w-64"
-                    >
-                      <Card
-                        className={cn(
-                          "cursor-pointer transition-all duration-300",
-                          isSelected
-                            ? "ring-2 ring-orange-500 shadow-xl"
-                            : "shadow-md hover:shadow-lg",
-                        )}
+                    return (
+                      <motion.div
+                        key={gigData.gig._id}
+                        variants={cardVariants}
+                        initial="hidden"
+                        animate="visible"
+                        whileHover="hover"
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedGig(gigData.gig._id)}
+                        className="flex-shrink-0 w-48 md:w-64"
                       >
-                        <CardContent className="p-5">
-                          {!isSelected ? (
-                            <div className="text-center">
-                              <div className="text-3xl font-bold text-gray-800 mb-1">
-                                {applicantCount}
-                              </div>
-                              <div className="text-xs uppercase tracking-wider text-gray-500 mb-3">
-                                Applicants
-                              </div>
-                              <h3 className="font-semibold text-lg line-clamp-2 mb-2">
-                                {gigData.gig.title}
-                              </h3>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              <div className="text-center border-b pb-3">
-                                <div className="text-4xl font-bold text-orange-500">
+                        <Card
+                          className={cn(
+                            "cursor-pointer transition-all duration-200 overflow-hidden border",
+                            isSelected
+                              ? isDarkMode
+                                ? "ring-2 ring-blue-500 bg-gradient-to-br from-slate-900 to-slate-800"
+                                : "ring-2 ring-blue-500 bg-gradient-to-br from-white to-slate-50"
+                              : isDarkMode
+                                ? "border-slate-800 bg-slate-900/50 hover:border-slate-700"
+                                : "border-slate-200 bg-white hover:border-slate-300",
+                          )}
+                        >
+                          {/* Status indicator line */}
+                          <div
+                            className={cn(
+                              "h-1 w-full",
+                              dateStatus.isToday
+                                ? "bg-emerald-500"
+                                : dateStatus.exactPast
+                                  ? "bg-slate-500"
+                                  : "bg-blue-500",
+                            )}
+                          />
+
+                          <CardContent className="p-3">
+                            {!isSelected ? (
+                              <div className="text-center">
+                                <div
+                                  className={cn(
+                                    "text-2xl font-bold mb-1",
+                                    isDarkMode
+                                      ? "text-white"
+                                      : "text-slate-900",
+                                  )}
+                                >
                                   {applicantCount}
                                 </div>
-                                <div className="text-xs uppercase tracking-wider text-gray-500">
-                                  Total Applicants
+                                <div
+                                  className={cn(
+                                    "text-[10px] uppercase tracking-wider mb-1",
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500",
+                                  )}
+                                >
+                                  Applicants
                                 </div>
-                              </div>
-
-                              <div>
-                                <h3 className="font-bold text-lg mb-2">
+                                <h3
+                                  className={cn(
+                                    "font-medium text-sm line-clamp-1 mb-1",
+                                    isDarkMode
+                                      ? "text-white"
+                                      : "text-slate-900",
+                                  )}
+                                >
                                   {gigData.gig.title}
                                 </h3>
+                                <div
+                                  className={cn(
+                                    "text-[10px]",
+                                    isDarkMode
+                                      ? "text-slate-500"
+                                      : "text-slate-400",
+                                  )}
+                                >
+                                  {new Date(
+                                    gigData.gig.date,
+                                  ).toLocaleDateString()}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div
+                                  className={cn(
+                                    "border-b pb-2 text-center",
+                                    isDarkMode
+                                      ? "border-slate-700"
+                                      : "border-slate-200",
+                                  )}
+                                >
+                                  <div className="text-2xl font-bold text-blue-500">
+                                    {applicantCount}
+                                  </div>
+                                  <div
+                                    className={cn(
+                                      "text-[10px] uppercase tracking-wider",
+                                      isDarkMode
+                                        ? "text-slate-400"
+                                        : "text-slate-500",
+                                    )}
+                                  >
+                                    Total Applicants
+                                  </div>
+                                </div>
 
-                                <div className="space-y-2 text-sm">
-                                  {gigData.gig.time?.start &&
-                                    gigData.gig.time?.end && (
-                                      <div className="flex items-center gap-2">
-                                        <Clock className="w-4 h-4 text-gray-400" />
-                                        <span>
-                                          {gigData.gig.time.start}
-                                          {gigData.gig.time.durationFrom} -{" "}
-                                          {gigData.gig.time.end}
-                                          {gigData.gig.time.durationTo}
+                                <div>
+                                  <h3
+                                    className={cn(
+                                      "font-semibold text-sm mb-1 line-clamp-1",
+                                      isDarkMode
+                                        ? "text-white"
+                                        : "text-slate-900",
+                                    )}
+                                  >
+                                    {gigData.gig.title}
+                                  </h3>
+
+                                  <div className="space-y-1 text-xs">
+                                    {gigData.gig.time?.start &&
+                                      gigData.gig.time?.end && (
+                                        <div className="flex items-center gap-1">
+                                          <Clock
+                                            className={cn(
+                                              "w-3 h-3 shrink-0",
+                                              isDarkMode
+                                                ? "text-slate-500"
+                                                : "text-slate-400",
+                                            )}
+                                          />
+                                          <span
+                                            className={cn(
+                                              "truncate text-[10px]",
+                                              isDarkMode
+                                                ? "text-slate-300"
+                                                : "text-slate-600",
+                                            )}
+                                          >
+                                            {gigData.gig.time.start}
+                                            {
+                                              gigData.gig.time.durationFrom
+                                            } - {gigData.gig.time.end}
+                                            {gigData.gig.time.durationTo}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                    {gigData.gig.location && (
+                                      <div className="flex items-center gap-1">
+                                        <MapPin
+                                          className={cn(
+                                            "w-3 h-3 shrink-0",
+                                            isDarkMode
+                                              ? "text-slate-500"
+                                              : "text-slate-400",
+                                          )}
+                                        />
+                                        <span
+                                          className={cn(
+                                            "truncate text-[10px]",
+                                            isDarkMode
+                                              ? "text-slate-300"
+                                              : "text-slate-600",
+                                          )}
+                                        >
+                                          {gigData.gig.location}
                                         </span>
                                       </div>
                                     )}
 
-                                  {gigData.gig.location && (
-                                    <div className="flex items-center gap-2">
-                                      <MapPin className="w-4 h-4 text-gray-400" />
-                                      <span className="truncate">
-                                        {gigData.gig.location}
-                                      </span>
-                                    </div>
-                                  )}
+                                    {gigData?.gig?.price &&
+                                      gigData?.gig?.price > 0 && (
+                                        <div className="flex items-center gap-1 font-semibold">
+                                          <DollarSign className="w-3 h-3 text-emerald-500 shrink-0" />
+                                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                                            ${gigData.gig.price}
+                                          </span>
+                                        </div>
+                                      )}
+                                  </div>
+                                </div>
 
-                                  {gigData?.gig?.price &&
-                                    gigData?.gig?.price > 0 && (
-                                      <div className="flex items-center gap-2 font-semibold text-green-600">
-                                        <DollarSign className="w-4 h-4" />
-                                        <span>${gigData.gig.price}</span>
-                                      </div>
+                                {gigData.shortlisted.length > 0 && (
+                                  <div
+                                    className={cn(
+                                      "flex items-center justify-between pt-1 border-t text-xs",
+                                      isDarkMode
+                                        ? "border-slate-700"
+                                        : "border-slate-200",
                                     )}
-                                </div>
-                              </div>
-
-                              {gigData.shortlisted.length > 0 && (
-                                <div className="flex items-center justify-between pt-2 border-t">
-                                  <span className="text-sm text-gray-600">
-                                    Shortlisted
-                                  </span>
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-green-100 text-green-700"
                                   >
-                                    {gigData.shortlisted.length}
-                                  </Badge>
-                                </div>
-                              )}
-
-                              <Badge
-                                className={cn(
-                                  "w-full justify-center",
-                                  gigData.gig.isTaken
-                                    ? "bg-gray-100 text-gray-700"
-                                    : "bg-orange-100 text-orange-700",
+                                    <span
+                                      className={cn(
+                                        "text-[10px]",
+                                        isDarkMode
+                                          ? "text-slate-300"
+                                          : "text-slate-600",
+                                      )}
+                                    >
+                                      Shortlisted
+                                    </span>
+                                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-[10px] px-1.5 py-0.5">
+                                      {gigData.shortlisted.length}
+                                    </Badge>
+                                  </div>
                                 )}
-                              >
-                                {gigData.gig.isTaken ? "Booked" : "Active"}
-                              </Badge>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          ) : (
-            <Card className="text-center p-8">
-              <CardContent className="space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-                  <Sparkles className="w-8 h-8 text-gray-500" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg mb-2">No Gigs Found</h3>
-                  <p className="text-gray-500 text-sm">
-                    Share your gigs or check back later for applications.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
 
-        {/* MAIN CONTENT AREA */}
-        {selectedGigData ? (
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="space-y-6">
-                {/* Gig Header */}
-                <div className="flex items-start justify-between">
+                                <Badge
+                                  className={cn(
+                                    "w-full justify-center text-[10px] py-0.5",
+                                    gigData.gig.isTaken
+                                      ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                      : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+                                  )}
+                                >
+                                  {gigData.gig.isTaken ? "Booked" : "Active"}
+                                </Badge>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            ) : (
+              <Card
+                className={cn(
+                  "text-center p-6",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
+                <CardContent className="space-y-2">
+                  <div
+                    className={cn(
+                      "w-12 h-12 mx-auto rounded-full flex items-center justify-center",
+                      isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                    )}
+                  >
+                    <Sparkles
+                      className={cn(
+                        "w-6 h-6",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    />
+                  </div>
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      {getGigIcon(selectedGigData.gig)}
-                      <div>
-                        <h1 className="text-xl md:text-2xl font-bold">
+                    <h3
+                      className={cn(
+                        "font-medium text-sm mb-1",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      No Gigs Found
+                    </h3>
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      Share your gigs or check back later
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* MAIN CONTENT AREA - Selected Gig Details */}
+            {selectedGigData ? (
+              <Card
+                className={cn(
+                  "border overflow-hidden",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
+                {/* Top gradient bar */}
+                <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+
+                <CardContent className="p-4 space-y-4">
+                  {/* Gig Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className={cn(
+                          "p-1.5 rounded-lg shrink-0",
+                          isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                        )}
+                      >
+                        {getGigIcon(selectedGigData.gig)}
+                      </div>
+                      <div className="min-w-0">
+                        <h1
+                          className={cn(
+                            "font-semibold text-sm truncate",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
                           {selectedGigData.gig.title}
                         </h1>
-                        <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-2 mt-0.5">
                           <Badge
-                            className={getGigStatusColor(selectedGigData.gig)}
+                            className={cn(
+                              "text-[10px] px-1.5 py-0.5",
+                              selectedGigData.gig.isTaken
+                                ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+                            )}
                           >
                             {selectedGigData.gig.isTaken ? "Booked" : "Active"}
                           </Badge>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Calendar className="w-4 h-4" />
+                          <div
+                            className={cn(
+                              "flex items-center gap-1 text-[10px]",
+                              isDarkMode ? "text-slate-400" : "text-slate-500",
+                            )}
+                          >
+                            <Calendar className="w-3 h-3" />
                             {formatDate(selectedGigData.gig.date)}
                           </div>
                         </div>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        router.push(
+                          `/hub/gigs/client/edit/${selectedGigData.gig._id}`,
+                        );
+                      }}
+                      className={cn(
+                        "h-7 px-2 text-xs gap-1 shrink-0",
+                        isDarkMode
+                          ? "border-blue-800/50 text-blue-400 hover:bg-blue-950/30"
+                          : "border-blue-200 text-blue-600 hover:bg-blue-50",
+                      )}
+                    >
+                      <Edit className="w-3 h-3" />
+                      <span className="hidden sm:inline">Edit</span>
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      router.push(
-                        `/hub/gigs/client/edit/${selectedGigData.gig._id}`,
-                      );
-                    }}
-                    className="flex items-center gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span className="hidden sm:inline">Edit Gig</span>
-                  </Button>
-                </div>
 
-                {/* Gig Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <Users className="w-5 h-5 text-blue-500" />
-                      <span className="text-lg font-bold">
-                        {activeApplicants.length}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Active
-                    </span>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <Bookmark className="w-5 h-5 text-green-500" />
-                      <span className="text-lg font-bold">
-                        {selectedGigData.shortlisted.length}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Shortlisted
-                    </span>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <DollarSign className="w-5 h-5 text-purple-500" />
-                      <span className="text-lg font-bold">
-                        ${selectedGigData.gig.price || "0"}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Budget
-                    </span>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <Archive className="w-5 h-5 text-gray-500" />
-                      <span className="text-lg font-bold">
-                        {historyApplicants.length}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      History
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tab Content */}
-                {activeGigTab === "shortlist" ? (
-                  <ShortlistTab
-                    selectedGigData={selectedGigData}
-                    filteredShortlist={filteredShortlist}
-                    handleRemoveFromShortlist={handleRemoveFromShortlist}
-                    handleViewProfile={handleViewProfile}
-                    handleBookMusician={handleBookMusician}
-                    formatTime={formatTime}
-                  />
-                ) : (
-                  <Tabs
-                    value={activeTab}
-                    onValueChange={(v: any) => handleTabChange(v)}
-                    className="mt-6"
-                  >
-                    <TabsList className="grid grid-cols-2">
-                      <TabsTrigger value="applicants" className="relative">
-                        <Users className="w-4 h-4 mr-2" />
-                        Applicants
-                        {activeApplicants.length > 0 && (
-                          <Badge className="ml-2 bg-blue-500 text-white text-xs px-1.5">
-                            {activeApplicants.length}
-                          </Badge>
+                  {/* Gig Stats - Compact grid */}
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      {
+                        label: "Active",
+                        value: activeApplicants.length,
+                        icon: Users,
+                        color: "blue",
+                      },
+                      {
+                        label: "Shortlist",
+                        value: selectedGigData.shortlisted.length,
+                        icon: Bookmark,
+                        color: "green",
+                      },
+                      {
+                        label: "Budget",
+                        value: `$${selectedGigData.gig.price || "0"}`,
+                        icon: DollarSign,
+                        color: "purple",
+                      },
+                      {
+                        label: "History",
+                        value: historyApplicants.length,
+                        icon: Archive,
+                        color: "gray",
+                      },
+                    ].map((stat, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "text-center p-2 rounded-lg",
+                          isDarkMode
+                            ? `bg-${stat.color}-900/20`
+                            : `bg-${stat.color}-50`,
                         )}
-                      </TabsTrigger>
-                      <TabsTrigger value="history" className="relative">
-                        <History className="w-4 h-4 mr-2" />
-                        History
-                        {historyApplicants.length > 0 && (
-                          <Badge className="ml-2 bg-gray-500 text-white text-xs px-1.5">
-                            {historyApplicants.length}
-                          </Badge>
-                        )}
-                      </TabsTrigger>
-                    </TabsList>
+                      >
+                        <div className="flex items-center justify-center gap-1 mb-0.5">
+                          <stat.icon
+                            className={cn(
+                              "w-3 h-3",
+                              isDarkMode
+                                ? `text-${stat.color}-400`
+                                : `text-${stat.color}-500`,
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "text-sm font-bold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            {stat.value}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[10px]",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
+                          {stat.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
 
-                    <TabsContent value="applicants" className="space-y-4">
-                      {/* Applicant View Toggle */}
-                      <div className="flex items-center justify-between mb-4">
+                  {/* Tab Content */}
+                  {activeGigTab === "shortlist" ? (
+                    <ShortlistTab
+                      selectedGigData={selectedGigData}
+                      filteredShortlist={filteredShortlist}
+                      handleRemoveFromShortlist={handleRemoveFromShortlist}
+                      handleViewProfile={handleViewProfile}
+                      handleBookMusician={handleBookMusician}
+                      formatTime={formatTime}
+                    />
+                  ) : (
+                    <Tabs
+                      value={activeTab}
+                      onValueChange={(v: any) => handleTabChange(v)}
+                      className="mt-2"
+                    >
+                      <TabsList
+                        className={cn(
+                          "grid grid-cols-2 p-0.5 h-8",
+                          isDarkMode
+                            ? "bg-slate-800/50 border border-slate-700/50"
+                            : "bg-slate-100 border border-slate-200",
+                        )}
+                      >
+                        <TabsTrigger value="applicants" className="text-xs h-7">
+                          <Users className="w-3 h-3 mr-1" />
+                          Applicants
+                          {activeApplicants.length > 0 && (
+                            <Badge className="ml-1 bg-blue-500 text-white text-[8px] px-1 py-0">
+                              {activeApplicants.length}
+                            </Badge>
+                          )}
+                        </TabsTrigger>
+                        <TabsTrigger value="history" className="text-xs h-7">
+                          <History className="w-3 h-3 mr-1" />
+                          History
+                          {historyApplicants.length > 0 && (
+                            <Badge className="ml-1 bg-slate-500 text-white text-[8px] px-1 py-0">
+                              {historyApplicants.length}
+                            </Badge>
+                          )}
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent
+                        value="applicants"
+                        className="space-y-3 mt-3"
+                      >
+                        {/* Applicant View Toggle */}
                         <div className="flex items-center gap-2">
                           <Button
                             variant={
@@ -1419,7 +1804,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                             size="sm"
                             onClick={() => handleApplicantViewChange("active")}
                             className={cn(
-                              "text-xs",
+                              "h-7 text-xs px-2",
                               applicantView === "active" && "bg-blue-600",
                             )}
                           >
@@ -1435,307 +1820,422 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                             size="sm"
                             onClick={() => handleApplicantViewChange("history")}
                             className={cn(
-                              "text-xs",
-                              applicantView === "history" && "bg-gray-600",
+                              "h-7 text-xs px-2",
+                              applicantView === "history" && "bg-slate-600",
                             )}
                           >
                             <Archive className="w-3 h-3 mr-1" />
                             History ({filteredHistoryApplicants.length})
                           </Button>
                         </div>
-                      </div>
 
-                      {/* Content based on view */}
-                      {applicantView === "active" ? (
-                        <>
-                          {activeGigTab === "regular" && (
-                            <RegularGigsTab
-                              selectedGigData={{
-                                ...selectedGigData,
-                                applicants: filteredActiveApplicants,
-                              }}
-                              filteredApplicants={filteredActiveApplicants}
-                              handleAddToShortlist={handleAddToShortlist}
-                              handleRemoveFromShortlist={
-                                handleRemoveFromShortlist
-                              }
-                              handleViewProfile={handleViewProfile}
-                              handleBookMusician={(
-                                userId: Id<"users">,
-                                userName: string,
-                              ) =>
-                                handleBookMusician(userId, userName, "regular")
-                              }
-                              getStatusColor={getStatusColor}
-                            />
-                          )}
-                          {activeGigTab === "band-roles" && (
-                            <BandRolesTab
-                              selectedGigData={{
-                                ...selectedGigData,
-                                applicants: filteredActiveApplicants,
-                              }}
-                              filteredApplicants={filteredActiveApplicants}
-                              clerkId={user?.clerkId!}
-                            />
-                          )}
-                          {activeGigTab === "full-band" && (
-                            <FullBandTab
-                              selectedGigData={selectedGigData}
-                              handleAddToShortlist={handleAddToShortlist}
-                              handleRemoveFromShortlist={
-                                handleRemoveFromShortlist
-                              }
-                              handleViewProfile={handleViewProfile}
-                              handleBookMusician={handleBookMusician}
-                              getStatusColor={getStatusColor}
-                            />
-                          )}
-                        </>
-                      ) : (
-                        /* History View - Show cancelled/rejected applicants */
-                        <div className="space-y-3">
-                          {filteredHistoryApplicants.length > 0 ? (
-                            filteredHistoryApplicants.map((applicant) => {
-                              const userData = selectedGigData.userDetails.get(
-                                applicant.userId,
-                              );
-                              if (!userData) return null;
+                        {/* Content based on view */}
+                        {applicantView === "active" ? (
+                          <>
+                            {activeGigTab === "regular" && (
+                              <RegularGigsTab
+                                selectedGigData={{
+                                  ...selectedGigData,
+                                  applicants: filteredActiveApplicants,
+                                }}
+                                filteredApplicants={filteredActiveApplicants}
+                                handleAddToShortlist={handleAddToShortlist}
+                                handleRemoveFromShortlist={
+                                  handleRemoveFromShortlist
+                                }
+                                handleViewProfile={handleViewProfile}
+                                handleBookMusician={(
+                                  userId: Id<"users">,
+                                  userName: string,
+                                ) =>
+                                  handleBookMusician(
+                                    userId,
+                                    userName,
+                                    "regular",
+                                  )
+                                }
+                                getStatusColor={getStatusColor}
+                              />
+                            )}
+                            {activeGigTab === "band-roles" && (
+                              <BandRolesTab
+                                selectedGigData={{
+                                  ...selectedGigData,
+                                  applicants: filteredActiveApplicants,
+                                }}
+                                filteredApplicants={filteredActiveApplicants}
+                                clerkId={user?.clerkId!}
+                              />
+                            )}
+                            {activeGigTab === "full-band" && (
+                              <FullBandTab
+                                selectedGigData={selectedGigData}
+                                handleAddToShortlist={handleAddToShortlist}
+                                handleRemoveFromShortlist={
+                                  handleRemoveFromShortlist
+                                }
+                                handleViewProfile={handleViewProfile}
+                                handleBookMusician={handleBookMusician}
+                                getStatusColor={getStatusColor}
+                              />
+                            )}
+                          </>
+                        ) : (
+                          /* History View */
+                          <div className="space-y-2">
+                            {filteredHistoryApplicants.length > 0 ? (
+                              filteredHistoryApplicants.map((applicant) => {
+                                const userData =
+                                  selectedGigData.userDetails.get(
+                                    applicant.userId,
+                                  );
+                                if (!userData) return null;
 
-                              return (
-                                <Card
-                                  key={applicant.userId}
-                                  className="opacity-75 hover:opacity-100 transition-opacity"
-                                >
-                                  <CardContent className="p-4">
-                                    <div className="flex items-center gap-3">
-                                      <Avatar className="w-10 h-10">
-                                        <AvatarImage src={userData.picture} />
-                                        <AvatarFallback>
-                                          {userData.firstname?.charAt(0) || "U"}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <h4 className="font-medium">
-                                            {userData.firstname}{" "}
-                                            {userData.username}
-                                          </h4>
-                                          {applicant.bandRole && (
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs"
-                                            >
-                                              {applicant.bandRole}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Badge
-                                            className={getStatusColor(
-                                              applicant.status,
+                                return (
+                                  <Card
+                                    key={applicant.userId}
+                                    className={cn(
+                                      "opacity-75 hover:opacity-100 transition-opacity",
+                                      isDarkMode
+                                        ? "bg-slate-900/50 border-slate-800"
+                                        : "bg-white border-slate-200",
+                                    )}
+                                  >
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="w-8 h-8">
+                                          <AvatarImage src={userData.picture} />
+                                          <AvatarFallback
+                                            className={cn(
+                                              "text-xs",
+                                              isDarkMode
+                                                ? "bg-slate-800 text-slate-300"
+                                                : "bg-slate-200 text-slate-600",
                                             )}
                                           >
-                                            {applicant.status === "cancelled"
-                                              ? "Cancelled"
-                                              : "Rejected"}
-                                          </Badge>
-                                          <span className="text-xs text-gray-500">
-                                            {formatDate(applicant.appliedAt)}
-                                          </span>
+                                            {userData.firstname?.charAt(0) ||
+                                              "U"}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-1">
+                                            <h4
+                                              className={cn(
+                                                "font-medium text-xs truncate",
+                                                isDarkMode
+                                                  ? "text-white"
+                                                  : "text-slate-900",
+                                              )}
+                                            >
+                                              {userData.firstname}{" "}
+                                              {userData.username}
+                                            </h4>
+                                            {applicant.bandRole && (
+                                              <Badge
+                                                variant="outline"
+                                                className="text-[8px] px-1 py-0"
+                                              >
+                                                {applicant.bandRole}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-1 mt-0.5">
+                                            <Badge
+                                              className={cn(
+                                                "text-[8px] px-1 py-0",
+                                                getStatusColor(
+                                                  applicant.status,
+                                                ),
+                                              )}
+                                            >
+                                              {applicant.status === "cancelled"
+                                                ? "Cancelled"
+                                                : "Rejected"}
+                                            </Badge>
+                                            <span
+                                              className={cn(
+                                                "text-[8px]",
+                                                isDarkMode
+                                                  ? "text-slate-500"
+                                                  : "text-slate-400",
+                                              )}
+                                            >
+                                              {formatDate(applicant.appliedAt)}
+                                            </span>
+                                          </div>
                                         </div>
-                                        {applicant.status === "cancelled" && (
-                                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                            <AlertCircle className="w-3 h-3" />
-                                            Booking was cancelled
-                                          </p>
-                                        )}
-                                        {applicant.status === "rejected" && (
-                                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                            <XCircle className="w-3 h-3" />
-                                            Application was not accepted
-                                          </p>
-                                        )}
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleViewProfile(
+                                              selectedGigData.gig._id,
+                                              applicant.userId,
+                                            )
+                                          }
+                                          className="h-6 w-6 p-0"
+                                        >
+                                          <Eye className="w-3 h-3" />
+                                        </Button>
                                       </div>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() =>
-                                          handleViewProfile(
-                                            selectedGigData.gig._id,
-                                            applicant.userId,
-                                          )
-                                        }
-                                        className="flex-shrink-0"
-                                      >
-                                        <Eye className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })
-                          ) : (
-                            <div className="text-center py-8 text-gray-500">
-                              <Archive className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                              <p>No cancelled or rejected applicants</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </TabsContent>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })
+                            ) : (
+                              <div
+                                className={cn(
+                                  "text-center py-6 text-xs",
+                                  isDarkMode
+                                    ? "text-slate-400"
+                                    : "text-gray-500",
+                                )}
+                              >
+                                <Archive className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                <p>No cancelled or rejected applicants</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </TabsContent>
 
-                    <TabsContent value="history">
-                      <HistoryTab
-                        selectedGigData={selectedGigData}
-                        formatTime={formatTime}
-                        getStatusColor={getStatusColor}
-                      />
-                    </TabsContent>
-                  </Tabs>
+                      <TabsContent value="history">
+                        <HistoryTab
+                          selectedGigData={selectedGigData}
+                          formatTime={formatTime}
+                          getStatusColor={getStatusColor}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              // Empty State when no gig selected
+              <Card
+                className={cn(
+                  "text-center py-8",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-800"
+                    : "bg-white border-slate-200",
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          // Empty State when no gig selected
-          <Card className="text-center py-16">
-            <CardContent className="space-y-6">
-              <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20">
-                <Target className="w-12 h-12 text-orange-500" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold mb-3">Select a Gig</h3>
-                <p className="text-gray-500 text-lg max-w-md mx-auto">
-                  Choose a gig from the cards above to view applicants and
-                  manage bookings.
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-3">
-                <Award className="w-5 h-5 text-orange-500" />
-                <span className="text-sm font-medium text-gray-600">
-                  {gigsWithApplicants.length} gigs available
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Book Now Dialog */}
-        <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedBand ? "Book Band" : "Book Musician"}
-              </DialogTitle>
-              <DialogDescription>
-                Confirm booking for{" "}
-                {selectedBand?.bandName || selectedMusician?.userName}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
-                    <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-500 text-white">
-                      {selectedBand?.bandName?.charAt(0) ||
-                        selectedMusician?.userName?.charAt(0) ||
-                        "U"}
-                    </AvatarFallback>
-                  </Avatar>
+              >
+                <CardContent className="space-y-3">
+                  <div
+                    className={cn(
+                      "w-16 h-16 mx-auto rounded-full flex items-center justify-center",
+                      isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                    )}
+                  >
+                    <Target
+                      className={cn(
+                        "w-8 h-8",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    />
+                  </div>
                   <div>
-                    <h4 className="font-semibold">
-                      {selectedBand?.bandName || selectedMusician?.userName}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {selectedBand ? "Band" : "Musician"} ready to book for{" "}
-                      {selectedGigData?.gig.title}
+                    <h3
+                      className={cn(
+                        "text-lg font-bold mb-1",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      Select a Gig
+                    </h3>
+                    <p
+                      className={cn(
+                        "text-xs max-w-md mx-auto",
+                        isDarkMode ? "text-slate-400" : "text-gray-500",
+                      )}
+                    >
+                      Choose a gig from the cards above to view applicants
                     </p>
                   </div>
-                </div>
-              </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Award
+                      className={cn(
+                        "w-4 h-4",
+                        isDarkMode ? "text-slate-400" : "text-orange-500",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "text-xs font-medium",
+                        isDarkMode ? "text-slate-300" : "text-gray-600",
+                      )}
+                    >
+                      {gigsWithApplicants.length} gigs available
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Agreed Price (Optional)
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    type="number"
-                    placeholder="Enter agreed price"
-                    value={bookingPrice}
-                    onChange={(e) =>
-                      setBookingPrice(
-                        e.target.value ? Number(e.target.value) : "",
-                      )
-                    }
-                    className="pl-9"
+            {/* Book Now Dialog */}
+            <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
+              <DialogContent
+                className={cn(
+                  "sm:max-w-md",
+                  isDarkMode
+                    ? "bg-slate-900 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
+                <DialogHeader>
+                  <DialogTitle
+                    className={cn(
+                      "text-base",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {selectedBand ? "Book Band" : "Book Musician"}
+                  </DialogTitle>
+                  <DialogDescription
+                    className={cn(
+                      "text-xs",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
+                  >
+                    Confirm booking for{" "}
+                    {selectedBand?.bandName || selectedMusician?.userName}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3 py-2">
+                  <div
+                    className={cn(
+                      "p-3 rounded-lg border",
+                      isDarkMode
+                        ? "bg-gradient-to-r from-green-900/20 to-emerald-900/20 border-green-800/30"
+                        : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200",
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="w-8 h-8 border-2 border-white shadow-lg">
+                        <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-500 text-white text-xs">
+                          {selectedBand?.bandName?.charAt(0) ||
+                            selectedMusician?.userName?.charAt(0) ||
+                            "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h4
+                          className={cn(
+                            "font-semibold text-sm",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          {selectedBand?.bandName || selectedMusician?.userName}
+                        </h4>
+                        <p
+                          className={cn(
+                            "text-xs",
+                            isDarkMode ? "text-slate-400" : "text-gray-600",
+                          )}
+                        >
+                          {selectedBand ? "Band" : "Musician"} ready to book
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      className={cn(
+                        "text-xs font-medium mb-1 block",
+                        isDarkMode ? "text-slate-300" : "text-slate-700",
+                      )}
+                    >
+                      Agreed Price (Optional)
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                      <Input
+                        type="number"
+                        placeholder="Enter price"
+                        value={bookingPrice}
+                        onChange={(e) =>
+                          setBookingPrice(
+                            e.target.value ? Number(e.target.value) : "",
+                          )
+                        }
+                        className="pl-7 h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "p-2 rounded-lg border",
+                      isDarkMode
+                        ? "bg-gradient-to-r from-blue-900/20 to-cyan-900/20 border-blue-800/30"
+                        : "bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200",
+                    )}
+                  >
+                    <div className="flex items-start gap-1">
+                      <CheckCircle className="w-3 h-3 text-blue-600 mt-0.5 shrink-0" />
+                      <p
+                        className={cn(
+                          "text-xs",
+                          isDarkMode ? "text-blue-300" : "text-blue-800",
+                        )}
+                      >
+                        {selectedBand
+                          ? "Band members will be notified"
+                          : "Musician will be notified"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowBookDialog(false);
+                      setSelectedMusician(null);
+                      setSelectedBand(null);
+                    }}
+                    className="w-full sm:w-auto h-8 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmBooking}
+                    className="w-full sm:w-auto h-8 text-xs bg-gradient-to-r from-purple-600 to-pink-600"
+                  >
+                    <ShoppingBag className="w-3 h-3 mr-1" />
+                    Confirm
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Band Booking Options Section */}
+            {selectedGigData?.gig.isClientBand &&
+              selectedGigData?.gig.bandCategory &&
+              selectedGigData?.gig.bandCategory.length > 0 && (
+                <div
+                  className={cn(
+                    "mt-4 border-t pt-4",
+                    isDarkMode ? "border-slate-800" : "border-slate-200",
+                  )}
+                >
+                  <BookingOptionsSection
+                    gigId={selectedGigData.gig._id}
+                    clerkId={user?.clerkId!}
+                    gig={selectedGigData.gig}
+                    musiciansCount={selectedGigData.gig.bandCategory.reduce(
+                      (total: number, role: any) =>
+                        total + (role.bookedUsers?.length || 0),
+                      0,
+                    )}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Leave empty to use the gig's listed price
-                </p>
-              </div>
-
-              <div className="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-blue-800">
-                      Booking Confirmation
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      {selectedBand
-                        ? "The band members will receive notifications and can confirm the booking."
-                        : "The musician will receive a notification and can confirm the booking."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowBookDialog(false);
-                  setSelectedMusician(null);
-                  setSelectedBand(null);
-                }}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirmBooking}
-                className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
-              >
-                <ShoppingBag className="w-4 h-4 mr-2" />
-                Confirm Booking
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Band Booking Options Section */}
-        {selectedGigData?.gig.isClientBand &&
-          selectedGigData?.gig.bandCategory &&
-          selectedGigData?.gig.bandCategory.length > 0 && (
-            <div className="mt-8 border-t pt-8">
-              <BookingOptionsSection
-                gigId={selectedGigData.gig._id}
-                clerkId={user?.clerkId!}
-                gig={selectedGigData.gig}
-                musiciansCount={selectedGigData.gig.bandCategory.reduce(
-                  (total: number, role: any) =>
-                    total + (role.bookedUsers?.length || 0),
-                  0,
-                )}
-              />
-            </div>
-          )}
+              )}
+          </div>
+        </div>
       </div>
     </TooltipProvider>
   );

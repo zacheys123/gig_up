@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  Activity,
+} from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
@@ -20,7 +26,7 @@ import { FavoriteGigs } from "./_components/FavouriteGigs";
 import { ThemeModal } from "@/components/modals/ThemeModal";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Moon, Sun, Video, RefreshCw } from "lucide-react";
+import { ArrowLeft, Moon, Sun, Video, RefreshCw, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { UpgradeBanner } from "./_components/UpgradeBlock";
@@ -28,6 +34,8 @@ import Link from "next/link";
 import { PendingGig } from "./_components/PendingGig";
 import { BookedGigs } from "./_components/BookedGigs";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
+import { LiveTv } from "@mui/icons-material";
 
 // ============= HELPER FUNCTIONS =============
 
@@ -506,8 +514,13 @@ export default function GigsHub() {
             themeIsDark={isDarkMode}
             colors={colors}
           />
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
+        </div>
+
+        {/* Tabs section */}
+        <div className={cn("border-b", colors.border, colors.card)}>
+          <div className="max-w-7xl mx-auto px-4">
+            {/* Regular header content */}
+            <div className="py-4">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => router.back()}
@@ -518,60 +531,11 @@ export default function GigsHub() {
                 >
                   <ArrowLeft className={cn("w-4 h-4", colors.text)} />
                 </button>
-                <h2 className={cn("font-semibold", colors.text)}>Gig Hub</h2>
+                <h1 className={cn("text-2xl font-bold mb-1", colors.text)}>
+                  gigUup
+                </h1>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Refresh button with visual indicator */}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="gap-2 relative"
-                >
-                  <RefreshCw
-                    className={cn("w-3 h-3", isRefreshing && "animate-spin")}
-                  />
-                  <span className="text-xs hidden sm:inline">
-                    {lastRefresh.toLocaleTimeString()}
-                  </span>
-
-                  {/* Subtle pulse dot when auto-refreshing */}
-                  {isRefreshing && (
-                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                    </span>
-                  )}
-                </Button>
-
-                <button
-                  onClick={() => setShowThemeModal(true)}
-                  className={cn(
-                    "p-2 rounded-lg transition-colors",
-                    colors.hoverBg,
-                  )}
-                >
-                  {isDarkMode ? (
-                    <Moon className={cn("w-4 h-4", colors.text)} />
-                  ) : (
-                    <Sun className={cn("w-4 h-4", colors.text)} />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs section */}
-        <div className={cn("border-b", colors.border, colors.card)}>
-          <div className="max-w-7xl mx-auto px-4">
-            {/* Regular header content */}
-            <div className="py-4">
-              <h1 className={cn("text-2xl font-bold mb-1", colors.text)}>
-                Gig Hub
-              </h1>
               <p className={cn("text-sm mb-4", colors.textMuted)}>
                 {getUserSubtitle(memoizedUser)}
               </p>
@@ -593,6 +557,189 @@ export default function GigsHub() {
                     ? "🎯 Client"
                     : "📊 Booker"}
               </span>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Refresh button with premium shadows */}
+                  <div className="relative group">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className={cn(
+                        "relative gap-2.5 px-4 rounded-xl transition-all duration-300",
+                        "hover:scale-105 active:scale-95",
+                        isDarkMode
+                          ? "bg-slate-900/90 backdrop-blur-md border border-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-800/90 hover:border-slate-700 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.8)] hover:shadow-[0_12px_20px_-8px_rgba(0,0,0,0.9)]"
+                          : "bg-white/90 backdrop-blur-md border border-slate-200/80 text-slate-700 hover:text-slate-900 hover:bg-white hover:border-slate-300 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.1)] hover:shadow-[0_12px_20px_-8px_rgba(0,0,0,0.15)]",
+                        isRefreshing &&
+                          isDarkMode &&
+                          "opacity-80 cursor-wait border-blue-800/50 shadow-blue-900/30",
+                      )}
+                    >
+                      {/* Inner glow effect - only in dark mode */}
+                      {isDarkMode && (
+                        <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+
+                      <RefreshCw
+                        className={cn(
+                          "w-4 h-4 transition-all duration-500",
+                          isRefreshing
+                            ? "animate-spin text-blue-400"
+                            : "group-hover:rotate-180",
+                          isDarkMode
+                            ? "text-slate-400 group-hover:text-blue-400"
+                            : "text-slate-500 group-hover:text-blue-500",
+                        )}
+                      />
+
+                      <span className="text-sm font-medium">Refresh</span>
+
+                      {/* Last refresh time with enhanced shadows */}
+                      <span
+                        className={cn(
+                          "hidden md:inline-flex items-center text-xs ml-1.5 px-2.5 py-0.5 rounded-full",
+                          isDarkMode
+                            ? "bg-slate-800/90 backdrop-blur-sm border border-slate-700 text-slate-400 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                            : "bg-slate-100 border border-slate-200 text-slate-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]",
+                        )}
+                      >
+                        <Clock
+                          className={cn(
+                            "w-3 h-3 mr-1.5",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        {lastRefresh.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+
+                      {/* Premium pulse indicator with enhanced shadow */}
+                      {isRefreshing && (
+                        <motion.span
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="absolute -top-1 -right-1"
+                        >
+                          <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500/50"></span>
+                            <span
+                              className={cn(
+                                "relative inline-flex rounded-full h-3 w-3 ring-2",
+                                isDarkMode
+                                  ? "bg-blue-500 ring-slate-900"
+                                  : "bg-blue-500 ring-white",
+                              )}
+                            />
+                          </span>
+                        </motion.span>
+                      )}
+                    </Button>
+
+                    {/* Tooltip with enhanced shadow */}
+                    <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
+                      <div className="relative">
+                        <div
+                          className={cn(
+                            "absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45",
+                            isDarkMode ? "bg-slate-800" : "bg-white",
+                          )}
+                        />
+                        <div
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs whitespace-nowrap",
+                            "backdrop-blur-md",
+                            isDarkMode
+                              ? "bg-slate-800/90 border border-slate-700 text-slate-300 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.8)]"
+                              : "bg-white/90 border border-slate-200 text-slate-600 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)]",
+                          )}
+                        >
+                          Last sync: {lastRefresh.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Theme toggle with outstanding shadows */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowThemeModal(true)}
+                    className={cn(
+                      "relative p-3 rounded-xl transition-all duration-300",
+                      "backdrop-blur-md",
+                      isDarkMode
+                        ? "bg-slate-900/90 border border-slate-800/80 hover:bg-slate-800/90 hover:border-slate-700 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.9)] hover:shadow-[0_15px_30px_-10px_rgba(0,0,0,1)]"
+                        : "bg-white/90 border border-slate-200/80 hover:bg-white hover:border-slate-300 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.1)] hover:shadow-[0_15px_30px_-10px_rgba(0,0,0,0.15)]",
+                    )}
+                    title={
+                      isDarkMode
+                        ? "Switch to light mode"
+                        : "Switch to dark mode"
+                    }
+                  >
+                    {/* Glow overlay for dark mode */}
+                    {isDarkMode && (
+                      <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-purple-500/0 opacity-0 hover:opacity-100 transition-opacity" />
+                    )}
+
+                    {/* Icon with enhanced shadow */}
+                    <motion.div
+                      animate={{ rotate: isDarkMode ? 0 : 180 }}
+                      transition={{ duration: 0.5 }}
+                      className="relative"
+                    >
+                      {isDarkMode ? (
+                        <Moon
+                          className={cn(
+                            "w-4 h-4 text-indigo-400",
+                            "drop-shadow-[0_0_8px_rgba(129,140,248,0.5)]",
+                          )}
+                        />
+                      ) : (
+                        <Sun
+                          className={cn(
+                            "w-4 h-4 text-amber-500",
+                            "drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]",
+                          )}
+                        />
+                      )}
+                    </motion.div>
+                  </motion.button>
+
+                  {/* Connection indicator with enhanced shadow */}
+                  <div
+                    className={cn(
+                      "hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl",
+                      "backdrop-blur-md",
+                      isDarkMode
+                        ? "bg-slate-900/80 border border-slate-800/80 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.8)]"
+                        : "bg-white/80 border border-slate-200/80 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.05)]",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "w-2 h-2 rounded-full animate-pulse",
+                        isDarkMode
+                          ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                          : "bg-emerald-500",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      connected
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Scrollable tabs */}
