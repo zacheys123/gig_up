@@ -2789,13 +2789,51 @@ export const getUserApplications = query({
   },
 });
 
-// Add helper query for getting user's gigs
 export const getUserGigs = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("gigs")
+      .filter((q) => q.eq(q.field("postedBy"), args.userId));
+
+    const gigs = await query.order("desc").collect();
+    return gigs.filter((f) => f.isTaken === false);
+  },
+});
+
+// Get only available gigs (isTaken = false)
+export const getUserAvailableGigs = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const gigs = await ctx.db
       .query("gigs")
-      .filter((q) => q.eq(q.field("postedBy"), args.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("postedBy"), args.userId),
+          q.eq(q.field("isTaken"), false),
+        ),
+      )
+      .order("desc")
+      .collect();
+
+    return gigs;
+  },
+});
+
+// Get only taken/completed gigs (isTaken = true)
+export const getUserTakenGigs = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const gigs = await ctx.db
+      .query("gigs")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("postedBy"), args.userId),
+          q.eq(q.field("isTaken"), true),
+        ),
+      )
       .order("desc")
       .collect();
 

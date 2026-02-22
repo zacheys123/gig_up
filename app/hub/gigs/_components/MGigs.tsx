@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -82,6 +82,9 @@ import {
   Users2,
   Mic,
   Volume2,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 
 // Types
@@ -89,6 +92,56 @@ type DisplayMode = "grid" | "list" | "timeline" | "calendar" | "kanban";
 type ViewFilter = "all" | "client" | "musician";
 type DateFilter = "all" | "upcoming" | "past" | "today";
 type PaymentFilter = "all" | "paid" | "pending";
+
+// Variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 400, damping: 30 },
+  },
+  hover: {
+    scale: 1.02,
+    transition: { type: "spring", stiffness: 400, damping: 20 },
+  },
+  tap: { scale: 0.98 },
+};
+
+const statsVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.05,
+      type: "spring",
+      stiffness: 300,
+      damping: 25,
+    },
+  }),
+};
+
+const filterVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { type: "spring", stiffness: 400, damping: 30 },
+  },
+};
 
 // Compact Gig Card Component
 const CompactGigCard = ({
@@ -278,7 +331,7 @@ export const MyGigs = ({ user }: { user: any }) => {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [showHeader, setShowHeader] = useState(true);
+  const [showHeader, setShowHeader] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [filterAnimationKey, setFilterAnimationKey] = useState(0);
 
@@ -656,7 +709,7 @@ export const MyGigs = ({ user }: { user: any }) => {
             <CompactGigCard
               key={gig._id}
               gig={gig}
-              onClick={() => router.push(`/hub/gigs/edit/${gig._id}`)}
+              onClick={() => router.push(`/hub/gigs/client/edit/${gig._id}`)}
             />
           ))}
         </div>
@@ -670,7 +723,7 @@ export const MyGigs = ({ user }: { user: any }) => {
             <CompactGigCard
               key={gig._id}
               gig={gig}
-              onClick={() => router.push(`/hub/gigs/edit/${gig._id}`)}
+              onClick={() => router.push(`/hub/gigs/client/edit/${gig._id}`)}
             />
           ))}
         </div>
@@ -684,7 +737,7 @@ export const MyGigs = ({ user }: { user: any }) => {
           <CompactGigCard
             key={gig._id}
             gig={gig}
-            onClick={() => router.push(`/hub/gigs/edit/${gig._id}`)}
+            onClick={() => router.push(`/hub/gigs/client/edit/${gig._id}`)}
           />
         ))}
       </div>
@@ -713,17 +766,29 @@ export const MyGigs = ({ user }: { user: any }) => {
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col">
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
+        {/* Sticky Header Section - Fixed at top - MATCHING BOOKEDGIPS STYLE */}
+        <div
+          className={cn(
+            "sticky top-0 z-30 backdrop-blur-md border-b",
+            isDarkMode
+              ? "bg-slate-950/80 border-slate-800/50"
+              : "bg-white/80 border-slate-200/50",
+          )}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
             className="px-3 py-2 md:px-6 md:py-3"
           >
-            {/* Header with Chevron Toggle */}
+            {/* Header with Chevron Toggle - More compact on mobile */}
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex-1 min-w-0"
+              >
                 <div className="flex items-center gap-1.5 md:gap-2 mb-0.5">
                   <div
                     className={cn(
@@ -757,7 +822,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                     ? "Manage your gigs"
                     : `${filteredGigs.length} gigs found`}
                 </p>
-              </div>
+              </motion.div>
 
               <div className="flex items-center gap-2">
                 <Button
@@ -769,27 +834,28 @@ export const MyGigs = ({ user }: { user: any }) => {
                   <span className="hidden sm:inline">New Gig</span>
                 </Button>
 
+                {/* Header Collapse Button with Chevron - MATCHING BOOKEDGIPS */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowHeader(!showHeader)}
                   className={cn(
-                    "p-1.5 rounded-full transition-all duration-200 shrink-0",
+                    "p-1.5 md:p-2 rounded-full transition-all duration-200 shrink-0",
                     isDarkMode
                       ? "text-slate-400 hover:text-white hover:bg-slate-800"
                       : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
                   )}
                 >
                   {showHeader ? (
-                    <ChevronUp className="w-4 h-4" />
+                    <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
                   ) : (
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
                   )}
                 </motion.button>
               </div>
             </div>
 
-            {/* Expandable Stats */}
+            {/* Expandable Stats - MATCHING BOOKEDGIPS STYLE */}
             <AnimatePresence>
               {showHeader && stats && (
                 <motion.div
@@ -799,418 +865,551 @@ export const MyGigs = ({ user }: { user: any }) => {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="pt-3 pb-1">
-                    {/* Desktop Stats Grid - hidden on mobile */}
-                    <div className="hidden md:grid grid-cols-4 lg:grid-cols-7 gap-3">
-                      {[
-                        {
-                          key: "total",
-                          label: "Total",
-                          icon: Package,
-                          color: "blue",
-                        },
-                        {
-                          key: "active",
-                          label: "Active",
-                          icon: Zap,
-                          color: "green",
-                        },
-                        {
-                          key: "completed",
-                          label: "Completed",
-                          icon: CheckCircle,
-                          color: "emerald",
-                        },
-                        {
-                          key: "pending",
-                          label: "Pending",
-                          icon: Clock,
-                          color: "amber",
-                        },
-                        {
-                          key: "upcoming",
-                          label: "Upcoming",
-                          icon: Calendar,
-                          color: "indigo",
-                        },
-                        {
-                          key: "past",
-                          label: "Past",
-                          icon: History,
-                          color: "gray",
-                        },
-                        {
-                          key: "today",
-                          label: "Today",
-                          icon: Sun,
-                          color: "orange",
-                        },
-                        {
-                          key: "client",
-                          label: "Client",
-                          icon: Briefcase,
-                          color: "purple",
-                        },
-                        {
-                          key: "musician",
-                          label: "Artist",
-                          icon: Music,
-                          color: "pink",
-                        },
-                        {
-                          key: "paid",
-                          label: "Paid",
-                          icon: CheckCircle,
-                          color: "green",
-                        },
-                        {
-                          key: "pendingPayment",
-                          label: "Due",
-                          icon: Clock,
-                          color: "amber",
-                        },
-                        {
-                          key: "totalEarnings",
-                          label: "Earnings",
-                          icon: DollarSign,
-                          color: "emerald",
-                        },
-                        {
-                          key: "averageRating",
-                          label: "Rating",
-                          icon: Star,
-                          color: "yellow",
-                        },
-                        {
-                          key: "clientsScore",
-                          label: "Score",
-                          icon: TrendingUp,
-                          color: "indigo",
-                        },
-                      ].map((stat) => {
-                        const value = stats[stat.key as keyof typeof stats];
-                        if (stat.key === "totalEarnings") {
-                          return (
-                            <Card
-                              key={stat.key}
-                              className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20"
-                            >
-                              <CardContent className="p-3">
-                                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                                  Earnings
-                                </p>
-                                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                                  ${(value as number).toLocaleString()}
-                                </p>
-                              </CardContent>
-                            </Card>
-                          );
-                        }
-                        if (stat.key === "averageRating") {
-                          return (
-                            <Card
-                              key={stat.key}
-                              className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20"
-                            >
-                              <CardContent className="p-3">
-                                <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
-                                  Rating
-                                </p>
-                                <div className="flex items-center gap-1">
-                                  <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                                    {value}
-                                  </p>
-                                  <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        }
-                        if (stat.key === "clientsScore") {
-                          return (
-                            <Card
-                              key={stat.key}
-                              className="bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border-indigo-500/20"
-                            >
-                              <CardContent className="p-3">
-                                <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                                  Score
-                                </p>
-                                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                                  {value}
-                                </p>
-                              </CardContent>
-                            </Card>
-                          );
-                        }
-                        return (
-                          <Card key={stat.key}>
-                            <CardContent className="p-3">
-                              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                {stat.label}
+                  <div className="pt-3 space-y-3">
+                    {/* Stats Cards - Horizontal scroll on mobile - MATCHING BOOKEDGIPS */}
+                    {stats && (
+                      <>
+                        {/* Desktop Grid - hidden on mobile */}
+                        <div className="hidden md:grid grid-cols-4 lg:grid-cols-7 gap-2">
+                          {Object.entries(stats).map(([key, value], index) => {
+                            // Skip special stats that have their own cards
+                            if (
+                              key === "totalEarnings" ||
+                              key === "averageRating" ||
+                              key === "clientsScore"
+                            ) {
+                              return null;
+                            }
+                            return (
+                              <motion.div
+                                key={key}
+                                custom={index}
+                                variants={statsVariants}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <Card
+                                  className={cn(
+                                    "border shadow-sm transition-all duration-200",
+                                    isDarkMode
+                                      ? "bg-slate-900/80 border-slate-800"
+                                      : "bg-white border-slate-200",
+                                  )}
+                                >
+                                  <CardContent className="p-2 text-center">
+                                    <p
+                                      className={cn(
+                                        "text-[10px] font-medium uppercase tracking-wider",
+                                        isDarkMode
+                                          ? "text-slate-400"
+                                          : "text-slate-500",
+                                      )}
+                                    >
+                                      {key === "total"
+                                        ? "Total"
+                                        : key === "active"
+                                          ? "Active"
+                                          : key === "completed"
+                                            ? "Completed"
+                                            : key === "pending"
+                                              ? "Pending"
+                                              : key === "upcoming"
+                                                ? "Upcoming"
+                                                : key === "past"
+                                                  ? "Past"
+                                                  : key === "today"
+                                                    ? "Today"
+                                                    : key === "client"
+                                                      ? "Client"
+                                                      : key === "musician"
+                                                        ? "Artist"
+                                                        : key === "paid"
+                                                          ? "Paid"
+                                                          : key ===
+                                                              "pendingPayment"
+                                                            ? "Due"
+                                                            : key}
+                                    </p>
+                                    <p
+                                      className={cn(
+                                        "text-lg font-bold",
+                                        isDarkMode
+                                          ? "text-white"
+                                          : "text-slate-900",
+                                      )}
+                                    >
+                                      {value}
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Special Stats Row - Earnings, Rating, Score */}
+                        <div className="hidden md:grid grid-cols-3 gap-2">
+                          {/* Total Earnings */}
+                          <Card
+                            className={cn(
+                              "border shadow-sm",
+                              isDarkMode
+                                ? "bg-gradient-to-br from-emerald-950/30 to-emerald-950/10 border-emerald-900/20"
+                                : "bg-gradient-to-br from-emerald-50/50 to-emerald-50/30 border-emerald-200/50",
+                            )}
+                          >
+                            <CardContent className="p-2 text-center">
+                              <p
+                                className={cn(
+                                  "text-[10px] font-medium uppercase tracking-wider",
+                                  isDarkMode
+                                    ? "text-emerald-300/90"
+                                    : "text-emerald-600/90",
+                                )}
+                              >
+                                Earnings
                               </p>
-                              <p className="text-lg font-bold text-slate-900 dark:text-white">
-                                {value}
+                              <p
+                                className={cn(
+                                  "text-lg font-bold",
+                                  isDarkMode
+                                    ? "text-emerald-300"
+                                    : "text-emerald-600",
+                                )}
+                              >
+                                ${stats.totalEarnings.toLocaleString()}
                               </p>
                             </CardContent>
                           </Card>
-                        );
-                      })}
-                    </div>
 
-                    {/* Mobile Horizontal Scroll Stats */}
-                    <div className="md:hidden relative">
-                      {showLeftArrow && (
-                        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-slate-950 to-transparent z-10 flex items-center">
-                          <ChevronLeft className="w-4 h-4 text-slate-400" />
-                        </div>
-                      )}
-                      <div
-                        ref={statsScrollRef}
-                        className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 px-1"
-                        style={{ scrollBehavior: "smooth" }}
-                      >
-                        {[
-                          { key: "total", label: "Total", value: stats.total },
-                          {
-                            key: "active",
-                            label: "Active",
-                            value: stats.active,
-                          },
-                          {
-                            key: "completed",
-                            label: "Done",
-                            value: stats.completed,
-                          },
-                          {
-                            key: "pending",
-                            label: "Pending",
-                            value: stats.pending,
-                          },
-                          {
-                            key: "upcoming",
-                            label: "Up",
-                            value: stats.upcoming,
-                          },
-                          { key: "past", label: "Past", value: stats.past },
-                          { key: "today", label: "Today", value: stats.today },
-                          {
-                            key: "client",
-                            label: "Client",
-                            value: stats.client,
-                          },
-                          {
-                            key: "musician",
-                            label: "Artist",
-                            value: stats.musician,
-                          },
-                          { key: "paid", label: "Paid", value: stats.paid },
-                          {
-                            key: "pendingPayment",
-                            label: "Due",
-                            value: stats.pendingPayment,
-                          },
-                          {
-                            key: "totalEarnings",
-                            label: "💰",
-                            value: `$${stats.totalEarnings}`,
-                          },
-                          {
-                            key: "averageRating",
-                            label: "⭐",
-                            value: stats.averageRating,
-                          },
-                          {
-                            key: "clientsScore",
-                            label: "📊",
-                            value: stats.clientsScore,
-                          },
-                        ].map((stat) => (
-                          <div
-                            key={stat.key}
+                          {/* Average Rating */}
+                          <Card
                             className={cn(
-                              "flex-shrink-0 px-4 py-2 rounded-xl",
-                              stat.key === "totalEarnings"
-                                ? "bg-emerald-100 dark:bg-emerald-900/30"
-                                : stat.key === "averageRating"
-                                  ? "bg-yellow-100 dark:bg-yellow-900/30"
-                                  : stat.key === "clientsScore"
-                                    ? "bg-indigo-100 dark:bg-indigo-900/30"
-                                    : "bg-slate-100 dark:bg-slate-800",
+                              "border shadow-sm",
+                              isDarkMode
+                                ? "bg-gradient-to-br from-yellow-950/30 to-yellow-950/10 border-yellow-900/20"
+                                : "bg-gradient-to-br from-yellow-50/50 to-yellow-50/30 border-yellow-200/50",
                             )}
                           >
-                            <span className="text-xs font-medium whitespace-nowrap">
-                              <span
+                            <CardContent className="p-2 text-center">
+                              <p
                                 className={cn(
-                                  "mr-1",
-                                  stat.key === "totalEarnings"
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : stat.key === "averageRating"
-                                      ? "text-yellow-600 dark:text-yellow-400"
-                                      : stat.key === "clientsScore"
-                                        ? "text-indigo-600 dark:text-indigo-400"
-                                        : "text-slate-500 dark:text-slate-400",
+                                  "text-[10px] font-medium uppercase tracking-wider",
+                                  isDarkMode
+                                    ? "text-yellow-300/90"
+                                    : "text-yellow-600/90",
                                 )}
                               >
-                                {stat.label}:
-                              </span>
-                              <span className="font-bold text-slate-900 dark:text-white">
-                                {stat.value}
-                              </span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      {showRightArrow && (
-                        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-slate-950 to-transparent z-10 flex items-center justify-end">
-                          <ChevronRight className="w-4 h-4 text-slate-400" />
+                                Rating
+                              </p>
+                              <div className="flex items-center justify-center gap-1">
+                                <p
+                                  className={cn(
+                                    "text-lg font-bold",
+                                    isDarkMode
+                                      ? "text-yellow-300"
+                                      : "text-yellow-600",
+                                  )}
+                                >
+                                  {stats.averageRating}
+                                </p>
+                                <Star
+                                  className={cn(
+                                    "w-3 h-3",
+                                    isDarkMode
+                                      ? "fill-yellow-300/70 text-yellow-300/70"
+                                      : "fill-yellow-500/70 text-yellow-500/70",
+                                  )}
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Client Score */}
+                          <Card
+                            className={cn(
+                              "border shadow-sm",
+                              isDarkMode
+                                ? "bg-gradient-to-br from-indigo-950/30 to-indigo-950/10 border-indigo-900/20"
+                                : "bg-gradient-to-br from-indigo-50/50 to-indigo-50/30 border-indigo-200/50",
+                            )}
+                          >
+                            <CardContent className="p-2 text-center">
+                              <p
+                                className={cn(
+                                  "text-[10px] font-medium uppercase tracking-wider",
+                                  isDarkMode
+                                    ? "text-indigo-300/90"
+                                    : "text-indigo-600/90",
+                                )}
+                              >
+                                Score
+                              </p>
+                              <p
+                                className={cn(
+                                  "text-lg font-bold",
+                                  isDarkMode
+                                    ? "text-indigo-300"
+                                    : "text-indigo-600",
+                                )}
+                              >
+                                {stats.clientsScore}
+                              </p>
+                            </CardContent>
+                          </Card>
                         </div>
+
+                        {/* Mobile Horizontal Scroll Stats - MATCHING BOOKEDGIPS */}
+                        <div className="md:hidden -mx-3 px-3 overflow-x-auto scrollbar-hide">
+                          <div className="flex gap-2 pb-1 min-w-min">
+                            {Object.entries(stats).map(
+                              ([key, value], index) => {
+                                let bgColor = !isDarkMode
+                                  ? "bg-slate-100"
+                                  : "bg-slate-800";
+                                let textColor = isDarkMode
+                                  ? "text-slate-400"
+                                  : "text-slate-500";
+                                let valueColor = isDarkMode
+                                  ? "text-white"
+                                  : "text-slate-900";
+
+                                if (key === "totalEarnings") {
+                                  bgColor = isDarkMode
+                                    ? "bg-emerald-950/30"
+                                    : "bg-emerald-50/70";
+                                  textColor = isDarkMode
+                                    ? "text-emerald-300/80"
+                                    : "text-emerald-600/80";
+                                  valueColor = isDarkMode
+                                    ? "text-emerald-300"
+                                    : "text-emerald-600";
+                                } else if (key === "averageRating") {
+                                  bgColor = isDarkMode
+                                    ? "bg-yellow-950/30"
+                                    : "bg-yellow-50/70";
+                                  textColor = isDarkMode
+                                    ? "text-yellow-300/80"
+                                    : "text-yellow-600/80";
+                                  valueColor = isDarkMode
+                                    ? "text-yellow-300"
+                                    : "text-yellow-600";
+                                } else if (key === "clientsScore") {
+                                  bgColor = isDarkMode
+                                    ? "bg-indigo-950/30"
+                                    : "bg-indigo-50/70";
+                                  textColor = isDarkMode
+                                    ? "text-indigo-300/80"
+                                    : "text-indigo-600/80";
+                                  valueColor = isDarkMode
+                                    ? "text-indigo-300"
+                                    : "text-indigo-600";
+                                }
+
+                                return (
+                                  <div
+                                    key={key}
+                                    className={cn(
+                                      "flex-shrink-0 px-3 py-1.5 rounded-full",
+                                      bgColor,
+                                    )}
+                                  >
+                                    <span className="text-xs font-medium whitespace-nowrap">
+                                      <span className={cn("mr-1", textColor)}>
+                                        {key === "total"
+                                          ? "Total"
+                                          : key === "active"
+                                            ? "Active"
+                                            : key === "completed"
+                                              ? "Done"
+                                              : key === "pending"
+                                                ? "Pending"
+                                                : key === "upcoming"
+                                                  ? "Up"
+                                                  : key === "past"
+                                                    ? "Past"
+                                                    : key === "today"
+                                                      ? "Now"
+                                                      : key === "client"
+                                                        ? "Client"
+                                                        : key === "musician"
+                                                          ? "Art"
+                                                          : key === "paid"
+                                                            ? "Paid"
+                                                            : key ===
+                                                                "pendingPayment"
+                                                              ? "Due"
+                                                              : key ===
+                                                                  "totalEarnings"
+                                                                ? "💰"
+                                                                : key ===
+                                                                    "averageRating"
+                                                                  ? "⭐"
+                                                                  : key ===
+                                                                      "clientsScore"
+                                                                    ? "📊"
+                                                                    : key}
+                                        :
+                                      </span>
+                                      <span
+                                        className={cn("font-bold", valueColor)}
+                                      >
+                                        {key === "totalEarnings"
+                                          ? `$${value}`
+                                          : value}
+                                      </span>
+                                    </span>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Scroll hint for mobile - MATCHING BOOKEDGIPS */}
+                        <div className="md:hidden flex items-center justify-center gap-1 mt-1">
+                          <div className="flex gap-1">
+                            <div className="w-1 h-1 rounded-full bg-slate-400/50 animate-pulse" />
+                            <div className="w-1 h-1 rounded-full bg-slate-400/50 animate-pulse delay-150" />
+                            <div className="w-1 h-1 rounded-full bg-slate-400/50 animate-pulse delay-300" />
+                          </div>
+                          <span className="text-[10px] text-slate-400/70">
+                            scroll for more stats
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Search Bar - Compact - MATCHING BOOKEDGIPS */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <Input
+                        placeholder="Search by title, location, or artist..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8 h-9 text-sm rounded-full"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          <X className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
                       )}
                     </div>
 
-                    {/* Scroll hint for mobile */}
-                    <div className="md:hidden flex items-center justify-center gap-1 mt-1">
-                      <div className="flex gap-1">
-                        <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse" />
-                        <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse delay-150" />
-                        <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse delay-300" />
+                    {/* Filter Chips - Horizontal Scroll - MATCHING BOOKEDGIPS */}
+                    <div className="overflow-x-auto scrollbar-hide -mx-3 px-3">
+                      <div className="flex gap-2 pb-1 min-w-min">
+                        {/* Role Filter Chip */}
+                        <Select
+                          value={viewFilter}
+                          onValueChange={handleViewFilterChange}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-auto h-8 rounded-full text-xs gap-1 px-3 border",
+                              isDarkMode
+                                ? "bg-slate-900/40 border-slate-800/30 text-slate-200/90 hover:bg-slate-800/40"
+                                : "bg-white/60 border-slate-200/40 text-slate-700/90 hover:bg-slate-50/70",
+                              viewFilter !== "all" &&
+                                (isDarkMode
+                                  ? "border-blue-500/50"
+                                  : "border-blue-400"),
+                            )}
+                          >
+                            <Users className="w-3.5 h-3.5 opacity-70" />
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent
+                            className={cn(
+                              "border",
+                              isDarkMode
+                                ? "bg-slate-900/90 border-slate-800/50 backdrop-blur-md"
+                                : "bg-white/90 border-slate-200/50 backdrop-blur-md",
+                            )}
+                          >
+                            <SelectItem value="all">All Roles</SelectItem>
+                            <SelectItem value="client">Client</SelectItem>
+                            <SelectItem value="musician">Artist</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Date Filter Chip */}
+                        <Select
+                          value={dateFilter}
+                          onValueChange={handleDateFilterChange}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-auto h-8 rounded-full text-xs gap-1 px-3 border",
+                              isDarkMode
+                                ? "bg-slate-900/40 border-slate-800/30 text-slate-200/90 hover:bg-slate-800/40"
+                                : "bg-white/60 border-slate-200/40 text-slate-700/90 hover:bg-slate-50/70",
+                              dateFilter !== "all" &&
+                                (dateFilter === "today"
+                                  ? isDarkMode
+                                    ? "border-emerald-500/50"
+                                    : "border-emerald-400"
+                                  : dateFilter === "upcoming"
+                                    ? isDarkMode
+                                      ? "border-blue-500/50"
+                                      : "border-blue-400"
+                                    : isDarkMode
+                                      ? "border-slate-500/50"
+                                      : "border-slate-400"),
+                            )}
+                          >
+                            <Calendar className="w-3.5 h-3.5 opacity-70" />
+                            <SelectValue placeholder="Date" />
+                          </SelectTrigger>
+                          <SelectContent
+                            className={cn(
+                              "border",
+                              isDarkMode
+                                ? "bg-slate-900/90 border-slate-800/50 backdrop-blur-md"
+                                : "bg-white/90 border-slate-200/50 backdrop-blur-md",
+                            )}
+                          >
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="upcoming">Upcoming</SelectItem>
+                            <SelectItem value="past">Past</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Payment Filter Chip */}
+                        <Select
+                          value={paymentFilter}
+                          onValueChange={handlePaymentFilterChange}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-auto h-8 rounded-full text-xs gap-1 px-3 border",
+                              isDarkMode
+                                ? "bg-slate-900/40 border-slate-800/30 text-slate-200/90 hover:bg-slate-800/40"
+                                : "bg-white/60 border-slate-200/40 text-slate-700/90 hover:bg-slate-50/70",
+                              paymentFilter !== "all" &&
+                                (paymentFilter === "paid"
+                                  ? isDarkMode
+                                    ? "border-emerald-500/50"
+                                    : "border-emerald-400"
+                                  : isDarkMode
+                                    ? "border-amber-500/50"
+                                    : "border-amber-400"),
+                            )}
+                          >
+                            <DollarSign className="w-3.5 h-3.5 opacity-70" />
+                            <SelectValue placeholder="Payment" />
+                          </SelectTrigger>
+                          <SelectContent
+                            className={cn(
+                              "border",
+                              isDarkMode
+                                ? "bg-slate-900/90 border-slate-800/50 backdrop-blur-md"
+                                : "bg-white/90 border-slate-200/50 backdrop-blur-md",
+                            )}
+                          >
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Refresh Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRefresh}
+                          disabled={isRefreshing}
+                          className={cn(
+                            "h-8 rounded-full gap-1 px-3 text-xs border",
+                            isDarkMode
+                              ? "bg-slate-900/40 border-slate-800/30 text-slate-300/90 hover:bg-slate-800/40"
+                              : "bg-white/60 border-slate-200/40 text-slate-600/90 hover:bg-slate-100/70",
+                          )}
+                        >
+                          <RefreshCw
+                            className={cn(
+                              "w-3.5 h-3.5",
+                              isRefreshing && "animate-spin",
+                              isDarkMode
+                                ? "text-slate-400/70"
+                                : "text-slate-500/70",
+                            )}
+                          />
+                          <span className="hidden sm:inline">Refresh</span>
+                        </Button>
+
+                        {/* Clear Filters */}
+                        {(searchQuery ||
+                          viewFilter !== "all" ||
+                          dateFilter !== "all" ||
+                          paymentFilter !== "all") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearFilters}
+                            className={cn(
+                              "h-8 rounded-full gap-1 px-3 text-xs border border-rose-500/30",
+                              isDarkMode
+                                ? "bg-rose-950/20 text-rose-400/90 hover:bg-rose-950/40"
+                                : "bg-rose-50/50 text-rose-600/90 hover:bg-rose-100/70",
+                            )}
+                          >
+                            <X className="w-3.5 h-3.5 opacity-70" />
+                            <span>Clear</span>
+                          </Button>
+                        )}
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        scroll for more stats
+                    </div>
+
+                    {/* Quick filter stats - MATCHING BOOKEDGIPS */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span
+                        className={cn(
+                          "flex items-center gap-2 px-2 py-1 rounded-full border",
+                          isDarkMode
+                            ? "bg-slate-900/40 border-slate-800/30 text-slate-300/90"
+                            : "bg-slate-100/50 border-slate-200/40 text-slate-600/90",
+                        )}
+                      >
+                        <span className="font-semibold text-orange-500/90">
+                          {filteredGigs.length}
+                        </span>
+                        <span className="opacity-70">of</span>
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            isDarkMode ? "text-white/90" : "text-slate-900/90",
+                          )}
+                        >
+                          {gigs?.length || 0}
+                        </span>
+                        <span className="opacity-70">gigs</span>
                       </span>
+
+                      {(searchQuery ||
+                        viewFilter !== "all" ||
+                        dateFilter !== "all" ||
+                        paymentFilter !== "all") && (
+                        <button
+                          onClick={handleClearFilters}
+                          className="text-rose-500 hover:text-rose-600 font-medium"
+                        >
+                          Reset all
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Search Bar - Always visible */}
-            <div className="relative mt-2">
-              <Search
-                className={cn(
-                  "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4",
-                  isDarkMode ? "text-slate-500" : "text-slate-400",
-                )}
-              />
-              <Input
-                placeholder="Search gigs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-sm rounded-full"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                >
-                  <X className="w-4 h-4 text-slate-400" />
-                </button>
-              )}
-            </div>
-
-            {/* Filter Chips - Horizontal Scroll */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide mt-2 pb-1">
-              <Select value={viewFilter} onValueChange={handleViewFilterChange}>
-                <SelectTrigger className="w-auto h-8 rounded-full text-xs gap-1 px-3">
-                  <Users className="w-3.5 h-3.5" />
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="musician">Artist</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={dateFilter} onValueChange={handleDateFilterChange}>
-                <SelectTrigger className="w-auto h-8 rounded-full text-xs gap-1 px-3">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <SelectValue placeholder="Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="past">Past</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={paymentFilter}
-                onValueChange={handlePaymentFilterChange}
-              >
-                <SelectTrigger className="w-auto h-8 rounded-full text-xs gap-1 px-3">
-                  <DollarSign className="w-3.5 h-3.5" />
-                  <SelectValue placeholder="Payment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="h-8 rounded-full gap-1 px-3 text-xs"
-              >
-                <RefreshCw
-                  className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin")}
-                />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
-
-              {(searchQuery ||
-                viewFilter !== "all" ||
-                dateFilter !== "all" ||
-                paymentFilter !== "all") && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="h-8 rounded-full gap-1 px-3 text-xs text-rose-500"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Clear</span>
-                </Button>
-              )}
-            </div>
-
-            {/* Results count */}
-            <div className="flex items-center justify-between mt-2">
-              <div
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1 rounded-full text-xs",
-                  isDarkMode
-                    ? "bg-slate-800/50 text-slate-300"
-                    : "bg-slate-100 text-slate-600",
-                )}
-              >
-                <span className="font-semibold text-orange-500">
-                  {filteredGigs.length}
-                </span>
-                <span>of</span>
-                <span className="font-semibold">{gigs?.length || 0}</span>
-                <span>gigs</span>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLegendOpen(true)}
-                className="h-7 rounded-full gap-1 px-3 text-xs"
-              >
-                <Info className="w-3.5 h-3.5" />
-                <span>Guide</span>
-              </Button>
-            </div>
           </motion.div>
         </div>
 
-        {/* Display Mode Toggle */}
+        {/* View Toggle - Below header - MATCHING BOOKEDGIPS */}
         <div className="px-3 md:px-6 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1245,8 +1444,8 @@ export const MyGigs = ({ user }: { user: any }) => {
                           "p-1.5 rounded-md transition-all",
                           displayMode === mode
                             ? isDarkMode
-                              ? "bg-orange-600 text-white"
-                              : "bg-orange-500 text-white"
+                              ? "bg-blue-600 text-white"
+                              : "bg-blue-500 text-white"
                             : isDarkMode
                               ? "text-slate-400 hover:text-white hover:bg-slate-700"
                               : "text-slate-500 hover:text-slate-900 hover:bg-slate-200",
@@ -1256,19 +1455,25 @@ export const MyGigs = ({ user }: { user: any }) => {
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-xs">
-                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)} View
                     </TooltipContent>
                   </Tooltip>
                 ))}
               </div>
             </div>
 
-            {/* Sort */}
+            {/* Sort - MATCHING BOOKEDGIPS */}
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[120px] h-8 text-xs rounded-full">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className={cn(
+                  isDarkMode
+                    ? "bg-slate-900 border-slate-800"
+                    : "bg-white border-slate-200",
+                )}
+              >
                 <SelectItem value="newest">Newest</SelectItem>
                 <SelectItem value="oldest">Oldest</SelectItem>
                 <SelectItem value="price-high">Price: High</SelectItem>
@@ -1279,7 +1484,7 @@ export const MyGigs = ({ user }: { user: any }) => {
           </div>
         </div>
 
-        {/* Gig Cards */}
+        {/* Scrollable Gig Cards Section */}
         <div className="flex-1 overflow-y-auto px-3 md:px-6 pb-6">
           <AnimatePresence mode="wait">
             <motion.div
@@ -1287,6 +1492,7 @@ export const MyGigs = ({ user }: { user: any }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="py-4"
             >
               {renderGigs()}
@@ -1294,7 +1500,37 @@ export const MyGigs = ({ user }: { user: any }) => {
           </AnimatePresence>
         </div>
 
-        {/* Legend Dialog */}
+        {/* Gradient Legend Button - Fixed at Bottom Right - MATCHING BOOKEDGIPS */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setLegendOpen(true)}
+          className={cn(
+            "fixed bottom-4 right-4 z-50 gap-1.5 rounded-full",
+            "backdrop-blur-md border",
+            "transition-all duration-300",
+            "hover:scale-110 active:scale-95",
+            "shadow-lg hover:shadow-xl",
+            "group",
+            isDarkMode
+              ? "bg-slate-900/80 border-slate-700/50 text-slate-300 hover:bg-slate-800 hover:text-white"
+              : "bg-white/80 border-slate-200/50 text-slate-600 hover:bg-white hover:text-slate-900",
+          )}
+        >
+          <div className="relative">
+            <span
+              className={cn(
+                "absolute inset-0 rounded-full opacity-0 group-hover:opacity-100",
+                "bg-gradient-to-r from-red-500/30 via-yellow-500/30 via-green-500/30 via-blue-500/30 to-purple-500/30",
+                "animate-ping",
+              )}
+            />
+            <Info className="w-4 h-4" />
+          </div>
+          <span className="hidden sm:inline text-xs">Guide</span>
+        </Button>
+
+        {/* Legend Dialog - MATCHING BOOKEDGIPS */}
         <Dialog open={legendOpen} onOpenChange={setLegendOpen}>
           <DialogContent
             className={cn(
@@ -1304,36 +1540,78 @@ export const MyGigs = ({ user }: { user: any }) => {
                 : "bg-white border-slate-200",
             )}
           >
-            <div className="h-2 w-full bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500" />
-            <div className="p-6">
-              <DialogHeader className="mb-4">
+            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+            <div className="p-4">
+              <DialogHeader className="mb-3">
                 <DialogTitle
                   className={cn(
-                    "text-xl font-bold",
+                    "text-base font-bold",
                     isDarkMode ? "text-white" : "text-slate-900",
                   )}
                 >
-                  Status Guide
+                  Status Legend
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {[
-                  { color: "bg-emerald-500", text: "Gig happening today" },
-                  { color: "bg-blue-500", text: "Future gig (after today)" },
-                  { color: "bg-slate-400", text: "Gig date has passed" },
-                  { color: "bg-green-500", text: "Payment completed" },
-                  { color: "bg-amber-500", text: "Payment pending" },
-                  { color: "bg-slate-500", text: "Gig completed/taken" },
+                  {
+                    badge: "bg-green-100 text-green-800",
+                    icon: "🎤",
+                    text: "Gig happening today",
+                  },
+                  {
+                    badge: "bg-blue-100 text-blue-800",
+                    icon: "📅",
+                    text: "Future gig",
+                  },
+                  {
+                    badge: "bg-gray-100 text-gray-800",
+                    icon: "✅",
+                    text: "Past gig",
+                  },
+                  {
+                    badge: "bg-green-100 text-green-800",
+                    icon: "💰",
+                    text: "Payment completed",
+                  },
+                  {
+                    badge: "bg-yellow-100 text-yellow-800",
+                    icon: "⏳",
+                    text: "Payment pending",
+                  },
+                  {
+                    badge: "bg-amber-100 text-amber-800",
+                    icon: "⚠️",
+                    text: "Cancel within 3 days",
+                  },
+                  {
+                    badge: "bg-red-100 text-red-800",
+                    icon: "🚨",
+                    text: "Cancel within 24h",
+                  },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className={cn("w-4 h-4 rounded-full", item.color)} />
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <Badge className={cn(item.badge, "px-2 py-0")}>
+                      {i === 0
+                        ? "Today"
+                        : i === 1
+                          ? "Future"
+                          : i === 2
+                            ? "Past"
+                            : i === 3
+                              ? "Paid"
+                              : i === 4
+                                ? "Pending"
+                                : i === 5
+                                  ? "3d"
+                                  : "24h"}
+                    </Badge>
                     <span
-                      className={cn(
-                        "text-sm",
-                        isDarkMode ? "text-slate-300" : "text-slate-600",
-                      )}
+                      className={
+                        isDarkMode ? "text-slate-300" : "text-slate-600"
+                      }
                     >
-                      {item.text}
+                      {item.icon} {item.text}
                     </span>
                   </div>
                 ))}

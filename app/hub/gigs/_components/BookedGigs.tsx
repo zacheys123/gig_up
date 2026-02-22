@@ -1790,462 +1790,588 @@ export const BookedGigs = ({ user }: { user: any }) => {
     );
   }
 
-return (
-  <TooltipProvider>
-    <div className="h-full flex flex-col">
-      {/* Sticky Header Section - Fixed at top */}
-      <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className="px-3 py-2 md:px-6 md:py-3"
+  return (
+    <TooltipProvider>
+      <div className="h-full flex flex-col">
+        {/* Sticky Header Section - Fixed at top */}
+        <div
+          className={cn(
+            "sticky top-0 z-30 backdrop-blur-md border-b",
+            isDarkMode
+              ? "bg-slate-950/80 border-slate-800/50"
+              : "bg-white/80 border-slate-200/50",
+          )}
         >
-          {/* Header with Chevron Toggle - More compact on mobile */}
-          <div className="flex items-start justify-between gap-2">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="flex-1 min-w-0"
-            >
-              <div className="flex items-center gap-1.5 md:gap-2 mb-0.5">
-                <div
-                  className={cn(
-                    "p-1.5 md:p-2 rounded-lg shrink-0",
-                    isDarkMode ? "bg-emerald-500/20" : "bg-emerald-100",
-                  )}
-                >
-                  <CheckCircle
+          {" "}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="px-3 py-2 md:px-6 md:py-3"
+          >
+            {/* Header with Chevron Toggle - More compact on mobile */}
+            <div className="flex items-start justify-between gap-2">
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex-1 min-w-0"
+              >
+                <div className="flex items-center gap-1.5 md:gap-2 mb-0.5">
+                  <div
                     className={cn(
-                      "w-4 h-4 md:w-5 md:h-5",
-                      isDarkMode ? "text-emerald-400" : "text-emerald-600",
+                      "p-1.5 md:p-2 rounded-lg shrink-0",
+                      isDarkMode ? "bg-emerald-500/20" : "bg-emerald-100",
                     )}
-                  />
+                  >
+                    <CheckCircle
+                      className={cn(
+                        "w-4 h-4 md:w-5 md:h-5",
+                        isDarkMode ? "text-emerald-400" : "text-emerald-600",
+                      )}
+                    />
+                  </div>
+                  <h2
+                    className={cn(
+                      "text-base md:text-xl font-bold tracking-tight truncate",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    Booked Gigs
+                  </h2>
                 </div>
-                <h2
+                <p
                   className={cn(
-                    "text-base md:text-xl font-bold tracking-tight truncate",
-                    isDarkMode ? "text-white" : "text-slate-900",
+                    "text-xs truncate",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
                   )}
                 >
-                  Booked Gigs
-                </h2>
-              </div>
-              <p
+                  {showHeader
+                    ? "Manage your booked gigs"
+                    : "Tap to expand filters"}
+                </p>
+              </motion.div>
+
+              {/* Header Collapse Button with Chevron */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowHeader(!showHeader)}
                 className={cn(
-                  "text-xs truncate",
-                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                  "p-1.5 md:p-2 rounded-full transition-all duration-200 shrink-0",
+                  isDarkMode
+                    ? "text-slate-400 hover:text-white hover:bg-slate-800"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
                 )}
               >
-                {showHeader ? "Manage your booked gigs" : "Tap to expand filters"}
-              </p>
-            </motion.div>
+                {showHeader ? (
+                  <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+                )}
+              </motion.button>
+            </div>
 
-            {/* Header Collapse Button with Chevron */}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setShowHeader(!showHeader)}
-              className={cn(
-                "p-1.5 md:p-2 rounded-full transition-all duration-200 shrink-0",
-                isDarkMode
-                  ? "text-slate-400 hover:text-white hover:bg-slate-800"
-                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
-              )}
-            >
-              {showHeader ? (
-                <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
-              ) : (
-                <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
-              )}
-            </motion.button>
-          </div>
-
-          {/* Expandable Content */}
-          <AnimatePresence>
-            {showHeader && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="pt-3 space-y-3">
-                  {/* Stats Cards - Horizontal scroll on mobile */}
-                  {stats && (
-                    <>
-                      {/* Desktop Grid - hidden on mobile */}
-                      <div className="hidden md:grid grid-cols-4 lg:grid-cols-8 gap-2">
-                        {Object.entries(stats).map(([key, value], index) => (
-                          <motion.div
-                            key={key}
-                            custom={index}
-                            variants={statsVariants}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Card
-                              className={cn(
-                                "border shadow-sm transition-all duration-200",
-                                isDarkMode
-                                  ? "bg-slate-900/80 border-slate-800"
-                                  : "bg-white border-slate-200",
-                              )}
-                            >
-                              <CardContent className="p-2 text-center">
-                                <p
-                                  className={cn(
-                                    "text-[10px] font-medium uppercase tracking-wider",
-                                    isDarkMode ? "text-slate-400" : "text-slate-500",
-                                  )}
-                                >
-                                  {key === "total"
-                                    ? "Total"
-                                    : key === "upcoming"
-                                      ? "Upcoming"
-                                      : key === "past"
-                                        ? "Past"
-                                        : key === "today"
-                                          ? "Today"
-                                          : key === "client"
-                                            ? "Client"
-                                            : key === "musician"
-                                              ? "Artist"
-                                              : key === "paid"
-                                                ? "Paid"
-                                                : key === "pendingPayment"
-                                                  ? "Pending"
-                                                  : key}
-                                </p>
-                                <p
-                                  className={cn(
-                                    "text-lg font-bold",
-                                    isDarkMode ? "text-white" : "text-slate-900",
-                                    key === "paid" && (isDarkMode ? "text-emerald-400" : "text-emerald-600"),
-                                    key === "pendingPayment" && (isDarkMode ? "text-amber-400" : "text-amber-600"),
-                                  )}
-                                >
-                                  {value}
-                                </p>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-                        ))}
-                      </div>
-
-                      {/* Mobile Horizontal Scroll */}
-                      <div className="md:hidden -mx-3 px-3 overflow-x-auto scrollbar-hide">
-                        <div className="flex gap-2 pb-1 min-w-min">
+            {/* Expandable Content */}
+            <AnimatePresence>
+              {showHeader && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-3 space-y-3">
+                    {/* Stats Cards - Horizontal scroll on mobile */}
+                    {stats && (
+                      <>
+                        {/* Desktop Grid - hidden on mobile */}
+                        <div className="hidden md:grid grid-cols-4 lg:grid-cols-8 gap-2">
                           {Object.entries(stats).map(([key, value], index) => (
-                            <div
+                            <motion.div
                               key={key}
-                              className="flex-shrink-0 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800"
+                              custom={index}
+                              variants={statsVariants}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
                             >
-                              <span className="text-xs font-medium">
-                                <span className="text-slate-500 dark:text-slate-400 mr-1">
-                                  {key === "total"
-                                    ? "Total"
-                                    : key === "upcoming"
-                                      ? "Up"
-                                      : key === "past"
-                                        ? "Past"
-                                        : key === "today"
-                                          ? "Now"
-                                          : key === "client"
-                                            ? "Client"
-                                            : key === "musician"
-                                              ? "Art"
-                                              : key === "paid"
-                                                ? "Paid"
-                                                : key === "pendingPayment"
-                                                  ? "Due"
-                                                  : key}:
-                                </span>
-                                <span className="font-bold text-slate-900 dark:text-white">
-                                  {value}
-                                </span>
-                              </span>
-                            </div>
+                              <Card
+                                className={cn(
+                                  "border shadow-sm transition-all duration-200",
+                                  isDarkMode
+                                    ? "bg-slate-900/80 border-slate-800"
+                                    : "bg-white border-slate-200",
+                                )}
+                              >
+                                <CardContent className="p-2 text-center">
+                                  <p
+                                    className={cn(
+                                      "text-[10px] font-medium uppercase tracking-wider",
+                                      isDarkMode
+                                        ? "text-slate-400"
+                                        : "text-slate-500",
+                                    )}
+                                  >
+                                    {key === "total"
+                                      ? "Total"
+                                      : key === "upcoming"
+                                        ? "Upcoming"
+                                        : key === "past"
+                                          ? "Past"
+                                          : key === "today"
+                                            ? "Today"
+                                            : key === "client"
+                                              ? "Client"
+                                              : key === "musician"
+                                                ? "Artist"
+                                                : key === "paid"
+                                                  ? "Paid"
+                                                  : key === "pendingPayment"
+                                                    ? "Pending"
+                                                    : key}
+                                  </p>
+                                  <p
+                                    className={cn(
+                                      "text-lg font-bold",
+                                      isDarkMode
+                                        ? "text-white"
+                                        : "text-slate-900",
+                                      key === "paid" &&
+                                        (isDarkMode
+                                          ? "text-emerald-400"
+                                          : "text-emerald-600"),
+                                      key === "pendingPayment" &&
+                                        (isDarkMode
+                                          ? "text-amber-400"
+                                          : "text-amber-600"),
+                                    )}
+                                  >
+                                    {value}
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            </motion.div>
                           ))}
                         </div>
-                      </div>
-                    </>
-                  )}
 
-                  {/* Search Bar - Compact */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                    <Input
-                      placeholder="Search by title, location, or artist..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 h-9 text-sm rounded-full"
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2"
-                      >
-                        <X className="w-3.5 h-3.5 text-slate-400" />
-                      </button>
+                        {/* Mobile Horizontal Scroll */}
+                        <div className="md:hidden -mx-3 px-3 overflow-x-auto scrollbar-hide">
+                          <div className="flex gap-2 pb-1 min-w-min">
+                            {Object.entries(stats).map(
+                              ([key, value], index) => (
+                                <div
+                                  key={key}
+                                  className="flex-shrink-0 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800"
+                                >
+                                  <span className="text-xs font-medium">
+                                    <span className="text-slate-500 dark:text-slate-400 mr-1">
+                                      {key === "total"
+                                        ? "Total"
+                                        : key === "upcoming"
+                                          ? "Up"
+                                          : key === "past"
+                                            ? "Past"
+                                            : key === "today"
+                                              ? "Now"
+                                              : key === "client"
+                                                ? "Client"
+                                                : key === "musician"
+                                                  ? "Art"
+                                                  : key === "paid"
+                                                    ? "Paid"
+                                                    : key === "pendingPayment"
+                                                      ? "Due"
+                                                      : key}
+                                      :
+                                    </span>
+                                    <span className="font-bold text-slate-900 dark:text-white">
+                                      {value}
+                                    </span>
+                                  </span>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      </>
                     )}
-                  </div>
 
-                  {/* Filter Chips - Horizontal Scroll */}
-                  <div className="overflow-x-auto scrollbar-hide -mx-3 px-3">
-                    <div className="flex gap-2 pb-1 min-w-min">
-                      {/* Role Filter Chip */}
-                      <Select value={viewFilter} onValueChange={handleViewFilterChange}>
-                        <SelectTrigger className={cn(
-                          "w-auto h-8 rounded-full border text-xs gap-1 px-3",
-                          isDarkMode
-                            ? "bg-slate-900/90 border-slate-700 text-slate-200"
-                            : "bg-white border-slate-200 text-slate-700",
-                          viewFilter !== "all" && (isDarkMode ? "border-blue-500/50" : "border-blue-400")
-                        )}>
-                          <Users className="w-3.5 h-3.5" />
-                          <SelectValue placeholder="Role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Roles</SelectItem>
-                          <SelectItem value="client">Client Only</SelectItem>
-                          <SelectItem value="musician">Musician Only</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    {/* Search Bar - Compact */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <Input
+                        placeholder="Search by title, location, or artist..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 h-9 text-sm rounded-full"
+                      />
+                      {searchTerm && (
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          <X className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+                      )}
+                    </div>
 
-                      {/* Date Filter Chip */}
-                      <Select value={dateFilter} onValueChange={handleDateFilterChange}>
-                        <SelectTrigger className={cn(
-                          "w-auto h-8 rounded-full border text-xs gap-1 px-3",
-                          isDarkMode
-                            ? "bg-slate-900/90 border-slate-700 text-slate-200"
-                            : "bg-white border-slate-200 text-slate-700",
-                          dateFilter !== "all" && (
-                            dateFilter === "today" ? (isDarkMode ? "border-emerald-500/50" : "border-emerald-400") :
-                            dateFilter === "upcoming" ? (isDarkMode ? "border-blue-500/50" : "border-blue-400") :
-                            (isDarkMode ? "border-slate-500/50" : "border-slate-400")
-                          )
-                        )}>
-                          <Calendar className="w-3.5 h-3.5" />
-                          <SelectValue placeholder="Date" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Dates</SelectItem>
-                          <SelectItem value="today">Today</SelectItem>
-                          <SelectItem value="upcoming">Upcoming</SelectItem>
-                          <SelectItem value="past">Past</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    {/* Filter Chips - Horizontal Scroll */}
+                    <div className="overflow-x-auto scrollbar-hide -mx-3 px-3">
+                      <div className="flex gap-2 pb-1 min-w-min">
+                        {/* Role Filter Chip */}
+                        <Select
+                          value={viewFilter}
+                          onValueChange={handleViewFilterChange}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-auto h-8 rounded-full border text-xs gap-1 px-3",
+                              isDarkMode
+                                ? "bg-slate-900/90 border-slate-700 text-slate-200"
+                                : "bg-white border-slate-200 text-slate-700",
+                              viewFilter !== "all" &&
+                                (isDarkMode
+                                  ? "border-blue-500/50"
+                                  : "border-blue-400"),
+                            )}
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Roles</SelectItem>
+                            <SelectItem value="client">Client Only</SelectItem>
+                            <SelectItem value="musician">
+                              Musician Only
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
 
-                      {/* Payment Filter Chip */}
-                      <Select value={paymentFilter} onValueChange={handlePaymentFilterChange}>
-                        <SelectTrigger className={cn(
-                          "w-auto h-8 rounded-full border text-xs gap-1 px-3",
-                          isDarkMode
-                            ? "bg-slate-900/90 border-slate-700 text-slate-200"
-                            : "bg-white border-slate-200 text-slate-700",
-                          paymentFilter !== "all" && (
-                            paymentFilter === "paid" ? (isDarkMode ? "border-emerald-500/50" : "border-emerald-400") :
-                            (isDarkMode ? "border-amber-500/50" : "border-amber-400")
-                          )
-                        )}>
-                          <DollarSign className="w-3.5 h-3.5" />
-                          <SelectValue placeholder="Payment" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Payments</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {/* Date Filter Chip */}
+                        <Select
+                          value={dateFilter}
+                          onValueChange={handleDateFilterChange}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-auto h-8 rounded-full border text-xs gap-1 px-3",
+                              isDarkMode
+                                ? "bg-slate-900/90 border-slate-700 text-slate-200"
+                                : "bg-white border-slate-200 text-slate-700",
+                              dateFilter !== "all" &&
+                                (dateFilter === "today"
+                                  ? isDarkMode
+                                    ? "border-emerald-500/50"
+                                    : "border-emerald-400"
+                                  : dateFilter === "upcoming"
+                                    ? isDarkMode
+                                      ? "border-blue-500/50"
+                                      : "border-blue-400"
+                                    : isDarkMode
+                                      ? "border-slate-500/50"
+                                      : "border-slate-400"),
+                            )}
+                          >
+                            <Calendar className="w-3.5 h-3.5" />
+                            <SelectValue placeholder="Date" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Dates</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="upcoming">Upcoming</SelectItem>
+                            <SelectItem value="past">Past</SelectItem>
+                          </SelectContent>
+                        </Select>
 
-                      {/* Clear Filters - Only when active */}
-                      {(viewFilter !== "all" || dateFilter !== "all" || paymentFilter !== "all") && (
+                        {/* Payment Filter Chip */}
+                        <Select
+                          value={paymentFilter}
+                          onValueChange={handlePaymentFilterChange}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-auto h-8 rounded-full border text-xs gap-1 px-3",
+                              isDarkMode
+                                ? "bg-slate-900/90 border-slate-700 text-slate-200"
+                                : "bg-white border-slate-200 text-slate-700",
+                              paymentFilter !== "all" &&
+                                (paymentFilter === "paid"
+                                  ? isDarkMode
+                                    ? "border-emerald-500/50"
+                                    : "border-emerald-400"
+                                  : isDarkMode
+                                    ? "border-amber-500/50"
+                                    : "border-amber-400"),
+                            )}
+                          >
+                            <DollarSign className="w-3.5 h-3.5" />
+                            <SelectValue placeholder="Payment" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Payments</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Clear Filters - Only when active */}
+                        {(viewFilter !== "all" ||
+                          dateFilter !== "all" ||
+                          paymentFilter !== "all") && (
+                          <button
+                            onClick={handleClearFilters}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap",
+                              isDarkMode
+                                ? "bg-rose-950/30 text-rose-400 border border-rose-800/30"
+                                : "bg-rose-50 text-rose-600 border border-rose-200",
+                            )}
+                          >
+                            <X className="w-3 h-3 inline mr-1" />
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick filter stats */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        {filteredGigs.length} of {bookedGigs.length} gigs
+                      </span>
+                      {(searchTerm ||
+                        viewFilter !== "all" ||
+                        dateFilter !== "all" ||
+                        paymentFilter !== "all") && (
                         <button
                           onClick={handleClearFilters}
-                          className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap",
-                            isDarkMode
-                              ? "bg-rose-950/30 text-rose-400 border border-rose-800/30"
-                              : "bg-rose-50 text-rose-600 border border-rose-200",
-                          )}
+                          className="text-rose-500 hover:text-rose-600 font-medium"
                         >
-                          <X className="w-3 h-3 inline mr-1" />
-                          Clear
+                          Reset all
                         </button>
                       )}
                     </div>
                   </div>
-
-                  {/* Quick filter stats */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
-                      {filteredGigs.length} of {bookedGigs.length} gigs
-                    </span>
-                    {(searchTerm || viewFilter !== "all" || dateFilter !== "all" || paymentFilter !== "all") && (
-                      <button
-                        onClick={handleClearFilters}
-                        className="text-rose-500 hover:text-rose-600 font-medium"
-                      >
-                        Reset all
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </div>
-
-      {/* Display Mode Toggle - Below header */}
-      <div className="px-3 md:px-6 pt-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              "text-xs font-medium",
-              isDarkMode ? "text-slate-400" : "text-slate-500"
-            )}>
-              View:
-            </span>
-            <div className={cn(
-              "flex p-0.5 rounded-lg",
-              isDarkMode ? "bg-slate-800/50" : "bg-slate-100"
-            )}>
-              {[
-                { mode: "grid", icon: Grid3x3 },
-                { mode: "list", icon: List },
-                { mode: "timeline", icon: Activity },
-                { mode: "calendar", icon: CalendarDays },
-                { mode: "kanban", icon: Kanban },
-              ].map(({ mode, icon: Icon }) => (
-                <Tooltip key={mode}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => handleDisplayModeChange(mode as any)}
-                      className={cn(
-                        "p-1.5 rounded-md transition-all",
-                        displayMode === mode
-                          ? isDarkMode
-                            ? "bg-blue-600 text-white"
-                            : "bg-blue-500 text-white"
-                          : isDarkMode
-                            ? "text-slate-400 hover:text-white hover:bg-slate-700"
-                            : "text-slate-500 hover:text-slate-900 hover:bg-slate-200",
-                      )}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    {mode.charAt(0).toUpperCase() + mode.slice(1)} View
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          </div>
-
-          {/* Results count pill */}
-          <div className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs",
-            isDarkMode ? "bg-slate-800/50 text-slate-300" : "bg-slate-100 text-slate-600"
-          )}>
-            <div className={cn(
-              "w-1.5 h-1.5 rounded-full animate-pulse",
-              isDarkMode ? "bg-emerald-400" : "bg-emerald-500"
-            )} />
-            <span>{filteredGigs.length} of {bookedGigs.length}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Scrollable Gig Cards Section */}
-      <div className="flex-1 overflow-y-auto px-3 md:px-6 pb-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`gig-list-${displayMode}-${filterAnimationKey}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="py-4"
-          >
-            {renderGigs()}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Gradient Legend Button - Fixed at Bottom Right */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setLegendOpen(true)}
-        className={cn(
-          "fixed bottom-4 right-4 z-50 gap-1.5 rounded-full",
-          "backdrop-blur-md border",
-          "transition-all duration-300",
-          "hover:scale-110 active:scale-95",
-          "shadow-lg hover:shadow-xl",
-          "group",
-          isDarkMode
-            ? "bg-slate-900/80 border-slate-700/50 text-slate-300 hover:bg-slate-800 hover:text-white"
-            : "bg-white/80 border-slate-200/50 text-slate-600 hover:bg-white hover:text-slate-900",
-        )}
-      >
-        <div className="relative">
-          <span className={cn(
-            "absolute inset-0 rounded-full opacity-0 group-hover:opacity-100",
-            "bg-gradient-to-r from-red-500/30 via-yellow-500/30 via-green-500/30 via-blue-500/30 to-purple-500/30",
-            "animate-ping",
-          )} />
-          <Info className="w-4 h-4" />
         </div>
-        <span className="hidden sm:inline text-xs">Guide</span>
-      </Button>
 
-      {/* Legend Dialog */}
-      <Dialog open={legendOpen} onOpenChange={setLegendOpen}>
-        <DialogContent className={cn(
-          "sm:max-w-md p-0 overflow-hidden",
-          isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200",
-        )}>
-          <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-          <div className="p-4">
-            <DialogHeader className="mb-3">
-              <DialogTitle className={cn(
-                "text-base font-bold",
-                isDarkMode ? "text-white" : "text-slate-900"
-              )}>
-                Status Legend
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {[
-                { badge: "bg-green-100 text-green-800", icon: "🎤", text: "Gig happening today" },
-                { badge: "bg-blue-100 text-blue-800", icon: "📅", text: "Future gig" },
-                { badge: "bg-gray-100 text-gray-800", icon: "✅", text: "Past gig" },
-                { badge: "bg-green-100 text-green-800", icon: "💰", text: "Payment completed" },
-                { badge: "bg-yellow-100 text-yellow-800", icon: "⏳", text: "Payment pending" },
-                { badge: "bg-amber-100 text-amber-800", icon: "⚠️", text: "Cancel within 3 days" },
-                { badge: "bg-red-100 text-red-800", icon: "🚨", text: "Cancel within 24h" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <Badge className={cn(item.badge, "px-2 py-0")}>
-                    {i === 0 ? "Today" : i === 1 ? "Future" : i === 2 ? "Past" : 
-                     i === 3 ? "Paid" : i === 4 ? "Pending" : i === 5 ? "3d" : "24h"}
-                  </Badge>
-                  <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
-                    {item.icon} {item.text}
-                  </span>
-                </div>
-              ))}
+        {/* Display Mode Toggle - Below header */}
+        <div className="px-3 md:px-6 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                View:
+              </span>
+              <div
+                className={cn(
+                  "flex p-0.5 rounded-lg",
+                  isDarkMode ? "bg-slate-800/50" : "bg-slate-100",
+                )}
+              >
+                {[
+                  { mode: "grid", icon: Grid3x3 },
+                  { mode: "list", icon: List },
+                  { mode: "timeline", icon: Activity },
+                  { mode: "calendar", icon: CalendarDays },
+                  { mode: "kanban", icon: Kanban },
+                ].map(({ mode, icon: Icon }) => (
+                  <Tooltip key={mode}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => handleDisplayModeChange(mode as any)}
+                        className={cn(
+                          "p-1.5 rounded-md transition-all",
+                          displayMode === mode
+                            ? isDarkMode
+                              ? "bg-blue-600 text-white"
+                              : "bg-blue-500 text-white"
+                            : isDarkMode
+                              ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                              : "text-slate-500 hover:text-slate-900 hover:bg-slate-200",
+                        )}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)} View
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </div>
+
+            {/* Results count pill */}
+            <div
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs",
+                isDarkMode
+                  ? "bg-slate-800/50 text-slate-300"
+                  : "bg-slate-100 text-slate-600",
+              )}
+            >
+              <div
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full animate-pulse",
+                  isDarkMode ? "bg-emerald-400" : "bg-emerald-500",
+                )}
+              />
+              <span>
+                {filteredGigs.length} of {bookedGigs.length}
+              </span>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  </TooltipProvider>
-);
+        </div>
+
+        {/* Scrollable Gig Cards Section */}
+        <div className="flex-1 overflow-y-auto px-3 md:px-6 pb-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`gig-list-${displayMode}-${filterAnimationKey}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="py-4"
+            >
+              {renderGigs()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Gradient Legend Button - Fixed at Bottom Right */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setLegendOpen(true)}
+          className={cn(
+            "fixed bottom-4 right-4 z-50 gap-1.5 rounded-full",
+            "backdrop-blur-md border",
+            "transition-all duration-300",
+            "hover:scale-110 active:scale-95",
+            "shadow-lg hover:shadow-xl",
+            "group",
+            isDarkMode
+              ? "bg-slate-900/80 border-slate-700/50 text-slate-300 hover:bg-slate-800 hover:text-white"
+              : "bg-white/80 border-slate-200/50 text-slate-600 hover:bg-white hover:text-slate-900",
+          )}
+        >
+          <div className="relative">
+            <span
+              className={cn(
+                "absolute inset-0 rounded-full opacity-0 group-hover:opacity-100",
+                "bg-gradient-to-r from-red-500/30 via-yellow-500/30 via-green-500/30 via-blue-500/30 to-purple-500/30",
+                "animate-ping",
+              )}
+            />
+            <Info className="w-4 h-4" />
+          </div>
+          <span className="hidden sm:inline text-xs">Guide</span>
+        </Button>
+
+        {/* Legend Dialog */}
+        <Dialog open={legendOpen} onOpenChange={setLegendOpen}>
+          <DialogContent
+            className={cn(
+              "sm:max-w-md p-0 overflow-hidden",
+              isDarkMode
+                ? "bg-slate-900 border-slate-800"
+                : "bg-white border-slate-200",
+            )}
+          >
+            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+            <div className="p-4">
+              <DialogHeader className="mb-3">
+                <DialogTitle
+                  className={cn(
+                    "text-base font-bold",
+                    isDarkMode ? "text-white" : "text-slate-900",
+                  )}
+                >
+                  Status Legend
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {[
+                  {
+                    badge: "bg-green-100 text-green-800",
+                    icon: "🎤",
+                    text: "Gig happening today",
+                  },
+                  {
+                    badge: "bg-blue-100 text-blue-800",
+                    icon: "📅",
+                    text: "Future gig",
+                  },
+                  {
+                    badge: "bg-gray-100 text-gray-800",
+                    icon: "✅",
+                    text: "Past gig",
+                  },
+                  {
+                    badge: "bg-green-100 text-green-800",
+                    icon: "💰",
+                    text: "Payment completed",
+                  },
+                  {
+                    badge: "bg-yellow-100 text-yellow-800",
+                    icon: "⏳",
+                    text: "Payment pending",
+                  },
+                  {
+                    badge: "bg-amber-100 text-amber-800",
+                    icon: "⚠️",
+                    text: "Cancel within 3 days",
+                  },
+                  {
+                    badge: "bg-red-100 text-red-800",
+                    icon: "🚨",
+                    text: "Cancel within 24h",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <Badge className={cn(item.badge, "px-2 py-0")}>
+                      {i === 0
+                        ? "Today"
+                        : i === 1
+                          ? "Future"
+                          : i === 2
+                            ? "Past"
+                            : i === 3
+                              ? "Paid"
+                              : i === 4
+                                ? "Pending"
+                                : i === 5
+                                  ? "3d"
+                                  : "24h"}
+                    </Badge>
+                    <span
+                      className={
+                        isDarkMode ? "text-slate-300" : "text-slate-600"
+                      }
+                    >
+                      {item.icon} {item.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
+  );
 };

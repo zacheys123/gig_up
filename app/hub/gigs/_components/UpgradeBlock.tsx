@@ -29,14 +29,13 @@ interface UpgradeBannerProps {
   userTier: string;
   userRole: "musician" | "client" | "booker";
   onUpgrade?: (tier: "pro" | "premium") => void;
+  isDarkMode?: boolean;
 }
 
 // Role-specific feature configurations
-// Replace JUST the getRoleFeatures function with this:
-
 const getRoleFeatures = (
   role: "musician" | "client" | "booker",
-  featureName: string
+  featureName: string,
 ) => {
   const baseFeatures = {
     musician: {
@@ -197,19 +196,13 @@ const getRoleFeatures = (
         ],
       },
     },
-  } as const; // Add 'as const' here for TypeScript inference
+  };
 
-  // Type-safe access
   const roleConfig = baseFeatures[role];
-
-  // Use type assertion for the feature name
   const featureConfig = (roleConfig as any)[featureName];
-
-  // Fallback to client instant-gigs if feature not found
   return featureConfig || baseFeatures.client["instant-gigs"];
 };
 
-// Event type examples for different roles
 const getEventExamples = (role: "musician" | "client" | "booker") => {
   if (role === "musician") {
     return [
@@ -229,7 +222,6 @@ const getEventExamples = (role: "musician" | "client" | "booker") => {
     ];
   }
 
-  // Booker
   return [
     { icon: "🎬", name: "Film Scoring", type: "Production Projects" },
     { icon: "🎤", name: "Concert Tours", type: "Large Scale" },
@@ -238,12 +230,12 @@ const getEventExamples = (role: "musician" | "client" | "booker") => {
   ];
 };
 
-const StatItem = ({ value, label, colors }: any) => (
+const StatItem = ({ value, label, colors, isDarkMode }: any) => (
   <div
     className={cn(
       "text-center p-3 rounded-xl border",
       colors.border,
-      colors.backgroundMuted
+      isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
     )}
   >
     <div className={cn("text-xl font-bold mb-1", colors.text)}>{value}</div>
@@ -251,13 +243,18 @@ const StatItem = ({ value, label, colors }: any) => (
   </div>
 );
 
-const FeatureItem = ({ feature, colors }: any) => (
+const FeatureItem = ({ feature, colors, isDarkMode }: any) => (
   <div className="flex items-center gap-3 group">
-    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 group-hover:scale-110 transition-transform" />
+    <CheckCircle
+      className={cn(
+        "w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform",
+        isDarkMode ? "text-green-400" : "text-green-500",
+      )}
+    />
     <span
       className={cn(
-        "text-sm group-hover:text-green-600 transition-colors",
-        colors.text
+        "text-sm group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors",
+        colors.text,
       )}
     >
       {feature}
@@ -265,12 +262,12 @@ const FeatureItem = ({ feature, colors }: any) => (
   </div>
 );
 
-const EventExample = ({ event, colors }: any) => (
+const EventExample = ({ event, colors, isDarkMode }: any) => (
   <div
     className={cn(
       "text-center p-3 rounded-xl border",
       colors.border,
-      colors.backgroundMuted
+      isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
     )}
   >
     <div className="text-2xl mb-2">{event.icon}</div>
@@ -282,7 +279,7 @@ const EventExample = ({ event, colors }: any) => (
 );
 
 export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
-  ({ featureName, userTier, userRole, onUpgrade }) => {
+  ({ featureName, userTier, userRole, onUpgrade, isDarkMode }) => {
     const { colors } = useThemeColors();
 
     const feature = getRoleFeatures(userRole, featureName);
@@ -300,18 +297,19 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
     return (
       <div
         className={cn(
-          "rounded-2xl p-8 border-2 border-dashed",
-          colors.border,
-          colors.backgroundMuted
+          "rounded-2xl p-8 border-2 border-dashed transition-colors duration-300",
+          isDarkMode
+            ? "border-slate-700 bg-gradient-to-br from-slate-900/50 to-slate-800/30"
+            : "border-slate-200 bg-gradient-to-br from-amber-50/50 to-orange-50/30",
         )}
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
             <Icon className="w-10 h-10 text-white" />
           </div>
 
-          <div className="px-4 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
+          <div className="px-4 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3 shadow-md">
             PRO FEATURE
           </div>
 
@@ -325,13 +323,19 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
           {/* Workflow Cycle */}
           <div
             className={cn(
-              "rounded-xl p-4 mb-6 max-w-md mx-auto",
-              colors.card,
-              colors.border
+              "rounded-xl p-4 mb-6 max-w-md mx-auto border",
+              isDarkMode
+                ? "bg-slate-800/50 border-slate-700"
+                : "bg-white border-slate-200",
             )}
           >
             <div className="flex items-center justify-center gap-2 mb-3">
-              <Target className="w-5 h-5 text-amber-500" />
+              <Target
+                className={cn(
+                  "w-5 h-5",
+                  isDarkMode ? "text-amber-400" : "text-amber-500",
+                )}
+              />
               <span className={cn("font-semibold text-sm", colors.text)}>
                 How It Works:
               </span>
@@ -350,15 +354,25 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
               <h3
                 className={cn(
                   "text-xl font-bold mb-4 flex items-center gap-2",
-                  colors.text
+                  colors.text,
                 )}
               >
-                <Star className="w-5 h-5 text-amber-500" />
+                <Star
+                  className={cn(
+                    "w-5 h-5",
+                    isDarkMode ? "text-amber-400" : "text-amber-500",
+                  )}
+                />
                 What You Get
               </h3>
               <div className="grid grid-cols-1 gap-3">
                 {feature.features.map((item: string, index: number) => (
-                  <FeatureItem key={index} feature={item} colors={colors} />
+                  <FeatureItem
+                    key={index}
+                    feature={item}
+                    colors={colors}
+                    isDarkMode={isDarkMode}
+                  />
                 ))}
               </div>
             </div>
@@ -368,10 +382,15 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
               <h3
                 className={cn(
                   "text-xl font-bold mb-4 flex items-center gap-2",
-                  colors.text
+                  colors.text,
                 )}
               >
-                <TrendingUp className="w-5 h-5 text-green-500" />
+                <TrendingUp
+                  className={cn(
+                    "w-5 h-5",
+                    isDarkMode ? "text-green-400" : "text-green-500",
+                  )}
+                />
                 Performance Boost
               </h3>
               <div className="grid grid-cols-3 gap-3">
@@ -381,6 +400,7 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
                     value={stat.value}
                     label={stat.label}
                     colors={colors}
+                    isDarkMode={isDarkMode}
                   />
                 ))}
               </div>
@@ -394,10 +414,15 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
               <h3
                 className={cn(
                   "text-xl font-bold mb-4 flex items-center gap-2",
-                  colors.text
+                  colors.text,
                 )}
               >
-                <Calendar className="w-5 h-5 text-blue-500" />
+                <Calendar
+                  className={cn(
+                    "w-5 h-5",
+                    isDarkMode ? "text-blue-400" : "text-blue-500",
+                  )}
+                />
                 Perfect For{" "}
                 {userRole === "musician"
                   ? "These Gigs"
@@ -407,7 +432,12 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 {eventExamples.map((event, index) => (
-                  <EventExample key={index} event={event} colors={colors} />
+                  <EventExample
+                    key={index}
+                    event={event}
+                    colors={colors}
+                    isDarkMode={isDarkMode}
+                  />
                 ))}
               </div>
             </div>
@@ -416,14 +446,15 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
             <div
               className={cn(
                 "rounded-xl p-4 border",
-                colors.border,
-                colors.card
+                isDarkMode
+                  ? "bg-slate-800/50 border-slate-700"
+                  : "bg-white border-slate-200",
               )}
             >
               <h3
                 className={cn(
                   "text-lg font-bold mb-3 text-center",
-                  colors.text
+                  colors.text,
                 )}
               >
                 Choose Your Plan
@@ -432,7 +463,7 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
               <div className="space-y-3">
                 <Button
                   onClick={() => handleUpgrade("pro")}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold"
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
                   size="lg"
                 >
                   <Zap className="w-5 h-5 mr-2" />
@@ -443,7 +474,12 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
                 <Button
                   onClick={() => handleUpgrade("premium")}
                   variant="outline"
-                  className="w-full border-amber-500 text-amber-600 hover:bg-amber-50 font-semibold"
+                  className={cn(
+                    "w-full border-2 font-semibold transition-all",
+                    isDarkMode
+                      ? "border-amber-500 text-amber-400 hover:bg-amber-950/30"
+                      : "border-amber-500 text-amber-600 hover:bg-amber-50",
+                  )}
                   size="lg"
                 >
                   <Crown className="w-5 h-5 mr-2" />
@@ -456,7 +492,7 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
               <div
                 className={cn(
                   "mt-3 pt-3 border-t text-center text-sm",
-                  colors.border
+                  isDarkMode ? "border-slate-700" : "border-slate-200",
                 )}
               >
                 <span className={colors.textMuted}>Current: </span>
@@ -474,8 +510,10 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
         <div
           className={cn(
             "rounded-xl p-6 text-center",
-            colors.primaryBg,
-            colors.textInverted
+            isDarkMode
+              ? "bg-gradient-to-r from-blue-600 to-indigo-600"
+              : "bg-gradient-to-r from-blue-500 to-indigo-500",
+            "text-white shadow-xl",
           )}
         >
           <h4 className="text-xl font-bold mb-2">
@@ -499,7 +537,7 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
               onClick={() => handleUpgrade("pro")}
-              className="bg-white text-green-600 hover:bg-gray-100 font-semibold"
+              className="bg-white text-green-600 hover:bg-gray-100 font-semibold shadow-md"
             >
               <Zap className="w-5 h-5 mr-2" />
               Start with Pro
@@ -507,7 +545,9 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
             <Button
               onClick={() => window.open("/features", "_blank")}
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-green-600"
+              className={cn(
+                "border-white text-white hover:bg-white hover:text-green-600",
+              )}
             >
               Compare All Plans
             </Button>
@@ -515,7 +555,7 @@ export const UpgradeBanner: React.FC<UpgradeBannerProps> = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 UpgradeBanner.displayName = "UpgradeBanner";

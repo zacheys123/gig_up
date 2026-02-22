@@ -88,6 +88,17 @@ export function SimpleForgotSecretModal({
   const [newSecretValidationState, setNewSecretValidationState] = useState<
     "valid" | "invalid" | null
   >(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const gigInfo = useQuery(api.controllers.gigs.getGigBasicInfo, {
     gigId,
@@ -373,32 +384,36 @@ export function SimpleForgotSecretModal({
   const getStepIcon = () => {
     switch (step) {
       case "trySecret":
-        return <LockKeyhole className="w-12 h-12 text-blue-500" />;
+        return (
+          <LockKeyhole className="w-8 h-8 md:w-12 md:h-12 text-blue-500" />
+        );
       case "email":
-        return <Mail className="w-12 h-12 text-orange-500" />;
+        return <Mail className="w-8 h-8 md:w-12 md:h-12 text-orange-500" />;
       case "security":
-        return <Shield className="w-12 h-12 text-purple-500" />;
+        return <Shield className="w-8 h-8 md:w-12 md:h-12 text-purple-500" />;
       case "newSecret":
-        return <Key className="w-12 h-12 text-green-500" />;
+        return <Key className="w-8 h-8 md:w-12 md:h-12 text-green-500" />;
       case "success":
-        return <CheckCircle className="w-12 h-12 text-emerald-500" />;
+        return (
+          <CheckCircle className="w-8 h-8 md:w-12 md:h-12 text-emerald-500" />
+        );
       default:
-        return <Lock className="w-12 h-12 text-blue-500" />;
+        return <Lock className="w-8 h-8 md:w-12 md:h-12 text-blue-500" />;
     }
   };
 
   const getStepTitle = () => {
     switch (step) {
       case "trySecret":
-        return "Enter Secret Key";
+        return isMobile ? "Secret Key" : "Enter Secret Key";
       case "email":
-        return "Verify Identity";
+        return isMobile ? "Verify" : "Verify Identity";
       case "security":
-        return "Security Question";
+        return isMobile ? "Security" : "Security Question";
       case "newSecret":
-        return "New Secret Key";
+        return isMobile ? "New Key" : "New Secret Key";
       case "success":
-        return "Access Restored!";
+        return "Success!";
       default:
         return "Recover Access";
     }
@@ -407,38 +422,50 @@ export function SimpleForgotSecretModal({
   const getStepDescription = () => {
     switch (step) {
       case "trySecret":
-        return "Enter your gig secret key to continue editing";
+        return "Enter your gig secret key";
       case "email":
-        return "We'll send your security question to verify it's you";
+        return "Verify your identity";
       case "security":
-        return "Answer your security question to continue";
+        return "Answer security question";
       case "newSecret":
-        return "Create a new secret key for this gig";
+        return "Create a new secret key";
       case "success":
-        return "Your new secret key has been set successfully";
+        return "Access restored!";
       default:
         return "Recover access to your gig";
     }
   };
+  // Define steps array outside the component or at the top of the component
+  const steps = [
+    {
+      key: "trySecret",
+      label: isMobile ? "Key" : "Try Key",
+    },
+    {
+      key: "email",
+      label: isMobile ? "ID" : "Verify",
+    },
+    {
+      key: "security",
+      label: isMobile ? "Q" : "Security",
+    },
+    {
+      key: "newSecret",
+      label: isMobile ? "New" : "New Key",
+    },
+    { key: "success", label: "Done" },
+  ];
 
   const getProgressSteps = () => {
-    const steps = [
-      { key: "trySecret", label: "Try Key", active: step === "trySecret" },
-      { key: "email", label: "Verify", active: step === "email" },
-      { key: "security", label: "Security", active: step === "security" },
-      { key: "newSecret", label: "New Key", active: step === "newSecret" },
-      { key: "success", label: "Done", active: step === "success" },
-    ];
-
-    const currentIndex = steps.findIndex((s) => s.active);
+    const currentIndex = steps.findIndex((s) => s.key === step);
 
     return (
-      <div className="flex items-center justify-center mb-6">
+      <div className="flex items-center justify-between md:justify-center mb-4 md:mb-6 px-2">
         {steps.map((stepItem, index) => (
           <div key={stepItem.key} className="flex items-center">
             <div
               className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all",
+                "w-7 h-7 md:w-10 md:h-10 rounded-full flex items-center justify-center text-xs md:text-sm font-medium transition-all",
                 index <= currentIndex
                   ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
                   : cn(colors.backgroundMuted, colors.textMuted),
@@ -449,7 +476,7 @@ export function SimpleForgotSecretModal({
             {index < steps.length - 1 && (
               <div
                 className={cn(
-                  "w-12 h-1 mx-2 transition-all",
+                  "w-6 md:w-12 h-1 mx-1 md:mx-2 transition-all",
                   index < currentIndex
                     ? "bg-gradient-to-r from-blue-500 to-cyan-500"
                     : colors.backgroundMuted,
@@ -464,375 +491,190 @@ export function SimpleForgotSecretModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
+      {/* Main Dialog - Smaller on mobile */}
       <DialogContent
         className={cn(
-          "sm:max-w-lg p-0 overflow-hidden",
+          "w-[90vw] max-w-sm p-0 overflow-hidden rounded-xl",
           colors.background,
           colors.border,
         )}
       >
-        {/* Sleek Header */}
-        <div className={cn("p-6", colors.gradientPrimary)}>
+        {/* Sleek Header - More compact padding */}
+        <div className={cn("p-3 md:p-5", colors.gradientPrimary)}>
           <DialogHeader>
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex items-start gap-2 md:gap-3">
               <div
                 className={cn(
-                  "w-14 h-14 rounded-xl",
+                  "w-10 h-10 md:w-12 md:h-12 rounded-lg shrink-0",
                   colors.overlay,
                   "flex items-center justify-center",
                 )}
               >
                 {getStepIcon()}
               </div>
-              <div className="flex-1">
-                <DialogTitle className="text-2xl font-bold text-white">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-base md:text-lg font-bold text-white truncate">
                   {getStepTitle()}
                 </DialogTitle>
-                <DialogDescription className="text-blue-100">
+                <DialogDescription className="text-xs text-blue-100 truncate">
                   {getStepDescription()}
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
           {gigTitle && (
-            <div className="text-sm text-blue-200">
-              Gig: <span className="font-medium">{gigTitle}</span>
+            <div className="mt-1 text-xs text-blue-200 truncate">
+              {gigTitle}
             </div>
           )}
         </div>
 
-        {/* Progress Indicator */}
-        <div className="px-6 pt-6">{getProgressSteps()}</div>
+        {/* Progress Steps - More compact */}
+        <div className="px-3 pt-3 md:px-5 md:pt-4">{getProgressSteps()}</div>
 
-        {/* Step Content */}
+        {/* Step Content - Compact spacing */}
         <div
           className={cn(
-            "px-6 pb-6 max-h-[60vh] overflow-y-auto",
+            "px-3 pb-3 md:px-5 md:pb-4 max-h-[70vh] overflow-y-auto",
             colors.background,
           )}
         >
           {step === "trySecret" && (
-            <div className="space-y-6">
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5" />
-                <div
-                  className={cn(
-                    "relative p-6 rounded-2xl",
-                    colors.border,
-                    colors.backgroundMuted,
-                  )}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-                      <Lock className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className={cn("font-bold text-xl", colors.text)}>
-                        Try Your Secret Key
-                      </h3>
-                      <p className={cn("text-sm mt-1", colors.textMuted)}>
-                        Enter your secret key to continue editing
-                      </p>
-                    </div>
+            <div className="space-y-3">
+              <div
+                className={cn(
+                  "p-3 rounded-lg",
+                  colors.border,
+                  colors.backgroundMuted,
+                )}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+                    <Lock className="w-3 h-3 text-white" />
                   </div>
+                  <h3 className={cn("font-bold text-sm", colors.text)}>
+                    Enter Key
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className={cn("text-xs font-medium", colors.text)}>
+                        Secret Key
+                      </Label>
+                      <span className="text-[10px] text-slate-500">
+                        case-sensitive
+                      </span>
+                    </div>
 
-                  <p className={cn("mb-6", colors.textMuted)}>
-                    If you remember your secret key, you can continue editing
-                    immediately.
-                  </p>
-
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label
-                          htmlFor="secret"
-                          className={cn("text-sm font-medium", colors.text)}
-                        >
-                          Secret Key
-                        </Label>
-                        <span className={cn("text-xs", colors.textMuted)}>
-                          Case-sensitive
-                        </span>
-                      </div>
-
-                      <div className="relative group">
-                        <Input
-                          id="secret"
-                          type={showSecret ? "text" : "password"}
-                          value={secretInput}
-                          onChange={(e) => setSecretInput(e.target.value)}
-                          placeholder="Enter your secret key"
-                          className={cn(
-                            "h-12 pr-12 font-mono tracking-wide transition-all duration-200",
-                            colors.border,
-                            colors.background,
-                            colors.text,
-                            "placeholder:text-gray-500 dark:placeholder:text-gray-400",
-                            // Validation states
-                            secretValidationState === "valid" && [
-                              "border-emerald-500 dark:border-emerald-400",
-                              colors.successBg,
-                              "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
-                            ],
-                            secretValidationState === "invalid" && [
-                              "border-red-500 dark:border-red-400",
-                              colors.destructiveBg,
-                              "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
-                            ],
-                            !secretValidationState && [
-                              "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500",
-                            ],
-                          )}
-                          autoFocus
-                          autoComplete="off"
-                        />
-
+                    <div className="relative">
+                      <Input
+                        value={secretInput}
+                        onChange={(e) => setSecretInput(e.target.value)}
+                        type={showSecret ? "text" : "password"}
+                        className={cn(
+                          "h-9 pr-16 text-sm rounded-lg",
+                          colors.border,
+                          colors.background,
+                        )}
+                        placeholder="Enter key..."
+                      />
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => setShowSecret(!showSecret)}
-                          className={cn(
-                            "absolute right-10 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md transition-colors",
-                            colors.hoverBg,
-                          )}
+                          className="p-1 rounded-md"
                         >
                           {showSecret ? (
-                            <EyeOff className="w-4 h-4" />
+                            <EyeOff className="w-3.5 h-3.5" />
                           ) : (
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
                           )}
                         </button>
-
-                        {secretValidationState && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            {secretValidationState === "valid" ? (
-                              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-h-[20px]">
-                        {secretValidationState === "invalid" && (
-                          <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-1.5">
-                            <XCircle className="w-4 h-4 flex-shrink-0" />
-                            Incorrect secret key. Please try again or use
-                            recovery.
-                          </p>
-                        )}
-
-                        {secretValidationState === "valid" && (
-                          <p className="text-sm text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5">
-                            <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                            Secret key verified! Redirecting...
-                          </p>
-                        )}
                       </div>
                     </div>
-
-                    <Button
-                      onClick={handleTrySecret}
-                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold"
-                      disabled={isLoading || !secretInput}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4 mr-2" />
-                          Verify & Continue
-                        </>
-                      )}
-                    </Button>
                   </div>
+
+                  <Button
+                    onClick={handleTrySecret}
+                    disabled={isLoading || !secretInput}
+                    className="w-full h-9 text-sm bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      "Verify Key"
+                    )}
+                  </Button>
                 </div>
               </div>
-
               <div className="text-center">
-                <div className="inline-flex items-center gap-2 p-3">
-                  <Shield className="w-4 h-4 text-gray-400" />
-                  <button
-                    type="button"
-                    onClick={() => setStep("email")}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
-                  >
-                    Forgot your key? Use security recovery
-                  </button>
-                </div>
+                <button
+                  onClick={() => setStep("email")}
+                  className="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  Forgot key? Use recovery
+                </button>
               </div>
             </div>
           )}
 
           {step === "email" && (
-            <div className="space-y-6">
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5" />
-                <div
-                  className={cn(
-                    "relative p-6 rounded-2xl",
-                    colors.border,
-                    colors.backgroundMuted,
-                  )}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500">
-                      <Shield className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className={cn("font-bold text-xl", colors.text)}>
-                        Account Recovery
-                      </h3>
-                      <p className={cn("text-sm mt-1", colors.textMuted)}>
-                        Enter your account email
-                      </p>
-                    </div>
+            <div className="space-y-3">
+              <div
+                className={cn(
+                  "p-3 rounded-lg",
+                  colors.border,
+                  colors.backgroundMuted,
+                )}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500">
+                    <Mail className="w-3 h-3 text-white" />
                   </div>
-
-                  {user?.email && email === user?.email && (
-                    <div
+                  <h3 className={cn("font-bold text-sm", colors.text)}>
+                    Verify Email
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className={cn("text-xs font-medium", colors.text)}>
+                      Email Address
+                    </Label>
+                    <Input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className={cn(
-                        "mb-4 p-3 rounded-lg",
-                        colors.infoBg,
+                        "h-9 text-sm rounded-lg",
                         colors.border,
+                        colors.background,
                       )}
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep("trySecret")}
+                      className="flex-1 h-9 text-xs"
                     >
-                      <p className="text-sm flex items-center gap-2">
-                        <Info className="w-4 h-4" />
-                        <span className={colors.infoText}>
-                          Your account email:{" "}
-                          <span className="font-medium">{user.email}</span>
-                        </span>
-                      </p>
-                    </div>
-                  )}
-
-                  <p className={cn("mb-6", colors.textMuted)}>
-                    Enter the email address associated with your account to
-                    verify your identity.
-                  </p>
-
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label
-                          htmlFor="email"
-                          className={cn("text-sm font-medium", colors.text)}
-                        >
-                          Email Address
-                        </Label>
-                      </div>
-
-                      <div className="relative">
-                        <Input
-                          id="email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => {
-                            setEmail(e.target.value);
-                            setEmailValidationState(null);
-                            setEmailValidationMessage("");
-                          }}
-                          placeholder="your@email.com"
-                          className={cn(
-                            "h-12 pr-12 transition-all duration-200",
-                            colors.border,
-                            colors.background,
-                            colors.text,
-                            "placeholder:text-gray-500 dark:placeholder:text-gray-400",
-                            emailValidationState === "valid" && [
-                              "border-emerald-500 dark:border-emerald-400",
-                              colors.successBg,
-                              "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
-                            ],
-                            emailValidationState === "invalid" && [
-                              "border-red-500 dark:border-red-400",
-                              colors.destructiveBg,
-                              "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
-                            ],
-                            !emailValidationState && [
-                              "focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500",
-                            ],
-                          )}
-                          aria-invalid={emailValidationState === "invalid"}
-                        />
-
-                        {emailValidationState && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            {emailValidationState === "valid" ? (
-                              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-h-[20px]">
-                        {emailValidationState === "invalid" && (
-                          <p className="text-sm text-red-500 dark:text-red-400 flex items-start gap-1.5">
-                            <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                            <span>{emailValidationMessage}</span>
-                          </p>
-                        )}
-
-                        {emailValidationState === "valid" && (
-                          <p className="text-sm text-emerald-500 dark:text-emerald-400 flex items-start gap-1.5">
-                            <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                            <span>{emailValidationMessage}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setStep("trySecret");
-                          setEmailValidationState(null);
-                          setEmailValidationMessage("");
-                        }}
-                        className={cn(
-                          "flex-1 h-12",
-                          colors.border,
-                          colors.text,
-                          colors.hoverBg,
-                        )}
-                        disabled={isLoading}
-                      >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
-                      </Button>
-                      <Button
-                        onClick={handleEmailSubmit}
-                        className="flex-1 h-12 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-semibold"
-                        disabled={
-                          isLoading ||
-                          !email.trim() ||
-                          emailValidationState === "invalid"
-                        }
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                            Verifying...
-                          </>
-                        ) : (
-                          "Verify Email"
-                        )}
-                      </Button>
-                    </div>
-
-                    <div className={cn("text-xs pt-2", colors.textMuted)}>
-                      <p>
-                        ⓘ You must use the exact email address associated with
-                        your account.
-                      </p>
-                    </div>
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleEmailSubmit}
+                      disabled={isLoading || !email}
+                      className="flex-1 h-9 text-xs bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "Verify"
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -840,222 +682,76 @@ export function SimpleForgotSecretModal({
           )}
 
           {step === "security" && (
-            <div className="space-y-6">
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5" />
-                <div
-                  className={cn(
-                    "relative p-6 rounded-2xl",
-                    colors.border,
-                    colors.backgroundMuted,
-                  )}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
-                      <Shield className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className={cn("font-bold text-xl", colors.text)}>
-                        Security Verification
-                      </h3>
-                      <p className={cn("text-sm mt-1", colors.textMuted)}>
-                        Answer your security question
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className={cn("mb-6", colors.textMuted)}>
-                    Please answer the security question you set up when creating
-                    your account.
-                  </p>
-
-                  <div className="space-y-6">
-                    <div
-                      className={cn(
-                        "p-4 rounded-xl border",
-                        colors.border,
-                        colors.background,
-                      )}
-                    >
-                      <div className="space-y-2">
-                        <p
-                          className={cn(
-                            "text-xs font-medium uppercase tracking-wider",
-                            colors.textMuted,
-                          )}
-                        >
-                          Your Security Question
-                        </p>
-                        <p className={cn("text-lg font-semibold", colors.text)}>
-                          {securityQuestion}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label
-                          htmlFor="securityAnswer"
-                          className={cn("text-sm font-medium", colors.text)}
-                        >
-                          Your Answer
-                        </Label>
-                        <span className={cn("text-xs", colors.textMuted)}>
-                          Case-sensitive
-                        </span>
-                      </div>
-
-                      <div className="relative">
-                        <Input
-                          id="securityAnswer"
-                          type={showSecurityAnswer ? "text" : "password"}
-                          value={securityAnswer}
-                          onChange={(e) => {
-                            setSecurityAnswer(e.target.value);
-                            setSecurityValidationState(null);
-                            setSecurityValidationMessage("");
-                          }}
-                          placeholder="Enter your answer..."
-                          className={cn(
-                            "h-12 pr-12 transition-all duration-200",
-                            colors.border,
-                            colors.background,
-                            colors.text,
-                            "placeholder:text-gray-500 dark:placeholder:text-gray-400",
-                            securityValidationState === "valid" && [
-                              "border-emerald-500 dark:border-emerald-400",
-                              colors.successBg,
-                              "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
-                            ],
-                            securityValidationState === "invalid" && [
-                              "border-red-500 dark:border-red-400",
-                              colors.destructiveBg,
-                              "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
-                            ],
-                            !securityValidationState && [
-                              "focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500",
-                            ],
-                          )}
-                          autoFocus
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowSecurityAnswer(!showSecurityAnswer)
-                          }
-                          className={cn(
-                            "absolute right-10 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md transition-colors",
-                            colors.hoverBg,
-                          )}
-                        >
-                          {showSecurityAnswer ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-
-                        {securityValidationState && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            {securityValidationState === "valid" ? (
-                              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-h-[20px]">
-                        {securityValidationState === "invalid" && (
-                          <p className="text-sm text-red-500 dark:text-red-400 flex items-start gap-1.5">
-                            <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                            <span>
-                              {securityValidationMessage ||
-                                "Incorrect answer. Please try again."}
-                            </span>
-                          </p>
-                        )}
-
-                        {securityValidationState === "valid" && (
-                          <p className="text-sm text-emerald-500 dark:text-emerald-400 flex items-start gap-1.5">
-                            <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                            <span>
-                              {securityValidationMessage ||
-                                "Answer verified! Proceeding..."}
-                            </span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setStep("email");
-                          setSecurityValidationState(null);
-                          setSecurityValidationMessage("");
-                        }}
-                        className={cn(
-                          "flex-1 h-12",
-                          colors.border,
-                          colors.text,
-                          colors.hoverBg,
-                        )}
-                        disabled={isLoading}
-                      >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
-                      </Button>
-                      <Button
-                        onClick={handleSecuritySubmit}
-                        className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold"
-                        disabled={
-                          isLoading ||
-                          !securityAnswer.trim() ||
-                          securityValidationState === "invalid"
-                        }
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                            Verifying...
-                          </>
-                        ) : (
-                          "Verify Answer"
-                        )}
-                      </Button>
-                    </div>
-
-                    <div className={cn("text-xs pt-2", colors.textMuted)}>
-                      <p>
-                        ⓘ Your security answer is case-sensitive and must match
-                        exactly what you set up.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+            <div className="space-y-3">
               <div
                 className={cn(
-                  "p-4 rounded-xl border",
+                  "p-3 rounded-lg",
                   colors.border,
-                  colors.background,
+                  colors.backgroundMuted,
                 )}
               >
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5" />
-                  <div>
-                    <h4 className={cn("font-semibold mb-2", colors.text)}>
-                      About Security Questions
-                    </h4>
-                    <p className={cn("text-sm", colors.textMuted)}>
-                      This extra layer of security ensures only you can access
-                      your gigs, even if you forget your secret key.
-                    </p>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+                    <Shield className="w-3 h-3 text-white" />
+                  </div>
+                  <h3 className={cn("font-bold text-sm", colors.text)}>
+                    Security Question
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  <div className={cn("p-2 rounded-lg text-xs", colors.border)}>
+                    {securityQuestion}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className={cn("text-xs font-medium", colors.text)}>
+                      Your Answer
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        value={securityAnswer}
+                        onChange={(e) => setSecurityAnswer(e.target.value)}
+                        type={showSecurityAnswer ? "text" : "password"}
+                        className={cn(
+                          "h-9 pr-8 text-sm rounded-lg",
+                          colors.border,
+                          colors.background,
+                        )}
+                        placeholder="Enter answer..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowSecurityAnswer(!showSecurityAnswer)
+                        }
+                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                      >
+                        {showSecurityAnswer ? (
+                          <EyeOff className="w-3.5 h-3.5" />
+                        ) : (
+                          <Eye className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep("email")}
+                      className="flex-1 h-9 text-xs"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleSecuritySubmit}
+                      disabled={isLoading || !securityAnswer}
+                      className="flex-1 h-9 text-xs bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "Verify"
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1063,315 +759,102 @@ export function SimpleForgotSecretModal({
           )}
 
           {step === "newSecret" && (
-            <div className="space-y-6">
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5" />
-                <div
-                  className={cn(
-                    "relative p-6 rounded-2xl",
-                    colors.border,
-                    colors.backgroundMuted,
-                  )}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
-                      <Key className="w-5 h-5 text-white" />
+            <div className="space-y-3">
+              <div
+                className={cn(
+                  "p-3 rounded-lg",
+                  colors.border,
+                  colors.backgroundMuted,
+                )}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
+                    <Key className="w-3 h-3 text-white" />
+                  </div>
+                  <h3 className={cn("font-bold text-sm", colors.text)}>
+                    New Secret Key
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className={cn("text-xs font-medium", colors.text)}>
+                        New Key
+                      </Label>
+                      <button
+                        onClick={generateRandomSecret}
+                        className="text-xs text-blue-500"
+                      >
+                        <Sparkles className="w-3 h-3 inline mr-1" />
+                        Generate
+                      </button>
                     </div>
-                    <div>
-                      <h3 className={cn("font-bold text-xl", colors.text)}>
-                        Create New Secret Key
-                      </h3>
-                      <p className={cn("text-sm mt-1", colors.textMuted)}>
-                        Set a new secret key for this gig
-                      </p>
+                    <div className="relative">
+                      <Input
+                        value={newSecret}
+                        onChange={(e) => setNewSecret(e.target.value)}
+                        type={showNewSecret ? "text" : "password"}
+                        className={cn(
+                          "h-9 pr-8 text-sm rounded-lg",
+                          colors.border,
+                          colors.background,
+                        )}
+                        placeholder="New secret key..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewSecret(!showNewSecret)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                      >
+                        {showNewSecret ? (
+                          <EyeOff className="w-3.5 h-3.5" />
+                        ) : (
+                          <Eye className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="space-y-6">
-                    <div
+                  <div className="space-y-1">
+                    <Label className={cn("text-xs font-medium", colors.text)}>
+                      Confirm Key
+                    </Label>
+                    <Input
+                      value={confirmSecret}
+                      onChange={(e) => setConfirmSecret(e.target.value)}
+                      type={showNewSecret ? "text" : "password"}
                       className={cn(
-                        "p-4 rounded-xl border",
+                        "h-9 text-sm rounded-lg",
                         colors.border,
-                        colors.warningBg,
+                        colors.background,
                       )}
+                      placeholder="Confirm secret key..."
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep("security")}
+                      className="flex-1 h-9 text-xs"
                     >
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-500 mt-0.5" />
-                        <div>
-                          <h5
-                            className={cn(
-                              "font-semibold mb-1",
-                              colors.warningText,
-                            )}
-                          >
-                            Important Notice
-                          </h5>
-                          <p className={cn("text-sm", colors.warningText)}>
-                            Save this key securely. You'll need it for all
-                            future edits. We cannot recover it if lost.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-5">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label
-                            htmlFor="newSecret"
-                            className={cn("text-sm font-medium", colors.text)}
-                          >
-                            New Secret Key
-                          </Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={generateRandomSecret}
-                            className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Generate
-                          </Button>
-                        </div>
-
-                        <div className="relative">
-                          <Input
-                            id="newSecret"
-                            type={showNewSecret ? "text" : "password"}
-                            value={newSecret}
-                            onChange={(e) => {
-                              setNewSecret(e.target.value);
-                              setNewSecretValidationState(null);
-                            }}
-                            placeholder="Enter new secret key (min. 8 characters)"
-                            className={cn(
-                              "h-12 pr-12 font-mono tracking-wide transition-all duration-200",
-                              colors.border,
-                              colors.background,
-                              colors.text,
-                              "placeholder:text-gray-500 dark:placeholder:text-gray-400",
-                              newSecretValidationState === "valid" && [
-                                "border-emerald-500 dark:border-emerald-400",
-                                colors.successBg,
-                                "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500",
-                              ],
-                              newSecretValidationState === "invalid" && [
-                                "border-red-500 dark:border-red-400",
-                                colors.destructiveBg,
-                                "focus:ring-2 focus:ring-red-500/20 focus:border-red-500",
-                              ],
-                              !newSecretValidationState && [
-                                "focus:ring-2 focus:ring-green-500/20 focus:border-green-500",
-                              ],
-                              newSecret &&
-                                newSecret.length < 8 && [
-                                  "border-yellow-500 dark:border-yellow-400",
-                                  colors.warningBg,
-                                ],
-                            )}
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => setShowNewSecret(!showNewSecret)}
-                            className={cn(
-                              "absolute right-10 top-1/2 transform -translate-y-1/2 p-1.5 rounded-md transition-colors",
-                              colors.hoverBg,
-                            )}
-                          >
-                            {showNewSecret ? (
-                              <EyeOff className="w-4 h-4" />
-                            ) : (
-                              <Eye className="w-4 h-4" />
-                            )}
-                          </button>
-
-                          {newSecretValidationState && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              {newSecretValidationState === "valid" ? (
-                                <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                              ) : (
-                                <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {newSecret && newSecret.length < 8 && (
-                          <p className="text-sm text-yellow-500 dark:text-yellow-500 flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            Should be at least 8 characters
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="confirmSecret"
-                          className={cn("text-sm font-medium", colors.text)}
-                        >
-                          Confirm Secret Key
-                        </Label>
-
-                        <div className="relative">
-                          <Input
-                            id="confirmSecret"
-                            type={showNewSecret ? "text" : "password"}
-                            value={confirmSecret}
-                            onChange={(e) => {
-                              setConfirmSecret(e.target.value);
-                              setNewSecretValidationState(null);
-                            }}
-                            placeholder="Re-enter the secret key"
-                            className={cn(
-                              "h-12 pr-12 font-mono tracking-wide transition-all duration-200",
-                              colors.border,
-                              colors.background,
-                              colors.text,
-                              "placeholder:text-gray-500 dark:placeholder:text-gray-400",
-                              confirmSecret &&
-                                newSecret !== confirmSecret && [
-                                  "border-red-500 dark:border-red-400",
-                                  colors.destructiveBg,
-                                  "focus:ring-2 focus:ring-red-500/20",
-                                ],
-                              confirmSecret &&
-                                newSecret === confirmSecret && [
-                                  "border-emerald-500 dark:border-emerald-400",
-                                  colors.successBg,
-                                  "focus:ring-2 focus:ring-emerald-500/20",
-                                ],
-                              !confirmSecret && [
-                                "focus:ring-2 focus:ring-green-500/20 focus:border-green-500",
-                              ],
-                            )}
-                          />
-
-                          {confirmSecret && newSecret === confirmSecret && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                            </div>
-                          )}
-                          {confirmSecret && newSecret !== confirmSecret && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-h-[20px]">
-                          {confirmSecret && newSecret !== confirmSecret && (
-                            <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-1.5">
-                              <XCircle className="w-4 h-4 flex-shrink-0" />
-                              Keys don't match
-                            </p>
-                          )}
-                          {confirmSecret && newSecret === confirmSecret && (
-                            <p className="text-sm text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5">
-                              <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                              Keys match
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {newSecret && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className={cn("text-xs", colors.textMuted)}>
-                              Strength
-                            </span>
-                            <span
-                              className={cn(
-                                "text-xs font-medium",
-                                getPasswordStrength(newSecret) === "weak"
-                                  ? "text-red-500"
-                                  : getPasswordStrength(newSecret) === "medium"
-                                    ? "text-yellow-500"
-                                    : "text-emerald-500",
-                              )}
-                            >
-                              {getPasswordStrength(newSecret).toUpperCase()}
-                            </span>
-                          </div>
-                          <div
-                            className={cn(
-                              "h-1.5 w-full rounded-full overflow-hidden",
-                              colors.backgroundMuted,
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "h-full transition-all duration-300",
-                                getPasswordStrength(newSecret) === "weak"
-                                  ? "w-1/3 bg-red-500"
-                                  : getPasswordStrength(newSecret) === "medium"
-                                    ? "w-2/3 bg-yellow-500"
-                                    : "w-full bg-emerald-500",
-                              )}
-                            />
-                          </div>
-                          <div className={cn("text-xs", colors.textMuted)}>
-                            {newSecret.length < 8
-                              ? "Use at least 8 characters"
-                              : !/[A-Z]/.test(newSecret)
-                                ? "Add uppercase letters"
-                                : !/[0-9]/.test(newSecret)
-                                  ? "Add numbers"
-                                  : !/[^A-Za-z0-9]/.test(newSecret)
-                                    ? "Add special characters"
-                                    : "Strong password"}
-                          </div>
-                        </div>
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleResetSecret}
+                      disabled={
+                        isLoading ||
+                        !newSecret ||
+                        !confirmSecret ||
+                        newSecret !== confirmSecret ||
+                        newSecret.length < 8
+                      }
+                      className="flex-1 h-9 text-xs bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "Set Key"
                       )}
-
-                      <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setStep("security");
-                            setNewSecretValidationState(null);
-                          }}
-                          className={cn(
-                            "flex-1 h-12",
-                            colors.border,
-                            colors.text,
-                            colors.hoverBg,
-                          )}
-                          disabled={isLoading}
-                        >
-                          <ArrowLeft className="w-4 h-4 mr-2" />
-                          Back
-                        </Button>
-                        <Button
-                          onClick={handleResetSecret}
-                          className="flex-1 h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold"
-                          disabled={
-                            isLoading ||
-                            !newSecret ||
-                            !confirmSecret ||
-                            newSecret !== confirmSecret ||
-                            newSecret.length < 8
-                          }
-                        >
-                          {isLoading ? (
-                            <>
-                              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                              Setting...
-                            </>
-                          ) : (
-                            "Set New Key"
-                          )}
-                        </Button>
-                      </div>
-
-                      <div className={cn("text-xs pt-2", colors.textMuted)}>
-                        <p>
-                          ⓘ Make sure to save your secret key in a secure place.
-                        </p>
-                      </div>
-                    </div>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1379,163 +862,61 @@ export function SimpleForgotSecretModal({
           )}
 
           {step === "success" && (
-            <div className="space-y-6">
+            <div className="space-y-3">
               <div className="text-center">
-                <div className="relative inline-block">
-                  <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center">
-                    <CheckCircle className="w-12 h-12 text-white" />
-                  </div>
-                  <div className="absolute inset-0 rounded-full border-4 border-emerald-300 dark:border-emerald-600 animate-ping opacity-30" />
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 mb-2">
+                  <CheckCircle className="w-6 h-6 text-white" />
                 </div>
-                <h3 className={cn("text-2xl font-bold mt-6 mb-2", colors.text)}>
+                <h3 className={cn("font-bold text-base", colors.text)}>
                   Success!
                 </h3>
-                <p className={cn(colors.textMuted)}>
-                  Your secret key has been successfully reset
+                <p className={cn("text-xs mt-1", colors.textMuted)}>
+                  Your secret key has been reset
                 </p>
               </div>
 
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5" />
-                <div
-                  className={cn(
-                    "relative p-6 rounded-2xl",
-                    colors.border,
-                    colors.backgroundMuted,
-                  )}
+              <div
+                className={cn(
+                  "p-3 rounded-lg",
+                  colors.border,
+                  colors.backgroundMuted,
+                )}
+              >
+                <Label
+                  className={cn("text-xs font-medium mb-2 block", colors.text)}
                 >
-                  <div className="space-y-4">
-                    <div>
-                      <Label
-                        className={cn(
-                          "text-sm font-medium mb-3 block",
-                          colors.text,
-                        )}
-                      >
-                        Your New Secret Key
-                      </Label>
-                      <div className="flex items-stretch gap-3">
-                        <div
-                          className={cn(
-                            "flex-1 p-4 border rounded-xl",
-                            colors.border,
-                            colors.background,
-                          )}
-                        >
-                          <p className="font-mono text-lg text-center tracking-wider select-all">
-                            {generatedSecret}
-                          </p>
-                        </div>
-                        <Button
-                          onClick={() => copyToClipboard(generatedSecret)}
-                          className={cn(
-                            "px-5 text-white font-semibold",
-                            copied
-                              ? "bg-emerald-600 hover:bg-emerald-700"
-                              : "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700",
-                          )}
-                        >
-                          {copied ? (
-                            <Check className="w-5 h-5" />
-                          ) : (
-                            <Copy className="w-5 h-5" />
-                          )}
-                        </Button>
-                      </div>
-
-                      {copied && (
-                        <p className="text-sm text-emerald-500 dark:text-emerald-400 mt-2 text-center">
-                          <Check className="w-4 h-4 inline mr-1" />
-                          Copied to clipboard!
-                        </p>
-                      )}
-                    </div>
-
-                    <div
-                      className={cn(
-                        "p-4 rounded-xl border",
-                        colors.border,
-                        colors.warningBg,
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-500 mt-0.5" />
-                        <div>
-                          <h5
-                            className={cn(
-                              "font-semibold mb-2",
-                              colors.warningText,
-                            )}
-                          >
-                            Important Instructions
-                          </h5>
-                          <ul className="text-sm space-y-2">
-                            <li className="flex items-center gap-2">
-                              <div
-                                className={cn(
-                                  "w-1.5 h-1.5 rounded-full",
-                                  colors.warningText,
-                                )}
-                              />
-                              <span className={colors.warningText}>
-                                Save this key in a secure password manager
-                              </span>
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <div
-                                className={cn(
-                                  "w-1.5 h-1.5 rounded-full",
-                                  colors.warningText,
-                                )}
-                              />
-                              <span className={colors.warningText}>
-                                Required for all future edits to this gig
-                              </span>
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <div
-                                className={cn(
-                                  "w-1.5 h-1.5 rounded-full",
-                                  colors.warningText,
-                                )}
-                              />
-                              <span className={colors.warningText}>
-                                Never share your secret key with anyone
-                              </span>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className={cn(
-                        "p-4 rounded-xl border",
-                        colors.border,
-                        colors.infoBg,
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Info className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5" />
-                        <div>
-                          <h6
-                            className={cn("font-medium mb-1", colors.infoText)}
-                          >
-                            Next Steps
-                          </h6>
-                          <p className={cn("text-sm", colors.infoText)}>
-                            You can now continue to edit your gig. Remember to
-                            use this secret key whenever you need to make
-                            changes.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  Your New Secret Key
+                </Label>
+                <div className="flex gap-2">
+                  <div
+                    className={cn(
+                      "flex-1 p-2 rounded-lg text-xs font-mono break-all",
+                      colors.border,
+                      colors.background,
+                    )}
+                  >
+                    {generatedSecret}
                   </div>
+                  <Button
+                    onClick={() => copyToClipboard(generatedSecret)}
+                    className={cn(
+                      "px-3 h-9",
+                      copied
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700",
+                      "text-white",
+                    )}
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1543,38 +924,20 @@ export function SimpleForgotSecretModal({
                     setGeneratedSecret("");
                     setNewSecret("");
                     setConfirmSecret("");
-                    setEmail("");
-                    setSecurityAnswer("");
-                    setEmailValidationState(null);
-                    setSecurityValidationState(null);
-                    setNewSecretValidationState(null);
                   }}
-                  className={cn(
-                    "flex-1 h-12",
-                    colors.border,
-                    colors.text,
-                    colors.hoverBg,
-                  )}
+                  className="flex-1 h-9 text-xs"
                 >
-                  Reset Another Key
+                  Reset Another
                 </Button>
                 <Button
                   onClick={() => {
                     onSuccess();
                     onClose();
                   }}
-                  className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold"
+                  className="flex-1 h-9 text-xs bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
                 >
-                  <ArrowRight className="w-4 h-4 mr-2" />
-                  Continue to Gig
+                  Continue
                 </Button>
-              </div>
-
-              <div className="text-center">
-                <p className={cn("text-xs", colors.textMuted)}>
-                  ⓘ This modal will close automatically when you click "Continue
-                  to Gig"
-                </p>
               </div>
             </div>
           )}

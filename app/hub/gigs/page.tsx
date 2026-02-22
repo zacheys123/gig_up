@@ -36,7 +36,8 @@ import { BookedGigs } from "./_components/BookedGigs";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { LiveTv } from "@mui/icons-material";
-
+import { usePathname } from "next/navigation";
+import { MobileThemeModal } from "@/components/modals/MobileThemeModal";
 // ============= HELPER FUNCTIONS =============
 
 const getUserSubtitle = (user: any) => {
@@ -197,7 +198,6 @@ const getUserGigTabs = (user: any) => {
 const renderGigContent = (
   user: any,
   activeTab: string,
-  colors: any,
   isInGracePeriod: boolean,
 ) => {
   const userTier = user?.tier || "free";
@@ -245,7 +245,6 @@ const renderGigContent = (
         return <FavoriteGigs user={user} />;
       case "saved":
         return <SavedGigs user={user} />;
-
       case "reviewed":
         return <ReviewedGigs user={user} />;
       case "payments":
@@ -418,9 +417,9 @@ export default function GigsHub() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   // Use theme hooks
-  const { colors } = useThemeColors();
-  const { toggleDarkMode, isDarkMode } = useThemeToggle();
-
+  const { colors, isDarkMode } = useThemeColors();
+  const { toggleDarkMode } = useThemeToggle();
+  const pathname = usePathname();
   // Auto-refresh every 30 seconds - SILENT (no toast)
   useEffect(() => {
     const interval = setInterval(() => {
@@ -495,18 +494,16 @@ export default function GigsHub() {
       )}
     >
       {/* FIXED HEADER - No scroll */}
-      <div className="flex-shrink-0 z-50">
+      <div className="flex-shrink-0 z-50 ">
         {/* Top bar with back button and refresh */}
         <div
           className={cn(
-            "border-b",
+            "hidden border-b md:flex justify-center items-center",
             colors.border,
             colors.navText,
             "backdrop-blur-md",
           )}
         >
-          {" "}
-          {/* Theme Modal - Moved outside header to fix layout */}
           <ThemeModal
             isOpen={showThemeModal}
             onClose={() => setShowThemeModal(false)}
@@ -515,6 +512,31 @@ export default function GigsHub() {
             colors={colors}
           />
         </div>
+        {/* Mobile Theme Button - visible only on mobile */}
+        <div className="md:hidden flex items-center justify-end p-3 border-b">
+          <button
+            onClick={() => setShowThemeModal(true)}
+            className={cn(
+              "p-2 rounded-full transition-all duration-200",
+              colors.hoverBg,
+            )}
+          >
+            {isDarkMode ? (
+              <Moon className={cn("w-5 h-5", colors.text)} />
+            ) : (
+              <Sun className={cn("w-5 h-5", colors.text)} />
+            )}
+          </button>
+        </div>
+
+        {/* Mobile Theme Modal */}
+        <MobileThemeModal
+          isOpen={showThemeModal}
+          onClose={() => setShowThemeModal(false)}
+          toggleDarkMode={toggleDarkMode}
+          themeIsDark={isDarkMode}
+          colors={colors}
+        />
 
         {/* Tabs section */}
         <div className={cn("border-b", colors.border, colors.card)}>
@@ -703,7 +725,7 @@ export default function GigsHub() {
                       ) : (
                         <Sun
                           className={cn(
-                            "w-4 h-4 text-amber-500",
+                            "w-4 h-4 text-amber-500 ",
                             "drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]",
                           )}
                         />
@@ -742,20 +764,45 @@ export default function GigsHub() {
               </div>
             </div>
 
-            {/* Scrollable tabs */}
+            {/* Scrollable tabs - Including Community Nav */}
             <div className="flex gap-2 overflow-x-auto pb-3 hide-scrollbar">
+              {" "}
+              {/* Community Nav - Distinct but blending */}
+              <Link
+                href="/community?tab=videos"
+                className={cn(
+                  "px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all",
+                  "flex items-center gap-1.5",
+                  "border-2 border-dashed",
+                  pathname === "/community" &&
+                    searchParams.get("tab") === "videos"
+                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-md"
+                    : cn(
+                        "border-purple-300 dark:border-purple-700",
+                        "text-purple-600 dark:text-purple-400",
+                        "hover:bg-purple-50 dark:hover:bg-purple-900/20",
+                        "hover:border-purple-400 dark:hover:border-purple-600",
+                      ),
+                )}
+              >
+                <Video className="w-4 h-4" />
+                <span>Community</span>
+                <span className="text-[10px] opacity-70 hidden sm:inline">
+                  videos
+                </span>
+              </Link>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                    "px-4 py-2 rounded-full text-xs md:text-sm font-medium whitespace-nowrap transition-all",
                     activeTab === tab.id
                       ? "bg-blue-500 text-white shadow-md"
                       : cn(
-                          colors.backgroundMuted, // Use theme background instead of hardcoded gray
+                          colors.backgroundMuted,
                           colors.textMuted,
-                          colors.hoverBg, // Use theme hover
+                          colors.hoverBg,
                         ),
                   )}
                 >
@@ -768,9 +815,10 @@ export default function GigsHub() {
       </div>
 
       {/* Main Content - Scrollable */}
+
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {renderGigContent(memoizedUser, activeTab, colors, isInGracePeriod)}
+          {renderGigContent(memoizedUser, activeTab, isInGracePeriod)}
         </div>
       </div>
 
