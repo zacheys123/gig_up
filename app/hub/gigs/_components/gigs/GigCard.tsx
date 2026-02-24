@@ -36,6 +36,7 @@ import {
   Volume2,
   Mic,
   XCircle,
+  Loader2,
 } from "lucide-react";
 
 // Convex imports
@@ -2607,7 +2608,7 @@ const GigCard: React.FC<GigCardProps> = ({
               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span>{gig.bussinesscat || "Gig"}</span>
                 <span>•</span>
-                <span>{gigPoster?.firstname || "User"}</span>
+                <span>{gigPoster?.organization || "User"}</span>
               </div>
             </div>
           </div>
@@ -2665,140 +2666,527 @@ const GigCard: React.FC<GigCardProps> = ({
       </motion.div>
 
       {/* Minimal Modals */}
+      {/* Minimal Modals - Enhanced with Theme Support */}
       <Dialog open={showInterestModal} onOpenChange={setShowInterestModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Show Interest</DialogTitle>
-            <DialogDescription>Add a note (optional)</DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={interestNotes}
-            onChange={(e) => setInterestNotes(e.target.value)}
-            placeholder="Tell the client why you're interested..."
-            className="min-h-[80px]"
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowInterestModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => handleRegularInterest(interestNotes)}
-              disabled={loading}
-            >
-              {loading ? "..." : "Submit"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <DialogContent
+          className={cn(
+            "sm:max-w-md p-0 overflow-hidden border-0",
+            isDarkMode
+              ? "bg-gradient-to-b from-slate-900 to-slate-800"
+              : "bg-gradient-to-b from-white to-slate-50",
+          )}
+        >
+          {/* Decorative header gradient */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500" />
 
-      <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Apply with Band</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              value={memberName}
-              onChange={(e) => setMemberName(e.target.value)}
-              placeholder="Band name"
-            />
-            {gig.bandCategory && (
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gig.bandCategory.map((role, i) => (
-                    <SelectItem key={i} value={role.role}>
-                      {role.role} ({role.filledSlots}/{role.maxSlots})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+          <div className="p-5 sm:p-6">
+            <DialogHeader className="space-y-2 mb-4">
+              <DialogTitle
+                className={cn(
+                  "text-xl font-semibold",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
+              >
+                Show Interest
+              </DialogTitle>
+              <DialogDescription
+                className={cn(
+                  "text-sm",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                Add a note to introduce yourself (optional)
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <Textarea
+                value={interestNotes}
+                onChange={(e) => setInterestNotes(e.target.value)}
+                placeholder="Tell the client why you're interested in this gig..."
+                className={cn(
+                  "min-h-[100px] resize-none border-2 transition-all",
+                  "focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500",
+                  isDarkMode
+                    ? "bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+                )}
+              />
+
+              {/* Gig preview - optional */}
+              <div
+                className={cn(
+                  "p-3 rounded-lg border",
+                  isDarkMode
+                    ? "bg-slate-800/30 border-slate-700/50"
+                    : "bg-slate-50 border-slate-200",
+                )}
+              >
+                <p
+                  className={cn(
+                    "text-xs font-medium",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                  )}
+                >
+                  You're applying for:
+                </p>
+                <p
+                  className={cn(
+                    "text-sm font-medium mt-1",
+                    isDarkMode ? "text-white" : "text-slate-900",
+                  )}
+                >
+                  {gig?.title}
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowInterestModal(false)}
+                className={cn(
+                  "w-full sm:w-auto rounded-xl border-2",
+                  isDarkMode
+                    ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-100",
+                )}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleRegularInterest(interestNotes)}
+                disabled={loading}
+                className={cn(
+                  "w-full sm:w-auto rounded-xl font-medium",
+                  "bg-gradient-to-r from-orange-500 to-amber-500",
+                  "hover:from-orange-600 hover:to-amber-600",
+                  "text-white shadow-lg hover:shadow-xl",
+                  "transition-all duration-200",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                )}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Sending...</span>
+                  </div>
+                ) : (
+                  "Submit Interest"
+                )}
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowBandJoinModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                const idx =
-                  gig.bandCategory?.findIndex((r) => r.role === selectedRole) ??
-                  -1;
-                if (idx >= 0) handleBandAction(idx)?.action?.();
-              }}
-              disabled={!selectedRole || !memberName}
-            >
-              Apply
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Apply with Band Modal */}
+      <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
+        <DialogContent
+          className={cn(
+            "sm:max-w-md p-0 overflow-hidden border-0",
+            isDarkMode
+              ? "bg-gradient-to-b from-slate-900 to-slate-800"
+              : "bg-gradient-to-b from-white to-slate-50",
+          )}
+        >
+          <div className="h-1.5 w-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500" />
+
+          <div className="p-5 sm:p-6">
+            <DialogHeader className="space-y-2 mb-4">
+              <DialogTitle
+                className={cn(
+                  "text-xl font-semibold",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
+              >
+                Apply with Band
+              </DialogTitle>
+              <DialogDescription
+                className={cn(
+                  "text-sm",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                Enter your band details and select a role
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label
+                  className={cn(
+                    "text-sm font-medium",
+                    isDarkMode ? "text-slate-300" : "text-slate-700",
+                  )}
+                >
+                  Band Name
+                </label>
+                <Input
+                  value={memberName}
+                  onChange={(e) => setMemberName(e.target.value)}
+                  placeholder="Enter your band name"
+                  className={cn(
+                    "h-11 border-2 transition-all",
+                    "focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500",
+                    isDarkMode
+                      ? "bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                      : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+                  )}
+                />
+              </div>
+
+              {gig.bandCategory && (
+                <div className="space-y-2">
+                  <label
+                    className={cn(
+                      "text-sm font-medium",
+                      isDarkMode ? "text-slate-300" : "text-slate-700",
+                    )}
+                  >
+                    Select Role
+                  </label>
+                  <Select value={selectedRole} onValueChange={setSelectedRole}>
+                    <SelectTrigger
+                      className={cn(
+                        "h-11 border-2",
+                        "focus:ring-2 focus:ring-purple-500/20",
+                        isDarkMode
+                          ? "bg-slate-800/50 border-slate-700 text-white"
+                          : "bg-white border-slate-200 text-slate-900",
+                      )}
+                    >
+                      <SelectValue placeholder="Choose a role" />
+                    </SelectTrigger>
+                    <SelectContent
+                      className={cn(
+                        isDarkMode
+                          ? "bg-slate-900 border-slate-800"
+                          : "bg-white border-slate-200",
+                      )}
+                    >
+                      {gig.bandCategory.map((role, i) => {
+                        const isFull = role.filledSlots >= role.maxSlots;
+                        return (
+                          <SelectItem
+                            key={i}
+                            value={role.role}
+                            disabled={isFull}
+                            className={cn(
+                              isFull && "opacity-50",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            <div className="flex items-center justify-between w-full gap-4">
+                              <span>{role.role}</span>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-xs",
+                                  isFull
+                                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                                    : isDarkMode
+                                      ? "border-slate-600 text-slate-300"
+                                      : "border-slate-300 text-slate-600",
+                                )}
+                              >
+                                {role.filledSlots}/{role.maxSlots}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowBandJoinModal(false)}
+                className={cn(
+                  "w-full sm:w-auto rounded-xl border-2",
+                  isDarkMode
+                    ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-100",
+                )}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const idx =
+                    gig.bandCategory?.findIndex(
+                      (r) => r.role === selectedRole,
+                    ) ?? -1;
+                  if (idx >= 0) handleBandAction(idx)?.action?.();
+                }}
+                disabled={!selectedRole || !memberName}
+                className={cn(
+                  "w-full sm:w-auto rounded-xl font-medium",
+                  "bg-gradient-to-r from-purple-500 to-pink-500",
+                  "hover:from-purple-600 hover:to-pink-600",
+                  "text-white shadow-lg hover:shadow-xl",
+                  "transition-all duration-200",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                )}
+              >
+                Apply with Band
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Application Modal */}
       <Dialog
         open={showApplicationModal}
         onOpenChange={setShowApplicationModal}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              Apply for {selectedRoleForApplication?.role}
-            </DialogTitle>
-          </DialogHeader>
-          <Textarea
-            value={interestNotes}
-            onChange={(e) => setInterestNotes(e.target.value)}
-            placeholder="Notes (optional)"
-            className="min-h-[80px]"
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowApplicationModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                const idx =
-                  gig.bandCategory?.findIndex(
-                    (r) => r.role === selectedRoleForApplication?.role,
-                  ) ?? 0;
-                applyForBandRole({
-                  gigId: gig._id,
-                  bandRoleIndex: idx,
-                  userId: currentUser!._id,
-                  applicationNotes: interestNotes,
-                })
-                  .then(() => {
-                    toast.success("Applied!");
-                    setShowApplicationModal(false);
+        <DialogContent
+          className={cn(
+            "sm:max-w-md p-0 overflow-hidden border-0",
+            isDarkMode
+              ? "bg-gradient-to-b from-slate-900 to-slate-800"
+              : "bg-gradient-to-b from-white to-slate-50",
+          )}
+        >
+          <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500" />
+
+          <div className="p-5 sm:p-6">
+            <DialogHeader className="space-y-2 mb-4">
+              <DialogTitle
+                className={cn(
+                  "text-xl font-semibold",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
+              >
+                Apply for {selectedRoleForApplication?.role}
+              </DialogTitle>
+              <DialogDescription
+                className={cn(
+                  "text-sm",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                Add any additional information (optional)
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedRoleForApplication && (
+              <div className="mb-4 p-3 rounded-lg border bg-gradient-to-r from-blue-50/50 to-cyan-50/50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                    <Music className="w-3 h-3 text-white" />
+                  </div>
+                  <p
+                    className={cn(
+                      "text-xs font-medium",
+                      isDarkMode ? "text-blue-300" : "text-blue-700",
+                    )}
+                  >
+                    Role details
+                  </p>
+                </div>
+                {selectedRoleForApplication.description && (
+                  <p
+                    className={cn(
+                      "text-xs mb-2",
+                      isDarkMode ? "text-slate-300" : "text-slate-600",
+                    )}
+                  >
+                    {selectedRoleForApplication.description}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
+                      Slots available:
+                    </span>
+                    <span
+                      className={cn(
+                        "ml-1 font-medium",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      {selectedRoleForApplication.maxSlots -
+                        selectedRoleForApplication.filledSlots}
+                      /{selectedRoleForApplication.maxSlots}
+                    </span>
+                  </div>
+                  {selectedRoleForApplication.price && (
+                    <div>
+                      <span
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        Rate:
+                      </span>
+                      <span className="ml-1 font-medium text-emerald-600 dark:text-emerald-400">
+                        ${selectedRoleForApplication.price}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Textarea
+              value={interestNotes}
+              onChange={(e) => setInterestNotes(e.target.value)}
+              placeholder="Tell the client why you're a good fit for this role..."
+              className={cn(
+                "min-h-[100px] resize-none border-2 transition-all",
+                "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500",
+                isDarkMode
+                  ? "bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                  : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+              )}
+            />
+
+            <DialogFooter className="flex-col sm:flex-row gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowApplicationModal(false)}
+                className={cn(
+                  "w-full sm:w-auto rounded-xl border-2",
+                  isDarkMode
+                    ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-100",
+                )}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const idx =
+                    gig.bandCategory?.findIndex(
+                      (r) => r.role === selectedRoleForApplication?.role,
+                    ) ?? 0;
+                  applyForBandRole({
+                    gigId: gig._id,
+                    bandRoleIndex: idx,
+                    userId: currentUser!._id,
+                    applicationNotes: interestNotes,
                   })
-                  .catch(toast.error);
-              }}
-              disabled={loading}
-            >
-              {loading ? "..." : "Apply"}
-            </Button>
-          </DialogFooter>
+                    .then(() => {
+                      toast.success("Applied successfully!");
+                      setShowApplicationModal(false);
+                      setInterestNotes("");
+                    })
+                    .catch((error) => toast.error(error.message));
+                }}
+                disabled={loading}
+                className={cn(
+                  "w-full sm:w-auto rounded-xl font-medium",
+                  "bg-gradient-to-r from-blue-500 to-cyan-500",
+                  "hover:from-blue-600 hover:to-cyan-600",
+                  "text-white shadow-lg hover:shadow-xl",
+                  "transition-all duration-200",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                )}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Applying...</span>
+                  </div>
+                ) : (
+                  "Submit Application"
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
+      {/* Warning Modal */}
       <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
-        <DialogContent className="sm:max-w-md text-center">
-          <AlertCircle className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-          <DialogTitle className="text-base">Role Mismatch</DialogTitle>
-          <p className="text-sm text-gray-500 mt-1">{warningReason}</p>
-          <DialogFooter className="mt-4">
-            <Button onClick={() => setShowWarningModal(false)}>Got it</Button>
-          </DialogFooter>
+        <DialogContent
+          className={cn(
+            "sm:max-w-md p-0 overflow-hidden border-0",
+            isDarkMode
+              ? "bg-gradient-to-b from-slate-900 to-slate-800"
+              : "bg-gradient-to-b from-white to-slate-50",
+          )}
+        >
+          <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" />
+
+          <div className="p-6 text-center">
+            <div className="relative mx-auto w-16 h-16 mb-4">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-red-500 rounded-full opacity-20 animate-ping" />
+              <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-amber-500 to-red-500">
+                <AlertCircle className="w-8 h-8 text-white" />
+              </div>
+            </div>
+
+            <DialogHeader className="space-y-2">
+              <DialogTitle
+                className={cn(
+                  "text-xl font-semibold",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
+              >
+                Role Mismatch
+              </DialogTitle>
+              <DialogDescription
+                className={cn(
+                  "text-sm",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                {warningReason}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div
+              className={cn(
+                "mt-4 p-3 rounded-lg text-xs",
+                isDarkMode
+                  ? "bg-amber-950/30 text-amber-300"
+                  : "bg-amber-50 text-amber-700",
+              )}
+            >
+              <p className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                Update your profile to match the requirements
+              </p>
+            </div>
+
+            <DialogFooter className="flex-col gap-2 mt-6">
+              <Button
+                onClick={() => setShowWarningModal(false)}
+                className={cn(
+                  "w-full rounded-xl font-medium",
+                  "bg-gradient-to-r from-amber-500 to-red-500",
+                  "hover:from-amber-600 hover:to-red-600",
+                  "text-white shadow-lg hover:shadow-xl",
+                  "transition-all duration-200",
+                )}
+              >
+                Got it
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => router.push("/hub/profile/edit")}
+                className={cn(
+                  "w-full rounded-xl text-sm",
+                  isDarkMode
+                    ? "text-slate-400 hover:text-white hover:bg-slate-800"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
+                )}
+              >
+                Update Profile
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </>
