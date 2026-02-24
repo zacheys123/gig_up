@@ -115,780 +115,20 @@ import {
   BarChart3,
   LineChart,
   Zap,
+  History,
 } from "lucide-react";
 // Trust components
 import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
 import { ChatIcon } from "@/components/chat/ChatIcon";
 import { isUserQualifiedForRole } from "../../../utils";
+import { useAllGigs } from "@/hooks/useAllGigs";
+import PlatformActivitySidebar, {
+  PlatformGig,
+} from "../../_components/PlatformActivitySidebar";
+import ComingSoonGigs from "../../_components/ComingSoon";
+import { formatTimeAgo } from "@/utils";
 
 // ============= COMPONENT PLACEHOLDERS =============
-
-const ApplicantSidebar = ({
-  groupedApplicants,
-  filterUsers,
-  getUserStatusBadge,
-  handleViewProfile,
-  canMessageUser,
-  isDarkMode,
-  searchQuery,
-  setSearchQuery,
-  activeTab,
-  setActiveTab,
-  isMobile = false,
-}: any) => {
-  const [activityScores, setActivityScores] = useState<Record<string, number>>(
-    {},
-  );
-  const [categoryStats, setCategoryStats] = useState<
-    Record<string, { active: number; trending: boolean }>
-  >({});
-  const [feedMood, setFeedMood] = useState<"active" | "calm" | "busy">("calm");
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [onlineCount, setOnlineCount] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Update individual activity scores
-      const newScores: Record<string, number> = {};
-      Object.values(groupedApplicants).forEach((category: any) => {
-        category?.forEach((user: any) => {
-          if (user?._id) {
-            newScores[user._id] = Math.floor(Math.random() * 100); // 0-99 activity score
-          }
-        });
-      });
-      setActivityScores(newScores);
-
-      // Update category stats
-      const newStats: Record<string, { active: number; trending: boolean }> =
-        {};
-      Object.keys(groupedApplicants).forEach((key) => {
-        const users = groupedApplicants[key] || [];
-        const active = Math.floor(Math.random() * users.length); // Random active count
-        const trending = Math.random() > 0.7; // 30% chance of trending
-        newStats[key] = { active, trending };
-      });
-      setCategoryStats(newStats);
-
-      // Update feed mood
-      const moods = ["active", "calm", "busy"] as const;
-      setFeedMood(moods[Math.floor(Math.random() * moods.length)]);
-
-      // Random online count (between 1 and total users)
-      const totalUsers = Object.values(groupedApplicants).reduce(
-        (acc: number, arr: any) => acc + (arr?.length || 0),
-        0,
-      );
-      setOnlineCount(Math.floor(Math.random() * totalUsers) + 1);
-
-      setLastUpdated(new Date());
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [groupedApplicants]);
-
-  const getActivityColor = (score: number = 0) => {
-    if (score > 66) return "text-emerald-500";
-    if (score > 33) return "text-amber-500";
-    return "text-slate-400";
-  };
-
-  const getActivityBar = (score: number = 0) => {
-    const width = Math.min(100, Math.max(10, score));
-    return (
-      <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all duration-500",
-            score > 66
-              ? "bg-emerald-500"
-              : score > 33
-                ? "bg-amber-500"
-                : "bg-slate-400",
-          )}
-          style={{ width: `${width}%` }}
-        />
-      </div>
-    );
-  };
-
-  const totalActive = Object.values(categoryStats).reduce(
-    (acc, stat) => acc + (stat?.active || 0),
-    0,
-  );
-
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border overflow-hidden",
-        isDarkMode
-          ? "bg-slate-900/80 border-slate-700/50 backdrop-blur-md"
-          : "bg-white/90 border-slate-200/50 backdrop-blur-md shadow-lg",
-      )}
-    >
-      {/* Header with activity mood */}
-      <div
-        className={cn(
-          "px-4 py-3 border-b flex items-center justify-between",
-          isDarkMode ? "border-slate-700/50" : "border-slate-200/50",
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              "w-2 h-2 rounded-full animate-pulse",
-              feedMood === "busy"
-                ? "bg-emerald-500"
-                : feedMood === "active"
-                  ? "bg-amber-500"
-                  : "bg-slate-400",
-            )}
-          />
-          <div className="flex items-center gap-2">
-            <h3
-              className={cn(
-                "text-sm font-semibold uppercase tracking-wider",
-                isDarkMode ? "text-slate-300" : "text-slate-700",
-              )}
-            >
-              Activity Feed
-            </h3>
-            {feedMood === "busy" && (
-              <Zap className="w-3.5 h-3.5 text-emerald-500" />
-            )}
-            {feedMood === "active" && (
-              <Activity className="w-3.5 h-3.5 text-amber-500" />
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-xs font-mono",
-              isDarkMode
-                ? "border-slate-700 text-slate-400"
-                : "border-slate-200 text-slate-500",
-            )}
-          >
-            <span className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {Object.values(groupedApplicants).reduce(
-                (acc: number, arr: any) => acc + (arr?.length || 0),
-                0,
-              )}
-            </span>
-          </Badge>
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-xs font-mono",
-              isDarkMode
-                ? "border-slate-700 text-slate-400"
-                : "border-slate-200 text-slate-500",
-            )}
-          >
-            <span className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              {onlineCount} online
-            </span>
-          </Badge>
-        </div>
-      </div>
-
-      {/* Live activity ticker */}
-      <div
-        className={cn(
-          "px-3 py-2 border-b flex items-center gap-3 overflow-x-auto text-[10px] font-mono",
-          isDarkMode
-            ? "border-slate-700/50 bg-slate-800/30"
-            : "border-slate-200/50 bg-slate-100/30",
-        )}
-      >
-        <Activity
-          className={cn(
-            "w-3 h-3 animate-pulse",
-            isDarkMode ? "text-amber-400" : "text-amber-500",
-          )}
-        />
-        {Object.entries(categoryStats).map(([key, data]) => (
-          <div
-            key={key}
-            className="flex items-center gap-1.5 whitespace-nowrap"
-          >
-            <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
-              {key.toUpperCase()}:
-            </span>
-            <span
-              className={data?.trending ? "text-emerald-500" : "text-slate-400"}
-            >
-              {data?.active || 0} active
-            </span>
-            {data?.trending && (
-              <Sparkles className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div
-        className={cn(
-          "p-3 border-b",
-          isDarkMode ? "border-slate-700/50" : "border-slate-200/50",
-        )}
-      >
-        <div className="relative">
-          <Search
-            className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5",
-              isDarkMode ? "text-slate-500" : "text-slate-400",
-            )}
-          />
-          <Input
-            placeholder="Search participants..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn(
-              "pl-8 h-9 text-sm rounded-lg border-0 bg-transparent",
-              "focus:ring-1 focus:ring-blue-500/30",
-              isDarkMode
-                ? "bg-slate-800/50 text-white placeholder:text-slate-500"
-                : "bg-slate-100/50 text-slate-900 placeholder:text-slate-400",
-            )}
-          />
-        </div>
-      </div>
-
-      {/* Category Tabs with live indicators */}
-      <div className="px-3 pt-3">
-        <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
-          {[
-            { id: "all", label: "ALL", color: "blue" },
-            { id: "interested", label: "INTERESTED", color: "rose" },
-            { id: "applied", label: "APPLIED", color: "amber" },
-            { id: "shortlisted", label: "SHORTLISTED", color: "emerald" },
-            { id: "booked", label: "BOOKED", color: "purple" },
-          ].map((tab) => {
-            const count =
-              tab.id === "all"
-                ? Object.values(groupedApplicants).reduce(
-                    (acc: number, arr: any) => acc + (arr?.length || 0),
-                    0,
-                  )
-                : groupedApplicants[tab.id as keyof typeof groupedApplicants]
-                    ?.length || 0;
-
-            const stat = categoryStats[tab.id];
-            const active = stat?.active || 0;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all",
-                  "flex items-center gap-1.5",
-                  activeTab === tab.id
-                    ? isDarkMode
-                      ? `bg-${tab.color}-500/20 text-${tab.color}-400 border border-${tab.color}-500/30`
-                      : `bg-${tab.color}-50 text-${tab.color}-700 border border-${tab.color}-200`
-                    : isDarkMode
-                      ? "text-slate-400 hover:text-white hover:bg-slate-800"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
-                )}
-              >
-                <span>{tab.label}</span>
-                {active > 0 && (
-                  <span
-                    className={cn(
-                      "text-[8px]",
-                      isDarkMode ? "text-slate-500" : "text-slate-400",
-                    )}
-                  >
-                    {active} now
-                  </span>
-                )}
-                {stat?.trending && (
-                  <Sparkles className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
-                )}
-                {count > 0 && (
-                  <span
-                    className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded-full",
-                      activeTab === tab.id
-                        ? isDarkMode
-                          ? `bg-${tab.color}-500/30 text-${tab.color}-300`
-                          : `bg-${tab.color}-200 text-${tab.color}-800`
-                        : isDarkMode
-                          ? "bg-slate-800 text-slate-400"
-                          : "bg-slate-200 text-slate-500",
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Participants List - Like activity feed */}
-      <ScrollArea
-        className={cn("px-3", isMobile ? "h-[calc(100vh-350px)]" : "h-[400px]")}
-      >
-        <div className="space-y-2 pt-2 pb-3">
-          {activeTab === "all" ? (
-            // Show all categories grouped like feed sections
-            <>
-              {[
-                "interested",
-                "applied",
-                "shortlisted",
-                "booked",
-                "bandApplicants",
-              ].map((category) => {
-                const users =
-                  groupedApplicants[
-                    category as keyof typeof groupedApplicants
-                  ] || [];
-                const filtered = filterUsers(users);
-                if (filtered.length === 0) return null;
-
-                const categoryColors = {
-                  interested: "rose",
-                  applied: "amber",
-                  shortlisted: "emerald",
-                  booked: "purple",
-                  bandApplicants: "indigo",
-                };
-
-                const color =
-                  categoryColors[category as keyof typeof categoryColors] ||
-                  "slate";
-
-                return (
-                  <div key={category} className="space-y-1">
-                    <div
-                      className={cn(
-                        "sticky top-0 py-1.5 px-2 text-[10px] font-mono uppercase tracking-wider flex items-center justify-between",
-                        isDarkMode
-                          ? "bg-slate-900/90 text-slate-400"
-                          : "bg-white/90 text-slate-500",
-                        "backdrop-blur-sm z-10",
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            `bg-${color}-500`,
-                          )}
-                        />
-                        <span>
-                          {category === "bandApplicants"
-                            ? "BAND APPLICANTS"
-                            : category.toUpperCase()}
-                        </span>
-                        {categoryStats[category]?.trending && (
-                          <Sparkles className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
-                        )}
-                      </div>
-                      <span className="font-mono">
-                        {filtered.length} •{" "}
-                        {categoryStats[category]?.active || 0} active
-                      </span>
-                    </div>
-
-                    {filtered.map((user: any) => {
-                      const statusBadge = getUserStatusBadge(user._id);
-                      const activityScore = activityScores[user._id] || 0;
-
-                      return (
-                        <motion.div
-                          key={user._id}
-                          whileHover={{ x: 2 }}
-                          className={cn(
-                            "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer group",
-                            isDarkMode
-                              ? "hover:bg-slate-800/80"
-                              : "hover:bg-slate-100/80",
-                          )}
-                          onClick={() => handleViewProfile(user._id)}
-                        >
-                          {/* Avatar with activity indicator */}
-                          <div className="relative">
-                            <Avatar className="w-8 h-8">
-                              <AvatarImage src={user.picture} />
-                              <AvatarFallback
-                                className={cn(
-                                  "text-xs",
-                                  isDarkMode ? "bg-slate-800" : "bg-slate-200",
-                                )}
-                              >
-                                {user.firstname?.charAt(0) || "U"}
-                              </AvatarFallback>
-                            </Avatar>
-                            {/* Online indicator */}
-                            <div
-                              className={cn(
-                                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2",
-                                isDarkMode ? "ring-slate-900" : "ring-white",
-                                Math.random() > 0.5
-                                  ? "bg-emerald-500"
-                                  : "bg-slate-400",
-                              )}
-                            />
-                          </div>
-
-                          {/* User info with activity data */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p
-                                className={cn(
-                                  "font-medium text-xs truncate",
-                                  isDarkMode ? "text-white" : "text-slate-900",
-                                )}
-                              >
-                                {user.firstname || user.username}
-                              </p>
-                              {statusBadge && (
-                                <span
-                                  className={cn(
-                                    "text-[8px] px-1.5 py-0.5 rounded-full font-mono",
-                                    statusBadge.bg,
-                                    statusBadge.text,
-                                  )}
-                                >
-                                  {statusBadge.label}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-3 mt-1">
-                              <div className="flex items-center gap-1">
-                                <TrustStarsDisplay
-                                  trustStars={user.trustStars || 0}
-                                  size="sm"
-                                />
-                              </div>
-
-                              {/* Activity bar */}
-                              <div className="flex items-center gap-1.5">
-                                {getActivityBar(activityScore)}
-                                <span
-                                  className={cn(
-                                    "text-[8px] font-mono",
-                                    getActivityColor(activityScore),
-                                  )}
-                                >
-                                  {activityScore}%
-                                </span>
-                              </div>
-
-                              {user.city && (
-                                <span
-                                  className={cn(
-                                    "text-[8px]",
-                                    isDarkMode
-                                      ? "text-slate-600"
-                                      : "text-slate-400",
-                                  )}
-                                >
-                                  {user.city}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Last active indicator */}
-                            <p
-                              className={cn(
-                                "text-[8px] mt-1",
-                                isDarkMode
-                                  ? "text-slate-600"
-                                  : "text-slate-400",
-                              )}
-                            >
-                              {Math.floor(Math.random() * 10)}m ago
-                            </p>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              className={cn(
-                                "p-1 rounded-md transition-colors",
-                                isDarkMode
-                                  ? "hover:bg-slate-700 text-slate-400 hover:text-white"
-                                  : "hover:bg-slate-200 text-slate-500 hover:text-slate-900",
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewProfile(user._id);
-                              }}
-                            >
-                              <Eye className="w-3 h-3" />
-                            </button>
-                            {canMessageUser(user._id) && (
-                              <ChatIcon
-                                userId={user._id}
-                                size="sm"
-                                variant="ghost"
-                                className="p-1"
-                              />
-                            )}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </>
-          ) : (
-            // Show single category
-            <div className="space-y-1">
-              {filterUsers(
-                groupedApplicants[
-                  activeTab as keyof typeof groupedApplicants
-                ] || [],
-              ).map((user: any) => {
-                const statusBadge = getUserStatusBadge(user._id);
-                const activityScore = activityScores[user._id] || 0;
-
-                return (
-                  <motion.div
-                    key={user._id}
-                    whileHover={{ x: 2 }}
-                    className={cn(
-                      "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer group",
-                      isDarkMode
-                        ? "hover:bg-slate-800/80"
-                        : "hover:bg-slate-100/80",
-                    )}
-                    onClick={() => handleViewProfile(user._id)}
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={user.picture} />
-                      <AvatarFallback
-                        className={cn(
-                          "text-xs",
-                          isDarkMode ? "bg-slate-800" : "bg-slate-200",
-                        )}
-                      >
-                        {user.firstname?.charAt(0) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p
-                          className={cn(
-                            "font-medium text-xs truncate",
-                            isDarkMode ? "text-white" : "text-slate-900",
-                          )}
-                        >
-                          {user.firstname || user.username}
-                        </p>
-                        {statusBadge && (
-                          <span
-                            className={cn(
-                              "text-[8px] px-1.5 py-0.5 rounded-full font-mono",
-                              statusBadge.bg,
-                              statusBadge.text,
-                            )}
-                          >
-                            {statusBadge.label}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3 mt-1">
-                        <TrustStarsDisplay
-                          trustStars={user.trustStars || 0}
-                          size="sm"
-                        />
-
-                        {/* Activity bar */}
-                        <div className="flex items-center gap-1.5">
-                          {getActivityBar(activityScore)}
-                          <span
-                            className={cn(
-                              "text-[8px] font-mono",
-                              getActivityColor(activityScore),
-                            )}
-                          >
-                            {activityScore}%
-                          </span>
-                        </div>
-
-                        {user.city && (
-                          <span
-                            className={cn(
-                              "text-[8px]",
-                              isDarkMode ? "text-slate-600" : "text-slate-400",
-                            )}
-                          >
-                            {user.city}
-                          </span>
-                        )}
-                      </div>
-
-                      <p
-                        className={cn(
-                          "text-[8px] mt-1",
-                          isDarkMode ? "text-slate-600" : "text-slate-400",
-                        )}
-                      >
-                        {Math.floor(Math.random() * 10)}m ago
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        className={cn(
-                          "p-1 rounded-md",
-                          isDarkMode
-                            ? "hover:bg-slate-700 text-slate-400"
-                            : "hover:bg-slate-200 text-slate-500",
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewProfile(user._id);
-                        }}
-                      >
-                        <Eye className="w-3 h-3" />
-                      </button>
-                      {canMessageUser(user._id) && (
-                        <ChatIcon
-                          userId={user._id}
-                          size="sm"
-                          variant="ghost"
-                          className="p-1"
-                        />
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-
-              {filterUsers(
-                groupedApplicants[
-                  activeTab as keyof typeof groupedApplicants
-                ] || [],
-              ).length === 0 && (
-                <div className="text-center py-8">
-                  <div
-                    className={cn(
-                      "w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-3",
-                      isDarkMode ? "bg-slate-800" : "bg-slate-100",
-                    )}
-                  >
-                    <Users
-                      className={cn(
-                        "w-6 h-6",
-                        isDarkMode ? "text-slate-600" : "text-slate-400",
-                      )}
-                    />
-                  </div>
-                  <p
-                    className={cn(
-                      "text-sm font-medium mb-1",
-                      isDarkMode ? "text-slate-300" : "text-slate-700",
-                    )}
-                  >
-                    No {activeTab} participants
-                  </p>
-                  <p
-                    className={cn(
-                      "text-xs",
-                      isDarkMode ? "text-slate-400" : "text-slate-500",
-                    )}
-                  >
-                    Check back later for activity
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {Object.values(groupedApplicants).every(
-            (arr) => Array.isArray(arr) && arr.length === 0,
-          ) &&
-            activeTab === "all" && (
-              <div className="text-center py-8">
-                <div
-                  className={cn(
-                    "w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4",
-                    isDarkMode ? "bg-slate-800" : "bg-slate-100",
-                  )}
-                >
-                  <Users
-                    className={cn(
-                      "w-8 h-8",
-                      isDarkMode ? "text-slate-600" : "text-slate-400",
-                    )}
-                  />
-                </div>
-                <p
-                  className={cn(
-                    "text-sm font-medium mb-2",
-                    isDarkMode ? "text-white" : "text-slate-900",
-                  )}
-                >
-                  No Activity Yet
-                </p>
-                <p
-                  className={cn(
-                    "text-xs max-w-[200px] mx-auto",
-                    isDarkMode ? "text-slate-400" : "text-slate-500",
-                  )}
-                >
-                  No participants have shown interest in this gig yet
-                </p>
-              </div>
-            )}
-        </div>
-      </ScrollArea>
-
-      {/* Footer with live stats */}
-      <div
-        className={cn(
-          "p-3 border-t text-[10px] font-mono flex items-center justify-between",
-          isDarkMode
-            ? "border-slate-700/50 text-slate-500"
-            : "border-slate-200/50 text-slate-400",
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              feedMood === "busy"
-                ? "bg-emerald-500 animate-pulse"
-                : feedMood === "active"
-                  ? "bg-amber-500 animate-pulse"
-                  : "bg-slate-400",
-            )}
-          />
-          <span>{feedMood.toUpperCase()} FEED</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <Activity className="w-3 h-3" />
-            {totalActive} active
-          </span>
-          <span>•</span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {lastUpdated.toLocaleTimeString()}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // GigInfoCard Component
 const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
@@ -1074,181 +314,283 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
 // PosterInfoCard Component
 const PosterInfoCard = ({
   poster,
+  metrics,
   canMessageUser,
   handleViewProfile,
   getTrustTierIcon,
   isDarkMode,
-}: any) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3, delay: 0.1 }}
-  >
-    <Card
-      className={cn(
-        "border shadow-lg overflow-hidden",
-        isDarkMode
-          ? "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700"
-          : "bg-gradient-to-br from-white to-slate-50 border-slate-200",
-      )}
+}: any) => {
+  const display = metrics?.display || {
+    reliability: {
+      value: 0,
+      label: "Reliability",
+      icon: "🛡️",
+      color: "text-slate-500",
+    },
+    completion: {
+      value: 0,
+      label: "Completed",
+      icon: "✅",
+      color: "text-slate-500",
+    },
+    myCancellations: {
+      value: 0,
+      label: "My Cancellations",
+      icon: "❌",
+      color: "text-slate-500",
+    },
+    otherCancellations: {
+      value: 0,
+      label: "Other's Cancellations",
+      icon: "🤷",
+      color: "text-slate-500",
+    },
+    response: { hours: null, style: "unknown", icon: "⏳" },
+    badge: {
+      tier: "new",
+      label: "New",
+      emoji: "🌱",
+      color: "from-purple-500 to-pink-500",
+    },
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.1 }}
     >
-      <CardContent className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3
-            className={cn(
-              "text-sm font-semibold flex items-center gap-2",
-              isDarkMode ? "text-white" : "text-slate-900",
-            )}
-          >
-            <Users2 className="w-4 h-4 text-emerald-500" />
-            Gig Owner
-          </h3>
-          {poster.verifiedIdentity && (
-            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Verified
-            </Badge>
-          )}
-        </div>
+      <Card
+        className={cn(
+          "border shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300",
+          isDarkMode
+            ? "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700"
+            : "bg-gradient-to-br from-white to-slate-50 border-slate-200",
+        )}
+      >
+        {/* Badge gradient bar */}
+        <div
+          className={cn("h-1 w-full bg-gradient-to-r", display.badge.color)}
+        />
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Avatar Section */}
-          <div className="flex-shrink-0 text-center sm:text-left">
-            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 mx-auto sm:mx-0 border-4 border-white dark:border-slate-700 shadow-lg">
-              <AvatarImage src={poster.picture} />
-              <AvatarFallback className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white text-lg sm:text-xl font-bold">
-                {poster.firstname?.charAt(0) || poster.username?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="mt-2">
-              <TrustStarsDisplay
-                trustStars={poster.trustStars || 0}
-                size="sm"
-              />
+        <CardContent className="p-4 md:p-6">
+          {/* Header with badge */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Users2 className="w-4 h-4 text-emerald-500" />
+              <h3
+                className={cn(
+                  "text-sm font-semibold",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
+              >
+                Gig Owner
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Reliability Badge */}
+              <Badge
+                className={cn(
+                  "text-xs capitalize bg-gradient-to-r text-white border-0 flex items-center gap-1",
+                  display.badge.color,
+                )}
+              >
+                <span>{display.badge.emoji}</span>
+                <span>{display.badge.label}</span>
+              </Badge>
+
+              {/* Verified Badge */}
+              {poster.verifiedIdentity && (
+                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Verified
+                </Badge>
+              )}
             </div>
           </div>
 
-          {/* Info Section */}
-          <div className="flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h4
-                  className={cn(
-                    "text-base sm:text-lg font-semibold",
-                    isDarkMode ? "text-white" : "text-slate-900",
-                  )}
-                >
-                  {poster.firstname || poster.username}
-                </h4>
-                {poster.city && (
-                  <div className="flex items-center gap-1 mt-1 text-xs text-slate-500">
-                    <MapPin className="w-3 h-3" />
-                    {poster.city}
+          {/* Avatar and Basic Info */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Avatar Section */}
+            <div className="flex-shrink-0 text-center sm:text-left">
+              <div className="relative inline-block">
+                <Avatar className="w-20 h-20 sm:w-24 sm:h-24 mx-auto sm:mx-0 border-4 border-white dark:border-slate-700 shadow-lg">
+                  <AvatarImage src={poster.picture} />
+                  <AvatarFallback className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white text-xl sm:text-2xl font-bold">
+                    {poster.firstname?.charAt(0) || poster.username?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800" />
+              </div>
+
+              <div className="mt-3">
+                <TrustStarsDisplay
+                  trustStars={poster.trustStars || 0}
+                  size="md"
+                />
+              </div>
+
+              <p className="text-[10px] text-slate-500 mt-2">
+                Member since {new Date(poster._creationTime).getFullYear()}
+              </p>
+            </div>
+
+            {/* Info Section */}
+            <div className="flex-1">
+              {/* Name and Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4
+                    className={cn(
+                      "text-lg sm:text-xl font-bold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {poster.firstname || poster.username}
+                  </h4>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {poster.roleType && (
+                      <Badge variant="outline" className="text-xs">
+                        {poster.roleType}
+                      </Badge>
+                    )}
+                    {poster.city && (
+                      <div className="flex items-center gap-1 text-xs text-slate-500">
+                        <MapPin className="w-3 h-3" />
+                        {poster.city}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                {canMessageUser(poster._id) && (
-                  <ChatIcon
-                    userId={poster._id}
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  {canMessageUser(poster._id) && (
+                    <ChatIcon
+                      userId={poster._id}
+                      size="sm"
+                      variant="default"
+                      showPulse
+                    />
+                  )}
+                  <Button
+                    variant="outline"
                     size="sm"
-                    variant="default"
-                    showPulse
-                  />
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleViewProfile(poster._id)}
-                  className="gap-1 text-xs"
-                >
-                  <Eye className="w-3 h-3" />
-                  Profile
-                </Button>
+                    onClick={() => handleViewProfile(poster._id)}
+                    className="gap-1 text-xs"
+                  >
+                    <Eye className="w-3 h-3" />
+                    Profile
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {/* Stats Grid */}
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div
-                className={cn(
-                  "text-center p-2 rounded-lg",
-                  isDarkMode ? "bg-slate-800" : "bg-slate-50",
-                )}
-              >
+              {/* Simple Metrics Grid */}
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {/* Completion Rate */}
                 <div
                   className={cn(
-                    "text-base font-bold",
-                    isDarkMode ? "text-white" : "text-slate-900",
+                    "text-center p-2 rounded-lg",
+                    isDarkMode ? "bg-slate-800" : "bg-slate-50",
                   )}
                 >
-                  {poster.completedGigsCount || 0}
+                  <div
+                    className={cn(
+                      "text-lg font-bold",
+                      display.completion.color,
+                    )}
+                  >
+                    {display.completion.value}%
+                  </div>
+                  <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
+                    <span>{display.completion.icon}</span>
+                    {display.completion.label}
+                  </div>
                 </div>
+
+                {/* My Cancellations */}
                 <div
                   className={cn(
-                    "text-[10px]",
-                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                    "text-center p-2 rounded-lg",
+                    isDarkMode ? "bg-slate-800" : "bg-slate-50",
                   )}
                 >
-                  Gigs
+                  <div
+                    className={cn(
+                      "text-lg font-bold",
+                      display.myCancellations.color,
+                    )}
+                  >
+                    {display.myCancellations.value}%
+                  </div>
+                  <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
+                    <span>{display.myCancellations.icon}</span>
+                    {display.myCancellations.label}
+                  </div>
                 </div>
-              </div>
-              <div
-                className={cn(
-                  "text-center p-2 rounded-lg",
-                  isDarkMode ? "bg-slate-800" : "bg-slate-50",
-                )}
-              >
+
+                {/* Response Style */}
                 <div
                   className={cn(
-                    "text-base font-bold",
-                    isDarkMode ? "text-white" : "text-slate-900",
+                    "text-center p-2 rounded-lg",
+                    isDarkMode ? "bg-slate-800" : "bg-slate-50",
                   )}
                 >
-                  {poster.followers?.length || 0}
-                </div>
-                <div
-                  className={cn(
-                    "text-[10px]",
-                    isDarkMode ? "text-slate-400" : "text-slate-500",
-                  )}
-                >
-                  Followers
-                </div>
-              </div>
-              <div
-                className={cn(
-                  "text-center p-2 rounded-lg",
-                  isDarkMode ? "bg-slate-800" : "bg-slate-50",
-                )}
-              >
-                <div
-                  className={cn(
-                    "text-base font-bold",
-                    isDarkMode ? "text-white" : "text-slate-900",
-                  )}
-                >
-                  {new Date().getFullYear() -
-                    new Date(poster._creationTime).getFullYear()}
-                </div>
-                <div
-                  className={cn(
-                    "text-[10px]",
-                    isDarkMode ? "text-slate-400" : "text-slate-500",
-                  )}
-                >
-                  Years
+                  <div className="text-lg font-bold text-slate-900 dark:text-white">
+                    {display.response.icon}
+                  </div>
+                  <div className="text-[10px] text-slate-500 capitalize">
+                    {display.response.style === "quick" && "Quick"}
+                    {display.response.style === "thoughtful" && "Thoughtful"}
+                    {display.response.style === "fast" && "Fast"}
+                    {display.response.style === "patient" && "Patient"}
+                    {display.response.style === "unknown" && "—"}
+                  </div>
                 </div>
               </div>
+
+              {/* Visual Breakdown Bar */}
+              {metrics?.totalGigs > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+                    <span>Gig History</span>
+                    <span>
+                      {metrics.completedByMe} completed •{" "}
+                      {metrics.cancelledByMe} cancelled by me •{" "}
+                      {metrics.cancelledByOther} cancelled by others
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{ width: `${metrics.completionRate}%` }}
+                    />
+                    <div
+                      className="h-full bg-rose-500"
+                      style={{ width: `${metrics.myCancellationRate}%` }}
+                    />
+                    <div
+                      className="h-full bg-slate-400"
+                      style={{ width: `${metrics.otherCancellationRate}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Simple Summary */}
+              <p className="text-xs text-slate-500 mt-3">
+                {metrics?.summary ||
+                  `${display.reliability.value}% reliable • ${display.response.icon} ${display.response.style}`}
+              </p>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  </motion.div>
-);
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
 
 // RequirementsCard Component
 const RequirementsCard = ({ requirements, isDarkMode }: any) => (
@@ -1730,6 +1072,15 @@ export default function GigDetailsPage({ params }: PageProps) {
     }
   };
 
+  const { allGigs: allGigsData, isLoading: allGigsLoading } = useAllGigs({
+    limit: 100,
+  });
+
+  // Add these handler functions inside your component:
+  const handleViewGig = (gig: any) => {
+    router.push(`/hub/gigs/musician/${gig._id}/gig-info`);
+  };
+
   // Handle view profile
   const handleViewProfile = (userId: Id<"users">) => {
     setSelectedUserId(userId);
@@ -1898,47 +1249,295 @@ export default function GigDetailsPage({ params }: PageProps) {
     );
   };
 
-  // Inside the component, add these states and effects
-  const [priceChanges, setPriceChanges] = useState<Record<string, number>>({});
-  const [tickerData, setTickerData] = useState<
-    Record<string, { volume: number; change: number }>
-  >({});
-  const [marketTrend, setMarketTrend] = useState<"bull" | "bear" | "neutral">(
-    "neutral",
-  );
+  // Inside your GigDetailsPage component:
 
-  // Simulate market movements
+  // 1. DELETE these old states (they're causing issues)
+  // const [priceChanges, setPriceChanges]...
+  // const [tickerData, setTickerData]...
+  // const [marketTrend, setMarketTrend]...
+
+  // 2. ADD these new states for live activity
+  const [liveActivity, setLiveActivity] = useState({
+    recentInterests: 0,
+    recentApplications: 0,
+    recentViews: 0,
+    activeUsers: 0,
+    peakHour: "",
+    topLocation: "",
+  });
+
+  const [liveFeed, setLiveFeed] = useState<
+    Array<{
+      id: string;
+      type: "interest" | "apply" | "view";
+      gigTitle: string;
+      timestamp: number;
+      category: string;
+    }>
+  >([]);
+
+  // 3. Base metrics from real data (static baseline)
+  const baseMetrics = useMemo(() => {
+    if (!allGigsData) return null;
+
+    // Calculate from REAL gig data
+    const totalInterests = allGigsData.reduce(
+      (sum, gig) => sum + (gig.interestedUsers?.length || 0),
+      0,
+    );
+
+    const totalApplications = allGigsData.reduce(
+      (sum, gig) => sum + (gig.appliedUsers?.length || 0),
+      0,
+    );
+
+    // Category popularity
+    const categoryCount: Record<string, number> = {};
+    allGigsData.forEach((gig) => {
+      const cat = gig.bussinesscat || "other";
+      categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+    });
+
+    const topCategory =
+      Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      "None";
+
+    // Location popularity
+    const locationCount: Record<string, number> = {};
+    allGigsData.forEach((gig) => {
+      if (gig.location) {
+        const loc = gig.location.split(",")[0];
+        locationCount[loc] = (locationCount[loc] || 0) + 1;
+      }
+    });
+
+    const topLocation =
+      Object.entries(locationCount).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      "Remote";
+
+    // Average price
+    const prices = allGigsData.filter((g) => g.price).map((g) => g.price || 0);
+    const avgPrice = prices.length
+      ? Math.floor(prices.reduce((a, b) => a + b, 0) / prices.length)
+      : 0;
+
+    // Peak posting hour
+    const hours = allGigsData.map((g) => new Date(g._creationTime).getHours());
+    const hourCount: Record<number, number> = {};
+    hours.forEach((h) => (hourCount[h] = (hourCount[h] || 0) + 1));
+    const peakHourNum = Object.entries(hourCount).sort(
+      (a, b) => b[1] - a[1],
+    )[0]?.[0];
+
+    const peakHour = peakHourNum
+      ? `${parseInt(peakHourNum) > 12 ? parseInt(peakHourNum) - 12 : peakHourNum}${parseInt(peakHourNum) >= 12 ? "PM" : "AM"}`
+      : "N/A";
+
+    return {
+      totalGigs: allGigsData.length,
+      totalInterests,
+      totalApplications,
+      avgPrice,
+      topCategory,
+      topLocation,
+      peakHour,
+      bookedCount: allGigsData.filter((g) => g.isTaken).length,
+    };
+  }, [allGigsData]);
+
+  // 4. Initialize live activity with baseline data (only once)
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Random price movements for each user
-      const newChanges: Record<string, number> = {};
-      Object.values(groupedApplicants).forEach((category: any) => {
-        category.forEach((user: any) => {
-          newChanges[user._id] = Math.random() * 4 - 2; // -2 to +2 change
-        });
-      });
-      setPriceChanges(newChanges);
+    if (!baseMetrics) return;
 
-      // Update ticker data for categories
-      const newTicker: Record<string, { volume: number; change: number }> = {};
-      // Fix 1: Cast the key as keyof the type
-      Object.keys(groupedApplicants).forEach((key) => {
-        const typedKey = key as keyof typeof groupedApplicants;
-        const users = groupedApplicants[typedKey] || [];
-        const volume = users.length * (10 + Math.floor(Math.random() * 90));
-        const change = Number((Math.random() * 10 - 5).toFixed(2));
-        newTicker[key] = { volume, change };
-      });
-      setTickerData(newTicker);
+    // Only set initial values if they haven't been set yet
+    setLiveActivity({
+      recentInterests: Math.floor(baseMetrics.totalInterests * 0.1),
+      recentApplications: Math.floor(baseMetrics.totalApplications * 0.1),
+      recentViews: Math.floor(baseMetrics.totalGigs * 3),
+      activeUsers: Math.floor(baseMetrics.totalGigs * 1.5),
+      peakHour: baseMetrics.peakHour,
+      topLocation: baseMetrics.topLocation,
+    });
 
-      // Random market trend
-      const trends = ["bull", "bear", "neutral"] as const;
-      setMarketTrend(trends[Math.floor(Math.random() * trends.length)]);
+    // This should only run once when baseMetrics becomes available
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseMetrics?.totalGigs]); // Only depend on a single primitive value
+
+  // 5. Simulate LIVE activity using real data patterns (separate effect)
+  useEffect(() => {
+    if (!baseMetrics || !allGigsData || allGigsData.length === 0) return;
+
+    // Live feed simulation using REAL gig data
+    const feedInterval = setInterval(() => {
+      // Pick a random gig to "interact with"
+      const randomGig =
+        allGigsData[Math.floor(Math.random() * allGigsData.length)];
+      if (!randomGig) return;
+
+      // Random activity type
+      const types = ["interest", "apply", "view"] as const;
+      const randomType = types[Math.floor(Math.random() * types.length)];
+
+      // Add to live feed
+      const newFeedItem = {
+        id: `${Date.now()}-${Math.random()}`,
+        type: randomType,
+        gigTitle: randomGig.title || "A gig",
+        timestamp: Date.now(),
+        category: randomGig.bussinesscat || "talent",
+      };
+
+      setLiveFeed((prev) => [newFeedItem, ...prev].slice(0, 5));
+
+      // Update counters based on activity
+      setLiveActivity((prev) => ({
+        ...prev,
+        recentInterests:
+          prev.recentInterests + (randomType === "interest" ? 1 : 0),
+        recentApplications:
+          prev.recentApplications + (randomType === "apply" ? 1 : 0),
+        recentViews: prev.recentViews + (randomType === "view" ? 1 : 0),
+        activeUsers: Math.max(
+          5,
+          prev.activeUsers + (Math.random() > 0.7 ? 1 : -1),
+        ),
+      }));
+    }, 8000);
+
+    // Smooth counter updates (for the live numbers)
+    const counterInterval = setInterval(() => {
+      setLiveActivity((prev) => ({
+        ...prev,
+        recentInterests: Math.max(
+          0,
+          prev.recentInterests + (Math.random() > 0.5 ? 1 : -1),
+        ),
+        recentApplications: Math.max(
+          0,
+          prev.recentApplications + (Math.random() > 0.6 ? 1 : 0),
+        ),
+        recentViews: prev.recentViews + Math.floor(Math.random() * 3),
+        activeUsers: Math.max(
+          5,
+          prev.activeUsers + (Math.random() > 0.5 ? 1 : -1),
+        ),
+      }));
     }, 3000);
 
-    return () => clearInterval(interval);
-  }, [groupedApplicants]);
+    return () => {
+      clearInterval(feedInterval);
+      clearInterval(counterInterval);
+    };
+  }, [baseMetrics, allGigsData]); // Keep these dependencies
+  // 5. Use these in your UI
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "interest":
+        return <Heart className="w-3 h-3 text-rose-400" />;
+      case "apply":
+        return <Briefcase className="w-3 h-3 text-amber-400" />;
+      default:
+        return <Eye className="w-3 h-3 text-blue-400" />;
+    }
+  };
 
+  const [upcomingGigs, setUpcomingGigs] = useState<PlatformGig[]>([]);
+
+  // Add this near your other states (around line 900)
+  const [filteredGigs, setFilteredGigs] = useState<any[]>([]);
+
+  // Filter gigs based on active tab
+  useEffect(() => {
+    if (!allGigsData) return;
+
+    let filtered = [...allGigsData];
+
+    switch (activeTab) {
+      case "trending":
+        // Trending: Gigs with most total interactions (interested + applied + booked + views)
+        filtered = allGigsData
+          .map((gig) => ({
+            ...gig,
+            interactionScore:
+              (gig.interestedUsers?.length || 0) * 2 + // Interested users weighted more
+              (gig.appliedUsers?.length || 0) * 3 + // Applied users weighted even more
+              (gig.bookedBy ? 10 : 0) + // Booked gigs get big boost
+              (gig.viewCount?.length || 0), // Views count
+          }))
+          .sort((a, b) => b.interactionScore - a.interactionScore)
+          .slice(0, 10);
+        break;
+
+      case "hot":
+        // Hot: Gigs with most booking history entries (engagement)
+        filtered = allGigsData
+          .map((gig) => {
+            // Count total booking history entries
+            const bookingHistoryCount = gig.bookingHistory?.length || 0;
+
+            // Count band booking history
+            const bandBookingCount = gig.bandBookingHistory?.length || 0;
+
+            // Count bookCount entries
+            const bookCountEntries = gig.bookCount?.length || 0;
+
+            // Count shortlisted users
+            const shortlistedCount = gig.shortlistedUsers?.length || 0;
+
+            return {
+              ...gig,
+              engagementScore:
+                bookingHistoryCount * 2 +
+                bandBookingCount * 2 +
+                bookCountEntries * 1.5 +
+                shortlistedCount * 1.5,
+            };
+          })
+          .sort((a, b) => b.engagementScore - a.engagementScore)
+          .slice(0, 10);
+        break;
+
+      case "closing":
+        // Closing: Gigs where interest window is closing soon
+        const now = Date.now();
+        const threeDaysFromNow = now + 3 * 24 * 60 * 60 * 1000;
+
+        filtered = allGigsData
+          .filter(
+            (gig) =>
+              gig.acceptInterestEndTime &&
+              gig.acceptInterestEndTime > now &&
+              gig.acceptInterestEndTime < threeDaysFromNow &&
+              !gig.isTaken,
+          )
+          .sort(
+            (a, b) =>
+              (a.acceptInterestEndTime || 0) - (b.acceptInterestEndTime || 0),
+          )
+          .slice(0, 10);
+        break;
+
+      default:
+        filtered = allGigsData.slice(0, 10);
+    }
+
+    setFilteredGigs(filtered);
+  }, [activeTab, allGigsData]);
+  // Add these queries near your other useQuery hooks
+  const onlineUsers = useQuery(api.controllers.user.getOnlineUsers, {
+    thresholdMinutes: 5,
+    limit: 50,
+  });
+
+  const onlineStats = useQuery(api.controllers.user.getOnlineUsersStats, {
+    thresholdMinutes: 5,
+  });
+
+  // Optional: Get current user's online status for "You're online" badge
+  const isCurrentUserOnline = useMemo(() => {
+    if (!currentUser?._id || !onlineUsers) return false;
+    return onlineUsers.some((user: any) => user._id === currentUser._id);
+  }, [currentUser?._id, onlineUsers]);
   // Add this before the return
   const getTrendIcon = (change: number) => {
     if (change > 0.5)
@@ -1975,63 +1574,51 @@ export default function GigDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <div
-      className={cn(
-        "min-h-screen relative",
-        isDarkMode
-          ? "bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-slate-950/90"
-          : "bg-gradient-to-br from-slate-50/80 via-white/70 to-slate-50/80",
-      )}
-    >
-      {/* Subtle background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className={cn(
-            "absolute top-0 left-0 right-0 h-96 bg-gradient-to-b",
-            isDarkMode
-              ? "from-indigo-500/5 via-transparent to-transparent"
-              : "from-amber-500/5 via-transparent to-transparent",
-          )}
-        />
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => router.back()}
+    <TooltipProvider>
+      <div
+        className={cn(
+          "min-h-screen relative",
+          isDarkMode
+            ? "bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-slate-950/90"
+            : "bg-gradient-to-br from-slate-50/80 via-white/70 to-slate-50/80",
+        )}
+      >
+        {/* Subtle background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div
             className={cn(
-              "p-2 rounded-xl transition-all hover:scale-105",
+              "absolute top-0 left-0 right-0 h-96 bg-gradient-to-b",
               isDarkMode
-                ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
+                ? "from-indigo-500/5 via-transparent to-transparent"
+                : "from-amber-500/5 via-transparent to-transparent",
             )}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          />
+        </div>
 
-          <div className="flex items-center gap-2">
-            <div className="hidden md:block">
-              {getMyStatusBadge && getMyStatusBadge()}
-            </div>
-
-            {/* Mobile menu buttons */}
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
             <button
-              onClick={() => setShowApplicantSidebar(true)}
+              onClick={() => router.back()}
               className={cn(
-                "md:hidden p-2 rounded-xl",
+                "p-2 rounded-xl transition-all hover:scale-105",
                 isDarkMode
-                  ? "bg-slate-800/50 text-slate-300"
-                  : "bg-slate-100/50 text-slate-600",
+                  ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
               )}
             >
-              <Users className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {gig.bandCategory && gig.bandCategory.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="hidden md:block">
+                {getMyStatusBadge && getMyStatusBadge()}
+              </div>
+
+              {/* Mobile menu buttons */}
               <button
-                onClick={() => setShowRoleDrawer(true)}
+                onClick={() => setShowApplicantSidebar(true)}
                 className={cn(
                   "md:hidden p-2 rounded-xl",
                   isDarkMode
@@ -2039,610 +1626,1517 @@ export default function GigDetailsPage({ params }: PageProps) {
                     : "bg-slate-100/50 text-slate-600",
                 )}
               >
-                <Music className="w-5 h-5" />
+                <Activity className="w-5 h-5" />
               </button>
-            )}
 
-            {/* Share Button */}
-            <button
-              className={cn(
-                "hidden md:flex p-2 rounded-xl",
-                isDarkMode
-                  ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
-              )}
-            >
-              <Share2 className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Gig Title - Mobile friendly */}
-        <div className="mb-6">
-          <h1
-            className={cn(
-              "text-xl sm:text-xl md:text-3xl font-bold mb-2",
-              isDarkMode ? "text-white" : "text-slate-900",
-            )}
-          >
-            {gig.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span
-              className={cn(
-                "px-2 py-1 rounded-lg text-xs",
-                isDarkMode
-                  ? "bg-slate-800/50 text-slate-300"
-                  : "bg-slate-100/50 text-slate-600",
-              )}
-            >
-              {gig.bussinesscat || "Gig"}
-            </span>
-            <span
-              className={cn(
-                "flex items-center gap-1 text-xs",
-                isDarkMode ? "text-slate-400" : "text-slate-500",
-              )}
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              {gig.location?.split(",")[0] || "Remote"}
-            </span>
-            <span
-              className={cn(
-                "flex items-center gap-1 text-xs",
-                isDarkMode ? "text-slate-400" : "text-slate-500",
-              )}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              {formatDate(gig.date)}
-            </span>
-          </div>
-        </div>
-
-        {/* Desktop Layout - Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* LEFT COLUMN - Desktop Applicant Sidebar */}
-          <div className="hidden md:block md:col-span-1">
-            <Card
-              className={cn(
-                "border shadow-sm",
-                isDarkMode
-                  ? "bg-slate-900/50 border-slate-800"
-                  : "bg-white border-slate-200",
-              )}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3
-                    className={cn(
-                      "font-semibold text-sm",
-                      isDarkMode ? "text-white" : "text-slate-900",
-                    )}
-                  >
-                    All Applicants
-                  </h3>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-xs",
-                      isDarkMode
-                        ? "border-slate-700 text-slate-300"
-                        : "border-slate-200 text-slate-600",
-                    )}
-                  >
-                    {userIds.length - 1} total
-                  </Badge>
-                </div>
-
-                <ApplicantSidebar
-                  groupedApplicants={groupedApplicants}
-                  filterUsers={filterUsers}
-                  getUserStatusBadge={getUserStatusBadge}
-                  handleViewProfile={handleViewProfile}
-                  canMessageUser={canMessageUser}
-                  isDarkMode={isDarkMode}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* RIGHT COLUMN - Main Content */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Gig Info Card */}
-            <GigInfoCard
-              gig={gig}
-              formatDate={formatDate}
-              formatTime={formatTime}
-              isDarkMode={isDarkMode}
-            />
-
-            {/* Poster Info Card - Desktop */}
-            {poster && (
-              <PosterInfoCard
-                poster={poster}
-                canMessageUser={canMessageUser}
-                handleViewProfile={handleViewProfile}
-                getTrustTierIcon={getTrustTierIcon}
-                isDarkMode={isDarkMode}
-              />
-            )}
-
-            {/* Requirements */}
-            {gig.requirements && gig.requirements.length > 0 && (
-              <RequirementsCard
-                requirements={gig.requirements}
-                isDarkMode={isDarkMode}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Applicant Stats Bar - Mobile */}
-        <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
-          <div className="flex items-center gap-1.5 text-xs shrink-0">
-            <Heart className="w-3.5 h-3.5 text-rose-500" />
-            <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-              {groupedApplicants?.interested?.length || 0}
-            </span>
-            <span className={isDarkMode ? "text-slate-500" : "text-slate-400"}>
-              Interested
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs shrink-0">
-            <Briefcase className="w-3.5 h-3.5 text-amber-500" />
-            <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-              {groupedApplicants?.applied?.length || 0}
-            </span>
-            <span className={isDarkMode ? "text-slate-500" : "text-slate-400"}>
-              Applied
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs shrink-0">
-            <Star className="w-3.5 h-3.5 text-emerald-500" />
-            <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-              {groupedApplicants?.shortlisted?.length || 0}
-            </span>
-            <span className={isDarkMode ? "text-slate-500" : "text-slate-400"}>
-              Shortlisted
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs shrink-0">
-            <CheckCircle className="w-3.5 h-3.5 text-purple-500" />
-            <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-              {groupedApplicants?.booked?.length || 0}
-            </span>
-            <span className={isDarkMode ? "text-slate-500" : "text-slate-400"}>
-              Booked
-            </span>
-          </div>
-        </div>
-
-        {/* Bottom Action Bar - Mobile */}
-        <div
-          className={cn(
-            "fixed bottom-0 left-0 right-0 z-30 md:hidden",
-            "backdrop-blur-xl border-t",
-            isDarkMode
-              ? "bg-slate-900/80 border-slate-800/50"
-              : "bg-white/80 border-slate-200/50",
-          )}
-        >
-          <div className="flex items-center justify-around p-3">
-            <button
-              onClick={() => setShowApplicantSidebar(true)}
-              className="flex flex-col items-center gap-1"
-            >
-              <Users className="w-5 h-5" />
-              <span className="text-[10px]">The Network</span>
-            </button>
-            {gig.bandCategory && gig.bandCategory.length > 0 && (
-              <button
-                onClick={() => setShowRoleDrawer(true)}
-                className="flex flex-col items-center gap-1"
-              >
-                <Music className="w-5 h-5" />
-                <span className="text-[10px]">Roles</span>
-              </button>
-            )}
-            {canWithdraw && (
-              <button
-                onClick={() => setShowWithdrawDialog(true)}
-                className="flex flex-col items-center gap-1 text-rose-500"
-              >
-                <XCircle className="w-5 h-5" />
-                <span className="text-[10px]">Withdraw</span>
-              </button>
-            )}
-            <button className="flex flex-col items-center gap-1">
-              <Share2 className="w-5 h-5" />
-              <span className="text-[10px]">Share</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Applicant Sidebar Drawer - Mobile */}
-        <AnimatePresence>
-          {showApplicantSidebar && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowApplicantSidebar(false)}
-                className="fixed inset-0 bg-black/40 z-40 md:hidden"
-              />
-              <motion.div
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
-                transition={{ type: "spring", damping: 25 }}
-                className={cn(
-                  "fixed left-0 top-0 bottom-0 w-[85%] max-w-sm z-50 md:hidden",
-                  "backdrop-blur-xl border-r",
-                  isDarkMode
-                    ? "bg-slate-900/95 border-slate-800/50"
-                    : "bg-white/95 border-slate-200/50",
-                )}
-              >
-                <div className="p-4 h-full overflow-y-auto">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3
-                      className={cn(
-                        "font-semibold text-sm",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      Applicants
-                    </h3>
-                    <button
-                      onClick={() => setShowApplicantSidebar(false)}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <ApplicantSidebar
-                    groupedApplicants={groupedApplicants}
-                    filterUsers={filterUsers}
-                    getUserStatusBadge={getUserStatusBadge}
-                    handleViewProfile={handleViewProfile}
-                    canMessageUser={canMessageUser}
-                    isDarkMode={isDarkMode}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    isMobile={true}
-                  />
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* Role Drawer - Mobile */}
-        <AnimatePresence>
-          {showRoleDrawer && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowRoleDrawer(false)}
-                className="fixed inset-0 bg-black/40 z-40 md:hidden"
-              />
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 25 }}
-                className={cn(
-                  "fixed left-0 right-0 bottom-0 z-50 md:hidden",
-                  "backdrop-blur-xl border-t rounded-t-3xl",
-                  isDarkMode
-                    ? "bg-slate-900/95 border-slate-800/50"
-                    : "bg-white/95 border-slate-200/50",
-                )}
-              >
-                <div className="p-4 max-h-[80vh] overflow-y-auto">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3
-                      className={cn(
-                        "font-semibold text-sm",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      Band Roles
-                    </h3>
-                    <button
-                      onClick={() => setShowRoleDrawer(false)}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {gig.bandCategory && gig.bandCategory.length > 0 ? (
-                    <div className="space-y-3">
-                      {gig.bandCategory.map((role, index) => (
-                        <RoleCard
-                          key={index}
-                          role={role}
-                          index={index}
-                          isDarkMode={isDarkMode}
-                          currentUser={currentUser}
-                          onApply={() => {
-                            // Handle role application
-                            setShowRoleDrawer(false);
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-slate-500 py-8 text-sm">
-                      No band roles available
-                    </p>
+              {gig.bandCategory && gig.bandCategory.length > 0 && (
+                <button
+                  onClick={() => setShowRoleDrawer(true)}
+                  className={cn(
+                    "md:hidden p-2 rounded-xl",
+                    isDarkMode
+                      ? "bg-slate-800/50 text-slate-300"
+                      : "bg-slate-100/50 text-slate-600",
                   )}
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* Add bottom padding for mobile nav */}
-        <div className="h-16 md:hidden" />
-      </div>
-
-      {/* Profile Dialog */}
-      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-        <DialogContent
-          className={cn(
-            "sm:max-w-md",
-            isDarkMode
-              ? "bg-slate-900 border-slate-800"
-              : "bg-white border-slate-200",
-          )}
-        >
-          {selectedUser && (
-            <>
-              <DialogHeader>
-                <DialogTitle
-                  className={isDarkMode ? "text-white" : "text-slate-900"}
                 >
-                  User Profile
-                </DialogTitle>
-                <DialogDescription
-                  className={isDarkMode ? "text-slate-400" : "text-slate-500"}
-                >
-                  {selectedUser.firstname || selectedUser.username}
-                </DialogDescription>
-              </DialogHeader>
+                  <Music className="w-5 h-5" />
+                </button>
+              )}
 
-              <div className="space-y-4 py-2">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-16 h-16 border-2 border-slate-200 dark:border-slate-700">
-                    <AvatarImage src={selectedUser.picture} />
-                    <AvatarFallback
+              {/* Share Button */}
+              <button
+                className={cn(
+                  "hidden md:flex p-2 rounded-xl",
+                  isDarkMode
+                    ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
+                )}
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Gig Title - Mobile friendly */}
+          <div className="mb-6">
+            <h1
+              className={cn(
+                "text-xl sm:text-xl md:text-3xl font-bold mb-2",
+                isDarkMode ? "text-white" : "text-slate-900",
+              )}
+            >
+              {gig.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span
+                className={cn(
+                  "px-2 py-1 rounded-lg text-xs",
+                  isDarkMode
+                    ? "bg-slate-800/50 text-slate-300"
+                    : "bg-slate-100/50 text-slate-600",
+                )}
+              >
+                {gig.bussinesscat || "Gig"}
+              </span>
+              <span
+                className={cn(
+                  "flex items-center gap-1 text-xs",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                {gig.location?.split(",")[0] || "Remote"}
+              </span>
+              <span
+                className={cn(
+                  "flex items-center gap-1 text-xs",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                {formatDate(gig.date)}
+              </span>
+            </div>
+          </div>
+
+          {/* Desktop Layout - Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* LEFT COLUMN - Platform Activity (Fixed & Enhanced) */}
+            <div className="hidden md:block md:col-span-1">
+              {allGigsLoading ? (
+                <Card
+                  className={cn(
+                    "border shadow-sm p-3",
+                    isDarkMode
+                      ? "bg-slate-900/50 border-slate-800"
+                      : "bg-white border-slate-200",
+                  )}
+                >
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                </Card>
+              ) : (
+                <div className="space-y-3 sticky top-24">
+                  {/* SECTION 1: Live Market Activity */}
+                  <div
+                    className={cn(
+                      "rounded-xl border-2 overflow-hidden transition-all duration-300",
+                      isDarkMode
+                        ? "bg-gradient-to-b from-slate-900 via-slate-800/90 to-slate-900 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
+                        : "bg-gradient-to-b from-white via-purple-50/30 to-white border-purple-200 shadow-lg",
+                    )}
+                  >
+                    {/* Animated header with gradient */}
+                    <div
                       className={cn(
-                        "bg-gradient-to-br from-slate-700 to-slate-800 text-white text-xl",
+                        "px-3 py-2.5 border-b flex items-center justify-between relative overflow-hidden",
                         isDarkMode
-                          ? "from-slate-700 to-slate-800"
-                          : "from-slate-200 to-slate-300",
+                          ? "border-purple-500/20"
+                          : "border-purple-200",
                       )}
                     >
-                      {selectedUser.firstname?.charAt(0) ||
-                        selectedUser.username?.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+                      {/* Animated background effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-transparent animate-pulse" />
 
-                  <div>
-                    <h3
-                      className={cn(
-                        "font-semibold text-lg",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      {selectedUser.firstname || selectedUser.username}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <TrustStarsDisplay
-                        trustStars={selectedUser.trustStars || 0}
-                        size="sm"
-                      />
-                      {selectedUser.verifiedIdentity && (
-                        <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      )}
-                      {getTrustTierIcon(selectedUser.trustTier)}
-                    </div>
-                  </div>
-                </div>
+                      <div className="flex items-center gap-2 relative z-10">
+                        <div className="relative">
+                          <Activity className="w-4 h-4 text-purple-500" />
+                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-ping" />
+                        </div>
+                        <div>
+                          <h3
+                            className={cn(
+                              "text-xs font-bold uppercase tracking-wider",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            Social Pulse
+                          </h3>
+                          <p className="text-[8px] text-purple-500 font-mono">
+                            LIVE • REAL-TIME
+                          </p>
+                        </div>
+                      </div>
 
-                <Separator
-                  className={isDarkMode ? "bg-slate-800" : "bg-slate-200"}
-                />
+                      <div className="flex items-center gap-2">
+                        {/* Online Users Badge with live count */}
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[8px] h-5 px-1.5 font-mono flex items-center gap-1.5",
+                            isDarkMode
+                              ? "border-purple-500/30 text-purple-300"
+                              : "border-purple-300 text-purple-700",
+                          )}
+                        >
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="font-bold">
+                              {onlineStats?.total || 0}
+                            </span>
+                          </div>
+                          <span>ONLINE</span>
+                        </Badge>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <div
-                      className={cn(
-                        "text-base font-semibold",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      {selectedUser.completedGigsCount || 0}
+                        {/* "You're online" indicator - only show if current user is online */}
+                        {isCurrentUserOnline && (
+                          <Badge
+                            className={cn(
+                              "text-[7px] h-4 px-1.5 bg-emerald-500/20 text-emerald-500 border-emerald-500/30",
+                            )}
+                          >
+                            YOU'RE ONLINE
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <div
-                      className={
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      }
-                    >
-                      Gigs
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      className={cn(
-                        "text-base font-semibold",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      {selectedUser.followers?.length || 0}
-                    </div>
-                    <div
-                      className={
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      }
-                    >
-                      Followers
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      className={cn(
-                        "text-base font-semibold",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      {selectedUser.avgRating?.toFixed(1) || "0.0"}
-                    </div>
-                    <div
-                      className={
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      }
-                    >
-                      Rating
-                    </div>
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  {selectedUser.roleType && (
+                    {/* Live Activity Ticker - Enhanced with online users */}
                     <div
                       className={cn(
-                        "flex items-center gap-2 text-sm",
-                        isDarkMode ? "text-slate-300" : "text-slate-600",
+                        "px-2 py-1.5 border-b flex items-center gap-3 overflow-x-auto text-[8px] font-mono whitespace-nowrap scrollbar-hide",
+                        isDarkMode
+                          ? "bg-slate-800/50 border-slate-700"
+                          : "bg-slate-100/50 border-slate-200",
                       )}
                     >
-                      {getRoleIcon(selectedUser.roleType)}
-                      <span className="capitalize">
-                        {selectedUser.roleType}
+                      {/* Online Users Avatars */}
+                      <div className="flex items-center gap-1.5 min-w-fit">
+                        <div className="flex -space-x-1.5">
+                          {onlineUsers
+                            ?.slice(0, 4)
+                            .map((user: any, i: number) => (
+                              <div
+                                key={user._id}
+                                className="relative group"
+                                style={{ zIndex: 10 - i }}
+                              >
+                                <Avatar className="w-5 h-5 border-2 border-white dark:border-slate-800">
+                                  <AvatarImage src={user.picture} />
+                                  <AvatarFallback className="text-[8px] bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                                    {user.firstname?.charAt(0) ||
+                                      user.username?.charAt(0) ||
+                                      "U"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-slate-800" />
+
+                                {/* Tooltip on hover */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 hidden group-hover:block z-20">
+                                  <div
+                                    className={cn(
+                                      "text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap",
+                                      isDarkMode
+                                        ? "bg-slate-800 text-white"
+                                        : "bg-white text-slate-900",
+                                      "border shadow-lg",
+                                    )}
+                                  >
+                                    {user.firstname || user.username} •{" "}
+                                    {user.roleType || "Member"}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+
+                        {onlineUsers && onlineUsers.length > 4 && (
+                          <Badge
+                            variant="outline"
+                            className="text-[7px] h-4 px-1 ml-1"
+                          >
+                            +{onlineUsers.length - 4}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <span className="text-slate-400">|</span>
+
+                      {/* Role Breakdown */}
+                      {onlineStats && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-emerald-500">
+                            🎵 {onlineStats.musicians}
+                          </span>
+                          <span className="text-slate-400">•</span>
+                          <span className="text-blue-500">
+                            👔 {onlineStats.clients}
+                          </span>
+                          {onlineStats.bookers > 0 && (
+                            <>
+                              <span className="text-slate-400">•</span>
+                              <span className="text-purple-500">
+                                📅 {onlineStats.bookers}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      <span className="text-slate-400">|</span>
+
+                      {/* Activity Counts */}
+                      <span>
+                        <Heart className="w-2.5 h-2.5 inline text-rose-400" />{" "}
+                        {liveActivity.recentInterests}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span>
+                        <Briefcase className="w-2.5 h-2.5 inline text-amber-400" />{" "}
+                        {liveActivity.recentApplications}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span>
+                        <MapPin className="w-2.5 h-2.5 inline" />{" "}
+                        {liveActivity.topLocation}
                       </span>
                     </div>
-                  )}
-                  {selectedUser.city && (
-                    <div
-                      className={cn(
-                        "flex items-center gap-2 text-sm",
-                        isDarkMode ? "text-slate-300" : "text-slate-600",
-                      )}
-                    >
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      <span>{selectedUser.city}</span>
-                    </div>
-                  )}
-                  {selectedUser.instrument && (
-                    <div
-                      className={cn(
-                        "flex items-center gap-2 text-sm",
-                        isDarkMode ? "text-slate-300" : "text-slate-600",
-                      )}
-                    >
-                      <Music className="w-4 h-4 text-slate-400" />
-                      <span>{selectedUser.instrument}</span>
-                    </div>
-                  )}
-                </div>
 
-                <div className="flex gap-3">
-                  <Button
-                    className="flex-1 text-sm"
-                    onClick={() => {
-                      setShowProfileDialog(false);
-                      router.push(`/profile/${selectedUser._id}`);
-                    }}
+                    {/* Live Feed - Real Activity */}
+                    <div className="px-2 py-1 border-b">
+                      <div className="text-[7px] font-mono text-slate-500 mb-1">
+                        LIVE FEED
+                      </div>
+                      <div className="space-y-1 max-h-[60px] overflow-hidden">
+                        {liveFeed.map((item) => {
+                          // Get random online user for demo (in real app, this would be the actual user)
+                          const randomUser =
+                            onlineUsers?.[
+                              Math.floor(
+                                Math.random() * (onlineUsers?.length || 1),
+                              )
+                            ];
+
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-1.5 text-[7px] animate-pulse group hover:bg-slate-100 dark:hover:bg-slate-800/50 p-0.5 rounded transition-all"
+                            >
+                              <div className="relative flex-shrink-0">
+                                <Avatar className="w-4 h-4">
+                                  <AvatarImage src={randomUser?.picture} />
+                                  <AvatarFallback className="text-[6px] bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                                    U
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="absolute -bottom-0.5 -right-0.5 w-1 h-1 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-slate-800" />
+                              </div>
+                              <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[50px]">
+                                {randomUser?.firstname || "User"}
+                              </span>
+                              {getActivityIcon(item.type)}
+                              <span className="truncate max-w-[60px] text-slate-600 dark:text-slate-400">
+                                {item.gigTitle}
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span className="text-slate-500">
+                                {Math.floor(
+                                  (Date.now() - item.timestamp) / 1000,
+                                )}
+                                s ago
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Quick Filters */}
+                    <div className="px-2 pt-2">
+                      <div
+                        className={cn(
+                          "flex gap-1 p-1 rounded-xl backdrop-blur-sm border shadow-inner",
+                          isDarkMode
+                            ? "bg-gradient-to-b from-slate-800/80 to-slate-900/50 border-slate-700/50"
+                            : "bg-gradient-to-b from-slate-100/80 to-slate-200/50 border-slate-200/50",
+                        )}
+                      >
+                        {[
+                          {
+                            id: "trending",
+                            icon: TrendingUp,
+                            label: "Trending",
+                            color: "rose",
+                            description: "Most active gigs right now",
+                          },
+                          {
+                            id: "hot",
+                            icon: Sparkles,
+                            label: "Hot",
+                            color: "amber",
+                            description: "High demand, limited time",
+                          },
+                          {
+                            id: "closing",
+                            icon: Timer,
+                            label: "Closing",
+                            color: "purple",
+                            description: "Applications ending soon",
+                          },
+                        ].map((filter) => {
+                          const Icon = filter.icon;
+                          const isActive = activeTab === filter.id;
+
+                          // Dynamic color classes based on filter and dark mode
+                          const getActiveClasses = () => {
+                            if (isDarkMode) {
+                              switch (filter.id) {
+                                case "trending":
+                                  return "bg-gradient-to-br from-rose-600 to-rose-700 text-white shadow-lg shadow-rose-500/20";
+                                case "hot":
+                                  return "bg-gradient-to-br from-amber-600 to-amber-700 text-white shadow-lg shadow-amber-500/20";
+                                case "closing":
+                                  return "bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/20";
+                                default:
+                                  return "bg-slate-700 text-white";
+                              }
+                            } else {
+                              switch (filter.id) {
+                                case "trending":
+                                  return "bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-200";
+                                case "hot":
+                                  return "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md shadow-amber-200";
+                                case "closing":
+                                  return "bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md shadow-purple-200";
+                                default:
+                                  return "bg-slate-500 text-white";
+                              }
+                            }
+                          };
+
+                          const getInactiveClasses = () => {
+                            return isDarkMode
+                              ? "bg-slate-800/50 text-slate-300 hover:bg-slate-700/80 hover:text-white border border-slate-700/50"
+                              : "bg-white/50 text-slate-600 hover:bg-white hover:text-slate-900 border border-slate-200/50";
+                          };
+
+                          const getPingColor = () => {
+                            if (isDarkMode) {
+                              switch (filter.id) {
+                                case "trending":
+                                  return "bg-rose-400";
+                                case "hot":
+                                  return "bg-amber-400";
+                                case "closing":
+                                  return "bg-purple-400";
+                                default:
+                                  return "bg-slate-400";
+                              }
+                            } else {
+                              switch (filter.id) {
+                                case "trending":
+                                  return "bg-rose-500";
+                                case "hot":
+                                  return "bg-amber-500";
+                                case "closing":
+                                  return "bg-purple-500";
+                                default:
+                                  return "bg-slate-500";
+                              }
+                            }
+                          };
+
+                          const getDotColor = () => {
+                            if (isDarkMode) {
+                              switch (filter.id) {
+                                case "trending":
+                                  return "bg-rose-500";
+                                case "hot":
+                                  return "bg-amber-500";
+                                case "closing":
+                                  return "bg-purple-500";
+                                default:
+                                  return "bg-slate-500";
+                              }
+                            } else {
+                              switch (filter.id) {
+                                case "trending":
+                                  return "bg-rose-600";
+                                case "hot":
+                                  return "bg-amber-600";
+                                case "closing":
+                                  return "bg-purple-600";
+                                default:
+                                  return "bg-slate-600";
+                              }
+                            }
+                          };
+
+                          return (
+                            <Tooltip key={filter.id}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => setActiveTab(filter.id)}
+                                  className={cn(
+                                    "group relative flex-1 py-2 rounded-lg text-[11px] font-semibold transition-all duration-200",
+                                    "flex items-center justify-center gap-1.5",
+                                    "hover:shadow-md hover:scale-[1.02] active:scale-[0.98]",
+                                    isActive
+                                      ? getActiveClasses()
+                                      : getInactiveClasses(),
+                                  )}
+                                >
+                                  {/* Animated indicator for active state */}
+                                  {isActive && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5">
+                                      <span
+                                        className={cn(
+                                          "absolute inline-flex h-full w-full rounded-full",
+                                          getPingColor(),
+                                          "animate-ping opacity-75",
+                                        )}
+                                      />
+                                      <span
+                                        className={cn(
+                                          "relative inline-flex rounded-full h-1.5 w-1.5",
+                                          getDotColor(),
+                                        )}
+                                      />
+                                    </span>
+                                  )}
+
+                                  <Icon
+                                    className={cn(
+                                      "w-3.5 h-3.5 transition-transform group-hover:scale-110",
+                                      isActive && "animate-bounce-small",
+                                      isActive && isDarkMode
+                                        ? "text-white"
+                                        : isActive
+                                          ? "text-white"
+                                          : "",
+                                    )}
+                                  />
+                                  <span className="hidden sm:inline">
+                                    {filter.label}
+                                  </span>
+
+                                  {/* Counter badge */}
+                                  {isActive && (
+                                    <span
+                                      className={cn(
+                                        "ml-1 px-1 py-0.5 rounded-full text-[8px] font-bold",
+                                        isDarkMode
+                                          ? "bg-white/20"
+                                          : "bg-white/30",
+                                      )}
+                                    >
+                                      ●
+                                    </span>
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                className={cn(
+                                  "text-[10px] font-medium px-2 py-1 border",
+                                  isDarkMode
+                                    ? "bg-slate-800 text-slate-200 border-slate-700"
+                                    : "bg-white text-slate-700 border-slate-200",
+                                )}
+                              >
+                                <div className="flex flex-col items-center">
+                                  <span className="font-bold">
+                                    {filter.label}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "text-[8px]",
+                                      isDarkMode
+                                        ? "text-slate-400"
+                                        : "text-slate-500",
+                                    )}
+                                  >
+                                    {filter.description}
+                                  </span>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Activity Feed - Compact Cards */}
+                    <div className="p-2 max-h-[320px] overflow-y-auto scrollbar-thin">
+                      <div className="space-y-1.5">
+                        {filteredGigs
+                          .slice(0, 6)
+                          .map((gig: any, idx: number) => {
+                            // Calculate interaction stats for display
+                            const totalInteractions =
+                              (gig.interestedUsers?.length || 0) +
+                              (gig.appliedUsers?.length || 0) +
+                              (gig.bookingHistory?.length || 0) +
+                              (gig.viewCount?.length || 0);
+
+                            return (
+                              <motion.div
+                                key={gig._id}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                onClick={() => handleViewGig(gig)}
+                                className={cn(
+                                  "p-2 rounded-lg border cursor-pointer transition-all group relative overflow-hidden",
+                                  isDarkMode
+                                    ? "bg-slate-800/40 border-slate-700/50 hover:border-purple-500/50 hover:bg-slate-800/60"
+                                    : "bg-white/40 border-slate-200/50 hover:border-purple-300 hover:bg-white/80",
+                                )}
+                              >
+                                {/* Animated hover effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+
+                                <div className="flex items-center gap-2 relative">
+                                  {/* Status indicator based on filter type */}
+                                  <div
+                                    className={cn(
+                                      "w-1 h-8 rounded-full",
+                                      activeTab === "trending" &&
+                                        totalInteractions > 20 &&
+                                        "bg-emerald-500",
+                                      activeTab === "trending" &&
+                                        totalInteractions > 10 &&
+                                        totalInteractions <= 20 &&
+                                        "bg-amber-500",
+                                      activeTab === "hot" &&
+                                        (gig.bookingHistory?.length || 0) > 5 &&
+                                        "bg-orange-500",
+                                      activeTab === "closing" &&
+                                        "bg-purple-500",
+                                      (!activeTab || activeTab === "all") &&
+                                        "bg-blue-500",
+                                    )}
+                                  />
+
+                                  {/* Avatar */}
+                                  <Avatar className="w-6 h-6 rounded-md border border-white dark:border-slate-700">
+                                    <AvatarImage src={gig.logo} />
+                                    <AvatarFallback className="text-[9px] bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                                      {gig.title?.charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-medium text-[11px] truncate max-w-[100px] group-hover:text-purple-600 dark:group-hover:text-purple-400">
+                                        {gig.title}
+                                      </h4>
+
+                                      {/* Show filter-specific badge */}
+                                      {activeTab === "trending" && (
+                                        <span className="text-[8px] px-1 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 font-mono">
+                                          🔥 {totalInteractions}
+                                        </span>
+                                      )}
+                                      {activeTab === "hot" && (
+                                        <span className="text-[8px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-mono">
+                                          ⚡{" "}
+                                          {(gig.bookingHistory?.length || 0) +
+                                            (gig.bandBookingHistory?.length ||
+                                              0)}
+                                        </span>
+                                      )}
+                                      {activeTab === "closing" && (
+                                        <span className="text-[8px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-mono">
+                                          ⏰{" "}
+                                          {Math.ceil(
+                                            (gig.acceptInterestEndTime! -
+                                              Date.now()) /
+                                              (1000 * 60 * 60),
+                                          )}
+                                          h
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Compact metrics row - shows different metrics based on filter */}
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      {activeTab === "trending" && (
+                                        <>
+                                          <div className="flex items-center gap-1">
+                                            <Heart className="w-2.5 h-2.5 text-rose-400" />
+                                            <span className="text-[8px] text-slate-500 font-mono">
+                                              {gig.interestedUsers?.length || 0}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Briefcase className="w-2.5 h-2.5 text-amber-400" />
+                                            <span className="text-[8px] text-slate-500 font-mono">
+                                              {gig.appliedUsers?.length || 0}
+                                            </span>
+                                          </div>
+                                        </>
+                                      )}
+
+                                      {activeTab === "hot" && (
+                                        <>
+                                          <div className="flex items-center gap-1">
+                                            <History />
+                                            <span className="text-[8px] text-slate-500 font-mono">
+                                              {gig.bookingHistory?.length || 0}{" "}
+                                              actions
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Users className="w-2.5 h-2.5 text-blue-400" />
+                                            <span className="text-[8px] text-slate-500 font-mono">
+                                              {gig.shortlistedUsers?.length ||
+                                                0}{" "}
+                                              shortlisted
+                                            </span>
+                                          </div>
+                                        </>
+                                      )}
+
+                                      {activeTab === "closing" && (
+                                        <>
+                                          <div className="flex items-center gap-1">
+                                            <Timer className="w-2.5 h-2.5 text-purple-400" />
+                                            <span className="text-[8px] text-slate-500 font-mono">
+                                              closes{" "}
+                                              {new Date(
+                                                gig.acceptInterestEndTime!,
+                                              ).toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                              })}
+                                            </span>
+                                          </div>
+                                        </>
+                                      )}
+
+                                      <div className="flex items-center gap-1 ml-auto">
+                                        <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                        <span className="text-[7px] text-slate-500 font-mono">
+                                          {formatTimeAgo(gig._creationTime)}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Price indicator */}
+                                    {gig.price && (
+                                      <div className="flex items-center gap-1 mt-0.5">
+                                        <DollarSign className="w-2 h-2 text-emerald-500" />
+                                        <span className="text-[7px] text-emerald-500 font-bold">
+                                          {gig.currency}{" "}
+                                          {gig.price.toLocaleString()}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                      </div>
+                    </div>
+
+                    {/* Live footer with social stats */}
+                    <div
+                      className={cn(
+                        "px-2 py-1.5 border-t flex items-center justify-between text-[7px] font-mono",
+                        isDarkMode
+                          ? "border-slate-700/50 bg-slate-800/30"
+                          : "border-slate-200/50 bg-slate-100/30",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse delay-150" />
+                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse delay-300" />
+                        </div>
+                        <span className="text-[8px] font-bold uppercase tracking-wider">
+                          SOCIAL FEED
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8px] text-slate-500">
+                          <Users className="w-2.5 h-2.5 inline mr-1" />
+                          {onlineUsers?.length || 0} online
+                        </span>
+                        <span className="text-[8px] text-slate-500">•</span>
+                        <span className="text-[8px] text-slate-500">
+                          {new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: Coming Soon */}
+                  <div
+                    className={cn(
+                      "rounded-xl border-2 overflow-hidden transition-all duration-300",
+                      isDarkMode
+                        ? "bg-gradient-to-b from-slate-900 via-indigo-900/20 to-slate-900 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                        : "bg-gradient-to-b from-white via-indigo-50/30 to-white border-indigo-200 shadow-lg",
+                    )}
                   >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Full Profile
-                  </Button>
-                  {canMessageUser(selectedUser._id) && (
-                    <ChatIcon
-                      userId={selectedUser._id}
-                      size="md"
-                      variant="default"
-                      className="flex-1"
-                    />
-                  )}
+                    <div
+                      className={cn(
+                        "px-3 py-2 border-b flex items-center justify-between relative",
+                        isDarkMode
+                          ? "border-indigo-500/20"
+                          : "border-indigo-200",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <Calendar className="w-4 h-4 text-indigo-500" />
+                          <div className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                        </div>
+                        <div>
+                          <h3
+                            className={cn(
+                              "text-xs font-bold uppercase tracking-wider",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            Opening Soon
+                          </h3>
+                          <p className="text-[8px] text-indigo-500 font-mono">
+                            APPLICATIONS OPENING
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        className={cn(
+                          "text-[9px] px-1.5 py-0.5 font-mono",
+                          isDarkMode
+                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
+                            : "bg-indigo-100 text-indigo-700 border-indigo-200",
+                        )}
+                      >
+                        {upcomingGigs.length} NEW
+                      </Badge>
+                    </div>
+
+                    {/* Countdown Summary */}
+                    {upcomingGigs.length > 0 && (
+                      <div
+                        className={cn(
+                          "px-2 py-1.5 border-b flex items-center justify-between text-[8px]",
+                          isDarkMode
+                            ? "bg-indigo-900/20 border-indigo-800/30"
+                            : "bg-indigo-50 border-indigo-100",
+                        )}
+                      >
+                        <span>Next opening in:</span>
+                        <span className="font-mono font-bold text-indigo-500">
+                          {Math.floor(
+                            (upcomingGigs[0]?.acceptInterestStartTime! -
+                              Date.now()) /
+                              (1000 * 60 * 60),
+                          )}
+                          h{" "}
+                          {Math.floor(
+                            ((upcomingGigs[0]?.acceptInterestStartTime! -
+                              Date.now()) %
+                              (1000 * 60 * 60)) /
+                              (1000 * 60),
+                          )}
+                          m
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="p-2 space-y-1 max-h-[180px] overflow-y-auto scrollbar-thin">
+                      {upcomingGigs.slice(0, 4).map((gig) => {
+                        const startTime = gig.acceptInterestStartTime!;
+                        const now = Date.now();
+                        const daysUntil = Math.ceil(
+                          (startTime - now) / (1000 * 60 * 60 * 24),
+                        );
+                        const hoursUntil = Math.floor(
+                          (startTime - now) / (1000 * 60 * 60),
+                        );
+
+                        return (
+                          <motion.div
+                            key={gig._id}
+                            whileHover={{ x: 4 }}
+                            onClick={() => handleViewGig(gig)}
+                            className={cn(
+                              "p-1.5 rounded-lg border cursor-pointer transition-all group",
+                              isDarkMode
+                                ? "bg-slate-800/30 border-indigo-500/20 hover:border-indigo-500/50 hover:bg-slate-800/50"
+                                : "bg-white/30 border-indigo-200/50 hover:border-indigo-300 hover:bg-white/60",
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              {/* Timer Circle */}
+                              <div className="relative flex-shrink-0">
+                                <div
+                                  className={cn(
+                                    "w-8 h-8 rounded-md flex flex-col items-center justify-center",
+                                    daysUntil <= 1
+                                      ? "bg-gradient-to-br from-orange-500 to-red-500"
+                                      : "bg-gradient-to-br from-indigo-500 to-purple-500",
+                                  )}
+                                >
+                                  <span className="text-[10px] font-bold text-white leading-tight">
+                                    {daysUntil}d
+                                  </span>
+                                  <span className="text-[6px] text-white/80 uppercase tracking-wider">
+                                    {hoursUntil}h
+                                  </span>
+                                </div>
+                                {daysUntil <= 1 && (
+                                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-ping" />
+                                )}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium text-[10px] truncate max-w-[90px] group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                    {gig.title}
+                                  </h4>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[7px] h-3 px-1 border-indigo-300 text-indigo-600 dark:border-indigo-700 dark:text-indigo-400"
+                                  >
+                                    {new Date(startTime).toLocaleDateString(
+                                      [],
+                                      {
+                                        month: "short",
+                                        day: "numeric",
+                                      },
+                                    )}
+                                  </Badge>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-2 h-2 text-slate-400" />
+                                    <span className="text-[7px] text-slate-500 truncate max-w-[50px]">
+                                      {gig.location?.split(",")[0] || "Remote"}
+                                    </span>
+                                  </div>
+
+                                  {/* Early interest indicator */}
+                                  {gig.interestedUsers &&
+                                    gig.interestedUsers.length > 0 && (
+                                      <div className="flex items-center gap-0.5 ml-auto">
+                                        <Users className="w-2 h-2 text-indigo-400" />
+                                        <span className="text-[7px] text-indigo-400 font-mono">
+                                          {gig.interestedUsers.length} waiting
+                                        </span>
+                                      </div>
+                                    )}
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+
+                      {upcomingGigs.length === 0 && (
+                        <div className="text-center py-4">
+                          <div className="w-8 h-8 mx-auto rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-2">
+                            <Calendar className="w-4 h-4 text-indigo-500" />
+                          </div>
+                          <p className="text-[9px] font-medium text-slate-600 dark:text-slate-400">
+                            No upcoming gigs
+                          </p>
+                          <p className="text-[7px] text-slate-500 mt-1">
+                            Check back later for new opportunities
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* View all link */}
+                    {upcomingGigs.length > 3 && (
+                      <div
+                        className={cn(
+                          "px-2 py-1 border-t text-center",
+                          isDarkMode
+                            ? "border-indigo-800/30"
+                            : "border-indigo-200",
+                        )}
+                      >
+                        <button className="text-[8px] text-indigo-500 hover:text-indigo-600 font-medium">
+                          +{upcomingGigs.length - 3} more opening soon →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SECTION 3: Market Stats - Updated with online data */}
+                  <div
+                    className={cn(
+                      "rounded-xl border overflow-hidden",
+                      isDarkMode
+                        ? "bg-slate-900/60 border-slate-700/50 backdrop-blur-sm"
+                        : "bg-white/60 border-slate-200/50 backdrop-blur-sm",
+                    )}
+                  >
+                    <div className="grid grid-cols-3 divide-x divide-slate-200 dark:divide-slate-700">
+                      <div className="py-2 text-center">
+                        <div className="text-[8px] text-slate-500 mb-0.5 flex items-center justify-center gap-1">
+                          <Users className="w-3 h-3" />
+                          ONLINE
+                        </div>
+                        <div className="text-xs font-bold text-emerald-500">
+                          {onlineStats?.total || 0}
+                        </div>
+                      </div>
+                      <div className="py-2 text-center">
+                        <div className="text-[8px] text-slate-500 mb-0.5 flex items-center justify-center gap-1">
+                          <Music className="w-3 h-3" />
+                          MUSICIANS
+                        </div>
+                        <div className="text-xs font-bold text-blue-500">
+                          {onlineStats?.musicians || 0}
+                        </div>
+                      </div>
+                      <div className="py-2 text-center">
+                        <div className="text-[8px] text-slate-500 mb-0.5 flex items-center justify-center gap-1">
+                          <Briefcase className="w-3 h-3" />
+                          CLIENTS
+                        </div>
+                        <div className="text-xs font-bold text-purple-500">
+                          {onlineStats?.clients || 0}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Withdraw Dialog */}
-      <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
-        <DialogContent
-          className={cn(
-            "sm:max-w-md",
-            isDarkMode
-              ? "bg-slate-900 border-slate-800"
-              : "bg-white border-slate-200",
-          )}
-        >
-          <DialogHeader>
-            <DialogTitle
-              className={isDarkMode ? "text-white" : "text-slate-900"}
-            >
-              Withdraw Application
-            </DialogTitle>
-            <DialogDescription
-              className={isDarkMode ? "text-slate-400" : "text-slate-500"}
-            >
-              Are you sure you want to withdraw your application?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <Textarea
-              placeholder="Reason (optional)"
-              value={withdrawReason}
-              onChange={(e) => setWithdrawReason(e.target.value)}
-              rows={3}
-              className={cn(
-                isDarkMode
-                  ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-                  : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
               )}
-            />
+            </div>
+
+            {/* RIGHT COLUMN - Main Content */}
+            <div className="md:col-span-2 space-y-6">
+              {/* Gig Info Card */}
+              <GigInfoCard
+                gig={gig}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                isDarkMode={isDarkMode}
+              />
+
+              {/* Poster Info Card */}
+              {poster && (
+                <PosterInfoCard
+                  poster={poster}
+                  canMessageUser={canMessageUser}
+                  handleViewProfile={handleViewProfile}
+                  getTrustTierIcon={getTrustTierIcon}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+
+              {/* Requirements */}
+              {gig.requirements && gig.requirements.length > 0 && (
+                <RequirementsCard
+                  requirements={gig.requirements}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+            </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowWithdrawDialog(false)}
-              className={cn(
-                isDarkMode
-                  ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                  : "",
+          {/* Mobile Stats Bar */}
+          <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <Heart className="w-3.5 h-3.5 text-rose-500" />
+              <span
+                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+              >
+                {groupedApplicants?.interested?.length || 0}
+              </span>
+              <span
+                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
+              >
+                Interested
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <Briefcase className="w-3.5 h-3.5 text-amber-500" />
+              <span
+                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+              >
+                {groupedApplicants?.applied?.length || 0}
+              </span>
+              <span
+                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
+              >
+                Applied
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <Star className="w-3.5 h-3.5 text-emerald-500" />
+              <span
+                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+              >
+                {groupedApplicants?.shortlisted?.length || 0}
+              </span>
+              <span
+                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
+              >
+                Shortlisted
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <CheckCircle className="w-3.5 h-3.5 text-purple-500" />
+              <span
+                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+              >
+                {groupedApplicants?.booked?.length || 0}
+              </span>
+              <span
+                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
+              >
+                Booked
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Action Bar - Mobile */}
+          <div
+            className={cn(
+              "fixed bottom-0 left-0 right-0 z-30 md:hidden",
+              "backdrop-blur-xl border-t",
+              isDarkMode
+                ? "bg-slate-900/80 border-slate-800/50"
+                : "bg-white/80 border-slate-200/50",
+            )}
+          >
+            <div className="flex items-center justify-around p-3">
+              <button
+                onClick={() => setShowApplicantSidebar(true)}
+                className="flex flex-col items-center gap-1"
+              >
+                <Activity className="w-5 h-5" />
+                <span className="text-[10px]">Activity</span>
+              </button>
+              {gig.bandCategory && gig.bandCategory.length > 0 && (
+                <button
+                  onClick={() => setShowRoleDrawer(true)}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <Music className="w-5 h-5" />
+                  <span className="text-[10px]">Roles</span>
+                </button>
               )}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleWithdraw}
-              disabled={loading}
-              className="text-sm"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Withdraw
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+              {canWithdraw && (
+                <button
+                  onClick={() => setShowWithdrawDialog(true)}
+                  className="flex flex-col items-center gap-1 text-rose-500"
+                >
+                  <XCircle className="w-5 h-5" />
+                  <span className="text-[10px]">Withdraw</span>
+                </button>
+              )}
+              <button className="flex flex-col items-center gap-1">
+                <Share2 className="w-5 h-5" />
+                <span className="text-[10px]">Share</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Platform Activity Drawer */}
+          <AnimatePresence>
+            {showApplicantSidebar && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowApplicantSidebar(false)}
+                  className="fixed inset-0 bg-black/40 z-40 md:hidden"
+                />
+                <motion.div
+                  initial={{ x: "-100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "-100%" }}
+                  transition={{ type: "spring", damping: 25 }}
+                  className={cn(
+                    "fixed left-0 top-0 bottom-0 w-[85%] max-w-sm z-50 md:hidden",
+                    "backdrop-blur-xl border-r",
+                    isDarkMode
+                      ? "bg-slate-900/95 border-slate-800/50"
+                      : "bg-white/95 border-slate-200/50",
+                  )}
+                >
+                  <div className="p-4 h-full overflow-y-auto">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3
+                        className={cn(
+                          "font-semibold text-sm",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        Platform Activity
+                      </h3>
+                      <button
+                        onClick={() => setShowApplicantSidebar(false)}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {allGigsLoading ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-20 w-full" />
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* TOP - Gig Tabs (Platform Activity) */}
+                        <PlatformActivitySidebar
+                          allGigs={allGigsData}
+                          currentGigId={gigId as Id<"gigs">}
+                          isDarkMode={isDarkMode}
+                          onViewGig={handleViewGig}
+                        />
+
+                        {/* BOTTOM - Coming Soon Gigs */}
+                        <ComingSoonGigs
+                          allGigs={allGigsData}
+                          currentGigId={gigId as Id<"gigs">}
+                          isDarkMode={isDarkMode}
+                          onViewGig={handleViewGig}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Role Drawer - Mobile */}
+          <AnimatePresence>
+            {showRoleDrawer && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowRoleDrawer(false)}
+                  className="fixed inset-0 bg-black/40 z-40 md:hidden"
+                />
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 25 }}
+                  className={cn(
+                    "fixed left-0 right-0 bottom-0 z-50 md:hidden",
+                    "backdrop-blur-xl border-t rounded-t-3xl",
+                    isDarkMode
+                      ? "bg-slate-900/95 border-slate-800/50"
+                      : "bg-white/95 border-slate-200/50",
+                  )}
+                >
+                  <div className="p-4 max-h-[80vh] overflow-y-auto">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3
+                        className={cn(
+                          "font-semibold text-sm",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        Band Roles
+                      </h3>
+                      <button
+                        onClick={() => setShowRoleDrawer(false)}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {gig.bandCategory && gig.bandCategory.length > 0 ? (
+                      <div className="space-y-3">
+                        {gig.bandCategory.map((role, index) => (
+                          <RoleCard
+                            key={index}
+                            role={role}
+                            index={index}
+                            isDarkMode={isDarkMode}
+                            currentUser={currentUser}
+                            onApply={() => {
+                              // Handle role application
+                              setShowRoleDrawer(false);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-slate-500 py-8 text-sm">
+                        No band roles available
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Add bottom padding for mobile nav */}
+          <div className="h-16 md:hidden" />
+        </div>
+
+        {/* Profile Dialog */}
+        <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+          <DialogContent
+            className={cn(
+              "sm:max-w-md",
+              isDarkMode
+                ? "bg-slate-900 border-slate-800"
+                : "bg-white border-slate-200",
+            )}
+          >
+            {selectedUser && (
+              <>
+                <DialogHeader>
+                  <DialogTitle
+                    className={isDarkMode ? "text-white" : "text-slate-900"}
+                  >
+                    User Profile
+                  </DialogTitle>
+                  <DialogDescription
+                    className={isDarkMode ? "text-slate-400" : "text-slate-500"}
+                  >
+                    {selectedUser.firstname || selectedUser.username}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-16 h-16 border-2 border-slate-200 dark:border-slate-700">
+                      <AvatarImage src={selectedUser.picture} />
+                      <AvatarFallback
+                        className={cn(
+                          "bg-gradient-to-br from-slate-700 to-slate-800 text-white text-xl",
+                          isDarkMode
+                            ? "from-slate-700 to-slate-800"
+                            : "from-slate-200 to-slate-300",
+                        )}
+                      >
+                        {selectedUser.firstname?.charAt(0) ||
+                          selectedUser.username?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div>
+                      <h3
+                        className={cn(
+                          "font-semibold text-lg",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {selectedUser.firstname || selectedUser.username}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <TrustStarsDisplay
+                          trustStars={selectedUser.trustStars || 0}
+                          size="sm"
+                        />
+                        {selectedUser.verifiedIdentity && (
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                        )}
+                        {getTrustTierIcon(selectedUser.trustTier)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator
+                    className={isDarkMode ? "bg-slate-800" : "bg-slate-200"}
+                  />
+
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div
+                        className={cn(
+                          "text-base font-semibold",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {selectedUser.completedGigsCount || 0}
+                      </div>
+                      <div
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        Gigs
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        className={cn(
+                          "text-base font-semibold",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {selectedUser.followers?.length || 0}
+                      </div>
+                      <div
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        Followers
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        className={cn(
+                          "text-base font-semibold",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {selectedUser.avgRating?.toFixed(1) || "0.0"}
+                      </div>
+                      <div
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
+                        Rating
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {selectedUser.roleType && (
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 text-sm",
+                          isDarkMode ? "text-slate-300" : "text-slate-600",
+                        )}
+                      >
+                        {getRoleIcon(selectedUser.roleType)}
+                        <span className="capitalize">
+                          {selectedUser.roleType}
+                        </span>
+                      </div>
+                    )}
+                    {selectedUser.city && (
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 text-sm",
+                          isDarkMode ? "text-slate-300" : "text-slate-600",
+                        )}
+                      >
+                        <MapPin className="w-4 h-4 text-slate-400" />
+                        <span>{selectedUser.city}</span>
+                      </div>
+                    )}
+                    {selectedUser.instrument && (
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 text-sm",
+                          isDarkMode ? "text-slate-300" : "text-slate-600",
+                        )}
+                      >
+                        <Music className="w-4 h-4 text-slate-400" />
+                        <span>{selectedUser.instrument}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      className="flex-1 text-sm"
+                      onClick={() => {
+                        setShowProfileDialog(false);
+                        router.push(`/profile/${selectedUser._id}`);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Full Profile
+                    </Button>
+                    {canMessageUser(selectedUser._id) && (
+                      <ChatIcon
+                        userId={selectedUser._id}
+                        size="md"
+                        variant="default"
+                        className="flex-1"
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Withdraw Dialog */}
+        <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
+          <DialogContent
+            className={cn(
+              "sm:max-w-md",
+              isDarkMode
+                ? "bg-slate-900 border-slate-800"
+                : "bg-white border-slate-200",
+            )}
+          >
+            <DialogHeader>
+              <DialogTitle
+                className={isDarkMode ? "text-white" : "text-slate-900"}
+              >
+                Withdraw Application
+              </DialogTitle>
+              <DialogDescription
+                className={isDarkMode ? "text-slate-400" : "text-slate-500"}
+              >
+                Are you sure you want to withdraw your application?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <Textarea
+                placeholder="Reason (optional)"
+                value={withdrawReason}
+                onChange={(e) => setWithdrawReason(e.target.value)}
+                rows={3}
+                className={cn(
+                  isDarkMode
+                    ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+                )}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowWithdrawDialog(false)}
+                className={cn(
+                  isDarkMode
+                    ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                    : "",
+                )}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleWithdraw}
+                disabled={loading}
+                className="text-sm"
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Withdraw
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }

@@ -3,7 +3,11 @@ import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { createNotificationInternal } from "../createNotificationInternal";
 import { applyTrustScoreUpdate, updateUserTrust } from "../trustHelper";
-
+// Add this type definition at the top of your file (after imports)
+type WeeklyGigData = {
+  count: number;
+  weekStart: number;
+};
 // Helper to get Convex user ID from Clerk ID
 export const getUserByClerkId = async (ctx: any, clerkId: string) => {
   const user = await ctx.db
@@ -111,15 +115,55 @@ export const withdrawFromBandRole = mutation({
       } else {
         // CASE 2: APPLICANT WITHDRAWING (ONLY IN applicants, NOT bookedUsers)
         const newApplicants = role.applicants.filter((id) => id !== userId);
+        // Update the updateWeeklyGigCount function with explicit typing
+        const updateWeeklyGigCount = (
+          currentWeeklyData: WeeklyGigData | null,
+        ): WeeklyGigData => {
+          // Get current week start (Monday)
+          const now = new Date();
+          const currentWeekStart = new Date(now);
+          currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+          currentWeekStart.setHours(0, 0, 0, 0);
+
+          const weekStartTimestamp = currentWeekStart.getTime();
+          const currentGigsThisWeek = currentWeeklyData || {
+            count: 0,
+            weekStart: 0,
+          };
+
+          // Reset if new week
+          if (currentGigsThisWeek.weekStart !== weekStartTimestamp) {
+            return {
+              count: 1,
+              weekStart: weekStartTimestamp,
+            };
+          }
+
+          // Increment if same week
+          return {
+            count: currentGigsThisWeek.count + 1,
+            weekStart: weekStartTimestamp,
+          };
+        };
+
+        // Update user's weekly gig count
+        const updatedWeeklyData = updateWeeklyGigCount(
+          musician.gigsBookedThisWeek as WeeklyGigData | null,
+        );
 
         updatedBandCategory[bandRoleIndex] = {
           ...role,
           applicants: newApplicants,
           // Update currentApplicants counter
           currentApplicants: newApplicants.length,
-          // bookedUsers remains unchanged
         };
-
+        // Update user stats
+        await ctx.db.patch(userId, {
+          gigsBooked: (musician.gigsBooked || 0) + 1,
+          gigsBookedThisWeek: updatedWeeklyData,
+          cancelgigCount: (musician.cancelgigCount || 0) + 1,
+          updatedAt: Date.now(),
+        });
         notificationType = "interest_removed";
         title = "🔄 Application Withdrawn";
         message = `${musician.firstname || musician.username} withdrew their application for ${role.role}`;

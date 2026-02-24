@@ -454,24 +454,59 @@ export const AllGigs = ({ user }: { user: any }) => {
     return getUserGigStatus(convertedGig, user?._id);
   };
   // Optimized saved/favorite maps
-  useEffect(() => {
-    const currentGigIds = allNewGigs.map((gig) => gig._id).sort();
-    const savedGigIds = Object.keys(isSavedMap).sort();
+  // Replace your existing useEffect with this:
 
-    if (JSON.stringify(currentGigIds) !== JSON.stringify(savedGigIds)) {
+  useEffect(() => {
+    console.log("🔄 [AllGigs] Syncing maps with new gigs", {
+      allNewGigsCount: allNewGigs.length,
+      savedMapSize: Object.keys(isSavedMap).length,
+      favoriteMapSize: Object.keys(isFavoriteMap).length,
+    });
+
+    // Only initialize if maps are empty
+    if (
+      Object.keys(isSavedMap).length === 0 &&
+      Object.keys(isFavoriteMap).length === 0
+    ) {
+      console.log("📝 [AllGigs] Initializing empty maps");
       const savedMap: Record<string, boolean> = {};
       const favoriteMap: Record<string, boolean> = {};
 
       allNewGigs.forEach((gig) => {
-        savedMap[gig._id] = isSavedMap[gig._id] || false;
-        favoriteMap[gig._id] = isFavoriteMap[gig._id] || false;
+        savedMap[gig._id] = false;
+        favoriteMap[gig._id] = false;
       });
 
       setIsSavedMap(savedMap);
       setIsFavoriteMap(favoriteMap);
+      return;
+    }
+
+    // Check for new gigs that aren't in our maps yet
+    const newGigs = allNewGigs.filter(
+      (gig) => !isSavedMap.hasOwnProperty(gig._id),
+    );
+
+    if (newGigs.length > 0) {
+      console.log("➕ [AllGigs] Adding new gigs to maps:", newGigs.length);
+
+      setIsSavedMap((prev) => {
+        const newMap = { ...prev };
+        newGigs.forEach((gig) => {
+          newMap[gig._id] = false;
+        });
+        return newMap;
+      });
+
+      setIsFavoriteMap((prev) => {
+        const newMap = { ...prev };
+        newGigs.forEach((gig) => {
+          newMap[gig._id] = false;
+        });
+        return newMap;
+      });
     }
   }, [allNewGigs]);
-
   // Filter gigs
   const filteredGigs = useMemo(() => {
     let result = allNewGigs.filter((gig) => {
@@ -653,66 +688,177 @@ export const AllGigs = ({ user }: { user: any }) => {
     setShowGigDescription(false);
     setSelectedGig(null);
   };
+  const handleSaveGig = async (gigToSave?: any) => {
+    // Use the passed gig or fall back to selectedModalGig
+    const gig = gigToSave || selectedModalGig;
 
-  const handleSaveGig = async () => {
-    if (!selectedGig || !user?._id) return;
+    console.log("📝 [AllGigs] handleSaveGig called", {
+      gig: gig?._id,
+      userExists: !!user?._id,
+      isCurrentlySaved: gig ? isSavedMap[gig._id] : undefined,
+      fromParam: !!gigToSave,
+      currentSavedMap: isSavedMap,
+    });
 
-    const gigId = selectedGig._id;
+    if (!gig || !user?._id) {
+      console.log("❌ [AllGigs] No gig or user");
+      return;
+    }
+
+    const gigId = gig._id;
     const isCurrentlySaved = isSavedMap[gigId];
+
+    console.log("🔄 [AllGigs] Attempting to save/unsave", {
+      gigId,
+      isCurrentlySaved,
+      action: isCurrentlySaved ? "unsave" : "save",
+    });
 
     try {
       if (isCurrentlySaved) {
+        console.log("📤 [AllGigs] Calling unsaveGig mutation");
         await unsaveGig({
           userId: user._id,
           gigId: gigId,
         });
-        setIsSavedMap((prev) => ({ ...prev, [gigId]: false }));
+        console.log("✅ [AllGigs] unsaveGig completed");
+
+        // Update local state
+        setIsSavedMap((prev) => {
+          const newMap = { ...prev, [gigId]: false };
+          console.log("🔄 [AllGigs] Updated saved map (after unsave):", newMap);
+          return newMap;
+        });
+
         toast.success("Removed from saved");
       } else {
+        console.log("📤 [AllGigs] Calling saveGig mutation");
         await saveGig({
           userId: user._id,
           gigId: gigId,
         });
-        setIsSavedMap((prev) => ({ ...prev, [gigId]: true }));
+        console.log("✅ [AllGigs] saveGig completed");
+
+        // Update local state
+        setIsSavedMap((prev) => {
+          const newMap = { ...prev, [gigId]: true };
+          console.log("🔄 [AllGigs] Updated saved map (after save):", newMap);
+          return newMap;
+        });
+
         toast.success("⭐ Added to saved");
       }
     } catch (error: any) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to update saved status";
-      toast.error(errorMessage);
+      console.error("❌ [AllGigs] Save operation failed:", error);
+
+      // If error is "Gig already saved", sync the state
+      if (
+        error.message === "Gig already saved" ||
+        error.message.includes("already saved")
+      ) {
+        console.log("🔄 [AllGigs] Syncing saved state - marking as saved");
+        setIsSavedMap((prev) => {
+          const newMap = { ...prev, [gigId]: true };
+          console.log("🔄 [AllGigs] Updated saved map (after sync):", newMap);
+          return newMap;
+        });
+        toast.info("Gig is already in your saved items");
+      } else {
+        toast.error(error.message || "Failed to update saved status");
+      }
     }
   };
 
-  const handleFavoriteGig = async () => {
-    if (!selectedGig || !user?._id) return;
+  const handleFavoriteGig = async (gigToFavorite?: any) => {
+    // Use the passed gig or fall back to selectedModalGig
+    const gig = gigToFavorite || selectedModalGig;
 
-    const gigId = selectedGig._id;
+    console.log("❤️ [AllGigs] handleFavoriteGig called", {
+      gig: gig?._id,
+      userExists: !!user?._id,
+      isCurrentlyFavorited: gig ? isFavoriteMap[gig._id] : undefined,
+      fromParam: !!gigToFavorite,
+      currentFavoriteMap: isFavoriteMap,
+    });
+
+    if (!gig || !user?._id) {
+      console.log("❌ [AllGigs] No gig or user");
+      return;
+    }
+
+    const gigId = gig._id;
     const isCurrentlyFavorited = isFavoriteMap[gigId];
+
+    console.log("🔄 [AllGigs] Attempting to favorite/unfavorite", {
+      gigId,
+      isCurrentlyFavorited,
+      action: isCurrentlyFavorited ? "unfavorite" : "favorite",
+    });
 
     try {
       if (isCurrentlyFavorited) {
+        console.log("📤 [AllGigs] Calling unfavoriteGig mutation");
         await unfavoriteGig({
           userId: user._id,
           gigId: gigId,
         });
-        setIsFavoriteMap((prev) => ({ ...prev, [gigId]: false }));
+        console.log("✅ [AllGigs] unfavoriteGig completed");
+
+        // Update local state
+        setIsFavoriteMap((prev) => {
+          const newMap = { ...prev, [gigId]: false };
+          console.log(
+            "🔄 [AllGigs] Updated favorite map (after unfavorite):",
+            newMap,
+          );
+          return newMap;
+        });
+
         toast.success("Removed from favorites");
       } else {
+        console.log("📤 [AllGigs] Calling favoriteGig mutation");
         await favoriteGig({
           userId: user._id,
           gigId: gigId,
         });
-        setIsFavoriteMap((prev) => ({ ...prev, [gigId]: true }));
+        console.log("✅ [AllGigs] favoriteGig completed");
+
+        // Update local state
+        setIsFavoriteMap((prev) => {
+          const newMap = { ...prev, [gigId]: true };
+          console.log(
+            "🔄 [AllGigs] Updated favorite map (after favorite):",
+            newMap,
+          );
+          return newMap;
+        });
+
         toast.success("❤️ Added to favorites");
       }
     } catch (error: any) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to update favorite status";
-      toast.error(errorMessage);
+      console.error("❌ [AllGigs] Favorite operation failed:", error);
+
+      // If the error is "Gig already favorited", it means the backend thinks it's favorited
+      // but our UI state doesn't reflect that. Let's sync the state.
+      if (
+        error.message === "Gig already favorited" ||
+        error.message.includes("already favorited")
+      ) {
+        console.log(
+          "🔄 [AllGigs] Syncing favorite state - marking as favorited",
+        );
+        setIsFavoriteMap((prev) => {
+          const newMap = { ...prev, [gigId]: true };
+          console.log(
+            "🔄 [AllGigs] Updated favorite map (after sync):",
+            newMap,
+          );
+          return newMap;
+        });
+        toast.info("Gig is already in your favorites");
+      } else {
+        toast.error(error.message || "Failed to update favorite status");
+      }
     }
   };
 
@@ -1310,7 +1456,6 @@ export const AllGigs = ({ user }: { user: any }) => {
           />
         </div>
 
-        {/* GigDescription Modal */}
         {showGigModal && selectedModalGig && (
           <GigDescription
             gig={selectedModalGig}
@@ -1320,11 +1465,10 @@ export const AllGigs = ({ user }: { user: any }) => {
             user={user}
             isSaved={isSavedMap[selectedModalGig?._id]}
             isFavorite={isFavoriteMap[selectedModalGig?._id]}
-            onSave={handleSaveGig}
-            onFavorite={handleFavoriteGig}
+            onSave={handleSaveGig} // This is now properly passed
+            onFavorite={handleFavoriteGig} // This is now properly passed
           />
         )}
-
         {/* Filters Panel */}
         <FiltersPanel
           isOpen={showFiltersPanel}
@@ -1334,7 +1478,6 @@ export const AllGigs = ({ user }: { user: any }) => {
           availableCategories={categories}
           availableLocations={locations}
         />
-
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
           {/* Header Section - Collapsible */}
           {!showHeader ? (

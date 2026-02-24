@@ -65,6 +65,7 @@ import {
   Palette as PaletteIcon,
   Settings,
   UserPlus,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
@@ -1342,7 +1343,6 @@ const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
 InterestWindowSection.displayName = "InterestWindowSection";
 
 // Validation Summary Component
-// Validation Summary Component
 const ValidationSummary = React.memo(({ fieldErrors }: any) => {
   if (Object.keys(fieldErrors).length === 0) return null;
 
@@ -1372,6 +1372,50 @@ const ValidationSummary = React.memo(({ fieldErrors }: any) => {
   );
 });
 ValidationSummary.displayName = "ValidationSummary";
+// Add this component after ValidationSummary
+const TrustScoreWarning = ({ error }: { error?: string }) => {
+  if (!error || !error.includes("trust")) return null;
+  const router = useRouter();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6 p-4 border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-xl"
+    >
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30">
+          <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-1">
+            Weekly Posting Limit
+          </h3>
+          <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+            Pro users with trust scores below 40 are limited to 1 gig per week.
+          </p>
+          <div className="flex gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300"
+              onClick={() => router.push("/profile/trust")}
+            >
+              View Trust Score
+            </Button>
+            <Button
+              size="sm"
+              variant="link"
+              className="text-amber-700 dark:text-amber-300"
+              onClick={() => router.push("/pricing")}
+            >
+              Upgrade Tier →
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 // Main NormalGigsForm Component
 export default function NormalGigsForm() {
   const router = useRouter();
@@ -2109,10 +2153,13 @@ export default function NormalGigsForm() {
     [draftId, refreshDrafts],
   );
 
-  // Handle form submit
+  // In your NormalGigsForm component, update the handleSubmit function:
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+
+      // First validate form fields
       if (bussinesscat === "other" && (!bandRoles || bandRoles.length === 0)) {
         setFieldErrors((prev) => ({
           ...prev,
@@ -2121,15 +2168,55 @@ export default function NormalGigsForm() {
         setIsVisible(true);
         setError(true);
         setEditMessage("Please add at least one band role");
+
+        // Scroll to the error
+        setTimeout(() => {
+          const errorElement = document.querySelector(
+            '[data-error="bandRoles"]',
+          );
+          errorElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
         return;
       }
 
       const isValid = validateRequiredFields();
 
+      // In your handleSubmit function, replace the error scrolling section:
+
       if (!isValid) {
         setIsVisible(true);
         setError(true);
         setEditMessage("Please fill in all required fields");
+
+        // Find first field with error and scroll to it - FIXED VERSION
+        const firstError = Object.keys(fieldErrors)[0];
+        if (firstError) {
+          setTimeout(() => {
+            const errorElement = document.querySelector(
+              `[name="${firstError}"]`,
+            );
+            if (
+              errorElement &&
+              "focus" in errorElement &&
+              typeof errorElement.focus === "function"
+            ) {
+              errorElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+              (errorElement as HTMLElement).focus();
+            } else {
+              // Fallback: just scroll to the general area
+              const errorContainer = document.querySelector(
+                ".validation-summary",
+              );
+              errorContainer?.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+          }, 100);
+        }
         return;
       }
 
@@ -2155,21 +2242,6 @@ export default function NormalGigsForm() {
           formValues.durationto,
         );
 
-        // 🔴 DEBUG: Check what's being sent
-        console.log("Submitting to Convex:", {
-          hasPostedBy: !!submissionData.postedBy,
-          hasTitle: !!submissionData.title,
-          hasSecret: !!submissionData.secret,
-          hasBussinesscat: !!submissionData.bussinesscat,
-          hasDate: !!submissionData.date,
-          hasTime: !!submissionData.time,
-          hasLogo:
-            !!submissionData.logo && submissionData.logo.trim().length > 0,
-          logoValue: submissionData.logo,
-          timeObject: submissionData.time,
-          fullData: submissionData,
-        });
-
         await createGig(submissionData);
 
         setEditMessage("Gig created successfully!");
@@ -2179,12 +2251,71 @@ export default function NormalGigsForm() {
 
         setBandRoles([]);
 
+        toast.success("Gig created successfully!", {
+          description: "Your gig has been posted and is now live!",
+          duration: 5000,
+        });
+
         setTimeout(() => {
-          router.refresh();
+          router.push("/hub/gigs"); // Redirect to gigs page
         }, 2000);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error creating gig:", error);
-        setEditMessage("Failed to create gig. Please try again.");
+
+        // Handle specific error messages from Convex
+        const errorMessage = error.message || "Failed to create gig";
+
+        // Check for specific error types
+        if (errorMessage.includes("Pro users with trust score below 40")) {
+          // Show a detailed error modal or toast with actionable info
+          toast.error("Weekly Gig Limit Reached", {
+            description:
+              "Pro users with trust score below 40 are limited to 1 gig per week. Complete more gigs to improve your trust score!",
+            duration: 8000,
+            icon: <Shield className="w-5 h-5 text-red-500" />,
+          });
+
+          setFieldErrors((prev) => ({
+            ...prev,
+            trustScore:
+              "You've reached your weekly gig limit. Complete more gigs to improve your trust score.",
+          }));
+
+          setEditMessage(
+            "Weekly gig limit reached. Complete more gigs to increase your limit.",
+          );
+        } else if (errorMessage.includes("grace period")) {
+          toast.error("Account Too New", {
+            description:
+              "New accounts have posting limits during the 26-day grace period. Please try again later.",
+            duration: 8000,
+          });
+        } else if (errorMessage.includes("tier")) {
+          toast.error("Tier Limit Reached", {
+            description:
+              "Your current tier has posting limits. Upgrade to post more gigs.",
+            duration: 8000,
+            action: {
+              label: "View Tiers",
+              onClick: () => router.push("/pricing"),
+            },
+          });
+        } else if (errorMessage.includes("trust score")) {
+          toast.error("Trust Score Too Low", {
+            description:
+              "Your trust score needs to improve to post more gigs. Complete your current gigs successfully!",
+            duration: 8000,
+          });
+        } else {
+          // Generic error
+          toast.error("Failed to create gig", {
+            description: errorMessage,
+            duration: 5000,
+          });
+
+          setEditMessage("Failed to create gig. Please try again.");
+        }
+
         setError(true);
         setIsVisible(true);
       } finally {
@@ -2203,6 +2334,7 @@ export default function NormalGigsForm() {
       formValues,
       bandRoles,
       bussinesscat,
+      fieldErrors,
     ],
   );
 
@@ -2302,49 +2434,68 @@ export default function NormalGigsForm() {
     const getDefaultSlots = () => {
       switch (bussinesscat) {
         case "full":
-          return 5;
+          return 3; // 3 bands can apply, you'll hire 1 band
         case "personal":
-          return 1;
+          return 5; // 5 individuals can apply, you'll hire 1 person
         case "mc":
+          return 5; // 5 MCs can apply, you'll hire 1 MC
         case "dj":
+          return 5; // 5 DJs can apply, you'll hire 1 DJ
         case "vocalist":
-          return 1;
+          return 5; // 5 vocalists can apply, you'll hire 1 vocalist
         default:
-          return 1;
+          return 5;
       }
     };
 
-    const getSlotLabel = () => {
+    const getUnitLabel = () => {
       switch (bussinesscat) {
         case "full":
-          return "band members";
+          return "bands";
         case "personal":
-          return "person";
+          return "individual musicians";
         case "mc":
-          return "MC";
+          return "MCs";
         case "dj":
-          return "DJ";
+          return "DJs";
         case "vocalist":
-          return "vocalist";
+          return "vocalists";
         default:
-          return "slots";
+          return "applicants";
+      }
+    };
+
+    const getSingleLabel = () => {
+      switch (bussinesscat) {
+        case "full":
+          return "1 band";
+        case "personal":
+          return "1 musician";
+        case "mc":
+          return "1 MC";
+        case "dj":
+          return "1 DJ";
+        case "vocalist":
+          return "1 vocalist";
+        default:
+          return "1 person";
       }
     };
 
     const getDescription = () => {
       switch (bussinesscat) {
         case "full":
-          return "How many musicians do you need for your full band?";
+          return "How many bands can apply? Each band applies as one unit. You'll review and select one band to hire.";
         case "personal":
-          return "How many individual musicians do you need?";
+          return "How many individual musicians can apply? You'll review applications and hire one musician.";
         case "mc":
-          return "How many MCs do you need for your event?";
+          return "How many MCs can apply? You'll review their profiles and book one MC.";
         case "dj":
-          return "How many DJs do you need for your event?";
+          return "How many DJs can apply? You'll check their mixes and hire one DJ.";
         case "vocalist":
-          return "How many vocalists do you need for your event?";
+          return "How many vocalists can apply? You'll listen to demos and select one vocalist.";
         default:
-          return "Number of positions available";
+          return "Maximum number of applicants. You choose one to hire.";
       }
     };
 
@@ -2353,7 +2504,7 @@ export default function NormalGigsForm() {
         case "full":
           return Users;
         case "personal":
-          return Users;
+          return UserPlus;
         case "mc":
           return Mic;
         case "dj":
@@ -2388,7 +2539,7 @@ export default function NormalGigsForm() {
             </div>
             <div>
               <h3 className={cn("font-semibold", colors.text)}>
-                Positions Needed
+                How Many Can Apply?
               </h3>
               <p className={cn("text-sm", colors.textMuted)}>
                 {getDescription()}
@@ -2403,7 +2554,7 @@ export default function NormalGigsForm() {
               <label
                 className={cn("block text-sm font-medium mb-3", colors.text)}
               >
-                Number of {getSlotLabel()}
+                Maximum number of {getUnitLabel()} allowed to apply
               </label>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -2439,14 +2590,9 @@ export default function NormalGigsForm() {
                         }))
                       }
                       min="1"
-                      max={bussinesscat === "full" ? "20" : "10"}
+                      max="50"
                       className="w-24 h-12 text-center text-xl font-bold"
                     />
-                    <div className="absolute inset-y-0 right-2 flex items-center">
-                      <span className={cn("text-sm", colors.textMuted)}>
-                        {getSlotLabel()}
-                      </span>
-                    </div>
                   </div>
 
                   <Button
@@ -2465,84 +2611,233 @@ export default function NormalGigsForm() {
                   </Button>
                 </div>
 
-                {bussinesscat === "full" && (
-                  <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
-                    {[3, 4, 5, 6, 7, 8].map((num) => (
-                      <Button
-                        key={num}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setFormValues((prev) => ({
-                            ...prev,
-                            maxSlots: num,
-                          }))
-                        }
-                        className={cn(
-                          "px-3",
-                          currentSlots === num &&
-                            "bg-gradient-to-r from-blue-500 to-purple-500 text-white",
-                        )}
-                      >
-                        {num}
-                      </Button>
-                    ))}
+                <div className="flex flex-wrap gap-2">
+                  {[3, 5, 10, 15, 20, 30].map((num) => (
+                    <Button
+                      key={num}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setFormValues((prev) => ({
+                          ...prev,
+                          maxSlots: num,
+                        }))
+                      }
+                      className={cn(
+                        "px-3",
+                        currentSlots === num &&
+                          "bg-gradient-to-r from-blue-500 to-purple-500 text-white",
+                      )}
+                    >
+                      {num}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clear explanation of what this means */}
+              <div className="mt-4 p-4 rounded-xl border bg-blue-50/30 dark:bg-blue-900/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-blue-500" />
+                  <span className={cn("text-sm font-medium", colors.text)}>
+                    How this works for{" "}
+                    {bussinesscat === "full" ? "bands" : "individuals"}:
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                        1
+                      </span>
+                    </div>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      <strong>
+                        Up to {currentSlots} {getUnitLabel()}
+                      </strong>{" "}
+                      can apply for this gig
+                    </p>
                   </div>
-                )}
+
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                        2
+                      </span>
+                    </div>
+                    <p className={cn("text-sm", colors.textMuted)}>
+                      You will <strong>review all applications</strong> and
+                      choose your favorite
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                        3
+                      </span>
+                    </div>
+                    <p className={cn("text-sm font-medium", colors.text)}>
+                      You will hire <strong>{getSingleLabel()}</strong> from the{" "}
+                      {currentSlots} applicants
+                    </p>
+                  </div>
+                </div>
+
+                {/* Visual representation */}
+                <div className="mt-4 pt-3 border-t border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium">Applicant pool:</span>
+                    <Badge variant="outline" className="text-xs">
+                      You choose 1 winner
+                    </Badge>
+                  </div>
+
+                  {bussinesscat === "full" ? (
+                    // Band visualization
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from({ length: Math.min(3, currentSlots) }).map(
+                          (_, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700"
+                            >
+                              <Users className="w-3 h-3 text-purple-500" />
+                              <span className="text-xs">Band {index + 1}</span>
+                            </div>
+                          ),
+                        )}
+                        {currentSlots > 3 && (
+                          <div className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs">
+                            +{currentSlots - 3} more bands
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <ArrowRight className="w-4 h-4 text-gray-400" />
+                        <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-medium">
+                          🏆 Your chosen band
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Individual visualization
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1">
+                        {Array.from({ length: Math.min(5, currentSlots) }).map(
+                          (_, index) => (
+                            <div
+                              key={index}
+                              className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center"
+                            >
+                              <UserPlus className="w-3 h-3 text-gray-500" />
+                            </div>
+                          ),
+                        )}
+                        {currentSlots > 5 && (
+                          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs">
+                            +{currentSlots - 5}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <ArrowRight className="w-4 h-4 text-gray-400" />
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 border-2 border-white dark:border-gray-800 flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          Your chosen talent
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-500 mt-2">
+                    {currentSlots} {getUnitLabel()} apply → You review → You
+                    hire {getSingleLabel()}
+                  </p>
+                </div>
               </div>
             </div>
 
             <div className="flex-1">
               <div className={cn("p-4 rounded-xl border", colors.border)}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className={cn("text-sm font-medium", colors.text)}>
-                    Available Positions
-                  </span>
-                  <Badge variant="outline">
-                    {currentSlots} {getSlotLabel()}
-                  </Badge>
+                <h4 className={cn("text-sm font-medium mb-3", colors.text)}>
+                  Application Summary
+                </h4>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">
+                      Maximum applicants:
+                    </span>
+                    <span className="font-semibold">
+                      {currentSlots} {getUnitLabel()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">
+                      You will hire:
+                    </span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      {getSingleLabel()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">
+                      Selection ratio:
+                    </span>
+                    <span className="font-semibold">
+                      1 out of {currentSlots}{" "}
+                      {bussinesscat === "full" ? "bands" : "applicants"}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {Array.from({ length: currentSlots }).map((_, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center",
-                        "bg-gradient-to-r from-blue-500/20 to-purple-500/20",
-                        "border border-blue-500/30",
-                      )}
-                    >
-                      <Users className="w-4 h-4 text-blue-500" />
+                <div className="mt-4 pt-3 border-t">
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/10">
+                    <Trophy className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                        Competitive selection
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Only the best {getSingleLabel()} will be hired. Review
+                        all applicants carefully!
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
-
-                {bussinesscat === "full" && (
-                  <p className={cn("text-xs mt-2", colors.textMuted)}>
-                    {currentSlots} positions to fill in your band
-                  </p>
-                )}
               </div>
             </div>
           </div>
 
           <div className="mt-4 pt-4 border-t">
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10">
               <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-              <p className={cn("text-xs", colors.textMuted)}>
-                {bussinesscat === "full"
-                  ? "You can specify exact roles for each slot in the next section."
-                  : "This is the number of positions available for this gig."}
-              </p>
+              <div className="space-y-1">
+                <p
+                  className={cn(
+                    "text-xs font-medium text-blue-700 dark:text-blue-400",
+                  )}
+                >
+                  Quick tip:
+                </p>
+                <p className={cn("text-xs", colors.textMuted)}>
+                  {bussinesscat === "full"
+                    ? "Each band applies as ONE unit. You'll receive applications from complete bands, then choose your favorite to book."
+                    : "Each person applies individually. You'll review all applications and select the best talent for your gig."}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </motion.div>
     );
   }, [bussinesscat, formValues.maxSlots, colors]);
-
   // Price Information Component
   const renderPriceInformation = useCallback(() => {
     if (!shouldShowField("priceInfo")) return null;
@@ -3464,7 +3759,7 @@ export default function NormalGigsForm() {
 
           {/* Validation Summary */}
           <ValidationSummary fieldErrors={fieldErrors} />
-
+          <TrustScoreWarning error={fieldErrors.trustScore} />
           {/* Action Buttons - Fixed at bottom */}
           <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background to-transparent pt-8 pb-4">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

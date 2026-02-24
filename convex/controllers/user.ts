@@ -10,6 +10,7 @@ import {
 } from "../createNotificationInternal";
 import { updateUserTrust } from "../trustHelper";
 import { normalizeSecurityAnswer } from "../verifyUtil";
+import { AnyChildComponents } from "convex/server";
 
 // Helper function to create type-safe user data with admin defaults
 const createUserData = (args: any, now: number) => {
@@ -1919,5 +1920,498 @@ export const hasSecurityQuestion = query({
       .first();
 
     return !!(user?.securityQuestion && user?.securityAnswer);
+  },
+});
+// convex/controllers/user.ts
+// Add this query to get simple user metrics for the PosterInfoCard
+
+export const getUserSimpleMetrics = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+
+    // Get ALL gigs
+    const allGigs = await ctx.db.query("gigs").collect();
+
+    // For MUSICIAN: gigs where they were booked
+    const musicianBookedGigs = allGigs.filter(
+      (gig) =>
+        gig.bookedBy === args.userId ||
+        gig.bandCategory?.some((role) =>
+          role.bookedUsers.includes(args.userId),
+        ) ||
+        gig.bookCount?.some(
+          (booking) =>
+            booking.appliedBy === args.userId ||
+            booking.performingMembers?.some((m) => m.userId === args.userId),
+        ),
+    );
+
+    // For CLIENT: gigs they posted
+    const clientPostedGigs = allGigs.filter(
+      (gig) => gig.postedBy === args.userId,
+    );
+
+    // Determine which set to use based on role
+    const relevantGigs = user.isClient ? clientPostedGigs : musicianBookedGigs;
+
+    // Count based on who cancelled
+    let completedByMe = 0;
+    let cancelledByMe = 0;
+    let cancelledByOther = 0;
+    let pendingGigs = 0;
+
+    relevantGigs.forEach((gig) => {
+      // Check if gig was completed (paid)
+      const isCompleted =
+        gig.paymentStatus === "paid" || gig.paymentStatus === "verified_paid";
+
+      if (isCompleted) {
+        completedByMe++;
+        return;
+      }
+
+      // Check if gig was cancelled
+      if (gig.cancelledAt) {
+        // Determine who cancelled
+        if (gig.cancelledBy === args.userId) {
+          // I cancelled
+          cancelledByMe++;
+        } else if (
+          gig.cancelledBy === (user.isClient ? "musician" : "client") ||
+          gig.cancelledBy === "both" ||
+          gig.cancelledBy
+        ) {
+          // Other party cancelled
+          cancelledByOther++;
+        } else {
+          // Unknown cancellation - count as pending
+          pendingGigs++;
+        }
+      } else {
+        // Not completed, not cancelled = pending/upcoming
+        pendingGigs++;
+      }
+    });
+
+    const total = relevantGigs.length;
+
+    // Calculate meaningful rates
+    const completionRate =
+      total > 0 ? Math.round((completedByMe / total) * 100) : 0;
+
+    const myCancellationRate =
+      total > 0 ? Math.round((cancelledByMe / total) * 100) : 0;
+
+    const otherCancellationRate =
+      total > 0 ? Math.round((cancelledByOther / total) * 100) : 0;
+
+    // Simple reliability score (your fault vs their fault)
+    const reliabilityScore =
+      total > 0
+        ? Math.round(((completedByMe + cancelledByOther) / total) * 100)
+        : 0;
+
+    // Get response metrics using your existing helper
+    const responseData = await calculateResponseMetrics(ctx, user);
+
+    // Get reliability tier using your existing helper
+    const tier = getReliabilityTier(completionRate, myCancellationRate, total);
+
+    return {
+      // Basic counts
+      totalGigs: total,
+      completedByMe,
+      cancelledByMe,
+      cancelledByOther,
+      pendingGigs,
+
+      // Rates
+      completionRate,
+      myCancellationRate,
+      otherCancellationRate,
+      reliabilityScore,
+
+      // Response
+      avgResponseHours: responseData.avgResponseHours,
+      totalResponses: responseData.totalResponses,
+
+      // Tier
+      reliabilityTier: tier,
+
+      // Human-readable summary
+      summary: user.isClient
+        ? `${completionRate}% of gigs completed • ${myCancellationRate}% cancelled by you`
+        : `${completionRate}% reliable • ${myCancellationRate}% cancelled by you`,
+
+      // Display-ready format for PosterInfoCard
+      display: {
+        reliability: {
+          value: reliabilityScore,
+          label: "Reliability",
+          icon: "🛡️",
+          color: getRateColor(reliabilityScore, "high"),
+        },
+        completion: {
+          value: completionRate,
+          label: "Completed",
+          icon: "✅",
+          color: getRateColor(completionRate, "high"),
+        },
+        myCancellations: {
+          value: myCancellationRate,
+          label: "My Cancellations",
+          icon: "❌",
+          color: getRateColor(myCancellationRate, "low"),
+        },
+        otherCancellations: {
+          value: otherCancellationRate,
+          label: "Other's Cancellations",
+          icon: "🤷",
+          color: "text-slate-400",
+        },
+        response: {
+          hours: responseData.avgResponseHours,
+          label: responseData.avgResponseHours
+            ? `${responseData.avgResponseHours}h avg response`
+            : "No response data",
+          icon: user.isClient ? "📅" : "⚡",
+        },
+        badge: {
+          tier,
+          label:
+            tier === "elite"
+              ? "Elite"
+              : tier === "trusted"
+                ? "Trusted"
+                : tier === "verified"
+                  ? "Verified"
+                  : tier === "basic"
+                    ? "Basic"
+                    : tier === "new"
+                      ? "New"
+                      : "Needs Work",
+          emoji:
+            tier === "elite"
+              ? "👑"
+              : tier === "trusted"
+                ? "⭐"
+                : tier === "verified"
+                  ? "✅"
+                  : tier === "basic"
+                    ? "👍"
+                    : tier === "new"
+                      ? "🌱"
+                      : "⚠️",
+          color:
+            tier === "elite"
+              ? "from-amber-500 to-yellow-500"
+              : tier === "trusted"
+                ? "from-sky-500 to-blue-500"
+                : tier === "verified"
+                  ? "from-emerald-500 to-teal-500"
+                  : tier === "basic"
+                    ? "from-slate-400 to-slate-500"
+                    : tier === "new"
+                      ? "from-purple-500 to-pink-500"
+                      : "from-rose-500 to-red-500",
+        },
+      },
+    };
+  },
+});
+
+// Also add this helper if not already present (find first applicant)
+function findFirstApplicant(gig: Doc<"gigs">) {
+  // Check booking history for applicants
+  const applicants =
+    gig.bookingHistory
+      ?.filter((e) => e.status === "applied")
+      .sort((a, b) => a.timestamp - b.timestamp) || [];
+
+  if (applicants.length > 0) {
+    return applicants[0];
+  }
+
+  // Check bookCount as fallback
+  if (gig.bookCount && gig.bookCount.length > 0) {
+    const sorted = [...gig.bookCount].sort((a, b) => a.appliedAt - b.appliedAt);
+    return {
+      timestamp: sorted[0].appliedAt,
+      userId: sorted[0].appliedBy,
+    };
+  }
+
+  return null;
+}
+
+// Add this helper if not already present
+function findInterestTime(
+  gig: Doc<"gigs">,
+  userId: Id<"users">,
+): number | null {
+  // Try to find in booking history first
+  const entry = gig.bookingHistory
+    ?.filter((e) => e.userId === userId)
+    .sort((a, b) => a.timestamp - b.timestamp)[0];
+
+  if (entry) {
+    return entry.timestamp;
+  }
+
+  // Fallback to rough estimate based on array position
+  if (gig.interestedUsers) {
+    const index = gig.interestedUsers.indexOf(userId);
+    if (index !== -1) {
+      return gig._creationTime + (index + 1) * 60 * 60 * 1000;
+    }
+  }
+
+  return null;
+}
+const musicianResponseRate = (gig: Doc<"gigs">, userId: Id<"users">) => {
+  // CASE 1: Direct booking (no shortlist)
+  if (gig.bookedBy === userId) {
+    return {
+      type: "direct_booking",
+      timeToBook: gig?.bookedAt && gig?.bookedAt - gig._creationTime, // Total time
+      quality: "excellent", // They got booked immediately!
+    };
+  }
+
+  // CASE 2: Band role booking
+  const bookedRole = gig.bandCategory?.find((role) =>
+    role.bookedUsers.includes(userId),
+  );
+  if (bookedRole) {
+    return {
+      type: "band_booking",
+      timeToBook: gig?.bookedAt && gig?.bookedAt - gig._creationTime,
+      quality: "good",
+    };
+  }
+
+  // CASE 3: Showed interest but not booked
+  if (gig.interestedUsers?.includes(userId)) {
+    return {
+      type: "interested_only",
+      timeToInterest: findInterestTime(gig, userId),
+      quality: "pending",
+    };
+  }
+
+  return null;
+};
+// For clients: How quickly do they fill their gig?
+const clientResponseRate = (gig: Doc<"gigs">) => {
+  // Find first applicant
+  const firstApplicant = findFirstApplicant(gig);
+
+  if (firstApplicant && gig.bookedAt) {
+    const timeToFirstApp = firstApplicant.timestamp - gig._creationTime;
+    const timeToBook = gig.bookedAt - gig._creationTime;
+    const timeToDecide = gig.bookedAt - firstApplicant.timestamp;
+
+    return {
+      timeToFirstApp, // How fast applicants came in
+      timeToDecide, // How fast they chose someone
+      timeToBook, // Total time to fill the gig
+      quality: timeToDecide < 24 * 60 * 60 * 1000 ? "fast" : "normal",
+    };
+  }
+
+  return null;
+};
+// Helper to get color based on rate and desired direction
+function getRateColor(rate: number, direction: "high" | "low"): string {
+  if (direction === "high") {
+    // For metrics where high is good (completion)
+    if (rate >= 90) return "text-emerald-500";
+    if (rate >= 75) return "text-emerald-400";
+    if (rate >= 50) return "text-amber-500";
+    if (rate >= 25) return "text-orange-500";
+    return "text-rose-500";
+  } else {
+    // For metrics where low is good (cancellation)
+    if (rate <= 5) return "text-emerald-500";
+    if (rate <= 10) return "text-emerald-400";
+    if (rate <= 20) return "text-amber-500";
+    if (rate <= 30) return "text-orange-500";
+    return "text-rose-500";
+  }
+}
+
+// Determine reliability tier
+function getReliabilityTier(
+  completion: number,
+  cancellation: number,
+  total: number,
+): string {
+  if (total < 3) return "new"; // Not enough data
+
+  if (completion >= 90 && cancellation <= 5) return "elite";
+  if (completion >= 80 && cancellation <= 10) return "trusted";
+  if (completion >= 70 && cancellation <= 15) return "verified";
+  if (completion >= 50) return "basic";
+
+  return "needs-improvement";
+}
+
+// Calculate response metrics based on role
+async function calculateResponseMetrics(ctx: any, user: Doc<"users">) {
+  const allGigs = await ctx.db.query("gigs").collect();
+
+  let totalResponseTime = 0;
+  let responseCount = 0;
+
+  if (user.isClient) {
+    // CLIENT: Time to respond to applicants
+    allGigs.forEach((gig: any) => {
+      if (gig.postedBy === user._id && gig.bookingHistory) {
+        const applicantResponses = new Map();
+
+        gig.bookingHistory.forEach((entry: any) => {
+          if (
+            entry.actionBy === user._id &&
+            (entry.status === "shortlisted" || entry.status === "rejected")
+          ) {
+            const applicantId = entry.userId;
+
+            const applicationEntry = gig.bookingHistory?.find(
+              (e: any) => e.userId === applicantId && e.status === "applied",
+            );
+
+            if (applicationEntry) {
+              const responseTime = entry.timestamp - applicationEntry.timestamp;
+              totalResponseTime += responseTime;
+              responseCount++;
+            }
+          }
+        });
+      }
+    });
+  } else {
+    // MUSICIAN: Time to respond to gig opportunities
+    allGigs.forEach((gig: any) => {
+      if (gig.bookingHistory) {
+        const userEntries = gig.bookingHistory
+          .filter((entry: any) => entry.userId === user._id)
+          .sort((a: any, b: any) => a.timestamp - b.timestamp);
+
+        if (userEntries.length > 0) {
+          const firstInteraction = userEntries[0];
+          const responseTime = firstInteraction.timestamp - gig._creationTime;
+          totalResponseTime += responseTime;
+          responseCount++;
+        }
+      }
+    });
+  }
+
+  const avgResponseHours =
+    responseCount > 0
+      ? Math.round(totalResponseTime / responseCount / (1000 * 60 * 60))
+      : null;
+
+  return {
+    avgResponseHours,
+    totalResponses: responseCount,
+  };
+}
+// convex/controllers/user.ts
+// Add this query to get all online users
+
+export const getOnlineUsers = query({
+  args: {
+    thresholdMinutes: v.optional(v.number()),
+    limit: v.optional(v.number()),
+    roleType: v.optional(v.string()), // Optional filter by role (musician, client, etc.)
+  },
+  handler: async (ctx, args) => {
+    const threshold = args.thresholdMinutes || 5; // Default 5 minutes
+    const limit = args.limit || 50;
+
+    const now = Date.now();
+    const cutoffTime = now - threshold * 60 * 1000; // Convert minutes to milliseconds
+
+    // Build query
+    let query = ctx.db
+      .query("users")
+      .withIndex("by_last_active", (q) => q.gt("lastActive", cutoffTime));
+
+    // Optional: filter by role
+    if (args.roleType) {
+      if (args.roleType === "musician") {
+        query = query.filter((q) => q.eq(q.field("isMusician"), true));
+      } else if (args.roleType === "client") {
+        query = query.filter((q) => q.eq(q.field("isClient"), true));
+      }
+    }
+
+    // Get online users
+    const onlineUsers = await query.take(limit);
+
+    // Return only the fields needed for display
+    return onlineUsers.map((user) => ({
+      _id: user._id,
+      firstname: user.firstname || "",
+      username: user.username || "",
+      picture: user.picture || "",
+      lastActive: user.lastActive,
+      isMusician: user.isMusician || false,
+      isClient: user.isClient || false,
+      roleType: user.roleType || "",
+      instrument: user.instrument || "",
+      trustStars: user.trustStars || 0,
+    }));
+  },
+});
+
+// Also add this query to get online count only (lighter weight)
+export const getOnlineUsersCount = query({
+  args: {
+    thresholdMinutes: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const threshold = args.thresholdMinutes || 5;
+    const cutoffTime = Date.now() - threshold * 60 * 1000;
+
+    const onlineUsers = await ctx.db
+      .query("users")
+      .withIndex("by_last_active", (q) => q.gt("lastActive", cutoffTime))
+      .collect();
+
+    return onlineUsers.length;
+  },
+});
+
+// And a query to get online users by role breakdown
+export const getOnlineUsersStats = query({
+  args: {
+    thresholdMinutes: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const threshold = args.thresholdMinutes || 5;
+    const cutoffTime = Date.now() - threshold * 60 * 1000;
+
+    const onlineUsers = await ctx.db
+      .query("users")
+      .withIndex("by_last_active", (q) => q.gt("lastActive", cutoffTime))
+      .collect();
+
+    const musicians = onlineUsers.filter((u) => u.isMusician).length;
+    const clients = onlineUsers.filter((u) => u.isClient).length;
+    const bookers = onlineUsers.filter((u) => u.isBooker).length;
+
+    return {
+      total: onlineUsers.length,
+      musicians,
+      clients,
+      bookers,
+      other: onlineUsers.length - (musicians + clients + bookers),
+    };
   },
 });

@@ -76,13 +76,13 @@ export function OnlineBadge({
         className={cn(
           "flex items-center gap-1",
           textSizeClasses[size],
-          className
+          className,
         )}
       >
         <div
           className={cn(
             "rounded-full bg-gray-400 animate-pulse",
-            sizeClasses[size]
+            sizeClasses[size],
           )}
         />
         {showText && <span className="text-gray-500">checking.....</span>}
@@ -95,14 +95,14 @@ export function OnlineBadge({
       className={cn(
         "flex items-center gap-1.5",
         textSizeClasses[size],
-        className
+        className,
       )}
     >
       <div
         className={cn(
           "rounded-full border-2 border-white dark:border-gray-800 transition-all",
           sizeClasses[size],
-          isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
+          isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400",
         )}
         title={isOnline ? "Online now" : `Last seen ${getTimeAgo(lastSeen!)}`}
       />
@@ -111,7 +111,7 @@ export function OnlineBadge({
         <span
           className={cn(
             "font-medium",
-            isOnline ? "text-green-600" : "text-gray-500"
+            isOnline ? "text-green-600" : "text-gray-500",
           )}
         >
           {isOnline ? "Online" : `Last seen ${getTimeAgo(lastSeen!)}`}

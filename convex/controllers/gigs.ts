@@ -24,7 +24,11 @@ interface ProcessedBandRole {
   currency?: string;
   negotiable?: boolean;
 }
-
+// Add this type definition at the top of your file (after imports)
+type WeeklyGigData = {
+  count: number;
+  weekStart: number;
+};
 // =================== REGULAR GIG FUNCTIONS ===================
 
 /**
@@ -158,7 +162,7 @@ export const showInterestInGig = mutation({
     try {
       await createNotificationInternal(ctx, {
         userDocumentId: gig.postedBy,
-        type: "new_interest",
+        type: "gig_interest",
         title: "🎵 New Interest Received",
         message: `${user.firstname || user.username} showed interest in "${gig.title}"`,
         image: user.picture,
@@ -296,7 +300,48 @@ export const removeInterestFromGig = mutation({
       await ctx.db.patch(userId, {
         cancelgigCount: (user.cancelgigCount || 0) + 1,
       });
+      // Update the updateWeeklyGigCount function with explicit typing
+      const updateWeeklyGigCount = (
+        currentWeeklyData: WeeklyGigData | null,
+      ): WeeklyGigData => {
+        // Get current week start (Monday)
+        const now = new Date();
+        const currentWeekStart = new Date(now);
+        currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+        currentWeekStart.setHours(0, 0, 0, 0);
 
+        const weekStartTimestamp = currentWeekStart.getTime();
+        const currentGigsThisWeek = currentWeeklyData || {
+          count: 0,
+          weekStart: 0,
+        };
+
+        // Reset if new week
+        if (currentGigsThisWeek.weekStart !== weekStartTimestamp) {
+          return {
+            count: 1,
+            weekStart: weekStartTimestamp,
+          };
+        }
+
+        // Increment if same week
+        return {
+          count: currentGigsThisWeek.count + 1,
+          weekStart: weekStartTimestamp,
+        };
+      };
+
+      // Update user's weekly gig count
+      const updatedWeeklyData = updateWeeklyGigCount(
+        user.gigsBookedThisWeek as WeeklyGigData | null,
+      );
+      // Update user stats
+      await ctx.db.patch(userId, {
+        gigsBooked: (user.gigsBooked || 0) + 1,
+        gigsBookedThisWeek: updatedWeeklyData,
+        cancelgigCount: (user.cancelgigCount || 0) + 1,
+        updatedAt: Date.now(),
+      });
       // Trigger trust recalculation
       await updateUserTrust(ctx, userId);
 
@@ -718,6 +763,47 @@ export const selectMusicianFromInterested = mutation({
       previousInterestedUsers: interestedUsers,
       bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
       updatedAt: now,
+    });
+    // Update the updateWeeklyGigCount function with explicit typing
+    const updateWeeklyGigCount = (
+      currentWeeklyData: WeeklyGigData | null,
+    ): WeeklyGigData => {
+      // Get current week start (Monday)
+      const now = new Date();
+      const currentWeekStart = new Date(now);
+      currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+      currentWeekStart.setHours(0, 0, 0, 0);
+
+      const weekStartTimestamp = currentWeekStart.getTime();
+      const currentGigsThisWeek = currentWeeklyData || {
+        count: 0,
+        weekStart: 0,
+      };
+
+      // Reset if new week
+      if (currentGigsThisWeek.weekStart !== weekStartTimestamp) {
+        return {
+          count: 1,
+          weekStart: weekStartTimestamp,
+        };
+      }
+
+      // Increment if same week
+      return {
+        count: currentGigsThisWeek.count + 1,
+        weekStart: weekStartTimestamp,
+      };
+    };
+
+    // Update user's weekly gig count
+    const updatedWeeklyData = updateWeeklyGigCount(
+      musician.gigsBookedThisWeek as WeeklyGigData | null,
+    );
+    // Update user stats
+    await ctx.db.patch(musician._id, {
+      gigsBooked: (musician.gigsBooked || 0) + 1,
+      gigsBookedThisWeek: updatedWeeklyData,
+      updatedAt: Date.now(),
     });
 
     // Update musician's bookedByClients array and flat IDs
@@ -2167,12 +2253,6 @@ export const createGig = mutation({
     // ============================================
     // UPDATE USER'S WEEKLY GIG COUNT
     // ============================================
-
-    // Add this type definition at the top of your file (after imports)
-    type WeeklyGigData = {
-      count: number;
-      weekStart: number;
-    };
 
     // Update the updateWeeklyGigCount function with explicit typing
     const updateWeeklyGigCount = (

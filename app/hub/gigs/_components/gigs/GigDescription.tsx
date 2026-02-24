@@ -459,57 +459,159 @@ const GigDescription: React.FC<GigDescriptionProps> = ({
   };
 
   const handleSave = async () => {
+    console.log("🔵 [GigDescription] handleSave clicked", {
+      currentUserId,
+      gigId: gig?._id,
+      propIsSaved,
+      hasOnSave: !!onSave,
+      timestamp: new Date().toISOString(),
+    });
+
     if (!currentUserId) {
+      console.log("❌ [GigDescription] No user ID, showing toast");
       toast.error("Please sign in to save gigs");
       return;
     }
 
-    if (onSave) {
-      await onSave();
+    if (!gig) {
+      console.log("❌ [GigDescription] No gig data");
+      toast.error("Gig data not available");
       return;
     }
 
+    console.log("📝 [GigDescription] Attempting to save/favorite", {
+      method: onSave ? "using onSave prop" : "using fallback mutation",
+      gigId: gig._id,
+      userId: currentUserId,
+    });
+
+    if (onSave) {
+      console.log("🔄 [GigDescription] Calling onSave prop");
+      try {
+        await onSave();
+        console.log("✅ [GigDescription] onSave completed successfully");
+      } catch (error) {
+        console.error("❌ [GigDescription] onSave failed:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save gig",
+        );
+      }
+      return;
+    }
+
+    console.log("⚠️ [GigDescription] No onSave prop, using fallback mutation");
     setLoading(true);
     try {
+      console.log("🔄 [GigDescription] Calling saveGigMutation");
       await saveGigMutation({
         userId: currentUserId,
         gigId: gig._id,
       });
+      console.log("✅ [GigDescription] saveGigMutation completed");
       toast.success(propIsSaved ? "Removed from saved" : "Gig saved!");
     } catch (error: any) {
+      console.error("❌ [GigDescription] saveGigMutation failed:", {
+        error,
+        message: error.message,
+        stack: error.stack,
+      });
       toast.error(error.message || "Failed to save gig");
     } finally {
+      console.log("🏁 [GigDescription] Setting loading to false");
       setLoading(false);
     }
   };
 
   const handleFavorite = async () => {
+    console.log("❤️ [GigDescription] handleFavorite clicked", {
+      currentUserId,
+      gigId: gig?._id,
+      propIsFavorite,
+      hasOnFavorite: !!onFavorite,
+      timestamp: new Date().toISOString(),
+    });
+
     if (!currentUserId) {
+      console.log("❌ [GigDescription] No user ID, showing toast");
       toast.error("Please sign in to favorite gigs");
       return;
     }
 
-    if (onFavorite) {
-      await onFavorite();
+    if (!gig) {
+      console.log("❌ [GigDescription] No gig data");
+      toast.error("Gig data not available");
       return;
     }
 
+    console.log("📝 [GigDescription] Attempting to favorite", {
+      method: onFavorite ? "using onFavorite prop" : "using fallback mutation",
+      gigId: gig._id,
+      userId: currentUserId,
+    });
+
+    if (onFavorite) {
+      console.log("🔄 [GigDescription] Calling onFavorite prop");
+      try {
+        await onFavorite();
+        console.log("✅ [GigDescription] onFavorite completed successfully");
+      } catch (error) {
+        console.error("❌ [GigDescription] onFavorite failed:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to favorite gig",
+        );
+      }
+      return;
+    }
+
+    console.log(
+      "⚠️ [GigDescription] No onFavorite prop, using fallback mutation",
+    );
     setLoading(true);
     try {
+      console.log("🔄 [GigDescription] Calling favoriteGigMutation");
       await favoriteGigMutation({
         userId: currentUserId,
         gigId: gig._id,
       });
+      console.log("✅ [GigDescription] favoriteGigMutation completed");
       toast.success(
         propIsFavorite ? "Removed from favorites" : "Added to favorites!",
       );
     } catch (error: any) {
+      console.error("❌ [GigDescription] favoriteGigMutation failed:", {
+        error,
+        message: error.message,
+        stack: error.stack,
+      });
       toast.error(error.message || "Failed to favorite gig");
     } finally {
+      console.log("🏁 [GigDescription] Setting loading to false");
       setLoading(false);
     }
   };
-
+  useEffect(() => {
+    console.log("📋 [GigDescription] Component mounted with props:", {
+      gig: gig?._id,
+      gigTitle: gig?.title,
+      isOpen,
+      currentUserId,
+      propIsSaved,
+      propIsFavorite,
+      hasOnSave: !!onSave,
+      hasOnFavorite: !!onFavorite,
+      userExists: !!user,
+      timestamp: new Date().toISOString(),
+    });
+  }, [
+    gig,
+    isOpen,
+    currentUserId,
+    propIsSaved,
+    propIsFavorite,
+    onSave,
+    onFavorite,
+    user,
+  ]);
   const getSpecializationIcon = () => {
     if (gig.mcType) return <Mic className="w-4 h-4" />;
     if (gig.djGenre) return <Headphones className="w-4 h-4" />;

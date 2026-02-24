@@ -619,6 +619,7 @@ const DateField = ({
 );
 
 // Interest Window Section Component
+// Interest Window Section Component
 const InterestWindowSection = React.memo(
   ({ formValues, colors, onInterestWindowChange }: any) => {
     const [showInterestWindow, setShowInterestWindow] = useState(() => {
@@ -643,18 +644,6 @@ const InterestWindowSection = React.memo(
       return "days";
     });
 
-    // Log when component renders
-    useEffect(() => {
-      console.log("=== InterestWindowSection Render ===");
-      console.log("Form values passed:", {
-        acceptInterestStartTime: formValues?.acceptInterestStartTime,
-        acceptInterestEndTime: formValues?.acceptInterestEndTime,
-        interestWindowDays: formValues?.interestWindowDays,
-        enableInterestWindow: formValues?.enableInterestWindow,
-      });
-      console.log("Current interestWindowType:", interestWindowType);
-    }, [formValues, interestWindowType]);
-
     // When the section opens, automatically enable it
     useEffect(() => {
       if (showInterestWindow && !formValues?.enableInterestWindow) {
@@ -666,18 +655,16 @@ const InterestWindowSection = React.memo(
       formValues?.enableInterestWindow,
       onInterestWindowChange,
     ]);
-    // Inside InterestWindowSection component, replace the handleInterestWindowChange
+
     const handleInterestWindowChange = useCallback(
       (field: string, value: any) => {
-        // This function should be defined by the parent component (EditGigForm)
-        // and passed down as a prop
         if (onInterestWindowChange) {
           onInterestWindowChange(field, value);
         }
       },
-      [onInterestWindowChange], // This should be passed as a prop
+      [onInterestWindowChange],
     );
-    // Add these helper functions inside the component
+
     const getDefaultStartDate = () => {
       const now = new Date();
       now.setHours(now.getHours() + 1); // 1 hour from now
@@ -699,6 +686,7 @@ const InterestWindowSection = React.memo(
       const minutes = String(date.getMinutes()).padStart(2, "0");
       return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
+
     if (!showInterestWindow) {
       return (
         <motion.div
@@ -783,22 +771,14 @@ const InterestWindowSection = React.memo(
               <Button
                 type="button"
                 variant={interestWindowType === "dates" ? "default" : "outline"}
-                // In InterestWindowSection, update the type switching logic:
-
-                onClick={() => {
-                  setInterestWindowType("days");
-                  // When switching to days, clear dates AND disable interest window if dates were set
-                  if (
-                    formValues?.acceptInterestStartTime ||
-                    formValues?.acceptInterestEndTime
-                  ) {
-                    onInterestWindowChange(
-                      "acceptInterestStartTime",
-                      undefined,
-                    );
-                    onInterestWindowChange("acceptInterestEndTime", undefined);
+                onClick={(e) => {
+                  e.stopPropagation(); // Stop event bubbling
+                  setInterestWindowType("dates");
+                  // When switching to dates, clear days
+                  if (formValues?.interestWindowDays) {
+                    onInterestWindowChange("interestWindowDays", undefined);
                   }
-                  // Ensure interest window is enabled if we're setting days
+                  // Ensure interest window is enabled
                   onInterestWindowChange("enableInterestWindow", true);
                 }}
                 className={cn(
@@ -812,7 +792,8 @@ const InterestWindowSection = React.memo(
               <Button
                 type="button"
                 variant={interestWindowType === "days" ? "default" : "outline"}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation(); // Stop event bubbling
                   setInterestWindowType("days");
                   // When switching to days, clear dates
                   if (
@@ -838,10 +819,11 @@ const InterestWindowSection = React.memo(
               </Button>
             </div>
           </div>
+
           {interestWindowType === "dates" && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div onClick={(e) => e.stopPropagation()}>
                   <label
                     className={cn(
                       "block text-sm font-medium mb-2",
@@ -859,6 +841,7 @@ const InterestWindowSection = React.memo(
                         getDefaultStartDate()
                       }
                       onChange={(e) => {
+                        e.stopPropagation();
                         const value = e.target.value;
                         console.log("Start time changed to:", value);
                         onInterestWindowChange(
@@ -878,6 +861,9 @@ const InterestWindowSection = React.memo(
                           );
                         }
                       }}
+                      onClick={(e) => e.stopPropagation()} // Stop event bubbling
+                      onFocus={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
                       className="pl-10"
                     />
                   </div>
@@ -886,7 +872,7 @@ const InterestWindowSection = React.memo(
                   </p>
                 </div>
 
-                <div>
+                <div onClick={(e) => e.stopPropagation()}>
                   <label
                     className={cn(
                       "block text-sm font-medium mb-2",
@@ -903,6 +889,7 @@ const InterestWindowSection = React.memo(
                         formValues.acceptInterestEndTime || getDefaultEndDate()
                       }
                       onChange={(e) => {
+                        e.stopPropagation();
                         const value = e.target.value;
                         console.log("End time changed to:", value);
                         onInterestWindowChange(
@@ -910,6 +897,9 @@ const InterestWindowSection = React.memo(
                           value || undefined,
                         );
                       }}
+                      onClick={(e) => e.stopPropagation()} // Stop event bubbling
+                      onFocus={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
                       className="pl-10"
                     />
                   </div>
@@ -920,8 +910,9 @@ const InterestWindowSection = React.memo(
               </div>
             </div>
           )}
+
           {interestWindowType === "days" && (
-            <div>
+            <div onClick={(e) => e.stopPropagation()}>
               <label
                 className={cn("block text-sm font-medium mb-3", colors.text)}
               >
@@ -933,7 +924,8 @@ const InterestWindowSection = React.memo(
                     type="button"
                     size="icon"
                     variant="ghost"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const current = formValues.interestWindowDays || 7;
                       onInterestWindowChange(
                         "interestWindowDays",
@@ -953,7 +945,8 @@ const InterestWindowSection = React.memo(
                     type="button"
                     size="icon"
                     variant="ghost"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const current = formValues.interestWindowDays || 7;
                       onInterestWindowChange(
                         "interestWindowDays",
@@ -984,6 +977,7 @@ const InterestWindowSection = React.memo(
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-6 pt-4 border-t"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3">
                 <Info className="w-5 h-5 text-blue-500" />
@@ -1001,39 +995,21 @@ const InterestWindowSection = React.memo(
             </motion.div>
           )}
 
-          <div className="mt-4 pt-4 border-t">
+          <div
+            className="mt-4 pt-4 border-t"
+            onClick={(e) => e.stopPropagation()}
+          >
             <p className={cn("text-xs", colors.textMuted)}>
               <strong>Tip:</strong> Setting an interest window helps manage
               application flow and prevents last-minute applications.
             </p>
           </div>
         </div>
-        {/* Add this at the bottom of the expanded section for debugging
-        <div className="mt-4 p-4 rounded-lg bg-gray-100 dark:bg-gray-800">
-          <h4 className="text-sm font-medium mb-2">Debug Info</h4>
-          <pre className="text-xs overflow-auto">
-            {JSON.stringify(
-              {
-                showInterestWindow,
-                interestWindowType,
-                formValues: {
-                  acceptInterestStartTime: formValues?.acceptInterestStartTime,
-                  acceptInterestEndTime: formValues?.acceptInterestEndTime,
-                  interestWindowDays: formValues?.interestWindowDays,
-                  enableInterestWindow: formValues?.enableInterestWindow,
-                },
-              },
-              null,
-              2,
-            )}
-          </pre>
-        </div> */}
       </motion.div>
     );
   },
 );
 InterestWindowSection.displayName = "InterestWindowSection";
-
 // History View Component
 const HistoryView = ({ gig }: { gig: any }) => {
   const { colors } = useThemeColors();
@@ -3115,19 +3091,11 @@ export default function EditGigForm({
                                 <SelectValue placeholder="Select day" />
                               </SelectTrigger>
                               <SelectContent className={colors.background}>
-                                <SelectItem value="monday">Monday</SelectItem>
-                                <SelectItem value="tuesday">Tuesday</SelectItem>
-                                <SelectItem value="wednesday">
-                                  Wednesday
-                                </SelectItem>
-                                <SelectItem value="thursday">
-                                  Thursday
-                                </SelectItem>
-                                <SelectItem value="friday">Friday</SelectItem>
-                                <SelectItem value="saturday">
-                                  Saturday
-                                </SelectItem>
-                                <SelectItem value="sunday">Sunday</SelectItem>
+                                {days.map((day) => (
+                                  <SelectItem key={day.id} value={day.val}>
+                                    {day.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <ErrorMessage error={fieldErrors.day} />
@@ -3405,40 +3373,78 @@ export default function EditGigForm({
                       )}
                     </div>
                   </div>
+
                   {/* Negotiable Switch */}
                   {formValues.bussinesscat !== "other" && (
-                    <div className="flex items-center justify-between p-4 rounded-xl border">
-                      <div>
-                        <Label className={cn("font-medium", colors.text)}>
-                          Price Negotiable
-                        </Label>
+                    <div
+                      className={cn(
+                        "flex items-center justify-between p-5 rounded-xl border-2",
+                        formValues?.negotiable
+                          ? "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/10"
+                          : colors.border,
+                        "transition-all duration-200 hover:shadow-md",
+                      )}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Label
+                            className={cn("font-medium text-base", colors.text)}
+                          >
+                            Price Negotiable
+                          </Label>
+                          {formValues?.negotiable && (
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-xs border-none">
+                              ✓ Enabled
+                            </Badge>
+                          )}
+                        </div>
                         <p className={cn("text-sm", colors.textMuted)}>
-                          Allow applicants to negotiate the price
+                          {formValues?.negotiable
+                            ? "Applicants can propose their own price for this gig"
+                            : "Price is fixed and non-negotiable"}
                         </p>
                       </div>
-                      <Switch
-                        checked={formValues?.negotiable ?? true}
-                        onCheckedChange={(checked) => {
-                          setFormValues((prev: any) => ({
-                            ...prev,
-                            negotiable: checked,
-                          }));
-                          setHasChanges(true); // Add this
-                        }}
-                      />
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          checked={formValues?.negotiable ?? true}
+                          onCheckedChange={(checked) => {
+                            setFormValues((prev: any) => ({
+                              ...prev,
+                              negotiable: checked,
+                            }));
+                            setHasChanges(true);
+                          }}
+                          className={cn(
+                            formValues?.negotiable
+                              ? "data-[state=checked]:bg-green-600"
+                              : "",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-sm font-medium min-w-[60px]",
+                            formValues?.negotiable
+                              ? "text-green-600 dark:text-green-400"
+                              : colors.textMuted,
+                          )}
+                        >
+                          {formValues?.negotiable ? "ON" : "OFF"}
+                        </span>
+                      </div>
                     </div>
                   )}
 
+                  {/* ===== INTEREST WINDOW SECTION ===== */}
                   <InterestWindowSection
                     formValues={formValues}
                     colors={colors}
-                    onInterestWindowChange={handleInterestWindowChange} // Add this
+                    onInterestWindowChange={handleInterestWindowChange}
                   />
+                  {/* ===== END INTEREST WINDOW SECTION ===== */}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* Customize Tab */}
           <TabsContent value="customize">
             <Card className={colors.cardBorder}>
