@@ -108,7 +108,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
     <div
       className={cn(
         "space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6",
-        colors.background
+        colors.background,
       )}
     >
       {/* Header */}
@@ -120,21 +120,21 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
               "p-3 rounded-xl border transition-all duration-300 group",
               colors.border,
               colors.hoverBg,
-              "hover:shadow-lg hover:scale-105"
+              "hover:shadow-lg hover:scale-105",
             )}
             aria-label="Go back"
           >
             <ArrowLeft
               className={cn(
                 "w-5 h-5 transition-transform group-hover:-translate-x-1",
-                colors.text
+                colors.text,
               )}
             />
           </button>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-5 h-5 text-orange-500" />
-              <h1 className={cn("text-2xl sm:text-3xl font-bold", colors.text)}>
+              <h1 className={cn("text-xl sm:text-3xl font-bold", colors.text)}>
                 Create Your Gig
               </h1>
             </div>
@@ -155,13 +155,13 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
               colors.border,
               colors.text,
               colors.hoverBg,
-              "hover:border-orange-500 hover:shadow-md"
+              "hover:border-orange-500 hover:shadow-md",
             )}
           >
             <ArrowLeft
               className={cn(
                 "w-4 h-4 transition-transform group-hover:-translate-x-1",
-                colors.text
+                colors.text,
               )}
             />
             Back to Options
@@ -190,14 +190,14 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
               "rounded-2xl p-6 sm:p-8 border overflow-hidden relative",
               colors.background,
               colors.border,
-              "shadow-lg"
+              "shadow-lg",
             )}
           >
             {/* Background gradient */}
             <div
               className={cn(
                 "absolute top-0 right-0 w-64 h-64 rounded-full -translate-y-32 translate-x-32 blur-3xl",
-                colors.gradientSecondary
+                colors.gradientSecondary,
               )}
             />
 
@@ -207,7 +207,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <h2 className={cn("text-2xl font-bold", colors.text)}>
+                  <h2 className={cn("text-xl font-bold", colors.text)}>
                     Welcome to Gig Creation
                   </h2>
                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-orange-500 to-red-500 text-white">
@@ -227,7 +227,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                       colors.backgroundMuted,
                       colors.text,
                       colors.border,
-                      "border"
+                      "border",
                     )}
                   >
                     🎵 Live Music
@@ -238,7 +238,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                       colors.backgroundMuted,
                       colors.text,
                       colors.border,
-                      "border"
+                      "border",
                     )}
                   >
                     🎭 Events
@@ -249,7 +249,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                       colors.backgroundMuted,
                       colors.text,
                       colors.border,
-                      "border"
+                      "border",
                     )}
                   >
                     ⚡ Quick Booking
@@ -260,7 +260,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                       colors.backgroundMuted,
                       colors.text,
                       colors.border,
-                      "border"
+                      "border",
                     )}
                   >
                     💼 Professional
@@ -291,7 +291,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                     colors.background,
                     colors.border,
                     "hover:shadow-2xl hover:scale-[1.02] hover:border-orange-500/50",
-                    "relative overflow-hidden"
+                    "relative overflow-hidden",
                   )}
                   onClick={option.onClick}
                 >
@@ -300,7 +300,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                     className={cn(
                       "absolute inset-0 transition-all duration-500",
                       colors.hoverBg,
-                      "group-hover:opacity-100 opacity-0"
+                      "group-hover:opacity-100 opacity-0",
                     )}
                   />
 
@@ -309,7 +309,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                       <div
                         className={cn(
                           "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110",
-                          `bg-gradient-to-br ${option.gradient}`
+                          `bg-gradient-to-br ${option.gradient}`,
                         )}
                       >
                         <Icon className="w-7 h-7 text-white" />
@@ -338,7 +338,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                               className={cn(
                                 "p-2 rounded-lg transition-all duration-300",
                                 "group-hover/item:scale-110",
-                                colors.hoverBg
+                                colors.hoverBg,
                               )}
                             >
                               <FeatureIcon
@@ -361,7 +361,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                         "w-full transition-all duration-500 group-hover:scale-105",
                         `bg-gradient-to-r ${option.gradient}`,
                         "text-white font-semibold shadow-lg hover:shadow-xl",
-                        "hover:brightness-110"
+                        "hover:brightness-110",
                       )}
                     >
                       <span className="flex items-center justify-center gap-2">
@@ -384,7 +384,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
               "rounded-2xl border p-6 sm:p-8",
               colors.backgroundMuted,
               colors.border,
-              "shadow-lg"
+              "shadow-lg",
             )}
           >
             <div className="flex items-center gap-3 mb-6">
@@ -412,14 +412,14 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                     "flex items-start gap-3 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02]",
                     colors.background,
                     colors.border,
-                    "hover:shadow-md hover:border-orange-500/50"
+                    "hover:shadow-md hover:border-orange-500/50",
                   )}
                 >
                   <div className="flex-shrink-0">
                     <div
                       className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center",
-                        colors.backgroundMuted
+                        colors.backgroundMuted,
                       )}
                     >
                       <span className={cn("text-sm font-bold", colors.text)}>
@@ -438,7 +438,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
             <div className="mt-8 pt-6 border-t">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <div className={cn("text-2xl font-bold mb-1", colors.text)}>
+                  <div className={cn("text-xl font-bold mb-1", colors.text)}>
                     5,000+
                   </div>
                   <div className={cn("text-sm", colors.textMuted)}>
@@ -446,7 +446,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={cn("text-2xl font-bold mb-1", colors.text)}>
+                  <div className={cn("text-xl font-bold mb-1", colors.text)}>
                     98%
                   </div>
                   <div className={cn("text-sm", colors.textMuted)}>
@@ -454,7 +454,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={cn("text-2xl font-bold mb-1", colors.text)}>
+                  <div className={cn("text-xl font-bold mb-1", colors.text)}>
                     24h
                   </div>
                   <div className={cn("text-sm", colors.textMuted)}>
@@ -462,7 +462,7 @@ export const CreateNormalGigs = ({ user }: { user: any }) => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={cn("text-2xl font-bold mb-1", colors.text)}>
+                  <div className={cn("text-xl font-bold mb-1", colors.text)}>
                     500+
                   </div>
                   <div className={cn("text-sm", colors.textMuted)}>

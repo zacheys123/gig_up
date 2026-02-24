@@ -142,14 +142,14 @@ const StatCard: React.FC<{
         "hover:scale-105 transform-gpu",
         "min-w-0 flex-1", // Flex basis for responsive behavior
         colorConfig.bg,
-        colorConfig.hover
+        colorConfig.hover,
       )}
     >
       {Icon && (
         <div
           className={cn(
             "w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 rounded-lg flex items-center justify-center",
-            colorConfig.bg
+            colorConfig.bg,
           )}
         >
           <Icon className={cn("w-3 h-3 sm:w-4 sm:h-4", colorConfig.text)} />
@@ -157,8 +157,8 @@ const StatCard: React.FC<{
       )}
       <div
         className={cn(
-          "text-lg sm:text-xl lg:text-2xl font-bold mb-1",
-          colorConfig.text
+          "text-lg sm:text-xl lg:text-xl font-bold mb-1",
+          colorConfig.text,
         )}
       >
         {value}
@@ -214,7 +214,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
                 colors.textInverted,
                 "text-sm sm:text-base",
-                "w-full xs:w-auto justify-center"
+                "w-full xs:w-auto justify-center",
               )}
               onClick={() => onAction?.("create")}
               size="sm"
@@ -229,7 +229,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 colors.border,
                 colors.hoverBg,
                 "text-sm sm:text-base",
-                "w-full xs:w-auto justify-center"
+                "w-full xs:w-auto justify-center",
               )}
               size="sm"
             >
@@ -246,7 +246,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 "bg-blue-500 hover:bg-blue-600",
                 colors.textInverted,
                 "text-sm sm:text-base",
-                "w-full xs:w-auto justify-center"
+                "w-full xs:w-auto justify-center",
               )}
               onClick={() => onAction?.("search")}
               size="sm"
@@ -261,7 +261,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 colors.border,
                 colors.hoverBg,
                 "text-sm sm:text-base",
-                "w-full xs:w-auto justify-center"
+                "w-full xs:w-auto justify-center",
               )}
               size="sm"
             >
@@ -277,7 +277,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
               "bg-green-500 hover:bg-green-600",
               colors.textInverted,
               "text-sm sm:text-base",
-              "w-full xs:w-auto justify-center"
+              "w-full xs:w-auto justify-center",
             )}
             onClick={() => onAction?.("create")}
             size="sm"
@@ -293,7 +293,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
               "bg-teal-500 hover:bg-teal-600",
               colors.textInverted,
               "text-sm sm:text-base",
-              "w-full xs:w-auto justify-center"
+              "w-full xs:w-auto justify-center",
             )}
             onClick={() => onAction?.("create-template")}
             size="sm"
@@ -313,7 +313,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
               colors.border,
               colors.hoverBg,
               "text-sm sm:text-base",
-              "w-full xs:w-auto justify-center"
+              "w-full xs:w-auto justify-center",
             )}
             size="sm"
           >
@@ -519,7 +519,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
           "shadow-sm",
           "w-full",
           "transition-all duration-300", // Add transition to main container
-          isCollapsed ? "pb-0" : "pb-4" // Remove bottom padding when collapsed
+          isCollapsed ? "pb-0" : "pb-4", // Remove bottom padding when collapsed
         )}
       >
         {/* Header - Always visible */}
@@ -536,7 +536,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     className={cn(
                       "p-1 h-8 w-8 sm:h-10 sm:w-10 rounded-lg transition-all duration-200 flex-shrink-0",
                       colors.hoverBg,
-                      isAnimating && "opacity-50 cursor-not-allowed"
+                      isAnimating && "opacity-50 cursor-not-allowed",
                     )}
                   >
                     {isCollapsed ? (
@@ -549,8 +549,8 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 <div className="min-w-0 flex-1">
                   <h2
                     className={cn(
-                      "text-xl sm:text-2xl lg:text-3xl font-bold truncate",
-                      colors.text
+                      "text-xl sm:text-xl lg:text-3xl font-bold truncate",
+                      colors.text,
                     )}
                   >
                     {title}
@@ -559,7 +559,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     className={cn(
                       "mt-1 text-sm sm:text-base",
                       colors.textMuted,
-                      "line-clamp-2 sm:line-clamp-3"
+                      "line-clamp-2 sm:line-clamp-3",
                     )}
                   >
                     {description}
@@ -578,7 +578,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
             "transition-all duration-300 ease-in-out overflow-hidden",
             isCollapsed
               ? "max-h-0 opacity-0 -translate-y-2 scale-y-0 origin-top"
-              : "max-h-[2000px] opacity-100 translate-y-0 scale-y-100 origin-top"
+              : "max-h-[2000px] opacity-100 translate-y-0 scale-y-100 origin-top",
           )}
         >
           {/* Custom Children Content */}
@@ -602,18 +602,18 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                       colors.hoverBg,
                       "hover:border-blue-300",
                       "animate-in slide-in-from-top-5 duration-300",
-                      `delay-${(index % 3) * 100 + 150}` // Stagger animation
+                      `delay-${(index % 3) * 100 + 150}`, // Stagger animation
                     )}
                   >
                     {"icon" in item && (
-                      <div className="text-2xl mb-3">{item.icon}</div>
+                      <div className="text-xl mb-3">{item.icon}</div>
                     )}
                     {"title" in item ? (
                       <>
                         <h3
                           className={cn(
                             "font-semibold mb-2 text-base sm:text-lg truncate",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           {item.title}
@@ -621,7 +621,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                         <div
                           className={cn(
                             "space-y-2 text-xs sm:text-sm",
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         >
                           {"type" in item && (
@@ -656,19 +656,19 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                                   ? cn(
                                       "bg-green-100 text-green-800",
                                       colors.successBg,
-                                      colors.successText
+                                      colors.successText,
                                     )
                                   : item.status === "Draft"
                                     ? cn(
                                         "bg-amber-100 text-amber-800",
                                         colors.warningBg,
-                                        colors.warningText
+                                        colors.warningText,
                                       )
                                     : cn(
                                         "bg-blue-100 text-blue-800",
                                         colors.infoBg,
-                                        colors.infoText
-                                      )
+                                        colors.infoText,
+                                      ),
                               )}
                             >
                               {item.status}
@@ -681,7 +681,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                         <h3
                           className={cn(
                             "font-semibold mb-2 truncate",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           {item.name}
@@ -689,7 +689,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                         <div
                           className={cn(
                             "space-y-1 text-xs sm:text-sm",
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         >
                           <div className="truncate">Role: {item.role}</div>
@@ -718,13 +718,13 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                   "text-center py-8 sm:py-12 border-2 border-dashed rounded-xl",
                   colors.border,
                   colors.backgroundMuted,
-                  "animate-in slide-in-from-top-5 duration-300 delay-300"
+                  "animate-in slide-in-from-top-5 duration-300 delay-300",
                 )}
               >
                 <div
                   className={cn(
                     "w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4",
-                    colors.infoText
+                    colors.infoText,
                   )}
                 >
                   {type === "create-gigs" ? (
@@ -742,7 +742,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 <h4
                   className={cn(
                     "text-lg sm:text-xl font-semibold mb-2 px-4",
-                    colors.text
+                    colors.text,
                   )}
                 >
                   {type === "create-gigs"
@@ -752,7 +752,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                 <p
                   className={cn(
                     "max-w-md mx-auto mb-6 px-4 text-sm sm:text-base",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   {type === "create-gigs"
@@ -766,7 +766,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     className={cn(
                       colors.border,
                       colors.hoverBg,
-                      "w-full xs:w-auto justify-center"
+                      "w-full xs:w-auto justify-center",
                     )}
                   >
                     Learn More
@@ -776,7 +776,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
                     className={cn(
                       "bg-blue-500 hover:bg-blue-600",
                       colors.textInverted,
-                      "w-full xs:w-auto justify-center"
+                      "w-full xs:w-auto justify-center",
                     )}
                   >
                     Get Started
@@ -792,7 +792,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
               className={cn(
                 "p-4 sm:p-6 border-t",
                 colors.border,
-                "animate-in slide-in-from-top-5 duration-300 delay-200"
+                "animate-in slide-in-from-top-5 duration-300 delay-200",
               )}
             >
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -811,7 +811,7 @@ export const GigSectionHeader: React.FC<GigSectionHeaderProps> = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 GigSectionHeader.displayName = "GigSectionHeader";

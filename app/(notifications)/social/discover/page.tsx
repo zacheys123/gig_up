@@ -63,7 +63,7 @@ export default function DiscoverPage() {
           instrument: filters.instrument,
           limit: 50,
         }
-      : "skip"
+      : "skip",
   ) as UserProps[] | undefined;
 
   // Get all users if no search (for initial discovery)
@@ -150,7 +150,7 @@ export default function DiscoverPage() {
   const handleFollow = async (
     targetUserId: string,
     targetUsername: string,
-    isPrivate: boolean
+    isPrivate: boolean,
   ) => {
     if (!currentUser?.clerkId) {
       toast.error("Please log in to follow users");
@@ -285,7 +285,7 @@ export default function DiscoverPage() {
                   colors.card,
                   colors.border,
                   activeCategory === category.id && "ring-2 ring-blue-500",
-                  isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50"
+                  isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50",
                 )}
                 onClick={() => setActiveCategory(category.id)}
               >
@@ -318,7 +318,7 @@ export default function DiscoverPage() {
             className={cn(
               "p-6 rounded-xl border mb-6",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <div className="flex flex-col lg:flex-row gap-4">
@@ -327,7 +327,7 @@ export default function DiscoverPage() {
                 <Search
                   className={cn(
                     "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 />
                 <Input
@@ -338,7 +338,7 @@ export default function DiscoverPage() {
                     "pl-10 pr-4 py-2 rounded-xl",
                     colors.background,
                     colors.border,
-                    colors.text
+                    colors.text,
                   )}
                 />
               </div>
@@ -351,7 +351,7 @@ export default function DiscoverPage() {
                     className={cn(
                       "rounded-xl gap-2",
                       colors.border,
-                      colors.text
+                      colors.text,
                     )}
                   >
                     <Filter className="w-4 h-4" />
@@ -433,7 +433,7 @@ export default function DiscoverPage() {
                           "rounded-lg",
                           colors.background,
                           colors.border,
-                          colors.text
+                          colors.text,
                         )}
                       />
                     </div>
@@ -456,7 +456,7 @@ export default function DiscoverPage() {
                           "rounded-lg",
                           colors.background,
                           colors.border,
-                          colors.text
+                          colors.text,
                         )}
                       />
                     </div>
@@ -470,7 +470,7 @@ export default function DiscoverPage() {
                       onClick={clearFilters}
                       className={cn(
                         "w-full justify-center text-red-600 hover:text-red-700",
-                        isDarkMode ? "hover:bg-red-900/20" : "hover:bg-red-50"
+                        isDarkMode ? "hover:bg-red-900/20" : "hover:bg-red-50",
                       )}
                     >
                       <X className="w-4 h-4 mr-2" />
@@ -576,7 +576,7 @@ export default function DiscoverPage() {
                     "rounded-xl border p-6 transition-all duration-300 hover:shadow-lg flex flex-col",
                     colors.card,
                     colors.border,
-                    isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50"
+                    isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50",
                   )}
                 >
                   {/* User Header */}
@@ -593,7 +593,7 @@ export default function DiscoverPage() {
                           <div
                             className={cn(
                               "w-12 h-12 rounded-xl flex items-center justify-center",
-                              isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                              isDarkMode ? "bg-gray-700" : "bg-gray-200",
                             )}
                           >
                             <Users
@@ -623,7 +623,7 @@ export default function DiscoverPage() {
                       <Shield
                         className={cn(
                           "w-4 h-4 flex-shrink-0",
-                          colors.textMuted
+                          colors.textMuted,
                         )}
                       />
                     )}
@@ -637,7 +637,7 @@ export default function DiscoverPage() {
                         "text-xs",
                         user.isMusician
                           ? "bg-purple-500 text-white"
-                          : "bg-green-500 text-white"
+                          : "bg-green-500 text-white",
                       )}
                     >
                       {user.isMusician ? "Musician" : "Client"}
@@ -703,7 +703,7 @@ export default function DiscoverPage() {
                       handleFollow(
                         user._id,
                         user.firstname || user.username,
-                        user.isPrivate || false
+                        user.isPrivate || false,
                       )
                     }
                     disabled={!user.canFollow}
@@ -745,13 +745,13 @@ export default function DiscoverPage() {
             className={cn(
               "text-center py-16 rounded-xl border-2 border-dashed",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <Search
               className={cn("mx-auto w-16 h-16 mb-4", colors.textMuted)}
             />
-            <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+            <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
               No Users Found
             </h3>
             <p

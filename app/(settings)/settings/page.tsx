@@ -165,7 +165,7 @@ const SettingPage = () => {
     const { user: clerkUser } = useUser();
     const { signOut } = useClerk();
     const deleteUserAccount = useMutation(
-      api.controllers.user.deleteUserAccount
+      api.controllers.user.deleteUserAccount,
     );
 
     useEffect(() => {
@@ -199,7 +199,7 @@ const SettingPage = () => {
 
         if (!convexResult.success) {
           throw new Error(
-            convexResult.success || "Failed to delete data from database"
+            convexResult.success || "Failed to delete data from database",
           );
         }
 
@@ -223,7 +223,7 @@ const SettingPage = () => {
         console.error("Delete account error:", err);
         setError(
           err.message ||
-            "Failed to delete account. Please try again or contact support."
+            "Failed to delete account. Please try again or contact support.",
         );
         setIsDeleting(false);
       }
@@ -250,7 +250,7 @@ const SettingPage = () => {
                   />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+                  <h3 className="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
                     Delete Account
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -651,13 +651,13 @@ const SettingPage = () => {
           onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
           className={cn(
             "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-            twoFactorEnabled ? colors.primaryBg : colors.border
+            twoFactorEnabled ? colors.primaryBg : colors.border,
           )}
         >
           <span
             className={cn(
               "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-              twoFactorEnabled ? "translate-x-6" : "translate-x-1"
+              twoFactorEnabled ? "translate-x-6" : "translate-x-1",
             )}
           />
         </button>
@@ -704,7 +704,7 @@ const SettingPage = () => {
             "px-4 py-2 rounded-lg border font-medium",
             colors.border,
             colors.textSecondary,
-            colors.background
+            colors.background,
           )}
         >
           {twoFactorEnabled ? "Close" : "Cancel"}
@@ -715,7 +715,7 @@ const SettingPage = () => {
             className={cn(
               "px-4 py-2 rounded-lg font-medium",
               colors.primaryBg,
-              colors.textInverted
+              colors.textInverted,
             )}
           >
             Enable 2FA
@@ -750,7 +750,7 @@ const SettingPage = () => {
             key={index}
             className={cn(
               "flex items-center justify-between p-3 rounded-lg",
-              colors.background
+              colors.background,
             )}
           >
             <div>
@@ -762,7 +762,7 @@ const SettingPage = () => {
             <button
               className={cn(
                 "text-sm font-medium hover:opacity-80",
-                colors.destructive
+                colors.destructive,
               )}
             >
               Log out
@@ -776,7 +776,7 @@ const SettingPage = () => {
           className={cn(
             "px-4 py-2 rounded-lg font-medium",
             colors.primaryBg,
-            colors.textInverted
+            colors.textInverted,
           )}
         >
           Close
@@ -810,7 +810,7 @@ const SettingPage = () => {
             key={index}
             className={cn(
               "flex items-center justify-between p-3 rounded-lg",
-              colors.background
+              colors.background,
             )}
           >
             <div>
@@ -822,7 +822,7 @@ const SettingPage = () => {
             <button
               className={cn(
                 "text-sm font-medium hover:opacity-80",
-                colors.destructive
+                colors.destructive,
               )}
             >
               Disconnect
@@ -836,7 +836,7 @@ const SettingPage = () => {
           className={cn(
             "px-4 py-2 rounded-lg font-medium",
             colors.primaryBg,
-            colors.textInverted
+            colors.textInverted,
           )}
         >
           Close
@@ -865,7 +865,7 @@ const SettingPage = () => {
             <button
               className={cn(
                 "text-sm font-medium hover:opacity-80",
-                colors.destructive
+                colors.destructive,
               )}
             >
               Remove
@@ -891,7 +891,7 @@ const SettingPage = () => {
             <button
               className={cn(
                 "text-sm font-medium hover:opacity-80",
-                colors.destructive
+                colors.destructive,
               )}
             >
               Remove
@@ -903,7 +903,7 @@ const SettingPage = () => {
           className={cn(
             "w-full p-3 border-2 border-dashed rounded-lg transition-colors",
             colors.border,
-            colors.textSecondary
+            colors.textSecondary,
           )}
         >
           + Add New Payment Method
@@ -915,7 +915,7 @@ const SettingPage = () => {
           className={cn(
             "px-4 py-2 rounded-lg font-medium",
             colors.primaryBg,
-            colors.textInverted
+            colors.textInverted,
           )}
         >
           Close
@@ -933,7 +933,7 @@ const SettingPage = () => {
           className={cn(
             "px-4 py-2 rounded-lg font-medium",
             colors.primaryBg,
-            colors.textInverted
+            colors.textInverted,
           )}
         >
           Close
@@ -986,7 +986,7 @@ const SettingPage = () => {
           className={cn(
             "flex items-center px-4 py-2 rounded-lg",
             colors.background,
-            colors.text
+            colors.text,
           )}
         >
           {darkMode ? (
@@ -1020,7 +1020,7 @@ const SettingPage = () => {
                       ? colors.destructiveBg
                       : item.isNavigation
                         ? cn("bg-blue-800/30 hover:bg-blue-800/40", colors.text)
-                        : colors.hoverBg
+                        : colors.hoverBg,
                   )}
                   onClick={item.action}
                 >
@@ -1031,7 +1031,7 @@ const SettingPage = () => {
                         size={16}
                         className={cn(
                           "ml-2 group-hover:translate-x-1 transition-transform",
-                          colors.primary
+                          colors.primary,
                         )}
                       />
                     ) : (
@@ -1052,13 +1052,13 @@ const SettingPage = () => {
       <div
         className={cn(
           "mt-10 flex justify-between items-center pt-6 border-t",
-          colors.border
+          colors.border,
         )}
       >
         <button
           className={cn(
             "flex items-center hover:opacity-80",
-            colors.textSecondary
+            colors.textSecondary,
           )}
         >
           <HelpCircle size={16} className="mr-2" />
@@ -1068,7 +1068,7 @@ const SettingPage = () => {
           className={cn(
             "flex items-center px-4 py-2 rounded-lg",
             colors.destructiveBg,
-            colors.destructive
+            colors.destructive,
           )}
         >
           <LogOut size={16} className="mr-2" />
@@ -1081,20 +1081,20 @@ const SettingPage = () => {
         <div
           className={cn(
             "fixed inset-0 flex items-center justify-center z-50 p-4",
-            colors.overlay
+            colors.overlay,
           )}
         >
           <div
             className={cn(
               "rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto", // Increased max-width for better layout
-              colors.card
+              colors.card,
             )}
           >
             <div
               className={cn(
                 "sticky top-0 p-6 pb-4 flex justify-between items-center border-b rounded-t-xl",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <h3 className="text-xl font-bold">
@@ -1104,7 +1104,7 @@ const SettingPage = () => {
                 onClick={closeModal}
                 className={cn(
                   "p-1 rounded-full hover:opacity-70",
-                  colors.textSecondary
+                  colors.textSecondary,
                 )}
               >
                 <X size={20} />

@@ -23,8 +23,9 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
 
 import { useCheckTrial } from "@/hooks/useCheckTrial";
-import { useGigUpAssistant } from "@/app/(ai)/useGigUpAssistant";
+
 import { useAISuggestions } from "@/app/(ai)/useAISuggestions";
+import { usegigUpAssistant } from "@/app/(ai)/useGigUpAssistant";
 
 interface Message {
   id: string;
@@ -69,11 +70,11 @@ export const PLATFORM_VERSIONS = {
   },
 };
 
-interface GigUpAssistantModalProps {
+interface gigUpAssistantModalProps {
   onClose: () => void;
 }
 
-export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
+export function GigUpAssistantModal({ onClose }: gigUpAssistantModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -83,7 +84,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { askQuestion, isLoading, questionUsage, timeUntilReset, tierLimits } =
-    useGigUpAssistant();
+    usegigUpAssistant();
   const { colors, mounted } = useThemeColors();
   const { questions: suggestedQuestions, isLoading: suggestionsLoading } =
     useAISuggestions();
@@ -209,7 +210,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
   const getWelcomeMessage = () => {
     const messages = {
       "v1.0":
-        "Hi! I'm your GigUppassistant. Ask me about gig posting, messaging, and profiles!",
+        "Hi! I'm your gigUppassistant. Ask me about gig posting, messaging, and profiles!",
       "v2.0":
         "Hello! I'm here to help with multi-vendor events, video portfolios, and advanced analytics!",
       "v3.0":
@@ -252,7 +253,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
         "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
         "w-[95vw] max-w-4xl h-[85vh] max-h-[800px]",
         "rounded-3xl shadow-2xl flex flex-col border-0 backdrop-blur-sm",
-        "transform-gpu overflow-hidden"
+        "transform-gpu overflow-hidden",
       )}
       style={{
         backgroundColor: colors.card,
@@ -263,7 +264,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
       <div
         className={cn(
           "rounded-t-3xl p-6 flex justify-between items-center relative overflow-hidden",
-          "bg-gradient-to-r from-orange-500 to-red-500"
+          "bg-gradient-to-r from-orange-500 to-red-500",
         )}
       >
         {/* Background pattern */}
@@ -282,11 +283,11 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
           <div className="flex-1">
             {/* Top Row - Title and Basic Info */}
             <div className="flex items-center gap-3 mb-2">
-              <h3 className="font-bold text-white text-xl">GigUppAssistant</h3>
+              <h3 className="font-bold text-white text-xl">gigUppAssistant</h3>
               <span
                 className={cn(
                   "px-3 py-1.5 text-sm rounded-full font-bold backdrop-blur-sm border border-white/20",
-                  "bg-white/20 text-white"
+                  "bg-white/20 text-white",
                 )}
               >
                 {platformVersion}
@@ -301,7 +302,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                 <div
                   className={cn(
                     "w-2 h-2 rounded-full",
-                    questionUsage.canAsk ? "bg-green-400" : "bg-amber-400"
+                    questionUsage.canAsk ? "bg-green-400" : "bg-amber-400",
                   )}
                 />
                 <span className="text-white text-sm font-medium">
@@ -352,7 +353,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                         ? "bg-green-400"
                         : questionUsage.used / questionUsage.limit < 0.9
                           ? "bg-amber-400"
-                          : "bg-red-400"
+                          : "bg-red-400",
                     )}
                     style={{
                       width: `${Math.min((questionUsage.used / questionUsage.limit) * 100, 100)}%`,
@@ -381,7 +382,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
       <div
         className={cn(
           "flex-1 overflow-y-auto p-6 relative",
-          "bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"
+          "bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800",
         )}
       >
         {messages.length === 0 ? (
@@ -395,7 +396,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                     versionInfo.bgColor,
                     versionInfo.borderColor,
                     versionInfo.color,
-                    "shadow-lg"
+                    "shadow-lg",
                   )}
                 >
                   <VersionIcon className="w-6 h-6" />
@@ -419,14 +420,14 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                       "flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-all duration-200",
                       "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60",
                       "hover:shadow-md hover:scale-105",
-                      colors.text
+                      colors.text,
                     )}
                   >
                     <div
                       className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center",
                         versionInfo.bgColor,
-                        versionInfo.color
+                        versionInfo.color,
                       )}
                     >
                       <feature.icon className="w-4 h-4" />
@@ -445,7 +446,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                       key={index}
                       className={cn(
                         "w-full p-4 rounded-xl border-2 animate-pulse",
-                        "bg-gray-200/50 dark:bg-gray-700/50 border-gray-300/50 dark:border-gray-600/50"
+                        "bg-gray-200/50 dark:bg-gray-700/50 border-gray-300/50 dark:border-gray-600/50",
                       )}
                     >
                       <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded" />
@@ -463,7 +464,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                         "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-gray-200/60 dark:border-gray-700/60",
                         "hover:shadow-lg hover:scale-105 hover:border-orange-300/50 dark:hover:border-orange-400/50",
                         "active:scale-95",
-                        colors.text
+                        colors.text,
                       )}
                     >
                       {question}
@@ -475,7 +476,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
             <div
               className={cn(
                 "text-xs px-4 py-3 rounded-xl",
-                "bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60"
+                "bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60",
               )}
             >
               {questionUsage.limit === tierLimits.free.dailyLimit && (
@@ -529,8 +530,8 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                       ? "bg-gradient-to-br from-orange-500 to-red-500 text-white"
                       : cn(
                           "bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200/60 dark:border-gray-700/60",
-                          colors.text
-                        )
+                          colors.text,
+                        ),
                   )}
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -560,7 +561,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                               message.metadata
                                 .platformVersion as keyof typeof PLATFORM_VERSIONS
                             ]?.color,
-                            "border-current/20"
+                            "border-current/20",
                           )}
                         >
                           {message.metadata.platformVersion}
@@ -586,7 +587,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
                 </div>
                 <div
                   className={cn(
-                    "px-4 py-3 rounded-2xl bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200/60 dark:border-gray-700/60 shadow-lg backdrop-blur-sm"
+                    "px-4 py-3 rounded-2xl bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200/60 dark:border-gray-700/60 shadow-lg backdrop-blur-sm",
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -620,7 +621,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
       <div
         className={cn(
           "p-5 border-t-2",
-          "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+          "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
         )}
         style={{ borderColor: colors.border }}
       >
@@ -631,7 +632,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
             className={cn(
               "mb-4 p-4 rounded-xl flex items-center gap-3 text-sm font-medium",
               "bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 border-2 border-amber-200/60 dark:border-amber-700/60",
-              "text-amber-800 dark:text-amber-200 shadow-lg"
+              "text-amber-800 dark:text-amber-200 shadow-lg",
             )}
           >
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -666,7 +667,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
               "focus:border-orange-400 focus:ring-orange-200/50 dark:focus:ring-orange-400/30",
               "placeholder-gray-500 dark:placeholder-gray-400",
               !questionUsage.canAsk && "opacity-60 cursor-not-allowed",
-              colors.text
+              colors.text,
             )}
             disabled={!questionUsage.canAsk || isLoading}
           />
@@ -678,7 +679,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
             className={cn(
               "p-3 rounded-xl transition-all duration-200 disabled:opacity-40",
               "bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg",
-              "hover:shadow-xl disabled:hover:shadow-lg min-w-[50px]"
+              "hover:shadow-xl disabled:hover:shadow-lg min-w-[50px]",
             )}
           >
             <Send className="w-5 h-5" />
@@ -701,7 +702,7 @@ export function GigUpAssistantModal({ onClose }: GigUpAssistantModalProps) {
               className={cn(
                 "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 font-medium",
                 "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md",
-                "hover:shadow-lg"
+                "hover:shadow-lg",
               )}
             >
               <Crown className="w-3 h-3" />

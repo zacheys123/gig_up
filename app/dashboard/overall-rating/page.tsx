@@ -44,7 +44,7 @@ export default function TrustDashboard() {
               <div className="text-5xl font-bold mb-2">
                 {trustStars.toFixed(1)}
               </div>
-              <div className="text-2xl">⭐</div>
+              <div className="text-xl">⭐</div>
               <p className="text-sm text-gray-500 mt-2">Trust Stars</p>
             </div>
             <div className="text-center">
@@ -140,7 +140,7 @@ export default function TrustDashboard() {
               <Progress
                 value={Math.min(
                   (trustScore / nextFeature.threshold) * 100,
-                  100
+                  100,
                 )}
                 className="h-3"
               />

@@ -74,7 +74,7 @@ export const TrialRemainingModal = () => {
         <div
           className={cn(
             "fixed inset-0 z-50 flex items-center justify-center p-6",
-            colors.overlay
+            colors.overlay,
           )}
         >
           <motion.div
@@ -85,12 +85,12 @@ export const TrialRemainingModal = () => {
               "w-[90%] max-w-md sm:max-w-lg rounded-2xl shadow-xl p-6 sm:p-8 text-center space-y-5",
               colors.card,
               colors.cardBorder,
-              "border"
+              "border",
             )}
           >
             {/* Add DialogHeader wrapper */}
             <DialogHeader>
-              <DialogTitle className={cn("text-2xl font-bold", colors.text)}>
+              <DialogTitle className={cn("text-xl font-bold", colors.text)}>
                 {trialRemainingDays <= 3
                   ? "Trial Ending Soon! ⏰"
                   : "Trial Active ✨"}
@@ -116,7 +116,7 @@ export const TrialRemainingModal = () => {
               <div
                 className={cn(
                   "h-2 rounded-full transition-all duration-500",
-                  getProgressBarColor()
+                  getProgressBarColor(),
                 )}
                 style={{ width: `${(trialRemainingDays / 30) * 100}%` }}
               />
@@ -133,7 +133,7 @@ export const TrialRemainingModal = () => {
                   "px-6 py-2.5 text-sm sm:text-base rounded-lg border transition-all",
                   colors.border,
                   colors.text,
-                  colors.hoverBg
+                  colors.hoverBg,
                 )}
               >
                 Continue Trial
@@ -143,7 +143,7 @@ export const TrialRemainingModal = () => {
                 onClick={handleUpgrade}
                 className={cn(
                   "px-6 py-2.5 text-sm sm:text-base rounded-lg bg-gradient-to-r from-green-500 via-blue-500 to-indigo-500 text-white hover:brightness-110 transition-all",
-                  colors.textInverted
+                  colors.textInverted,
                 )}
               >
                 Upgrade Now

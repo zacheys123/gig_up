@@ -111,7 +111,7 @@ export const useNotificationSystem = () => {
   const context = useContext(NotificationSystemContext);
   if (context === undefined) {
     throw new Error(
-      "useNotificationSystem must be used within a NotificationSystemProvider"
+      "useNotificationSystem must be used within a NotificationSystemProvider",
     );
   }
   return context;
@@ -134,7 +134,7 @@ export const NotificationSystemProvider = ({
   // Fetch all notifications (read and unread)
   const allNotifications = useQuery(
     api.controllers.notifications.getUserNotifications,
-    userId ? { clerkId: userId, limit: 50 } : "skip"
+    userId ? { clerkId: userId, limit: 50 } : "skip",
   );
 
   // Memoize filtered notifications to prevent unnecessary recalculations
@@ -145,21 +145,21 @@ export const NotificationSystemProvider = ({
   // Fetch unread count
   const unreadCountData = useQuery(
     api.controllers.notifications.getUnreadCount,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   // Fetch notification settings
   const notificationSettings = useQuery(
     api.controllers.notifications.getNotificationSettings,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   // Mutations
   const markAsReadMutation = useMutation(
-    api.controllers.notifications.markAsRead
+    api.controllers.notifications.markAsRead,
   );
   const markAllAsReadMutation = useMutation(
-    api.controllers.notifications.markAllAsRead
+    api.controllers.notifications.markAllAsRead,
   );
 
   const addToast = useCallback(
@@ -190,7 +190,7 @@ export const NotificationSystemProvider = ({
         }, hideDuration);
       }
     },
-    []
+    [],
   );
 
   const removeToast = useCallback((id: string) => {
@@ -212,7 +212,7 @@ export const NotificationSystemProvider = ({
         console.error("Error marking notification as read:", error);
       }
     },
-    [markAsReadMutation]
+    [markAsReadMutation],
   );
 
   const markAllAsRead = useCallback(async () => {
@@ -316,7 +316,7 @@ export const NotificationSystemProvider = ({
         if (isNewNotification) {
           const shouldShowToast = shouldDisplayToast(
             notification,
-            notificationSettings
+            notificationSettings,
           );
 
           if (shouldShowToast) {
@@ -422,7 +422,7 @@ export const NotificationSystemProvider = ({
       markAllAsRead,
       refreshNotifications,
       getNotificationSettings,
-    ]
+    ],
   );
 
   return (

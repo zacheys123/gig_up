@@ -111,7 +111,7 @@ export const BookingOptionsSection: React.FC<BookingOptionsSectionProps> = ({
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 mb-4">
           <CheckCircle className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-xl font-bold text-gray-900">
           🎉 All Band Roles Filled!
         </h2>
         <p className="text-gray-600 mt-2">
@@ -124,7 +124,7 @@ export const BookingOptionsSection: React.FC<BookingOptionsSectionProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-700">
+            <div className="text-xl font-bold text-green-700">
               {gig.bandCategory.length}
             </div>
             <div className="text-sm text-green-600 flex items-center justify-center gap-2 mt-1">
@@ -136,7 +136,7 @@ export const BookingOptionsSection: React.FC<BookingOptionsSectionProps> = ({
 
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-700">
+            <div className="text-xl font-bold text-blue-700">
               {musiciansCount}
             </div>
             <div className="text-sm text-blue-600 flex items-center justify-center gap-2 mt-1">
@@ -148,7 +148,7 @@ export const BookingOptionsSection: React.FC<BookingOptionsSectionProps> = ({
 
         <Card className="border-purple-200 bg-purple-50">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-purple-700">
+            <div className="text-xl font-bold text-purple-700">
               {gig.isTaken ? "Booked" : "Ready"}
             </div>
             <div className="text-sm text-purple-600 flex items-center justify-center gap-2 mt-1">

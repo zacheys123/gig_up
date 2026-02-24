@@ -71,13 +71,14 @@ export function ClientDashboard({
   // Safely calculate statistics with fallback to 0
   const gigsBookedAndCompleted =
     gigs?.filter(
-      (gig: GigWithUsers) => gig.postedByUser?.clerkId === userId && gig.isTaken
+      (gig: GigWithUsers) =>
+        gig.postedByUser?.clerkId === userId && gig.isTaken,
     ).length || 0;
 
   const upcoming =
     gigs?.filter(
       (gig: GigWithUsers) =>
-        gig.postedByUser?.clerkId === userId && gig.isPending
+        gig.postedByUser?.clerkId === userId && gig.isPending,
     ).length || 0;
 
   // Determine user's actual tier from user data
@@ -195,7 +196,7 @@ export function ClientDashboard({
           className={cn(
             "rounded-3xl p-8 border backdrop-blur-xl",
             currentTier.bgColor,
-            currentTier.borderColor
+            currentTier.borderColor,
           )}
         >
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -204,7 +205,7 @@ export function ClientDashboard({
                 <div
                   className={cn(
                     "p-4 rounded-2xl bg-gradient-to-r",
-                    currentTier.gradient
+                    currentTier.gradient,
                   )}
                 >
                   {currentTier.icon}
@@ -225,7 +226,7 @@ export function ClientDashboard({
                     <span
                       className={cn(
                         "bg-gradient-to-r bg-clip-text text-transparent",
-                        currentTier.gradient
+                        currentTier.gradient,
                       )}
                     >
                       {currentTier.name} Tier
@@ -245,13 +246,13 @@ export function ClientDashboard({
                     className={cn(
                       "p-4 rounded-xl border backdrop-blur-sm flex items-center gap-3",
                       currentTier.borderColor,
-                      "bg-black/30"
+                      "bg-black/30",
                     )}
                   >
                     <div
                       className={cn(
                         "p-2 rounded-lg",
-                        currentTier.badgeGradient
+                        currentTier.badgeGradient,
                       )}
                     >
                       {feature.icon}
@@ -279,7 +280,7 @@ export function ClientDashboard({
                     className={cn(
                       "w-full bg-gradient-to-r hover:scale-[1.02] transition-transform duration-300",
                       currentTier.gradient,
-                      "text-white py-6 text-lg font-semibold rounded-xl"
+                      "text-white py-6 text-lg font-semibold rounded-xl",
                     )}
                   >
                     Upgrade to {currentTier.nextTier}
@@ -339,7 +340,7 @@ export function ClientDashboard({
                       <Rocket className="text-white" size={28} />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold mb-2">
+                      <h3 className="text-xl font-bold mb-2">
                         Ready to Launch? 🚀
                       </h3>
                       <p className="text-blue-200">
@@ -415,7 +416,7 @@ export function ClientDashboard({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold">
+                  <h1 className="text-xl md:text-3xl font-bold">
                     Event Management Dashboard
                   </h1>
                   <p className="text-gray-400">
@@ -491,7 +492,7 @@ export function ClientDashboard({
                       "p-4 rounded-xl border transition-all",
                       userTier === key
                         ? "bg-gradient-to-r from-white/10 to-white/5 border-purple-600"
-                        : "bg-black/20 border-gray-700 hover:border-gray-600"
+                        : "bg-black/20 border-gray-700 hover:border-gray-600",
                     )}
                   >
                     <div className="flex items-center justify-between mb-2">

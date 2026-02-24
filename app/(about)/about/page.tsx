@@ -66,7 +66,7 @@ export default function AboutPage() {
   if (!userId || !user) {
     return (
       <div className={`min-h-screen ${colors.background}`}>
-        <GigLoader color="border-green-400" title="Welcome to Gigup..." />
+        <GigLoader color="border-green-400" title="Welcome to gigUp..." />
       </div>
     );
   }
@@ -74,7 +74,7 @@ export default function AboutPage() {
   if (!mounted) {
     return (
       <div className={`min-h-screen ${colors.background}`}>
-        <GigLoader color="border-green-400" title="Welcome to Gigup..." />
+        <GigLoader color="border-green-400" title="Welcome to gigUp..." />
       </div>
     );
   }
@@ -552,7 +552,7 @@ export default function AboutPage() {
       <footer className={`${colors.navBackground} ${colors.text} py-12 px-4`}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-xl font-bold mb-4 text-amber-400">Gigup</h3>
+            <h3 className="text-xl font-bold mb-4 text-amber-400">gigUp</h3>
             <p className={colors.textMuted}>
               Bridging the gap between exceptional talent and unforgettable
               venues since 2020.
@@ -649,7 +649,7 @@ export default function AboutPage() {
         <div
           className={`max-w-6xl mx-auto mt-12 pt-8 ${colors.border} text-center ${colors.textMuted}`}
         >
-          <p>© {new Date().getFullYear()} Gigup. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} gigUp. All rights reserved.</p>
           <div className="flex justify-center space-x-6 mt-4">
             <Link
               href="/privacy"

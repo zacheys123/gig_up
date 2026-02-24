@@ -26,7 +26,7 @@ export default function BillingPage() {
   // Get subscription directly from Convex
   const subscription = useQuery(
     api.controllers.subscription.getSubscription,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   if (!authLoaded || (userId && subscription === undefined)) {
@@ -39,7 +39,7 @@ export default function BillingPage() {
       <div className="fixed inset-0 flex flex-col overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mb-4">
+            <h1 className="text-xl font-bold text-white mb-4">
               No Subscription Data
             </h1>
             <p className="text-gray-400">
@@ -79,7 +79,7 @@ export default function BillingPage() {
           <div className="flex items-center gap-3">
             {getUserRoleIcon()}
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+              <h1 className="text-xl md:text-3xl font-bold text-white flex items-center gap-2">
                 <span>Billing & Subscription</span>
               </h1>
               <p className="text-sm md:text-base text-gray-400 mt-1">

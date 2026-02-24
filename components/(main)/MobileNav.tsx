@@ -31,7 +31,7 @@ export function MobileNavigation() {
       <nav
         className={cn(
           "fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b",
-          "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700"
+          "bg-white/80 dark:bg-gray-900/80 border-gray-200 dark:border-gray-700",
         )}
       >
         <div className="max-w-7xl mx-auto px-6">
@@ -96,7 +96,7 @@ export function MobileNavigation() {
                   <span className="text-white font-bold text-sm">G</span>
                 </div>
                 <span className={`text-xl font-bold ${colors.text}`}>
-                  GigUp
+                  gigUp
                 </span>
               </motion.div>
             </Link>

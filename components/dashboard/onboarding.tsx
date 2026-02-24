@@ -56,7 +56,7 @@ export function OnboardingModal() {
     },
   ];
   const markUserAsOnBoarded = useMutation(
-    api.controllers.user.markOnboardingComplete
+    api.controllers.user.markOnboardingComplete,
   );
   const handleComplete = () => {
     // Mark onboarding as complete (you'll need to add this mutation)
@@ -94,8 +94,8 @@ export function OnboardingModal() {
                   {steps[currentStep].icon}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    Welcome to GigUpp!
+                  <h2 className="text-xl font-bold text-white">
+                    Welcome to gigUpp!
                   </h2>
                   <p className="text-white/80 text-sm mt-1">
                     Step {currentStep + 1} of {steps.length} • Let's get you
@@ -126,11 +126,11 @@ export function OnboardingModal() {
               <div
                 className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-r ${steps[currentStep].color} mb-4`}
               >
-                <div className="text-white text-2xl">
+                <div className="text-white text-xl">
                   {steps[currentStep].icon}
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
                 {steps[currentStep].title}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">

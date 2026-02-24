@@ -58,7 +58,7 @@ export default function InvitesPage({ params }: InvitesPageProps) {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <GigLoader
@@ -75,7 +75,7 @@ export default function InvitesPage({ params }: InvitesPageProps) {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <div className={cn("text-xl", colors.text)}>
@@ -102,7 +102,7 @@ export default function InvitesPage({ params }: InvitesPageProps) {
                 "flex items-center gap-2 border-2 transition-all duration-300 hover:shadow-lg backdrop-blur-sm",
                 colors.border,
                 colors.hoverBg,
-                "hover:scale-105"
+                "hover:scale-105",
               )}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -120,7 +120,7 @@ export default function InvitesPage({ params }: InvitesPageProps) {
                 <div>
                   <h1
                     className={cn(
-                      "text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent mb-2"
+                      "text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent mb-2",
                     )}
                   >
                     Gig Invitation
@@ -163,24 +163,24 @@ export default function InvitesPage({ params }: InvitesPageProps) {
               "border-2 text-center backdrop-blur-sm",
               colors.card,
               colors.border,
-              colors.backgroundSecondary
+              colors.backgroundSecondary,
             )}
           >
             <CardContent className="p-12">
               <div
                 className={cn(
-                  "w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl bg-gradient-to-br from-gray-500 to-slate-600"
+                  "w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl bg-gradient-to-br from-gray-500 to-slate-600",
                 )}
               >
                 <Users className="w-10 h-10 text-white" />
               </div>
-              <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+              <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
                 Complete Your Profile
               </h3>
               <p
                 className={cn(
                   "max-w-md mx-auto mb-8 text-lg leading-relaxed",
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               >
                 Set up your musician or client profile to start sending and
@@ -200,7 +200,7 @@ export default function InvitesPage({ params }: InvitesPageProps) {
                   className={cn(
                     "border-2 hover:shadow-lg transition-all duration-300",
                     colors.border,
-                    colors.hoverBg
+                    colors.hoverBg,
                   )}
                 >
                   Learn More
@@ -224,7 +224,7 @@ const StatusBadge = ({ status }: { status: string }) => {
       icon: Clock,
       className: cn(
         "bg-orange-500/10 text-orange-700 border-orange-300",
-        colors.border
+        colors.border,
       ),
     },
     accepted: {
@@ -232,7 +232,7 @@ const StatusBadge = ({ status }: { status: string }) => {
       icon: Check,
       className: cn(
         "bg-green-500/10 text-green-700 border-green-300",
-        colors.border
+        colors.border,
       ),
     },
     declined: {
@@ -245,7 +245,7 @@ const StatusBadge = ({ status }: { status: string }) => {
       icon: Users2,
       className: cn(
         "bg-blue-500/10 text-blue-700 border-blue-300",
-        colors.border
+        colors.border,
       ),
     },
     cancelled: {
@@ -253,7 +253,7 @@ const StatusBadge = ({ status }: { status: string }) => {
       icon: X,
       className: cn(
         "bg-gray-500/10 text-gray-700 border-gray-300",
-        colors.border
+        colors.border,
       ),
     },
   };
@@ -266,7 +266,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     <div
       className={cn(
         "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-300",
-        config.className
+        config.className,
       )}
     >
       <Icon className="w-4 h-4" />
@@ -284,7 +284,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
     gigId: gigId as Id<"instantgigs">,
   });
   const updateGigStatus = useMutation(
-    api.controllers.instantGigs.updateInstantGigStatus
+    api.controllers.instantGigs.updateInstantGigStatus,
   );
 
   const { myDeputies } = useDeputies(gig?.invitedMusicianId);
@@ -327,20 +327,20 @@ function ClientGigView({ gigId }: { gigId: string }) {
           "w-full border-2 text-center backdrop-blur-sm",
           colors.card,
           colors.border,
-          colors.backgroundSecondary
+          colors.backgroundSecondary,
         )}
       >
         <CardContent className="p-12">
           <div className="w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl bg-gradient-to-br from-red-500 to-orange-600">
             <AlertCircle className="w-10 h-10 text-white" />
           </div>
-          <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+          <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
             Gig Not Found
           </h3>
           <p
             className={cn(
               "max-w-md mx-auto mb-8 text-lg leading-relaxed",
-              colors.textMuted
+              colors.textMuted,
             )}
           >
             We couldn't find the gig you're looking for. It may have been
@@ -353,7 +353,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
               className={cn(
                 "border-2 hover:shadow-lg transition-all duration-300",
                 colors.border,
-                colors.hoverBg
+                colors.hoverBg,
               )}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -372,7 +372,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
   }
 
   const availableDeputies = myDeputies.filter(
-    (deputy) => deputy?.relationship?.canBeBooked !== false
+    (deputy) => deputy?.relationship?.canBeBooked !== false,
   );
   const bookingHistory = gig.bookingHistory || [];
 
@@ -383,7 +383,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
         className={cn(
           "w-full border-0 transition-all duration-500 hover:shadow-2xl transform-gpu overflow-hidden backdrop-blur-sm",
           colors.card,
-          "bg-gradient-to-br from-white to-gray-50/80"
+          "bg-gradient-to-br from-white to-gray-50/80",
         )}
       >
         {/* Accent Border */}
@@ -397,13 +397,13 @@ function ClientGigView({ gigId }: { gigId: string }) {
                 <span
                   className={cn(
                     "text-xs font-semibold uppercase tracking-wide",
-                    colors.primary
+                    colors.primary,
                   )}
                 >
                   {gig.gigType}
                 </span>
               </div>
-              <CardTitle className={cn("text-2xl font-bold mb-2", colors.text)}>
+              <CardTitle className={cn("text-xl font-bold mb-2", colors.text)}>
                 {gig.title}
               </CardTitle>
               <CardDescription
@@ -431,13 +431,13 @@ function ClientGigView({ gigId }: { gigId: string }) {
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
                   colors.backgroundMuted,
-                  "group hover:bg-white/80 border border-transparent hover:border-orange-200"
+                  "group hover:bg-white/80 border border-transparent hover:border-orange-200",
                 )}
               >
                 <div
                   className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center",
-                    "bg-gradient-to-br from-orange-500 to-red-500"
+                    "bg-gradient-to-br from-orange-500 to-red-500",
                   )}
                 >
                   <item.icon className="w-4 h-4 text-white" />
@@ -446,7 +446,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   <div
                     className={cn(
                       "text-xs font-medium uppercase tracking-wide",
-                      colors.textMuted
+                      colors.textMuted,
                     )}
                   >
                     {item.label}
@@ -463,7 +463,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
             <h4
               className={cn(
                 "font-bold text-lg mb-4 flex items-center gap-2",
-                colors.text
+                colors.text,
               )}
             >
               <User className="w-5 h-5" />
@@ -479,7 +479,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
               <div
                 className={cn(
                   "mb-4 p-4 rounded-xl border-2",
-                  "bg-gradient-to-br from-gray-50 to-blue-50 border-blue-200"
+                  "bg-gradient-to-br from-gray-50 to-blue-50 border-blue-200",
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -487,7 +487,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                     <div
                       className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center",
-                        "bg-gradient-to-br from-gray-500 to-slate-500"
+                        "bg-gradient-to-br from-gray-500 to-slate-500",
                       )}
                     >
                       <User className="w-5 h-5 text-white" />
@@ -516,7 +516,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
               className={cn(
                 "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
                 colors.backgroundMuted,
-                "group hover:bg-white/80 border border-transparent hover:border-blue-200"
+                "group hover:bg-white/80 border border-transparent hover:border-blue-200",
               )}
             >
               <div className="flex items-center space-x-4">
@@ -526,7 +526,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                     gig.originalMusicianId
                       ? "bg-gradient-to-br from-green-500 to-emerald-500"
                       : "bg-gradient-to-br from-blue-500 to-cyan-500",
-                    "shadow-lg"
+                    "shadow-lg",
                   )}
                 >
                   <User className="w-6 h-6 text-white" />
@@ -573,7 +573,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                 <div
                   className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center",
-                    "bg-gradient-to-br from-blue-500 to-cyan-500"
+                    "bg-gradient-to-br from-blue-500 to-cyan-500",
                   )}
                 >
                   <Users2 className="w-5 h-5 text-white" />
@@ -600,7 +600,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                         "border-0 transition-all duration-500 hover:shadow-xl transform-gpu overflow-hidden",
                         colors.card,
                         "bg-gradient-to-br from-white to-blue-50/50",
-                        "border-l-4 border-l-blue-500"
+                        "border-l-4 border-l-blue-500",
                       )}
                     >
                       <CardContent className="p-4">
@@ -609,7 +609,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                             <div
                               className={cn(
                                 "w-12 h-12 rounded-xl flex items-center justify-center",
-                                "bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg"
+                                "bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg",
                               )}
                             >
                               <User className="w-6 h-6 text-white" />
@@ -637,7 +637,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                                     <span
                                       className={cn(
                                         "text-sm",
-                                        colors.textMuted
+                                        colors.textMuted,
                                       )}
                                     >
                                       {deputy?.backupCount} backup gigs
@@ -648,7 +648,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                                 <p
                                   className={cn(
                                     "text-sm mt-2",
-                                    colors.textMuted
+                                    colors.textMuted,
                                   )}
                                 >
                                   📝 {deputy?.relationship.note}
@@ -663,7 +663,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               onClick={() =>
                                 handleAcceptDeputy(
                                   deputy?._id as Id<"users">,
-                                  `${deputy?.firstname} ${deputy?.lastname}`
+                                  `${deputy?.firstname} ${deputy?.lastname}`,
                                 )
                               }
                               className="bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-xl transition-all duration-300"
@@ -680,7 +680,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               className={cn(
                                 "border-2 transition-all duration-300",
                                 colors.border,
-                                colors.hoverBg
+                                colors.hoverBg,
                               )}
                             >
                               View Profile
@@ -698,7 +698,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                       onClick={handleDeclineDeputy}
                       className={cn(
                         "border-2 text-red-600 border-red-300 hover:bg-red-50 transition-all duration-300",
-                        colors.hoverBg
+                        colors.hoverBg,
                       )}
                     >
                       <X className="w-4 h-4 mr-2" />
@@ -711,7 +711,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   className={cn(
                     "text-center p-8 border-2 border-dashed rounded-2xl",
                     colors.border,
-                    colors.backgroundSecondary
+                    colors.backgroundSecondary,
                   )}
                 >
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-500 to-yellow-500 shadow-lg">
@@ -723,7 +723,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                   <p
                     className={cn(
                       "max-w-md mx-auto mb-6 text-lg leading-relaxed",
-                      colors.textMuted
+                      colors.textMuted,
                     )}
                   >
                     You don't have any deputies set up who can cover this gig
@@ -757,7 +757,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                     className={cn(
                       "border-2 hover:shadow-lg transition-all duration-300",
                       colors.border,
-                      colors.hoverBg
+                      colors.hoverBg,
                     )}
                   >
                     <Users2 className="w-4 h-4 mr-2" />
@@ -773,7 +773,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
               <h4
                 className={cn(
                   "font-bold text-lg mb-4 flex items-center gap-2",
-                  colors.text
+                  colors.text,
                 )}
               >
                 <Calendar className="w-5 h-5" />
@@ -786,7 +786,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                     className={cn(
                       "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
                       colors.backgroundMuted,
-                      "group hover:bg-white/80 border border-transparent hover:border-green-200"
+                      "group hover:bg-white/80 border border-transparent hover:border-green-200",
                     )}
                   >
                     <div className="flex items-center space-x-4">
@@ -799,7 +799,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                               ? "bg-red-500"
                               : entry.status === "deputy-suggested"
                                 ? "bg-blue-500"
-                                : "bg-yellow-500"
+                                : "bg-yellow-500",
                         )}
                       />
                       <div>
@@ -829,7 +829,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
               <h4
                 className={cn(
                   "font-bold text-lg mb-4 flex items-center gap-2",
-                  colors.text
+                  colors.text,
                 )}
               >
                 <Music className="w-5 h-5" />
@@ -839,7 +839,7 @@ function ClientGigView({ gigId }: { gigId: string }) {
                 className={cn(
                   "p-4 rounded-xl border-2",
                   colors.border,
-                  colors.backgroundMuted
+                  colors.backgroundMuted,
                 )}
               >
                 <p className={cn("text-sm leading-relaxed", colors.text)}>
@@ -864,15 +864,15 @@ function MusicianGigView({ gigId }: { gigId: string }) {
   });
 
   const updateGigStatus = useMutation(
-    api.controllers.instantGigs.updateInstantGigStatus
+    api.controllers.instantGigs.updateInstantGigStatus,
   );
 
   const updateGigAvailability = useMutation(
-    api.controllers.instantGigs.updateGigAvailability
+    api.controllers.instantGigs.updateGigAvailability,
   );
 
   const { myDeputies, updateDeputySettings, isLoading } = useDeputies(
-    user?._id
+    user?._id,
   );
   const router = useRouter();
   useEffect(() => {
@@ -883,7 +883,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
   const handleStatusUpdate = async (
     status: "accepted" | "declined" | "deputy-suggested",
     notes?: string,
-    deputySuggestedId?: string
+    deputySuggestedId?: string,
   ) => {
     if (!user) {
       toast.error("You must be logged in to update gig status");
@@ -915,7 +915,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
 
   const handleSuggestSpecificDeputy = async (
     deputyId: string,
-    deputyName: string
+    deputyName: string,
   ) => {
     if (!user) {
       toast.error("You must be logged in to suggest deputies");
@@ -969,12 +969,12 @@ function MusicianGigView({ gigId }: { gigId: string }) {
 
   const handleUpdateDeputyBooking = async (
     deputyId: string,
-    canBeBooked: boolean
+    canBeBooked: boolean,
   ) => {
     try {
       await updateDeputySettings(deputyId as Id<"users">, { canBeBooked });
       toast.success(
-        `Deputy ${canBeBooked ? "enabled" : "disabled"} for bookings`
+        `Deputy ${canBeBooked ? "enabled" : "disabled"} for bookings`,
       );
     } catch (error) {
       toast.error("Failed to update deputy settings");
@@ -988,20 +988,20 @@ function MusicianGigView({ gigId }: { gigId: string }) {
           "w-full border-2 text-center backdrop-blur-sm",
           colors.card,
           colors.border,
-          colors.backgroundSecondary
+          colors.backgroundSecondary,
         )}
       >
         <CardContent className="p-12">
           <div className="w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl bg-gradient-to-br from-orange-500 to-red-600">
             <Music className="w-10 h-10 text-white animate-pulse" />
           </div>
-          <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+          <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
             Loading Gig Details
           </h3>
           <p
             className={cn(
               "max-w-md mx-auto mb-8 text-lg leading-relaxed",
-              colors.textMuted
+              colors.textMuted,
             )}
           >
             Fetching the latest information about this gig invitation...
@@ -1026,7 +1026,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
     gig?.musicianAvailability === undefined && gig?.status === "pending";
 
   const availableDeputies = myDeputies.filter(
-    (deputy) => deputy?.relationship?.canBeBooked !== false
+    (deputy) => deputy?.relationship?.canBeBooked !== false,
   );
   const bookingHistory = gig.bookingHistory || [];
   console.log(bookingHistory);
@@ -1037,7 +1037,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
         className={cn(
           "w-full border-0 transition-all duration-500 hover:shadow-2xl transform-gpu overflow-hidden backdrop-blur-sm",
           colors.card,
-          "bg-gradient-to-br from-white to-gray-50/80"
+          "bg-gradient-to-br from-white to-gray-50/80",
         )}
       >
         {/* Accent Border */}
@@ -1051,13 +1051,13 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                 <span
                   className={cn(
                     "text-xs font-semibold uppercase tracking-wide",
-                    colors.primary
+                    colors.primary,
                   )}
                 >
                   {gig.gigType}
                 </span>
               </div>
-              <CardTitle className={cn("text-2xl font-bold mb-2", colors.text)}>
+              <CardTitle className={cn("text-xl font-bold mb-2", colors.text)}>
                 {gig.title}
               </CardTitle>
               <CardDescription
@@ -1078,7 +1078,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                 "flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-300",
                 colors.border,
                 "bg-gradient-to-br from-blue-50 to-purple-50",
-                "hover:shadow-lg"
+                "hover:shadow-lg",
               )}
             >
               <div className="flex items-center space-x-4">
@@ -1087,7 +1087,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                     "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg",
                     isAvailable || defaultAvailability
                       ? "bg-gradient-to-br from-green-500 to-emerald-500"
-                      : "bg-gradient-to-br from-red-500 to-rose-500"
+                      : "bg-gradient-to-br from-red-500 to-rose-500",
                   )}
                 >
                   {isAvailable || defaultAvailability ? (
@@ -1128,7 +1128,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
             <h4
               className={cn(
                 "font-bold text-lg mb-4 flex items-center gap-2",
-                colors.text
+                colors.text,
               )}
             >
               <User className="w-5 h-5" />
@@ -1138,14 +1138,14 @@ function MusicianGigView({ gigId }: { gigId: string }) {
               className={cn(
                 "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
                 colors.backgroundMuted,
-                "group hover:bg-white/80 border border-transparent hover:border-blue-200"
+                "group hover:bg-white/80 border border-transparent hover:border-blue-200",
               )}
             >
               <div className="flex items-center space-x-4">
                 <div
                   className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center",
-                    "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg"
+                    "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg",
                   )}
                 >
                   <User className="w-6 h-6 text-white" />
@@ -1182,13 +1182,13 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
                   colors.backgroundMuted,
-                  "group hover:bg-white/80 border border-transparent hover:border-orange-200"
+                  "group hover:bg-white/80 border border-transparent hover:border-orange-200",
                 )}
               >
                 <div
                   className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center",
-                    "bg-gradient-to-br from-orange-500 to-red-500"
+                    "bg-gradient-to-br from-orange-500 to-red-500",
                   )}
                 >
                   <item.icon className="w-4 h-4 text-white" />
@@ -1197,7 +1197,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                   <div
                     className={cn(
                       "text-xs font-medium uppercase tracking-wide",
-                      colors.textMuted
+                      colors.textMuted,
                     )}
                   >
                     {item.label}
@@ -1216,7 +1216,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
               <h4
                 className={cn(
                   "font-bold text-lg mb-4 flex items-center gap-2",
-                  colors.text
+                  colors.text,
                 )}
               >
                 <Music className="w-5 h-5" />
@@ -1226,7 +1226,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                 className={cn(
                   "p-4 rounded-xl border-2",
                   colors.border,
-                  colors.backgroundMuted
+                  colors.backgroundMuted,
                 )}
               >
                 <p className={cn("text-sm leading-relaxed", colors.text)}>
@@ -1255,7 +1255,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                     className={cn(
                       "flex-1 border-2 hover:shadow-xl transition-all duration-300 transform hover:scale-105",
                       colors.border,
-                      colors.hoverBg
+                      colors.hoverBg,
                     )}
                     size="lg"
                   >
@@ -1271,7 +1271,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                       <div
                         className={cn(
                           "w-10 h-10 rounded-lg flex items-center justify-center",
-                          "bg-gradient-to-br from-blue-500 to-cyan-500"
+                          "bg-gradient-to-br from-blue-500 to-cyan-500",
                         )}
                       >
                         <Users2 className="w-5 h-5 text-white" />
@@ -1296,14 +1296,14 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                           className={cn(
                             "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
                             colors.backgroundMuted,
-                            "group hover:bg-white/80 border border-transparent hover:border-purple-200"
+                            "group hover:bg-white/80 border border-transparent hover:border-purple-200",
                           )}
                         >
                           <div className="flex items-center space-x-4">
                             <div
                               className={cn(
                                 "w-10 h-10 rounded-lg flex items-center justify-center",
-                                "bg-gradient-to-br from-purple-500 to-pink-500"
+                                "bg-gradient-to-br from-purple-500 to-pink-500",
                               )}
                             >
                               <User className="w-5 h-5 text-white" />
@@ -1325,7 +1325,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                               onClick={() =>
                                 handleSuggestSpecificDeputy(
                                   deputy?._id as Id<"users">,
-                                  `${deputy?.firstname} ${deputy?.lastname}`
+                                  `${deputy?.firstname} ${deputy?.lastname}`,
                                 )
                               }
                               variant="outline"
@@ -1333,7 +1333,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                               className={cn(
                                 "border-2 transition-all duration-300",
                                 colors.border,
-                                colors.hoverBg
+                                colors.hoverBg,
                               )}
                             >
                               {isLoading(`update-${deputy?._id}`)
@@ -1347,7 +1347,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                               onCheckedChange={(checked) =>
                                 handleUpdateDeputyBooking(
                                   deputy?._id as Id<"users">,
-                                  checked
+                                  checked,
                                 )
                               }
                               disabled={isLoading(`update-${deputy?._id}`)}
@@ -1363,7 +1363,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                       className={cn(
                         "w-full border-2 hover:shadow-lg transition-all duration-300",
                         colors.border,
-                        colors.hoverBg
+                        colors.hoverBg,
                       )}
                     >
                       <Users2 className="w-4 h-4 mr-2" />
@@ -1382,7 +1382,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                 <div
                   className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center",
-                    "bg-gradient-to-br from-blue-500 to-cyan-500"
+                    "bg-gradient-to-br from-blue-500 to-cyan-500",
                   )}
                 >
                   <Users2 className="w-5 h-5 text-white" />
@@ -1413,14 +1413,14 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                       className={cn(
                         "flex items-center justify-between p-4 rounded-xl transition-all duration-300",
                         colors.backgroundMuted,
-                        "group hover:bg-white/80 border border-transparent hover:border-purple-200"
+                        "group hover:bg-white/80 border border-transparent hover:border-purple-200",
                       )}
                     >
                       <div className="flex items-center space-x-4">
                         <div
                           className={cn(
                             "w-10 h-10 rounded-lg flex items-center justify-center",
-                            "bg-gradient-to-br from-purple-500 to-pink-500"
+                            "bg-gradient-to-br from-purple-500 to-pink-500",
                           )}
                         >
                           <User className="w-5 h-5 text-white" />
@@ -1440,14 +1440,14 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                         onClick={() =>
                           handleSuggestSpecificDeputy(
                             deputy?._id as Id<"users">,
-                            `${deputy?.firstname} ${deputy?.lastname}`
+                            `${deputy?.firstname} ${deputy?.lastname}`,
                           )
                         }
                         variant="outline"
                         className={cn(
                           "border-2 transition-all duration-300",
                           colors.border,
-                          colors.hoverBg
+                          colors.hoverBg,
                         )}
                       >
                         Suggest
@@ -1468,7 +1468,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                   className={cn(
                     "p-6 rounded-xl border-2 text-center",
                     colors.border,
-                    colors.backgroundSecondary
+                    colors.backgroundSecondary,
                   )}
                 >
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
@@ -1480,7 +1480,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
                   <p
                     className={cn(
                       "max-w-md mx-auto mb-4 text-sm",
-                      colors.textMuted
+                      colors.textMuted,
                     )}
                   >
                     You don't have any deputies set up for this type of gig, or
@@ -1516,7 +1516,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
             <div
               className={cn(
                 "p-4 rounded-xl border-2",
-                "bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200"
+                "bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200",
               )}
             >
               <div className="flex items-center gap-3">
@@ -1532,7 +1532,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
             <div
               className={cn(
                 "p-4 rounded-xl border-2",
-                "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200"
+                "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200",
               )}
             >
               <div className="flex items-center gap-3">
@@ -1549,7 +1549,7 @@ function MusicianGigView({ gigId }: { gigId: string }) {
             <div
               className={cn(
                 "p-4 rounded-xl border-2",
-                "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
+                "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200",
               )}
             >
               <div className="flex items-center gap-3">
@@ -1618,7 +1618,7 @@ export const GigAvailabilitySwitch: React.FC<GigAvailabilitySwitchProps> = ({
         disabled
           ? "cursor-not-allowed opacity-50"
           : "cursor-pointer hover:shadow-md",
-        "group"
+        "group",
       )}
     >
       {/* Knob */}
@@ -1629,7 +1629,7 @@ export const GigAvailabilitySwitch: React.FC<GigAvailabilitySwitchProps> = ({
           checked
             ? `translate-x-full ${size === "sm" ? "-translate-x-7" : size === "md" ? "-translate-x-9" : "-translate-x-11"}`
             : "translate-x-0.5",
-          "group-hover:scale-105"
+          "group-hover:scale-105",
         )}
       >
         {checked ? (
@@ -1649,7 +1649,7 @@ export const GigAvailabilitySwitch: React.FC<GigAvailabilitySwitchProps> = ({
           <span
             className={cn(
               "absolute left-2 text-xs font-medium transition-opacity duration-200",
-              checked ? "opacity-0" : "opacity-100 text-white"
+              checked ? "opacity-0" : "opacity-100 text-white",
             )}
           >
             No
@@ -1657,7 +1657,7 @@ export const GigAvailabilitySwitch: React.FC<GigAvailabilitySwitchProps> = ({
           <span
             className={cn(
               "absolute right-2 text-xs font-medium transition-opacity duration-200",
-              checked ? "opacity-100 text-white" : "opacity-0"
+              checked ? "opacity-100 text-white" : "opacity-0",
             )}
           >
             Yes
@@ -1676,8 +1676,7 @@ interface GigAvailabilitySwitchProps {
   showLabels?: boolean;
 }
 
-interface GigAvailabilitySwitchWithStatusProps
-  extends GigAvailabilitySwitchProps {
+interface GigAvailabilitySwitchWithStatusProps extends GigAvailabilitySwitchProps {
   status?: "available" | "notavailable" | "pending";
   showStatusText?: boolean;
 }
@@ -1733,7 +1732,7 @@ export const GigAvailabilitySwitchWithStatus: React.FC<
             "px-3 py-1 rounded-full text-sm font-medium border",
             config.bg,
             config.color,
-            config.border
+            config.border,
           )}
         >
           {config.text}

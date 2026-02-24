@@ -1371,7 +1371,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                               <div className="text-center">
                                 <div
                                   className={cn(
-                                    "text-2xl font-bold mb-1",
+                                    "text-xl font-bold mb-1",
                                     isDarkMode
                                       ? "text-white"
                                       : "text-slate-900",
@@ -1422,7 +1422,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                                       : "border-slate-200",
                                   )}
                                 >
-                                  <div className="text-2xl font-bold text-blue-500">
+                                  <div className="text-xl font-bold text-blue-500">
                                     {applicantCount}
                                   </div>
                                   <div

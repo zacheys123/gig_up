@@ -25,7 +25,7 @@ export const FinalLoader = () => (
       </div>
     </motion.div>
     <div className="text-center space-y-2">
-      <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
+      <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
         Ready to go!
       </h3>
       <p className="text-gray-400">Taking you to your dashboard...</p>

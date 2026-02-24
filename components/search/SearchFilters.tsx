@@ -51,13 +51,13 @@ const CustomSwitch = ({
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
-        checked ? colors.primaryBg : "bg-gray-300"
+        checked ? colors.primaryBg : "bg-gray-300",
       )}
     >
       <span
         className={cn(
           "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-          checked ? "translate-x-6" : "translate-x-1"
+          checked ? "translate-x-6" : "translate-x-1",
         )}
       />
     </button>
@@ -68,7 +68,7 @@ const CustomSwitch = ({
 const discoveryFeatures = [
   {
     id: "new-talents",
-    label: "New on GigUp",
+    label: "New on gigUp",
     icon: <FiUsers className="w-4 h-4" />,
     description: "Recently joined musicians",
     color: "text-green-500",
@@ -174,7 +174,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
 
   const toggleStringFilter = (
     category: "roleType" | "instrument" | "discoveryType",
-    value: string
+    value: string,
   ) => {
     const newFilters = { ...activeFilters };
     const index = newFilters[category].indexOf(value);
@@ -191,7 +191,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
 
   const toggleBooleanFilter = (
     category: "clientOnly" | "musicianOnly" | "bookerOnly",
-    value: boolean
+    value: boolean,
   ) => {
     const newFilters = {
       ...activeFilters,
@@ -266,7 +266,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
 
   // Count active filters for the badge
   const activeFilterCount = Object.values(activeFilters).filter((v) =>
-    Array.isArray(v) ? v.length > 0 : v === true
+    Array.isArray(v) ? v.length > 0 : v === true,
   ).length;
 
   return (
@@ -315,7 +315,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
           style={dropdownStyle}
           className={cn(
             "absolute right-0 mt-2 w-76 rounded-lg shadow-lg border z-50 overflow-hidden",
-            colors.card
+            colors.card,
           )}
         >
           <div style={headerStyle} className="p-4 border-b flex flex-col gap-2">
@@ -412,7 +412,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
               <div className="space-y-2">
                 {discoveryFeatures.map((feature) => {
                   const isSelected = activeFilters.discoveryType.includes(
-                    feature.id
+                    feature.id,
                   );
                   return (
                     <button
@@ -423,7 +423,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
                       className={cn(
                         "flex items-center gap-3 w-full p-3 rounded-lg border transition-all duration-200",
                         "hover:scale-[1.02] hover:shadow-sm",
-                        isSelected ? "ring-2 ring-amber-500" : ""
+                        isSelected ? "ring-2 ring-amber-500" : "",
                       )}
                       style={{
                         backgroundColor: isSelected
@@ -482,7 +482,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
                         "flex items-center justify-center gap-1",
                         isSelected
                           ? "ring-2 ring-amber-300 bg-amber-800 text-white"
-                          : ""
+                          : "",
                       )}
                       style={{
                         backgroundColor: isSelected
@@ -543,7 +543,7 @@ const SearchFilters = ({ onFilterChange }: SearchFiltersProps) => {
                         "flex items-center justify-center gap-1",
                         isSelected
                           ? "ring-2 ring-amber-300 bg-purple-300 text-black"
-                          : ""
+                          : "",
                       )}
                       style={{
                         backgroundColor: isSelected

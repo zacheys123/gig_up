@@ -20,7 +20,7 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
   const { user: currentUser } = useCurrentUser();
 
   const createTestimonial = useMutation(
-    api.controllers.testimonials.createTestimonial
+    api.controllers.testimonials.createTestimonial,
   );
 
   const [rating, setRating] = useState(5);
@@ -86,9 +86,9 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto p-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Share Your Experience</h2>
+        <h2 className="text-xl font-bold mb-2">Share Your Experience</h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Help others by sharing your GigUpp journey
+          Help others by sharing your gigUpp journey
         </p>
       </div>
 
@@ -101,7 +101,7 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
               key={star}
               type="button"
               onClick={() => setRating(star)}
-              className="text-2xl hover:scale-110 transition-transform"
+              className="text-xl hover:scale-110 transition-transform"
               disabled={isSubmitting}
             >
               <Star
@@ -122,7 +122,7 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Share your experience with GigUp. How has it helped your career or event?"
+          placeholder="Share your experience with gigUp. How has it helped your career or event?"
           className="min-h-[120px]"
           disabled={isSubmitting}
           required
@@ -186,7 +186,7 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
       </Button>
 
       <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-        By sharing your story, you agree to have it featured on GigUp.
+        By sharing your story, you agree to have it featured on gigUp.
       </p>
     </form>
   );

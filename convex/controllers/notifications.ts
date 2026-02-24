@@ -36,18 +36,18 @@ export const trackProfileView = mutation({
     });
     console.log(
       "Can Create Notification:",
-      viewerDoc?.tier === "pro" || isViewerInGracePeriod
+      viewerDoc?.tier === "pro" || isViewerInGracePeriod,
     );
 
     if (!viewedUserDoc) {
       throw new Error(
-        `Viewed user not found with document ID: ${viewedUserDocId}`
+        `Viewed user not found with document ID: ${viewedUserDocId}`,
       );
     }
 
     if (!viewerDoc) {
       throw new Error(
-        `Viewer user not found with document ID: ${viewerUserDocId}`
+        `Viewer user not found with document ID: ${viewerUserDocId}`,
       );
     }
 
@@ -60,12 +60,12 @@ export const trackProfileView = mutation({
     // Check if user has already viewed this profile
     const viewerViewedProfiles = viewerDoc.viewedProfiles || [];
     const hasAlreadyViewed = viewerViewedProfiles.some(
-      (viewedId: any) => viewedId.toString() === viewedUserDoc._id.toString()
+      (viewedId: any) => viewedId.toString() === viewedUserDoc._id.toString(),
     );
 
     if (hasAlreadyViewed) {
       console.log(
-        `🚫 USER BLOCKED: ${viewerDoc.username} has already viewed ${viewedUserDoc.username}`
+        `🚫 USER BLOCKED: ${viewerDoc.username} has already viewed ${viewedUserDoc.username}`,
       );
       return {
         success: false,
@@ -105,10 +105,10 @@ export const trackProfileView = mutation({
     });
 
     console.log(
-      `✅ Profile view tracked for ${viewedUserDoc.username} by ${viewerDoc.username}`
+      `✅ Profile view tracked for ${viewedUserDoc.username} by ${viewerDoc.username}`,
     );
     console.log(
-      `📊 Viewer details - Tier: ${viewerDoc.tier}, Grace Period: ${isViewerInGracePeriod}`
+      `📊 Viewer details - Tier: ${viewerDoc.tier}, Grace Period: ${isViewerInGracePeriod}`,
     );
 
     // ✅ Create notification using Document IDs consistently
@@ -138,7 +138,7 @@ export const trackProfileView = mutation({
       console.log(`🔔 Notification created with ID: ${notificationId}`);
     } else {
       console.log(
-        `🔕 Notification was not created - check viewer restrictions or recipient settings`
+        `🔕 Notification was not created - check viewer restrictions or recipient settings`,
       );
     }
 
@@ -333,8 +333,8 @@ export const markAllAsRead = mutation({
         ctx.db.patch(notification._id, {
           isRead: true,
           readAt: Date.now(),
-        })
-      )
+        }),
+      ),
     );
 
     return { success: true, count: unreadNotifications.length };

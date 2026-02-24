@@ -369,14 +369,12 @@ function calculateActivityPoints(user: Doc<"users">): number {
 
     const bookingsCount = Math.max(user.bookingsCount || 0, successfulBookings);
     const completedGigs = user.completedGigsCount || 0;
-
     // Points for successful (non-cancelled) bookings
     if (bookingsCount >= 20) points += 25;
     else if (bookingsCount >= 10) points += 20;
     else if (bookingsCount >= 5) points += 15;
     else if (bookingsCount >= 3) points += 10;
     else if (bookingsCount >= 1) points += 5;
-
     // Points for completed gigs (actual work done)
     points += Math.min(completedGigs * 1.0, 15); // Higher weight for completed
 
@@ -506,16 +504,11 @@ async function calculateContentPoints(
       );
 
       // Video presence
-      if (videoCount >= 1) points += 2;
-      if (videoCount >= 3) points += 2;
-      if (videoCount >= 5) points += 1;
+      if (videoCount >= 1 && totalVideoLikes >= 50) points += 2;
+      if (videoCount >= 10 && totalVideoLikes >= 100) points += 2;
+      if (videoCount >= 20 && totalVideoLikes >= 300) points += 1;
 
-      // Video engagement
-      if (totalVideoLikes >= 5) points += 1;
-      if (totalVideoLikes >= 20) points += 1;
-      if (totalVideoLikes >= 50) points += 1;
-
-      // Profile video
+      // Profile video+
       const hasProfileVideo = userVideos.some(
         (video: any) => video.isProfileVideo,
       );

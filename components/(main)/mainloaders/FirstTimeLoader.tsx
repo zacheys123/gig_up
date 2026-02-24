@@ -3,11 +3,11 @@ import { motion } from "framer-motion";
 
 export function FirstTimLoader({ phase }: { phase: number; progress: number }) {
   const phases = [
-    { emoji: "🎸", text: "Welcome to GigUp!" },
+    { emoji: "🎸", text: "Welcome to gigUp!" },
     { emoji: "🚀", text: "Setting up your profile" },
     { emoji: "🎵", text: "Preparing your music space" },
     { emoji: "🌟", text: "Almost there..." },
-    { emoji: "✅", text: "Ready to rock!" }
+    { emoji: "✅", text: "Ready to rock!" },
   ];
 
   const currentPhase = phases[phase] || phases[phases.length - 1];
@@ -21,12 +21,8 @@ export function FirstTimLoader({ phase }: { phase: number; progress: number }) {
       >
         {currentPhase.emoji}
       </motion.div>
-      <h2 className="text-3xl font-bold mb-4">
-        {currentPhase.text}
-      </h2>
-      <p className="text-gray-400 text-lg">
-        Your music journey starts here
-      </p>
+      <h2 className="text-3xl font-bold mb-4">{currentPhase.text}</h2>
+      <p className="text-gray-400 text-lg">Your music journey starts here</p>
     </div>
   );
 }

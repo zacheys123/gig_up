@@ -496,7 +496,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               "p-3 rounded-lg border flex flex-col items-center gap-2 transition-all duration-200 hover:scale-105",
               isSelected
                 ? "border-transparent shadow-lg bg-gradient-to-br from-orange-500 to-red-500 text-white"
-                : "border-gray-200 dark:border-gray-800 hover:border-orange-500/50"
+                : "border-gray-200 dark:border-gray-800 hover:border-orange-500/50",
             )}
             style={{
               backgroundColor: isSelected ? undefined : colors.backgroundMuted,
@@ -511,7 +511,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               <span
                 className={cn(
                   "text-xs text-center",
-                  isSelected ? "text-white/80" : colors.textMuted
+                  isSelected ? "text-white/80" : colors.textMuted,
                 )}
               >
                 {talent.description}
@@ -539,8 +539,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     "border",
                     colors.border,
                     colors.hoverBg,
-                    "hover:border-orange-500/50"
-                  )
+                    "hover:border-orange-500/50",
+                  ),
             )}
             style={{
               color: isSelected ? colors.primaryContrast : colors.text,
@@ -1140,7 +1140,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                             <button
                               key={star}
                               onClick={() => handleFilterChange("rating", star)}
-                              className="text-2xl transition-transform hover:scale-110"
+                              className="text-xl transition-transform hover:scale-110"
                               style={{
                                 color:
                                   star <= localFilters.rating

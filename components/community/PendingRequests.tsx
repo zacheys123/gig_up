@@ -19,7 +19,7 @@ export const PendingRequests: React.FC<PendingRequestsProps> = ({ user }) => {
 
   const handleRespond = async (
     principalId: Id<"users">,
-    status: "accepted" | "rejected"
+    status: "accepted" | "rejected",
   ) => {
     const result = await respondToDeputyRequest(principalId, status);
     if (!result.success) {
@@ -236,7 +236,7 @@ const StatCard: React.FC<{
         </div>
         <div>
           <p className="text-sm text-gray-600">{label}</p>
-          <p className={`text-2xl font-bold ${text}`}>{value}</p>
+          <p className={`text-xl font-bold ${text}`}>{value}</p>
         </div>
       </div>
     </div>
@@ -249,7 +249,7 @@ const Header: React.FC<{ title: string; count: number }> = ({
   count,
 }) => (
   <div className="flex justify-between items-center">
-    <h2 className="text-2xl font-bold">{title}</h2>
+    <h2 className="text-xl font-bold">{title}</h2>
     <p className="text-gray-600">{count} pending requests</p>
   </div>
 );

@@ -8,7 +8,7 @@ const AllDirections = () => {
         <div id="ring"></div>
         <div id="ring"></div>
         <div id="ring"></div>
-        <div id="h3">gigup</div>
+        <div id="h3">gigUp</div>
       </div>
     </div>
   );

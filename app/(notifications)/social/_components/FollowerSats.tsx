@@ -35,7 +35,7 @@ export default function FollowersStats({ stats, colors }: FollowersStatsProps) {
             "px-3 py-2 md:px-4 md:py-3 rounded-xl border-2 flex-1 min-w-[100px]",
             colors.card,
             colors.border,
-            "flex items-center gap-2 md:gap-3"
+            "flex items-center gap-2 md:gap-3",
           )}
         >
           <div
@@ -44,8 +44,8 @@ export default function FollowersStats({ stats, colors }: FollowersStatsProps) {
           <div className="min-w-0">
             <p
               className={cn(
-                "text-lg md:text-2xl font-bold truncate",
-                colors.text
+                "text-lg md:text-xl font-bold truncate",
+                colors.text,
               )}
             >
               {stat.value}

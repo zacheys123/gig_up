@@ -23,29 +23,26 @@ export default function EmptyFollowersState({
       className={cn(
         "rounded-xl md:rounded-2xl p-8 md:p-12 text-center border-2 border-dashed",
         colors.card,
-        colors.border
+        colors.border,
       )}
     >
       <div
         className={cn(
           "w-16 h-16 md:w-24 md:h-24 rounded-full mx-auto mb-4 md:mb-6 flex items-center justify-center",
-          colors.secondaryBackground
+          colors.secondaryBackground,
         )}
       >
         <Users className={cn("w-8 h-8 md:w-10 md:h-10", colors.textMuted)} />
       </div>
       <h3
-        className={cn(
-          "text-xl md:text-2xl font-bold mb-3 md:mb-4",
-          colors.text
-        )}
+        className={cn("text-xl md:text-xl font-bold mb-3 md:mb-4", colors.text)}
       >
         {searchQuery ? "No matching followers" : "Your community awaits"}
       </h3>
       <p
         className={cn(
           "text-sm md:text-lg mb-6 md:mb-8 max-w-md mx-auto",
-          colors.textMuted
+          colors.textMuted,
         )}
       >
         {searchQuery
@@ -58,7 +55,7 @@ export default function EmptyFollowersState({
           className={cn(
             "rounded-xl gap-2",
             colors.primaryBg,
-            colors.primaryBgHover
+            colors.primaryBgHover,
           )}
         >
           <Share2 className="w-4 h-4" />

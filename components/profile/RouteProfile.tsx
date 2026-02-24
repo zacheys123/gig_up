@@ -39,10 +39,10 @@ const RouteProfile = ({ isMobile }: { isMobile: boolean }) => {
         (file: string | undefined) => file && setFileUrl(file),
         setIsUploading,
         dep,
-        user?.user
+        user?.user,
       );
     },
-    [fileUrl]
+    [fileUrl],
   );
 
   const handleUpload = async (ev: React.FormEvent<HTMLFormElement>) => {
@@ -116,7 +116,7 @@ const RouteProfile = ({ isMobile }: { isMobile: boolean }) => {
 
       <div className="flex flex-col items-center gap-2">
         <div className="flex items-center gap-2 group">
-          <h3 className="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
+          <h3 className="text-xl md:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
             {user?.user?.firstname} {user?.user?.lastname}
           </h3>
           <button

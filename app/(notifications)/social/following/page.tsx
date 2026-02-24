@@ -66,7 +66,7 @@ export default function FollowingPage() {
   // Get users that current user is following with details
   const followingUsers = useQuery(
     api.controllers.socials.getFollowingWithDetails,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   ) as FollowingUser[] | undefined;
 
   // const followUser = useMutation(api.controllers.user.followUser);
@@ -86,7 +86,7 @@ export default function FollowingPage() {
           user.lastname?.toLowerCase().includes(query) ||
           user.username.toLowerCase().includes(query) ||
           user.city?.toLowerCase().includes(query) ||
-          user.instrument?.toLowerCase().includes(query)
+          user.instrument?.toLowerCase().includes(query),
       );
     }
 
@@ -120,7 +120,7 @@ export default function FollowingPage() {
       bookers: followingUsers.filter((user) => user.isBooker).length,
       proUsers: followingUsers.filter((user) => user.tier === "pro").length,
       mutualFollowers: followingUsers.filter(
-        (user) => (user.mutualFollowers || 0) > 0
+        (user) => (user.mutualFollowers || 0) > 0,
       ).length,
     };
   }, [followingUsers]);
@@ -165,10 +165,10 @@ export default function FollowingPage() {
                 className={cn(
                   "p-4 rounded-xl border text-center",
                   colors.card,
-                  colors.border
+                  colors.border,
                 )}
               >
-                <div className={cn("text-2xl font-bold mb-1", colors.text)}>
+                <div className={cn("text-xl font-bold mb-1", colors.text)}>
                   {stats.total}
                 </div>
                 <div className={cn("text-sm", colors.textMuted)}>Total</div>
@@ -178,13 +178,13 @@ export default function FollowingPage() {
                 className={cn(
                   "p-4 rounded-xl border text-center",
                   colors.card,
-                  colors.border
+                  colors.border,
                 )}
               >
                 <div
                   className={cn(
-                    "text-2xl font-bold mb-1 text-purple-600",
-                    isDarkMode && "text-purple-400"
+                    "text-xl font-bold mb-1 text-purple-600",
+                    isDarkMode && "text-purple-400",
                   )}
                 >
                   {stats.musicians}
@@ -196,13 +196,13 @@ export default function FollowingPage() {
                 className={cn(
                   "p-4 rounded-xl border text-center",
                   colors.card,
-                  colors.border
+                  colors.border,
                 )}
               >
                 <div
                   className={cn(
-                    "text-2xl font-bold mb-1 text-green-600",
-                    isDarkMode && "text-green-400"
+                    "text-xl font-bold mb-1 text-green-600",
+                    isDarkMode && "text-green-400",
                   )}
                 >
                   {stats.clients}
@@ -213,13 +213,13 @@ export default function FollowingPage() {
                 className={cn(
                   "p-4 rounded-xl border text-center",
                   colors.card,
-                  colors.border
+                  colors.border,
                 )}
               >
                 <div
                   className={cn(
-                    "text-2xl font-bold mb-1 text-green-600",
-                    isDarkMode && "text-green-400"
+                    "text-xl font-bold mb-1 text-green-600",
+                    isDarkMode && "text-green-400",
                   )}
                 >
                   {stats.bookers}
@@ -231,13 +231,13 @@ export default function FollowingPage() {
                 className={cn(
                   "p-4 rounded-xl border text-center",
                   colors.card,
-                  colors.border
+                  colors.border,
                 )}
               >
                 <div
                   className={cn(
-                    "text-2xl font-bold mb-1 text-blue-600",
-                    isDarkMode && "text-blue-400"
+                    "text-xl font-bold mb-1 text-blue-600",
+                    isDarkMode && "text-blue-400",
                   )}
                 >
                   {stats.mutualFollowers}
@@ -255,7 +255,7 @@ export default function FollowingPage() {
             className={cn(
               "p-6 rounded-xl border mb-6",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <div className="flex flex-col lg:flex-row gap-4 z-[9999]">
@@ -379,7 +379,7 @@ export default function FollowingPage() {
                     "rounded-xl border p-6 transition-all duration-300 hover:shadow-lg",
                     colors.card,
                     colors.border,
-                    "flex flex-col h-full"
+                    "flex flex-col h-full",
                   )}
                 >
                   {/* Header with Avatar and Basic Info */}
@@ -396,7 +396,7 @@ export default function FollowingPage() {
                         <div
                           className={cn(
                             "w-16 h-16 rounded-2xl flex items-center justify-center",
-                            colors.secondaryBackground
+                            colors.secondaryBackground,
                           )}
                         >
                           <Users className="w-6 h-6 text-gray-400" />
@@ -416,7 +416,7 @@ export default function FollowingPage() {
                           <h3
                             className={cn(
                               "font-semibold text-lg truncate",
-                              colors.text
+                              colors.text,
                             )}
                           >
                             {user.firstname} {user.lastname}
@@ -445,7 +445,7 @@ export default function FollowingPage() {
                               ? "bg-purple-500 text-white"
                               : user.isClient
                                 ? "bg-green-500 text-white"
-                                : "bg-blue-500 text-white"
+                                : "bg-blue-500 text-white",
                           )}
                         >
                           {user.isMusician && user?.roleType !== "teacher"
@@ -516,7 +516,7 @@ export default function FollowingPage() {
                       <p
                         className={cn(
                           "text-sm leading-relaxed line-clamp-3",
-                          colors.textMuted
+                          colors.textMuted,
                         )}
                       >
                         {user.talentbio}
@@ -535,7 +535,7 @@ export default function FollowingPage() {
                         colors.border,
                         colors.text,
                         colors.hoverBg,
-                        "font-semibold hover:scale-105"
+                        "font-semibold hover:scale-105",
                       )}
                     />
                   </div>
@@ -550,11 +550,11 @@ export default function FollowingPage() {
             className={cn(
               "text-center py-16 rounded-xl border-2 border-dashed",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <UserCheck className="mx-auto text-gray-400 w-16 h-16 mb-4" />
-            <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+            <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
               {hasActiveFilters ? "No Matching Users" : "Not Following Anyone"}
             </h3>
             <p

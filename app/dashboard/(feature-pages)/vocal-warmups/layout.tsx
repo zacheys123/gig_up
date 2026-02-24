@@ -18,7 +18,7 @@ export default function VocalWarmupsLayout({
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/20 dark:to-red-900/20 mb-6">
               <Volume2 className="h-10 w-10 text-orange-600 dark:text-orange-400" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
               Vocal Warmups
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">

@@ -374,7 +374,7 @@ export default function HowItWorksPage() {
             element.classList.remove(
               "ring-4",
               "ring-yellow-400",
-              "ring-opacity-50"
+              "ring-opacity-50",
             );
           }, 3000);
         }
@@ -383,13 +383,13 @@ export default function HowItWorksPage() {
 
     window.addEventListener(
       "section-navigate",
-      handleSectionNavigate as EventListener
+      handleSectionNavigate as EventListener,
     );
 
     return () => {
       window.removeEventListener(
         "section-navigate",
-        handleSectionNavigate as EventListener
+        handleSectionNavigate as EventListener,
       );
     };
   }, [searchParams, scrollToSection]);
@@ -511,7 +511,7 @@ export default function HowItWorksPage() {
       <div
         className={cn(
           "flex justify-center items-center min-h-64",
-          colors.background
+          colors.background,
         )}
       >
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -529,7 +529,7 @@ export default function HowItWorksPage() {
             "p-3 rounded-full border shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110",
             colors.card,
             colors.border,
-            colors.hoverBg
+            colors.hoverBg,
           )}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
@@ -559,7 +559,7 @@ export default function HowItWorksPage() {
             transition={{ duration: 0.6 }}
           >
             <h1 className={cn("text-4xl md:text-6xl font-bold", colors.text)}>
-              GigUpp Trust Rating System
+              gigUpp Trust Rating System
             </h1>
             <p
               className={cn("text-xl mt-4 max-w-2xl mx-auto", colors.textMuted)}
@@ -584,7 +584,7 @@ export default function HowItWorksPage() {
 
           {/* Clickable Tier Cards */}
           <div className="space-y-6">
-            <h3 className={cn("text-2xl font-semibold", colors.text)}>
+            <h3 className={cn("text-xl font-semibold", colors.text)}>
               Trust Rating Tiers
             </h3>
             <p className={cn("text-gray-600 dark:text-gray-400 mb-6")}>
@@ -600,7 +600,7 @@ export default function HowItWorksPage() {
               className={cn(
                 "p-6 rounded-xl border-2",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -652,7 +652,7 @@ export default function HowItWorksPage() {
               className={cn(
                 "p-6 rounded-xl border-2",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -730,13 +730,13 @@ export default function HowItWorksPage() {
             className={cn(
               "p-6 rounded-xl border-2 scroll-mt-20",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="text-2xl">🌱</div>
+              <div className="text-xl">🌱</div>
               <div>
-                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                <h3 className={cn("text-xl font-bold", colors.text)}>
                   Newcomer (0.5-1.9 stars)
                 </h3>
                 <p className={cn("text-gray-600 dark:text-gray-400")}>
@@ -778,13 +778,13 @@ export default function HowItWorksPage() {
             className={cn(
               "p-6 rounded-xl border-2 scroll-mt-20",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="text-2xl">⭐</div>
+              <div className="text-xl">⭐</div>
               <div>
-                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                <h3 className={cn("text-xl font-bold", colors.text)}>
                   Rising Star (2.0-2.4 stars)
                 </h3>
                 <p className={cn("text-gray-600 dark:text-gray-400")}>
@@ -827,13 +827,13 @@ export default function HowItWorksPage() {
             className={cn(
               "p-6 rounded-xl border-2 scroll-mt-20",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="text-2xl">✅</div>
+              <div className="text-xl">✅</div>
               <div>
-                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                <h3 className={cn("text-xl font-bold", colors.text)}>
                   Verified (2.5-3.4 stars)
                 </h3>
                 <p className={cn("text-gray-600 dark:text-gray-400")}>
@@ -878,13 +878,13 @@ export default function HowItWorksPage() {
             className={cn(
               "p-6 rounded-xl border-2 scroll-mt-20",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="text-2xl">🤝</div>
+              <div className="text-xl">🤝</div>
               <div>
-                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                <h3 className={cn("text-xl font-bold", colors.text)}>
                   Trusted (3.5-4.4 stars)
                 </h3>
                 <p className={cn("text-gray-600 dark:text-gray-400")}>
@@ -929,13 +929,13 @@ export default function HowItWorksPage() {
             className={cn(
               "p-6 rounded-xl border-2 scroll-mt-20",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="text-2xl">🏆</div>
+              <div className="text-xl">🏆</div>
               <div>
-                <h3 className={cn("text-2xl font-bold", colors.text)}>
+                <h3 className={cn("text-xl font-bold", colors.text)}>
                   Elite (4.5-5.0 stars)
                 </h3>
                 <p className={cn("text-gray-600 dark:text-gray-400")}>
@@ -1030,7 +1030,7 @@ export default function HowItWorksPage() {
                   "p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg",
                   colors.card,
                   colors.border,
-                  "hover:scale-105"
+                  "hover:scale-105",
                 )}
               >
                 <div className="flex items-center gap-3 mb-4">
@@ -1090,7 +1090,7 @@ export default function HowItWorksPage() {
               className="space-y-6"
             >
               <div>
-                <h3 className={cn("text-2xl font-bold mb-2", colors.text)}>
+                <h3 className={cn("text-xl font-bold mb-2", colors.text)}>
                   {category.title}
                 </h3>
                 <p className={cn("text-lg", colors.textMuted)}>
@@ -1110,7 +1110,7 @@ export default function HowItWorksPage() {
                     }}
                     className={cn(
                       "p-6 rounded-xl border-2 space-y-4 transition-all duration-300 hover:shadow-lg hover:scale-105",
-                      tierColors[badge.tier]
+                      tierColors[badge.tier],
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -1119,7 +1119,7 @@ export default function HowItWorksPage() {
                         <h4
                           className={cn(
                             "font-semibold",
-                            getTierTextColor(badge.tier, colors)
+                            getTierTextColor(badge.tier, colors),
                           )}
                         >
                           {badge.name}
@@ -1127,7 +1127,7 @@ export default function HowItWorksPage() {
                         <span
                           className={cn(
                             "text-xs px-2 py-1 rounded-full border",
-                            getTierBadgeColor(badge.tier, colors)
+                            getTierBadgeColor(badge.tier, colors),
                           )}
                         >
                           {tierLabels[badge.tier]}
@@ -1137,7 +1137,7 @@ export default function HowItWorksPage() {
                     <p
                       className={cn(
                         "text-sm",
-                        getTierMutedTextColor(badge.tier, colors)
+                        getTierMutedTextColor(badge.tier, colors),
                       )}
                     >
                       {badge.description}
@@ -1145,7 +1145,7 @@ export default function HowItWorksPage() {
                     <div
                       className={cn(
                         "text-xs p-2 rounded border",
-                        getTierBoxColor(badge.tier, colors)
+                        getTierBoxColor(badge.tier, colors),
                       )}
                     >
                       <strong>Requirements:</strong> {badge.requirements}
@@ -1168,7 +1168,7 @@ export default function HowItWorksPage() {
             "p-8 rounded-xl border-2 text-center transition-all duration-300 scroll-mt-20",
             colors.card,
             colors.border,
-            "hover:shadow-xl"
+            "hover:shadow-xl",
           )}
         >
           <FaRocket className="mx-auto text-blue-500 mb-4" size={48} />
@@ -1187,7 +1187,7 @@ export default function HowItWorksPage() {
                 colors.primaryBg,
                 colors.primaryBgHover,
                 colors.textInverted,
-                "hover:scale-105 shadow-lg"
+                "hover:scale-105 shadow-lg",
               )}
             >
               Complete Your Profile
@@ -1199,7 +1199,7 @@ export default function HowItWorksPage() {
                 colors.border,
                 colors.text,
                 colors.hoverBg,
-                "hover:scale-105"
+                "hover:scale-105",
               )}
             >
               View Your Trust Rating

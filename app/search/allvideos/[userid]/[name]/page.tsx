@@ -47,7 +47,7 @@ const AllVideosPage = () => {
           userId: userid as string,
           currentUserId: currentUserId || undefined,
         }
-      : "skip"
+      : "skip",
   );
 
   // Mutations
@@ -89,7 +89,7 @@ const AllVideosPage = () => {
         toast.error("Failed to update like");
       }
     },
-    [currentUserId, videos, unlikeVideo, likeVideo, isInGracePeriod]
+    [currentUserId, videos, unlikeVideo, likeVideo, isInGracePeriod],
   );
 
   // Memoized delete handler
@@ -106,7 +106,7 @@ const AllVideosPage = () => {
         toast.error("Failed to delete video");
       }
     },
-    [deleteVideo]
+    [deleteVideo],
   );
 
   // Memoized share handler
@@ -146,11 +146,11 @@ const AllVideosPage = () => {
     const totalVideos = videos.length;
     const totalViews = videos.reduce(
       (sum, video) => sum + (video.views || 0),
-      0
+      0,
     );
     const totalLikes = videos.reduce(
       (sum, video) => sum + (video.likes || 0),
-      0
+      0,
     );
     const publicVideos = videos.filter((video) => video.isPublic).length;
 
@@ -182,7 +182,7 @@ const AllVideosPage = () => {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <motion.div
@@ -217,7 +217,7 @@ const AllVideosPage = () => {
         className={cn(
           "sticky top-0 z-50 border-b backdrop-blur-xl",
           colors.border,
-          colors.background
+          colors.background,
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
@@ -231,14 +231,14 @@ const AllVideosPage = () => {
                 className={cn(
                   "p-2 rounded-xl transition-all duration-200",
                   colors.hoverBg,
-                  colors.text
+                  colors.text,
                 )}
               >
                 <ArrowLeft className="w-5 h-5" />
               </motion.button>
 
               <div>
-                <h1 className={cn("text-2xl font-bold", colors.text)}>
+                <h1 className={cn("text-xl font-bold", colors.text)}>
                   {isOwnProfile ? "My Video Gallery" : `${name}'s Performances`}
                 </h1>
                 <p className={cn("text-sm", colors.textMuted)}>
@@ -286,7 +286,7 @@ const AllVideosPage = () => {
                   className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-xl font-medium",
                     "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
-                    "shadow-lg hover:shadow-amber-500/25 transition-all"
+                    "shadow-lg hover:shadow-amber-500/25 transition-all",
                   )}
                 >
                   <Upload className="w-4 h-4" />
@@ -326,7 +326,7 @@ const AllVideosPage = () => {
                   className={cn(
                     "px-6 py-3 rounded-xl font-medium",
                     "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
-                    "shadow-lg hover:shadow-amber-500/25 transition-all"
+                    "shadow-lg hover:shadow-amber-500/25 transition-all",
                   )}
                 >
                   Upload First Video
@@ -355,7 +355,7 @@ const AllVideosPage = () => {
                     "group rounded-2xl overflow-hidden transition-all duration-300",
                     "border shadow-sm hover:shadow-xl",
                     colors.card,
-                    colors.border
+                    colors.border,
                   )}
                 >
                   {/* Video Thumbnail */}
@@ -411,7 +411,7 @@ const AllVideosPage = () => {
                       <h3
                         className={cn(
                           "font-semibold text-sm line-clamp-2 flex-1",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         {video.title}
@@ -425,13 +425,13 @@ const AllVideosPage = () => {
                             whileTap={{ scale: 0.95 }}
                             onClick={() =>
                               setVideoActions(
-                                videoActions === video._id ? null : video._id
+                                videoActions === video._id ? null : video._id,
                               )
                             }
                             className={cn(
                               "p-1 rounded-lg transition-colors",
                               colors.hoverBg,
-                              colors.text
+                              colors.text,
                             )}
                           >
                             <MoreVertical className="w-4 h-4" />
@@ -446,7 +446,7 @@ const AllVideosPage = () => {
                                 className={cn(
                                   "absolute right-0 top-full mt-1 py-2 rounded-xl shadow-lg border z-10",
                                   colors.card,
-                                  colors.border
+                                  colors.border,
                                 )}
                               >
                                 <button
@@ -455,7 +455,7 @@ const AllVideosPage = () => {
                                   }
                                   className={cn(
                                     "w-full px-4 py-2 text-left text-sm transition-colors",
-                                    "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20",
                                   )}
                                 >
                                   Delete Video
@@ -470,7 +470,7 @@ const AllVideosPage = () => {
                     <p
                       className={cn(
                         "text-xs line-clamp-2 mb-3",
-                        colors.textMuted
+                        colors.textMuted,
                       )}
                     >
                       {video.description}
@@ -483,7 +483,7 @@ const AllVideosPage = () => {
                           onClick={() => handleLike(video._id as Id<"videos">)}
                           className={cn(
                             "flex items-center gap-1 transition-colors",
-                            isLiked ? "text-red-500" : colors.text
+                            isLiked ? "text-red-500" : colors.text,
                           )}
                         >
                           <Heart
@@ -504,7 +504,7 @@ const AllVideosPage = () => {
                         onClick={() => handleShare(video._id as Id<"videos">)}
                         className={cn(
                           "p-1 rounded-lg transition-colors",
-                          colors.hoverBg
+                          colors.hoverBg,
                         )}
                       >
                         <Share2 className="w-4 h-4" />
@@ -522,7 +522,7 @@ const AllVideosPage = () => {
                             "px-2 py-0.5 rounded-full text-[10px] font-medium capitalize",
                             isDarkMode
                               ? "bg-amber-900/30 text-amber-300"
-                              : "bg-amber-100 text-amber-700"
+                              : "bg-amber-100 text-amber-700",
                           )}
                         >
                           {video.videoType}
@@ -548,7 +548,7 @@ const AllVideosPage = () => {
           className={cn(
             "fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-2xl",
             "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
-            "flex items-center justify-center md:hidden"
+            "flex items-center justify-center md:hidden",
           )}
         >
           <Upload className="w-6 h-6" />

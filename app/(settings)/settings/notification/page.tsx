@@ -121,7 +121,7 @@ const ToggleRow = memo(
           isEnabled ? currentColor.border : colors.border,
           isEnabled ? currentColor.bg : "bg-transparent",
           "hover:shadow-lg",
-          localSaving && "opacity-70 cursor-not-allowed"
+          localSaving && "opacity-70 cursor-not-allowed",
         )}
       >
         {/* Left Content */}
@@ -130,7 +130,7 @@ const ToggleRow = memo(
             className={cn(
               "p-2.5 rounded-lg flex-shrink-0 transition-all duration-300",
               isEnabled ? currentColor.iconBg : colors.backgroundSecondary,
-              isEnabled ? currentColor.text : colors.textMuted
+              isEnabled ? currentColor.text : colors.textMuted,
             )}
           >
             <IconComponent className="w-4 h-4" />
@@ -142,7 +142,7 @@ const ToggleRow = memo(
                 className={cn(
                   "font-semibold text-base",
                   isEnabled ? currentColor.text : colors.text,
-                  localSaving && "opacity-70"
+                  localSaving && "opacity-70",
                 )}
               >
                 {label}
@@ -157,8 +157,8 @@ const ToggleRow = memo(
                     ? cn("text-green-700 border-green-200", colors.successBg)
                     : cn(
                         "text-gray-600 border-gray-300",
-                        colors.backgroundSecondary
-                      )
+                        colors.backgroundSecondary,
+                      ),
                 )}
               >
                 {localSaving ? (
@@ -184,7 +184,7 @@ const ToggleRow = memo(
               className={cn(
                 "text-sm",
                 isEnabled ? colors.text : colors.textMuted,
-                localSaving && "opacity-60"
+                localSaving && "opacity-60",
               )}
             >
               {description}
@@ -204,7 +204,7 @@ const ToggleRow = memo(
                 ? cn("bg-orange-500 border-orange-600", colors.primaryRing)
                 : cn("bg-gray-300 border-gray-400", colors.borderSecondary),
               localSaving && "opacity-70 cursor-not-allowed",
-              !localSaving && "hover:shadow-md"
+              !localSaving && "hover:shadow-md",
             )}
           >
             <span
@@ -215,15 +215,15 @@ const ToggleRow = memo(
                   ? cn("translate-x-5 border-orange-600", colors.primaryRing)
                   : cn(
                       "translate-x-0.5 border-gray-400",
-                      colors.borderSecondary
-                    )
+                      colors.borderSecondary,
+                    ),
               )}
             />
           </button>
         </div>
       </motion.div>
     );
-  }
+  },
 );
 
 ToggleRow.displayName = "ToggleRow";
@@ -254,7 +254,7 @@ const NotificationSection = memo(
           colors.card,
           colors.border,
           "border",
-          "hover:shadow-lg"
+          "hover:shadow-lg",
         )}
       >
         <div className="flex items-center gap-4 mb-6">
@@ -262,7 +262,7 @@ const NotificationSection = memo(
             className={cn(
               "p-3 rounded-xl",
               `bg-gradient-to-br ${gradient} text-white`,
-              "shadow-lg"
+              "shadow-lg",
             )}
           >
             <IconComponent className="w-5 h-5" />
@@ -279,7 +279,7 @@ const NotificationSection = memo(
         <div className="space-y-3">{children}</div>
       </motion.div>
     );
-  }
+  },
 );
 
 NotificationSection.displayName = "NotificationSection";
@@ -302,12 +302,12 @@ export default function NotificationSettingsPage() {
         console.error("Failed to update setting:", error);
       }
     },
-    [settings, updateSettings]
+    [settings, updateSettings],
   );
 
   // Calculate enabled count once
   const enabledCount = Object.values(settings).filter(
-    (val) => val === true
+    (val) => val === true,
   ).length;
   const totalCount = Object.keys(settings).length;
 
@@ -343,17 +343,17 @@ export default function NotificationSettingsPage() {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <div className="text-center">
           <div
             className={cn(
               "w-12 h-12 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4",
-              colors.primaryRing
+              colors.primaryRing,
             )}
           />
-          <h2 className={cn("text-2xl font-bold mb-2", colors.text)}>
+          <h2 className={cn("text-xl font-bold mb-2", colors.text)}>
             Loading Preferences
           </h2>
           <p className={cn("text-lg", colors.textMuted)}>
@@ -372,7 +372,7 @@ export default function NotificationSettingsPage() {
           "w-full border-b",
           colors.border,
           colors.background,
-          "sticky top-0 z-10"
+          "sticky top-0 z-10",
         )}
       >
         <div className="max-w-6xl mx-auto px-6 py-6">
@@ -384,7 +384,7 @@ export default function NotificationSettingsPage() {
                   "flex items-center gap-2 p-2 rounded-lg transition-all duration-300",
                   colors.hoverBg,
                   colors.textMuted,
-                  "hover:text-opacity-100"
+                  "hover:text-opacity-100",
                 )}
               >
                 <ArrowLeft size={20} />
@@ -392,7 +392,7 @@ export default function NotificationSettingsPage() {
               </button>
 
               <div>
-                <h1 className={cn("text-2xl font-bold", colors.text)}>
+                <h1 className={cn("text-xl font-bold", colors.text)}>
                   Notification Settings
                 </h1>
                 <p className={cn("text-sm", colors.textMuted)}>
@@ -406,7 +406,7 @@ export default function NotificationSettingsPage() {
                 "px-4 py-2 rounded-full text-sm font-medium",
                 colors.successBg,
                 "border",
-                colors.successBorder
+                colors.successBorder,
               )}
             >
               {enabledCount}/{totalCount} active
@@ -425,7 +425,7 @@ export default function NotificationSettingsPage() {
             "rounded-xl p-4 mb-8",
             colors.card,
             colors.border,
-            "border"
+            "border",
           )}
         >
           <div className="flex items-start gap-3">
@@ -663,7 +663,7 @@ export default function NotificationSettingsPage() {
               "rounded-xl p-5",
               colors.card,
               colors.border,
-              "border"
+              "border",
             )}
           >
             <div className="flex items-center gap-3 mb-3">
@@ -704,7 +704,7 @@ export default function NotificationSettingsPage() {
               "rounded-xl p-5",
               colors.card,
               colors.border,
-              "border"
+              "border",
             )}
           >
             <div className="flex items-center gap-3 mb-3">
@@ -754,7 +754,7 @@ export default function NotificationSettingsPage() {
           "fixed bottom-0 left-0 right-0 py-3",
           colors.card,
           colors.border,
-          "border-t backdrop-blur-sm"
+          "border-t backdrop-blur-sm",
         )}
       >
         <div className="max-w-6xl mx-auto px-6">
@@ -771,7 +771,7 @@ export default function NotificationSettingsPage() {
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300",
                 "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-                "hover:shadow-lg"
+                "hover:shadow-lg",
               )}
             >
               Turn All ON
@@ -798,7 +798,7 @@ export default function NotificationSettingsPage() {
                 colors.text,
                 "border",
                 colors.border,
-                "hover:shadow-lg"
+                "hover:shadow-lg",
               )}
             >
               Turn Most OFF
@@ -817,7 +817,7 @@ export default function NotificationSettingsPage() {
           colors.border,
           "border",
           "shadow-lg hover:shadow-xl",
-          "hover:scale-110 active:scale-95"
+          "hover:scale-110 active:scale-95",
         )}
         aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
       >
@@ -827,7 +827,7 @@ export default function NotificationSettingsPage() {
               "w-5 h-5 absolute top-0.5 left-0.5 transition-all duration-300",
               isDarkMode
                 ? "rotate-0 opacity-100 text-yellow-500"
-                : "rotate-90 opacity-0"
+                : "rotate-90 opacity-0",
             )}
           />
           <Moon
@@ -835,7 +835,7 @@ export default function NotificationSettingsPage() {
               "w-5 h-5 absolute top-0.5 left-0.5 transition-all duration-300",
               isDarkMode
                 ? "rotate-90 opacity-0"
-                : "rotate-0 opacity-100 text-blue-600"
+                : "rotate-0 opacity-100 text-blue-600",
             )}
           />
         </div>

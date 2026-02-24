@@ -269,13 +269,13 @@ export default function TrustExplainedPage() {
   // Get trust score data - UPDATED to use trustStars
   const trustData = useQuery(
     api.controllers.trustScore.getTrustScore,
-    user?.clerkId ? { clerkId: user.clerkId } : "skip"
+    user?.clerkId ? { clerkId: user.clerkId } : "skip",
   );
 
   // Get improvement suggestions
   const improvements = useQuery(
     api.controllers.trustScore.getTrustImprovements,
-    user?.clerkId ? { clerkId: user.clerkId } : "skip"
+    user?.clerkId ? { clerkId: user.clerkId } : "skip",
   ) as Improvement[] | undefined;
 
   useEffect(() => {
@@ -365,7 +365,7 @@ export default function TrustExplainedPage() {
               <div className="text-xl">{currentTier.emoji}</div>
               <div className="flex flex-col items-center">
                 <StarDisplay stars={trustStars} size="lg" showValue={false} />
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-xl font-bold text-blue-600">
                   {trustStars.toFixed(1)} stars
                 </div>
               </div>
@@ -400,7 +400,7 @@ export default function TrustExplainedPage() {
           >
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold mb-2">Your Current Status</h2>
+                <h2 className="text-xl font-bold mb-2">Your Current Status</h2>
                 <p className="text-blue-100/90">{currentTier.description}</p>
               </div>
               <div className="text-5xl">{currentTier.emoji}</div>
@@ -483,7 +483,7 @@ export default function TrustExplainedPage() {
                       <span className="text-3xl">{nextTierData.emoji}</span>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-gray-900">
+                      <div className="text-xl font-bold text-gray-900">
                         {nextTierData.displayName}
                       </div>
                       <div className="text-sm text-gray-600">
@@ -515,7 +515,7 @@ export default function TrustExplainedPage() {
                   <div className="text-sm text-gray-600 mb-2">
                     Stars needed to reach {nextTierData.displayName}:
                   </div>
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-xl font-bold text-blue-600">
                     {(
                       parseFloat(nextTierData.starRange.split("-")[0]) -
                       trustStars
@@ -670,7 +670,7 @@ export default function TrustExplainedPage() {
                         onClick={() => {
                           if (
                             improvements?.some((imp: Improvement) =>
-                              matchesImprovement(item.action, imp)
+                              matchesImprovement(item.action, imp),
                             )
                           ) {
                             router.push("/profile");
@@ -838,7 +838,7 @@ export default function TrustExplainedPage() {
           className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-center text-white shadow-xl"
         >
           <div className="max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold mb-4">
+            <h3 className="text-xl font-bold mb-4">
               Ready to Boost Your Career?
             </h3>
             <p className="text-blue-100 mb-8">

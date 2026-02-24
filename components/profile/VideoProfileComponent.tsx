@@ -58,7 +58,7 @@ const VideoProfileComponent = ({
   const updateVideoMutation = useMutation(api.controllers.videos.updateVideo);
   const userVideos = useQuery(
     api.controllers.videos.getUserProfileVideos,
-    user ? { userId: user.clerkId } : "skip"
+    user ? { userId: user.clerkId } : "skip",
   );
 
   // State for file upload
@@ -156,7 +156,7 @@ const VideoProfileComponent = ({
 
               onAddVideo(newVideo);
               setAddedVideos((prev) =>
-                prev.length < 3 ? [...prev, file] : prev
+                prev.length < 3 ? [...prev, file] : prev,
               );
 
               // Reset form
@@ -185,7 +185,7 @@ const VideoProfileComponent = ({
         },
         setUploading,
         dep,
-        user
+        user,
       );
     },
     [
@@ -199,7 +199,7 @@ const VideoProfileComponent = ({
       createVideo,
       onAddVideo,
       user,
-    ]
+    ],
   );
 
   const deleteVideo = async (videoId: string) => {
@@ -344,14 +344,14 @@ const VideoProfileComponent = ({
         "border-2 rounded-lg p-3 sm:p-4 cursor-pointer transition-all duration-200",
         isSelected
           ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
-          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
       )}
     >
       <div className="flex items-start gap-2 sm:gap-3">
         <div
           className={cn(
             "p-1.5 sm:p-2 rounded-full flex-shrink-0",
-            isSelected ? "text-amber-600" : "text-gray-500"
+            isSelected ? "text-amber-600" : "text-gray-500",
           )}
         >
           {icon}
@@ -362,7 +362,7 @@ const VideoProfileComponent = ({
               "font-semibold text-sm sm:text-base",
               isSelected
                 ? "text-amber-900 dark:text-amber-100"
-                : "text-gray-900 dark:text-gray-100"
+                : "text-gray-900 dark:text-gray-100",
             )}
           >
             {title}
@@ -372,7 +372,7 @@ const VideoProfileComponent = ({
               "text-xs sm:text-sm mt-1",
               isSelected
                 ? "text-amber-700 dark:text-amber-300"
-                : "text-gray-600 dark:text-gray-400"
+                : "text-gray-600 dark:text-gray-400",
             )}
           >
             {description}
@@ -381,7 +381,7 @@ const VideoProfileComponent = ({
         <div
           className={cn(
             "w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-            isSelected ? "border-amber-500 bg-amber-500" : "border-gray-400"
+            isSelected ? "border-amber-500 bg-amber-500" : "border-gray-400",
           )}
         >
           {isSelected && (
@@ -430,7 +430,7 @@ const VideoProfileComponent = ({
           <div
             className={cn(
               "text-center py-8 sm:py-12 rounded-lg border-2 border-dashed",
-              colors.border
+              colors.border,
             )}
           >
             <Music
@@ -440,7 +440,7 @@ const VideoProfileComponent = ({
             <p
               className={cn(
                 "text-base sm:text-lg font-medium mb-2",
-                colors.text
+                colors.text,
               )}
             >
               No videos yet
@@ -460,7 +460,7 @@ const VideoProfileComponent = ({
                   colors.border,
                   editingVideoId === video._id
                     ? "ring-2 ring-amber-500 shadow-lg"
-                    : ""
+                    : "",
                 )}
               >
                 <div className="aspect-video bg-black relative">
@@ -481,13 +481,13 @@ const VideoProfileComponent = ({
                           size={24}
                           className={cn(
                             "mx-auto mb-1 sm:mb-2 text-white",
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         />
                         <p
                           className={cn(
                             "text-xs sm:text-sm font-medium line-clamp-1 text-white",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           {video.title}
@@ -495,7 +495,7 @@ const VideoProfileComponent = ({
                         <p
                           className={cn(
                             "text-xs mt-1 hidden xs:block text-gray-300",
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         >
                           {editingVideoId ? "Editing..." : "Click to play"}
@@ -512,7 +512,7 @@ const VideoProfileComponent = ({
                         "text-xs",
                         video.isPublic
                           ? "bg-green-500 hover:bg-green-600"
-                          : "bg-blue-500 hover:bg-blue-600"
+                          : "bg-blue-500 hover:bg-blue-600",
                       )}
                     >
                       {video.isPublic ? (
@@ -537,7 +537,7 @@ const VideoProfileComponent = ({
                         "text-xs max-w-[60px] truncate",
                         video.videoType === "profile"
                           ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-600 cursor-pointer"
-                          : "bg-gray-800 text-white border-gray-600 cursor-default"
+                          : "bg-gray-800 text-white border-gray-600 cursor-default",
                       )}
                       onClick={(e) => {
                         if (video.videoType === "profile") {
@@ -604,7 +604,7 @@ const VideoProfileComponent = ({
                   className={cn(
                     "p-3 sm:p-4 rounded-lg border",
                     colors.border,
-                    colors.background
+                    colors.background,
                   )}
                 >
                   {editingVideoId === video._id ? (
@@ -614,7 +614,7 @@ const VideoProfileComponent = ({
                         <label
                           className={cn(
                             "block text-sm font-medium mb-2",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           Title *
@@ -632,7 +632,7 @@ const VideoProfileComponent = ({
                             "w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors",
                             colors.border,
                             colors.background,
-                            colors.text
+                            colors.text,
                           )}
                           placeholder="Enter video title"
                         />
@@ -642,7 +642,7 @@ const VideoProfileComponent = ({
                         <label
                           className={cn(
                             "block text-sm font-medium mb-2",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           Description
@@ -660,7 +660,7 @@ const VideoProfileComponent = ({
                             "w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors resize-none",
                             colors.border,
                             colors.background,
-                            colors.text
+                            colors.text,
                           )}
                           placeholder="Enter video description (optional)"
                         />
@@ -672,7 +672,7 @@ const VideoProfileComponent = ({
                           <label
                             className={cn(
                               "block text-sm font-medium mb-2",
-                              colors.textMuted
+                              colors.textMuted,
                             )}
                           >
                             Privacy
@@ -691,7 +691,7 @@ const VideoProfileComponent = ({
                                 ? "border-green-500 bg-green-400/70" +
                                     colors.destructive
                                 : "border-blue-500 bg-violet-400/70",
-                              colors.warning
+                              colors.warning,
                             )}
                           >
                             <span className="text-sm font-medium">
@@ -710,7 +710,7 @@ const VideoProfileComponent = ({
                           <label
                             className={cn(
                               "block text-sm font-medium mb-2",
-                              colors.text
+                              colors.text,
                             )}
                           >
                             Type
@@ -727,7 +727,7 @@ const VideoProfileComponent = ({
                               "w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors",
                               colors.border,
                               colors.background,
-                              colors.text
+                              colors.text,
                             )}
                           >
                             {videoTypes.map((type) => (
@@ -744,7 +744,7 @@ const VideoProfileComponent = ({
                         <label
                           className={cn(
                             "block text-sm font-medium mb-2",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           Tags
@@ -791,7 +791,7 @@ const VideoProfileComponent = ({
                               "flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors",
                               colors.border,
                               colors.background,
-                              colors.text
+                              colors.text,
                             )}
                           />
                           <button
@@ -802,7 +802,7 @@ const VideoProfileComponent = ({
                               "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                               editTagInput.trim()
                                 ? "bg-amber-500 text-white hover:bg-amber-600 shadow-sm hover:shadow"
-                                : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed",
                             )}
                           >
                             Add
@@ -818,7 +818,7 @@ const VideoProfileComponent = ({
                         <h3
                           className={cn(
                             "font-semibold text-sm leading-tight line-clamp-2",
-                            colors.text
+                            colors.text,
                           )}
                         >
                           {video.title}
@@ -827,7 +827,7 @@ const VideoProfileComponent = ({
                           <p
                             className={cn(
                               "text-xs leading-relaxed line-clamp-2",
-                              colors.textMuted
+                              colors.textMuted,
                             )}
                           >
                             {video.description}
@@ -843,7 +843,7 @@ const VideoProfileComponent = ({
                             className={cn(
                               "text-xs font-medium px-2 py-1 rounded border",
                               colors.border,
-                              colors.text
+                              colors.text,
                             )}
                           >
                             {getPlatformFromUrl(video.url)}
@@ -895,7 +895,7 @@ const VideoProfileComponent = ({
                               {
                                 month: "short",
                                 day: "numeric",
-                              }
+                              },
                             )}
                           </span>
                         )}
@@ -912,7 +912,7 @@ const VideoProfileComponent = ({
                                 className={cn(
                                   "text-xs px-1.5 py-0.5 rounded font-medium truncate max-w-[60px]",
                                   "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
-                                  "border border-amber-200 dark:border-amber-800"
+                                  "border border-amber-200 dark:border-amber-800",
                                 )}
                                 title={tag}
                               >
@@ -937,7 +937,7 @@ const VideoProfileComponent = ({
                           className={cn(
                             "h-7 px-2 text-xs font-medium transition-all duration-200",
                             "hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/20 dark:hover:text-amber-300",
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         >
                           <MessageCircle size={12} className="mr-1" />
@@ -969,7 +969,7 @@ const VideoProfileComponent = ({
                 setNewVideoTags([]);
                 setNewTagInput("");
               }}
-              className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl sm:text-2xl font-bold z-10"
+              className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl sm:text-xl font-bold z-10"
             >
               &times;
             </button>
@@ -1178,7 +1178,7 @@ const VideoProfileComponent = ({
                       "flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-md transition-colors",
                       !newVideoTitle.trim() || uploading
                         ? "bg-gray-400 cursor-not-allowed text-white"
-                        : "bg-amber-500 hover:bg-amber-600 text-white"
+                        : "bg-amber-500 hover:bg-amber-600 text-white",
                     )}
                   >
                     Upload Video

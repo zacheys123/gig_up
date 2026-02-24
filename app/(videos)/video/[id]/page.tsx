@@ -55,24 +55,24 @@ export default function VideoDetailPage() {
   // Get video data
   const video = useQuery(
     api.controllers.videos.getVideoById,
-    id ? { videoId: id as string } : "skip"
+    id ? { videoId: id as string } : "skip",
   );
 
   // Get comments
   const comments = useQuery(
     api.controllers.comments.getVideoComments,
-    id ? { videoId: id as Id<"videos"> } : "skip"
+    id ? { videoId: id as Id<"videos"> } : "skip",
   );
 
   // Get current user data for like status
   const currentUser = useQuery(
     api.controllers.user.getUserByClerkId,
-    clerkId ? { clerkId } : "skip"
+    clerkId ? { clerkId } : "skip",
   );
 
   // Mutations
   const incrementViews = useMutation(
-    api.controllers.videos.incrementVideoViews
+    api.controllers.videos.incrementVideoViews,
   );
   const likeVideo = useMutation(api.controllers.videos.likeVideo);
   const unlikeVideo = useMutation(api.controllers.videos.unlikeVideo);
@@ -167,7 +167,7 @@ export default function VideoDetailPage() {
   // Get video owner data
   const videoOwner = useQuery(
     api.controllers.user.getUserByClerkId,
-    video?.userId ? { clerkId: video.userId } : "skip"
+    video?.userId ? { clerkId: video.userId } : "skip",
   );
 
   // Show loading state while video is loading
@@ -176,7 +176,7 @@ export default function VideoDetailPage() {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <div className="text-center">
@@ -197,7 +197,7 @@ export default function VideoDetailPage() {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <div className="text-center">
@@ -236,7 +236,7 @@ export default function VideoDetailPage() {
                 className={cn(
                   video.isPublic
                     ? "bg-green-500 hover:bg-green-600"
-                    : "bg-blue-500 hover:bg-blue-600"
+                    : "bg-blue-500 hover:bg-blue-600",
                 )}
               >
                 {video.isPublic ? (
@@ -267,7 +267,7 @@ export default function VideoDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "rounded-2xl overflow-hidden border",
-                colors.border
+                colors.border,
               )}
             >
               <div className="aspect-video bg-black relative">
@@ -300,12 +300,12 @@ export default function VideoDetailPage() {
               className={cn(
                 "rounded-2xl p-6 border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <div className="flex items-start justify-between mb-4">
                 <h1
-                  className={cn("text-2xl lg:text-3xl font-bold", colors.text)}
+                  className={cn("text-xl lg:text-3xl font-bold", colors.text)}
                 >
                   {video.title}
                 </h1>
@@ -320,7 +320,7 @@ export default function VideoDetailPage() {
                     "flex items-center gap-2",
                     hasLiked
                       ? "bg-red-500 hover:bg-red-600 text-white"
-                      : colors.border
+                      : colors.border,
                   )}
                 >
                   <Heart
@@ -389,7 +389,7 @@ export default function VideoDetailPage() {
               className={cn(
                 "rounded-2xl p-6 border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <h2 className={cn("text-xl font-semibold mb-6", colors.text)}>
@@ -416,7 +416,7 @@ export default function VideoDetailPage() {
                         className={cn(
                           "resize-none",
                           colors.background,
-                          colors.text
+                          colors.text,
                         )}
                         rows={3}
                       />
@@ -508,7 +508,7 @@ export default function VideoDetailPage() {
               className={cn(
                 "rounded-2xl p-6 border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <h2 className={cn("text-lg font-semibold mb-4", colors.text)}>
@@ -554,7 +554,7 @@ export default function VideoDetailPage() {
               className={cn(
                 "rounded-2xl p-6 border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <h2 className={cn("text-lg font-semibold mb-4", colors.text)}>
@@ -608,7 +608,7 @@ export default function VideoDetailPage() {
               className={cn(
                 "rounded-2xl p-6 border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <h2 className={cn("text-lg font-semibold mb-4", colors.text)}>
@@ -625,7 +625,7 @@ export default function VideoDetailPage() {
                   <Heart
                     className={cn(
                       "w-4 h-4",
-                      hasLiked ? "fill-current text-red-500" : ""
+                      hasLiked ? "fill-current text-red-500" : "",
                     )}
                   />
                   {hasLiked ? "Liked" : "Like Video"}

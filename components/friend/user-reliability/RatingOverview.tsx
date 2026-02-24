@@ -94,7 +94,7 @@ export const RatingOverview = ({
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="text-2xl font-bold">Trust Overview</h3>
+              <h3 className="text-xl font-bold">Trust Overview</h3>
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex items-center gap-2">
                   {getRoleIcon(userRole)}
@@ -208,7 +208,7 @@ export const RatingOverview = ({
                   {[1, 2, 3, 4, 5].map((star) => (
                     <FaStar
                       key={star}
-                      className={`text-2xl mx-1 ${star <= Math.round(avgRating) ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"}`}
+                      className={`text-xl mx-1 ${star <= Math.round(avgRating) ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"}`}
                     />
                   ))}
                 </div>
@@ -258,7 +258,7 @@ export const RatingOverview = ({
                   <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                     {roleMetrics.secondary}
                   </div>
-                  <div className="text-2xl font-semibold text-gray-700 dark:text-gray-300">
+                  <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">
                     {roleMetrics.secondaryValue}
                   </div>
                 </div>

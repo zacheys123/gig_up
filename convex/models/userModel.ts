@@ -277,6 +277,7 @@ export const userModel = defineTable({
   viewedGigs: v.optional(v.array(v.string())),
   totalInterests: v.optional(v.number()), // Total number of gigs user has shown interest in
   lastInterestAt: v.optional(v.number()), // Timestamp of last interest shown
+  favoriteMusicians: v.optional(v.id("users")),
   // User status and activity
   firstLogin: v.boolean(),
   onboardingComplete: v.boolean(),

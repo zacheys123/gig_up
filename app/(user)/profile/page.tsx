@@ -48,13 +48,13 @@ const ProfilePage = () => {
             <Skeleton
               className={cn(
                 "h-8 w-48 rounded-lg md:h-10 md:w-64",
-                colors.backgroundMuted
+                colors.backgroundMuted,
               )}
             />
             <Skeleton
               className={cn(
                 "h-5 w-36 rounded-lg md:h-6 md:w-48",
-                colors.backgroundMuted
+                colors.backgroundMuted,
               )}
             />
           </div>
@@ -76,7 +76,7 @@ const ProfilePage = () => {
     gigs?.filter((gig) =>
       user?.isClient
         ? gig.postedByUser?.clerkId === user?.clerkId
-        : gig.bookedByUser?.clerkId === user?.clerkId
+        : gig.bookedByUser?.clerkId === user?.clerkId,
     ).length || 0;
 
   const totalConnections =
@@ -120,7 +120,7 @@ const ProfilePage = () => {
           <div className="text-center">
             <h1
               className={cn(
-                "text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-500 mb-2"
+                "text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-500 mb-2",
               )}
             >
               Welcome Back, {user?.firstname}!
@@ -174,22 +174,22 @@ const ProfilePage = () => {
                 className={cn(
                   "rounded-xl p-4 border text-center",
                   colors.card,
-                  colors.border
+                  colors.border,
                 )}
               >
                 <div
                   className={cn(
                     "p-2 rounded-lg bg-gradient-to-br mx-auto w-12 mb-2",
-                    stat.color
+                    stat.color,
                   )}
                 >
                   {stat.icon}
                 </div>
                 <p
                   className={cn(
-                    "text-2xl font-bold",
+                    "text-xl font-bold",
                     colors.text,
-                    user?.isBooker && "text-1xl"
+                    user?.isBooker && "text-1xl",
                   )}
                 >
                   {stat.value}
@@ -243,7 +243,7 @@ const ProfilePage = () => {
                         className={cn(
                           "text-xs px-2 py-1 rounded-full",
                           colors.backgroundMuted,
-                          colors.destructive
+                          colors.destructive,
                         )}
                       >
                         {field}
@@ -272,7 +272,7 @@ const ProfilePage = () => {
             className={cn(
               "mb-[70px] rounded-xl border p-6",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <h2 className={cn("text-xl font-semibold mb-4", colors.text)}>
@@ -285,7 +285,7 @@ const ProfilePage = () => {
                   "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105",
                   colors.secondaryBackground,
                   colors.border,
-                  "hover:border-amber-400/30"
+                  "hover:border-amber-400/30",
                 )}
               >
                 <Icons.user className="h-6 w-6 mx-auto mb-2 text-amber-400" />
@@ -303,7 +303,7 @@ const ProfilePage = () => {
                     "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105",
                     colors.secondaryBackground,
                     colors.border,
-                    "hover:border-green-400/30"
+                    "hover:border-green-400/30",
                   )}
                 >
                   <Icons.teaching className="h-6 w-6 mx-auto mb-2 text-green-400" />
@@ -324,7 +324,7 @@ const ProfilePage = () => {
                     "p-4 rounded-lg border text-center cursor-pointer transition-all hover:scale-105",
                     colors.secondaryBackground,
                     colors.border,
-                    "hover:border-blue-400/30"
+                    "hover:border-blue-400/30",
                   )}
                 >
                   <Icons.music className="h-6 w-6 mx-auto mb-2 text-blue-400" />

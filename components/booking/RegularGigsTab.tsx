@@ -802,7 +802,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                   <div className="text-center p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Star className="w-5 h-5 text-yellow-500" />
-                      <span className="text-2xl font-bold">
+                      <span className="text-xl font-bold">
                         {selectedUserData.trustStars?.toFixed(1) || "4.5"}
                       </span>
                     </div>
@@ -812,7 +812,7 @@ export const RegularGigsTab: React.FC<RegularGigsTabProps> = ({
                   <div className="text-center p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Briefcase className="w-5 h-5 text-blue-500" />
-                      <span className="text-2xl font-bold">
+                      <span className="text-xl font-bold">
                         {selectedUserData.completedGigsCount || 0}
                       </span>
                     </div>

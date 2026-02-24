@@ -192,7 +192,7 @@ export const PerformanceMetrics = ({
             </div>
 
             <div className="space-y-1">
-              <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+              <div className="text-xl font-bold text-gray-800 dark:text-gray-100">
                 {metric.value}
                 {metric.max && (
                   <span className="text-sm text-gray-500 dark:text-gray-400">

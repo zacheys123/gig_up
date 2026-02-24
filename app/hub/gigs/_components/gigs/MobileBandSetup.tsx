@@ -351,7 +351,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                         <Minus className="w-3.5 h-3.5" />
                       </Button>
                       <div className="text-center">
-                        <div className="text-2xl font-black">
+                        <div className="text-xl font-black">
                           {role.maxSlots}
                         </div>
                         <div className="text-[10px] text-zinc-500">needed</div>
@@ -388,7 +388,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                           <Minus className="w-3.5 h-3.5" />
                         </Button>
                         <div className="text-center">
-                          <div className="text-2xl font-black">
+                          <div className="text-xl font-black">
                             {maxApplicants}
                           </div>
                           <div className="text-[10px] text-zinc-500">max</div>
@@ -730,7 +730,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                             </div>
                             <div className="grid grid-cols-3 gap-3">
                               <div className="text-center p-3 rounded-xl bg-white dark:bg-zinc-800 border">
-                                <div className="text-2xl font-black">
+                                <div className="text-xl font-black">
                                   {totalPositions}
                                 </div>
                                 <div className="text-[10px] font-bold uppercase text-zinc-500 mt-1">
@@ -738,7 +738,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                                 </div>
                               </div>
                               <div className="text-center p-3 rounded-xl bg-white dark:bg-zinc-800 border">
-                                <div className="text-2xl font-black text-blue-600">
+                                <div className="text-xl font-black text-blue-600">
                                   {selectedRoles.length}
                                 </div>
                                 <div className="text-[10px] font-bold uppercase text-zinc-500 mt-1">
@@ -746,7 +746,7 @@ const MobileBandSetupModal: React.FC<MobileBandSetupModalProps> = ({
                                 </div>
                               </div>
                               <div className="text-center p-3 rounded-xl bg-white dark:bg-zinc-800 border">
-                                <div className="text-2xl font-black text-orange-500">
+                                <div className="text-xl font-black text-orange-500">
                                   {showBudget ? (
                                     <>KES {totalBudget.toLocaleString()}</>
                                   ) : (

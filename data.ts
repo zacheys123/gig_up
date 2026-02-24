@@ -173,7 +173,7 @@ export const musicianQuestions = [
   "What should I include in my performance portfolio?",
   "How do I price my services for different gig types?",
   "Tips for writing compelling gig applications",
-  "How to build a strong reputation on GigUp?",
+  "How to build a strong reputation on gigUp?",
 ];
 
 // For clients
@@ -187,7 +187,7 @@ export const clientQuestions = [
 
 // For new/unauthenticated users
 export const generalQuestions = [
-  "How does GigUppwork for musicians?",
+  "How does gigUppwork for musicians?",
   "What are the benefits of the Pro tier?",
   "How do I get started as a client?",
   "What's included in the free trial?",

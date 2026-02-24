@@ -162,8 +162,8 @@ export function SearchResultsGrid() {
           <div className="flex-1 min-w-0">
             <h1
               className={cn(
-                "text-2xl sm:text-3xl md:text-4xl font-bold mb-2",
-                colors.text
+                "text-xl sm:text-3xl md:text-4xl font-bold mb-2",
+                colors.text,
               )}
             >
               Discover Talent
@@ -192,7 +192,7 @@ export function SearchResultsGrid() {
             className={cn(
               "rounded-xl p-4 mb-6",
               "bg-gradient-to-r from-blue-500/10 to-purple-500/10",
-              "border border-blue-500/20 dark:border-blue-400/20"
+              "border border-blue-500/20 dark:border-blue-400/20",
             )}
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -202,7 +202,7 @@ export function SearchResultsGrid() {
                   <h3
                     className={cn(
                       "text-sm md:text-base font-semibold",
-                      colors.text
+                      colors.text,
                     )}
                   >
                     Trust Score Insights
@@ -269,7 +269,7 @@ export function SearchResultsGrid() {
               <div
                 className={cn(
                   "absolute left-0 top-0 h-full w-80 max-w-full",
-                  "bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto"
+                  "bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto",
                 )}
               >
                 <div className="p-4">
@@ -327,7 +327,7 @@ export function SearchResultsGrid() {
                       "text-sm font-medium px-2 py-1 rounded-full",
                       isDarkMode
                         ? "bg-amber-500/20 text-amber-300"
-                        : "bg-amber-500/10 text-amber-700"
+                        : "bg-amber-500/10 text-amber-700",
                     )}
                   >
                     {activeFilterCount} filter
@@ -375,7 +375,7 @@ export function SearchResultsGrid() {
                   <h3
                     className={cn(
                       "text-lg md:text-xl font-semibold",
-                      colors.text
+                      colors.text,
                     )}
                   >
                     Featured Users
@@ -458,22 +458,22 @@ export function SearchResultsGrid() {
                   className={cn(
                     "text-center py-12 md:py-16 lg:py-20 rounded-2xl",
                     "border-2 border-dashed",
-                    colors.border
+                    colors.border,
                   )}
                 >
                   <div className="max-w-md mx-auto px-4">
                     <div
                       className={cn(
                         "text-5xl md:text-6xl mb-4 md:mb-6",
-                        isDarkMode ? "text-gray-400" : "text-gray-300"
+                        isDarkMode ? "text-gray-400" : "text-gray-300",
                       )}
                     >
                       {searchQuery ? "🔍" : "👥"}
                     </div>
                     <h3
                       className={cn(
-                        "text-xl md:text-2xl font-semibold mb-3 md:mb-4",
-                        isDarkMode ? "text-white" : "text-gray-900"
+                        "text-xl md:text-xl font-semibold mb-3 md:mb-4",
+                        isDarkMode ? "text-white" : "text-gray-900",
                       )}
                     >
                       {searchQuery ? "No matches found" : "No users available"}
@@ -481,7 +481,7 @@ export function SearchResultsGrid() {
                     <p
                       className={cn(
                         "text-sm md:text-base mb-6 md:mb-8 max-w-md mx-auto",
-                        isDarkMode ? "text-gray-400" : "text-gray-600"
+                        isDarkMode ? "text-gray-400" : "text-gray-600",
                       )}
                     >
                       {searchQuery

@@ -501,7 +501,7 @@ export default function Home() {
           isScrolled
             ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b"
             : "bg-transparent",
-          `border-${activePalette.light.split("-")[0]}-500/20`
+          `border-${activePalette.light.split("-")[0]}-500/20`,
         )}
       >
         <div className="container mx-auto px-6 py-4">
@@ -522,7 +522,7 @@ export default function Home() {
                 <div
                   className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center",
-                    `bg-gradient-to-br ${activePalette.primary}`
+                    `bg-gradient-to-br ${activePalette.primary}`,
                   )}
                 >
                   <Headphones className="w-6 h-6 text-white" />
@@ -531,11 +531,11 @@ export default function Home() {
               <div>
                 <h1
                   className={cn(
-                    "text-2xl font-black bg-clip-text text-transparent",
-                    `bg-gradient-to-r ${activePalette.primary}`
+                    "text-xl font-black bg-clip-text text-transparent",
+                    `bg-gradient-to-r ${activePalette.primary}`,
                   )}
                 >
-                  GigUpp
+                  gigUpp
                 </h1>
                 <p
                   className={`text-xs ${activePalette.light.split("-")[0]}-600/60 dark:${activePalette.light.split("-")[0]}-400/60`}
@@ -549,7 +549,7 @@ export default function Home() {
             <div className="hidden md:flex items-center gap-6">
               {["platform", "success", "features", "pro"].map(
                 (
-                  section // Added "success"
+                  section, // Added "success"
                 ) => (
                   <button
                     key={section}
@@ -558,7 +558,7 @@ export default function Home() {
                       "text-sm font-medium transition-all duration-300 relative group",
                       activeSection === section
                         ? `${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`
-                        : "text-gray-600 dark:text-gray-300 hover:text-cyan-500"
+                        : "text-gray-600 dark:text-gray-300 hover:text-cyan-500",
                     )}
                   >
                     <span className="capitalize">
@@ -575,11 +575,11 @@ export default function Home() {
                         "absolute -bottom-1 left-0 right-0 h-0.5 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300",
                         activeSection === section
                           ? `scale-x-100 bg-gradient-to-r ${activePalette.primary}`
-                          : `bg-gradient-to-r ${activePalette.primary}`
+                          : `bg-gradient-to-r ${activePalette.primary}`,
                       )}
                     />
                   </button>
-                )
+                ),
               )}
             </div>
 
@@ -592,7 +592,7 @@ export default function Home() {
                     className={cn(
                       "px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300",
                       `bg-gradient-to-r ${activePalette.primary} text-white`,
-                      "hover:shadow-lg hover:scale-105"
+                      "hover:shadow-lg hover:scale-105",
                     )}
                   >
                     Dashboard
@@ -602,7 +602,7 @@ export default function Home() {
                     className={cn(
                       "w-9 h-9 rounded-xl border-2 flex items-center justify-center hover:scale-105 transition-all",
                       `border-${activePalette.light.split("-")[0]}-500/30`,
-                      `bg-gradient-to-br ${activePalette.light}/10 ${activePalette.dark}/10`
+                      `bg-gradient-to-br ${activePalette.light}/10 ${activePalette.dark}/10`,
                     )}
                   >
                     <User
@@ -622,7 +622,7 @@ export default function Home() {
                       className={cn(
                         "px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300",
                         `bg-gradient-to-r ${activePalette.primary} text-white`,
-                        "hover:shadow-lg hover:scale-105"
+                        "hover:shadow-lg hover:scale-105",
                       )}
                     >
                       Get Started
@@ -646,7 +646,7 @@ export default function Home() {
               "absolute inset-0 bg-gradient-to-br",
               isDarkMode
                 ? `from-${activePalette.dark} via-gray-900 to-black`
-                : `from-${activePalette.light} via-white to-gray-100`
+                : `from-${activePalette.light} via-white to-gray-100`,
             )}
           />
 
@@ -681,7 +681,7 @@ export default function Home() {
                 className={cn(
                   "mb-8 p-4 rounded-2xl backdrop-blur-lg border",
                   `bg-gradient-to-r ${activePalette.primary}/10 ${activePalette.light.split("-")[0]}-500/10`,
-                  `border-${activePalette.light.split("-")[0]}-500/20`
+                  `border-${activePalette.light.split("-")[0]}-500/20`,
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -769,8 +769,8 @@ export default function Home() {
                   </h1>
                   <p
                     className={cn(
-                      "text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed",
-                      "text-gray-700 dark:text-gray-300"
+                      "text-xl md:text-xl max-w-3xl mx-auto leading-relaxed",
+                      "text-gray-700 dark:text-gray-300",
                     )}
                   >
                     {isAuthenticated
@@ -849,7 +849,7 @@ export default function Home() {
                         className={cn(
                           "px-10 py-5 text-lg font-semibold rounded-2xl border-2",
                           `border-${activePalette.light.split("-")[0]}-500 text-${activePalette.light.split("-")[0]}-500`,
-                          "hover:bg-cyan-500/10 transition-colors"
+                          "hover:bg-cyan-500/10 transition-colors",
                         )}
                       >
                         Sign In
@@ -913,7 +913,7 @@ export default function Home() {
                       <div
                         className={cn(
                           "text-sm mt-2",
-                          "text-gray-600 dark:text-gray-400"
+                          "text-gray-600 dark:text-gray-400",
                         )}
                       >
                         {stat.label}
@@ -957,7 +957,7 @@ export default function Home() {
             "absolute inset-0 bg-gradient-to-b",
             isDarkMode
               ? `from-${activePalette.dark}/20 via-gray-900/10 to-black/20`
-              : `from-${activePalette.light}/30 via-white/20 to-gray-100/30`
+              : `from-${activePalette.light}/30 via-white/20 to-gray-100/30`,
           )}
         />
 
@@ -1003,13 +1003,13 @@ export default function Home() {
               <span
                 className={`text-transparent bg-gradient-to-r ${activePalette.primary} bg-clip-text`}
               >
-                "GigUpp: Get booked, get paid, repeat"
+                "gigUpp: Get booked, get paid, repeat"
               </span>
             </h2>
             <p
               className={cn(
                 "text-xl max-w-3xl mx-auto",
-                "text-gray-700 dark:text-gray-300"
+                "text-gray-700 dark:text-gray-300",
               )}
             >
               {isAuthenticated
@@ -1038,7 +1038,7 @@ export default function Home() {
                   "relative p-8 rounded-2xl border backdrop-blur-sm h-full",
                   "bg-gradient-to-br from-white/90 to-white/80",
                   "dark:from-gray-900/90 dark:to-gray-800/80",
-                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`
+                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`,
                 )}
               >
                 <div
@@ -1047,13 +1047,13 @@ export default function Home() {
                   <Mic2 className="w-8 h-8 text-white" />
                 </div>
 
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                   For Artists & Performers
                 </h3>
                 <p
                   className={cn(
                     "text-gray-600 dark:text-gray-400 mb-6",
-                    "leading-relaxed"
+                    "leading-relaxed",
                   )}
                 >
                   Showcase your talent, find paid gigs, manage bookings, and
@@ -1140,7 +1140,7 @@ export default function Home() {
                   "relative p-8 rounded-2xl border backdrop-blur-sm h-full",
                   "bg-gradient-to-br from-white/90 to-white/80",
                   "dark:from-gray-900/90 dark:to-gray-800/80",
-                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`
+                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`,
                 )}
               >
                 <div
@@ -1149,13 +1149,13 @@ export default function Home() {
                   <Building className="w-8 h-8 text-white" />
                 </div>
 
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                   For Event Planners & Venues
                 </h3>
                 <p
                   className={cn(
                     "text-gray-600 dark:text-gray-400 mb-6",
-                    "leading-relaxed"
+                    "leading-relaxed",
                   )}
                 >
                   Find the perfect talent for weddings, corporate events,
@@ -1223,7 +1223,7 @@ export default function Home() {
                   "relative p-8 rounded-2xl border backdrop-blur-sm h-full",
                   "bg-gradient-to-br from-white/90 to-white/80",
                   "dark:from-gray-900/90 dark:to-gray-800/80",
-                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`
+                  `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40 transition-all duration-500`,
                 )}
               >
                 <div
@@ -1232,13 +1232,13 @@ export default function Home() {
                   <Briefcase className="w-8 h-8 text-white" />
                 </div>
 
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                   For Talent Bookers & Agents
                 </h3>
                 <p
                   className={cn(
                     "text-gray-600 dark:text-gray-400 mb-6",
-                    "leading-relaxed"
+                    "leading-relaxed",
                   )}
                 >
                   Discover, book, and manage talent across multiple venues and
@@ -1306,7 +1306,7 @@ export default function Home() {
                 className={cn(
                   "inline-block px-8 py-4 rounded-2xl border backdrop-blur-sm",
                   `bg-gradient-to-r ${activePalette.light}/10 ${activePalette.dark}/10`,
-                  `border-${activePalette.light.split("-")[0]}-500/20`
+                  `border-${activePalette.light.split("-")[0]}-500/20`,
                 )}
               >
                 <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
@@ -1391,7 +1391,7 @@ export default function Home() {
             <p
               className={cn(
                 "text-xl max-w-2xl mx-auto",
-                "text-gray-700 dark:text-gray-300"
+                "text-gray-700 dark:text-gray-300",
               )}
             >
               Hear from musicians, venues, and bookers who found their perfect
@@ -1414,7 +1414,7 @@ export default function Home() {
                     isDarkMode
                       ? "bg-gradient-to-br from-gray-900/80 to-gray-800/80"
                       : "bg-gradient-to-br from-white/90 to-white/80",
-                    `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40`
+                    `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40`,
                   )}
                 >
                   {/* Background glow effect */}
@@ -1456,14 +1456,14 @@ export default function Home() {
                   <p
                     className={cn(
                       "italic mb-6 text-lg leading-relaxed",
-                      colors.textMuted
+                      colors.textMuted,
                     )}
                   >
                     "{testimonial.content}"
                   </p>
                   <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
                     <div className="text-center">
-                      <div className={cn("text-2xl font-bold", colors.text)}>
+                      <div className={cn("text-xl font-bold", colors.text)}>
                         {testimonial.stats.bookings || 0}
                       </div>
                       <div className={cn("text-xs", colors.textMuted)}>
@@ -1471,7 +1471,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className={cn("text-2xl font-bold", colors.text)}>
+                      <div className={cn("text-xl font-bold", colors.text)}>
                         {testimonial.stats.earnings || "$0"}
                       </div>
                       <div className={cn("text-xs", colors.textMuted)}>
@@ -1519,7 +1519,7 @@ export default function Home() {
                   role: "Electronic Artist",
                   location: "Miami, FL",
                   story:
-                    "Built my entire residency schedule through GigUpp. Consistent bookings all season.",
+                    "Built my entire residency schedule through gigUpp. Consistent bookings all season.",
                   bookings: 28,
                   earnings: "$12,600",
                   rating: 4,
@@ -1546,7 +1546,7 @@ export default function Home() {
                     isDarkMode
                       ? "bg-gradient-to-br from-gray-900/80 to-gray-800/80"
                       : "bg-gradient-to-br from-white/90 to-white/80",
-                    `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40`
+                    `border-${activePalette.light.split("-")[0]}-500/20 hover:border-${activePalette.light.split("-")[0]}-500/40`,
                   )}
                 >
                   {/* Background glow effect */}
@@ -1596,14 +1596,14 @@ export default function Home() {
                   <p
                     className={cn(
                       "italic mb-6 text-lg leading-relaxed",
-                      colors.textMuted
+                      colors.textMuted,
                     )}
                   >
                     "{story.story}"
                   </p>
                   <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
                     <div className="text-center">
-                      <div className={cn("text-2xl font-bold", colors.text)}>
+                      <div className={cn("text-xl font-bold", colors.text)}>
                         {story.bookings}
                       </div>
                       <div className={cn("text-xs", colors.textMuted)}>
@@ -1611,7 +1611,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className={cn("text-2xl font-bold", colors.text)}>
+                      <div className={cn("text-xl font-bold", colors.text)}>
                         {story.earnings}
                       </div>
                       <div className={cn("text-xs", colors.textMuted)}>
@@ -1668,7 +1668,7 @@ export default function Home() {
               className={cn(
                 "mt-12 p-8 rounded-2xl border backdrop-blur-sm text-center",
                 `bg-gradient-to-r ${activePalette.light}/5 ${activePalette.dark}/5`,
-                `border-${activePalette.light.split("-")[0]}-500/20`
+                `border-${activePalette.light.split("-")[0]}-500/20`,
               )}
             >
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -1811,7 +1811,7 @@ export default function Home() {
               className={cn(
                 "mt-16 p-10 rounded-3xl border backdrop-blur-lg",
                 `bg-gradient-to-br ${activePalette.light}/5 ${activePalette.dark}/5 ${activePalette.light.split("-")[0]}-500/5`,
-                `border-${activePalette.light.split("-")[0]}-500/20`
+                `border-${activePalette.light.split("-")[0]}-500/20`,
               )}
             >
               <div className="flex flex-col md:flex-row items-center justify-between gap-8">
@@ -1823,14 +1823,14 @@ export default function Home() {
                   </div>
                   <div>
                     <h3
-                      className={`text-2xl font-bold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
+                      className={`text-xl font-bold ${activePalette.light.split("-")[0]}-600 dark:${activePalette.light.split("-")[0]}-400`}
                     >
                       Unlock Professional Tools
                     </h3>
                     <p
                       className={cn(
                         "text-lg mt-2",
-                        "text-gray-600 dark:text-gray-400"
+                        "text-gray-600 dark:text-gray-400",
                       )}
                     >
                       Access advanced booking, analytics, and premium features
@@ -1890,7 +1890,7 @@ export default function Home() {
               "rounded-3xl p-16 text-center border backdrop-blur-xl",
               "bg-gradient-to-br from-white/90 via-white/80 to-white/70",
               "dark:from-gray-900/90 dark:via-gray-800/80 dark:to-gray-900/70",
-              `border-${activePalette.light.split("-")[0]}-500/30 shadow-2xl`
+              `border-${activePalette.light.split("-")[0]}-500/30 shadow-2xl`,
             )}
           >
             <div className="max-w-2xl mx-auto space-y-10">
@@ -1942,7 +1942,7 @@ export default function Home() {
                         className={cn(
                           "px-12 py-6 text-xl font-semibold rounded-2xl border-2",
                           `border-${activePalette.light.split("-")[0]}-500 text-${activePalette.light.split("-")[0]}-500`,
-                          "hover:bg-cyan-500/10 transition-colors"
+                          "hover:bg-cyan-500/10 transition-colors",
                         )}
                       >
                         Sign In
@@ -1994,7 +1994,7 @@ export default function Home() {
         className={cn(
           "py-16 px-6 border-t",
           `bg-gradient-to-b from-white to-${activePalette.light} dark:from-gray-900 dark:to-gray-800`,
-          `border-${activePalette.light.split("-")[0]}-500/20`
+          `border-${activePalette.light.split("-")[0]}-500/20`,
         )}
       >
         <div className="container mx-auto max-w-7xl">
@@ -2015,9 +2015,9 @@ export default function Home() {
               </motion.div>
               <div>
                 <h3
-                  className={`text-2xl font-black bg-gradient-to-r ${activePalette.primary} bg-clip-text text-transparent`}
+                  className={`text-xl font-black bg-gradient-to-r ${activePalette.primary} bg-clip-text text-transparent`}
                 >
-                  GigUpp
+                  gigUpp
                 </h3>
                 <p
                   className={`text-sm ${activePalette.light.split("-")[0]}-600/60 dark:${activePalette.light.split("-")[0]}-400/60`}
@@ -2044,7 +2044,7 @@ export default function Home() {
             </div>
 
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              © {new Date().getFullYear()} GigUpp. All rights reserved.
+              © {new Date().getFullYear()} gigUpp. All rights reserved.
             </div>
           </div>
         </div>
@@ -2075,7 +2075,7 @@ export default function Home() {
                 "relative w-full max-w-2xl rounded-3xl border overflow-hidden",
                 "bg-gradient-to-br from-white via-white to-white",
                 "dark:from-gray-900 dark:via-gray-800 dark:to-gray-900",
-                `border-${activePalette.light.split("-")[0]}-500/30`
+                `border-${activePalette.light.split("-")[0]}-500/30`,
               )}
             >
               {/* Modal Header */}
@@ -2110,7 +2110,7 @@ export default function Home() {
                     <h4
                       className={cn(
                         "text-xl font-semibold mb-6 flex items-center gap-3",
-                        colors.text
+                        colors.text,
                       )}
                     >
                       <User
@@ -2136,7 +2136,7 @@ export default function Home() {
                             className={cn(
                               "flex items-center gap-4 p-4 rounded-xl border",
                               `bg-gradient-to-r ${activePalette.light}/5 ${activePalette.dark}/5`,
-                              `border-${activePalette.light.split("-")[0]}-500/20`
+                              `border-${activePalette.light.split("-")[0]}-500/20`,
                             )}
                           >
                             <motion.div
@@ -2158,7 +2158,7 @@ export default function Home() {
                     <h4
                       className={cn(
                         "text-xl font-semibold mb-6 flex items-center gap-3",
-                        colors.text
+                        colors.text,
                       )}
                     >
                       <Star className="w-6 h-6 text-amber-500" />
@@ -2176,7 +2176,7 @@ export default function Home() {
                           className={cn(
                             "flex items-center gap-4 p-4 rounded-xl border",
                             `bg-gradient-to-r ${activePalette.light}/5 ${activePalette.dark}/5`,
-                            `border-${activePalette.light.split("-")[0]}-500/20`
+                            `border-${activePalette.light.split("-")[0]}-500/20`,
                           )}
                         >
                           <Check
@@ -2199,7 +2199,7 @@ export default function Home() {
                     "mb-10 p-8 rounded-2xl border",
                     "bg-gradient-to-r from-gray-50 to-gray-100",
                     "dark:from-gray-800 dark:to-gray-900",
-                    colors.border
+                    colors.border,
                   )}
                 >
                   <div className="flex items-center justify-between mb-6">
@@ -2216,7 +2216,7 @@ export default function Home() {
                           (user?.year ? 1 : 0) +
                           (user?.roleType ? 1 : 0)) /
                           5) *
-                          100
+                          100,
                       )}
                       %
                     </span>
@@ -2224,7 +2224,7 @@ export default function Home() {
                   <div
                     className={cn(
                       "w-full rounded-full h-3",
-                      colors.backgroundMuted
+                      colors.backgroundMuted,
                     )}
                   >
                     <div
@@ -2269,7 +2269,7 @@ export default function Home() {
                         "px-8 py-4 border text-sm font-medium rounded-xl transition-all duration-300",
                         "border-gray-300 dark:border-gray-600",
                         "text-gray-600 dark:text-gray-400",
-                        "hover:text-red-400 hover:border-red-500 hover:bg-red-500/10"
+                        "hover:text-red-400 hover:border-red-500 hover:bg-red-500/10",
                       )}
                     >
                       <LogOut className="w-4 h-4 inline mr-2" />

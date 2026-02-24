@@ -3,9 +3,9 @@ import "./title.css";
 const Title = () => {
   return (
     <div className="glitch-container">
-      GIGUP
-      <span>GIGUP</span>
-      <span>gigup</span>
+      gigUp
+      <span>gigUp</span>
+      <span>gigUp</span>
     </div>
   );
 };

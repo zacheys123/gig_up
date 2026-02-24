@@ -65,6 +65,8 @@ export interface GigDraftData {
     type: string;
     date: Date;
   };
+  durationTo?: string;
+  durationFrom?: string;
 }
 
 export interface GigDraft {

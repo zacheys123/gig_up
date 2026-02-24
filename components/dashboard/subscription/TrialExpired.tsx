@@ -37,7 +37,7 @@ export const TrialExpiredModal = () => {
         <div
           className={cn(
             "fixed inset-0 z-50 flex items-center justify-center p-6",
-            colors.overlay
+            colors.overlay,
           )}
         >
           <motion.div
@@ -48,12 +48,12 @@ export const TrialExpiredModal = () => {
               "w-[90%] max-w-md sm:max-w-lg rounded-2xl shadow-xl p-6 sm:p-8 text-center space-y-5",
               colors.card,
               colors.cardBorder,
-              "border"
+              "border",
             )}
           >
             {/* Add DialogHeader wrapper */}
             <DialogHeader>
-              <DialogTitle className={cn("text-2xl font-bold", colors.text)}>
+              <DialogTitle className={cn("text-xl font-bold", colors.text)}>
                 Free Trial Ended 🎉
               </DialogTitle>
             </DialogHeader>
@@ -71,7 +71,7 @@ export const TrialExpiredModal = () => {
                   "px-6 py-2.5 text-sm sm:text-base rounded-lg border transition-all",
                   colors.border,
                   colors.text,
-                  colors.hoverBg
+                  colors.hoverBg,
                 )}
               >
                 Maybe Later
@@ -81,7 +81,7 @@ export const TrialExpiredModal = () => {
                 onClick={handleUpgrade}
                 className={cn(
                   "px-6 py-2.5 text-sm sm:text-base rounded-lg bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-400 text-white hover:brightness-110 transition-all",
-                  colors.textInverted
+                  colors.textInverted,
                 )}
               >
                 Upgrade Now

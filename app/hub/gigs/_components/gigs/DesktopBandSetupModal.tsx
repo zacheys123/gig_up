@@ -1089,7 +1089,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
       <div className="max-w-md mb-8">
         <h3
           className={cn(
-            "text-2xl font-bold mb-3",
+            "text-xl font-bold mb-3",
             isDarkMode ? "text-white" : "text-gray-900",
           )}
         >
@@ -1434,7 +1434,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                       Total Budget
                     </p>
-                    <p className="text-2xl font-black text-green-500">
+                    <p className="text-xl font-black text-green-500">
                       <span className="text-xs mr-1 opacity-50 font-medium">
                         KES
                       </span>
@@ -1445,7 +1445,7 @@ const DesktopBandSetupModal: React.FC<DesktopBandSetupModalProps> = ({
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                       Positions
                     </p>
-                    <p className="text-2xl font-black">{totalPositions}</p>
+                    <p className="text-xl font-black">{totalPositions}</p>
                   </div>
                 </div>
               </div>

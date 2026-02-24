@@ -57,11 +57,11 @@ export const useNotificationSettings = () => {
 
   const settingsData = useQuery(
     api.controllers.notifications.getNotificationSettings,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   const updateSettingsMutation = useMutation(
-    api.controllers.notifications.updateNotificationSettings
+    api.controllers.notifications.updateNotificationSettings,
   );
 
   const settings = useMemo((): NotificationSettings => {
@@ -91,7 +91,7 @@ export const useNotificationSettings = () => {
         settings: settingsToUpdate,
       });
     },
-    [userId, updateSettingsMutation, settings] // Add settings to dependencies
+    [userId, updateSettingsMutation, settings], // Add settings to dependencies
   );
 
   // Update multiple settings at once
@@ -137,7 +137,7 @@ export const useNotificationSettings = () => {
         settings: cleanSettings,
       });
     },
-    [userId, updateSettingsMutation, settings]
+    [userId, updateSettingsMutation, settings],
   );
 
   return {

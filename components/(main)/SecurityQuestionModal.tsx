@@ -97,7 +97,7 @@ export function SecurityQuestionSetupModal({
   const { colors, isDarkMode } = useThemeColors();
 
   const updateSecurity = useMutation(
-    api.controllers.user.updateSecurityQuestion
+    api.controllers.user.updateSecurityQuestion,
   );
   const { user } = useCurrentUser();
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -159,7 +159,7 @@ export function SecurityQuestionSetupModal({
       "What was your first job?",
     ];
     setCustomQuestion(
-      suggestions[Math.floor(Math.random() * suggestions.length)]
+      suggestions[Math.floor(Math.random() * suggestions.length)],
     );
   };
 
@@ -223,7 +223,7 @@ export function SecurityQuestionSetupModal({
             "relative ",
             isDarkMode
               ? "bg-gradient-to-b from-gray-900 to-gray-800"
-              : "bg-gradient-to-b from-white to-gray-50"
+              : "bg-gradient-to-b from-white to-gray-50",
           )}
         >
           {/* Header */}
@@ -233,7 +233,7 @@ export function SecurityQuestionSetupModal({
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-2xl font-bold text-white">
+                <DialogTitle className="text-xl font-bold text-white">
                   Secure Your Account
                 </DialogTitle>
                 <DialogDescription className="text-blue-100">
@@ -256,7 +256,7 @@ export function SecurityQuestionSetupModal({
                   "rounded-xl p-5 border",
                   isDarkMode
                     ? "bg-gray-800/50 border-gray-700"
-                    : "bg-blue-50/50 border-blue-100"
+                    : "bg-blue-50/50 border-blue-100",
                 )}
               >
                 <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
@@ -271,7 +271,7 @@ export function SecurityQuestionSetupModal({
                         "p-3 rounded-lg flex items-start gap-3",
                         isDarkMode
                           ? "bg-gray-800/80 hover:bg-gray-700/80"
-                          : "bg-white hover:bg-blue-50"
+                          : "bg-white hover:bg-blue-50",
                       )}
                     >
                       <div
@@ -296,7 +296,7 @@ export function SecurityQuestionSetupModal({
                   "rounded-xl p-5 border",
                   isDarkMode
                     ? "bg-gray-800/30 border-gray-700"
-                    : "bg-white border-gray-200"
+                    : "bg-white border-gray-200",
                 )}
               >
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -312,7 +312,7 @@ export function SecurityQuestionSetupModal({
                         className={cn(
                           "px-3",
                           !isCustom &&
-                            `bg-gradient-to-r ${SIMPLE_PALETTE.primary}`
+                            `bg-gradient-to-r ${SIMPLE_PALETTE.primary}`,
                         )}
                       >
                         Choose One
@@ -325,7 +325,7 @@ export function SecurityQuestionSetupModal({
                         className={cn(
                           "px-3",
                           isCustom &&
-                            `bg-gradient-to-r ${SIMPLE_PALETTE.secondary}`
+                            `bg-gradient-to-r ${SIMPLE_PALETTE.secondary}`,
                         )}
                       >
                         Custom
@@ -423,7 +423,7 @@ export function SecurityQuestionSetupModal({
                       "p-4 rounded-lg border",
                       isDarkMode
                         ? "bg-amber-900/20 border-amber-800"
-                        : "bg-amber-50 border-amber-200"
+                        : "bg-amber-50 border-amber-200",
                     )}
                   >
                     <div className="flex items-start gap-3">
@@ -448,7 +448,7 @@ export function SecurityQuestionSetupModal({
                       type="submit"
                       className={cn(
                         "w-full py-6 text-base font-semibold",
-                        `bg-gradient-to-r ${SIMPLE_PALETTE.primary} hover:opacity-90`
+                        `bg-gradient-to-r ${SIMPLE_PALETTE.primary} hover:opacity-90`,
                       )}
                       disabled={
                         isLoading || (!isCustom && !selectedQuestion) || !answer
@@ -478,7 +478,7 @@ export function SecurityQuestionSetupModal({
               "p-6 border-t mb-10",
               isDarkMode
                 ? "border-gray-700 bg-gray-900/50"
-                : "border-gray-200 bg-gray-50"
+                : "border-gray-200 bg-gray-50",
             )}
           >
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">

@@ -40,7 +40,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
           "md:p-10",
           theme === "purple"
             ? "border-purple-200/50 bg-gradient-to-br from-purple-50/90 via-white to-purple-25/90 shadow-2xl shadow-purple-100/30"
-            : "border-red-200/50 bg-gradient-to-br from-red-50/90 via-white to-red-25/90 shadow-2xl shadow-red-100/30"
+            : "border-red-200/50 bg-gradient-to-br from-red-50/90 via-white to-red-25/90 shadow-2xl shadow-red-100/30",
         )}
       >
         {/* Abstract Background */}
@@ -50,7 +50,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
               "absolute inset-0",
               theme === "purple"
                 ? "bg-[radial-gradient(circle_at_30%_20%,#8b5cf6_0%,transparent_50%)]"
-                : "bg-[radial-gradient(circle_at_30%_20%,#ef4444_0%,transparent_50%)]"
+                : "bg-[radial-gradient(circle_at_30%_20%,#ef4444_0%,transparent_50%)]",
             )}
           />
         </div>
@@ -62,7 +62,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
             <div
               className={cn(
                 "relative group",
-                theme === "purple" ? "text-purple-600" : "text-red-600"
+                theme === "purple" ? "text-purple-600" : "text-red-600",
               )}
             >
               {/* Floating Icon */}
@@ -83,7 +83,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                   "transition-transform duration-500 group-hover:scale-110",
                   theme === "purple"
                     ? "bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/25"
-                    : "bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/25"
+                    : "bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/25",
                 )}
               >
                 {isInGracePeriod ? (
@@ -100,11 +100,11 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                     "px-4 py-3 rounded-xl border backdrop-blur-sm",
                     theme === "purple"
                       ? "border-purple-200/50 bg-purple-50/50"
-                      : "border-red-200/50 bg-red-50/50"
+                      : "border-red-200/50 bg-red-50/50",
                   )}
                 >
                   <div className="text-sm opacity-75 mb-1">Current Limit</div>
-                  <div className="text-2xl md:text-3xl font-bold">3 Gigs</div>
+                  <div className="text-xl md:text-3xl font-bold">3 Gigs</div>
                 </div>
 
                 <div
@@ -112,11 +112,11 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                     "px-4 py-3 rounded-xl border backdrop-blur-sm",
                     theme === "purple"
                       ? "border-purple-200/50 bg-white/50"
-                      : "border-red-200/50 bg-white/50"
+                      : "border-red-200/50 bg-white/50",
                   )}
                 >
                   <div className="text-sm opacity-75 mb-1">Pro Limit</div>
-                  <div className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                  <div className="text-xl md:text-3xl font-bold flex items-center gap-2">
                     <Infinity className="w-6 h-6" />
                     Unlimited
                   </div>
@@ -139,7 +139,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
               <h2
                 className={cn(
                   "text-3xl md:text-4xl font-bold tracking-tight mb-4",
-                  theme === "purple" ? "text-purple-900" : "text-red-900"
+                  theme === "purple" ? "text-purple-900" : "text-red-900",
                 )}
               >
                 {isInGracePeriod
@@ -150,7 +150,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
               <p
                 className={cn(
                   "text-lg md:text-xl leading-relaxed max-w-2xl",
-                  theme === "purple" ? "text-purple-700" : "text-red-700"
+                  theme === "purple" ? "text-purple-700" : "text-red-700",
                 )}
               >
                 {isInGracePeriod
@@ -199,7 +199,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                     "group p-5 rounded-xl border transition-all duration-300 hover:translate-y-[-4px]",
                     theme === "purple"
                       ? "border-purple-100 bg-white/50 hover:bg-white hover:shadow-lg hover:border-purple-200"
-                      : "border-red-100 bg-white/50 hover:bg-white hover:shadow-lg hover:border-red-200"
+                      : "border-red-100 bg-white/50 hover:bg-white hover:shadow-lg hover:border-red-200",
                   )}
                 >
                   <div className="flex items-start gap-4">
@@ -208,7 +208,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                         "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center",
                         theme === "purple"
                           ? "bg-purple-100 text-purple-600"
-                          : "bg-red-100 text-red-600"
+                          : "bg-red-100 text-red-600",
                       )}
                     >
                       {benefit.icon}
@@ -234,7 +234,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                     "flex-1 h-14 rounded-xl text-base font-semibold gap-3",
                     theme === "purple"
                       ? "border-purple-300 text-purple-700 hover:bg-purple-50"
-                      : "border-red-300 text-red-700 hover:bg-red-50"
+                      : "border-red-300 text-red-700 hover:bg-red-50",
                   )}
                   onClick={() => window.open("/features/pro", "_blank")}
                 >
@@ -248,7 +248,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                     "flex-1 h-14 rounded-xl text-base font-semibold gap-3 shadow-lg",
                     theme === "purple"
                       ? "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-                      : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                      : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800",
                   )}
                   onClick={() => window.open("/pricing", "_blank")}
                 >
@@ -263,7 +263,7 @@ const CreateLimitOverlay: React.FC<CreateLimitOverlayProps> = ({
                 <div
                   className={cn(
                     "p-4 rounded-xl border backdrop-blur-sm",
-                    "border-purple-200/50 bg-gradient-to-r from-purple-50/50 to-white/50"
+                    "border-purple-200/50 bg-gradient-to-r from-purple-50/50 to-white/50",
                   )}
                 >
                   <div className="flex items-center gap-3">

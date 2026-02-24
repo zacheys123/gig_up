@@ -52,7 +52,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
       className={cn(
         "hidden sm:flex sm:flex-col relative border-r flex-shrink-0 h-screen sticky top-0",
         colors.border,
-        colors.navBackground || colors.background
+        colors.navBackground || colors.background,
       )}
     >
       {/* Glass effect with theme colors */}
@@ -60,7 +60,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
         className={cn(
           "absolute inset-0 backdrop-blur-xl",
           colors.navBackground || colors.background,
-          "bg-opacity-95"
+          "bg-opacity-95",
         )}
       />
 
@@ -72,7 +72,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
             "absolute -right-3 top-4 w-6 h-6 rounded-full flex items-center justify-center shadow-lg z-20 transition-colors",
             colors.primaryBg || "bg-amber-500",
             colors.primaryBgHover || "hover:bg-amber-600",
-            "text-white"
+            "text-white",
           )}
         >
           {collapsed ? (
@@ -95,15 +95,15 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                       "text-white font-semibold shadow-lg",
                       isDarkMode
                         ? "bg-amber-600 border-amber-500"
-                        : "bg-amber-500 border-amber-400"
+                        : "bg-amber-500 border-amber-400",
                     )
                   : cn(
                       colors.text,
                       colors.hoverBg,
                       "border border-transparent",
                       "hover:border-amber-200 dark:hover:border-amber-800",
-                      "hover:text-amber-600 dark:hover:text-amber-400"
-                    )
+                      "hover:text-amber-600 dark:hover:text-amber-400",
+                    ),
               )}
             >
               {activeTab === tab.id && (
@@ -113,7 +113,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                     "absolute inset-0 rounded-lg",
                     isDarkMode
                       ? "bg-amber-600 shadow-amber-500/25"
-                      : "bg-amber-500 shadow-amber-500/25"
+                      : "bg-amber-500 shadow-amber-500/25",
                   )}
                 />
               )}
@@ -122,7 +122,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
               <span
                 className={cn(
                   "relative z-10 text-lg transition-colors",
-                  activeTab === tab.id ? "text-white" : colors.text
+                  activeTab === tab.id ? "text-white" : colors.text,
                 )}
               >
                 {tab.icon}
@@ -134,7 +134,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                   <span
                     className={cn(
                       "block font-medium transition-colors",
-                      activeTab === tab.id ? "text-white" : colors.text
+                      activeTab === tab.id ? "text-white" : colors.text,
                     )}
                   >
                     {tab.label}
@@ -145,7 +145,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                         "text-xs mt-1 leading-tight transition-all duration-200",
                         activeTab === tab.id
                           ? "text-amber-100"
-                          : colors.textMuted
+                          : colors.textMuted,
                       )}
                     >
                       {tab.description}
@@ -167,7 +167,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                     colors.card || "bg-white dark:bg-gray-900",
                     colors.text || "text-gray-900 dark:text-gray-100",
                     "px-3 py-2 rounded-lg shadow-xl border text-sm font-medium whitespace-nowrap",
-                    colors.border || "border-gray-200 dark:border-gray-700"
+                    colors.border || "border-gray-200 dark:border-gray-700",
                   )}
                 >
                   <div className="font-semibold">{tab.label}</div>
@@ -175,7 +175,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                     <div
                       className={cn(
                         "text-xs mt-1 max-w-xs",
-                        colors.textMuted || "text-gray-600 dark:text-gray-400"
+                        colors.textMuted || "text-gray-600 dark:text-gray-400",
                       )}
                     >
                       {tab.description}
@@ -187,7 +187,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
                     className={cn(
                       "w-2 h-2 rotate-45",
                       colors.card || "bg-white dark:bg-gray-900",
-                      colors.border || "border-gray-200 dark:border-gray-700"
+                      colors.border || "border-gray-200 dark:border-gray-700",
                     )}
                   />
                 </div>
@@ -208,13 +208,13 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
             colors.hoverBg,
             colors.border || "border-gray-200 dark:border-gray-700",
             "hover:border-amber-300 dark:hover:border-amber-600",
-            "hover:text-amber-600 dark:hover:text-amber-400"
+            "hover:text-amber-600 dark:hover:text-amber-400",
           )}
         >
           <Palette
             className={cn(
               "w-5 h-5 transition-colors",
-              "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+              "group-hover:text-amber-600 dark:group-hover:text-amber-400",
             )}
           />
           {!collapsed && (

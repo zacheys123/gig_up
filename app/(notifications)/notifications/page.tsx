@@ -288,7 +288,7 @@ export default function NotificationsPage() {
   // Render grouped notification item
   const renderGroupedNotification = (
     group: GroupedNotification,
-    index: number
+    index: number,
   ) => {
     const config = getNotificationConfig(group.type.replace("_group", ""));
     const IconComponent = config.icon;
@@ -309,9 +309,9 @@ export default function NotificationsPage() {
                 config.bgColor,
                 config.borderColor,
                 "ring-1",
-                config.ringColor
+                config.ringColor,
               ),
-          config.hoverBorderColor
+          config.hoverBorderColor,
         )}
       >
         <div className="flex items-start gap-4">
@@ -327,7 +327,7 @@ export default function NotificationsPage() {
                 className={cn(
                   "absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold",
                   config.badgeBg,
-                  config.badgeText
+                  config.badgeText,
                 )}
               >
                 {group.count}
@@ -343,7 +343,7 @@ export default function NotificationsPage() {
                   <h3
                     className={cn(
                       "font-semibold text-sm",
-                      group.isRead ? colors.text : config.textColor
+                      group.isRead ? colors.text : config.textColor,
                     )}
                   >
                     {group.title}
@@ -352,7 +352,7 @@ export default function NotificationsPage() {
                     <span
                       className={cn(
                         "w-2 h-2 rounded-full animate-pulse",
-                        config.badgeBg
+                        config.badgeBg,
                       )}
                     ></span>
                   )}
@@ -373,7 +373,7 @@ export default function NotificationsPage() {
                     className={cn(
                       "px-2 py-1 rounded-full text-xs font-medium",
                       config.badgeBg,
-                      config.badgeText
+                      config.badgeText,
                     )}
                   >
                     {config.label} • Grouped
@@ -387,7 +387,7 @@ export default function NotificationsPage() {
               <FiArrowRight
                 className={cn(
                   "flex-shrink-0 mt-1 transition-transform group-hover:translate-x-1",
-                  group.isRead ? "text-gray-400" : config.iconColor
+                  group.isRead ? "text-gray-400" : config.iconColor,
                 )}
                 size={16}
               />
@@ -401,7 +401,7 @@ export default function NotificationsPage() {
   // Render individual notification item
   const renderIndividualNotification = (
     notification: Notification,
-    index: number
+    index: number,
   ) => {
     const config = getNotificationConfig(notification.type);
     const IconComponent = config.icon;
@@ -422,9 +422,9 @@ export default function NotificationsPage() {
                 config.bgColor,
                 config.borderColor,
                 "ring-1",
-                config.ringColor
+                config.ringColor,
               ),
-          config.hoverBorderColor
+          config.hoverBorderColor,
         )}
       >
         <div className="flex items-start gap-4">
@@ -443,7 +443,7 @@ export default function NotificationsPage() {
                   <h3
                     className={cn(
                       "font-semibold text-sm",
-                      notification.isRead ? colors.text : config.textColor
+                      notification.isRead ? colors.text : config.textColor,
                     )}
                   >
                     {notification.title}
@@ -452,7 +452,7 @@ export default function NotificationsPage() {
                     <span
                       className={cn(
                         "w-2 h-2 rounded-full animate-pulse",
-                        config.badgeBg
+                        config.badgeBg,
                       )}
                     ></span>
                   )}
@@ -473,7 +473,7 @@ export default function NotificationsPage() {
                     className={cn(
                       "px-2 py-1 rounded-full text-xs font-medium",
                       config.badgeBg,
-                      config.badgeText
+                      config.badgeText,
                     )}
                   >
                     {config.label}
@@ -484,7 +484,7 @@ export default function NotificationsPage() {
               <FiArrowRight
                 className={cn(
                   "flex-shrink-0 mt-1 transition-transform group-hover:translate-x-1",
-                  notification.isRead ? "text-gray-400" : config.iconColor
+                  notification.isRead ? "text-gray-400" : config.iconColor,
                 )}
                 size={16}
               />
@@ -500,14 +500,14 @@ export default function NotificationsPage() {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <div className="text-center">
           <div
             className={cn(
               "w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4",
-              colors.primaryBg
+              colors.primaryBg,
             )}
           ></div>
           <p className={cn("text-sm", colors.textMuted)}>
@@ -525,7 +525,7 @@ export default function NotificationsPage() {
         className={cn(
           "border-b sticky top-0 z-10",
           colors.border,
-          colors.background
+          colors.background,
         )}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -535,7 +535,7 @@ export default function NotificationsPage() {
                 <FiBell className="text-white text-xl" />
               </div>
               <div>
-                <h1 className={cn("text-2xl font-bold", colors.text)}>
+                <h1 className={cn("text-xl font-bold", colors.text)}>
                   Notifications
                 </h1>
                 <p className={cn("text-sm", colors.textMuted)}>
@@ -552,7 +552,7 @@ export default function NotificationsPage() {
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                   "bg-blue-500 hover:bg-blue-600 text-white",
-                  "flex items-center gap-2"
+                  "flex items-center gap-2",
                 )}
               >
                 <FiCheck size={16} />
@@ -568,7 +568,7 @@ export default function NotificationsPage() {
         className={cn(
           "border-b sticky top-[88px] z-10",
           colors.border,
-          colors.background
+          colors.background,
         )}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -588,8 +588,8 @@ export default function NotificationsPage() {
                       : cn(
                           "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300",
                           "border-gray-300 dark:border-gray-600",
-                          "hover:bg-gray-50 dark:hover:bg-gray-700"
-                        )
+                          "hover:bg-gray-50 dark:hover:bg-gray-700",
+                        ),
                   )}
                 >
                   {option.label}
@@ -599,7 +599,7 @@ export default function NotificationsPage() {
                         "px-1.5 py-0.5 rounded-full text-xs min-w-5 flex items-center justify-center",
                         isActive
                           ? "bg-white bg-opacity-20 text-white"
-                          : "bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300"
+                          : "bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300",
                       )}
                     >
                       {unreadCount}
@@ -617,7 +617,7 @@ export default function NotificationsPage() {
                   "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
                   "border border-gray-300 dark:border-gray-600",
                   "bg-white dark:bg-gray-800",
-                  "flex items-center gap-2 whitespace-nowrap"
+                  "flex items-center gap-2 whitespace-nowrap",
                 )}
               >
                 <FiX size={14} />
@@ -656,7 +656,7 @@ export default function NotificationsPage() {
               className={cn(
                 "text-center py-16 rounded-xl border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <FiBell className="mx-auto text-gray-400 text-4xl mb-4" />

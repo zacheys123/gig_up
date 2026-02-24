@@ -33,13 +33,13 @@ export const updateSubscription = mutation({
       v.literal("free"),
       v.literal("pro"),
       v.literal("premium"),
-      v.literal("elite")
+      v.literal("elite"),
     ),
     tierStatus: v.union(
       v.literal("active"),
       v.literal("pending"),
       v.literal("canceled"),
-      v.literal("expired")
+      v.literal("expired"),
     ),
     nextBillingDate: v.optional(v.number()),
   },
@@ -67,7 +67,7 @@ export const getAiSuggestions = query({
     userRole: v.union(
       v.literal("musician"),
       v.literal("client"),
-      v.literal("guest")
+      v.literal("guest"),
     ),
   },
   handler: async (ctx, args) => {
@@ -82,7 +82,7 @@ export const getAiSuggestions = query({
         "What should I include in my performance portfolio?",
         "How do I price my services for different gig types?",
         "Tips for writing compelling gig applications",
-        "How to build a strong reputation on GigUp?",
+        "How to build a strong reputation on gigUp?",
       ],
       client: [
         "How do I write a clear gig description?",
@@ -92,7 +92,7 @@ export const getAiSuggestions = query({
         "How to manage multiple gig bookings?",
       ],
       guest: [
-        "How does GigUppwork for musicians?",
+        "How does gigUppwork for musicians?",
         "What are the benefits of the Pro tier?",
         "How do I get started as a client?",
         "What's included in the free trial?",

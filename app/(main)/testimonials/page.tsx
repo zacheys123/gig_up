@@ -26,7 +26,7 @@ export default function TestimonialsPage() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-2">Real Stories, Real Impact</h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Hear from musicians, venues, and bookers who found success on GigUpp
+          Hear from musicians, venues, and bookers who found success on gigUpp
         </p>
       </div>
 
@@ -85,7 +85,7 @@ export default function TestimonialsPage() {
           <Star className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-medium mb-2">No stories yet</h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Be the first to share your GigUppexperience!
+            Be the first to share your gigUppexperience!
           </p>
           <Button onClick={() => setShowForm(true)} className="gap-2">
             <Plus className="w-4 h-4" />
@@ -101,7 +101,7 @@ export default function TestimonialsPage() {
         </div>
       ) : (
         <div className="mt-12 text-center p-8 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-2xl">
-          <h2 className="text-2xl font-bold mb-4">Share Your Story</h2>
+          <h2 className="text-xl font-bold mb-4">Share Your Story</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
             Your experience could help other musicians, venues, and bookers find
             their perfect match. Share your journey and get featured on our

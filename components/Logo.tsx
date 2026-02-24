@@ -20,7 +20,7 @@ const Logo = () => {
         <span
           className={cn("text-lg font-bold whitespace-nowrap", colors.text)}
         >
-          GigUpp
+          gigUpp
         </span>
       </motion.div>
     </Link>

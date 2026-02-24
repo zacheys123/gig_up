@@ -25,7 +25,7 @@ const CreateGigPage = () => {
           )}
         >
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-orange-400 to-red-400 flex items-center justify-center">
-            <span className="text-white text-2xl">🔒</span>
+            <span className="text-white text-xl">🔒</span>
           </div>
           <h2 className={cn("text-xl font-bold mb-3", colors.text)}>
             Authentication Required

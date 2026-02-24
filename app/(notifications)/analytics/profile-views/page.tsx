@@ -31,13 +31,13 @@ export default function ProfileViewsAnalytics() {
   // Fetch current user's profile views data
   const profileData = useQuery(
     api.controllers.user.getProfileViews,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
   const myId = toUserId(currentUser?._id as Id<"users">);
   // Fetch specific viewer details if viewerId is provided
   const viewerDetails = useQuery(
     api.controllers.user.getUserById,
-    viewerId ? { userId: myId } : "skip"
+    viewerId ? { userId: myId } : "skip",
   );
 
   const recentViewers = profileData?.recentViewers || [];
@@ -55,13 +55,13 @@ export default function ProfileViewsAnalytics() {
                 "p-2 rounded-lg transition-all duration-200",
                 "hover:bg-opacity-20",
                 colors.hoverBg,
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               <FiArrowLeft size={20} />
             </button>
             <div>
-              <h1 className={cn("text-2xl font-bold", colors.text)}>
+              <h1 className={cn("text-xl font-bold", colors.text)}>
                 Profile View Analytics
               </h1>
               <p className={cn("text-sm", colors.textMuted)}>
@@ -72,7 +72,7 @@ export default function ProfileViewsAnalytics() {
               <span
                 className={cn(
                   "px-3 py-1 rounded-full text-sm font-medium",
-                  "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                  "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
                 )}
               >
                 From Notification
@@ -95,7 +95,7 @@ export default function ProfileViewsAnalytics() {
               </div>
               <div>
                 <p className={cn("text-sm", colors.textMuted)}>Total Views</p>
-                <p className={cn("text-2xl font-bold", colors.text)}>
+                <p className={cn("text-xl font-bold", colors.text)}>
                   {totalViews}
                 </p>
               </div>
@@ -111,10 +111,10 @@ export default function ProfileViewsAnalytics() {
               </div>
               <div>
                 <p className={cn("text-sm", colors.textMuted)}>This Week</p>
-                <p className={cn("text-2xl font-bold", colors.text)}>
+                <p className={cn("text-xl font-bold", colors.text)}>
                   {
                     recentViewers.filter(
-                      (v) => Date.now() - v.timestamp < 7 * 24 * 60 * 60 * 1000
+                      (v) => Date.now() - v.timestamp < 7 * 24 * 60 * 60 * 1000,
                     ).length
                   }
                 </p>
@@ -133,7 +133,7 @@ export default function ProfileViewsAnalytics() {
                 <p className={cn("text-sm", colors.textMuted)}>
                   Unique Viewers
                 </p>
-                <p className={cn("text-2xl font-bold", colors.text)}>
+                <p className={cn("text-xl font-bold", colors.text)}>
                   {new Set(recentViewers.map((v) => v.userId)).size}
                 </p>
               </div>
@@ -147,7 +147,7 @@ export default function ProfileViewsAnalytics() {
             className={cn(
               "mb-8 p-6 rounded-xl border",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <h2 className={cn("text-lg font-semibold mb-4", colors.text)}>
@@ -212,7 +212,7 @@ export default function ProfileViewsAnalytics() {
                       onClick={() => router.push(`/user/${view.userId}`)}
                       className={cn(
                         "px-3 py-1 rounded-lg text-sm transition-colors",
-                        "bg-blue-500 hover:bg-blue-600 text-white"
+                        "bg-blue-500 hover:bg-blue-600 text-white",
                       )}
                     >
                       View Profile

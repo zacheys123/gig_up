@@ -58,11 +58,11 @@ interface PromptData {
 }
 interface CreateTemplateTabProps {
   onCreateTemplate: (
-    template: Omit<GigTemplate, "id" | "status" | "createdAt">
+    template: Omit<GigTemplate, "id" | "status" | "createdAt">,
   ) => void;
   onUpdateTemplate?: (
     templateId: string,
-    updates: Partial<GigTemplate>
+    updates: Partial<GigTemplate>,
   ) => void;
   user: any;
   existingTemplates: GigTemplate[];
@@ -265,7 +265,7 @@ const TIER_LIMITS = {
 const canAccessTier = (
   userTier: string,
   requiredTier: string,
-  isInGracePeriod: boolean = false
+  isInGracePeriod: boolean = false,
 ) => {
   const tierLevels = { free: 0, pro: 1, premium: 2, elite: 3 };
 
@@ -355,7 +355,7 @@ const TemplateForm = memo(
             }
             className={cn(
               "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-              colors.text
+              colors.text,
             )}
           >
             <ArrowLeft className="w-5 h-5" />
@@ -391,7 +391,7 @@ const TemplateForm = memo(
             className={cn(
               "mb-6 p-4 rounded-xl border-2 border-dashed text-center",
               colors.border,
-              colors.backgroundMuted
+              colors.backgroundMuted,
             )}
           >
             <Crown className={cn("w-8 h-8 mx-auto mb-2", colors.warningText)} />
@@ -430,7 +430,7 @@ const TemplateForm = memo(
                     colors.border,
                     "focus:ring-blue-500",
                     isFieldLocked("title") &&
-                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed",
                   )}
                 />
                 {isFieldLocked("title") && (
@@ -458,7 +458,7 @@ const TemplateForm = memo(
                           ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20 border-blue-500"
                           : cn(colors.hoverBg, "hover:border-blue-300"),
                         isFieldLocked("gigType") &&
-                          "opacity-60 cursor-not-allowed"
+                          "opacity-60 cursor-not-allowed",
                       )}
                     >
                       {type.label}
@@ -531,7 +531,7 @@ const TemplateForm = memo(
                     "focus:ring-blue-500",
                     isFieldLocked("budget") &&
                       "bg-gray-100 dark:bg-gray-800 cursor-not-allowed",
-                    !isBudgetValid && formData.budget && "border-red-500"
+                    !isBudgetValid && formData.budget && "border-red-500",
                   )}
                 />
                 {isFieldLocked("budget") ? (
@@ -572,7 +572,7 @@ const TemplateForm = memo(
                     colors.border,
                     "focus:ring-blue-500",
                     isFieldLocked("duration") &&
-                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed",
                   )}
                 />
                 {isFieldLocked("duration") && (
@@ -638,7 +638,7 @@ const TemplateForm = memo(
                     colors.border,
                     "focus:ring-blue-500",
                     isFieldLocked("setlist") &&
-                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                      "bg-gray-100 dark:bg-gray-800 cursor-not-allowed",
                   )}
                 />
                 {isFieldLocked("setlist") && (
@@ -671,7 +671,7 @@ const TemplateForm = memo(
                 colors.textInverted,
                 "hover:scale-105 hover:shadow-lg",
                 "active:scale-95",
-                "disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                "disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100",
               )}
               disabled={!isFormValid || (!isBudgetValid && formData.budget)}
             >
@@ -689,7 +689,7 @@ const TemplateForm = memo(
         </form>
       </div>
     );
-  }
+  },
 );
 // Upgrade Interface Component for free users
 const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
@@ -771,7 +771,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
           className={cn(
             "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6",
             colors.backgroundMuted,
-            colors.text
+            colors.text,
           )}
         >
           <User className="w-4 h-4" />
@@ -780,7 +780,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             className={cn(
               "text-xs px-2 py-1 rounded-full",
               colors.primaryBg,
-              colors.textInverted
+              colors.textInverted,
             )}
           >
             {tierLimits[userTier as keyof typeof tierLimits].maxTemplates}{" "}
@@ -795,7 +795,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
           "rounded-2xl p-6 mb-8",
           colors.backgroundMuted,
           "border",
-          colors.border
+          colors.border,
         )}
       >
         <h3 className={cn("text-xl font-bold mb-4 text-center", colors.text)}>
@@ -813,7 +813,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
                   ? "border-green-200 dark:border-green-800"
                   : tier === "premium"
                     ? "border-amber-200 dark:border-amber-800"
-                    : "border-gray-200 dark:border-gray-700"
+                    : "border-gray-200 dark:border-gray-700",
               )}
             >
               <div
@@ -823,12 +823,12 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
                     ? cn(colors.primaryBg, colors.textInverted)
                     : tier === "pro"
                       ? "bg-green-500 text-white"
-                      : "bg-amber-500 text-white"
+                      : "bg-amber-500 text-white",
                 )}
               >
                 {tier.toUpperCase()}
               </div>
-              <div className={cn("text-2xl font-bold mb-1", colors.text)}>
+              <div className={cn("text-xl font-bold mb-1", colors.text)}>
                 {limits.maxTemplates}
               </div>
               <div className={cn("text-sm", colors.textMuted)}>
@@ -868,7 +868,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             colors.border,
             colors.card,
             "hover:border-green-500 hover:shadow-xl hover:scale-105",
-            "relative overflow-hidden"
+            "relative overflow-hidden",
           )}
         >
           {/* Popular Badge */}
@@ -885,7 +885,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             <div className="px-4 py-1 rounded-full text-sm font-bold bg-green-500 text-white inline-block mb-3">
               PRO
             </div>
-            <h3 className={cn("font-bold text-2xl mb-3", colors.text)}>
+            <h3 className={cn("font-bold text-xl mb-3", colors.text)}>
               Professional
             </h3>
 
@@ -893,7 +893,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             <div
               className={cn(
                 "inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm mb-3",
-                "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
               )}
             >
               <BookOpen className="w-3 h-3" />
@@ -929,7 +929,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             className={cn(
               "w-full py-3 font-semibold",
               "bg-green-500 hover:bg-green-600 text-white",
-              "transition-all duration-300 hover:scale-105"
+              "transition-all duration-300 hover:scale-105",
             )}
             size="lg"
           >
@@ -945,7 +945,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             colors.border,
             colors.card,
             "hover:border-amber-500 hover:shadow-xl hover:scale-105",
-            "relative"
+            "relative",
           )}
         >
           {/* Premium Badge */}
@@ -962,7 +962,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             <div className="px-4 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3">
               PREMIUM
             </div>
-            <h3 className={cn("font-bold text-2xl mb-3", colors.text)}>
+            <h3 className={cn("font-bold text-xl mb-3", colors.text)}>
               Complete Freedom
             </h3>
 
@@ -970,7 +970,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             <div
               className={cn(
                 "inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm mb-3",
-                "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+                "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300",
               )}
             >
               <BookOpen className="w-3 h-3" />
@@ -1006,7 +1006,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             className={cn(
               "w-full py-3 font-semibold",
               "bg-amber-500 hover:bg-amber-600 text-white",
-              "transition-all duration-300 hover:scale-105"
+              "transition-all duration-300 hover:scale-105",
             )}
             size="lg"
           >
@@ -1022,7 +1022,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
           "rounded-2xl p-6 mb-8",
           colors.backgroundMuted,
           "border",
-          colors.border
+          colors.border,
         )}
       >
         <h3 className={cn("text-xl font-bold mb-6 text-center", colors.text)}>
@@ -1133,7 +1133,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
         className={cn(
           "rounded-2xl p-6 mb-8",
           colors.primaryBg,
-          colors.textInverted
+          colors.textInverted,
         )}
       >
         <h3 className={cn("text-xl font-bold mb-4 text-center")}>
@@ -1158,7 +1158,7 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
             },
           ].map((item, index) => (
             <div key={index} className="text-center p-4">
-              <div className="text-2xl mb-2">{item.icon}</div>
+              <div className="text-xl mb-2">{item.icon}</div>
               <div className="font-semibold mb-2">{item.title}</div>
               <div className="opacity-90">{item.tip}</div>
             </div>
@@ -1213,10 +1213,10 @@ const UpgradeInterface = memo(({ colors, user, showUpgradePrompt }: any) => {
         className={cn(
           "text-center mt-8 p-6 rounded-2xl",
           "bg-gradient-to-r from-blue-500 to-purple-600",
-          "text-white"
+          "text-white",
         )}
       >
-        <h3 className="text-2xl font-bold mb-2">Ready to Scale Your Gigs?</h3>
+        <h3 className="text-xl font-bold mb-2">Ready to Scale Your Gigs?</h3>
         <p className="mb-4 opacity-90">
           Join thousands of musicians using templates to streamline their
           booking process
@@ -1276,7 +1276,7 @@ const ScratchInterface = memo(
             onClick={handleBackToDefault}
             className={cn(
               "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-              colors.text
+              colors.text,
             )}
           >
             <ArrowLeft className="w-5 h-5" />
@@ -1296,14 +1296,14 @@ const ScratchInterface = memo(
           className={cn(
             "border-2 border-dashed rounded-2xl p-12 text-center",
             colors.border,
-            colors.backgroundMuted
+            colors.backgroundMuted,
           )}
         >
           <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
             <Sparkles className="w-10 h-10 text-blue-600 dark:text-blue-400" />
           </div>
 
-          <h4 className={cn("text-2xl font-bold mb-4", colors.text)}>
+          <h4 className={cn("text-xl font-bold mb-4", colors.text)}>
             Blank Canvas
           </h4>
 
@@ -1336,10 +1336,10 @@ const ScratchInterface = memo(
                   "p-4 rounded-xl text-center",
                   colors.backgroundMuted,
                   colors.border,
-                  "border"
+                  "border",
                 )}
               >
-                <div className="text-2xl mb-2">{item.icon}</div>
+                <div className="text-xl mb-2">{item.icon}</div>
                 <div className={cn("font-semibold mb-1", colors.text)}>
                   {item.title}
                 </div>
@@ -1354,7 +1354,7 @@ const ScratchInterface = memo(
             onClick={handleStartCreating}
             className={cn(
               "bg-blue-500 hover:bg-blue-600 text-white px-8 py-3",
-              colors.shadow
+              colors.shadow,
             )}
             size="lg"
             disabled={!canUseScratch}
@@ -1395,7 +1395,7 @@ const ScratchInterface = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 ScratchInterface.displayName = "ScratchInterface";
@@ -1450,7 +1450,7 @@ const GuidedInterface = memo(
 
         useExampleTemplate(template);
       },
-      [hasReachedLimit, userTier, showUpgradePrompt, useExampleTemplate]
+      [hasReachedLimit, userTier, showUpgradePrompt, useExampleTemplate],
     );
 
     if (!canAccessTier(userTier, "pro", isInGracePeriod)) {
@@ -1460,12 +1460,12 @@ const GuidedInterface = memo(
             "rounded-2xl p-6",
             colors.card,
             colors.border,
-            "border"
+            "border",
           )}
         >
           <div className="text-center p-12">
             <Lock className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+            <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
               Templates Locked
             </h3>
             <p
@@ -1479,7 +1479,7 @@ const GuidedInterface = memo(
               onClick={() => showUpgradePrompt("pro")}
               className={cn(
                 "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
-                "text-white px-8 py-3 font-semibold"
+                "text-white px-8 py-3 font-semibold",
               )}
               size="lg"
             >
@@ -1498,7 +1498,7 @@ const GuidedInterface = memo(
           colors.card,
           colors.border,
           "border",
-          "shadow-lg"
+          "shadow-lg",
         )}
       >
         {/* Template Limit Alert */}
@@ -1521,7 +1521,7 @@ const GuidedInterface = memo(
               colors.border,
               colors.backgroundMuted,
               currentCount >= currentLimit * 0.8 &&
-                "border-amber-200 dark:border-amber-800"
+                "border-amber-200 dark:border-amber-800",
             )}
           >
             <div className="flex items-center justify-between">
@@ -1531,7 +1531,7 @@ const GuidedInterface = memo(
                     "w-10 h-10 rounded-lg flex items-center justify-center",
                     currentCount >= currentLimit * 0.8
                       ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
-                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
                   )}
                 >
                   {currentCount >= currentLimit * 0.8 ? (
@@ -1582,7 +1582,7 @@ const GuidedInterface = memo(
                       "text-xs font-bold",
                       currentCount >= currentLimit * 0.8
                         ? "text-amber-600"
-                        : "text-green-600"
+                        : "text-green-600",
                     )}
                   >
                     {Math.round((currentCount / currentLimit) * 100)}%
@@ -1603,7 +1603,7 @@ const GuidedInterface = memo(
                     size="sm"
                     className={cn(
                       "bg-amber-500 hover:bg-amber-600 text-white",
-                      "text-xs font-semibold"
+                      "text-xs font-semibold",
                     )}
                   >
                     <Crown className="w-3 h-3 mr-1" />
@@ -1621,7 +1621,7 @@ const GuidedInterface = memo(
             className={cn(
               "w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-6 lg:mb-8 rounded-2xl flex items-center justify-center",
               colors.primaryBg,
-              "shadow-md"
+              "shadow-md",
             )}
           >
             <Lightbulb className="w-10 h-10 lg:w-12 lg:h-12 text-white" />
@@ -1629,7 +1629,7 @@ const GuidedInterface = memo(
           <h2
             className={cn(
               "text-3xl lg:text-4xl font-bold mb-4 lg:mb-6",
-              colors.text
+              colors.text,
             )}
           >
             Choose Your Creation Style
@@ -1637,7 +1637,7 @@ const GuidedInterface = memo(
           <p
             className={cn(
               "text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed px-4",
-              colors.textMuted
+              colors.textMuted,
             )}
           >
             Start with professional templates or unlock advanced creation tools
@@ -1652,7 +1652,7 @@ const GuidedInterface = memo(
                   ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white"
                   : userTier === "pro"
                     ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-                    : cn(colors.primaryBg, colors.textInverted)
+                    : cn(colors.primaryBg, colors.textInverted),
               )}
             >
               {userTier === "premium"
@@ -1665,7 +1665,7 @@ const GuidedInterface = memo(
               className={cn(
                 "px-3 py-1.5 rounded-full text-xs font-medium",
                 colors.backgroundMuted,
-                colors.text
+                colors.text,
               )}
             >
               📋 {currentCount}/{currentLimit} Templates
@@ -1682,12 +1682,12 @@ const GuidedInterface = memo(
                 <div
                   className={cn(
                     "w-3 h-3 lg:w-4 lg:h-4 rounded-full flex-shrink-0",
-                    colors.primaryBg
+                    colors.primaryBg,
                   )}
                 ></div>
                 <div>
                   <h3
-                    className={cn("text-xl lg:text-2xl font-bold", colors.text)}
+                    className={cn("text-xl lg:text-xl font-bold", colors.text)}
                   >
                     Professional Templates
                   </h3>
@@ -1702,7 +1702,7 @@ const GuidedInterface = memo(
               {EXAMPLE_TEMPLATES.map((template) => {
                 const canUseTemplate = canAccessTier(
                   userTier,
-                  template.tier || "free"
+                  template.tier || "free",
                 );
 
                 return (
@@ -1716,9 +1716,9 @@ const GuidedInterface = memo(
                       canUseTemplate && !hasReachedLimit
                         ? cn(
                             "hover:border-blue-400",
-                            "hover:bg-gradient-to-br hover:from-blue-50 hover:to-white"
+                            "hover:bg-gradient-to-br hover:from-blue-50 hover:to-white",
                           )
-                        : "opacity-90 cursor-not-allowed grayscale"
+                        : "opacity-90 cursor-not-allowed grayscale",
                     )}
                     onClick={() => handleUseTemplate(template)}
                   >
@@ -1731,7 +1731,7 @@ const GuidedInterface = memo(
                           colors.overlay,
                           template.tier === "pro"
                             ? "text-green-600 border-green-200"
-                            : "text-amber-600 border-amber-200"
+                            : "text-amber-600 border-amber-200",
                         )}
                       >
                         <div className="flex items-center gap-1">
@@ -1746,7 +1746,7 @@ const GuidedInterface = memo(
                       <div
                         className={cn(
                           "absolute inset-0 rounded-2xl flex items-center justify-center z-10 backdrop-blur-sm",
-                          colors.overlay
+                          colors.overlay,
                         )}
                       >
                         <div className="text-center p-6">
@@ -1755,7 +1755,7 @@ const GuidedInterface = memo(
                               "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
                               hasReachedLimit
                                 ? colors.destructiveBg
-                                : colors.warningBg
+                                : colors.warningBg,
                             )}
                           >
                             <Lock
@@ -1763,14 +1763,14 @@ const GuidedInterface = memo(
                                 "w-8 h-8",
                                 hasReachedLimit
                                   ? colors.destructive
-                                  : colors.warningText
+                                  : colors.warningText,
                               )}
                             />
                           </div>
                           <h4
                             className={cn(
                               "font-bold text-lg mb-2",
-                              colors.text
+                              colors.text,
                             )}
                           >
                             {hasReachedLimit
@@ -1791,7 +1791,7 @@ const GuidedInterface = memo(
                             className={cn(
                               hasReachedLimit
                                 ? "bg-red-500 hover:bg-red-600 text-white"
-                                : "bg-amber-500 hover:bg-amber-600 text-white"
+                                : "bg-amber-500 hover:bg-amber-600 text-white",
                             )}
                           >
                             <Crown className="w-4 h-4 mr-2" />
@@ -1811,10 +1811,10 @@ const GuidedInterface = memo(
                           "bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg",
                           canUseTemplate &&
                             !hasReachedLimit &&
-                            "group-hover:scale-110 group-hover:rotate-6 transition-all duration-300"
+                            "group-hover:scale-110 group-hover:rotate-6 transition-all duration-300",
                         )}
                       >
-                        <span className="text-2xl text-white">
+                        <span className="text-xl text-white">
                           {template.icon}
                         </span>
                       </div>
@@ -1825,7 +1825,7 @@ const GuidedInterface = memo(
                             "bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent",
                             canUseTemplate &&
                               !hasReachedLimit &&
-                              "group-hover:from-blue-600 group-hover:to-purple-600 transition-all duration-300"
+                              "group-hover:from-blue-600 group-hover:to-purple-600 transition-all duration-300",
                           )}
                         >
                           {template.title}
@@ -1833,7 +1833,7 @@ const GuidedInterface = memo(
                         <p
                           className={cn(
                             "text-sm leading-relaxed line-clamp-2",
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         >
                           {template.description}
@@ -1847,14 +1847,14 @@ const GuidedInterface = memo(
                         className={cn(
                           "flex items-center gap-2 px-3 py-2 rounded-lg border",
                           colors.infoBg,
-                          colors.infoBorder
+                          colors.infoBorder,
                         )}
                       >
                         <Clock className={cn("w-4 h-4", colors.infoText)} />
                         <span
                           className={cn(
                             "font-semibold text-sm",
-                            colors.infoText
+                            colors.infoText,
                           )}
                         >
                           {template.duration}
@@ -1864,7 +1864,7 @@ const GuidedInterface = memo(
                         className={cn(
                           "flex items-center gap-2 px-3 py-2 rounded-lg border",
                           colors.successBg,
-                          colors.successBorder
+                          colors.successBorder,
                         )}
                       >
                         <DollarSign
@@ -1873,7 +1873,7 @@ const GuidedInterface = memo(
                         <span
                           className={cn(
                             "font-semibold text-sm",
-                            colors.successText
+                            colors.successText,
                           )}
                         >
                           {template.budget.split(" - ")[0]}+
@@ -1889,17 +1889,17 @@ const GuidedInterface = memo(
                         canUseTemplate && !hasReachedLimit
                           ? cn(
                               "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700",
-                              "text-white shadow-lg hover:shadow-xl hover:scale-105"
+                              "text-white shadow-lg hover:shadow-xl hover:scale-105",
                             )
                           : hasReachedLimit
                             ? cn(
                                 "bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600",
-                                "text-white shadow-lg hover:shadow-xl"
+                                "text-white shadow-lg hover:shadow-xl",
                               )
                             : cn(
                                 "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                                "text-white shadow-lg hover:shadow-xl"
-                              )
+                                "text-white shadow-lg hover:shadow-xl",
+                              ),
                       )}
                       disabled={!canUseTemplate || hasReachedLimit}
                     >
@@ -1909,7 +1909,7 @@ const GuidedInterface = memo(
                           "translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000",
                           canUseTemplate && !hasReachedLimit
                             ? "block"
-                            : "hidden"
+                            : "hidden",
                         )}
                       />
                       <span className="relative z-10 flex items-center justify-center">
@@ -1941,13 +1941,13 @@ const GuidedInterface = memo(
               className={cn(
                 "rounded-xl p-5 border",
                 colors.border,
-                colors.backgroundMuted
+                colors.backgroundMuted,
               )}
             >
               <h4
                 className={cn(
                   "font-semibold text-lg mb-4 flex items-center gap-2",
-                  colors.text
+                  colors.text,
                 )}
               >
                 <CheckCircle className={cn("w-5 h-5", colors.successText)} />
@@ -1964,7 +1964,7 @@ const GuidedInterface = memo(
                     <div
                       className={cn(
                         "w-2 h-2 rounded-full flex-shrink-0",
-                        colors.successBg
+                        colors.successBg,
                       )}
                     ></div>
                     <span className={cn("text-sm", colors.text)}>
@@ -1986,14 +1986,14 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     colors.warningBorder,
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
                     <div
                       className={cn(
                         "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
-                        colors.warningBg
+                        colors.warningBg,
                       )}
                     >
                       <Zap className={cn("w-8 h-8", colors.warningText)} />
@@ -2003,7 +2003,7 @@ const GuidedInterface = memo(
                         "px-3 py-1 rounded-full text-sm font-bold",
                         colors.primaryBg,
                         colors.textInverted,
-                        "inline-block mb-3"
+                        "inline-block mb-3",
                       )}
                     >
                       PRO
@@ -2027,7 +2027,7 @@ const GuidedInterface = memo(
                         <CheckCircle
                           className={cn(
                             "w-4 h-4 flex-shrink-0",
-                            colors.successText
+                            colors.successText,
                           )}
                         />
                         <span className={cn("text-sm", colors.text)}>
@@ -2042,7 +2042,7 @@ const GuidedInterface = memo(
                       "w-full",
                       colors.primaryBg,
                       colors.textInverted,
-                      colors.primaryBgHover
+                      colors.primaryBgHover,
                     )}
                     size="lg"
                   >
@@ -2056,21 +2056,21 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     colors.warningBorder,
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
                     <div
                       className={cn(
                         "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
-                        colors.warningBg
+                        colors.warningBg,
                       )}
                     >
                       <Sparkles className={cn("w-8 h-8", colors.warningText)} />
                     </div>
                     <div
                       className={cn(
-                        "px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3"
+                        "px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white inline-block mb-3",
                       )}
                     >
                       PREMIUM
@@ -2117,7 +2117,7 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     "border-amber-200 dark:border-amber-800",
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
@@ -2166,7 +2166,7 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     "border-purple-200 dark:border-purple-800",
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
@@ -2219,7 +2219,7 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     "border-green-200 dark:border-green-800",
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
@@ -2258,7 +2258,7 @@ const GuidedInterface = memo(
                       className={cn(
                         "p-3 rounded-lg text-sm",
                         colors.warningBg,
-                        colors.warningBorder
+                        colors.warningBorder,
                       )}
                     >
                       <div className="flex items-center gap-2 mb-1">
@@ -2270,7 +2270,7 @@ const GuidedInterface = memo(
                       <ul
                         className={cn(
                           "text-sm space-y-1 ml-6",
-                          colors.warningText
+                          colors.warningText,
                         )}
                       >
                         <li>• Start from scratch creation</li>
@@ -2298,7 +2298,7 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     "border-purple-200 dark:border-purple-800",
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
@@ -2352,7 +2352,7 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     "border-amber-200 dark:border-amber-800",
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
@@ -2390,7 +2390,7 @@ const GuidedInterface = memo(
                       className={cn(
                         "p-3 rounded-lg text-sm",
                         colors.warningBg,
-                        colors.warningBorder
+                        colors.warningBorder,
                       )}
                     >
                       <div className="flex items-center gap-2 mb-1">
@@ -2402,7 +2402,7 @@ const GuidedInterface = memo(
                       <ul
                         className={cn(
                           "text-sm space-y-1 ml-6",
-                          colors.warningText
+                          colors.warningText,
                         )}
                       >
                         <li>• VIP concierge service</li>
@@ -2430,7 +2430,7 @@ const GuidedInterface = memo(
                   className={cn(
                     "rounded-2xl p-6 border-2",
                     "border-green-200 dark:border-green-800",
-                    colors.card
+                    colors.card,
                   )}
                 >
                   <div className="text-center mb-6">
@@ -2468,7 +2468,7 @@ const GuidedInterface = memo(
                       className={cn(
                         "p-3 rounded-lg text-sm",
                         colors.warningBg,
-                        colors.warningBorder
+                        colors.warningBorder,
                       )}
                     >
                       <div className="flex items-center gap-2 mb-1">
@@ -2480,7 +2480,7 @@ const GuidedInterface = memo(
                       <ul
                         className={cn(
                           "text-sm space-y-1 ml-6",
-                          colors.warningText
+                          colors.warningText,
                         )}
                       >
                         <li>• Start from scratch creation</li>
@@ -2515,12 +2515,12 @@ const GuidedInterface = memo(
             "text-center p-8 rounded-2xl border",
             colors.border,
             colors.backgroundMuted,
-            "shadow-md"
+            "shadow-md",
           )}
         >
           <div className="flex items-center justify-center gap-4 mb-4">
             <Shield className={cn("w-8 h-8", colors.successText)} />
-            <h4 className={cn("text-2xl font-bold", colors.text)}>
+            <h4 className={cn("text-xl font-bold", colors.text)}>
               {userTier === "premium"
                 ? "Premium Experience"
                 : "Ready for More?"}
@@ -2541,7 +2541,7 @@ const GuidedInterface = memo(
                 colors.border,
                 colors.hoverBg,
                 colors.text,
-                "hover:scale-105"
+                "hover:scale-105",
               )}
               size="lg"
             >
@@ -2556,7 +2556,7 @@ const GuidedInterface = memo(
                   colors.primaryBg,
                   colors.primaryBgHover,
                   colors.textInverted,
-                  "hover:scale-105"
+                  "hover:scale-105",
                 )}
                 size="lg"
               >
@@ -2570,7 +2570,7 @@ const GuidedInterface = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 GuidedInterface.displayName = "GuidedInterface";
@@ -2600,7 +2600,7 @@ const DefaultInterface = memo(
             "rounded-2xl p-6",
             colors.card,
             colors.border,
-            "border"
+            "border",
           )}
         >
           {/* Upgrade-focused interface for free users */}
@@ -2626,7 +2626,7 @@ const DefaultInterface = memo(
                 "border-2 rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group",
                 colors.border,
                 colors.card,
-                "hover:border-green-500 hover:scale-105"
+                "hover:border-green-500 hover:scale-105",
               )}
               onClick={() => showUpgradePrompt("pro")}
             >
@@ -2659,7 +2659,7 @@ const DefaultInterface = memo(
                 "border-2 rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group",
                 colors.border,
                 colors.card,
-                "hover:border-amber-500 hover:scale-105"
+                "hover:border-amber-500 hover:scale-105",
               )}
               onClick={() => showUpgradePrompt("premium")}
             >
@@ -2692,7 +2692,7 @@ const DefaultInterface = memo(
 
     // Existing interface for Pro+ users...
     // ... your existing Pro+ interface code
-  }
+  },
 );
 
 DefaultInterface.displayName = "DefaultInterface";
@@ -2727,7 +2727,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
             ? "custom"
             : canAccessTemplates
               ? "guided"
-              : "upgrade" // New mode for free users
+              : "upgrade", // New mode for free users
     );
     const [selectedExample, setSelectedExample] = useState<string | null>(null);
 
@@ -2754,7 +2754,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
     // Memoize existing templates to prevent unnecessary re-renders
     const memoizedExistingTemplates = useMemo(
       () => existingTemplates,
-      [existingTemplates.length]
+      [existingTemplates.length],
     );
 
     // Initialize form with editing template data
@@ -2831,7 +2831,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
           templateName,
         });
       },
-      []
+      [],
     );
     const useExampleTemplate = useCallback(
       (template: any) => {
@@ -2859,7 +2859,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         console.log("Setting creationMode to: custom");
         setCreationMode("custom");
       },
-      [userTier, showUpgradePrompt, isInGracePeriod]
+      [userTier, showUpgradePrompt, isInGracePeriod],
     );
 
     // Also add debugging to see state changes
@@ -2868,7 +2868,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         "State updated - creationMode:",
         creationMode,
         "selectedExample:",
-        selectedExample
+        selectedExample,
       );
     }, [creationMode, selectedExample]);
 
@@ -2902,7 +2902,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
           ...formData,
           icon:
             GIG_TYPES.find((t) => t.value === formData.gigType)?.label.split(
-              " "
+              " ",
             )[0] || "✨",
         };
 
@@ -2914,7 +2914,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
 
         handleFormClose();
       },
-      [formData, editingTemplate, onUpdateTemplate, onCreateTemplate]
+      [formData, editingTemplate, onUpdateTemplate, onCreateTemplate],
     );
 
     const handleFormClose = useCallback(() => {
@@ -2999,7 +2999,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         user,
         showUpgradePrompt, // Add this here too
         isInGracePeriod, // Add this
-      ]
+      ],
     );
 
     // In your CreateTemplateTab component, update the guidedInterfaceProps:
@@ -3025,7 +3025,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         isInGracePeriod,
         memoizedExistingTemplates, // ADD THIS
         templateLimitInfo, // ADD THIS
-      ]
+      ],
     );
 
     const scratchInterfaceProps = useMemo(
@@ -3043,7 +3043,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         user,
         handleStartScratchForm,
         showUpgradePrompt,
-      ]
+      ],
     );
 
     // Update the defaultInterfaceProps to include showUpgradePrompt:
@@ -3068,7 +3068,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         colors,
         user,
         showUpgradePrompt,
-      ]
+      ],
     );
 
     return (
@@ -3119,7 +3119,7 @@ export const CreateTemplateTab: React.FC<CreateTemplateTabProps> = memo(
         />
       </>
     );
-  }
+  },
 );
 
 CreateTemplateTab.displayName = "CreateTemplateTab";
@@ -3152,7 +3152,7 @@ const MaxTemplatesAlert = memo(
           "rounded-2xl p-6 mb-8 border-2",
           colors.border,
           colors.card,
-          "relative overflow-hidden"
+          "relative overflow-hidden",
         )}
       >
         {/* Background Pattern */}
@@ -3167,7 +3167,7 @@ const MaxTemplatesAlert = memo(
               className={cn(
                 "w-12 h-12 rounded-xl flex items-center justify-center",
                 "bg-red-100 dark:bg-red-900/30",
-                "border border-red-200 dark:border-red-800"
+                "border border-red-200 dark:border-red-800",
               )}
             >
               <Lock className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -3204,7 +3204,7 @@ const MaxTemplatesAlert = memo(
                     ? "bg-gradient-to-r from-red-500 to-orange-500"
                     : usagePercentage >= 80
                       ? "bg-gradient-to-r from-orange-500 to-amber-500"
-                      : "bg-gradient-to-r from-green-500 to-emerald-500"
+                      : "bg-gradient-to-r from-green-500 to-emerald-500",
                 )}
                 style={{ width: `${Math.min(usagePercentage, 100)}%` }}
               />
@@ -3218,7 +3218,7 @@ const MaxTemplatesAlert = memo(
               <span
                 className={cn(
                   "text-xs font-medium",
-                  usagePercentage >= 100 ? "text-red-500" : colors.textMuted
+                  usagePercentage >= 100 ? "text-red-500" : colors.textMuted,
                 )}
               >
                 {usagePercentage >= 100 ? "❌ Full" : "✅ Available"}
@@ -3290,7 +3290,7 @@ const MaxTemplatesAlert = memo(
                 "bg-gradient-to-r from-green-500 to-emerald-600",
                 "hover:from-green-600 hover:to-emerald-700",
                 "text-white shadow-lg hover:shadow-xl",
-                "transition-all duration-300 hover:scale-105"
+                "transition-all duration-300 hover:scale-105",
               )}
               size="lg"
             >
@@ -3306,7 +3306,7 @@ const MaxTemplatesAlert = memo(
                 colors.border,
                 colors.hoverBg,
                 colors.text,
-                "transition-all duration-300 hover:scale-105"
+                "transition-all duration-300 hover:scale-105",
               )}
               size="lg"
               onClick={() => window.open("/pricing", "_blank")}
@@ -3322,7 +3322,7 @@ const MaxTemplatesAlert = memo(
               className={cn(
                 "absolute -top-2 -right-2 px-3 py-1 rounded-full",
                 "bg-gradient-to-r from-amber-500 to-orange-500",
-                "text-white text-xs font-bold shadow-lg"
+                "text-white text-xs font-bold shadow-lg",
               )}
             >
               🎁 TRIAL OFFER
@@ -3331,7 +3331,7 @@ const MaxTemplatesAlert = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 MaxTemplatesAlert.displayName = "MaxTemplatesAlert";

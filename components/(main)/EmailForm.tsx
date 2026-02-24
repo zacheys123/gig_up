@@ -59,20 +59,20 @@ const EmailForm: React.FC<EmailFormProps> = ({ handleClose }) => {
   const onSubmit = async (data: EmailFormValues) => {
     try {
       const templateParams = {
-        your_name: "GigUppAdmin",
+        your_name: "gigUppAdmin",
         from_name: data.name,
         from_email: data.email,
         subject: data.subject || "New Contact Message",
         message: data.message,
         current_year: new Date().getFullYear(),
-        app_name: "GigUp",
+        app_name: "gigUp",
       };
 
       await emailjs.send(
         process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
         process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
         templateParams,
-        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
+        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!,
       );
 
       toast.success("Message sent successfully!");
@@ -94,7 +94,7 @@ const EmailForm: React.FC<EmailFormProps> = ({ handleClose }) => {
         <X className="w-5 h-5" />
       </button>
 
-      <h2 className="text-2xl font-bold mb-6 text-center text-foreground">
+      <h2 className="text-xl font-bold mb-6 text-center text-foreground">
         Contact Us
       </h2>
 

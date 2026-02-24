@@ -100,7 +100,7 @@ export const UserProfileHeader = ({
                 />
               ) : (
                 <div className="w-24 h-24 rounded-2xl border-4 border-white dark:border-gray-900 bg-gradient-to-br from-blue-400 to-purple-500 shadow-lg flex items-center justify-center">
-                  <span className="text-2xl font-bold text-white">
+                  <span className="text-xl font-bold text-white">
                     {displayName.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -113,7 +113,7 @@ export const UserProfileHeader = ({
           <div className="pt-16">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">
                   {displayName}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
@@ -149,7 +149,7 @@ export const UserProfileHeader = ({
                   className={`px-6 py-3 rounded-xl bg-gradient-to-r ${tierGradients[trustTier as keyof typeof tierGradients]} text-white shadow-lg`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">
+                    <span className="text-xl">
                       {tierEmojis[trustTier as keyof typeof tierEmojis]}
                     </span>
                     <div className="text-center">

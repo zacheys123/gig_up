@@ -135,7 +135,7 @@ export const BadgesSection = ({
                     <div
                       className={`relative p-3 rounded-full ${isDarkMode ? "bg-gray-800/80" : "bg-white/80"} border ${colors.border}`}
                     >
-                      <div className={`text-2xl ${getTierText(badge.tier)}`}>
+                      <div className={`text-xl ${getTierText(badge.tier)}`}>
                         {badge.icon}
                       </div>
                       {/* Glow Effect */}
@@ -235,7 +235,7 @@ export const BadgesSection = ({
               className={`absolute inset-2 rounded-full ${isDarkMode ? "bg-gray-900" : "bg-gray-200"} border ${colors.border}`}
             />
             <div className="absolute inset-4 rounded-full flex items-center justify-center">
-              <FaAward className={`text-2xl ${colors.textMuted}`} />
+              <FaAward className={`text-xl ${colors.textMuted}`} />
             </div>
           </div>
           <h3 className="text-lg font-medium text-gray-700 dark:text-gray-100 mb-2">

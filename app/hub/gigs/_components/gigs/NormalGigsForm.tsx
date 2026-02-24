@@ -368,7 +368,7 @@ const DraftsListModal = React.memo(
           <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                   <FileText className="w-7 h-7 text-blue-600" />
                   Your Drafts
                 </h2>
@@ -2741,7 +2741,7 @@ export default function NormalGigsForm() {
                   Back
                 </Button>
                 <div>
-                  <h1 className={cn("text-2xl font-bold", colors.text)}>
+                  <h1 className={cn("text-xl font-bold", colors.text)}>
                     Create New Gig
                   </h1>
                   <p className={cn("text-sm", colors.textMuted)}>

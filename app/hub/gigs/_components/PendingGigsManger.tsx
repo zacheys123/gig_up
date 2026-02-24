@@ -54,6 +54,8 @@ import {
   Share2,
   Receipt,
   Send,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 import { filterUserApplications } from "@/utils";
@@ -1422,7 +1424,7 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
           <div className="space-y-2">
             <h3
               className={cn(
-                "text-2xl font-bold",
+                "text-xl font-bold",
                 isDarkMode ? "text-white" : "text-slate-900",
               )}
             >
@@ -1458,38 +1460,60 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
 
   return (
     <TooltipProvider>
-      <div
-        className={cn(
-          "p-4 md:p-6 space-y-6 min-h-screen transition-colors duration-300",
-          isDarkMode
-            ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
-            : "bg-gradient-to-br from-slate-50 via-white to-slate-50",
-        )}
-      >
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1
-              className={cn(
-                "text-3xl md:text-4xl font-bold tracking-tight",
-                isDarkMode ? "text-white" : "text-slate-900",
-              )}
-            >
-              My gig applications
-            </h1>
-            <p
-              className={cn(
-                "text-sm md:text-base mt-1",
-                isDarkMode ? "text-slate-400" : "text-slate-500",
-              )}
-            >
-              Track and manage all your gig opportunities in one place
-            </p>
-          </div>
+      <div className="min-h-screen relative">
+        {/* Background gradient */}
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div
+            className={cn(
+              "absolute top-0 left-0 right-0 h-96 bg-gradient-to-b",
+              isDarkMode
+                ? "from-orange-500/5 via-transparent to-transparent"
+                : "from-orange-500/10 via-transparent to-transparent",
+            )}
+          />
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
-            <div className="relative w-full sm:w-72">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+          {/* Header with Chevron */}
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1
+                  className={cn(
+                    "text-xl sm:text-xl md:text-3xl font-bold tracking-tight",
+                    isDarkMode ? "text-white" : "text-slate-900",
+                  )}
+                >
+                  My gig applications
+                </h1>
+                <button
+                  onClick={() => setShowHeader(!showHeader)}
+                  className={cn(
+                    "p-1.5 rounded-full transition-all md:hidden",
+                    isDarkMode
+                      ? "text-slate-400 hover:text-white hover:bg-slate-800"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
+                  )}
+                >
+                  {showHeader ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              <p
+                className={cn(
+                  "text-xs sm:text-sm mt-1 hidden sm:block",
+                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                )}
+              >
+                Track and manage all your gig opportunities
+              </p>
+            </div>
+
+            {/* Search - Desktop */}
+            <div className="hidden md:block relative w-72">
               <Search
                 className={cn(
                   "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
@@ -1497,353 +1521,459 @@ export const PendingGigsManager: React.FC<PendingGigsManagerProps> = ({
                 )}
               />
               <Input
-                placeholder="Search by title, location, role..."
+                placeholder="Search gigs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "pl-9 h-11 rounded-xl border-2 transition-all duration-200",
+                  "pl-9 h-10 rounded-xl border-2 transition-all",
                   "focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500",
                   isDarkMode
-                    ? "bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-800"
-                    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white",
+                    ? "bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
                 )}
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className={cn(
-                    "absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full",
-                    isDarkMode ? "hover:bg-slate-700" : "hover:bg-slate-100",
-                  )}
-                >
-                  <X className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              )}
-            </div>
-
-            {/* Display mode toggle */}
-            <div
-              className={cn(
-                "flex gap-1 p-1 rounded-xl",
-                isDarkMode
-                  ? "bg-slate-800/50 border border-slate-700"
-                  : "bg-slate-100 border border-slate-200",
-              )}
-            >
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "grid" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("grid")}
-                    className={cn(
-                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
-                      displayMode === "grid"
-                        ? isDarkMode
-                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
-                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
-                        : isDarkMode
-                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
-                    )}
-                  >
-                    <Grid className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Grid view</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "list" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("list")}
-                    className={cn(
-                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
-                      displayMode === "list"
-                        ? isDarkMode
-                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
-                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
-                        : isDarkMode
-                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
-                    )}
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>List view</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "timeline" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("timeline")}
-                    className={cn(
-                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
-                      displayMode === "timeline"
-                        ? isDarkMode
-                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
-                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
-                        : isDarkMode
-                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
-                    )}
-                  >
-                    <Activity className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Timeline view</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "calendar" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("calendar")}
-                    className={cn(
-                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
-                      displayMode === "calendar"
-                        ? isDarkMode
-                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
-                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
-                        : isDarkMode
-                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
-                    )}
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Calendar view</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={displayMode === "kanban" ? "default" : "ghost"}
-                    onClick={() => handleDisplayModeChange("kanban")}
-                    className={cn(
-                      "h-9 w-9 p-0 rounded-lg transition-all duration-200",
-                      displayMode === "kanban"
-                        ? isDarkMode
-                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
-                          : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
-                        : isDarkMode
-                          ? "text-slate-400 hover:text-white hover:bg-slate-700"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
-                    )}
-                  >
-                    <Kanban className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Kanban view</p>
-                </TooltipContent>
-              </Tooltip>
             </div>
           </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
-            {
-              label: "Total involved",
-              value: tabCounts.all,
-              icon: Briefcase,
-              gradient: "from-blue-500 to-cyan-500",
-            },
-            {
-              label: "Interested",
-              value: tabCounts.interested,
-              icon: Heart,
-              gradient: "from-sky-500 to-blue-500",
-            },
-            {
-              label: "Applied",
-              value: tabCounts.applied,
-              icon: Send,
-              gradient: "from-amber-500 to-yellow-500",
-            },
-            {
-              label: "Shortlisted",
-              value: tabCounts.shortlisted,
-              icon: Star,
-              gradient: "from-emerald-500 to-green-500",
-            },
-            {
-              label: "History",
-              value: tabCounts.history,
-              icon: History,
-              gradient: "from-purple-500 to-pink-500",
-            },
-          ].map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              whileHover={{ y: -4 }}
-            >
-              <Card
-                className={cn(
-                  "overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300",
-                  isDarkMode
-                    ? "bg-slate-900 border-slate-800"
-                    : "bg-white border-slate-200",
-                )}
+          {/* Expandable Header Content */}
+          <AnimatePresence>
+            {showHeader && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p
-                        className={cn(
-                          "text-xs font-medium uppercase tracking-wider",
-                          isDarkMode ? "text-slate-400" : "text-slate-500",
-                        )}
-                      >
-                        {stat.label}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-2xl font-bold mt-1",
-                          isDarkMode ? "text-white" : "text-slate-900",
-                        )}
-                      >
-                        {stat.value}
-                      </p>
+                <div className="pt-2 pb-4 space-y-4">
+                  {/* Stats Cards - Horizontal Scroll on Mobile */}
+                  <div className="relative">
+                    {/* Mobile Horizontal Scroll */}
+                    <div className="md:hidden -mx-3 px-3 overflow-x-auto scrollbar-hide">
+                      <div className="flex gap-3 pb-2 min-w-min">
+                        {[
+                          {
+                            label: "Total",
+                            value: tabCounts.all,
+                            icon: Briefcase,
+                            gradient: "from-blue-500 to-cyan-500",
+                          },
+                          {
+                            label: "Interested",
+                            value: tabCounts.interested,
+                            icon: Heart,
+                            gradient: "from-sky-500 to-blue-500",
+                          },
+                          {
+                            label: "Applied",
+                            value: tabCounts.applied,
+                            icon: Send,
+                            gradient: "from-amber-500 to-yellow-500",
+                          },
+                          {
+                            label: "Shortlisted",
+                            value: tabCounts.shortlisted,
+                            icon: Star,
+                            gradient: "from-emerald-500 to-green-500",
+                          },
+                          {
+                            label: "History",
+                            value: tabCounts.history,
+                            icon: History,
+                            gradient: "from-purple-500 to-pink-500",
+                          },
+                        ].map((stat, index) => (
+                          <motion.div
+                            key={stat.label}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="flex-shrink-0 w-36"
+                          >
+                            <Card
+                              className={cn(
+                                "border shadow-sm",
+                                isDarkMode
+                                  ? "bg-slate-900 border-slate-800"
+                                  : "bg-white border-slate-200",
+                              )}
+                            >
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <p
+                                    className={cn(
+                                      "text-[10px] font-medium uppercase tracking-wider",
+                                      isDarkMode
+                                        ? "text-slate-400"
+                                        : "text-slate-500",
+                                    )}
+                                  >
+                                    {stat.label}
+                                  </p>
+                                  <div
+                                    className={cn(
+                                      "p-1.5 rounded-lg bg-gradient-to-br",
+                                      stat.gradient,
+                                    )}
+                                  >
+                                    <stat.icon className="w-3 h-3 text-white" />
+                                  </div>
+                                </div>
+                                <p
+                                  className={cn(
+                                    "text-lg font-bold",
+                                    isDarkMode
+                                      ? "text-white"
+                                      : "text-slate-900",
+                                  )}
+                                >
+                                  {stat.value}
+                                </p>
+                                <div className="mt-2 h-1 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className={cn(
+                                      "h-full rounded-full bg-gradient-to-r",
+                                      stat.gradient,
+                                    )}
+                                    style={{
+                                      width: `${(stat.value / Math.max(tabCounts.all, 1)) * 100}%`,
+                                    }}
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                      {/* Scroll hint */}
+                      <div className="flex items-center justify-center gap-1 mt-2">
+                        <div className="flex gap-1">
+                          <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse" />
+                          <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse delay-150" />
+                          <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse delay-300" />
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[10px]",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        >
+                          scroll for more
+                        </span>
+                      </div>
                     </div>
-                    <div
-                      className={cn(
-                        "p-3 rounded-xl bg-gradient-to-br",
-                        stat.gradient,
-                        "bg-opacity-10 dark:bg-opacity-20",
-                      )}
-                    >
-                      <stat.icon
+
+                    {/* Desktop Stats Grid */}
+                    <div className="hidden md:grid grid-cols-5 gap-4">
+                      {[
+                        {
+                          label: "Total involved",
+                          value: tabCounts.all,
+                          icon: Briefcase,
+                          gradient: "from-blue-500 to-cyan-500",
+                        },
+                        {
+                          label: "Interested",
+                          value: tabCounts.interested,
+                          icon: Heart,
+                          gradient: "from-sky-500 to-blue-500",
+                        },
+                        {
+                          label: "Applied",
+                          value: tabCounts.applied,
+                          icon: Send,
+                          gradient: "from-amber-500 to-yellow-500",
+                        },
+                        {
+                          label: "Shortlisted",
+                          value: tabCounts.shortlisted,
+                          icon: Star,
+                          gradient: "from-emerald-500 to-green-500",
+                        },
+                        {
+                          label: "History",
+                          value: tabCounts.history,
+                          icon: History,
+                          gradient: "from-purple-500 to-pink-500",
+                        },
+                      ].map((stat, index) => (
+                        <motion.div
+                          key={stat.label}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                          whileHover={{ y: -4 }}
+                        >
+                          <Card
+                            className={cn(
+                              "overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300",
+                              isDarkMode
+                                ? "bg-slate-900 border-slate-800"
+                                : "bg-white border-slate-200",
+                            )}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p
+                                    className={cn(
+                                      "text-xs font-medium uppercase tracking-wider",
+                                      isDarkMode
+                                        ? "text-slate-400"
+                                        : "text-slate-500",
+                                    )}
+                                  >
+                                    {stat.label}
+                                  </p>
+                                  <p
+                                    className={cn(
+                                      "text-xl font-bold mt-1",
+                                      isDarkMode
+                                        ? "text-white"
+                                        : "text-slate-900",
+                                    )}
+                                  >
+                                    {stat.value}
+                                  </p>
+                                </div>
+                                <div
+                                  className={cn(
+                                    "p-3 rounded-xl bg-gradient-to-br",
+                                    stat.gradient,
+                                  )}
+                                >
+                                  <stat.icon className="w-5 h-5 text-white" />
+                                </div>
+                              </div>
+                              <div className="mt-3 h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{
+                                    width: `${(stat.value / Math.max(tabCounts.all, 1)) * 100}%`,
+                                  }}
+                                  transition={{ duration: 0.5, delay: 0.2 }}
+                                  className={cn(
+                                    "h-full rounded-full bg-gradient-to-r",
+                                    stat.gradient,
+                                  )}
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Search - Mobile */}
+                  <div className="md:hidden">
+                    <div className="relative">
+                      <Search
                         className={cn(
-                          "w-5 h-5",
-                          isDarkMode ? "text-white" : "text-slate-900",
+                          "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4",
+                          isDarkMode ? "text-slate-500" : "text-slate-400",
+                        )}
+                      />
+                      <Input
+                        placeholder="Search gigs..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={cn(
+                          "pl-9 h-10 rounded-xl border-2 w-full",
+                          "focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500",
+                          isDarkMode
+                            ? "bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                            : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
                         )}
                       />
                     </div>
                   </div>
-
-                  {/* Progress bar */}
-                  <div className="mt-3 h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: `${(stat.value / Math.max(tabCounts.all, 1)) * 100}%`,
-                      }}
-                      transition={{ duration: 0.5, delay: 0.2 }}
-                      className={cn(
-                        "h-full rounded-full bg-gradient-to-r",
-                        stat.gradient,
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList
-            className={cn(
-              "grid grid-cols-5 gap-1 p-1 rounded-lg",
-              isDarkMode ? "bg-slate-800/50" : "bg-slate-100",
+                </div>
+              </motion.div>
             )}
-          >
-            {[
-              { value: "all", label: "All", icon: Filter },
-              { value: "interested", label: "Interested", icon: Heart },
-              { value: "applied", label: "Applied", icon: Send },
-              { value: "shortlisted", label: "Shortlisted", icon: Star },
-              { value: "history", label: "History", icon: History },
-            ].map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
+          </AnimatePresence>
+
+          {/* Fixed View Controls - Always visible */}
+          <div className="sticky top-0 z-10 pt-2 pb-3 bg-inherit backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-4">
+              {/* Left side - View Toggle */}
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "text-xs font-medium hidden sm:block",
+                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                  )}
+                >
+                  View:
+                </span>
+                <div
+                  className={cn(
+                    "flex gap-1 p-1 rounded-xl",
+                    isDarkMode
+                      ? "bg-slate-800/50 border border-slate-700"
+                      : "bg-slate-100 border border-slate-200",
+                  )}
+                >
+                  {[
+                    { mode: "grid", icon: Grid },
+                    { mode: "list", icon: List },
+                    { mode: "timeline", icon: Activity },
+                    { mode: "calendar", icon: CalendarDays },
+                    { mode: "kanban", icon: Kanban },
+                  ].map(({ mode, icon: Icon }) => (
+                    <Tooltip key={mode}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleDisplayModeChange(mode as any)}
+                          className={cn(
+                            "h-8 w-8 rounded-lg transition-all duration-200 flex items-center justify-center",
+                            displayMode === mode
+                              ? isDarkMode
+                                ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg"
+                                : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                              : isDarkMode
+                                ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
+                          )}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {mode.charAt(0).toUpperCase() + mode.slice(1)} view
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right side - Results count and filter toggle */}
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs",
+                    isDarkMode
+                      ? "bg-slate-800/50 text-slate-300"
+                      : "bg-slate-100 text-slate-600",
+                  )}
+                >
+                  <span className="font-semibold text-orange-500">
+                    {filteredGigs.length}
+                  </span>
+                  <span className="hidden xs:inline">of</span>
+                  <span className="font-semibold hidden xs:inline">
+                    {tabCounts.all}
+                  </span>
+                </div>
+
+                {/* Mobile filter button */}
+                <button
+                  onClick={() => setShowHeader(!showHeader)}
+                  className={cn(
+                    "md:hidden p-2 rounded-lg",
+                    isDarkMode
+                      ? "bg-slate-800/50 text-slate-300"
+                      : "bg-slate-100 text-slate-600",
+                  )}
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs - Below view controls */}
+          <div className="mt-4">
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
+              <TabsList
                 className={cn(
-                  "relative px-3 py-2 rounded-md text-sm font-medium transition-all",
-                  "data-[state=active]:shadow-sm",
-                  isDarkMode
-                    ? "data-[state=active]:bg-orange-600 data-[state=active]:text-white"
-                    : "data-[state=active]:bg-orange-500 data-[state=active]:text-white",
-                  !isDarkMode &&
-                    "data-[state=inactive]:text-slate-600 hover:text-slate-900 hover:bg-slate-200/50",
-                  isDarkMode &&
-                    "data-[state=inactive]:text-slate-400 hover:text-white hover:bg-slate-700",
+                  "grid grid-cols-5 gap-1 p-1 rounded-lg w-full",
+                  isDarkMode ? "bg-slate-800/50" : "bg-slate-100",
                 )}
               >
-                <div className="flex items-center justify-center gap-1.5">
-                  <tab.icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  {tabCounts[tab.value as keyof typeof tabCounts] > 0 && (
-                    <span
-                      className={cn(
-                        "ml-1 px-1.5 py-0.5 text-xs rounded-full",
-                        activeTab === tab.value
-                          ? "bg-white/20 text-white"
-                          : isDarkMode
-                            ? "bg-slate-700 text-slate-300"
-                            : "bg-slate-200 text-slate-600",
+                {[
+                  { value: "all", label: "All", icon: Filter },
+                  { value: "interested", label: "Interested", icon: Heart },
+                  { value: "applied", label: "Applied", icon: Send },
+                  { value: "shortlisted", label: "Shortlisted", icon: Star },
+                  { value: "history", label: "History", icon: History },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className={cn(
+                      "relative px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
+                      "data-[state=active]:shadow-sm",
+                      isDarkMode
+                        ? "data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                        : "data-[state=active]:bg-orange-500 data-[state=active]:text-white",
+                      !isDarkMode &&
+                        "data-[state=inactive]:text-slate-600 hover:text-slate-900 hover:bg-slate-200/50",
+                      isDarkMode &&
+                        "data-[state=inactive]:text-slate-400 hover:text-white hover:bg-slate-700",
+                    )}
+                  >
+                    <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                      <tab.icon className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                      {tabCounts[tab.value as keyof typeof tabCounts] > 0 && (
+                        <span
+                          className={cn(
+                            "ml-0.5 px-1.5 py-0.5 text-[10px] rounded-full",
+                            activeTab === tab.value
+                              ? "bg-white/20 text-white"
+                              : isDarkMode
+                                ? "bg-slate-700 text-slate-300"
+                                : "bg-slate-200 text-slate-600",
+                          )}
+                        >
+                          {tabCounts[tab.value as keyof typeof tabCounts]}
+                        </span>
                       )}
-                    >
-                      {tabCounts[tab.value as keyof typeof tabCounts]}
-                    </span>
-                  )}
-                </div>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+                    </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-          <TabsContent value={activeTab} className="mt-6">
-            {showContentLoading ? (
-              <div className="space-y-4">
-                {displayMode === "grid" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[...Array(6)].map((_, i) => (
-                      <Skeleton key={i} className="h-48 rounded-xl" />
-                    ))}
+              <TabsContent value={activeTab} className="mt-6">
+                {showContentLoading ? (
+                  <div className="space-y-4">
+                    {displayMode === "grid" ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        {[...Array(6)].map((_, i) => (
+                          <Skeleton key={i} className="h-48 rounded-xl" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {[...Array(4)].map((_, i) => (
+                          <Skeleton key={i} className="h-24 rounded-xl" />
+                        ))}
+                      </div>
+                    )}
                   </div>
+                ) : filteredGigs.length > 0 ? (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`gigs-${displayMode}-${activeTab}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {renderGigs()}
+                    </motion.div>
+                  </AnimatePresence>
                 ) : (
-                  <GigLoader title="Loader" size="md" />
+                  <EmptyState />
                 )}
-              </div>
-            ) : filteredGigs.length > 0 ? (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`gigs-${displayMode}-${activeTab}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  {renderGigs()}
-                </motion.div>
-              </AnimatePresence>
-            ) : (
-              <EmptyState />
-            )}
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Add padding at bottom for mobile */}
+          <div className="h-4 sm:h-6" />
+        </div>
       </div>
     </TooltipProvider>
   );

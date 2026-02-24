@@ -1,4 +1,4 @@
-import { getCurrentContext, GIGUP_CONTEXTS } from "@/utils";
+import { getCurrentContext, gigUp_CONTEXTS } from "@/utils";
 import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
 
@@ -30,12 +30,12 @@ export async function POST(request: Request) {
     if (!question) {
       return NextResponse.json(
         { error: "Question is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const context = platformVersion
-      ? GIGUP_CONTEXTS[platformVersion] || getCurrentContext()
+      ? gigUp_CONTEXTS[platformVersion] || getCurrentContext()
       : getCurrentContext();
 
     console.log("🤖 Using context for version:", platformVersion);
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "system",
-          content: `${context}\n\nCurrent user: ${userRole}, Tier: ${userTier}. Platform: ${GIGUP_CONTEXTS.current}`,
+          content: `${context}\n\nCurrent user: ${userRole}, Tier: ${userTier}. Platform: ${gigUp_CONTEXTS.current}`,
         },
         { role: "user", content: question },
       ],
@@ -61,8 +61,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       answer: answer,
-      platformVersion: GIGUP_CONTEXTS.current,
-      contextVersion: platformVersion || GIGUP_CONTEXTS.current,
+      platformVersion: gigUp_CONTEXTS.current,
+      contextVersion: platformVersion || gigUp_CONTEXTS.current,
       provider: "deepseek",
       model: "deepseek-chat",
     });
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
         debug:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 }

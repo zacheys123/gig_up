@@ -107,19 +107,19 @@ export default function TrustChecklist() {
   // Get trust score data
   const trustData = useQuery(
     api.controllers.trustScore.getTrustScore,
-    user?.clerkId ? { clerkId: user.clerkId } : "skip"
+    user?.clerkId ? { clerkId: user.clerkId } : "skip",
   );
 
   // Get improvement suggestions
   const improvements = useQuery(
     api.controllers.trustScore.getTrustImprovements,
-    user?.clerkId ? { clerkId: user.clerkId } : "skip"
+    user?.clerkId ? { clerkId: user.clerkId } : "skip",
   );
 
   // Get user's current data for checklist
   const userData = useQuery(
     api.controllers.user.getUserProfile,
-    user?.clerkId ? { clerkId: user.clerkId } : "skip"
+    user?.clerkId ? { clerkId: user.clerkId } : "skip",
   );
 
   // Get user's videos for video scoring
@@ -127,7 +127,7 @@ export default function TrustChecklist() {
     api.controllers.videos.getUserVideos,
     user?.clerkId
       ? { userId: user.clerkId, currentUserId: user.clerkId }
-      : "skip"
+      : "skip",
   );
 
   useEffect(() => {
@@ -149,11 +149,11 @@ export default function TrustChecklist() {
       userVideos?.some((video) => video.isProfileVideo) || false;
     const gigVideoCount =
       userVideos?.filter(
-        (video) => video.videoType === "gig" || video.videoType === "promo"
+        (video) => video.videoType === "gig" || video.videoType === "promo",
       ).length || 0;
 
     const accountAgeDays = Math.floor(
-      (Date.now() - userData._creationTime) / (1000 * 60 * 60 * 24)
+      (Date.now() - userData._creationTime) / (1000 * 60 * 60 * 24),
     );
 
     const checklist: ChecklistItem[] = [
@@ -242,8 +242,8 @@ export default function TrustChecklist() {
         completed: Boolean(
           // Use Boolean() to ensure boolean
           (userData.isMusician && !!userData.roleType) ||
-            (userData.isClient && !!userData.clientType) ||
-            (userData.isBooker && !!userData.bookerType)
+          (userData.isClient && !!userData.clientType) ||
+          (userData.isBooker && !!userData.bookerType),
         ),
         points: SCORING_CONSTANTS.ROLE_TYPE,
         icon: Briefcase,
@@ -281,7 +281,7 @@ export default function TrustChecklist() {
                   : accountAgeDays > 30
                     ? 1
                     : 0,
-          SECTION_CAPS.LONGEVITY
+          SECTION_CAPS.LONGEVITY,
         ),
         progress: {
           current: accountAgeDays,
@@ -300,7 +300,7 @@ export default function TrustChecklist() {
         completed: Boolean(
           // Use Boolean()
           userData.lastActive &&
-            Date.now() - userData.lastActive < 7 * 24 * 60 * 60 * 1000
+          Date.now() - userData.lastActive < 7 * 24 * 60 * 60 * 1000,
         ),
         points: 3,
         icon: Zap,
@@ -325,7 +325,7 @@ export default function TrustChecklist() {
                 : (userData.followers?.length || 0) >= 5
                   ? 1
                   : 0,
-          SECTION_CAPS.SOCIAL
+          SECTION_CAPS.SOCIAL,
         ),
         progress: {
           current: userData.followers?.length || 0,
@@ -367,9 +367,9 @@ export default function TrustChecklist() {
         completed: Boolean(
           // Use Boolean()
           (userData.isMusician && !!userData.talentbio) ||
-            (userData.isBooker && !!userData.bookerBio) ||
-            (userData.isClient &&
-              (!!userData.organization || !!userData.companyName))
+          (userData.isBooker && !!userData.bookerBio) ||
+          (userData.isClient &&
+            (!!userData.organization || !!userData.companyName)),
         ),
         points: SCORING_CONSTANTS.BIO,
         icon: FileText,
@@ -386,7 +386,7 @@ export default function TrustChecklist() {
         completed: Boolean(
           // Use Boolean()
           (userData.isMusician && !!userData.musiciangenres?.length) ||
-            (userData.isBooker && !!userData.bookerSkills?.length)
+          (userData.isBooker && !!userData.bookerSkills?.length),
         ),
         points: SCORING_CONSTANTS.SKILLS,
         icon: userData.isMusician ? Music : Award,
@@ -419,7 +419,7 @@ export default function TrustChecklist() {
           completed: videoCount > 0, // Already boolean
           points: Math.min(
             videoCount >= 5 ? 5 : videoCount >= 3 ? 4 : videoCount >= 1 ? 2 : 0,
-            5
+            5,
           ),
           progress: {
             current: videoCount,
@@ -443,7 +443,7 @@ export default function TrustChecklist() {
                 : totalVideoLikes >= 5
                   ? 1
                   : 0,
-            3
+            3,
           ),
           progress: {
             current: totalVideoLikes,
@@ -472,7 +472,7 @@ export default function TrustChecklist() {
           completed: gigVideoCount > 0, // Already boolean
           points: Math.min(
             gigVideoCount >= 3 ? 2 : gigVideoCount >= 1 ? 1 : 0,
-            2
+            2,
           ),
           progress: {
             current: gigVideoCount,
@@ -482,7 +482,7 @@ export default function TrustChecklist() {
           category: "content",
           priority: "low",
           actionUrl: "/videos/upload?type=gig",
-        }
+        },
       );
     }
 
@@ -491,7 +491,7 @@ export default function TrustChecklist() {
       const completedGigs = userData.completedGigsCount || 0;
       const gigPoints = Math.min(
         completedGigs * SCORING_CONSTANTS.GIGS_COMPLETED_PER_POINT,
-        SCORING_CONSTANTS.GIGS_COMPLETED_MAX
+        SCORING_CONSTANTS.GIGS_COMPLETED_MAX,
       );
 
       checklist.push(
@@ -505,7 +505,7 @@ export default function TrustChecklist() {
             current: completedGigs,
             max: Math.ceil(
               SCORING_CONSTANTS.GIGS_COMPLETED_MAX /
-                SCORING_CONSTANTS.GIGS_COMPLETED_PER_POINT
+                SCORING_CONSTANTS.GIGS_COMPLETED_PER_POINT,
             ),
           },
           icon: Calendar,
@@ -546,14 +546,14 @@ export default function TrustChecklist() {
           completed: Boolean(
             // Use Boolean()
             userData.performanceStats?.responseTime &&
-              userData.performanceStats.responseTime < 24
+            userData.performanceStats.responseTime < 24,
           ),
           points: 3,
           icon: Clock,
           category: "quality",
           priority: "medium",
           actionUrl: "/messages",
-        }
+        },
       );
     } else if (userData.isClient) {
       const gigsPosted = userData.gigsPosted || 0;
@@ -628,7 +628,7 @@ export default function TrustChecklist() {
           category: "quality",
           priority: "high",
           actionUrl: "/reviews",
-        }
+        },
       );
     }
 
@@ -700,7 +700,7 @@ export default function TrustChecklist() {
 
     const pointsAvailable = checklist.reduce(
       (sum, item) => sum + Math.max(item.points, 0),
-      0
+      0,
     );
 
     const completionRate = total > 0 ? (completed / total) * 100 : 0;
@@ -719,14 +719,14 @@ export default function TrustChecklist() {
 
     sections.forEach((section) => {
       const sectionItems = checklist.filter(
-        (item) => item.category === section
+        (item) => item.category === section,
       );
       const earned = sectionItems
         .filter((item) => item.completed)
         .reduce((sum, item) => sum + Math.max(item.points, 0), 0);
       const available = sectionItems.reduce(
         (sum, item) => sum + Math.max(item.points, 0),
-        0
+        0,
       );
       const percentage = available > 0 ? (earned / available) * 100 : 0;
 
@@ -767,7 +767,7 @@ export default function TrustChecklist() {
       acc[item.category].push(item);
       return acc;
     },
-    {} as Record<string, ChecklistItem[]>
+    {} as Record<string, ChecklistItem[]>,
   );
 
   const categoryIcons: Record<string, React.ElementType> = {
@@ -811,7 +811,7 @@ export default function TrustChecklist() {
         .reduce((sum, item) => sum + Math.max(item.points, 0), 0);
       const pointsAvailable = items.reduce(
         (sum, item) => sum + Math.max(item.points, 0),
-        0
+        0,
       );
 
       return {
@@ -823,7 +823,7 @@ export default function TrustChecklist() {
         pointsAvailable,
         description: categoryDescriptions[category] || "",
       };
-    }
+    },
   );
 
   // Calculate potential score
@@ -876,7 +876,7 @@ export default function TrustChecklist() {
                     />
                   ))}
                 </div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-xl font-bold text-blue-600">
                   {trustStars.toFixed(1)} stars
                 </div>
                 <div className="text-sm text-gray-600">
@@ -927,7 +927,7 @@ export default function TrustChecklist() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {/* Section Progress Overview */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
             Section Progress
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
@@ -980,7 +980,7 @@ export default function TrustChecklist() {
           {Object.entries(groupedChecklist).map(([category, items]) => {
             const Icon = categoryIcons[category];
             const completedItems = items.filter(
-              (item) => item.completed
+              (item) => item.completed,
             ).length;
             const totalItems = items.length;
             const colorStyle = categoryColors[category].split(" ");
@@ -1160,7 +1160,7 @@ export default function TrustChecklist() {
           className="mt-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 border border-blue-100"
         >
           <div className="max-w-3xl mx-auto text-center">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
               Ready to Boost Your Score?
             </h3>
             <p className="text-gray-700 mb-6">
@@ -1179,10 +1179,10 @@ export default function TrustChecklist() {
                           (item) =>
                             !item.completed &&
                             item.priority === "high" &&
-                            item.points > 0
+                            item.points > 0,
                         ) ||
                         checklist.find(
-                          (item) => !item.completed && item.points > 0
+                          (item) => !item.completed && item.points > 0,
                         );
                       if (firstPending?.actionUrl) {
                         router.push(firstPending.actionUrl);
@@ -1205,7 +1205,7 @@ export default function TrustChecklist() {
               ) : (
                 <div className="text-center py-8">
                   <div className="text-6xl mb-4">🎉</div>
-                  <p className="text-2xl font-semibold text-gray-900 mb-2">
+                  <p className="text-xl font-semibold text-gray-900 mb-2">
                     Congratulations!
                   </p>
                   <p className="text-gray-700 text-lg">
@@ -1251,7 +1251,7 @@ export default function TrustChecklist() {
 
         {/* Score Impact Analysis */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
             Score Impact Analysis
           </h2>
           <div className="grid md:grid-cols-2 gap-8">

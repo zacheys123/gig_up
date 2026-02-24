@@ -391,7 +391,7 @@ Unlock competitions by improving your trust score
 </div>
 </div>
 <div className="flex items-center gap-2">
-<span className="text-2xl font-bold text-amber-600">
+<span className="text-xl font-bold text-amber-600">
 {trustStars.toFixed(1)}⭐
 </span>
 <span className="text-sm text-gray-500">/{FEATURE_STAR_THRESHOLDS.canCompete}⭐</span>
@@ -566,7 +566,7 @@ return (
 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 <div className="text-center">
 <div className="text-5xl font-bold mb-2">{trustStars.toFixed(1)}</div>
-<div className="text-2xl">⭐</div>
+<div className="text-xl">⭐</div>
 <p className="text-sm text-gray-500 mt-2">Trust Stars</p>
 </div>
 <div className="text-center">

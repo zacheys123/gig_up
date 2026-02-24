@@ -84,19 +84,19 @@ const FriendsComponent = () => {
   // Get user data
   const friend = useQuery(
     api.controllers.user.getUserByUsername,
-    username ? { username: username as string } : "skip"
+    username ? { username: username as string } : "skip",
   );
 
   // Get trust score data
   const trustData = useQuery(
     api.controllers.trustScore.getTrustScore,
-    friend?._id ? { userId: friend._id } : "skip"
+    friend?._id ? { userId: friend._id } : "skip",
   );
 
   // Get improvement suggestions
   const improvements = useQuery(
     api.controllers.trustScore.getTrustImprovements,
-    friend?._id ? { userId: friend._id } : "skip"
+    friend?._id ? { userId: friend._id } : "skip",
   );
 
   // Get profile videos
@@ -111,7 +111,7 @@ const FriendsComponent = () => {
         ? {
             userId: friend.clerkId,
           }
-        : "skip"
+        : "skip",
   );
 
   const { isInGracePeriod } = useCheckTrial();
@@ -141,7 +141,7 @@ const FriendsComponent = () => {
         ? "bg-gradient-to-br from-purple-900 to-indigo-800"
         : "bg-gradient-to-br from-purple-600 to-indigo-600",
     }),
-    [isDarkMode]
+    [isDarkMode],
   );
 
   // Navigation handlers
@@ -150,18 +150,18 @@ const FriendsComponent = () => {
       goBack: () => router.back(),
       goToMusicGigs: () =>
         router.push(
-          currentUser?.isClient ? `/create/${userId}` : `/av_gigs/${userId}`
+          currentUser?.isClient ? `/create/${userId}` : `/av_gigs/${userId}`,
         ),
       goToVideos: () => {
         if (friend?.clerkId) {
           router.push(
-            `/search/allvideos/${friend.clerkId}/*${friend.firstname}${friend.lastname}`
+            `/search/allvideos/${friend.clerkId}/*${friend.firstname}${friend.lastname}`,
           );
         }
       },
       goToReviews: () =>
         router.push(
-          `/search/reviews/${friend?._id}/*${friend?.firstname}${friend?.lastname}`
+          `/search/reviews/${friend?._id}/*${friend?.firstname}${friend?.lastname}`,
         ),
       goToTrustScore: () => {
         if (currentUser?._id === friend?._id) {
@@ -171,7 +171,7 @@ const FriendsComponent = () => {
         }
       },
     }),
-    [router, currentUser, userId, friend]
+    [router, currentUser, userId, friend],
   );
 
   const isLoading = friend === undefined;
@@ -223,7 +223,7 @@ const FriendsComponent = () => {
           ]
         : []),
     ],
-    [currentUser, navigationHandlers, trustData]
+    [currentUser, navigationHandlers, trustData],
   );
 
   // Profile sections
@@ -280,7 +280,7 @@ const FriendsComponent = () => {
               <div
                 className={cn(
                   "px-4 py-2 rounded-full border",
-                  tierConfig.color
+                  tierConfig.color,
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -302,7 +302,7 @@ const FriendsComponent = () => {
                       ((trustData.score - trustData.tierData.minScore) /
                         (trustData.nextTier.minScore -
                           trustData.tierData.minScore)) *
-                        100
+                        100,
                     )}
                     %
                   </span>
@@ -318,8 +318,8 @@ const FriendsComponent = () => {
                           ((trustData.score - trustData.tierData.minScore) /
                             (trustData.nextTier.minScore -
                               trustData.tierData.minScore)) *
-                            100
-                        )
+                            100,
+                        ),
                       )}%`,
                     }}
                   />
@@ -338,7 +338,7 @@ const FriendsComponent = () => {
                   "p-3 rounded-lg border",
                   trustData.bandEligible
                     ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-                    : "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+                    : "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800",
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -347,7 +347,7 @@ const FriendsComponent = () => {
                       "p-2 rounded-lg",
                       trustData.bandEligible
                         ? "bg-green-100 dark:bg-green-800"
-                        : "bg-amber-100 dark:bg-amber-800"
+                        : "bg-amber-100 dark:bg-amber-800",
                     )}
                   >
                     {trustData.bandEligible ? (
@@ -377,7 +377,7 @@ const FriendsComponent = () => {
               <div
                 className={cn(
                   "p-3 rounded-lg border",
-                  themeStyles.secondaryBackground
+                  themeStyles.secondaryBackground,
                 )}
               >
                 <p className={cn("text-xs", colors.textMuted)}>
@@ -390,7 +390,7 @@ const FriendsComponent = () => {
               <div
                 className={cn(
                   "p-3 rounded-lg border",
-                  themeStyles.secondaryBackground
+                  themeStyles.secondaryBackground,
                 )}
               >
                 <p className={cn("text-xs", colors.textMuted)}>Last Updated</p>
@@ -477,7 +477,7 @@ const FriendsComponent = () => {
               <p
                 className={cn(
                   "leading-relaxed text-sm sm:text-base whitespace-pre-line",
-                  colors.text
+                  colors.text,
                 )}
               >
                 {friend.talentbio}
@@ -490,7 +490,7 @@ const FriendsComponent = () => {
               <p
                 className={cn(
                   "leading-relaxed text-sm sm:text-base whitespace-pre-line",
-                  colors.text
+                  colors.text,
                 )}
               >
                 {friend.username}
@@ -514,7 +514,7 @@ const FriendsComponent = () => {
           <div
             className={cn(
               "text-center py-8 rounded-lg",
-              themeStyles.secondaryBackground
+              themeStyles.secondaryBackground,
             )}
           >
             <div className="animate-pulse">
@@ -542,7 +542,7 @@ const FriendsComponent = () => {
                 className={cn(
                   "rounded-lg overflow-hidden border cursor-pointer",
                   themeStyles.secondaryBackground,
-                  !video.isPublic && !isFollowingFriend && "opacity-60"
+                  !video.isPublic && !isFollowingFriend && "opacity-60",
                 )}
                 onClick={() => {
                   if (video.isPublic || isFollowingFriend) {
@@ -581,7 +581,7 @@ const FriendsComponent = () => {
                   {!video.isPublic && !isFollowingFriend && (
                     <div
                       className={cn(
-                        "text-xs mt-2 p-2 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+                        "text-xs mt-2 p-2 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200",
                       )}
                     >
                       🔒 Follow each other to view private content
@@ -616,7 +616,7 @@ const FriendsComponent = () => {
               <div
                 className={cn(
                   "p-3 sm:p-4 rounded-lg",
-                  themeStyles.secondaryBackground
+                  themeStyles.secondaryBackground,
                 )}
               >
                 <p className={cn("text-xs sm:text-sm", colors.textMuted)}>
@@ -625,7 +625,7 @@ const FriendsComponent = () => {
                 <p
                   className={cn(
                     "font-medium text-sm sm:text-base",
-                    colors.text
+                    colors.text,
                   )}
                 >
                   {friend.instrument}
@@ -637,7 +637,7 @@ const FriendsComponent = () => {
               <div
                 className={cn(
                   "p-3 sm:p-4 rounded-lg",
-                  themeStyles.secondaryBackground
+                  themeStyles.secondaryBackground,
                 )}
               >
                 <p className={cn("text-xs sm:text-sm", colors.textMuted)}>
@@ -646,7 +646,7 @@ const FriendsComponent = () => {
                 <p
                   className={cn(
                     "font-medium text-sm sm:text-base",
-                    colors.text
+                    colors.text,
                   )}
                 >
                   Music Teacher
@@ -658,7 +658,7 @@ const FriendsComponent = () => {
               <div
                 className={cn(
                   "p-3 sm:p-4 rounded-lg",
-                  themeStyles.secondaryBackground
+                  themeStyles.secondaryBackground,
                 )}
               >
                 <p className={cn("text-xs sm:text-sm", colors.textMuted)}>
@@ -669,7 +669,7 @@ const FriendsComponent = () => {
                 <p
                   className={cn(
                     "font-medium text-sm sm:text-base",
-                    colors.text
+                    colors.text,
                   )}
                 >
                   {friend.experience} years
@@ -704,7 +704,7 @@ const FriendsComponent = () => {
                     "p-4 rounded-xl border-2",
                     isDarkMode
                       ? "bg-amber-900/20 border-amber-800"
-                      : "bg-amber-50 border-amber-200"
+                      : "bg-amber-50 border-amber-200",
                   )}
                 >
                   <div className="flex items-center gap-3 mb-3">
@@ -720,7 +720,7 @@ const FriendsComponent = () => {
                       </p>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
                     {friend.rate.currency} {friend.rate.baseRate}
                   </p>
                 </div>
@@ -739,7 +739,7 @@ const FriendsComponent = () => {
                           key={index}
                           className={cn(
                             "p-3 rounded-lg border",
-                            themeStyles.secondaryBackground
+                            themeStyles.secondaryBackground,
                           )}
                         >
                           <div className="flex items-start justify-between mb-2">
@@ -849,13 +849,13 @@ const FriendsComponent = () => {
                   rel="noopener noreferrer"
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:scale-105",
-                    themeStyles.secondaryBackground
+                    themeStyles.secondaryBackground,
                   )}
                 >
                   <div
                     className={cn(
                       "p-2 rounded-lg text-white",
-                      getPlatformStyle(handle.platform)
+                      getPlatformStyle(handle.platform),
                     )}
                   >
                     {getPlatformIcon(handle.platform)}
@@ -864,7 +864,7 @@ const FriendsComponent = () => {
                     <p
                       className={cn(
                         "text-sm font-medium truncate",
-                        colors.text
+                        colors.text,
                       )}
                     >
                       @{handle.handle}
@@ -890,13 +890,13 @@ const FriendsComponent = () => {
           <div
             className={cn(
               "text-center p-3 sm:p-4 rounded-lg shadow-sm",
-              isDarkMode ? "bg-indigo-900/30" : "bg-indigo-100"
+              isDarkMode ? "bg-indigo-900/30" : "bg-indigo-100",
             )}
           >
             <p
               className={cn(
-                "text-2xl sm:text-3xl font-extrabold",
-                isDarkMode ? "text-indigo-400" : "text-indigo-600"
+                "text-xl sm:text-3xl font-extrabold",
+                isDarkMode ? "text-indigo-400" : "text-indigo-600",
               )}
             >
               <CountUp end={friend.followers?.length || 0} duration={2} />
@@ -908,13 +908,13 @@ const FriendsComponent = () => {
           <div
             className={cn(
               "text-center p-3 sm:p-4 rounded-lg shadow-sm",
-              isDarkMode ? "bg-purple-900/30" : "bg-purple-100"
+              isDarkMode ? "bg-purple-900/30" : "bg-purple-100",
             )}
           >
             <p
               className={cn(
-                "text-2xl sm:text-3xl font-extrabold",
-                isDarkMode ? "text-purple-400" : "text-purple-600"
+                "text-xl sm:text-3xl font-extrabold",
+                isDarkMode ? "text-purple-400" : "text-purple-600",
               )}
             >
               <CountUp end={friend.followings?.length || 0} duration={2} />
@@ -945,7 +945,7 @@ const FriendsComponent = () => {
       <div
         className={cn(
           "flex justify-center items-center min-h-screen",
-          colors.background
+          colors.background,
         )}
       >
         <motion.div
@@ -962,13 +962,13 @@ const FriendsComponent = () => {
       <div
         className={cn(
           "flex justify-center items-center min-h-screen",
-          colors.background
+          colors.background,
         )}
       >
         <div
           className={cn(
             "p-6 sm:p-10 rounded-2xl shadow-xl border text-center",
-            themeStyles.cardBackground
+            themeStyles.cardBackground,
           )}
         >
           <p className={cn("text-lg sm:text-xl font-medium mb-4", colors.text)}>
@@ -995,7 +995,7 @@ const FriendsComponent = () => {
       <div
         className={cn(
           "relative h-[200px] rounded-b-3xl shadow-lg",
-          themeStyles.gradientBackground
+          themeStyles.gradientBackground,
         )}
       >
         {/* Trust Score Badge */}
@@ -1004,7 +1004,7 @@ const FriendsComponent = () => {
             <div
               className={cn(
                 "px-4 py-2 rounded-full border backdrop-blur-sm shadow-lg",
-                tierConfig.color
+                tierConfig.color,
               )}
             >
               <div className="flex items-center gap-2">
@@ -1024,7 +1024,7 @@ const FriendsComponent = () => {
               "w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 shadow-xl flex items-center justify-center overflow-hidden",
               isDarkMode
                 ? "border-gray-800 bg-gray-800"
-                : "border-white bg-white"
+                : "border-white bg-white",
             )}
           >
             {friend.picture ? (
@@ -1050,8 +1050,8 @@ const FriendsComponent = () => {
           <div className="flex flex-col items-center mb-6">
             <h1
               className={cn(
-                "text-xl sm:text-2xl capitalize font-extrabold tracking-tight",
-                colors.text
+                "text-xl sm:text-xl capitalize font-extrabold tracking-tight",
+                colors.text,
               )}
             >
               {friend.firstname} {friend.lastname}
@@ -1072,7 +1072,7 @@ const FriendsComponent = () => {
                 <span
                   className={cn(
                     "text-xs px-2 py-1 rounded-full",
-                    tierConfig.color
+                    tierConfig.color,
                   )}
                 >
                   {tierConfig.emoji} {tierConfig.name}
@@ -1085,7 +1085,7 @@ const FriendsComponent = () => {
               <p
                 className={cn(
                   "text-xs sm:text-sm mt-2 text-center",
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               >
                 {friend.experience} years as {friend.instrument}{" "}
@@ -1103,7 +1103,7 @@ const FriendsComponent = () => {
                   className={cn(
                     "flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl",
                     "bg-neutral-300 hover:bg-red-500/10 border-red-400 border",
-                    "text-neutral-500 hover:text-red-600"
+                    "text-neutral-500 hover:text-red-600",
                   )}
                 />
               </div>
@@ -1122,7 +1122,7 @@ const FriendsComponent = () => {
           <div
             className={cn(
               "flex justify-center gap-4 sm:gap-6 mb-8 p-4 rounded-xl border",
-              themeStyles.secondaryBackground
+              themeStyles.secondaryBackground,
             )}
           >
             {quickActions.map((action, index) => (
@@ -1138,7 +1138,7 @@ const FriendsComponent = () => {
                     "w-10 h-10 rounded-full shadow-sm border flex items-center justify-center",
                     isDarkMode
                       ? "bg-gray-700 border-gray-600"
-                      : "bg-gray-200 border-gray-300"
+                      : "bg-gray-200 border-gray-300",
                   )}
                 >
                   <action.icon className={action.color} size={18} />
@@ -1155,7 +1155,7 @@ const FriendsComponent = () => {
                 key={`${section.type}-${index}`}
                 className={cn(
                   "rounded-xl shadow-sm overflow-hidden border",
-                  themeStyles.cardBackground
+                  themeStyles.cardBackground,
                 )}
               >
                 {section.gradient ? (
@@ -1163,7 +1163,7 @@ const FriendsComponent = () => {
                     <h2
                       className={cn(
                         "text-lg sm:text-xl font-bold flex items-center gap-2",
-                        section.titleColor
+                        section.titleColor,
                       )}
                     >
                       {section.type === "trust" && (
@@ -1189,13 +1189,13 @@ const FriendsComponent = () => {
                   <div
                     className={cn(
                       "px-4 sm:px-6 py-4 border-b",
-                      isDarkMode ? "border-gray-700" : "border-gray-200"
+                      isDarkMode ? "border-gray-700" : "border-gray-200",
                     )}
                   >
                     <h2
                       className={cn(
                         "text-lg sm:text-xl font-bold",
-                        colors.text
+                        colors.text,
                       )}
                     >
                       {section.title}
@@ -1211,10 +1211,10 @@ const FriendsComponent = () => {
           <div
             className={cn(
               "mt-8 text-center text-xs sm:text-sm",
-              colors.textMuted
+              colors.textMuted,
             )}
           >
-            <p>&copy; {new Date().getFullYear()} Gigup. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} gigUp. All rights reserved.</p>
           </div>
         </div>
       ) : (

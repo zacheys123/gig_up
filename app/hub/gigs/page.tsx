@@ -26,7 +26,7 @@ import { FavoriteGigs } from "./_components/FavouriteGigs";
 import { ThemeModal } from "@/components/modals/ThemeModal";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Moon, Sun, Video, RefreshCw, Clock } from "lucide-react";
+import { ArrowLeft, Moon, Video, RefreshCw, Clock, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { UpgradeBanner } from "./_components/UpgradeBlock";
@@ -512,22 +512,6 @@ export default function GigsHub() {
             colors={colors}
           />
         </div>
-        {/* Mobile Theme Button - visible only on mobile */}
-        <div className="md:hidden flex items-center justify-end p-3 border-b">
-          <button
-            onClick={() => setShowThemeModal(true)}
-            className={cn(
-              "p-2 rounded-full transition-all duration-200",
-              colors.hoverBg,
-            )}
-          >
-            {isDarkMode ? (
-              <Moon className={cn("w-5 h-5", colors.text)} />
-            ) : (
-              <Sun className={cn("w-5 h-5", colors.text)} />
-            )}
-          </button>
-        </div>
 
         {/* Mobile Theme Modal */}
         <MobileThemeModal
@@ -553,8 +537,8 @@ export default function GigsHub() {
                 >
                   <ArrowLeft className={cn("w-4 h-4", colors.text)} />
                 </button>
-                <h1 className={cn("text-2xl font-bold mb-1", colors.text)}>
-                  gigUup
+                <h1 className={cn("text-xl font-bold mb-1", colors.text)}>
+                  gigUp
                 </h1>
               </div>
 
@@ -562,22 +546,60 @@ export default function GigsHub() {
                 {getUserSubtitle(memoizedUser)}
               </p>
 
-              {/* Role badge */}
               <span
                 className={cn(
-                  "px-3 py-1 rounded-full text-sm inline-block mb-4",
-                  memoizedUser.isMusician
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                    : memoizedUser.isClient
-                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium",
+                  "border shadow-sm backdrop-blur-sm",
+                  isDarkMode
+                    ? "bg-slate-900/50 border-slate-700"
+                    : "bg-white/50 border-slate-200",
+                  memoizedUser.isMusician && [
+                    isDarkMode
+                      ? "text-emerald-300 bg-emerald-900/20 border-emerald-800/50"
+                      : "text-emerald-700 bg-emerald-50 border-emerald-200",
+                  ],
+                  memoizedUser.isClient && [
+                    isDarkMode
+                      ? "text-blue-300 bg-blue-900/20 border-blue-800/50"
+                      : "text-blue-700 bg-blue-50 border-blue-200",
+                  ],
+                  !memoizedUser.isMusician &&
+                    !memoizedUser.isClient && [
+                      isDarkMode
+                        ? "text-purple-300 bg-purple-900/20 border-purple-800/50"
+                        : "text-purple-700 bg-purple-50 border-purple-200",
+                    ],
                 )}
               >
-                {memoizedUser.isMusician
-                  ? "🎵 Musician"
-                  : memoizedUser.isClient
-                    ? "🎯 Client"
-                    : "📊 Booker"}
+                {/* Role icon */}
+                <span className="text-base">
+                  {memoizedUser.isMusician
+                    ? "🎵"
+                    : memoizedUser.isClient
+                      ? "🎯"
+                      : "📊"}
+                </span>
+
+                {/* Role text */}
+                <span>
+                  {memoizedUser.isMusician
+                    ? "Musician"
+                    : memoizedUser.isClient
+                      ? "Client"
+                      : "Booker"}
+                </span>
+
+                {/* Optional: Add a subtle dot indicator */}
+                <span
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    memoizedUser.isMusician
+                      ? "bg-emerald-500"
+                      : memoizedUser.isClient
+                        ? "bg-blue-500"
+                        : "bg-purple-500",
+                  )}
+                />
               </span>
 
               <div className="flex items-center justify-between">
@@ -763,25 +785,23 @@ export default function GigsHub() {
                 </div>
               </div>
             </div>
-
             {/* Scrollable tabs - Including Community Nav */}
-            <div className="flex gap-2 overflow-x-auto pb-3 hide-scrollbar">
-              {" "}
+            {/* Scrollable tabs - Including Community Nav */}
+            <div className="flex gap-2 overflow-x-auto pb-3 hide-scrollbar scroll-smooth">
               {/* Community Nav - Distinct but blending */}
               <Link
                 href="/community?tab=videos"
                 className={cn(
                   "px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all",
                   "flex items-center gap-1.5",
-                  "border-2 border-dashed",
+                  "border-2 border-dashed flex-shrink-0",
                   pathname === "/community" &&
                     searchParams.get("tab") === "videos"
                     ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-md"
                     : cn(
-                        "border-purple-300 dark:border-purple-700",
-                        "text-purple-600 dark:text-purple-400",
-                        "hover:bg-purple-50 dark:hover:bg-purple-900/20",
-                        "hover:border-purple-400 dark:hover:border-purple-600",
+                        isDarkMode
+                          ? "border-purple-700 text-purple-400 hover:bg-purple-900/20 hover:border-purple-600"
+                          : "border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400",
                       ),
                 )}
               >
@@ -791,24 +811,42 @@ export default function GigsHub() {
                   videos
                 </span>
               </Link>
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-xs md:text-sm font-medium whitespace-nowrap transition-all",
-                    activeTab === tab.id
-                      ? "bg-blue-500 text-white shadow-md"
-                      : cn(
-                          colors.backgroundMuted,
-                          colors.textMuted,
-                          colors.hoverBg,
-                        ),
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
+
+              {tabs.map((tab) => {
+                // Check if this tab is active
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <motion.button
+                    key={tab.id}
+                    onClick={() => {
+                      handleTabChange(tab.id);
+                      const element = document.getElementById(`tab-${tab.id}`);
+                      if (element) {
+                        element.scrollIntoView({
+                          behavior: "smooth",
+                          block: "nearest",
+                          inline: "center",
+                        });
+                      }
+                    }}
+                    id={`tab-${tab.id}`}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-xs md:text-sm font-medium whitespace-nowrap transition-all relative flex-shrink-0",
+                      // Active tab styling - ALWAYS has blue background with white text
+                      isActive && "bg-blue-500 text-white shadow-md",
+                      // Inactive tab styling
+                      !isActive &&
+                        (isDarkMode
+                          ? "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900"),
+                    )}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {tab.label}
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
         </div>

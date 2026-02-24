@@ -59,7 +59,7 @@ export interface UpdateGigParams {
   isPublic?: boolean;
 }
 
-export function useGigUpdate() {
+export function usegigUpdate() {
   const updateGigMutation = useMutation(api.controllers.gigs.updateGig);
   const updateGigStatusMutation = useMutation(
     api.controllers.gigs.updateGigStatus,

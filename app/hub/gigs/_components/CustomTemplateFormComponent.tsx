@@ -50,7 +50,7 @@ export const CustomTemplateForm: React.FC<CustomTemplateFormProps> = React.memo(
         e.preventDefault();
         onSubmit(formData);
       },
-      [formData, onSubmit]
+      [formData, onSubmit],
     );
 
     // Memoize field change handler
@@ -73,7 +73,7 @@ export const CustomTemplateForm: React.FC<CustomTemplateFormProps> = React.memo(
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className={cn("text-2xl font-bold", colors.text)}>
+          <h3 className={cn("text-xl font-bold", colors.text)}>
             Create Custom Gig Template
           </h3>
           <Button variant="ghost" size="icon" onClick={onCancel}>
@@ -116,7 +116,7 @@ export const CustomTemplateForm: React.FC<CustomTemplateFormProps> = React.memo(
                     colors.border,
                     formData.gigType === type.value
                       ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/20 border-blue-500"
-                      : cn(colors.hoverBg, "hover:border-blue-300")
+                      : cn(colors.hoverBg, "hover:border-blue-300"),
                   )}
                 >
                   {type.label}
@@ -247,7 +247,7 @@ export const CustomTemplateForm: React.FC<CustomTemplateFormProps> = React.memo(
         </form>
       </div>
     );
-  }
+  },
 );
 
 CustomTemplateForm.displayName = "CustomTemplateForm";

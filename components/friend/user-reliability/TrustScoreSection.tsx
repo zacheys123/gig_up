@@ -103,12 +103,12 @@ export const TrustScoreSection: React.FC<TrustScoreSectionProps> = ({
       className={cn(
         "rounded-xl border p-6 mb-6",
         tierColor.bg,
-        tierColor.border
+        tierColor.border,
       )}
     >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold mb-2">Trust Score</h2>
+          <h2 className="text-xl font-bold mb-2">Trust Score</h2>
           <p className="text-gray-600">
             Platform-wide credibility score based on activity and performance
           </p>
@@ -122,7 +122,7 @@ export const TrustScoreSection: React.FC<TrustScoreSectionProps> = ({
             className={cn(
               "px-4 py-2 rounded-full border",
               tierColor.border,
-              tierColor.text
+              tierColor.text,
             )}
           >
             <div className="flex items-center gap-2">
@@ -172,14 +172,14 @@ export const TrustScoreSection: React.FC<TrustScoreSectionProps> = ({
             "p-4 rounded-lg border",
             bandEligible
               ? "bg-green-50 border-green-200"
-              : "bg-amber-50 border-amber-200"
+              : "bg-amber-50 border-amber-200",
           )}
         >
           <div className="flex items-center gap-3">
             <div
               className={cn(
                 "p-2 rounded-lg",
-                bandEligible ? "bg-green-100" : "bg-amber-100"
+                bandEligible ? "bg-green-100" : "bg-amber-100",
               )}
             >
               {bandEligible ? "✅" : "🎯"}

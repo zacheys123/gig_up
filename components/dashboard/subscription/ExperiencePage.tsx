@@ -1,27 +1,25 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useSubscription } from "@/hooks/useSubscription";
+
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { CheckCircle, Video, Quote } from "lucide-react";
-import useStore from "@/app/zustand/useStore";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-const ExperienceGigupPage = () => {
+const ExperiencegigUpPage = () => {
   const { userId } = useAuth();
-  const { currentUser: user } = useStore();
-  const { subscription } = useSubscription(userId as string);
-
+  const { currentUser: user } = useCurrentUser();
   const [loading, setLoading] = useState(true);
-  const tier = subscription?.subscription?.tier || "free";
+  const tier = user?.tier || "free";
   const isPro = tier !== "free";
 
   useEffect(() => {
-    if (subscription !== undefined) {
+    if (user !== undefined) {
       const timeout = setTimeout(() => setLoading(false), 700);
       return () => clearTimeout(timeout);
     }
-  }, [subscription]);
+  }, [user]);
 
   const perks = useMemo(() => {
     if (user?.isMusician) {
@@ -93,7 +91,7 @@ const ExperienceGigupPage = () => {
         className="max-w-5xl mx-auto"
       >
         <h1 className="text-3xl md:text-5xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 via-purple-400 to-yellow-400 text-center md:text-left">
-          Welcome to GigUppExperience
+          Welcome to gigUppExperience
         </h1>
 
         {loading ? (
@@ -108,9 +106,9 @@ const ExperienceGigupPage = () => {
           <>
             {/* How it Works */}
             <section className="mb-12">
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Video className="w-6 h-6" />
-                How GigUppWorks
+                How gigUppWorks
               </h2>
               <div className="rounded-xl overflow-hidden shadow-xl border border-white/10">
                 <video
@@ -124,7 +122,7 @@ const ExperienceGigupPage = () => {
 
             {/* Booking Info */}
             <section className="mb-12 space-y-4 text-sm md:text-base text-gray-300">
-              <h2 className="text-2xl font-bold mb-2">Booking a Gig</h2>
+              <h2 className="text-xl font-bold mb-2">Booking a Gig</h2>
               <p>
                 Browse artist profiles, explore videos, and select the right
                 performer for your event. Hit{" "}
@@ -140,12 +138,12 @@ const ExperienceGigupPage = () => {
                 chooses the best among ten of you,being in a pro pack allows you
                 to be among the top rated .
               </p>
-              <p>Gigup🎸🎹 Simple. Elegant. Fast.</p>
+              <p>gigUp🎸🎹 Simple. Elegant. Fast.</p>
             </section>
 
             {/* Tier Perks */}
             <section className="mb-12">
-              <h2 className="text-2xl font-bold mb-4">
+              <h2 className="text-xl font-bold mb-4">
                 Your Plan:{" "}
                 <span className="bg-gradient-to-r from-purple-400 via-emerald-400 to-yellow-400 bg-clip-text text-transparent uppercase">
                   {tier}
@@ -369,7 +367,7 @@ const ExperienceGigupPage = () => {
                   {
                     name: "Liam (Client)",
                     quote:
-                      "GigUpphelped me organize 4 amazing private shows in a month — seamless!",
+                      "gigUpphelped me organize 4 amazing private shows in a month — seamless!",
                   },
                   {
                     name: "Ava (Musician)",
@@ -401,7 +399,7 @@ const ExperienceGigupPage = () => {
             {/* Final Message */}
             <section className="my-20 text-center text-gray-300 text-sm max-w-3xl mx-auto">
               <p>
-                {`At GiGup, we believe in fair opportunity and easy access to
+                {`At gigUp, we believe in fair opportunity and easy access to
                 talent and events and clients. Whether you're here to perform or host, we're
                 here to power your success.`}
               </p>
@@ -413,4 +411,4 @@ const ExperienceGigupPage = () => {
   );
 };
 
-export default ExperienceGigupPage;
+export default ExperiencegigUpPage;

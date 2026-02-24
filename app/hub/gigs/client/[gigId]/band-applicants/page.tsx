@@ -180,7 +180,7 @@ const showBookingFeedback = (
   type: "success" | "error" | "warning",
   title: string,
   description?: string,
-  options?: any
+  options?: any,
 ) => {
   console.log(`📣 showBookingFeedback: ${type} - ${title} - ${description}`);
 
@@ -222,19 +222,19 @@ const handleConvexError = (error: any, context: string = "booking") => {
     showBookingFeedback(
       "error",
       "Position Filled",
-      `The "${roleName}" position is already full (${filled}/${total} slots). Please choose another musician.`
+      `The "${roleName}" position is already full (${filled}/${total} slots). Please choose another musician.`,
     );
   } else if (errorType === "PERMISSION_DENIED") {
     showBookingFeedback(
       "error",
       "Permission Denied",
-      "Only the band leader can book musicians"
+      "Only the band leader can book musicians",
     );
   } else if (errorMessage.includes("already full")) {
     showBookingFeedback(
       "error",
       "Position Filled",
-      "This band position has already been filled"
+      "This band position has already been filled",
     );
   } else {
     // Check if it's a Convex network error
@@ -245,13 +245,13 @@ const handleConvexError = (error: any, context: string = "booking") => {
       showBookingFeedback(
         "error",
         "Network Error",
-        "Unable to connect to server. Please check your internet connection."
+        "Unable to connect to server. Please check your internet connection.",
       );
     } else {
       showBookingFeedback(
         "error",
         "Action Failed",
-        errorMessage || "Please try again or contact support"
+        errorMessage || "Please try again or contact support",
       );
     }
   }
@@ -300,17 +300,17 @@ export default function BandApplicantsPage() {
   }, [applicants, bookedUsers]);
 
   const removeFromRole = useMutation(
-    api.controllers.bookings.withdrawFromBandRole
+    api.controllers.bookings.withdrawFromBandRole,
   );
   const bookForRole = useMutation(api.controllers.bookings.bookForBandRole);
   const unbookFromRole = useMutation(
-    api.controllers.bookings.unbookFromBandRole
+    api.controllers.bookings.unbookFromBandRole,
   );
   const handleBookForRole = async (
     applicantUserId: Id<"users">,
     bandRoleIndex: number,
     bandRole: string,
-    applicantName: string
+    applicantName: string,
   ) => {
     console.log("📞 handleBookForRole called:", {
       applicantUserId,
@@ -326,7 +326,7 @@ export default function BandApplicantsPage() {
       showBookingFeedback(
         "error",
         "Authentication Required",
-        "Please sign in to book musicians"
+        "Please sign in to book musicians",
       );
       return;
     }
@@ -360,7 +360,7 @@ export default function BandApplicantsPage() {
             label: "View Gig",
             onClick: () => router.push(`/gigs/${gigId}/manage`),
           },
-        }
+        },
       );
     } catch (error: any) {
       console.error("❌ Caught error in handleBookForRole:", error);
@@ -381,13 +381,13 @@ export default function BandApplicantsPage() {
   const handleUnbookFromRole = async (
     userId: Id<"users">,
     bandRoleIndex: number,
-    userName: string
+    userName: string,
   ) => {
     if (!clerkId) {
       showBookingFeedback(
         "error",
         "Authentication Required",
-        "Please sign in to perform this action"
+        "Please sign in to perform this action",
       );
       return;
     }
@@ -395,7 +395,7 @@ export default function BandApplicantsPage() {
     // Confirmation dialog before unbooking
     if (
       !window.confirm(
-        `Are you sure you want to unbook ${userName}? They will be moved back to applicants.`
+        `Are you sure you want to unbook ${userName}? They will be moved back to applicants.`,
       )
     ) {
       return;
@@ -420,7 +420,7 @@ export default function BandApplicantsPage() {
             label: "Review Applicants",
             onClick: () => window.location.reload(),
           },
-        }
+        },
       );
     } catch (error: any) {
       handleConvexError(error, "unbooking");
@@ -432,12 +432,12 @@ export default function BandApplicantsPage() {
   const handleRemoveFromRole = async (
     applicantId: string,
     bandRoleIndex: number,
-    userId: Id<"users">
+    userId: Id<"users">,
   ) => {
     // Confirmation dialog
     if (
       !window.confirm(
-        "Are you sure you want to remove this applicant? This action cannot be undone."
+        "Are you sure you want to remove this applicant? This action cannot be undone.",
       )
     ) {
       return;
@@ -461,7 +461,7 @@ export default function BandApplicantsPage() {
             label: "Refresh",
             onClick: () => window.location.reload(),
           },
-        }
+        },
       );
     } catch (error: any) {
       handleConvexError(error, "removing applicant");
@@ -529,22 +529,22 @@ export default function BandApplicantsPage() {
   const themeColors = useMemo(() => {
     return {
       background: extractColorClass(
-        colors.background || (isDarkMode ? "bg-gray-900" : "bg-white")
+        colors.background || (isDarkMode ? "bg-gray-900" : "bg-white"),
       ),
       text: extractColorClass(
-        colors.text || (isDarkMode ? "text-gray-100" : "text-gray-900")
+        colors.text || (isDarkMode ? "text-gray-100" : "text-gray-900"),
       ),
       textMuted: extractColorClass(
-        colors.textMuted || (isDarkMode ? "text-gray-400" : "text-gray-600")
+        colors.textMuted || (isDarkMode ? "text-gray-400" : "text-gray-600"),
       ),
       primary: extractColorClass(colors.primary || "text-orange-500"),
       primaryBg: extractColorClass(colors.primaryBg || "bg-orange-500"),
       primaryContrast: extractColorClass(colors.primaryContrast || "#ffffff"),
       border: extractColorClass(
-        colors.border || (isDarkMode ? "border-gray-700" : "border-gray-200")
+        colors.border || (isDarkMode ? "border-gray-700" : "border-gray-200"),
       ),
       card: extractColorClass(
-        colors.card || (isDarkMode ? "bg-gray-800" : "bg-white")
+        colors.card || (isDarkMode ? "bg-gray-800" : "bg-white"),
       ),
       destructive: extractColorClass(colors.destructive || "text-red-500"),
       success: extractColorClass(colors.success || "text-green-500"),
@@ -652,7 +652,7 @@ export default function BandApplicantsPage() {
 
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">
+              <h1 className="text-xl md:text-3xl font-bold mb-2">
                 {gig.title}
               </h1>
               <p
@@ -748,11 +748,11 @@ export default function BandApplicantsPage() {
                     {roles.map((role: any, index: number) => {
                       const roleApplicants =
                         applicants?.filter(
-                          (a: any) => a.bandRoleIndex === index
+                          (a: any) => a.bandRoleIndex === index,
                         ) || [];
                       const roleBooked =
                         bookedUsers?.filter(
-                          (b: any) => b.bandRoleIndex === index
+                          (b: any) => b.bandRoleIndex === index,
                         ) || [];
                       const totalUsers =
                         roleApplicants.length + roleBooked.length;
@@ -851,7 +851,7 @@ export default function BandApplicantsPage() {
             const isFullyBooked = role.filledSlots >= role.maxSlots;
             const availableSlots = Math.max(
               0,
-              role.maxSlots - roleBooked.length
+              role.maxSlots - roleBooked.length,
             );
 
             return (
@@ -888,7 +888,7 @@ export default function BandApplicantsPage() {
                       <div className="text-5xl md:text-6xl font-black tracking-widest text-center">
                         BOOKED
                       </div>
-                      <div className="text-2xl md:text-3xl font-bold text-center mt-2">
+                      <div className="text-xl md:text-3xl font-bold text-center mt-2">
                         FULL
                       </div>
                     </div>
@@ -1146,7 +1146,7 @@ export default function BandApplicantsPage() {
               // Calculate capacity for this specific role - ADD THIS
               const roleApplicants =
                 applicants?.filter(
-                  (a: any) => a.bandRoleIndex === user.bandRoleIndex
+                  (a: any) => a.bandRoleIndex === user.bandRoleIndex,
                 ) || [];
               const currentApplicants = roleApplicants.length;
               const maxApplicants = role?.maxApplicants || 20;
@@ -1379,7 +1379,7 @@ export default function BandApplicantsPage() {
                             </div>
                             <span style={{ color: themeColors.textMuted }}>
                               {Math.round(
-                                (currentApplicants / maxApplicants) * 100
+                                (currentApplicants / maxApplicants) * 100,
                               )}
                               % filled
                             </span>
@@ -1403,7 +1403,7 @@ export default function BandApplicantsPage() {
                           <Calendar className="w-3 h-3" />
                           <span>
                             {new Date(
-                              user.bookedAt || user.appliedAt
+                              user.bookedAt || user.appliedAt,
                             ).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
@@ -1425,7 +1425,7 @@ export default function BandApplicantsPage() {
                                 showBookingFeedback(
                                   "error",
                                   "Position Filled",
-                                  `The "${role.role}" position is already full (${role.filledSlots}/${role.maxSlots} slots)`
+                                  `The "${role.role}" position is already full (${role.filledSlots}/${role.maxSlots} slots)`,
                                 );
                                 return;
                               }
@@ -1433,7 +1433,7 @@ export default function BandApplicantsPage() {
                                 user.userId,
                                 user.bandRoleIndex,
                                 role?.role || user.bandRole,
-                                userInfo.firstname || userInfo.username
+                                userInfo.firstname || userInfo.username,
                               );
                             }
                           }}
@@ -1491,12 +1491,12 @@ export default function BandApplicantsPage() {
                                 ? handleUnbookFromRole(
                                     user.userId,
                                     user.bandRoleIndex,
-                                    userInfo.firstname || userInfo.username
+                                    userInfo.firstname || userInfo.username,
                                   )
                                 : handleRemoveFromRole(
                                     user._id,
                                     user.bandRoleIndex,
-                                    user.userId
+                                    user.userId,
                                   )
                             }
                             disabled={

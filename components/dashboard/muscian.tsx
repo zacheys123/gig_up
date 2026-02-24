@@ -79,7 +79,7 @@ export function MusicianDashboard({
         "bg-gradient-to-br from-card/80 via-card/60 to-card/40",
         colors.border,
         "shadow-2xl shadow-black/5 dark:shadow-black/30",
-        "relative overflow-hidden"
+        "relative overflow-hidden",
       )}
     >
       {/* Background Pattern */}
@@ -95,9 +95,9 @@ export function MusicianDashboard({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1, duration: 0.4 }}
             className={cn(
-              "text-2xl lg:text-3xl font-bold bg-gradient-to-r",
+              "text-xl lg:text-3xl font-bold bg-gradient-to-r",
               "from-primary via-primary/80 to-accent bg-clip-text text-transparent",
-              "leading-tight"
+              "leading-tight",
             )}
           >
             Performance Dashboard
@@ -119,14 +119,14 @@ export function MusicianDashboard({
             "flex items-center gap-3 px-4 py-2.5 rounded-2xl border-2 backdrop-blur-sm",
             colors.border,
             "bg-gradient-to-r from-background/50 to-background/30",
-            "shadow-lg shadow-black/5"
+            "shadow-lg shadow-black/5",
           )}
         >
           <div className="flex items-center gap-2">
             <div
               className={cn(
                 "w-2 h-2 rounded-full animate-pulse",
-                isPro ? "bg-green-400" : "bg-blue-400"
+                isPro ? "bg-green-400" : "bg-blue-400",
               )}
             />
             <span className={cn("text-sm font-medium", colors.textMuted)}>
@@ -139,12 +139,12 @@ export function MusicianDashboard({
               isPro
                 ? cn(
                     "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-                    "border-green-400/50 shadow-lg shadow-green-500/25"
+                    "border-green-400/50 shadow-lg shadow-green-500/25",
                   )
                 : cn(
                     "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
-                    "border-blue-400/50 shadow-lg shadow-blue-500/25"
-                  )
+                    "border-blue-400/50 shadow-lg shadow-blue-500/25",
+                  ),
             )}
           >
             {isPro ? "PRO" : "FREE"}
@@ -194,7 +194,7 @@ export function MusicianDashboard({
               "flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed text-center",
               "bg-gradient-to-br from-muted/30 to-muted/10 backdrop-blur-sm",
               colors.border,
-              "relative overflow-hidden"
+              "relative overflow-hidden",
             )}
           >
             {/* Background Elements */}
@@ -207,10 +207,10 @@ export function MusicianDashboard({
                 <div
                   className={cn(
                     "p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10",
-                    "border border-amber-400/20 shadow-lg shadow-amber-500/10"
+                    "border border-amber-400/20 shadow-lg shadow-amber-500/10",
                   )}
                 >
-                  <FiZap className="text-amber-400 text-2xl" />
+                  <FiZap className="text-amber-400 text-xl" />
                 </div>
               </div>
 
@@ -234,7 +234,7 @@ export function MusicianDashboard({
                   "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
                   "shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30",
                   "transition-all duration-300 border border-primary/20",
-                  "flex items-center gap-2"
+                  "flex items-center gap-2",
                 )}
               >
                 <FiBarChart2 className="text-lg" />
@@ -255,7 +255,7 @@ export function MusicianDashboard({
             "flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl",
             "bg-gradient-to-r from-muted/30 to-muted/10 backdrop-blur-sm",
             "border border-border/50",
-            "relative z-10"
+            "relative z-10",
           )}
         >
           <div className="flex items-center gap-3">
@@ -312,7 +312,7 @@ export function MusicianDashboard({
                     "rounded-3xl w-full max-w-md overflow-hidden border-2 backdrop-blur-xl",
                     "bg-gradient-to-br from-card via-card/95 to-card/90",
                     colors.border,
-                    "shadow-2xl shadow-black/20"
+                    "shadow-2xl shadow-black/20",
                   )}
                 >
                   {/* Header */}
@@ -321,7 +321,7 @@ export function MusicianDashboard({
                       <div
                         className={cn(
                           "p-2 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10",
-                          "border border-amber-400/20"
+                          "border border-amber-400/20",
                         )}
                       >
                         <FiAlertCircle className="h-5 w-5 text-amber-400" />
@@ -335,7 +335,7 @@ export function MusicianDashboard({
                       className={cn(
                         "p-2 rounded-xl transition-all duration-200",
                         "hover:bg-muted/50 active:scale-95",
-                        colors.textMuted
+                        colors.textMuted,
                       )}
                     >
                       <FiX className="h-5 w-5" />
@@ -348,7 +348,7 @@ export function MusicianDashboard({
                       <p
                         className={cn(
                           "text-sm leading-relaxed",
-                          colors.textMuted
+                          colors.textMuted,
                         )}
                       >
                         Complete your profile to showcase your talent and
@@ -388,7 +388,7 @@ export function MusicianDashboard({
                         "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
                         "text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30",
                         "hover:scale-[1.02] active:scale-[0.98] border border-primary/20",
-                        "flex items-center justify-center gap-3"
+                        "flex items-center justify-center gap-3",
                       )}
                     >
                       <FiUserPlus className="h-4 w-4" />
@@ -400,7 +400,7 @@ export function MusicianDashboard({
                   <div
                     className={cn(
                       "px-6 py-4 border-t border-border/50 text-center",
-                      "bg-muted/20"
+                      "bg-muted/20",
                     )}
                   >
                     <p className={cn("text-xs", colors.textMuted)}>

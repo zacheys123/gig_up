@@ -16,7 +16,7 @@ export function StatsCard({
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm text-gray-400">{title}</p>
-          <p className="text-2xl font-bold mt-1">
+          <p className="text-xl font-bold mt-1">
             {value}{" "}
             <span className="text-xs text-gray-500">
               / {max === Infinity ? "∞" : max}

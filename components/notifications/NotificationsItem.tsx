@@ -35,10 +35,10 @@ export function NotificationItem({
 
   // Convex mutations for follow request actions
   const acceptFollowRequest = useMutation(
-    api.controllers.user.acceptFollowRequest
+    api.controllers.user.acceptFollowRequest,
   );
   const declineFollowRequest = useMutation(
-    api.controllers.user.declineFollowRequest
+    api.controllers.user.declineFollowRequest,
   );
 
   const handleClick = async (e: React.MouseEvent) => {
@@ -153,13 +153,13 @@ export function NotificationItem({
           ? cn(
               themeConfig.card,
               themeConfig.border,
-              "bg-white/50 dark:bg-gray-800/50"
+              "bg-white/50 dark:bg-gray-800/50",
             )
           : cn(
               themeConfig.accent.background,
               "border-blue-200 dark:border-blue-800",
-              "ring-1 ring-blue-500/20 shadow-sm"
-            )
+              "ring-1 ring-blue-500/20 shadow-sm",
+            ),
       )}
     >
       <div className="flex items-start gap-2">
@@ -170,7 +170,7 @@ export function NotificationItem({
               "p-1.5 rounded-lg transition-colors duration-200",
               notification.isRead
                 ? "bg-gray-100/80 dark:bg-gray-700/80 text-gray-600 dark:text-gray-400"
-                : "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
+                : "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400",
             )}
           >
             {getNotificationIcon(notification.type)}
@@ -188,7 +188,7 @@ export function NotificationItem({
                     "font-semibold text-xs leading-tight truncate flex-1",
                     themeConfig.text.primary,
                     !notification.isRead &&
-                      "font-bold text-blue-700 dark:text-blue-300"
+                      "font-bold text-blue-700 dark:text-blue-300",
                   )}
                 >
                   {notification.title}
@@ -197,7 +197,7 @@ export function NotificationItem({
                   <div
                     className={cn(
                       "w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0",
-                      "bg-blue-500 shadow-sm"
+                      "bg-blue-500 shadow-sm",
                     )}
                   />
                 )}
@@ -207,7 +207,7 @@ export function NotificationItem({
               <p
                 className={cn(
                   "text-xs leading-relaxed line-clamp-1 mb-1",
-                  themeConfig.text.secondary
+                  themeConfig.text.secondary,
                 )}
               >
                 {notification.message}
@@ -227,7 +227,7 @@ export function NotificationItem({
                       className={cn(
                         "flex items-center gap-1 text-xs font-semibold h-7 px-2",
                         "bg-green-500 hover:bg-green-600 text-white shadow-sm",
-                        "transition-all duration-200 rounded-lg"
+                        "transition-all duration-200 rounded-lg",
                       )}
                     >
                       {isProcessing ? (
@@ -251,7 +251,7 @@ export function NotificationItem({
                       className={cn(
                         "flex items-center gap-1 text-xs font-semibold h-7 px-2",
                         "text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30",
-                        "transition-all duration-200 rounded-lg"
+                        "transition-all duration-200 rounded-lg",
                       )}
                     >
                       {isProcessing ? (
@@ -278,7 +278,7 @@ export function NotificationItem({
                       "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
                       notification.isRead
                         ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                        : "bg-blue-500 text-white shadow-sm"
+                        : "bg-blue-500 text-white shadow-sm",
                     )}
                   >
                     View details
@@ -292,7 +292,7 @@ export function NotificationItem({
                       "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
                       notification.isRead
                         ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                        : "bg-blue-500 text-white shadow-sm"
+                        : "bg-blue-500 text-white shadow-sm",
                     )}
                   >
                     {notification.type.replace("_", " ")}
@@ -456,7 +456,7 @@ export function NotificationItem({
 
 //         The entire Crew Battleground is permanently deleted from the database.
 
-//         Notification to all members: "The Crew Battleground for your '[Gig Name]' gig has been archived as per our data policy. Thank you for using GigUp!"
+//         Notification to all members: "The Crew Battleground for your '[Gig Name]' gig has been archived as per our data policy. Thank you for using gigUp!"
 
 //         Why? This manages server data, protects privacy, and keeps the app focused on current and future work, not ancient history.
 

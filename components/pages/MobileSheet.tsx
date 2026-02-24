@@ -44,7 +44,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSubscriptionStore } from "@/app/stores/useSubscriptionStore";
 import { useThemeColors, useThemeToggle } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { GigUpAssistant } from "../ai/GigupAssistant";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -55,6 +54,7 @@ import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import ConversationList from "../chat/ConversationDetails";
 import { getUserTrialStatus } from "@/hooks/useUserTrialStatus";
+import { GigUpAssistant } from "../ai/GigupAssistant";
 
 interface NavigationLink {
   label: string;
@@ -157,7 +157,7 @@ export const hasMinimumData = (user: any): boolean => {
 
 export const canAccessFeature = (
   user: any,
-  requiresCompleteProfile: boolean = false
+  requiresCompleteProfile: boolean = false,
 ): boolean => {
   if (!user) return false;
 
@@ -199,7 +199,7 @@ const getCoreLinks = (): NavigationLink[] => [
 // Pro tier features
 const getProTierLinks = (
   user: any,
-  isInGracePeriod?: boolean
+  isInGracePeriod?: boolean,
 ): NavigationLink[] => {
   const proLinks: NavigationLink[] = [
     {
@@ -251,7 +251,7 @@ const getProTierLinks = (
         icon: <BookCopy size={22} />,
         availableForTiers: ["pro", "premium", "elite"],
         requiresCompleteProfile: true,
-      }
+      },
     );
 
     if (user?.isMusician && !user?.isClient) {
@@ -333,7 +333,7 @@ const getEliteTierLinks = (): NavigationLink[] => [
 // Messages link (special handling)
 const getMessagesLink = (
   unreadCount: number | null,
-  handleOpenMessages: (e: React.MouseEvent) => void
+  handleOpenMessages: (e: React.MouseEvent) => void,
 ): NavigationLink => ({
   label: "Messages",
   href: "/messages",
@@ -357,7 +357,7 @@ const getNavigationLinks = (
   user: any,
   isInGracePeriod?: boolean,
   unreadCount?: number | null,
-  handleOpenMessages?: (e: React.MouseEvent) => void
+  handleOpenMessages?: (e: React.MouseEvent) => void,
 ): NavigationLink[] => {
   const coreLinks = getCoreLinks();
   const proLinks = getProTierLinks(user, isInGracePeriod);
@@ -409,7 +409,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [activeView, setActiveView] = useState<"main" | "conversations">(
-    "main"
+    "main",
   );
 
   const userTier = user?.tier || "free";
@@ -447,7 +447,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
     user,
     isInGracePeriod,
     totalUnread > 0 ? totalUnread : null,
-    handleOpenMessages
+    handleOpenMessages,
   );
 
   const displayTotalUnread = totalUnread > 0 ? totalUnread : null;
@@ -511,7 +511,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                 className={cn(
                   "w-6 h-6 transition-colors duration-200",
                   colors.text,
-                  "hover:text-orange-600"
+                  "hover:text-orange-600",
                 )}
               />
             </button>
@@ -522,7 +522,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
           className={cn(
             "w-[85%] sm:w-[380px] h-full p-0 overflow-hidden border-0",
             colors.card,
-            "shadow-xl"
+            "shadow-xl",
           )}
         >
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
@@ -531,14 +531,14 @@ export function MobileSheet({ children }: MobileSheetProps) {
             <div className="h-full flex flex-col">
               <div className={cn("p-6 border-b", colors.border)}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className={cn("text-2xl font-bold", colors.text)}>
-                    {hasMinimumData(user) ? "Menu" : "GigUp"}
+                  <h2 className={cn("text-xl font-bold", colors.text)}>
+                    {hasMinimumData(user) ? "Menu" : "gigUp"}
                   </h2>
                   <Badge
                     className={cn(
                       "px-3 py-1.5 text-sm font-bold border-0 shadow-lg",
                       currentTier.badge,
-                      "flex items-center gap-1.5"
+                      "flex items-center gap-1.5",
                     )}
                   >
                     <TierIcon className="w-3 h-3" />
@@ -559,7 +559,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                       <h3
                         className={cn(
                           "font-semibold text-base truncate",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         {user.firstname} {user.lastname}
@@ -611,7 +611,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                       nextTier.color === "purple" &&
                         "from-purple-500 to-pink-600",
                       nextTier.color === "yellow" &&
-                        "from-yellow-500 to-red-600"
+                        "from-yellow-500 to-red-600",
                     )}
                   >
                     <div className="flex items-center gap-3 mb-2">
@@ -682,7 +682,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                           "border border-transparent",
                           (!canAccess || isBlockedByProfile) && "opacity-60",
                           isFeatured &&
-                            "ring-2 ring-purple-200 dark:ring-purple-800"
+                            "ring-2 ring-purple-200 dark:ring-purple-800",
                         )}
                       >
                         <div className="flex items-center gap-4">
@@ -694,7 +694,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                                 : "group-hover:text-orange-600",
                               (!canAccess || isBlockedByProfile) &&
                                 "text-gray-400",
-                              isFeatured && "text-purple-600"
+                              isFeatured && "text-purple-600",
                             )}
                           >
                             {link.icon}
@@ -706,7 +706,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                               (!canAccess || isBlockedByProfile) &&
                                 "text-gray-500",
                               isFeatured &&
-                                "text-purple-700 dark:text-purple-300"
+                                "text-purple-700 dark:text-purple-300",
                             )}
                           >
                             {link.label}
@@ -759,7 +759,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                           className={cn(
                             "w-full text-left",
                             (!canAccess || isBlockedByProfile) &&
-                              "cursor-not-allowed"
+                              "cursor-not-allowed",
                           )}
                         >
                           {linkElement}
@@ -780,7 +780,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                         onClick={(e) => handleLinkClick(link, e)}
                         className={cn(
                           (!canAccess || isBlockedByProfile) &&
-                            "cursor-not-allowed"
+                            "cursor-not-allowed",
                         )}
                       >
                         {linkElement}
@@ -799,7 +799,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                         "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl transition-all duration-200",
                         "border border-gray-200",
                         "hover:border-orange-500 hover:text-orange-600",
-                        colors.text
+                        colors.text,
                       )}
                     >
                       <span className="font-semibold">Sign In</span>
@@ -811,7 +811,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                         "flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl transition-all duration-200",
                         "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
                         "text-white font-semibold shadow-lg hover:shadow-xl",
-                        "transform hover:scale-105"
+                        "transform hover:scale-105",
                       )}
                     >
                       <span>Create Account</span>
@@ -823,7 +823,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                   className={cn(
                     "flex items-center justify-between p-4 rounded-2xl border transition-all duration-200",
                     "hover:border-orange-500 hover:bg-orange-50",
-                    colors.border
+                    colors.border,
                   )}
                 >
                   <div>
@@ -838,7 +838,7 @@ export function MobileSheet({ children }: MobileSheetProps) {
                     className={cn(
                       "p-2 rounded-xl transition-all duration-200",
                       "hover:bg-orange-100",
-                      "hover:text-orange-600"
+                      "hover:text-orange-600",
                     )}
                     onClick={toggleDarkMode}
                   >

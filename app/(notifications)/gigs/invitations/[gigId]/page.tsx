@@ -33,13 +33,13 @@ export default function GigInvitation() {
   // Fetch gig details
   const gig = useQuery(
     api.controllers.gigs.getGigById,
-    gigId ? { gigId } : "skip"
+    gigId ? { gigId } : "skip",
   );
 
   // Fetch inviter details
   const inviter = useQuery(
     api.controllers.user.getUserById,
-    inviterId ? { userId: inviterId } : "skip"
+    inviterId ? { userId: inviterId } : "skip",
   );
 
   const acceptInvitation = useMutation(api.gigs.acceptGigInvitation);
@@ -79,7 +79,7 @@ export default function GigInvitation() {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <div className="text-center">
@@ -103,13 +103,13 @@ export default function GigInvitation() {
                 "p-2 rounded-lg transition-all duration-200",
                 "hover:bg-opacity-20",
                 colors.hoverBg,
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               <FiArrowLeft size={20} />
             </button>
             <div>
-              <h1 className={cn("text-2xl font-bold", colors.text)}>
+              <h1 className={cn("text-xl font-bold", colors.text)}>
                 Gig Invitation
               </h1>
               <p className={cn("text-sm", colors.textMuted)}>
@@ -120,7 +120,7 @@ export default function GigInvitation() {
               <span
                 className={cn(
                   "px-3 py-1 rounded-full text-sm font-medium",
-                  "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                  "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
                 )}
               >
                 Pending Response
@@ -139,7 +139,7 @@ export default function GigInvitation() {
               className={cn(
                 "p-6 rounded-xl border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <h2 className={cn("text-xl font-bold mb-4", colors.text)}>
@@ -219,7 +219,7 @@ export default function GigInvitation() {
                 className={cn(
                   "p-6 rounded-xl border",
                   colors.card,
-                  colors.border
+                  colors.border,
                 )}
               >
                 <h3 className={cn("font-semibold mb-4", colors.text)}>
@@ -254,7 +254,7 @@ export default function GigInvitation() {
               className={cn(
                 "p-6 rounded-xl border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <h3 className={cn("font-semibold mb-4", colors.text)}>
@@ -266,7 +266,7 @@ export default function GigInvitation() {
                   className={cn(
                     "w-full py-3 rounded-lg font-medium transition-colors",
                     "bg-green-500 hover:bg-green-600 text-white",
-                    "flex items-center justify-center gap-2"
+                    "flex items-center justify-center gap-2",
                   )}
                 >
                   <FiCheck size={18} />
@@ -277,7 +277,7 @@ export default function GigInvitation() {
                   className={cn(
                     "w-full py-3 rounded-lg font-medium transition-colors",
                     "bg-gray-500 hover:bg-gray-600 text-white",
-                    "flex items-center justify-center gap-2"
+                    "flex items-center justify-center gap-2",
                   )}
                 >
                   <FiX size={18} />

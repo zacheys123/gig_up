@@ -71,19 +71,6 @@ const CommunityMainPage = () => {
       setActiveTab(urlTab);
     }
   }, [urlTab, activeTab]);
-  // Show loading state until theme is mounted
-  if (!mounted) {
-    return (
-      <div
-        className={cn(
-          "min-h-screen flex items-center justify-center",
-          colors.background
-        )}
-      >
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
-      </div>
-    );
-  }
 
   const isClient = user?.isClient && !user?.isMusician;
   const isMusician = user?.isMusician;
@@ -285,7 +272,19 @@ const CommunityMainPage = () => {
       return "Connect with talented musicians and share performances";
     }
   };
-
+  // Show loading state until theme is mounted
+  if (!mounted) {
+    return (
+      <div
+        className={cn(
+          "min-h-screen flex items-center justify-center",
+          colors.background,
+        )}
+      >
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      </div>
+    );
+  }
   return (
     <div className={cn("min-h-screen flex", colors.background)}>
       {/* Desktop Sidebar */}
@@ -321,7 +320,7 @@ const CommunityMainPage = () => {
                 "p-2 rounded-lg border transition-all duration-200",
                 "hover:bg-amber-500 hover:text-white hover:border-amber-500",
                 colors.border,
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               <ArrowLeft className="w-5 h-5" />
@@ -330,7 +329,7 @@ const CommunityMainPage = () => {
             <div className="flex-1">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg">
-                  <span className="text-2xl">
+                  <span className="text-xl">
                     {isBooker ? "📋" : isClient ? "🎭" : "🎵"}
                   </span>
                 </div>
@@ -341,7 +340,7 @@ const CommunityMainPage = () => {
                   <p
                     className={cn(
                       "text-lg mt-2 max-w-2xl leading-relaxed",
-                      colors.textMuted
+                      colors.textMuted,
                     )}
                   >
                     {getWelcomeMessage()}

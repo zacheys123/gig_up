@@ -40,7 +40,7 @@ const MusicianCard = React.memo(
         return 4.5;
       const total = musician?.allreviews.reduce(
         (sum, review) => sum + (review.rating || 0),
-        0
+        0,
       );
       return Number((total / musician?.allreviews?.length).toFixed(1));
     };
@@ -58,7 +58,7 @@ const MusicianCard = React.memo(
           "rounded-2xl border overflow-hidden cursor-pointer group",
           colors.card,
           colors.border,
-          "hover:shadow-lg"
+          "hover:shadow-lg",
         )}
         onClick={onClick}
       >
@@ -136,7 +136,7 @@ const MusicianCard = React.memo(
                 onClick();
               }}
               className={cn(
-                "w-full py-3 bg-gradient-to-r from-amber-500 to-purple-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all mt-2 active:scale-95"
+                "w-full py-3 bg-gradient-to-r from-amber-500 to-purple-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all mt-2 active:scale-95",
               )}
             >
               View Profile
@@ -145,7 +145,7 @@ const MusicianCard = React.memo(
         </div>
       </motion.div>
     );
-  }
+  },
 );
 
 MusicianCard.displayName = "MusicianCard";
@@ -168,7 +168,7 @@ const Musicians = () => {
   const handleShowNearby = () => {
     // Fix for nearby musicians - ensure we're passing proper user objects
     const validNearbyUsers = (nearbyMusicians || []).filter(
-      (user) => user && typeof user === "object" && user._id
+      (user) => user && typeof user === "object" && user._id,
     ) as UserProps[];
 
     setModalData({
@@ -183,7 +183,7 @@ const Musicians = () => {
     if (!musician.allreviews || musician?.allreviews?.length === 0) return 4.5;
     const total = musician?.allreviews.reduce(
       (sum, review) => sum + (review.rating || 0),
-      0
+      0,
     );
     return Number((total / musician?.allreviews?.length).toFixed(1));
   };
@@ -210,7 +210,7 @@ const Musicians = () => {
       case "nearby":
         // Ensure nearbyMusicians is an array of proper user objects
         return (nearbyMusicians || []).filter(
-          (user) => user && typeof user === "object" && user._id
+          (user) => user && typeof user === "object" && user._id,
         ) as UserProps[];
       case "popular":
         return popularMusicians;
@@ -236,19 +236,19 @@ const Musicians = () => {
         className={cn(
           "border-b sticky top-0 z-40 backdrop-blur-md",
           colors.border,
-          colors.background
+          colors.background,
         )}
       >
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className={cn("text-2xl font-bold", colors.text)}>
+            <h1 className={cn("text-xl font-bold", colors.text)}>
               Professional Musicians
             </h1>
             <button
               onClick={handleShowNearby}
               className={cn(
                 "px-4 py-2 text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:shadow-lg transition-all flex items-center gap-2",
-                colors.hoverBg
+                colors.hoverBg,
               )}
             >
               <MapPin className="w-4 h-4" />
@@ -269,7 +269,7 @@ const Musicians = () => {
             <Award className="w-8 h-8 text-amber-500 mr-3" />
             <h1
               className={cn(
-                "text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-purple-600"
+                "text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-purple-600",
               )}
             >
               Professional Musicians
@@ -355,13 +355,13 @@ const Musicians = () => {
                 "rounded-2xl p-6 border-2 transition-all hover:scale-105",
                 colors.card,
                 colors.border,
-                "hover:shadow-xl"
+                "hover:shadow-xl",
               )}
             >
               <div className="flex items-center justify-between mb-3">
                 <div
                   className={cn(
-                    "p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-purple-500/10"
+                    "p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-purple-500/10",
                   )}
                 >
                   <stat.icon className="w-6 h-6 text-amber-500" />
@@ -373,13 +373,13 @@ const Musicians = () => {
                       stat.trend === "Quality" ||
                       stat.trend === "Fast"
                       ? "bg-green-500/20 text-green-600"
-                      : "bg-blue-500/20 text-blue-600"
+                      : "bg-blue-500/20 text-blue-600",
                   )}
                 >
                   {stat.trend}
                 </span>
               </div>
-              <p className={cn("text-2xl font-bold mb-1", colors.text)}>
+              <p className={cn("text-xl font-bold mb-1", colors.text)}>
                 {stat.value}
               </p>
               <p className={cn("text-sm", colors.textMuted)}>{stat.label}</p>
@@ -398,7 +398,7 @@ const Musicians = () => {
             <div
               className={cn(
                 "flex space-x-1 rounded-2xl p-1 border",
-                colors.border
+                colors.border,
               )}
             >
               {(() => {
@@ -423,7 +423,7 @@ const Musicians = () => {
                       "px-6 py-3 rounded-xl text-sm font-semibold transition-all",
                       activeFilter === filter.key
                         ? "bg-gradient-to-r from-amber-500 to-purple-500 text-white shadow-lg"
-                        : cn(colors.text, colors.hoverBg)
+                        : cn(colors.text, colors.hoverBg),
                     )}
                   >
                     {filter.label}
@@ -439,7 +439,7 @@ const Musicians = () => {
               <Music
                 className={cn("w-20 h-20 mx-auto mb-4", colors.textMuted)}
               />
-              <h3 className={cn("text-2xl font-bold mb-3", colors.text)}>
+              <h3 className={cn("text-xl font-bold mb-3", colors.text)}>
                 No Artists Found
               </h3>
               {/* <p className={cn("text-lg max-w-md mx-auto", colors.textMuted)}>
@@ -469,7 +469,7 @@ const Musicians = () => {
           transition={{ delay: 0.6 }}
           className={cn(
             "rounded-3xl p-12 mt-16 text-center bg-gradient-to-br from-amber-500/5 via-purple-500/5 to-blue-500/5 border",
-            colors.border
+            colors.border,
           )}
         >
           <div className="max-w-2xl mx-auto">
@@ -489,7 +489,7 @@ const Musicians = () => {
                 <button
                   onClick={() => router.push("/profile/setup")}
                   className={cn(
-                    "px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:shadow-2xl transition-all text-lg"
+                    "px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:shadow-2xl transition-all text-lg",
                   )}
                 >
                   Apply as Professional
@@ -498,7 +498,7 @@ const Musicians = () => {
                 <button
                   onClick={() => router.push("/booking")}
                   className={cn(
-                    "px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:shadow-2xl transition-all text-lg"
+                    "px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:shadow-2xl transition-all text-lg",
                   )}
                 >
                   Book Professional Service
@@ -529,13 +529,13 @@ const MusiciansSkeleton = ({ colors }: { colors: any }) => (
         <div
           className={cn(
             "h-12 w-96 mx-auto rounded-2xl animate-pulse mb-4",
-            colors.backgroundMuted
+            colors.backgroundMuted,
           )}
         />
         <div
           className={cn(
             "h-6 w-128 mx-auto rounded-2xl animate-pulse",
-            colors.backgroundMuted
+            colors.backgroundMuted,
           )}
         />
       </div>
@@ -547,7 +547,7 @@ const MusiciansSkeleton = ({ colors }: { colors: any }) => (
             key={i}
             className={cn(
               "rounded-2xl p-6 animate-pulse",
-              colors.backgroundMuted
+              colors.backgroundMuted,
             )}
           >
             <div className="flex items-center justify-between mb-3">
@@ -573,7 +573,7 @@ const MusiciansSkeleton = ({ colors }: { colors: any }) => (
                   <div
                     className={cn(
                       "w-12 h-12 rounded-full",
-                      colors.backgroundMuted
+                      colors.backgroundMuted,
                     )}
                   />
                   <div className="space-y-2">

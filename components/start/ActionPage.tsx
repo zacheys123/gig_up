@@ -169,7 +169,7 @@ const ActionPage = () => {
   const [talentbio, setTalentbio] = useState("");
   const [organization, setOrganization] = useState("");
   const [selectedBookerSkills, setSelectedBookerSkills] = useState<string[]>(
-    []
+    [],
   );
 
   // Teacher specific fields
@@ -353,7 +353,7 @@ const ActionPage = () => {
       registerAsMusician,
       registerAsClient,
       registerAsBooker,
-    ]
+    ],
   );
 
   const [modal, setModal] = useState(false);
@@ -378,7 +378,7 @@ const ActionPage = () => {
                     : roleType === "teacher"
                       ? "Successfully Registered as a Music Teacher"
                       : ""
-          }`
+          }`,
         );
         router.push("/dashboard");
       }
@@ -403,7 +403,7 @@ const ActionPage = () => {
   const connectAsBooker = useCallback(async () => {
     if (!bookerEnabled) {
       toast.error(
-        "Booker registration is currently unavailable. Please check back later."
+        "Booker registration is currently unavailable. Please check back later.",
       );
       return;
     }
@@ -444,7 +444,7 @@ const ActionPage = () => {
       setSelectedRole(role);
       setMoreInfo(true);
     },
-    [myuser]
+    [myuser],
   );
 
   const handleModal = () => {
@@ -471,7 +471,7 @@ const ActionPage = () => {
 
   const toggleBookerSkill = (skill: string) => {
     setSelectedBookerSkills((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
     );
   };
   // Update your role cards array to include feature flag checks
@@ -1188,7 +1188,7 @@ const ActionPage = () => {
           <div className="inline-flex items-center gap-2">
             <div className="h-px w-8 bg-gradient-to-r from-transparent to-orange-400"></div>
             <p className="text-xs font-mono tracking-widest text-neutral-500">
-              GigUppv2.0 • {new Date().getFullYear()}
+              gigUppv2.0 • {new Date().getFullYear()}
             </p>
             <div className="h-px w-8 bg-gradient-to-r from-blue-400 to-transparent"></div>
           </div>

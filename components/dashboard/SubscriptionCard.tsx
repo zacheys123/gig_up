@@ -96,7 +96,7 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
 
   const { subscriptionSuccess, subscriptionError } = useSubscriptionUpdates();
   const updateSubscription = useMutation(
-    api.controllers.subscription.updateSubscription
+    api.controllers.subscription.updateSubscription,
   );
 
   const handleSubscriptionClick = () => {
@@ -147,7 +147,7 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
       console.error("Failed to update subscription:", error);
       subscriptionError(
         "update",
-        error instanceof Error ? error.message : undefined
+        error instanceof Error ? error.message : undefined,
       );
     } finally {
       setIsLoading(false);
@@ -294,7 +294,7 @@ export function SubscriptionCard({ plan }: SubscriptionCardProps) {
             <h3
               className={`font-bold tracking-tight
               ${isPaidPlan ? "text-white" : colors.text} 
-              text-xl sm:text-2xl
+              text-xl sm:text-xl
             `}
             >
               {plan.name}
@@ -551,7 +551,7 @@ function ConfirmationModal({
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-3 mb-4">
               <TierIcon className="w-8 h-8 text-yellow-500" />
-              <span className={`text-2xl font-bold ${colors.primary}`}>
+              <span className={`text-xl font-bold ${colors.primary}`}>
                 {plan.name}
               </span>
             </div>

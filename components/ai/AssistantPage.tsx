@@ -1,4 +1,4 @@
-// components/ai/GigUpAssistantPage.tsx
+// components/ai/gigUpAssistantPage.tsx
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
@@ -26,8 +26,9 @@ import { cn } from "@/lib/utils";
 
 import { useCheckTrial } from "@/hooks/useCheckTrial";
 import { useRouter } from "next/navigation";
-import { useGigUpAssistant } from "@/app/(ai)/useGigUpAssistant";
+
 import { useAISuggestions } from "@/app/(ai)/useAISuggestions";
+import { usegigUpAssistant } from "@/app/(ai)/useGigUpAssistant";
 
 // Reuse the same interfaces and constants from your modal
 interface Message {
@@ -81,7 +82,7 @@ export function AssistantPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { askQuestion, isLoading, questionUsage, timeUntilReset, tierLimits } =
-    useGigUpAssistant();
+    usegigUpAssistant();
   const { colors, mounted } = useThemeColors();
   const { questions: suggestedQuestions, isLoading: suggestionsLoading } =
     useAISuggestions();
@@ -208,7 +209,7 @@ export function AssistantPage() {
   const getWelcomeMessage = () => {
     const messages = {
       "v1.0":
-        "Hi! I'm your GigUppassistant. Ask me about gig posting, messaging, and profiles!",
+        "Hi! I'm your gigUppassistant. Ask me about gig posting, messaging, and profiles!",
       "v2.0":
         "Hello! I'm here to help with multi-vendor events, video portfolios, and advanced analytics!",
       "v3.0":
@@ -247,7 +248,7 @@ export function AssistantPage() {
       <div
         className={cn(
           "p-6 border-b-2",
-          "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+          "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
         )}
         style={{ borderColor: colors.border }}
       >
@@ -264,11 +265,11 @@ export function AssistantPage() {
                 <Bot className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  GigUppAssistant
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                  gigUppAssistant
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Your AI-powered assistant for all things GigUp
+                  Your AI-powered assistant for all things gigUp
                 </p>
               </div>
             </div>
@@ -281,7 +282,7 @@ export function AssistantPage() {
         <div
           className={cn(
             "rounded-3xl shadow-2xl flex flex-col border-2 backdrop-blur-sm",
-            "h-[calc(100vh-200px)] min-h-[600px]"
+            "h-[calc(100vh-200px)] min-h-[600px]",
           )}
           style={{
             backgroundColor: colors.card,
@@ -293,7 +294,7 @@ export function AssistantPage() {
           <div
             className={cn(
               "rounded-t-3xl p-6 flex justify-between items-center relative overflow-hidden",
-              "bg-gradient-to-r from-orange-500 to-red-500"
+              "bg-gradient-to-r from-orange-500 to-red-500",
             )}
           >
             {/* Background pattern */}
@@ -313,12 +314,12 @@ export function AssistantPage() {
                 {/* Top Row - Title and Basic Info */}
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="font-bold text-white text-xl">
-                    GigUppAssistant
+                    gigUppAssistant
                   </h3>
                   <span
                     className={cn(
                       "px-3 py-1.5 text-sm rounded-full font-bold backdrop-blur-sm border border-white/20",
-                      "bg-white/20 text-white"
+                      "bg-white/20 text-white",
                     )}
                   >
                     {platformVersion}
@@ -335,7 +336,7 @@ export function AssistantPage() {
                     <div
                       className={cn(
                         "w-2 h-2 rounded-full",
-                        questionUsage.canAsk ? "bg-green-400" : "bg-amber-400"
+                        questionUsage.canAsk ? "bg-green-400" : "bg-amber-400",
                       )}
                     />
                     <span className="text-white text-sm font-medium">
@@ -386,7 +387,7 @@ export function AssistantPage() {
                             ? "bg-green-400"
                             : questionUsage.used / questionUsage.limit < 0.9
                               ? "bg-amber-400"
-                              : "bg-red-400"
+                              : "bg-red-400",
                         )}
                         style={{
                           width: `${Math.min((questionUsage.used / questionUsage.limit) * 100, 100)}%`,
@@ -395,7 +396,7 @@ export function AssistantPage() {
                     </div>
                     <span className="text-white/70 text-xs">
                       {Math.round(
-                        (questionUsage.used / questionUsage.limit) * 100
+                        (questionUsage.used / questionUsage.limit) * 100,
                       )}
                       %
                     </span>
@@ -409,7 +410,7 @@ export function AssistantPage() {
           <div
             className={cn(
               "flex-1 overflow-y-auto p-6 relative",
-              "bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"
+              "bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800",
             )}
           >
             {messages.length === 0 ? (
@@ -423,7 +424,7 @@ export function AssistantPage() {
                         versionInfo.bgColor,
                         versionInfo.borderColor,
                         versionInfo.color,
-                        "shadow-lg"
+                        "shadow-lg",
                       )}
                     >
                       <VersionIcon className="w-6 h-6" />
@@ -436,7 +437,7 @@ export function AssistantPage() {
                   <p
                     className={cn(
                       "text-base leading-relaxed px-4",
-                      colors.text
+                      colors.text,
                     )}
                   >
                     {getWelcomeMessage()}
@@ -454,14 +455,14 @@ export function AssistantPage() {
                           "flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-all duration-200",
                           "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60",
                           "hover:shadow-md hover:scale-105",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         <div
                           className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center",
                             versionInfo.bgColor,
-                            versionInfo.color
+                            versionInfo.color,
                           )}
                         >
                           <feature.icon className="w-4 h-4" />
@@ -480,7 +481,7 @@ export function AssistantPage() {
                           key={index}
                           className={cn(
                             "w-full p-4 rounded-xl border-2 animate-pulse",
-                            "bg-gray-200/50 dark:bg-gray-700/50 border-gray-300/50 dark:border-gray-600/50"
+                            "bg-gray-200/50 dark:bg-gray-700/50 border-gray-300/50 dark:border-gray-600/50",
                           )}
                         >
                           <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded" />
@@ -498,7 +499,7 @@ export function AssistantPage() {
                             "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-gray-200/60 dark:border-gray-700/60",
                             "hover:shadow-lg hover:scale-105 hover:border-orange-300/50 dark:hover:border-orange-400/50",
                             "active:scale-95",
-                            colors.textSecondary
+                            colors.textSecondary,
                           )}
                         >
                           {question}
@@ -510,7 +511,7 @@ export function AssistantPage() {
                 <div
                   className={cn(
                     "text-xs px-4 py-3 rounded-xl",
-                    "bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60"
+                    "bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60",
                   )}
                 >
                   {questionUsage.limit === tierLimits.free.dailyLimit && (
@@ -564,8 +565,8 @@ export function AssistantPage() {
                           ? "bg-gradient-to-br from-orange-500 to-red-500 text-white"
                           : cn(
                               "bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200/60 dark:border-gray-700/60",
-                              colors.text
-                            )
+                              colors.text,
+                            ),
                       )}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -595,7 +596,7 @@ export function AssistantPage() {
                                   message.metadata
                                     .platformVersion as keyof typeof PLATFORM_VERSIONS
                                 ]?.color,
-                                "border-current/20"
+                                "border-current/20",
                               )}
                             >
                               {message.metadata.platformVersion}
@@ -621,7 +622,7 @@ export function AssistantPage() {
                     </div>
                     <div
                       className={cn(
-                        "px-4 py-3 rounded-2xl bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200/60 dark:border-gray-700/60 shadow-lg backdrop-blur-sm"
+                        "px-4 py-3 rounded-2xl bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200/60 dark:border-gray-700/60 shadow-lg backdrop-blur-sm",
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -657,7 +658,7 @@ export function AssistantPage() {
           <div
             className={cn(
               "p-5 border-t-2",
-              "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+              "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
             )}
             style={{ borderColor: colors.border }}
           >
@@ -668,7 +669,7 @@ export function AssistantPage() {
                 className={cn(
                   "mb-4 p-4 rounded-xl flex items-center gap-3 text-sm font-medium",
                   "bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 border-2 border-amber-200/60 dark:border-amber-700/60",
-                  "text-amber-800 dark:text-amber-200 shadow-lg"
+                  "text-amber-800 dark:text-amber-200 shadow-lg",
                 )}
               >
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -703,7 +704,7 @@ export function AssistantPage() {
                   "focus:border-orange-400 focus:ring-orange-200/50 dark:focus:ring-orange-400/30",
                   "placeholder-gray-500 dark:placeholder-gray-400",
                   !questionUsage.canAsk && "opacity-60 cursor-not-allowed",
-                  colors.text
+                  colors.text,
                 )}
                 disabled={!questionUsage.canAsk || isLoading}
               />
@@ -715,7 +716,7 @@ export function AssistantPage() {
                 className={cn(
                   "p-3 rounded-xl transition-all duration-200 disabled:opacity-40",
                   "bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg",
-                  "hover:shadow-xl disabled:hover:shadow-lg min-w-[50px]"
+                  "hover:shadow-xl disabled:hover:shadow-lg min-w-[50px]",
                 )}
               >
                 <Send className="w-5 h-5" />
@@ -738,7 +739,7 @@ export function AssistantPage() {
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 font-medium",
                     "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md",
-                    "hover:shadow-lg"
+                    "hover:shadow-lg",
                   )}
                 >
                   <Crown className="w-3 h-3" />

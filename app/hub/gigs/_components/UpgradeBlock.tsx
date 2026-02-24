@@ -270,7 +270,7 @@ const EventExample = ({ event, colors, isDarkMode }: any) => (
       isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
     )}
   >
-    <div className="text-2xl mb-2">{event.icon}</div>
+    <div className="text-xl mb-2">{event.icon}</div>
     <div className={cn("text-sm font-semibold mb-1", colors.text)}>
       {event.name}
     </div>

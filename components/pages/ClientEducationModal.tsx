@@ -112,7 +112,7 @@ export default function ClientEducationModal({
           className={cn(
             "relative w-full max-w-2xl rounded-3xl border shadow-2xl",
             colors.background,
-            colors.border
+            colors.border,
           )}
         >
           {/* Header */}
@@ -120,13 +120,13 @@ export default function ClientEducationModal({
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "p-3 rounded-2xl bg-gradient-to-br from-amber-500/10 to-purple-500/10"
+                  "p-3 rounded-2xl bg-gradient-to-br from-amber-500/10 to-purple-500/10",
                 )}
               >
                 <Users className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <h2 className={cn("text-2xl font-bold", colors.text)}>
+                <h2 className={cn("text-xl font-bold", colors.text)}>
                   Finding the Right Musician
                 </h2>
                 <p className={cn("text-sm mt-1", colors.textMuted)}>
@@ -139,7 +139,7 @@ export default function ClientEducationModal({
               onClick={onClose}
               className={cn(
                 "absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               <X className="w-5 h-5" />
@@ -160,7 +160,7 @@ export default function ClientEducationModal({
               <div
                 className={cn(
                   "w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4",
-                  clientTips[currentTip].bgColor
+                  clientTips[currentTip].bgColor,
                 )}
               >
                 <div className={clientTips[currentTip].color}>
@@ -187,7 +187,7 @@ export default function ClientEducationModal({
                     "w-2 h-2 rounded-full transition-all duration-300",
                     index === currentTip
                       ? "bg-amber-500 w-6"
-                      : "bg-gray-300 dark:bg-gray-600 hover:bg-amber-400"
+                      : "bg-gray-300 dark:bg-gray-600 hover:bg-amber-400",
                   )}
                 />
               ))}
@@ -200,7 +200,7 @@ export default function ClientEducationModal({
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 relative group",
                   "hover:text-amber-600 dark:hover:text-amber-400",
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               >
                 <span className="transition-colors duration-200">Previous</span>
@@ -209,7 +209,7 @@ export default function ClientEducationModal({
                 <div
                   className={cn(
                     "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
-                    "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                    "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10",
                   )}
                 />
               </button>
@@ -219,7 +219,7 @@ export default function ClientEducationModal({
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 relative group",
                   "hover:text-amber-600 dark:hover:text-amber-400",
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               >
                 <span className="transition-colors duration-200">Next</span>
@@ -228,7 +228,7 @@ export default function ClientEducationModal({
                 <div
                   className={cn(
                     "absolute inset-0 rounded-lg bg-gray-50 dark:bg-gray-800/50",
-                    "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"
+                    "opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10",
                   )}
                 />
               </button>
@@ -242,7 +242,7 @@ export default function ClientEducationModal({
                 onClick={onDontShowAgain}
                 className={cn(
                   "text-sm hover:underline transition-colors",
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               >
                 Don't show this again
@@ -253,7 +253,7 @@ export default function ClientEducationModal({
                   variant="outline"
                   onClick={onClose}
                   className={cn(
-                    "border-amber-500 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                    "border-amber-500 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20",
                   )}
                 >
                   Close

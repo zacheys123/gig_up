@@ -1,12 +1,12 @@
 "use client";
-import { useGigUpAssistant } from "@/app/(ai)/useGigUpAssistant";
+import { usegigUpAssistant } from "@/app/(ai)/usegigUpAssistant";
 
 export default function TestAIPage() {
-  const { questionUsage, tierLimits } = useGigUpAssistant();
+  const { questionUsage, tierLimits } = usegigUpAssistant();
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">AI Assistant Test</h1>
+      <h1 className="text-xl font-bold mb-4">AI Assistant Test</h1>
 
       <div className="space-y-4">
         <div>

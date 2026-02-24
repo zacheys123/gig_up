@@ -1,6 +1,6 @@
 {
-  "name": "Gigup",
-  "short_name": "gigup",
+  "name": "gigUp",
+  "short_name": "gigUp",
   "description": "Book and create gigs from anywhere",
   "start_url": "/",
   "display": "standalone",

@@ -58,7 +58,7 @@ export function VersionManager() {
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Rocket className="w-8 h-8 text-blue-500" />
-        <h1 className="text-2xl font-bold">Platform Version Manager</h1>
+        <h1 className="text-xl font-bold">Platform Version Manager</h1>
       </div>
 
       {/* Current Version Status */}
@@ -159,22 +159,22 @@ export function VersionManager() {
       {/* Version Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-2xl font-bold text-blue-600">v1.0</div>
+          <div className="text-xl font-bold text-blue-600">v1.0</div>
           <div className="text-sm text-gray-600">Legacy Users</div>
           <div className="text-lg font-semibold">1,234</div>
         </div>
         <div className="bg-white border rounded-lg p-4 ring-2 ring-green-500">
-          <div className="text-2xl font-bold text-green-600">v2.0</div>
+          <div className="text-xl font-bold text-green-600">v2.0</div>
           <div className="text-sm text-gray-600">Active Users</div>
           <div className="text-lg font-semibold">4,567</div>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-2xl font-bold text-yellow-600">v3.0</div>
+          <div className="text-xl font-bold text-yellow-600">v3.0</div>
           <div className="text-sm text-gray-600">Beta Testers</div>
           <div className="text-lg font-semibold">89</div>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-2xl font-bold text-purple-600">Total</div>
+          <div className="text-xl font-bold text-purple-600">Total</div>
           <div className="text-sm text-gray-600">All Versions</div>
           <div className="text-lg font-semibold">5,890</div>
         </div>

@@ -281,14 +281,14 @@ const MusicianCard = memo(
         musician.firstname && musician.lastname
           ? `${musician.firstname} ${musician.lastname}`
           : musician.username || "Musician",
-      [musician.firstname, musician.lastname, musician.username]
+      [musician.firstname, musician.lastname, musician.username],
     );
 
     const displayGenres = useMemo(
       () =>
         musician.musiciangenres ||
         [musician.musiciangenres || "Various Genres"].filter(Boolean),
-      [musician.musiciangenres, musician.musiciangenres]
+      [musician.musiciangenres, musician.musiciangenres],
     );
 
     // Enhanced tags with gigType context and compatibility
@@ -369,7 +369,7 @@ const MusicianCard = memo(
           // Dim incompatible musicians
           selectedGigType &&
             musician.isCompatible === false &&
-            "opacity-60 grayscale-[20%]"
+            "opacity-60 grayscale-[20%]",
         )}
       >
         {" "}
@@ -390,7 +390,7 @@ const MusicianCard = memo(
             <div
               className={cn(
                 "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold",
-                "bg-amber-500 text-white shadow-sm"
+                "bg-amber-500 text-white shadow-sm",
               )}
             >
               <AlertTriangle className="w-3 h-3" />
@@ -404,7 +404,7 @@ const MusicianCard = memo(
             <div
               className={cn(
                 "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold",
-                "bg-green-500 text-white shadow-sm"
+                "bg-green-500 text-white shadow-sm",
               )}
             >
               <Target className="w-3 h-3" />
@@ -422,7 +422,7 @@ const MusicianCard = memo(
                   ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800"
                   : compatibilityDisplay.color === "blue"
                     ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"
-                    : cn(colors.warningBg, colors.warningBorder, colors.text)
+                    : cn(colors.warningBg, colors.warningBorder, colors.text),
               )}
             >
               {compatibilityDisplay.score}% {compatibilityDisplay.label}
@@ -441,7 +441,7 @@ const MusicianCard = memo(
                 <div
                   className={cn(
                     "absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md border",
-                    colors.border
+                    colors.border,
                   )}
                 >
                   <Check className="w-3 h-3 text-white" />
@@ -470,7 +470,7 @@ const MusicianCard = memo(
               <div
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2",
-                  "bg-green-500/10 text-green-600 border-green-500/20 border"
+                  "bg-green-500/10 text-green-600 border-green-500/20 border",
                 )}
               >
                 <CheckCircle className="w-3 h-3" />
@@ -518,7 +518,7 @@ const MusicianCard = memo(
                 // Highlight genres that match the gigType context
                 selectedGigType &&
                   genre.toLowerCase().includes(selectedGigType.toLowerCase()) &&
-                  cn(colors.warningBg, colors.text)
+                  cn(colors.warningBg, colors.text),
               )}
             >
               {genre}
@@ -529,7 +529,7 @@ const MusicianCard = memo(
               className={cn(
                 "px-2 py-1 text-xs rounded-full border",
                 colors.border,
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               +{displayGenres.length - 3}
@@ -553,8 +553,8 @@ const MusicianCard = memo(
                         : cn(
                             colors.warningBg,
                             colors.warningBorder,
-                            colors.text
-                          )
+                            colors.text,
+                          ),
                 )}
               >
                 {tag}
@@ -597,7 +597,7 @@ const MusicianCard = memo(
             // Style differently for incompatible musicians
             selectedGigType &&
               musician.isCompatible === false &&
-              "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700"
+              "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700",
           )}
           disabled={selectedGigType ? musician.isCompatible === false : false} // FIXED: Explicit boolean
         >
@@ -610,7 +610,7 @@ const MusicianCard = memo(
         </Button>
       </div>
     );
-  }
+  },
 );
 
 MusicianCard.displayName = "MusicianCard";
@@ -627,7 +627,7 @@ const FilterBadge = memo(
         <X className="w-3 h-3" />
       </button>
     </Badge>
-  )
+  ),
 );
 
 FilterBadge.displayName = "FilterBadge";
@@ -671,7 +671,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
         selectedGigType,
         // Remove selectedMinTrustStars
         selectedSortBy,
-      ]
+      ],
     );
 
     const handleSortByChange = useCallback(
@@ -682,10 +682,10 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
             | "rating"
             | "experience"
             | "recent"
-            | "rate"
+            | "rate",
         );
       },
-      []
+      [],
     );
 
     const { musicians, featuredMusicians, isLoading, isEmpty } =
@@ -714,7 +714,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
           displayRate: item.displayRate || "$0",
         }));
       },
-      []
+      [],
     );
 
     // Transform the musicians data
@@ -733,7 +733,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
       if (selectedInstrument) filters.push(`Instrument: ${selectedInstrument}`);
       if (selectedGigType) {
         const gigTypeLabel = GIG_TYPES.find(
-          (g) => g.value === selectedGigType
+          (g) => g.value === selectedGigType,
         )?.label;
         if (gigTypeLabel) filters.push(`Event: ${gigTypeLabel}`);
       }
@@ -765,28 +765,28 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
       (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedCity(e.target.value);
       },
-      []
+      [],
     );
 
     const handleInstrumentChange = useCallback(
       (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedInstrument(e.target.value);
       },
-      []
+      [],
     );
 
     const handleGigTypeChange = useCallback(
       (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedGigType(e.target.value);
       },
-      []
+      [],
     );
 
     const handleSearchChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
       },
-      []
+      [],
     );
 
     const clearAllFilters = useCallback(() => {
@@ -818,13 +818,13 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
             "rounded-2xl p-8 text-center",
             colors.card,
             colors.border,
-            "border"
+            "border",
           )}
         >
           <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center">
             <Music className="w-12 h-12 text-blue-600 dark:text-blue-400" />
           </div>
-          <h3 className={cn("text-2xl font-bold mb-3", colors.text)}>
+          <h3 className={cn("text-xl font-bold mb-3", colors.text)}>
             Create a Template First
           </h3>
           <p className={cn("text-lg mb-6 max-w-md mx-auto", colors.textMuted)}>
@@ -849,7 +849,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
             <div
               className={cn(
                 "p-4 rounded-xl text-center",
-                colors.backgroundMuted
+                colors.backgroundMuted,
               )}
             >
               <div className={cn("text-xl font-bold", colors.text)}>50+</div>
@@ -860,7 +860,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
             <div
               className={cn(
                 "p-4 rounded-xl text-center",
-                colors.backgroundMuted
+                colors.backgroundMuted,
               )}
             >
               <div className={cn("text-xl font-bold", colors.text)}>4.8</div>
@@ -869,7 +869,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
             <div
               className={cn(
                 "p-4 rounded-xl text-center",
-                colors.backgroundMuted
+                colors.backgroundMuted,
               )}
             >
               <div className={cn("text-xl font-bold", colors.text)}>24h</div>
@@ -946,7 +946,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
             colors.backgroundMuted,
             colors.border,
             "border",
-            showFilters ? colors.secondaryBackground : ""
+            showFilters ? colors.secondaryBackground : "",
           )}
         >
           <div className="flex flex-col sm:flex-row gap-4">
@@ -966,7 +966,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                 "grid gap-4 transition-all duration-200",
                 showFilters
                   ? "grid-cols-1 sm:grid-cols-3 opacity-100"
-                  : "grid-cols-0 opacity-0 h-0 overflow-hidden"
+                  : "grid-cols-0 opacity-0 h-0 overflow-hidden",
               )}
             >
               <select
@@ -976,7 +976,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   "px-3 py-2 rounded-lg border bg-transparent transition-colors",
                   colors.border,
                   colors.text,
-                  "hover:border-blue-300 focus:border-blue-500"
+                  "hover:border-blue-300 focus:border-blue-500",
                 )}
               >
                 <option value="">All Cities</option>
@@ -993,7 +993,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   "px-3 py-2 rounded-lg border bg-transparent transition-colors",
                   colors.border,
                   colors.text,
-                  "hover:border-blue-300 focus:border-blue-500"
+                  "hover:border-blue-300 focus:border-blue-500",
                 )}
               >
                 <option value="">All Instruments</option>
@@ -1011,7 +1011,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   "px-3 py-2 rounded-lg border bg-transparent transition-colors",
                   colors.border,
                   colors.text,
-                  "hover:border-blue-300 focus:border-blue-500"
+                  "hover:border-blue-300 focus:border-blue-500",
                 )}
               >
                 <option value="">All Gig Types</option>
@@ -1030,7 +1030,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
                   "px-3 py-2 rounded-lg border bg-transparent transition-colors",
                   colors.border,
                   colors.text,
-                  "hover:border-blue-300 focus:border-blue-500"
+                  "hover:border-blue-300 focus:border-blue-500",
                 )}
               >
                 <option value="trust">Sort by Trust</option>
@@ -1059,13 +1059,13 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
               "rounded-2xl p-8 text-center",
               colors.card,
               colors.border,
-              "border"
+              "border",
             )}
           >
             <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center">
               <Music className="w-12 h-12 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className={cn("text-2xl font-bold mb-3", colors.text)}>
+            <h3 className={cn("text-xl font-bold mb-3", colors.text)}>
               {debouncedSearchQuery
                 ? "No Musicians Found"
                 : "No Musicians Available Yet"}
@@ -1157,7 +1157,7 @@ export const ProMusiciansTab: React.FC<ProMusiciansTabProps> = memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 ProMusiciansTab.displayName = "ProMusiciansTab";

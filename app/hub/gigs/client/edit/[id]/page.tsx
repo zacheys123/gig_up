@@ -113,7 +113,7 @@ export default function EditGigPage() {
         <div className="container mx-auto p-4 md:p-6">
           {/* Header with Customize Button */}
           <div className="flex justify-between items-center mb-6">
-            <h1 className={`text-2xl font-bold ${colors.text}`}>Edit Gig</h1>
+            <h1 className={`text-xl font-bold ${colors.text}`}>Edit Gig</h1>
             <Button
               variant="outline"
               onClick={() => setShowCustomization(true)}

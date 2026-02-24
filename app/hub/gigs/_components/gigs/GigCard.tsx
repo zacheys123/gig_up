@@ -86,6 +86,29 @@ import { CountdownTimer } from "./CountDown";
 import { MdMusicOff } from "react-icons/md";
 import { createPortal } from "react-dom";
 
+// Add this mapping at the top of your GigCard component (outside the component or as a constant)
+const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  vocalist: "Lead Vocalist",
+  guitar: "Guitarist",
+  bass: "Bassist",
+  drums: "Drummer",
+  piano: "Pianist/Keyboardist",
+  sax: "Saxophonist",
+  trumpet: "Trumpeter",
+  violin: "Violinist",
+  backups: "Backup Vocalist",
+  percussion: "Percussionist",
+  dj: "DJ",
+  mc: "MC/Host",
+};
+
+// Helper function to get display name
+const getRoleDisplayName = (roleId: string): string => {
+  return (
+    ROLE_DISPLAY_NAMES[roleId] ||
+    roleId.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+  );
+};
 // Types
 interface PerformingMember {
   userId: Id<"users">;
@@ -165,6 +188,7 @@ export interface GigCardProps {
   userStatus?: GigUserStatus;
   showFullGigs?: boolean; // Add this prop
   getGigFromChild?: (gig: any) => void; // Add this callback prop
+  showChevron?: boolean;
 }
 
 type BandActionType =
@@ -553,20 +577,17 @@ const GigCard: React.FC<GigCardProps> = ({
         };
 
       case "client_band_creation":
-        // Check if user can apply to any role
         const qualifiedRoles =
           gig.bandCategory?.filter(
             (role) =>
               role.filledSlots < role.maxSlots &&
               isUserQualifiedForRole(currentUser!, role),
           ) || [];
-
+        const allRoles = gig.bandCategory || [];
+        const availableRoles = allRoles.filter(
+          (role) => role.filledSlots < role.maxSlots,
+        );
         if (qualifiedRoles.length === 0) {
-          const allRoles = gig.bandCategory || [];
-          const availableRoles = allRoles.filter(
-            (role) => role.filledSlots < role.maxSlots,
-          );
-
           return {
             label: "View Requirements",
             variant: "outline" as const,
@@ -601,11 +622,10 @@ const GigCard: React.FC<GigCardProps> = ({
           };
         }
 
-        // THIS IS THE MISSING RETURN STATEMENT
         return {
           label:
             qualifiedRoles.length === 1
-              ? `Apply as ${qualifiedRoles[0].role}`
+              ? `Apply as ${getRoleDisplayName(qualifiedRoles[0].role)}`
               : "Apply for Role",
           variant: "default" as const,
           icon: <UserPlus className="w-4 h-4" />,
@@ -1877,57 +1897,48 @@ const GigCard: React.FC<GigCardProps> = ({
     );
 
     // Special handling based on gig type
-    let specificMessage = "";
     let buttonLabel = "Not Qualified";
     let icon: React.ReactNode = <XCircle className="w-4 h-4" />;
 
     if (gigType === "mc") {
-      if (roleType !== "mc") {
-        specificMessage = "You are not registered as an MC";
-        buttonLabel = "Not an MC";
-        icon = <MicOff className="w-4 h-4" />;
-      } else {
-        specificMessage =
-          missingQualifications?.join(", ") || "Missing MC qualifications";
-      }
+      buttonLabel = roleType !== "mc" ? "Not an MC" : "Missing MC requirements";
+      icon =
+        roleType !== "mc" ? (
+          <MicOff className="w-4 h-4" />
+        ) : (
+          <XCircle className="w-4 h-4" />
+        );
     } else if (gigType === "dj") {
-      if (roleType !== "dj") {
-        specificMessage = "You are not registered as a DJ";
-        buttonLabel = "Not a DJ";
-        icon = <VolumeX className="w-4 h-4" />;
-      } else {
-        specificMessage =
-          missingQualifications?.join(", ") || "Missing DJ qualifications";
-      }
+      buttonLabel = roleType !== "dj" ? "Not a DJ" : "Missing DJ requirements";
+      icon =
+        roleType !== "dj" ? (
+          <VolumeX className="w-4 h-4" />
+        ) : (
+          <XCircle className="w-4 h-4" />
+        );
     } else if (gigType === "vocalist") {
-      if (roleType !== "vocalist") {
-        specificMessage = "You are not registered as a vocalist";
-        buttonLabel = "Not a Vocalist";
-        icon = <MicOff className="w-4 h-4" />;
-      } else {
-        specificMessage =
-          missingQualifications?.join(", ") ||
-          "Missing vocalist qualifications";
-      }
+      buttonLabel =
+        roleType !== "vocalist"
+          ? "Not a Vocalist"
+          : "Missing vocalist requirements";
+      icon =
+        roleType !== "vocalist" ? (
+          <MicOff className="w-4 h-4" />
+        ) : (
+          <XCircle className="w-4 h-4" />
+        );
     } else if (gigType === "individual_musician") {
       if (!isMusician) {
-        specificMessage = "You are not a musician";
         buttonLabel = "Not a Musician";
         icon = <Music className="w-4 h-4" />;
       } else if (roleType !== "instrumentalist") {
-        specificMessage = "You are not registered as an instrumentalist";
         buttonLabel = "Not Instrumentalist";
         icon = <Music className="w-4 h-4" />;
       } else {
         const requiredInstrument = gig.category || "instrument";
-        specificMessage = `Instrument mismatch. Gig requires: ${requiredInstrument}`;
         buttonLabel = `Needs ${requiredInstrument}`;
         icon = <X className="w-4 h-4" />;
       }
-    } else {
-      // Default case
-      specificMessage =
-        missingQualifications?.join(", ") || "You don't meet the requirements";
     }
 
     return {
@@ -1935,21 +1946,14 @@ const GigCard: React.FC<GigCardProps> = ({
       variant: "outline" as const,
       icon: icon,
       action: () => {
-        toast.error(buttonLabel, {
-          description: specificMessage,
-          duration: 5000,
-        });
+        const message =
+          missingQualifications?.join(", ") ||
+          "You don't meet the requirements for this gig";
+        toast.error(message);
       },
       disabled: true,
-      tooltip: specificMessage,
-      // FIXED: Added background color for better contrast
-      className: clsx(
-        "border-red-300 dark:border-red-700",
-        "bg-red-50/90 dark:bg-red-950/80", // Added background
-        "text-red-700 dark:text-red-300",
-        "hover:bg-red-100 dark:hover:bg-red-900/60",
-        "cursor-not-allowed backdrop-blur-sm",
-      ),
+      className:
+        "border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500",
       isQualified: false,
     };
   };
@@ -2003,7 +2007,7 @@ const GigCard: React.FC<GigCardProps> = ({
 
       case "individual_musician":
         const instrumentName = gig.category
-          ? gig.category.charAt(0).toUpperCase() + gig.category.slice(1)
+          ? getRoleDisplayName(gig.category) // Use the same mapping
           : "Musician";
 
         return {
@@ -2571,1526 +2575,229 @@ const GigCard: React.FC<GigCardProps> = ({
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        whileHover={{ y: -2 }}
         className={clsx(
-          "group relative rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200",
-          "cursor-pointer overflow-hidden w-full",
+          "relative p-3 border rounded-md transition-colors",
+          "cursor-pointer",
           {
-            // Status rings
-            "ring-1 ring-purple-500":
-              isClientBand && userStatus.isInBandApplication,
-            "ring-1 ring-green-500":
-              !isClientBand && userStatus.hasShownInterest,
-            "opacity-60": isPending || gig.isTaken || isFull,
-            "border border-dashed border-blue-300 bg-blue-50/30":
-              isNotOpen && !isDarkMode,
-            "border border-dashed border-blue-700 bg-blue-950/20":
-              isNotOpen && isDarkMode,
-
-            // Default theme classes when no custom colors
-            "bg-white": !gig.backgroundColor && !isDarkMode,
-            "bg-gray-800": !gig.backgroundColor && isDarkMode,
-            "text-gray-900": !gig.fontColor && !isDarkMode,
-            "text-gray-100": !gig.fontColor && isDarkMode,
-            "border border-gray-200":
-              !gig.backgroundColor && !gig.fontColor && !isDarkMode,
-            "border border-gray-700":
-              !gig.backgroundColor && !gig.fontColor && isDarkMode,
+            "opacity-50": isPending || gig.isTaken || isFull,
+            "border-dashed border-blue-400": isNotOpen,
           },
+          isDarkMode
+            ? "border-gray-800 hover:border-gray-700 bg-gray-900"
+            : "border-gray-200 hover:border-gray-300 bg-white",
         )}
         onClick={handleClick}
-        style={getCardStyles()}
       >
-        {/* Status indicator line - now conditionally colored based on isDarkMode when no custom colors */}
-        <div
-          className={clsx(
-            "absolute top-0 left-0 h-1 w-full",
-            !gig.fontColor &&
-              !gig.backgroundColor &&
-              !isClientBand &&
-              !isFull &&
-              !gig.isTaken &&
-              !gig.isPending && {
-                "bg-gradient-to-r from-gray-300 to-gray-400": !isDarkMode,
-                "bg-gradient-to-r from-gray-600 to-gray-700": isDarkMode,
-              },
-            {
-              "bg-gradient-to-r from-purple-500 to-pink-600": isClientBand,
-              "bg-gradient-to-r from-green-500 to-emerald-600":
-                !isClientBand && !isFull && !gig.isTaken,
-              "bg-gradient-to-r from-yellow-500 to-orange-600": gig.isPending,
-              "bg-gradient-to-r from-red-500 to-rose-600":
-                isFull || gig.isTaken,
-            },
-          )}
-        />
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={gigPoster?.picture} />
+              <AvatarFallback className="text-xs">
+                {gigPoster?.firstname?.charAt(0) || "G"}
+              </AvatarFallback>
+            </Avatar>
 
-        <div className="flex flex-col h-full">
-          {/* Header Row */}
-          <div className="flex items-start justify-between gap-3">
-            {/* Left side - Avatar and minimal info */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Avatar className="w-10 h-10 border-2 border-white shadow-md flex-shrink-0">
-                <AvatarImage src={gigPoster?.picture} />
-                <AvatarFallback
-                  className={clsx(
-                    "bg-gradient-to-br text-white text-xs",
-                    !gig.fontColor &&
-                      !gig.backgroundColor &&
-                      !isDarkMode &&
-                      "from-gray-500 to-gray-600",
-                    !gig.fontColor &&
-                      !gig.backgroundColor &&
-                      isDarkMode &&
-                      "from-gray-600 to-gray-700",
-                    (gig.fontColor || gig.backgroundColor) &&
-                      "from-orange-500 to-amber-500",
-                  )}
-                >
-                  {gigPoster?.firstname?.charAt(0) || "G"}
-                </AvatarFallback>
-              </Avatar>
-
-              <div className="flex-1 min-w-0">
-                <h3
-                  className={clsx(
-                    "font-semibold text-sm truncate",
-                    !gig.fontColor && !isDarkMode && "text-gray-900",
-                    !gig.fontColor && isDarkMode && "text-gray-100",
-                  )}
-                  style={gig.fontColor ? { color: gig.fontColor } : undefined}
-                >
-                  {gig.title}
-                </h3>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Badge
-                    variant="outline"
-                    className={clsx(
-                      "text-[10px] px-1.5 py-0 h-4",
-                      !gig.fontColor &&
-                        !gig.backgroundColor &&
-                        !isDarkMode &&
-                        "border-gray-300 text-gray-700",
-                      !gig.fontColor &&
-                        !gig.backgroundColor &&
-                        isDarkMode &&
-                        "border-gray-600 text-gray-300",
-                    )}
-                  >
-                    {gig.bussinesscat || "Gig"}
-                  </Badge>
-                  <span
-                    className={clsx(
-                      "text-[10px] truncate",
-                      !isDarkMode ? "text-gray-500" : "text-gray-400",
-                    )}
-                  >
-                    {gigPoster?.firstname || "User"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {isNotOpen && (
-              <div className="absolute -top-1 -right-1">
-                <Badge
-                  className={clsx(
-                    "text-white text-[8px] px-1.5 py-0.5 rotate-12 shadow-lg",
-                    isDarkMode ? "bg-blue-600" : "bg-blue-500",
-                  )}
-                >
-                  <Clock className="w-2 h-2 mr-0.5" />
-                  Soon
-                </Badge>
-              </div>
-            )}
-
-            {/* Price - Compact */}
-            <div className="text-right flex-shrink-0">
-              <div
-                className={clsx(
-                  "text-sm font-bold",
-                  !isDarkMode ? "text-green-600" : "text-green-400",
-                )}
-              >
-                {gig.price ? `$${gig.price}` : "—"}
+            <div>
+              <h3 className="text-sm font-medium truncate max-w-[150px]">
+                {gig.title}
+              </h3>
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <span>{gig.bussinesscat || "Gig"}</span>
+                <span>•</span>
+                <span>{gigPoster?.firstname || "User"}</span>
               </div>
             </div>
           </div>
 
-          {/* Quick Info Row */}
-          <div
-            className={clsx(
-              "flex items-center gap-2 mt-2 text-[10px]",
-              !isDarkMode ? "text-gray-500" : "text-gray-400",
-            )}
-          >
-            <div className="flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              <span className="truncate max-w-[60px]">
-                {gig.location?.split(",")[0] || "Remote"}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              <span>
-                {new Date(gig.date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-            {gig.time?.start && (
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                <span>{gig.time.start}</span>
-              </div>
-            )}
+          <div className="text-xs font-medium text-green-600 dark:text-green-400">
+            ${gig.price || "—"}
           </div>
+        </div>
 
-          {/* Action Buttons Row */}
+        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {gig.location?.split(",")[0] || "Remote"}
+          </span>
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {new Date(gig.date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {gigType === "client_band_creation"
+              ? gig.bandCategory?.reduce(
+                  (a, r) => a + r.applicants.length,
+                  0,
+                ) || 0
+              : gig.interestedUsers?.length || 0}{" "}
+            applied
+          </span>
+
           <div
-            className={clsx(
-              "flex items-center justify-between mt-3 pt-2 border-t",
-              !isDarkMode ? "border-gray-100" : "border-gray-800",
-            )}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1"
           >
-            {/* Applicant count */}
-            <div className="flex items-center gap-1 text-xs">
-              <Users className="w-3 h-3 text-orange-500" />
-              <span className="font-medium">
-                {gigType === "client_band_creation"
-                  ? gig.bandCategory?.reduce(
-                      (acc, role) => acc + role.applicants.length,
-                      0,
-                    ) || 0
-                  : gig.interestedUsers?.length || 0}
-              </span>
-              <span
-                className={clsx(
-                  "text-[10px]",
-                  !isDarkMode ? "text-gray-500" : "text-gray-400",
-                )}
-              >
-                applied
-              </span>
-            </div>
-
-            {/* Action Buttons */}
-            <div
-              className="flex items-center gap-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {renderActionButton()}
-
-              {/* More button */}
+            {renderActionButton()}
+            {getGigFromChild && (
               <Button
                 variant="ghost"
                 size="icon"
-                className={clsx(
-                  "h-6 w-6 rounded-full",
-                  !isDarkMode
-                    ? "hover:bg-orange-100"
-                    : "hover:bg-orange-900/20",
-                )}
+                className="h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  e.preventDefault();
-                  e.nativeEvent.stopImmediatePropagation();
-                  if (getGigFromChild) {
-                    getGigFromChild(gig);
-                  }
+                  getGigFromChild(gig);
                 }}
-                onMouseEnter={(e) => e.stopPropagation()}
-                onMouseLeave={(e) => e.stopPropagation()}
               >
                 <ChevronRight className="h-3 w-3" />
               </Button>
-            </div>
+            )}
           </div>
         </div>
       </motion.div>
+
+      {/* Minimal Modals */}
       <Dialog open={showInterestModal} onOpenChange={setShowInterestModal}>
-        <DialogContent
-          className={cn(
-            "sm:max-w-md rounded-xl shadow-xl",
-            colors.background,
-            colors.border,
-            "border-2",
-          )}
-        >
-          <DialogHeader className={cn("pb-3", colors.border)}>
-            <DialogTitle className={cn("text-xl font-bold", colors.text)}>
-              Show Interest in "{gig.title}"
-            </DialogTitle>
-            <DialogDescription className={cn(colors.textMuted)}>
-              Add an optional note to introduce yourself.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Show Interest</DialogTitle>
+            <DialogDescription>Add a note (optional)</DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Interest Window Info */}
-            {(gig.acceptInterestStartTime || gig.acceptInterestEndTime) && (
-              <div
-                className={cn(
-                  "p-3 rounded-lg border",
-                  interestWindowStatus.status === "open"
-                    ? cn(
-                        colors.successBg,
-                        colors.successBorder,
-                        "border",
-                        colors.text,
-                      )
-                    : cn(
-                        colors.infoBg,
-                        colors.infoBorder,
-                        "border",
-                        colors.text,
-                      ),
-                )}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock
-                    className={cn(
-                      "w-4 h-4",
-                      interestWindowStatus.status === "open"
-                        ? colors.successText
-                        : colors.infoText,
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      "font-medium",
-                      interestWindowStatus.status === "open"
-                        ? colors.successText
-                        : colors.infoText,
-                    )}
-                  >
-                    Interest Window
-                  </span>
-                </div>
-                <p
-                  className={cn(
-                    "text-sm",
-                    interestWindowStatus.status === "open"
-                      ? colors.successText
-                      : colors.infoText,
-                  )}
-                >
-                  {interestWindowStatus.message}
-                </p>
-              </div>
-            )}
-
-            {/* Available slots */}
-            <div
-              className={cn(
-                "p-3 rounded-lg border",
-                isDarkMode
-                  ? "bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-800/30"
-                  : "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200",
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "text-sm font-medium",
-                    isDarkMode ? "text-blue-300" : "text-blue-700",
-                  )}
-                >
-                  Available: {availableSlots}/{maxSlots}
-                </span>
-                {availableSlots <= 2 && (
-                  <Badge
-                    variant="destructive"
-                    className="animate-pulse bg-gradient-to-r from-red-500 to-orange-500"
-                  >
-                    Almost Full!
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label
-                className={cn("text-sm font-medium mb-2 block", colors.text)}
-              >
-                Notes
-              </label>
-              <Textarea
-                value={interestNotes}
-                onChange={(e) => setInterestNotes(e.target.value)}
-                placeholder="Tell the client why you're interested..."
-                className={cn(
-                  "min-h-[80px] rounded-xl border-2 transition-all",
-                  colors.border,
-                  colors.background,
-                  "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                  colors.text,
-                )}
-              />
-            </div>
-          </div>
-
-          <DialogFooter
-            className={cn(
-              "flex-col sm:flex-row gap-3 pt-4",
-              colors.border,
-              "border-t",
-            )}
-          >
+          <Textarea
+            value={interestNotes}
+            onChange={(e) => setInterestNotes(e.target.value)}
+            placeholder="Tell the client why you're interested..."
+            className="min-h-[80px]"
+          />
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setShowInterestModal(false)}
-              disabled={loading}
-              className={cn(
-                "w-full sm:w-auto rounded-xl",
-                colors.border,
-                colors.hoverBg,
-                colors.text,
-              )}
             >
               Cancel
             </Button>
             <Button
               onClick={() => handleRegularInterest(interestNotes)}
               disabled={loading}
-              className={cn(
-                "w-full sm:w-auto rounded-xl font-semibold",
-                colors.gradientPrimary,
-                "text-white shadow-lg",
-                colors.primaryBgHover,
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
             >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Sending...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  <span>Show Interest</span>
-                </div>
-              )}
+              {loading ? "..." : "Submit"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <Dialog open={showBandJoinModal} onOpenChange={setShowBandJoinModal}>
-        <DialogContent
-          className={cn(
-            "sm:max-w-md rounded-xl shadow-xl",
-            colors.background,
-            colors.border,
-            "border-2",
-          )}
-        >
-          <DialogHeader className={cn("pb-3", colors.border)}>
-            <DialogTitle className={cn("text-xl font-bold", colors.text)}>
-              Apply with Band
-            </DialogTitle>
-            <DialogDescription className={cn(colors.textMuted)}>
-              Select a role and apply with your band members.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Apply with Band</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Available slots */}
-            <div
-              className={cn(
-                "p-3 rounded-lg border",
-                isDarkMode
-                  ? "bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-800/30"
-                  : "bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200",
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "text-sm font-medium",
-                    isDarkMode ? "text-purple-300" : "text-purple-700",
-                  )}
-                >
-                  Available: {availableSlots}/{maxSlots} bands
-                </span>
-                {availableSlots <= 2 && (
-                  <Badge
-                    variant="destructive"
-                    className="animate-pulse bg-gradient-to-r from-red-500 to-orange-500"
-                  >
-                    Almost Full!
-                  </Badge>
-                )}
-              </div>
-              {bandCount > 0 && (
-                <p
-                  className={cn(
-                    "text-xs mt-1",
-                    isDarkMode ? "text-purple-400" : "text-purple-600",
-                  )}
-                >
-                  {bandCount} bands applied • {totalBandMembers} total musicians
-                </p>
-              )}
-            </div>
-
-            {/* Name */}
-            <div>
-              <label
-                className={cn("text-sm font-medium mb-2 block", colors.text)}
-              >
-                Band Name / Your Name
-              </label>
-              <Input
-                value={memberName}
-                onChange={(e) => setMemberName(e.target.value)}
-                placeholder="Enter band name or your name"
-                className={cn(
-                  "rounded-xl border-2 transition-all",
-                  colors.border,
-                  "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                  colors.background,
-                  colors.text,
-                )}
-              />
-            </div>
-
-            {/* Role selection */}
-            {gig.bandCategory && gig.bandCategory.length > 0 && (
-              <div>
-                <label
-                  className={cn("text-sm font-medium mb-2 block", colors.text)}
-                >
-                  Band Role
-                </label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger
-                    className={cn(
-                      "rounded-xl border-2 transition-all",
-                      colors.border,
-                      colors.background,
-                      colors.text,
-                      "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                    )}
-                  >
-                    <SelectValue placeholder="Choose a role for your band" />
-                  </SelectTrigger>
-                  <SelectContent
-                    className={cn(
-                      colors.background,
-                      colors.border,
-                      "rounded-xl shadow-lg border-2",
-                    )}
-                  >
-                    {gig.bandCategory.map((role, index) => {
-                      const isFull = role.filledSlots >= role.maxSlots;
-                      const isBooked = role.bookedUsers.includes(
-                        currentUserId!,
-                      );
-                      const hasApplied = role.applicants.includes(
-                        currentUserId!,
-                      );
-
-                      return (
-                        <SelectItem
-                          key={index}
-                          value={role.role}
-                          disabled={isFull || isBooked || hasApplied}
-                          className={cn(
-                            "py-3 px-4 rounded-lg my-1 transition-colors",
-                            colors.hoverBg,
-                            colors.text,
-                            isFull && "opacity-50 cursor-not-allowed",
-                            hasApplied &&
-                              !isBooked &&
-                              cn(colors.infoBg, colors.infoText),
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">{role.role}</span>
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={cn(
-                                  "text-xs px-2 py-1 rounded-full",
-                                  isDarkMode
-                                    ? "bg-gray-800 text-gray-300"
-                                    : "bg-gray-100 text-gray-700",
-                                )}
-                              >
-                                {role.filledSlots}/{role.maxSlots}
-                              </span>
-                              {isBooked && (
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-xs",
-                                    colors.successBg,
-                                    colors.successBorder,
-                                    colors.successText,
-                                  )}
-                                >
-                                  Booked
-                                </Badge>
-                              )}
-                              {hasApplied && !isBooked && (
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-xs",
-                                    colors.infoBg,
-                                    colors.infoBorder,
-                                    colors.infoText,
-                                  )}
-                                >
-                                  Applied
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Applied bands */}
-            {bandApplications.length > 0 && (
-              <div>
-                <label
-                  className={cn("text-sm font-medium mb-2 block", colors.text)}
-                >
-                  Applied Bands ({bandApplications.length})
-                </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
-                  {bandApplications.map((band, index) => {
-                    const firstMember = band.performingMembers?.[0];
-                    const bandName = firstMember?.name || `Band ${index + 1}`;
-                    const memberCount = band.performingMembers?.length || 0;
-                    const isCurrentUserBand = band.appliedBy === currentUserId;
-
-                    return (
-                      <div
-                        key={index}
-                        className={cn(
-                          "flex items-center justify-between p-3 rounded-xl border transition-all",
-                          colors.backgroundMuted,
-                          colors.border,
-                          colors.text,
-                          "hover:shadow-md",
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar
-                            className={cn(
-                              "w-9 h-9 border-2",
-                              isDarkMode
-                                ? "bg-gradient-to-br from-purple-700/30 to-pink-700/30 border-purple-600/30"
-                                : "bg-gradient-to-br from-purple-100 to-pink-100 border-purple-200",
-                            )}
-                          >
-                            <AvatarFallback
-                              className={cn(
-                                "font-semibold",
-                                isDarkMode
-                                  ? "text-purple-300"
-                                  : "text-purple-600",
-                              )}
-                            >
-                              {bandName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p
-                                className={cn(
-                                  "text-sm font-medium",
-                                  colors.text,
-                                )}
-                              >
-                                {bandName}'s Band
-                              </p>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-xs",
-                                  isDarkMode
-                                    ? "border-purple-700 text-purple-300 bg-purple-900/20"
-                                    : "border-purple-300 text-purple-700 bg-purple-50",
-                                )}
-                              >
-                                {memberCount}{" "}
-                                {memberCount === 1 ? "member" : "members"}
-                              </Badge>
-                            </div>
-                            <p className={cn("text-xs", colors.textMuted)}>
-                              Status: {band.status || "Applied"}
-                            </p>
-                          </div>
-                        </div>
-                        {isCurrentUserBand && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              colors.primary,
-                              colors.border,
-                              isDarkMode ? "bg-orange-900/20" : "bg-orange-50",
-                            )}
-                          >
-                            Your Band
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+          <div className="space-y-3">
+            <Input
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              placeholder="Band name"
+            />
+            {gig.bandCategory && (
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gig.bandCategory.map((role, i) => (
+                    <SelectItem key={i} value={role.role}>
+                      {role.role} ({role.filledSlots}/{role.maxSlots})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
-
-          <DialogFooter
-            className={cn(
-              "flex-col sm:flex-row gap-3 pt-4",
-              colors.border,
-              "border-t",
-            )}
-          >
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setShowBandJoinModal(false)}
-              disabled={loading}
-              className={cn(
-                "w-full sm:w-auto rounded-xl",
-                colors.border,
-                colors.hoverBg,
-                colors.text,
-              )}
             >
               Cancel
             </Button>
             <Button
               onClick={() => {
-                if (selectedRole) {
-                  const roleIndex = gig.bandCategory?.findIndex(
-                    (r) => r.role === selectedRole,
-                  );
-                  if (roleIndex !== undefined && roleIndex >= 0) {
-                    const action = handleBandAction(roleIndex);
-                    if (action?.action) {
-                      action.action().then(() => setShowBandJoinModal(false));
-                    }
-                  }
-                }
+                const idx =
+                  gig.bandCategory?.findIndex((r) => r.role === selectedRole) ??
+                  -1;
+                if (idx >= 0) handleBandAction(idx)?.action?.();
               }}
-              disabled={
-                loading || !selectedRole || !memberName.trim() || bandIsFull
-              }
-              className={cn(
-                "w-full sm:w-auto rounded-xl font-semibold",
-                colors.gradientPrimary,
-                "text-white shadow-lg hover:shadow-xl transition-all duration-200",
-                colors.primaryBgHover,
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
+              disabled={!selectedRole || !memberName}
             >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Applying...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  <span>Apply with Band</span>
-                </div>
-              )}
+              Apply
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Role Selection Modal */}
-      <Dialog
-        open={showRoleSelectionModal}
-        onOpenChange={setShowRoleSelectionModal}
-      >
-        <DialogContent
-          className={cn(
-            "sm:max-w-md",
-            colors.background,
-            colors.border,
-            "rounded-xl shadow-xl",
-          )}
-        >
-          <DialogHeader className={cn("pb-3", colors.border)}>
-            <DialogTitle className={cn("text-xl font-bold", colors.text)}>
-              Select Role to Apply For
-            </DialogTitle>
-            <DialogDescription className={cn(colors.textMuted)}>
-              You're qualified for multiple roles. Choose one to apply:
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="space-y-3">
-            {getUserQualifiedRoles.map((role, index) => {
-              const roleIndex =
-                gig.bandCategory?.findIndex((r) => r.role === role.role) || 0;
-              const bandRole = gig.bandCategory?.[roleIndex];
-              const roleColors = getRoleColors(roleIndex);
-
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={cn(
-                    "p-4 rounded-xl border cursor-pointer transition-all duration-200",
-                    "hover:scale-[1.02] hover:shadow-lg",
-                    colors.border,
-                    colors.hoverBg,
-                  )}
-                  onClick={() => {
-                    setSelectedRoleForApplication(role);
-                    setShowRoleSelectionModal(false);
-                    setShowApplicationModal(true);
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4
-                          className={cn("font-semibold text-base", colors.text)}
-                          style={{ color: roleColors.text }}
-                        >
-                          {role.role}
-                        </h4>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-xs",
-                            "bg-gradient-to-r from-purple-50 to-pink-50",
-                            "dark:from-purple-900/20 dark:to-pink-900/20",
-                          )}
-                        >
-                          {bandRole?.filledSlots || 0}/{bandRole?.maxSlots || 1}{" "}
-                          slots
-                        </Badge>
-                      </div>
-
-                      {bandRole?.description && (
-                        <p
-                          className={cn("text-sm mb-2", colors.textMuted)}
-                          style={{ color: `${roleColors.text}CC` }}
-                        >
-                          {bandRole.description}
-                        </p>
-                      )}
-
-                      {bandRole?.requiredSkills &&
-                        bandRole.requiredSkills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {bandRole.requiredSkills
-                              .slice(0, 3)
-                              .map((skill, i) => (
-                                <Badge
-                                  key={i}
-                                  variant="outline"
-                                  className="text-xs"
-                                  style={{
-                                    backgroundColor: roleColors.bg,
-                                    color: roleColors.text,
-                                    borderColor: roleColors.border,
-                                  }}
-                                >
-                                  {skill}
-                                </Badge>
-                              ))}
-                            {bandRole.requiredSkills.length > 3 && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs"
-                                style={{
-                                  backgroundColor: roleColors.bg,
-                                  color: roleColors.text,
-                                  borderColor: roleColors.border,
-                                }}
-                              >
-                                +{bandRole.requiredSkills.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-
-                      {bandRole?.price && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <DollarSign className="w-4 h-4 text-green-500" />
-                          <span
-                            className={cn("text-sm font-medium", colors.text)}
-                            style={{ color: colors.successText }}
-                          >
-                            ${bandRole.price}
-                          </span>
-                          {bandRole.negotiable && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-amber-500/30 text-amber-600 dark:text-amber-400"
-                            >
-                              Negotiable
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <ChevronRight
-                      className="w-5 h-5 ml-2 flex-shrink-0"
-                      style={{ color: roleColors.text }}
-                    />
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          <DialogFooter
-            className={cn(
-              "flex-col sm:flex-row gap-3 pt-4",
-              colors.border,
-              "border-t",
-            )}
-          >
-            <Button
-              variant="outline"
-              onClick={() => setShowRoleSelectionModal(false)}
-              className={cn(
-                "w-full sm:w-auto rounded-xl",
-                colors.border,
-                colors.hoverBg,
-                colors.text,
-              )}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (getUserQualifiedRoles.length > 0) {
-                  // Auto-select the first role if user doesn't manually select
-                  setSelectedRoleForApplication(getUserQualifiedRoles[0]);
-                  setShowRoleSelectionModal(false);
-                  setShowApplicationModal(true);
-                }
-              }}
-              className={cn(
-                "w-full sm:w-auto rounded-xl font-semibold",
-                "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                "text-white shadow-lg",
-              )}
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Quick Apply (First Role)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Application Modal */}
       <Dialog
         open={showApplicationModal}
         onOpenChange={setShowApplicationModal}
       >
-        <DialogContent
-          className={cn(
-            "sm:max-w-md",
-            colors.background,
-            colors.border,
-            "rounded-xl shadow-xl",
-          )}
-        >
-          <DialogHeader className={cn("pb-3", colors.border)}>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{
-                  backgroundColor: selectedRoleForApplication
-                    ? getRoleColors(
-                        gig.bandCategory?.findIndex(
-                          (r) => r.role === selectedRoleForApplication.role,
-                        ) || 0,
-                      ).bg
-                    : colors.backgroundMuted,
-                }}
-              >
-                <Music
-                  className="w-6 h-6"
-                  style={{
-                    color: selectedRoleForApplication
-                      ? getRoleColors(
-                          gig.bandCategory?.findIndex(
-                            (r) => r.role === selectedRoleForApplication.role,
-                          ) || 0,
-                        ).text
-                      : colors.text,
-                  }}
-                />
-              </div>
-              <div>
-                <DialogTitle className={cn("text-xl font-bold", colors.text)}>
-                  Apply for {selectedRoleForApplication?.role}
-                </DialogTitle>
-                <DialogDescription className={cn(colors.textMuted)}>
-                  Submit your application for this role
-                </DialogDescription>
-              </div>
-            </div>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Apply for {selectedRoleForApplication?.role}
+            </DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div>
-              <label
-                className={cn("text-sm font-medium mb-2 block", colors.text)}
-              >
-                Application Notes
-              </label>
-              <Textarea
-                placeholder="Tell the client why you're a good fit for this role..."
-                className={cn(
-                  "min-h-[100px] rounded-xl border-2 transition-all",
-                  colors.border,
-                  "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20",
-                  colors.background,
-                )}
-                value={interestNotes}
-                onChange={(e) => setInterestNotes(e.target.value)}
-              />
-              <p className={cn("text-xs mt-1", colors.textMuted)}>
-                Optional. Share your experience or special skills.
-              </p>
-            </div>
-
-            {selectedRoleForApplication && (
-              <div
-                className={cn(
-                  "p-4 rounded-xl border",
-                  "bg-gradient-to-r from-blue-50/50 to-cyan-50/50",
-                  "dark:from-blue-900/10 dark:to-cyan-900/10",
-                  colors.border,
-                )}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                    <Music className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <h4 className={cn("font-semibold", colors.text)}>
-                      Role Details
-                    </h4>
-                    <p className={cn("text-xs", colors.textMuted)}>
-                      Review requirements before applying
-                    </p>
-                  </div>
-                </div>
-
-                {selectedRoleForApplication.requiredSkills &&
-                  selectedRoleForApplication.requiredSkills.length > 0 && (
-                    <div className="mb-3">
-                      <p
-                        className={cn("text-sm font-medium mb-2", colors.text)}
-                      >
-                        Required Skills:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedRoleForApplication.requiredSkills.map(
-                          (skill, i) => {
-                            const userHasSkill = isUserQualifiedForRole(
-                              currentUser!,
-                              selectedRoleForApplication!,
-                            );
-                            return (
-                              <Badge
-                                key={i}
-                                variant={userHasSkill ? "default" : "outline"}
-                                className={cn(
-                                  "text-xs",
-                                  userHasSkill
-                                    ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-                                    : "border-amber-500/30 text-amber-600 dark:text-amber-400",
-                                )}
-                              >
-                                {skill}
-                                {userHasSkill && (
-                                  <CheckCircle className="w-3 h-3 ml-1" />
-                                )}
-                              </Badge>
-                            );
-                          },
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                {selectedRoleForApplication.description && (
-                  <div className="mb-3">
-                    <p className={cn("text-sm font-medium mb-1", colors.text)}>
-                      Description:
-                    </p>
-                    <p className={cn("text-sm", colors.textMuted)}>
-                      {selectedRoleForApplication.description}
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4 pt-3 border-t">
-                  <div>
-                    <p className={cn("text-xs font-medium", colors.textMuted)}>
-                      Slots Available
-                    </p>
-                    <p className={cn("text-lg font-bold", colors.text)}>
-                      {selectedRoleForApplication.maxSlots -
-                        selectedRoleForApplication.filledSlots}
-                      /{selectedRoleForApplication.maxSlots}
-                    </p>
-                  </div>
-                  <div>
-                    <p className={cn("text-xs font-medium", colors.textMuted)}>
-                      Rate
-                    </p>
-                    <p className={cn("text-lg font-bold", colors.text)}>
-                      ${selectedRoleForApplication.price || "Contact"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter
-            className={cn(
-              "flex-col sm:flex-row gap-3 pt-4",
-              colors.border,
-              "border-t",
-            )}
-          >
+          <Textarea
+            value={interestNotes}
+            onChange={(e) => setInterestNotes(e.target.value)}
+            placeholder="Notes (optional)"
+            className="min-h-[80px]"
+          />
+          <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setShowApplicationModal(false);
-                setSelectedRoleForApplication(null);
-                setInterestNotes("");
-              }}
-              className={cn(
-                "w-full sm:w-auto rounded-xl",
-                colors.border,
-                colors.hoverBg,
-                colors.text,
-              )}
+              onClick={() => setShowApplicationModal(false)}
             >
               Cancel
             </Button>
             <Button
               onClick={() => {
-                if (selectedRoleForApplication && currentUser) {
-                  const roleIndex =
-                    gig.bandCategory?.findIndex(
-                      (r) => r.role === selectedRoleForApplication.role,
-                    ) || 0;
-
-                  // Apply for the role
-                  applyForBandRole({
-                    gigId: gig._id,
-                    bandRoleIndex: roleIndex,
-                    userId: currentUser._id,
-                    applicationNotes: interestNotes,
+                const idx =
+                  gig.bandCategory?.findIndex(
+                    (r) => r.role === selectedRoleForApplication?.role,
+                  ) ?? 0;
+                applyForBandRole({
+                  gigId: gig._id,
+                  bandRoleIndex: idx,
+                  userId: currentUser!._id,
+                  applicationNotes: interestNotes,
+                })
+                  .then(() => {
+                    toast.success("Applied!");
+                    setShowApplicationModal(false);
                   })
-                    .then(() => {
-                      toast.success(
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                            <CheckCircle className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold">
-                              Application Submitted!
-                            </p>
-                            <p className="text-sm opacity-90">
-                              Applied for {selectedRoleForApplication.role}
-                            </p>
-                          </div>
-                        </div>,
-                      );
-                      setShowApplicationModal(false);
-                      setSelectedRoleForApplication(null);
-                      setInterestNotes("");
-                    })
-                    .catch((error) => {
-                      toast.error(
-                        error.message || "Failed to submit application",
-                        {
-                          style: {
-                            background: colors.destructiveBg,
-                            color: colors.destructive,
-                            borderColor: colors.destructive,
-                          },
-                        },
-                      );
-                    });
-                }
+                  .catch(toast.error);
               }}
-              className={cn(
-                "w-full sm:w-auto rounded-xl font-semibold",
-                "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                "text-white shadow-lg hover:shadow-xl transition-all duration-200",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
               disabled={loading}
             >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Applying...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <Send className="w-4 h-4" />
-                  <span>Apply Now</span>
-                </div>
-              )}
+              {loading ? "..." : "Apply"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* View Roles Modal */}
-      <Dialog open={showRolesModal} onOpenChange={setShowRolesModal}>
-        <DialogContent
-          className={cn(
-            "sm:max-w-lg max-h-[80vh] overflow-y-auto",
-            colors.background,
-            colors.border,
-            "rounded-xl shadow-xl",
-          )}
-        >
-          <DialogHeader className={cn("pb-3", colors.border)}>
-            <DialogTitle
-              className={cn(
-                "text-xl font-bold flex items-center gap-2",
-                colors.text,
-              )}
-            >
-              <Users className="w-5 h-5" />
-              Available Roles
-            </DialogTitle>
-            <DialogDescription className={cn(colors.textMuted)}>
-              {gig.bandCategory?.length || 0} total roles • Select one to apply
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            {/* Summary stats */}
-            <div
-              className={cn(
-                "p-3 rounded-xl border",
-                isDarkMode
-                  ? "bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-800/30"
-                  : "bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200",
-              )}
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className={cn("text-xs font-medium", colors.textMuted)}>
-                    Your Skills
-                  </p>
-                  <p className={cn("text-lg font-bold", colors.text)}>
-                    {currentUser?.instrument || "No instrument set"}
-                  </p>
-                </div>
-                <div>
-                  <p className={cn("text-xs font-medium", colors.textMuted)}>
-                    Matches
-                  </p>
-                  <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                    {getUserQualifiedRoles.length} role
-                    {getUserQualifiedRoles.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* All Roles List */}
-            <div className="space-y-3">
-              {gig.bandCategory?.map((role, index) => {
-                const isQualified = isUserQualifiedForRole(currentUser!, role);
-                const isRoleFull = role.filledSlots >= role.maxSlots;
-                const hasApplied =
-                  currentUser?._id && role.applicants.includes(currentUser._id);
-                const isBooked =
-                  currentUser?._id &&
-                  role.bookedUsers.includes(currentUser._id);
-                const roleAction = handleBandAction(index);
-                const roleColors = getRoleColors(index);
-
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={cn(
-                      "p-4 rounded-xl border transition-all duration-200",
-                      colors.border,
-                      isQualified && !isRoleFull && !hasApplied && !isBooked
-                        ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                        : "cursor-not-allowed opacity-60",
-                      isQualified &&
-                        "border-green-200 bg-green-50/50 dark:bg-green-900/10",
-                      !isQualified && "border-gray-200 dark:border-gray-800",
-                    )}
-                    onClick={() => {
-                      if (
-                        isQualified &&
-                        !isRoleFull &&
-                        !hasApplied &&
-                        !isBooked
-                      ) {
-                        setShowRolesModal(false);
-                        if (roleAction?.action) {
-                          roleAction.action();
-                        }
-                      }
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      {/* Role Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div
-                            className={cn(
-                              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                              isQualified
-                                ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
-                            )}
-                          >
-                            {getRoleIcon(role.role)}
-                          </div>
-                          <div className="min-w-0">
-                            <h4
-                              className={cn(
-                                "font-semibold truncate",
-                                colors.text,
-                              )}
-                            >
-                              {role.role}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {role.filledSlots}/{role.maxSlots} slots
-                              </Badge>
-                              {role.price && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs border-green-500/30 text-green-600 dark:text-green-400"
-                                >
-                                  ${role.price}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Description */}
-                        {role.description && (
-                          <p
-                            className={cn(
-                              "text-sm mb-2 line-clamp-2",
-                              colors.textMuted,
-                            )}
-                          >
-                            {role.description}
-                          </p>
-                        )}
-
-                        {/* Required Skills */}
-                        {role.requiredSkills &&
-                          role.requiredSkills.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {role.requiredSkills
-                                .slice(0, 3)
-                                .map((skill, i) => (
-                                  <Badge
-                                    key={i}
-                                    variant="outline"
-                                    className={cn(
-                                      "text-xs",
-                                      isQualified
-                                        ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
-                                        : "bg-gray-100 border-gray-200 dark:bg-gray-800 dark:border-gray-700",
-                                    )}
-                                  >
-                                    {skill}
-                                    {isQualified && (
-                                      <CheckCircle className="w-3 h-3 ml-1 inline" />
-                                    )}
-                                  </Badge>
-                                ))}
-                              {role.requiredSkills.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{role.requiredSkills.length - 3} more
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                      </div>
-
-                      {/* Status/Action */}
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        {isBooked ? (
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                            Booked ✓
-                          </Badge>
-                        ) : hasApplied ? (
-                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                            Applied ✓
-                          </Badge>
-                        ) : isRoleFull ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                          >
-                            Role Full
-                          </Badge>
-                        ) : isQualified ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                              ✓ Qualified
-                            </Badge>
-                            <Button
-                              size="sm"
-                              className={cn(
-                                "text-xs h-7 px-3",
-                                "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
-                                "text-white border-0 shadow-sm",
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowRolesModal(false);
-                                if (roleAction?.action) {
-                                  roleAction.action();
-                                }
-                              }}
-                            >
-                              Apply Now
-                            </Button>
-                          </div>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="text-gray-500 border-gray-300"
-                          >
-                            Not Qualified
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-
-              {(!gig.bandCategory || gig.bandCategory.length === 0) && (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <AlertCircle className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h4 className={cn("font-medium mb-1", colors.text)}>
-                    No Roles Available
-                  </h4>
-                  <p className={cn("text-sm", colors.textMuted)}>
-                    This gig doesn't have any defined roles yet.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter
-            className={cn(
-              "flex-col sm:flex-row gap-3 pt-4 mt-4",
-              colors.border,
-              "border-t",
-            )}
-          >
-            <div className="text-center sm:text-left flex-1">
-              <p className={cn("text-xs", colors.textMuted)}>
-                Need different skills? Update your profile.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowRolesModal(false)}
-                className={cn(
-                  "rounded-xl",
-                  colors.border,
-                  colors.hoverBg,
-                  colors.text,
-                )}
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => router.push("/hub/profile/edit")}
-                variant="outline"
-                className={cn(
-                  "rounded-xl border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-                )}
-              >
-                Update Profile
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
-        <DialogContent className="sm:max-w-[400px] border-orange-200 bg-orange-50/50 dark:bg-zinc-950 dark:border-orange-900/30">
-          <DialogHeader className="flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center mb-2">
-              <AlertCircle className="w-6 h-6 text-orange-600" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-orange-800 dark:text-orange-400">
-              Role Mismatch
-            </DialogTitle>
-            <DialogDescription className="text-zinc-600 dark:text-zinc-400 pt-2">
-              {warningReason}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-orange-100 dark:border-orange-900/20 my-2">
-            <p className="text-xs leading-relaxed text-zinc-500">
-              To maintain quality, clients prefer musicians who match the
-              requested category. If you have multiple skills, please update
-              your **Profile Settings** before applying.
-            </p>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-col gap-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push("/settings/profile")}
-              className="w-full border-orange-200 hover:bg-orange-100"
-            >
-              Update My Profile
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setShowWarningModal(false)}
-              className="w-full text-zinc-500"
-            >
-              Got it, thanks
-            </Button>
+        <DialogContent className="sm:max-w-md text-center">
+          <AlertCircle className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+          <DialogTitle className="text-base">Role Mismatch</DialogTitle>
+          <p className="text-sm text-gray-500 mt-1">{warningReason}</p>
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setShowWarningModal(false)}>Got it</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

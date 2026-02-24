@@ -612,7 +612,7 @@ const GigDescription: React.FC<GigDescriptionProps> = ({
                       </Avatar>
 
                       <div className="flex-1 min-w-0">
-                        <h2 className="text-xl md:text-2xl font-bold text-white mb-1 truncate">
+                        <h2 className="text-xl md:text-xl font-bold text-white mb-1 truncate">
                           {gig.title}
                         </h2>
 
@@ -650,7 +650,7 @@ const GigDescription: React.FC<GigDescriptionProps> = ({
 
                   {/* Price */}
                   <div className="md:text-right flex-shrink-0">
-                    <div className="text-2xl md:text-3xl font-bold text-white">
+                    <div className="text-xl md:text-3xl font-bold text-white">
                       {gig.price
                         ? `${gig.currency || "$"}${gig.price.toLocaleString()}`
                         : "Contact for price"}

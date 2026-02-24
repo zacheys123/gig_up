@@ -169,7 +169,7 @@ export function StatusBanner() {
       hasShownRef.current = true;
 
       console.log(
-        `${status.type} cannot be dismissed, only hidden temporarily.`
+        `${status.type} cannot be dismissed, only hidden temporarily.`,
       );
     }
   };
@@ -411,7 +411,7 @@ export function StatusBanner() {
               config.borderColor,
               colors.background,
               "backdrop-blur-xl",
-              "flex flex-col"
+              "flex flex-col",
             )}
           >
             {/* Modal Header */}
@@ -423,13 +423,13 @@ export function StatusBanner() {
                   ? "bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30"
                   : config.severity === "high"
                     ? "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30"
-                    : ""
+                    : "",
               )}
             >
               <div
                 className={cn(
                   "absolute inset-0 opacity-5 rounded-t-2xl",
-                  `bg-gradient-to-br ${config.gradient}`
+                  `bg-gradient-to-br ${config.gradient}`,
                 )}
               />
 
@@ -439,7 +439,7 @@ export function StatusBanner() {
                     className={cn(
                       "p-3 rounded-2xl shadow-lg flex-shrink-0",
                       config.iconBg,
-                      "text-white"
+                      "text-white",
                     )}
                   >
                     {config.icon}
@@ -447,14 +447,14 @@ export function StatusBanner() {
 
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h2 className="text-2xl font-bold truncate">
+                      <h2 className="text-xl font-bold truncate">
                         {config.title}
                       </h2>
                       <Badge
                         className={cn(
                           "px-3 py-1 font-bold",
                           severityLabel.color,
-                          "shadow-md"
+                          "shadow-md",
                         )}
                       >
                         {severityLabel.text}
@@ -513,7 +513,7 @@ export function StatusBanner() {
                     className={cn(
                       "p-5 rounded-2xl border",
                       colors.border,
-                      colors.backgroundMuted
+                      colors.backgroundMuted,
                     )}
                   >
                     <div className="flex items-center gap-3 mb-4">
@@ -556,7 +556,7 @@ export function StatusBanner() {
                     className={cn(
                       "p-5 rounded-2xl border",
                       colors.border,
-                      colors.backgroundMuted
+                      colors.backgroundMuted,
                     )}
                   >
                     <div className="flex items-center gap-3 mb-4">
@@ -585,7 +585,7 @@ export function StatusBanner() {
                       className={cn(
                         "p-5 rounded-2xl border",
                         colors.border,
-                        colors.backgroundMuted
+                        colors.backgroundMuted,
                       )}
                     >
                       <div className="flex items-center gap-3 mb-4">
@@ -624,7 +624,7 @@ export function StatusBanner() {
                           : config.severity === "high"
                             ? "bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
                             : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600",
-                        "text-white shadow-lg hover:shadow-xl transition-all"
+                        "text-white shadow-lg hover:shadow-xl transition-all",
                       )}
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
@@ -709,7 +709,7 @@ export function StatusBanner() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      This is an automated notification from Gigup's security
+                      This is an automated notification from gigUp's security
                       system
                     </p>
                     {status.type === "warning" && (

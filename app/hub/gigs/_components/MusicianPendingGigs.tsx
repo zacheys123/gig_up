@@ -609,7 +609,7 @@ export const MusicianPreBooking: React.FC<MusicianPreBookingProps> = ({
                         <div className="md:col-span-2 space-y-4">
                           <div>
                             <h3
-                              className={`text-2xl font-bold ${colors.text} mb-2`}
+                              className={`text-xl font-bold ${colors.text} mb-2`}
                             >
                               {selectedGigData.gig.title}
                             </h3>

@@ -32,7 +32,7 @@ export default function FollowersHeader({
               className={cn(
                 "p-3 rounded-xl",
                 colors.gradientPrimary,
-                "shadow-lg"
+                "shadow-lg",
               )}
             >
               <Users className="w-6 h-6 text-white" />
@@ -43,7 +43,7 @@ export default function FollowersHeader({
               className={cn(
                 "p-4 rounded-2xl",
                 colors.gradientPrimary,
-                "shadow-lg"
+                "shadow-lg",
               )}
             >
               <Users className="w-8 h-8 text-white" />
@@ -52,8 +52,8 @@ export default function FollowersHeader({
           <div className="flex-1 min-w-0">
             <h1
               className={cn(
-                "text-2xl md:text-3xl font-bold mb-1 md:mb-2",
-                colors.text
+                "text-xl md:text-3xl font-bold mb-1 md:mb-2",
+                colors.text,
               )}
             >
               Your Followers
@@ -83,7 +83,7 @@ export default function FollowersHeader({
               className={cn(
                 "rounded-xl gap-1 h-10 px-3",
                 colors.primaryBg,
-                colors.primaryBgHover
+                colors.primaryBgHover,
               )}
             >
               <UserPlus className="w-4 h-4" />
@@ -102,7 +102,7 @@ export default function FollowersHeader({
               className={cn(
                 "rounded-xl gap-2",
                 colors.primaryBg,
-                colors.primaryBgHover
+                colors.primaryBgHover,
               )}
             >
               <UserPlus className="w-4 h-4" />

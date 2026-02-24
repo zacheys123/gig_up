@@ -154,7 +154,7 @@ export const PreBookingStats: React.FC<PreBookingStatsProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-blue-600 mb-1">Regular</p>
-                <p className="text-2xl font-bold text-blue-800">
+                <p className="text-xl font-bold text-blue-800">
                   {stats.regular.count}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
@@ -171,7 +171,7 @@ export const PreBookingStats: React.FC<PreBookingStatsProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-purple-600 mb-1">Band Roles</p>
-                <p className="text-2xl font-bold text-purple-800">
+                <p className="text-xl font-bold text-purple-800">
                   {stats.bandRoles.count}
                 </p>
                 <p className="text-xs text-purple-600 mt-1">
@@ -188,7 +188,7 @@ export const PreBookingStats: React.FC<PreBookingStatsProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-pink-600 mb-1">Full Bands</p>
-                <p className="text-2xl font-bold text-pink-800">
+                <p className="text-xl font-bold text-pink-800">
                   {stats.fullBand.count}
                 </p>
                 <p className="text-xs text-pink-600 mt-1">
@@ -205,7 +205,7 @@ export const PreBookingStats: React.FC<PreBookingStatsProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-orange-600 mb-1">Shortlisted</p>
-                <p className="text-2xl font-bold text-orange-800">
+                <p className="text-xl font-bold text-orange-800">
                   {stats.shortlist.count}
                 </p>
                 <p className="text-xs text-orange-600 mt-1">

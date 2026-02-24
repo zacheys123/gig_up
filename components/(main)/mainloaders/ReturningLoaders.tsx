@@ -1,11 +1,11 @@
 // components/start/loaders/ReturningLoader.tsx
 import { motion } from "framer-motion";
 
-export function ReturningExperience({ phase,  }: { phase: number; }) {
+export function ReturningExperience({ phase }: { phase: number }) {
   const messages = [
     "Welcome back!",
     "Loading your profile...",
-    "Almost ready..."
+    "Almost ready...",
   ];
 
   return (
@@ -17,12 +17,8 @@ export function ReturningExperience({ phase,  }: { phase: number; }) {
       >
         🎵
       </motion.div>
-      <h2 className="text-2xl font-bold mb-2">
-        {messages[phase] || "Ready!"}
-      </h2>
-      <p className="text-gray-400">
-        Great to see you again!
-      </p>
+      <h2 className="text-xl font-bold mb-2">{messages[phase] || "Ready!"}</h2>
+      <p className="text-gray-400">Great to see you again!</p>
     </div>
   );
 }

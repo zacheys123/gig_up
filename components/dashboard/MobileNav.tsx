@@ -368,7 +368,7 @@ export default function MobileNav() {
       return [
         ...dashboardCoreLinks,
         ...commonDashboardLinks.filter((link) =>
-          link.availableForTiers?.includes("free")
+          link.availableForTiers?.includes("free"),
         ),
       ];
     }
@@ -559,7 +559,7 @@ export default function MobileNav() {
                 className={cn(
                   "fixed bottom-0 left-0 right-0 h-[85vh] rounded-t-3xl border-b flex flex-col",
                   colors.background,
-                  colors.border
+                  colors.border,
                 )}
               >
                 {/* Header */}
@@ -575,7 +575,7 @@ export default function MobileNav() {
                         <div
                           className={cn(
                             "px-2 py-1 text-xs rounded-full font-semibold",
-                            currentTier.badge
+                            currentTier.badge,
                           )}
                         >
                           <TierIcon className="w-3 h-3 inline mr-1" />
@@ -591,7 +591,7 @@ export default function MobileNav() {
                       className={cn(
                         "p-2 rounded-full",
                         colors.hoverBg,
-                        colors.text
+                        colors.text,
                       )}
                     >
                       <XIcon className="w-6 h-6" />
@@ -609,7 +609,7 @@ export default function MobileNav() {
                         nextTier.color === "purple" &&
                           "from-purple-500 to-pink-600",
                         nextTier.color === "yellow" &&
-                          "from-yellow-500 to-red-600"
+                          "from-yellow-500 to-red-600",
                       )}
                     >
                       <div className="flex items-center gap-2 mb-1">
@@ -697,10 +697,10 @@ export default function MobileNav() {
                               : cn(
                                   colors.text,
                                   "border-transparent",
-                                  colors.hoverBg
+                                  colors.hoverBg,
                                 ),
                             isFeatured &&
-                              "ring-2 ring-purple-200 dark:ring-purple-800"
+                              "ring-2 ring-purple-200 dark:ring-purple-800",
                           )}
                         >
                           <div
@@ -712,9 +712,9 @@ export default function MobileNav() {
                                   ? "text-gray-400 dark:text-gray-500"
                                   : cn(
                                       "group-hover:text-amber-400",
-                                      colors.textMuted
+                                      colors.textMuted,
                                     ),
-                              isFeatured && "text-purple-600"
+                              isFeatured && "text-purple-600",
                             )}
                           >
                             {link.icon}
@@ -729,7 +729,7 @@ export default function MobileNav() {
                                   (!canAccess || isBlockedByProfile) &&
                                     "text-gray-500 dark:text-gray-400",
                                   isFeatured &&
-                                    "text-purple-700 dark:text-purple-300"
+                                    "text-purple-700 dark:text-purple-300",
                                 )}
                               >
                                 {link.name}
@@ -770,8 +770,8 @@ export default function MobileNav() {
                                   ? "text-gray-400 dark:text-gray-500 opacity-50"
                                   : cn(
                                       "opacity-0 group-hover:opacity-100",
-                                      colors.textMuted
-                                    )
+                                      colors.textMuted,
+                                    ),
                             )}
                           />
                         </div>
@@ -851,7 +851,7 @@ export default function MobileNav() {
                         className={cn(
                           "flex items-center justify-between w-full p-3 rounded-xl transition-all duration-200",
                           colors.hoverBg,
-                          colors.text
+                          colors.text,
                         )}
                       >
                         <div className="flex items-center gap-2">
@@ -897,7 +897,7 @@ export default function MobileNav() {
                             .filter((feature: any) => {
                               const scoreNeeded = getScoreNeeded(
                                 feature.key,
-                                user
+                                user,
                               );
                               return (
                                 scoreNeeded - trustScore <= 20 &&
@@ -959,14 +959,14 @@ export default function MobileNav() {
                         className={cn(
                           "group flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 border-l-4 border-transparent",
                           colors.hoverBg,
-                          colors.text
+                          colors.text,
                         )}
                       >
                         <div
                           className={cn(
                             "transition-colors duration-200",
                             "group-hover:text-amber-400",
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         >
                           {isDarkMode ? (
@@ -982,7 +982,7 @@ export default function MobileNav() {
                           className={cn(
                             "text-xs px-2 py-1 rounded-full",
                             colors.card,
-                            colors.textMuted
+                            colors.textMuted,
                           )}
                         >
                           Switch
@@ -999,13 +999,13 @@ export default function MobileNav() {
                       className={cn(
                         "rounded-lg p-3 border mb-3",
                         colors.card,
-                        colors.border
+                        colors.border,
                       )}
                     >
                       <div
                         className={cn(
                           "text-xs mb-2 font-medium",
-                          colors.textMuted
+                          colors.textMuted,
                         )}
                       >
                         Quick Stats
@@ -1038,7 +1038,7 @@ export default function MobileNav() {
                     <div
                       className={cn("text-xs text-center", colors.textMuted)}
                     >
-                      GigUppv2.0.0
+                      gigUppv2.0.0
                       {shouldShowLimitedLinks && (
                         <span className="text-amber-600 ml-1">
                           • Trial Ended
@@ -1070,7 +1070,7 @@ export default function MobileNav() {
                   "relative flex items-center justify-center w-16 h-16 rounded-full",
                   "bg-gradient-to-r from-amber-500 to-orange-500 shadow-2xl",
                   "hover:from-amber-600 hover:to-orange-600 transition-all duration-300",
-                  "border-2 border-amber-400/30 z-10"
+                  "border-2 border-amber-400/30 z-10",
                 )}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

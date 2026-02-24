@@ -148,7 +148,7 @@ const TrustTierBadge = ({ tier, score }: { tier?: string; score?: number }) => {
     <div
       className={cn(
         "px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5",
-        getTierColor(effectiveTier)
+        getTierColor(effectiveTier),
       )}
     >
       {getTierIcon(effectiveTier)}
@@ -197,14 +197,14 @@ export function UserModal({
         baseStyles,
         isDarkMode
           ? "bg-blue-900/30 text-blue-300 border-blue-700/30"
-          : "bg-blue-100 text-blue-800 border-blue-200"
+          : "bg-blue-100 text-blue-800 border-blue-200",
       );
     } else {
       return cn(
         baseStyles,
         isDarkMode
           ? "bg-amber-900/30 text-amber-300 border-amber-700/30"
-          : "bg-amber-100 text-amber-800 border-amber-200"
+          : "bg-amber-100 text-amber-800 border-amber-200",
       );
     }
   };
@@ -221,7 +221,7 @@ export function UserModal({
       <div
         className={cn(
           "absolute inset-0 backdrop-blur-sm",
-          isDarkMode ? "bg-black/60" : "bg-black/40"
+          isDarkMode ? "bg-black/60" : "bg-black/40",
         )}
       />
 
@@ -233,7 +233,7 @@ export function UserModal({
         className={cn(
           "relative rounded-xl md:rounded-2xl w-full max-w-2xl mx-auto border shadow-2xl backdrop-blur-md",
           getModalBackground(),
-          "shadow-black/20"
+          "shadow-black/20",
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -241,14 +241,14 @@ export function UserModal({
         <div
           className={cn(
             "p-4 sm:p-6 border-b rounded-t-xl md:rounded-t-2xl",
-            getSecondaryBackground()
+            getSecondaryBackground(),
           )}
         >
           <div className="flex items-center justify-between">
             <h2
               className={cn(
                 "text-lg sm:text-xl font-semibold truncate",
-                isDarkMode ? "text-white" : "text-gray-900"
+                isDarkMode ? "text-white" : "text-gray-900",
               )}
             >
               Profile Preview
@@ -260,7 +260,7 @@ export function UserModal({
                 "hover:bg-opacity-20",
                 isDarkMode
                   ? "hover:bg-white/10 text-gray-300 hover:text-white"
-                  : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+                  : "hover:bg-gray-200 text-gray-600 hover:text-gray-900",
               )}
               aria-label="Close modal"
             >
@@ -284,7 +284,7 @@ export function UserModal({
                       className={cn(
                         "w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl object-cover border-2 shadow-lg",
                         isDarkMode ? "border-gray-600" : "border-gray-200",
-                        user.isFeatured && "ring-2 ring-purple-500/50"
+                        user.isFeatured && "ring-2 ring-purple-500/50",
                       )}
                     />
                     <OnlineBadge
@@ -298,12 +298,12 @@ export function UserModal({
                     <div
                       className={cn(
                         "w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center",
-                        "text-white font-bold text-xl sm:text-2xl shadow-lg border-2",
+                        "text-white font-bold text-xl sm:text-xl shadow-lg border-2",
                         "bg-gradient-to-br",
                         user.isClient
                           ? "from-blue-500 to-blue-600 border-blue-400"
                           : "from-amber-500 to-amber-600 border-amber-400",
-                        user.isFeatured && "ring-2 ring-purple-500/50"
+                        user.isFeatured && "ring-2 ring-purple-500/50",
                       )}
                     >
                       {safeFirstname?.[0]}
@@ -325,7 +325,7 @@ export function UserModal({
                   <h3
                     className={cn(
                       "font-semibold text-lg sm:text-xl truncate",
-                      isDarkMode ? "text-white" : "text-gray-900"
+                      isDarkMode ? "text-white" : "text-gray-900",
                     )}
                   >
                     {safeFirstname} {safeLastname}
@@ -342,7 +342,7 @@ export function UserModal({
                   <p
                     className={cn(
                       "text-sm truncate",
-                      isDarkMode ? "text-gray-400" : "text-gray-600"
+                      isDarkMode ? "text-gray-400" : "text-gray-600",
                     )}
                   >
                     @{safeUsername}
@@ -361,7 +361,7 @@ export function UserModal({
                     <span
                       className={cn(
                         "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold",
-                        "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                        "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
                       )}
                     >
                       <Crown size={10} />
@@ -435,7 +435,7 @@ export function UserModal({
                 className={cn(
                   "text-sm leading-relaxed mb-6 p-4 rounded-lg",
                   getSecondaryBackground(),
-                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                  isDarkMode ? "text-gray-300" : "text-gray-700",
                 )}
               >
                 {user.bio}
@@ -446,14 +446,14 @@ export function UserModal({
             <div
               className={cn(
                 "grid grid-cols-3 gap-3 mb-6 p-4 rounded-xl border",
-                getSecondaryBackground()
+                getSecondaryBackground(),
               )}
             >
               <div className="text-center">
                 <div
                   className={cn(
                     "font-bold text-xl mb-1",
-                    isDarkMode ? "text-white" : "text-gray-900"
+                    isDarkMode ? "text-white" : "text-gray-900",
                   )}
                 >
                   {safeCompletedGigsCount}
@@ -461,7 +461,7 @@ export function UserModal({
                 <div
                   className={cn(
                     "text-xs font-medium",
-                    isDarkMode ? "text-gray-500" : "text-gray-600"
+                    isDarkMode ? "text-gray-500" : "text-gray-600",
                   )}
                 >
                   Gigs
@@ -471,7 +471,7 @@ export function UserModal({
                 <div
                   className={cn(
                     "font-bold text-xl mb-1",
-                    isDarkMode ? "text-white" : "text-gray-900"
+                    isDarkMode ? "text-white" : "text-gray-900",
                   )}
                 >
                   {safeFollowersCount}
@@ -479,7 +479,7 @@ export function UserModal({
                 <div
                   className={cn(
                     "text-xs font-medium",
-                    isDarkMode ? "text-gray-500" : "text-gray-600"
+                    isDarkMode ? "text-gray-500" : "text-gray-600",
                   )}
                 >
                   Followers
@@ -489,7 +489,7 @@ export function UserModal({
                 <div
                   className={cn(
                     "font-bold text-xl mb-1 flex items-center justify-center gap-1",
-                    isDarkMode ? "text-white" : "text-gray-900"
+                    isDarkMode ? "text-white" : "text-gray-900",
                   )}
                 >
                   <Eye size={14} />
@@ -498,7 +498,7 @@ export function UserModal({
                 <div
                   className={cn(
                     "text-xs font-medium",
-                    isDarkMode ? "text-gray-500" : "text-gray-600"
+                    isDarkMode ? "text-gray-500" : "text-gray-600",
                   )}
                 >
                   Views
@@ -513,7 +513,7 @@ export function UserModal({
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg",
                     getSecondaryBackground(),
-                    isDarkMode ? "text-gray-300" : "text-gray-700"
+                    isDarkMode ? "text-gray-300" : "text-gray-700",
                   )}
                 >
                   <MapPin className="flex-shrink-0" size={16} />
@@ -526,7 +526,7 @@ export function UserModal({
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg",
                     getSecondaryBackground(),
-                    isDarkMode ? "text-gray-300" : "text-gray-700"
+                    isDarkMode ? "text-gray-300" : "text-gray-700",
                   )}
                 >
                   <Briefcase className="flex-shrink-0" size={16} />
@@ -539,7 +539,7 @@ export function UserModal({
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg",
                     getSecondaryBackground(),
-                    isDarkMode ? "text-gray-300" : "text-gray-700"
+                    isDarkMode ? "text-gray-300" : "text-gray-700",
                   )}
                 >
                   <Mail className="flex-shrink-0" size={16} />
@@ -565,7 +565,7 @@ export function UserModal({
                   "transition-all duration-200 flex items-center justify-center gap-2",
                   "bg-gradient-to-r from-blue-500 to-purple-600 text-white",
                   "hover:from-blue-600 hover:to-purple-700 hover:shadow-lg",
-                  "hover:scale-[1.02] active:scale-[0.98]"
+                  "hover:scale-[1.02] active:scale-[0.98]",
                 )}
               >
                 View Full Profile

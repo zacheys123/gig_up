@@ -117,7 +117,7 @@ Queries: Uses useQuery(api.controllers.gigs.getGigById) to fetch gig data
 
 Mutations: Uses useMutation(api.controllers.gigs.updateGig) for updates
 
-Utilities: Uses useGigUpdate() custom hook
+Utilities: Uses usegigUpdate() custom hook
 
 Services: fileupload for logo uploads
 

@@ -50,7 +50,7 @@ export default function Dashboard() {
       setLastRefreshed(new Date());
       console.log(
         "Dashboard data refreshed at:",
-        new Date().toLocaleTimeString()
+        new Date().toLocaleTimeString(),
       );
     } catch (error) {
       console.error("Error refreshing dashboard data:", error);
@@ -224,7 +224,7 @@ export default function Dashboard() {
           className={`flex flex-col items-center justify-center min-h-screen ${colors.text} p-8`}
         >
           <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold">Welcome to Your Dashboard</h1>
+            <h1 className="text-xl font-bold">Welcome to Your Dashboard</h1>
             <p className={colors.textMuted}>
               Please complete your profile setup to access dashboard features.
             </p>

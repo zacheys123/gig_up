@@ -1,4 +1,4 @@
-// components/ai/GigUpAssistant.tsx
+// components/ai/gigUpAssistant.tsx
 "use client";
 import { motion } from "framer-motion";
 import { ChatBubbleBottomCenterIcon } from "@heroicons/react/24/outline";
@@ -34,7 +34,7 @@ export function GigUpAssistant() {
         "fixed bottom-6 right-6 z-40 w-8 h-8 rounded-2xl shadow-2xl flex items-center justify-center group",
         "bg-gradient-to-br from-orange-500 to-red-500",
         "text-white border-2 border-white/20 backdrop-blur-sm",
-        "transition-all duration-300 hover:shadow-3xl"
+        "transition-all duration-300 hover:shadow-3xl",
       )}
       style={{
         boxShadow: "0 8px 32px rgba(249, 115, 22, 0.3)",
@@ -47,7 +47,7 @@ export function GigUpAssistant() {
         className={cn(
           "absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
           "bg-white shadow-lg border",
-          versionInfo.color
+          versionInfo.color,
         )}
         animate={{ scale: [1, 1.2, 1] }}
         transition={{ duration: 2, repeat: Infinity }}
@@ -61,7 +61,7 @@ export function GigUpAssistant() {
           <div
             className={cn(
               "bg-gradient-to-r from-gray-900 to-gray-700 text-white text-sm font-medium rounded-xl py-2 px-3 whitespace-nowrap",
-              "shadow-2xl border border-white/10 backdrop-blur-sm"
+              "shadow-2xl border border-white/10 backdrop-blur-sm",
             )}
           >
             {getTooltipText()}

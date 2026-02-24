@@ -10,7 +10,7 @@ self.addEventListener('push', function(event) {
   } catch (error) {
     console.error('Error parsing push data:', error);
     data = {
-      title: 'GigUp',
+      title: 'gigUp',
       body: 'You have a new notification',
       data: { url: '/' }
     };
@@ -23,13 +23,13 @@ self.addEventListener('push', function(event) {
     image: data.image,
     data: data.data || { url: data.url || '/' },
     actions: data.actions || [],
-    tag: data.tag || 'gigup-notification',
+    tag: data.tag || 'gigUp-notification',
     requireInteraction: data.requireInteraction || false,
     silent: data.silent || false,
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'GigUp', options)
+    self.registration.showNotification(data.title || 'gigUp', options)
   );
 });
 

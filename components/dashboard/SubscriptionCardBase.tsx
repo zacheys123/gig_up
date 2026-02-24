@@ -31,7 +31,7 @@ export interface SubscriptionCardProps {
 export default function SubscriptionCardBase({ plan }: SubscriptionCardProps) {
   const { user } = useUser();
   const { subscription, mutateSubscription } = useSubscription(
-    user?.id as string
+    user?.id as string,
   );
   const { showConfirmModal, setShowConfirmModal } = useStore();
   const [isMutating, setIsMutating] = useState(false);
@@ -62,7 +62,7 @@ export default function SubscriptionCardBase({ plan }: SubscriptionCardProps) {
           rollbackOnError: true,
           populateCache: true,
           revalidate: false,
-        }
+        },
       );
     } catch (error) {
       console.error("Error updating subscription:", error);
@@ -87,13 +87,13 @@ export default function SubscriptionCardBase({ plan }: SubscriptionCardProps) {
         "border rounded-lg p-4 md:p-6 w-full max-w-md mx-auto",
         plan.current
           ? "border-orange-500 bg-orange-900/10"
-          : "border-gray-700 bg-gray-900"
+          : "border-gray-700 bg-gray-900",
       )}
     >
       <h3 className="text-lg md:text-xl font-semibold text-white">
         {plan.name}
       </h3>
-      <p className="text-xl md:text-2xl font-bold my-3 md:my-4 text-white">
+      <p className="text-xl md:text-xl font-bold my-3 md:my-4 text-white">
         {plan.price}
       </p>
 
@@ -122,7 +122,7 @@ export default function SubscriptionCardBase({ plan }: SubscriptionCardProps) {
           plan.current
             ? "bg-gray-100 text-gray-600 cursor-default"
             : "bg-blue-600 hover:bg-blue-700 text-white",
-          isMutating && "opacity-70 cursor-wait"
+          isMutating && "opacity-70 cursor-wait",
         )}
       >
         {isMutating ? "Processing..." : plan.cta}

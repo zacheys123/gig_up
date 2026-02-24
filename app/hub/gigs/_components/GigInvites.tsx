@@ -73,7 +73,7 @@ export function GigInvites({ user }: { user: any }) {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <GigLoader
@@ -90,7 +90,7 @@ export function GigInvites({ user }: { user: any }) {
       <div
         className={cn(
           "min-h-screen flex items-center justify-center",
-          colors.background
+          colors.background,
         )}
       >
         <div className={cn("text-xl", colors.text)}>
@@ -117,7 +117,7 @@ export function GigInvites({ user }: { user: any }) {
                 "flex items-center gap-2 border-2 transition-all duration-300 hover:shadow-lg backdrop-blur-sm",
                 colors.border,
                 colors.hoverBg,
-                "hover:scale-105"
+                "hover:scale-105",
               )}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -135,7 +135,7 @@ export function GigInvites({ user }: { user: any }) {
                 <div>
                   <h1
                     className={cn(
-                      "text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent mb-2"
+                      "text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent mb-2",
                     )}
                   >
                     {user.isClient
@@ -179,7 +179,7 @@ export function GigInvites({ user }: { user: any }) {
                 className={cn(
                   "border-2 text-xs",
                   colors.border,
-                  colors.hoverBg
+                  colors.hoverBg,
                 )}
               >
                 <Eye className="w-3 h-3 mr-1" />
@@ -230,7 +230,7 @@ const StatusBadge = ({
         if (difference > 0) {
           const days = Math.floor(difference / (1000 * 60 * 60 * 24));
           const hours = Math.floor(
-            (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+            (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
           );
           setTimeLeft(`${days}d ${hours}h`);
         } else {
@@ -250,7 +250,7 @@ const StatusBadge = ({
       icon: Clock4,
       className: cn(
         "bg-orange-500/10 text-orange-700 border-orange-300",
-        colors.border
+        colors.border,
       ),
       gradient: "from-orange-400 to-red-500",
       pulse: true,
@@ -260,7 +260,7 @@ const StatusBadge = ({
       icon: CheckCircle,
       className: cn(
         "bg-green-500/10 text-green-700 border-green-300",
-        colors.border
+        colors.border,
       ),
       gradient: "from-green-400 to-emerald-500",
       pulse: false,
@@ -277,7 +277,7 @@ const StatusBadge = ({
       icon: Users2,
       className: cn(
         "bg-blue-500/10 text-blue-700 border-blue-300",
-        colors.border
+        colors.border,
       ),
       gradient: "from-blue-400 to-cyan-500",
       pulse: true,
@@ -287,7 +287,7 @@ const StatusBadge = ({
       icon: AlertTriangle,
       className: cn(
         "bg-gray-500/10 text-gray-700 border-gray-300",
-        colors.border
+        colors.border,
       ),
       gradient: "from-gray-400 to-slate-500",
       pulse: false,
@@ -297,7 +297,7 @@ const StatusBadge = ({
       icon: XCircle,
       className: cn(
         "bg-gray-500/10 text-gray-700 border-gray-300",
-        colors.border
+        colors.border,
       ),
       gradient: "from-gray-400 to-slate-500",
       pulse: false,
@@ -315,7 +315,7 @@ const StatusBadge = ({
         "inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-300",
         config.className,
         config.pulse && "animate-pulse",
-        isExpired && "grayscale"
+        isExpired && "grayscale",
       )}
     >
       <Icon className="w-4 h-4" />
@@ -324,7 +324,7 @@ const StatusBadge = ({
         <div
           className={cn(
             "w-2 h-2 rounded-full animate-ping",
-            status === "pending" ? "bg-orange-400" : "bg-blue-400"
+            status === "pending" ? "bg-orange-400" : "bg-blue-400",
           )}
         />
       )}
@@ -339,7 +339,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
     if (!user || !gig.bookingHistory) return false;
 
     return gig.bookingHistory.some(
-      (entry: any) => entry.deputySuggestedId === user._id
+      (entry: any) => entry.deputySuggestedId === user._id,
     );
   }, [gig, user]);
 
@@ -385,7 +385,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
           "bg-gradient-to-br from-white to-gray-50/80",
           "hover:bg-gradient-to-br hover:from-white hover:to-orange-50/50",
           isHovered && "scale-[1.02] shadow-xl",
-          "relative before:absolute before:inset-0 before:bg-gradient-to-r before:from-orange-500/0 before:via-red-500/0 before:to-pink-500/0 before:transition-all before:duration-500 before:hover:from-orange-500/5 before:hover:via-red-500/5 before:hover:to-pink-500/5"
+          "relative before:absolute before:inset-0 before:bg-gradient-to-r before:from-orange-500/0 before:via-red-500/0 before:to-pink-500/0 before:transition-all before:duration-500 before:hover:from-orange-500/5 before:hover:via-red-500/5 before:hover:to-pink-500/5",
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -435,7 +435,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
             <div
               className={cn(
                 "w-3 h-3 rounded-full animate-pulse shadow-lg",
-                urgency.color
+                urgency.color,
               )}
             />
             <span
@@ -443,7 +443,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 "text-xs font-bold px-2 py-1 rounded-full backdrop-blur-sm border",
                 colors.text,
                 colors.backgroundMuted,
-                colors.border
+                colors.border,
               )}
             >
               {urgency.daysLeft}d left
@@ -460,7 +460,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <span
                   className={cn(
                     "text-xs font-semibold uppercase tracking-wide",
-                    colors.primary
+                    colors.primary,
                   )}
                 >
                   {gig.gigType}
@@ -472,7 +472,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 className={cn(
                   "text-xl font-bold line-clamp-2 transition-colors duration-300 mb-2",
                   colors.text,
-                  "group-hover:text-orange-600"
+                  "group-hover:text-orange-600",
                 )}
               >
                 {gig.title}
@@ -482,7 +482,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
               <CardDescription
                 className={cn(
                   "line-clamp-2 text-sm leading-relaxed",
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               >
                 {gig.description}
@@ -500,7 +500,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <span
                   className={cn(
                     "font-bold",
-                    urgency.daysLeft < 3 ? "text-red-500" : "text-green-500"
+                    urgency.daysLeft < 3 ? "text-red-500" : "text-green-500",
                   )}
                 >
                   {urgency.daysLeft} days remaining
@@ -515,7 +515,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                     "absolute top-0 left-0 h-2 rounded-full transition-all duration-1000",
                     urgency.daysLeft < 3
                       ? "bg-gradient-to-r from-red-500 to-orange-500"
-                      : "bg-gradient-to-r from-green-500 to-emerald-500"
+                      : "bg-gradient-to-r from-green-500 to-emerald-500",
                   )}
                   style={{
                     width: `${Math.max(0, 100 - (urgency.daysLeft / 14) * 100)}%`,
@@ -533,13 +533,13 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
                 colors.backgroundMuted,
                 "group-hover:bg-white/80",
-                "border border-transparent group-hover:border-orange-200"
+                "border border-transparent group-hover:border-orange-200",
               )}
             >
               <div
                 className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  "bg-gradient-to-br from-blue-500 to-cyan-500"
+                  "bg-gradient-to-br from-blue-500 to-cyan-500",
                 )}
               >
                 <Users className="w-4 h-4 text-white" />
@@ -548,7 +548,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <div
                   className={cn(
                     "text-xs font-medium uppercase tracking-wide",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   {isClient ? "Musician" : "Client"}
@@ -566,13 +566,13 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
                 colors.backgroundMuted,
                 "group-hover:bg-white/80",
-                "border border-transparent group-hover:border-green-200"
+                "border border-transparent group-hover:border-green-200",
               )}
             >
               <div
                 className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  "bg-gradient-to-br from-green-500 to-emerald-500"
+                  "bg-gradient-to-br from-green-500 to-emerald-500",
                 )}
               >
                 <Calendar className="w-4 h-4 text-white" />
@@ -581,7 +581,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <div
                   className={cn(
                     "text-xs font-medium uppercase tracking-wide",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   Date
@@ -597,13 +597,13 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
                 colors.backgroundMuted,
                 "group-hover:bg-white/80",
-                "border border-transparent group-hover:border-purple-200"
+                "border border-transparent group-hover:border-purple-200",
               )}
             >
               <div
                 className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  "bg-gradient-to-br from-purple-500 to-pink-500"
+                  "bg-gradient-to-br from-purple-500 to-pink-500",
                 )}
               >
                 <MapPin className="w-4 h-4 text-white" />
@@ -612,7 +612,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <div
                   className={cn(
                     "text-xs font-medium uppercase tracking-wide",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   Venue
@@ -630,13 +630,13 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 "flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
                 colors.backgroundMuted,
                 "group-hover:bg-white/80",
-                "border border-transparent group-hover:border-yellow-200"
+                "border border-transparent group-hover:border-yellow-200",
               )}
             >
               <div
                 className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
-                  "bg-gradient-to-br from-yellow-500 to-amber-500"
+                  "bg-gradient-to-br from-yellow-500 to-amber-500",
                 )}
               >
                 <Music className="w-4 h-4 text-white" />
@@ -645,7 +645,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <div
                   className={cn(
                     "text-xs font-medium uppercase tracking-wide",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   Type
@@ -663,7 +663,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
               <div
                 className={cn(
                   "w-12 h-12 rounded-xl flex items-center justify-center",
-                  "bg-gradient-to-br from-green-500 to-emerald-500 shadow-lg"
+                  "bg-gradient-to-br from-green-500 to-emerald-500 shadow-lg",
                 )}
               >
                 <DollarSign className="w-5 h-5 text-white" />
@@ -672,7 +672,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <div
                   className={cn(
                     "text-xs font-medium uppercase tracking-wide",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   Budget
@@ -687,7 +687,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
               <div
                 className={cn(
                   "w-12 h-12 rounded-xl flex items-center justify-center",
-                  "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg"
+                  "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg",
                 )}
               >
                 <Clock className="w-5 h-5 text-white" />
@@ -696,7 +696,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
                 <div
                   className={cn(
                     "text-xs font-medium uppercase tracking-wide",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   Duration
@@ -714,7 +714,7 @@ const GigCard = ({ gig, isClient, colors, onEdit, onDelete, user }: any) => {
               "flex gap-3 pt-4 transition-all duration-300",
               isHovered
                 ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4"
+                : "opacity-0 translate-y-4",
             )}
           >
             <Button
@@ -737,7 +737,7 @@ const GigCardSkeleton = ({ colors }: { colors: any }) => (
     className={cn(
       "animate-pulse border-0 overflow-hidden",
       colors.card,
-      "bg-gradient-to-br from-white to-gray-50/80"
+      "bg-gradient-to-br from-white to-gray-50/80",
     )}
   >
     {/* Accent Border */}
@@ -831,7 +831,7 @@ function ClientInvitesOverview() {
     api.controllers.instantGigs.getClientInstantGigs,
     {
       clientId: user?._id as any,
-    }
+    },
   );
 
   const deleteGig = useMutation(api.controllers.instantGigs.deleteInstantGig);
@@ -901,7 +901,7 @@ function ClientInvitesOverview() {
             "grid grid-cols-2 lg:grid-cols-5 gap-4 p-6 rounded-3xl border-2 backdrop-blur-sm",
             colors.card,
             colors.border,
-            colors.backgroundSecondary
+            colors.backgroundSecondary,
           )}
         >
           <StatCard
@@ -1006,7 +1006,7 @@ const DeleteConfirmationModal = ({
           "w-full max-w-md mx-4 rounded-2xl border-2 shadow-2xl p-6",
           colors.card,
           colors.border,
-          "bg-white transform transition-all duration-200 scale-100"
+          "bg-white transform transition-all duration-200 scale-100",
         )}
       >
         {/* Header with icon */}
@@ -1030,7 +1030,7 @@ const DeleteConfirmationModal = ({
             className={cn(
               "mb-6 p-4 rounded-lg border",
               colors.border,
-              colors.backgroundMuted
+              colors.backgroundMuted,
             )}
           >
             <p className={cn("font-semibold", colors.text)}>{gig.title}</p>
@@ -1093,7 +1093,7 @@ const ActionMenu = ({ gig, isClient, onEdit, onDelete, colors }: any) => {
         size="sm"
         className={cn(
           "h-8 w-8 p-0 rounded-lg backdrop-blur-sm",
-          colors.hoverBg
+          colors.hoverBg,
         )}
         onClick={(e) => {
           e.stopPropagation();
@@ -1109,7 +1109,7 @@ const ActionMenu = ({ gig, isClient, onEdit, onDelete, colors }: any) => {
             "absolute right-0 top-10 z-60 w-48 rounded-lg border shadow-lg py-1", // Increased to z-60
             colors.card,
             colors.border,
-            "bg-white"
+            "bg-white",
           )}
           onClick={(e) => e.stopPropagation()}
         >
@@ -1123,7 +1123,7 @@ const ActionMenu = ({ gig, isClient, onEdit, onDelete, colors }: any) => {
                 }}
                 className={cn(
                   "flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors hover:bg-gray-100",
-                  colors.text
+                  colors.text,
                 )}
               >
                 <Edit className="w-4 h-4" />
@@ -1136,7 +1136,7 @@ const ActionMenu = ({ gig, isClient, onEdit, onDelete, colors }: any) => {
                   setIsOpen(false);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors text-red-600 hover:bg-red-50"
+                  "flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors text-red-600 hover:bg-red-50",
                 )}
               >
                 <Trash2 className="w-4 h-4" />
@@ -1152,7 +1152,7 @@ const ActionMenu = ({ gig, isClient, onEdit, onDelete, colors }: any) => {
             }}
             className={cn(
               "flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors hover:bg-gray-100",
-              colors.text
+              colors.text,
             )}
           >
             <Eye className="w-4 h-4" />
@@ -1192,11 +1192,11 @@ const EditGigModal = ({ gig, isOpen, onClose, onSave, colors }: any) => {
           "w-full max-w-2xl mx-4 rounded-2xl border shadow-2xl",
           colors.card,
           colors.border,
-          "bg-white"
+          "bg-white",
         )}
       >
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className={cn("text-2xl font-bold", colors.text)}>
+          <h2 className={cn("text-xl font-bold", colors.text)}>
             Edit Gig Details
           </h2>
           <Button
@@ -1371,7 +1371,7 @@ function MusicianInvitesOverview() {
     api.controllers.instantGigs.getDirectMusicianGigs,
     {
       musicianId: user?._id as any,
-    }
+    },
   );
 
   // Get deputy gigs
@@ -1379,7 +1379,7 @@ function MusicianInvitesOverview() {
     api.controllers.instantGigs.getDeputyGigsForMusician,
     {
       musicianId: user?._id as any,
-    }
+    },
   );
   const allGigs = useMemo(() => {
     const direct = directGigs || [];
@@ -1425,7 +1425,7 @@ function MusicianInvitesOverview() {
             "grid grid-cols-2 lg:grid-cols-5 gap-4 p-6 rounded-3xl border-2 backdrop-blur-sm",
             colors.card,
             colors.border,
-            colors.backgroundSecondary
+            colors.backgroundSecondary,
           )}
         >
           <StatCard
@@ -1494,12 +1494,12 @@ const StatCard = ({ label, value, icon: Icon, color, colors }: any) => {
       <div
         className={cn(
           "w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110",
-          `bg-gradient-to-br ${colorConfig[color as keyof typeof colorConfig]}`
+          `bg-gradient-to-br ${colorConfig[color as keyof typeof colorConfig]}`,
         )}
       >
         <Icon className="w-6 h-6 text-white" />
       </div>
-      <div className={cn("text-2xl font-bold mb-1", colors.text)}>{value}</div>
+      <div className={cn("text-xl font-bold mb-1", colors.text)}>{value}</div>
       <div className={cn("text-sm font-medium", colors.textMuted)}>{label}</div>
     </div>
   );
@@ -1546,25 +1546,25 @@ const EmptyState = ({ type, colors }: { type: string; colors: any }) => {
         "border-2 border-dashed text-center backdrop-blur-sm",
         colors.card,
         colors.border,
-        colors.backgroundSecondary
+        colors.backgroundSecondary,
       )}
     >
       <CardContent className="p-12">
         <div
           className={cn(
             "w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-2xl",
-            `bg-gradient-to-br ${currentConfig.gradient}`
+            `bg-gradient-to-br ${currentConfig.gradient}`,
           )}
         >
           <Icon className="w-10 h-10 text-white" />
         </div>
-        <h3 className={cn("text-2xl font-bold mb-4", colors.text)}>
+        <h3 className={cn("text-xl font-bold mb-4", colors.text)}>
           {currentConfig.title}
         </h3>
         <p
           className={cn(
             "max-w-md mx-auto mb-8 text-lg leading-relaxed",
-            colors.textMuted
+            colors.textMuted,
           )}
         >
           {currentConfig.description}
@@ -1575,7 +1575,7 @@ const EmptyState = ({ type, colors }: { type: string; colors: any }) => {
             className={cn(
               "bg-gradient-to-r hover:shadow-xl transition-all duration-300",
               currentConfig.gradient,
-              colors.textInverted
+              colors.textInverted,
             )}
           >
             <Sparkles className="w-5 h-5 mr-2" />
@@ -1587,7 +1587,7 @@ const EmptyState = ({ type, colors }: { type: string; colors: any }) => {
             className={cn(
               "border-2 hover:shadow-lg transition-all duration-300",
               colors.border,
-              colors.hoverBg
+              colors.hoverBg,
             )}
           >
             {currentConfig.secondaryAction}

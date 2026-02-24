@@ -110,7 +110,7 @@ const vocalExercises: WarmupExercise[] = [
 
 export const VocalWarmups: React.FC = () => {
   const [currentExercise, setCurrentExercise] = useState<WarmupExercise | null>(
-    null
+    null,
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -261,7 +261,7 @@ export const VocalWarmups: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Vocal Warmups</h2>
+          <h2 className="text-xl font-bold text-white">Vocal Warmups</h2>
           <p className="text-gray-400">
             Professional vocal exercises to prepare your voice
           </p>

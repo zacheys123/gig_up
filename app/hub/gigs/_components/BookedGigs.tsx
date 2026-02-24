@@ -356,11 +356,13 @@ export const BookedGigs = ({ user }: { user: any }) => {
     const takenGigs = allGigs.filter((gig: any) => gig.isTaken === true);
 
     return takenGigs.filter((gig: any) => {
+      // Case 1: User is the client who posted this gig (it got booked)
       const isClient = gig.postedBy === userId;
-      const isBookedMusician = gig.bookedBy === userId;
-      const isInBookedUsers =
-        Array.isArray(gig.bookedUsers) && gig.bookedUsers.includes(userId);
 
+      // Case 2: User is the booked musician (regular gig)
+      const isBookedMusician = gig.bookedBy === userId;
+
+      // Case 3: User is booked in a band role
       let isBookedInBand = false;
       if (gig.bandCategory && Array.isArray(gig.bandCategory)) {
         isBookedInBand = gig.bandCategory.some(
@@ -370,10 +372,15 @@ export const BookedGigs = ({ user }: { user: any }) => {
         );
       }
 
-      return isClient || isBookedMusician || isInBookedUsers || isBookedInBand;
+      // Case 4: User is the booked band leader
+      const isBookedBandLeader = gig.bookedBandLeader === userId;
+
+      // Return true if user is involved in ANY booked capacity
+      return (
+        isClient || isBookedMusician || isBookedInBand || isBookedBandLeader
+      );
     });
   }, [allGigs, user]);
-
   // Apply filters
   const filteredGigs = useMemo(() => {
     if (!bookedGigs.length) return [];
@@ -1504,289 +1511,81 @@ export const BookedGigs = ({ user }: { user: any }) => {
 
   if (bookedGigs.length === 0) {
     return (
-      <>
-        {showHeader && (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className="min-h-[80vh] flex items-center justify-center p-4"
+      >
+        <div className="w-full max-w-3xl mx-auto">
+          {/* Header with toggle */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="min-h-[80vh] flex items-center justify-center p-4"
+            className="mb-8 text-center"
           >
-            <div className="w-full max-w-3xl mx-auto">
-              {/* Header with toggle */}
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-8 text-center"
-              >
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-green-500/20 blur-xl rounded-full" />
-                    <CheckCircle
-                      className={cn(
-                        "w-10 h-10 relative",
-                        isDarkMode ? "text-emerald-400" : "text-emerald-600",
-                      )}
-                    />
-                  </div>
-                  <h2
-                    className={cn(
-                      "text-3xl md:text-4xl font-bold tracking-tight",
-                      isDarkMode ? "text-white" : "text-slate-900",
-                    )}
-                  >
-                    Booked Gigs
-                  </h2>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setShowHeader(false)}
-                    className={cn(
-                      "p-1.5 rounded-full transition-colors",
-                      isDarkMode
-                        ? "hover:bg-slate-800 text-slate-400"
-                        : "hover:bg-slate-100 text-slate-500",
-                    )}
-                  >
-                    {showHeader ? (
-                      <ChevronUp className="w-5 h-5" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" />
-                    )}
-                  </motion.button>
-                </div>
-
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 blur-xl rounded-full" />
+                <CheckCircle
                   className={cn(
-                    "text-sm md:text-base max-w-lg mx-auto",
-                    isDarkMode ? "text-slate-400" : "text-slate-500",
+                    "w-10 h-10 relative",
+                    isDarkMode ? "text-emerald-400" : "text-emerald-600",
                   )}
-                >
-                  Successfully booked gigs where you're involved as a client or
-                  musician
-                </motion.p>
-              </motion.div>
-
-              {/* Empty State Card */}
-              <motion.div
-                variants={emptyStateVariants}
-                initial="hidden"
-                animate="visible"
+                />
+              </div>
+              <h2
+                className={cn(
+                  "text-3xl md:text-4xl font-bold tracking-tight",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
               >
-                <Card
-                  className={cn(
-                    "border-2 overflow-hidden",
-                    isDarkMode
-                      ? "bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-slate-800"
-                      : "bg-gradient-to-br from-white to-slate-50/50 border-slate-200",
-                  )}
-                >
-                  {/* Decorative top gradient */}
-                  <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-
-                  <CardContent className="p-8 md:p-12">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        delay: 0.2,
-                        type: "spring",
-                        stiffness: 200,
-                      }}
-                      className="relative mb-8"
-                    >
-                      {/* Animated background circles */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div
-                          className={cn(
-                            "w-32 h-32 rounded-full opacity-20 animate-pulse",
-                            isDarkMode ? "bg-blue-500/30" : "bg-blue-500/20",
-                          )}
-                        />
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center animate-spin-slow">
-                        <div
-                          className={cn(
-                            "w-40 h-40 rounded-full border-2 border-dashed",
-                            isDarkMode
-                              ? "border-slate-700"
-                              : "border-slate-200",
-                          )}
-                        />
-                      </div>
-
-                      {/* Main icon */}
-                      <div className="relative flex justify-center">
-                        <div
-                          className={cn(
-                            "w-24 h-24 rounded-full flex items-center justify-center",
-                            isDarkMode
-                              ? "bg-gradient-to-br from-slate-800 to-slate-700"
-                              : "bg-gradient-to-br from-slate-100 to-white",
-                          )}
-                        >
-                          <Calendar
-                            className={cn(
-                              "w-12 h-12",
-                              isDarkMode ? "text-slate-400" : "text-slate-400",
-                            )}
-                          />
-                        </div>
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ delay: 0.4 }}
-                          className="absolute -bottom-2 -right-2"
-                        >
-                          <div
-                            className={cn(
-                              "p-2 rounded-full",
-                              isDarkMode ? "bg-slate-800" : "bg-white",
-                              "shadow-lg",
-                            )}
-                          >
-                            <AlertCircle className="w-5 h-5 text-amber-500" />
-                          </div>
-                        </motion.div>
-                      </div>
-                    </motion.div>
-
-                    <motion.h3
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className={cn(
-                        "text-2xl md:text-3xl font-bold text-center mb-3",
-                        isDarkMode ? "text-white" : "text-slate-900",
-                      )}
-                    >
-                      No Booked Gigs Yet
-                    </motion.h3>
-
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4 }}
-                      className={cn(
-                        "text-center mb-8 max-w-md mx-auto",
-                        isDarkMode ? "text-slate-400" : "text-slate-500",
-                      )}
-                    >
-                      You haven't booked or been booked for any gigs yet. Start
-                      exploring opportunities or create your own gig!
-                    </motion.p>
-
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 }}
-                      className="flex flex-col sm:flex-row gap-3 justify-center"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button
-                          onClick={() =>
-                            (window.location.href = "/hub/gigs?tab=all")
-                          }
-                          variant="outline"
-                          size="lg"
-                          className={cn(
-                            "gap-2 px-6 py-5 text-base font-medium",
-                            "border-2 transition-all duration-200",
-                            isDarkMode
-                              ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
-                              : "border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300",
-                          )}
-                        >
-                          <Search className="w-5 h-5" />
-                          Explore Gigs
-                        </Button>
-                      </motion.div>
-
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button
-                          onClick={() =>
-                            (window.location.href = "/gigs/create")
-                          }
-                          size="lg"
-                          className={cn(
-                            "gap-2 px-6 py-5 text-base font-medium",
-                            "bg-gradient-to-r transition-all duration-200",
-                            isDarkMode
-                              ? "from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                              : "from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white",
-                          )}
-                        >
-                          <Plus className="w-5 h-5" />
-                          Create a Gig
-                        </Button>
-                      </motion.div>
-                    </motion.div>
-
-                    {/* Quick tips */}
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.6 }}
-                      className={cn(
-                        "mt-8 pt-6 border-t text-sm text-center",
-                        isDarkMode
-                          ? "border-slate-800 text-slate-500"
-                          : "border-slate-200 text-slate-400",
-                      )}
-                    >
-                      <p>💡 Quick tips:</p>
-                      <div className="flex flex-wrap gap-3 justify-center mt-3">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "px-3 py-1",
-                            isDarkMode
-                              ? "border-slate-700"
-                              : "border-slate-200",
-                          )}
-                        >
-                          Browse available gigs
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "px-3 py-1",
-                            isDarkMode
-                              ? "border-slate-700"
-                              : "border-slate-200",
-                          )}
-                        >
-                          Show interest in gigs
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "px-3 py-1",
-                            isDarkMode
-                              ? "border-slate-700"
-                              : "border-slate-200",
-                          )}
-                        >
-                          Wait for confirmation
-                        </Badge>
-                      </div>
-                    </motion.div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                Booked Gigs
+              </h2>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowHeader(false)}
+                className={cn(
+                  "p-1.5 rounded-full transition-colors",
+                  isDarkMode
+                    ? "hover:bg-slate-800 text-slate-400"
+                    : "hover:bg-slate-100 text-slate-500",
+                )}
+              >
+                {showHeader ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </motion.button>
             </div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className={cn(
+                "text-sm md:text-base max-w-lg mx-auto",
+                isDarkMode ? "text-slate-400" : "text-slate-500",
+              )}
+            >
+              Successfully booked gigs where you're involved as a client or
+              musician
+            </motion.p>
           </motion.div>
-        )}
-      </>
+
+          {/* Add your empty state card content here */}
+          {/* You were missing the card content */}
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className={cn("text-lg", colors.textMuted)}>
+                No booked gigs yet
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
     );
   }
 

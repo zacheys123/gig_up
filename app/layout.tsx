@@ -7,8 +7,8 @@ import { StatusBanner } from "@/components/StatusBanner";
 import { GlobalActivityTracker } from "@/components/GlobalActivityTracker";
 
 export const metadata: Metadata = {
-  title: "Gigup",
-  description: "New Gigup",
+  title: "gigUp",
+  description: "New gigUp",
 };
 
 export const viewport: Viewport = {

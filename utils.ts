@@ -129,10 +129,10 @@ export interface AIContexts {
   current: PlatformVersion;
 }
 
-export const GIGUP_CONTEXTS: AIContexts = {
+export const gigUp_CONTEXTS: AIContexts = {
   // Version 1.0 - Basic platform
   "v1.0": `
-You are GigUppAssistant for GigUppPlatform v1.0
+You are gigUppAssistant for gigUppPlatform v1.0
 
 PLATFORM VERSION: 1.0
 CORE FEATURES:
@@ -155,7 +155,7 @@ RESPONSE GUIDELINES:
 
   // Version 2.0 - Advanced features
   "v2.0": `
-You are GigUppAssistant for GigUppPlatform v2.0
+You are gigUppAssistant for gigUppPlatform v2.0
 
 PLATFORM VERSION: 2.0 - "PRODUCER EDITION"
 NEW FEATURES:
@@ -190,7 +190,7 @@ RESPONSE GUIDELINES:
 
   // Version 3.0 - Future roadmap
   "v3.0": `
-You are GigUppAssistant for GigUppPlatform v3.0
+You are gigUppAssistant for gigUppPlatform v3.0
 
 PLATFORM VERSION: 3.0 - "COLLABORATION SUITE"
 NEW FEATURES:
@@ -221,11 +221,11 @@ RESPONSE GUIDELINES:
   current: "v1.0",
 };
 
-export const getCurrentContext = () => GIGUP_CONTEXTS[GIGUP_CONTEXTS.current];
+export const getCurrentContext = () => gigUp_CONTEXTS[gigUp_CONTEXTS.current];
 
 export const setPlatformVersion = (version: PlatformVersion) => {
-  if (GIGUP_CONTEXTS[version]) {
-    GIGUP_CONTEXTS.current = version;
+  if (gigUp_CONTEXTS[version]) {
+    gigUp_CONTEXTS.current = version;
   }
 };
 
@@ -1716,10 +1716,12 @@ export const prepareGigDataForConvex = (
     }
   }
 
-  // 4. FIX TIME OBJECT - durationFrom/durationTo are NOT in time object
+  // 4. FIX TIME OBJECT - CORRECT FIELD NAMES
   const time = {
     start: formValues.start?.trim() || "19:00",
     end: formValues.end?.trim() || "22:00",
+    durationFrom: durationFrom || formValues.durationfrom || "pm", // ✅ Correct
+    durationTo: durationTo || formValues.durationto || "pm", // ✅ Correct
   };
 
   // 5. CALCULATE TOTAL SLOTS
@@ -1778,7 +1780,9 @@ export const prepareGigDataForConvex = (
     // Validate window is sensible
     if (acceptInterestStartTime && acceptInterestEndTime) {
       if (acceptInterestEndTime <= acceptInterestStartTime) {
-        console.warn("Invalid interest window: end time must be after start time");
+        console.warn(
+          "Invalid interest window: end time must be after start time",
+        );
         acceptInterestStartTime = undefined;
         acceptInterestEndTime = undefined;
       }
@@ -1813,7 +1817,7 @@ export const prepareGigDataForConvex = (
     secret: formValues.secret.trim(),
     bussinesscat: formValues.bussinesscat,
     date: scheduleDate,
-    time: time, // Now only has start and end
+    time: time, // Now has correct fields: start, end, durationFrom, durationTo
     logo: logoUrl,
 
     // Optional fields with defaults
@@ -1854,26 +1858,17 @@ export const prepareGigDataForConvex = (
 
     // Negotiable
     negotiable: formValues.negotiable || false,
-
-    // 🔴 ADD DURATION FIELDS AT TOP LEVEL (as per your mutation schema)
-    durationFrom: durationFrom || formValues.durationfrom || "pm",
-    durationTo: durationTo || formValues.durationto || "pm",
   };
 
   console.log("=== DEBUG: Final prepared data ===");
   console.log("Time object:", result.time);
   console.log("Duration fields:", {
-    durationFrom: result.durationFrom,
-    durationTo: result.durationTo,
-  });
-  console.log("Interest window fields:", {
-    hasStartTime: !!result.acceptInterestStartTime,
-    hasEndTime: !!result.acceptInterestEndTime,
+    durationFrom: result.time.durationFrom,
+    durationTo: result.time.durationTo,
   });
 
   return result;
 };
-
 // Function to format gig price for display
 export const formatGigPrice = (
   price: number,
@@ -2161,9 +2156,10 @@ export const getInterestWindowStatus = (gig: {
   }
 };
 
-export function formatTimeAgo(date: Date): string {
+export function formatTimeAgo(date: number | Date): string {
+  const dateObj = typeof date === "number" ? new Date(date) : date;
   const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
+  const diffMs = dateObj.getTime() - now.getTime();
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 

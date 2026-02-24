@@ -361,7 +361,7 @@ export function Sidebar() {
       return [
         ...dashboardCoreLinks,
         ...commonDashboardLinks.filter((link) =>
-          link.availableForTiers?.includes("free")
+          link.availableForTiers?.includes("free"),
         ),
       ];
     }
@@ -480,7 +480,7 @@ export function Sidebar() {
         className={cn(
           "w-full md:w-64 h-full flex flex-col border-r",
           colors.background,
-          colors.border
+          colors.border,
         )}
       >
         {/* Header */}
@@ -489,7 +489,7 @@ export function Sidebar() {
             <div>
               <h2
                 className={cn(
-                  "text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent"
+                  "text-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent",
                 )}
               >
                 {shouldShowLimitedLinks ? "Dashboard Basic" : "Dashboard"}
@@ -498,7 +498,7 @@ export function Sidebar() {
                 <div
                   className={cn(
                     "px-2 py-1 text-xs rounded-full font-semibold",
-                    currentTier.badge
+                    currentTier.badge,
                   )}
                 >
                   <TierIcon className="w-3 h-3 inline mr-1" />
@@ -524,7 +524,7 @@ export function Sidebar() {
                 "mt-3 p-3 rounded-xl bg-gradient-to-r text-white",
                 nextTier.color === "orange" && "from-orange-500 to-red-500",
                 nextTier.color === "purple" && "from-purple-500 to-pink-600",
-                nextTier.color === "yellow" && "from-yellow-500 to-red-600"
+                nextTier.color === "yellow" && "from-yellow-500 to-red-600",
               )}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -602,7 +602,7 @@ export function Sidebar() {
                   active
                     ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500 text-amber-100"
                     : cn(colors.text, "border-transparent", colors.hoverBg),
-                  isFeatured && "ring-2 ring-purple-200 dark:ring-purple-800"
+                  isFeatured && "ring-2 ring-purple-200 dark:ring-purple-800",
                 )}
               >
                 <div
@@ -613,7 +613,7 @@ export function Sidebar() {
                       : !canAccess || isBlockedByProfile
                         ? "text-gray-400 dark:text-gray-500"
                         : cn("group-hover:text-amber-400", colors.textMuted),
-                    isFeatured && "text-purple-600"
+                    isFeatured && "text-purple-600",
                   )}
                 >
                   {link.icon}
@@ -627,7 +627,7 @@ export function Sidebar() {
                         active ? "text-amber-600" : colors.text,
                         (!canAccess || isBlockedByProfile) &&
                           "text-gray-500 dark:text-gray-400",
-                        isFeatured && "text-purple-700 dark:text-purple-300"
+                        isFeatured && "text-purple-700 dark:text-purple-300",
                       )}
                     >
                       {link.name}
@@ -666,8 +666,8 @@ export function Sidebar() {
                         ? "text-gray-400 dark:text-gray-500 opacity-50"
                         : cn(
                             "opacity-0 group-hover:opacity-100",
-                            colors.textMuted
-                          )
+                            colors.textMuted,
+                          ),
                   )}
                 />
               </div>
@@ -714,7 +714,7 @@ export function Sidebar() {
               className={cn(
                 "flex items-center justify-between w-full p-3 rounded-xl transition-all duration-200",
                 colors.hoverBg,
-                colors.text
+                colors.text,
               )}
             >
               <div className="flex items-center gap-2">
@@ -805,14 +805,14 @@ export function Sidebar() {
             className={cn(
               "group flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 border-l-4 border-transparent",
               colors.hoverBg,
-              colors.text
+              colors.text,
             )}
           >
             <div
               className={cn(
                 "transition-colors duration-200",
                 "group-hover:text-amber-400",
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               {isDarkMode ? (
@@ -828,7 +828,7 @@ export function Sidebar() {
               className={cn(
                 "text-xs px-2 py-1 rounded-full",
                 colors.card,
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               Switch
@@ -843,7 +843,7 @@ export function Sidebar() {
               className={cn(
                 "rounded-lg p-3 border",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <div className={cn("text-xs mb-2 font-medium", colors.textMuted)}>
@@ -872,7 +872,7 @@ export function Sidebar() {
         {/* App Version */}
         <div className={cn("px-4 py-2 border-t", colors.border)}>
           <div className={cn("text-xs text-center", colors.textMuted)}>
-            GigUppv2.0.0
+            gigUppv2.0.0
             {shouldShowLimitedLinks && (
               <span className="text-amber-600 ml-1">• Trial Ended</span>
             )}

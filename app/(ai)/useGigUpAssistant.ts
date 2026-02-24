@@ -1,4 +1,4 @@
-// hooks/useGigUpAssistant.ts
+// hooks/usegigUpAssistant.ts
 import { useState, useCallback, useMemo } from "react";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 
@@ -14,7 +14,7 @@ const TIER_QUESTION_LIMITS = {
   trial: { dailyLimit: 25, resetMinutes: 10 }, // Reset every 10 minutes
 } as const;
 
-export function useGigUpAssistant() {
+export function usegigUpAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useCurrentUser();
 
@@ -24,7 +24,7 @@ export function useGigUpAssistant() {
 
     const storageKey = `ai_questions_usage`;
     const usage = JSON.parse(
-      localStorage.getItem(storageKey) || '{"count": 0, "resetTime": null}'
+      localStorage.getItem(storageKey) || '{"count": 0, "resetTime": null}',
     );
 
     const userTier = user?.tier || "free";
@@ -42,7 +42,7 @@ export function useGigUpAssistant() {
         JSON.stringify({
           count: 0,
           resetTime: now + resetMinutes * 60 * 1000,
-        })
+        }),
       );
       return { used: 0, limit, resetTime: null, canAsk: true, resetMinutes };
     }
@@ -61,7 +61,7 @@ export function useGigUpAssistant() {
 
     const storageKey = `ai_questions_usage`;
     const current = JSON.parse(
-      localStorage.getItem(storageKey) || '{"count": 0}'
+      localStorage.getItem(storageKey) || '{"count": 0}',
     );
     const userTier = user?.tier || "free";
     const resetMinutes =
@@ -81,7 +81,7 @@ export function useGigUpAssistant() {
       JSON.stringify({
         count: newCount,
         resetTime: resetTime,
-      })
+      }),
     );
 
     return newCount;
@@ -104,7 +104,7 @@ export function useGigUpAssistant() {
 
   const askQuestion = async (
     question: string,
-    platformVersion: string = "v2.0"
+    platformVersion: string = "v2.0",
   ) => {
     const usage = getQuestionUsage();
 
@@ -154,7 +154,7 @@ export function useGigUpAssistant() {
   const questionUsage = useMemo(() => getQuestionUsage(), [getQuestionUsage]);
   const timeUntilReset = useMemo(
     () => getTimeUntilReset(),
-    [getTimeUntilReset]
+    [getTimeUntilReset],
   );
 
   return {

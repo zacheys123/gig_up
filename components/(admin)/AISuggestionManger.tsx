@@ -11,7 +11,7 @@ export function AISuggestionsManager() {
     "What should I include in my performance portfolio?",
     "How do I price my services for different gig types?",
     "Tips for writing compelling gig applications",
-    "How to build a strong reputation on GigUp?",
+    "How to build a strong reputation on gigUp?",
   ]);
 
   const [clientQuestions, setClientQuestions] = useState([
@@ -23,7 +23,7 @@ export function AISuggestionsManager() {
   ]);
 
   const [guestQuestions, setGuestQuestions] = useState([
-    "How does GigUppwork for musicians?",
+    "How does gigUppwork for musicians?",
     "What are the benefits of the Pro tier?",
     "How do I get started as a client?",
     "What's included in the free trial?",
@@ -33,7 +33,7 @@ export function AISuggestionsManager() {
   const [version, setVersion] = useState("1.0.0");
 
   const updateSuggestions = useMutation(
-    api.controllers.subscription.updateAISuggestions
+    api.controllers.subscription.updateAISuggestions,
   );
 
   const handleSave = async () => {
@@ -55,7 +55,7 @@ export function AISuggestionsManager() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">AI Suggestions Manager</h1>
+      <h1 className="text-xl font-bold">AI Suggestions Manager</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Musician Questions */}

@@ -72,7 +72,7 @@ export default function FollowRequests() {
   const { colors, isDarkMode } = useThemeColors();
 
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [showBulkDeclineDialog, setShowBulkDeclineDialog] = useState(false);
@@ -84,7 +84,7 @@ export default function FollowRequests() {
   // Fetch pending follow requests
   const pendingRequests = useQuery(
     api.controllers.user.getPendingFollowRequests,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   ) as FollowRequest[] | undefined;
 
   const acceptRequest = useMutation(api.controllers.user.acceptFollowRequest);
@@ -150,12 +150,12 @@ export default function FollowRequests() {
 
     if (successful > 0) {
       toast.success(
-        `Accepted ${successful} follow request${successful !== 1 ? "s" : ""}`
+        `Accepted ${successful} follow request${successful !== 1 ? "s" : ""}`,
       );
     }
     if (failed > 0) {
       toast.error(
-        `Failed to accept ${failed} request${failed !== 1 ? "s" : ""}`
+        `Failed to accept ${failed} request${failed !== 1 ? "s" : ""}`,
       );
     }
   };
@@ -188,12 +188,12 @@ export default function FollowRequests() {
 
     if (successful > 0) {
       toast.success(
-        `Declined ${successful} follow request${successful !== 1 ? "s" : ""}`
+        `Declined ${successful} follow request${successful !== 1 ? "s" : ""}`,
       );
     }
     if (failed > 0) {
       toast.error(
-        `Failed to decline ${failed} request${failed !== 1 ? "s" : ""}`
+        `Failed to decline ${failed} request${failed !== 1 ? "s" : ""}`,
       );
     }
   };
@@ -239,7 +239,7 @@ export default function FollowRequests() {
     if (!pendingRequests || selectedRequests.size === 0) return null;
 
     const selected = pendingRequests.filter(
-      (req) => req && selectedRequests.has(req._id)
+      (req) => req && selectedRequests.has(req._id),
     );
 
     return {
@@ -273,7 +273,7 @@ export default function FollowRequests() {
         className={cn(
           "border-b sticky top-0 z-40",
           colors.navBackground,
-          colors.border
+          colors.border,
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -289,7 +289,7 @@ export default function FollowRequests() {
                   "p-2 rounded-lg transition-all duration-200 shrink-0",
                   "hover:bg-opacity-20",
                   colors.hoverBg,
-                  colors.textMuted
+                  colors.textMuted,
                 )}
               >
                 <ArrowLeft size={20} />
@@ -298,7 +298,7 @@ export default function FollowRequests() {
                 className={cn(
                   "p-2 sm:p-3 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10",
                   "border shrink-0",
-                  isDarkMode ? "border-amber-400/20" : "border-amber-500/20"
+                  isDarkMode ? "border-amber-400/20" : "border-amber-500/20",
                 )}
               >
                 <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
@@ -306,8 +306,8 @@ export default function FollowRequests() {
               <div className="min-w-0">
                 <h1
                   className={cn(
-                    "text-xl sm:text-2xl font-bold truncate",
-                    colors.text
+                    "text-xl sm:text-xl font-bold truncate",
+                    colors.text,
                   )}
                 >
                   Follow Requests
@@ -315,7 +315,7 @@ export default function FollowRequests() {
                 <p
                   className={cn(
                     "text-xs sm:text-sm truncate",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   Manage who can follow you and see your content
@@ -327,7 +327,7 @@ export default function FollowRequests() {
               <div
                 className={cn(
                   "px-3 py-1.5 rounded-full text-sm font-medium shrink-0",
-                  "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                  "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
                 )}
               >
                 {pendingRequests?.length || 0} Pending
@@ -356,7 +356,7 @@ export default function FollowRequests() {
             className={cn(
               "border-b sticky top-[73px] sm:top-[81px] z-30",
               colors.border,
-              "bg-gradient-to-r from-blue-500/5 to-purple-500/5"
+              "bg-gradient-to-r from-blue-500/5 to-purple-500/5",
             )}
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -367,7 +367,7 @@ export default function FollowRequests() {
                     <span
                       className={cn(
                         "font-medium text-sm sm:text-base",
-                        colors.text
+                        colors.text,
                       )}
                     >
                       {selectedRequests.size} request
@@ -458,7 +458,7 @@ export default function FollowRequests() {
                 "p-4 rounded-xl border",
                 colors.card,
                 colors.border,
-                "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3",
               )}
             >
               <div className="flex items-center gap-3">
@@ -471,7 +471,7 @@ export default function FollowRequests() {
                 <span
                   className={cn(
                     "font-medium text-sm sm:text-base",
-                    colors.text
+                    colors.text,
                   )}
                 >
                   {allSelected ? "Deselect all" : "Select all"}
@@ -505,7 +505,7 @@ export default function FollowRequests() {
                     colors.card,
                     colors.border,
                     selectedRequests.has(request._id) &&
-                      "ring-2 ring-blue-500/50 bg-blue-500/5 border-blue-500/30"
+                      "ring-2 ring-blue-500/50 bg-blue-500/5 border-blue-500/30",
                   )}
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -532,7 +532,7 @@ export default function FollowRequests() {
                             <div
                               className={cn(
                                 "w-14 h-14 rounded-xl flex items-center justify-center",
-                                colors.secondaryBackground
+                                colors.secondaryBackground,
                               )}
                             >
                               <UserPlus className="w-5 h-5 text-gray-400" />
@@ -552,7 +552,7 @@ export default function FollowRequests() {
                               <h3
                                 className={cn(
                                   "font-semibold text-base sm:text-lg truncate",
-                                  colors.text
+                                  colors.text,
                                 )}
                               >
                                 {request.firstname} {request.lastname}
@@ -560,7 +560,7 @@ export default function FollowRequests() {
                               <p
                                 className={cn(
                                   "text-sm truncate",
-                                  colors.textMuted
+                                  colors.textMuted,
                                 )}
                               >
                                 @{request.username}
@@ -584,7 +584,7 @@ export default function FollowRequests() {
                                 "text-xs",
                                 request.isMusician
                                   ? "bg-purple-500 text-white"
-                                  : "bg-green-500 text-white"
+                                  : "bg-green-500 text-white",
                               )}
                             >
                               {request.isMusician ? "Musician" : "Client"}
@@ -644,7 +644,7 @@ export default function FollowRequests() {
                               <p
                                 className={cn(
                                   "text-sm leading-relaxed line-clamp-2",
-                                  colors.textMuted
+                                  colors.textMuted,
                                 )}
                               >
                                 {request.talentbio}
@@ -661,7 +661,7 @@ export default function FollowRequests() {
                         onClick={() =>
                           handleAccept(
                             request._id,
-                            request.firstname || request.username
+                            request.firstname || request.username,
                           )
                         }
                         className="bg-green-500 hover:bg-green-600 text-white rounded-xl gap-2 text-sm"
@@ -686,7 +686,7 @@ export default function FollowRequests() {
                             onClick={() =>
                               handleDecline(
                                 request._id,
-                                request.firstname || request.username
+                                request.firstname || request.username,
                               )
                             }
                             className="text-red-600"
@@ -718,14 +718,14 @@ export default function FollowRequests() {
             className={cn(
               "text-center py-12 sm:py-16 rounded-xl border-2",
               colors.card,
-              colors.border
+              colors.border,
             )}
           >
             <Users className="mx-auto text-gray-400 w-12 h-12 sm:w-16 sm:h-16 mb-4" />
             <h3
               className={cn(
-                "text-xl sm:text-2xl font-bold mb-3 sm:mb-4",
-                colors.text
+                "text-xl sm:text-xl font-bold mb-3 sm:mb-4",
+                colors.text,
               )}
             >
               No Pending Requests
@@ -733,7 +733,7 @@ export default function FollowRequests() {
             <p
               className={cn(
                 "text-sm sm:text-lg mb-6 sm:mb-8 max-w-md mx-auto px-4",
-                colors.textMuted
+                colors.textMuted,
               )}
             >
               When someone requests to follow you, it will appear here for you

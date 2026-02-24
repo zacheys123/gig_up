@@ -192,7 +192,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
         >
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className={cn("text-2xl font-bold", themeColors.text)}>
+              <h2 className={cn("text-xl font-bold", themeColors.text)}>
                 Gig Card Designer
               </h2>
               <p className={cn("text-sm mt-1", themeColors.textMuted)}>
@@ -207,7 +207,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                 themeColors.textMuted,
               )}
             >
-              <span className="text-2xl">&times;</span>
+              <span className="text-xl">&times;</span>
             </button>
           </div>
 
@@ -898,7 +898,7 @@ const GigCustomization: React.FC<GigCustomizationProps> = ({
                       <div className="flex justify-between items-start">
                         <div className="space-y-3">
                           <h4
-                            className="text-2xl font-bold leading-tight"
+                            className="text-xl font-bold leading-tight"
                             style={{
                               color:
                                 localCustomization.fontColor ||

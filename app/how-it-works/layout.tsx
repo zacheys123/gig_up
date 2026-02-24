@@ -93,7 +93,7 @@ export default function HowItWorksLayout({
     window.dispatchEvent(
       new CustomEvent("section-navigate", {
         detail: { section },
-      })
+      }),
     );
   };
 
@@ -121,7 +121,7 @@ export default function HowItWorksLayout({
         className={cn(
           "border-b sticky top-0 z-40 backdrop-blur-sm",
           colors.navBorder,
-          colors.navBackground
+          colors.navBackground,
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -132,10 +132,10 @@ export default function HowItWorksLayout({
                 href="/"
                 className={cn(
                   "text-xl font-bold hover:opacity-80 transition-opacity",
-                  colors.navText
+                  colors.navText,
                 )}
               >
-                Gigup
+                gigUp
               </Link>
 
               {/* Mobile Back to App Button */}
@@ -160,13 +160,13 @@ export default function HowItWorksLayout({
                           ? cn(
                               colors.primaryBg,
                               colors.textInverted,
-                              "shadow-lg"
+                              "shadow-lg",
                             )
                           : cn(
                               "hover:bg-gray-100 dark:hover:bg-gray-800",
                               colors.text,
-                              "hover:shadow-md"
-                            )
+                              "hover:shadow-md",
+                            ),
                       )}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -190,7 +190,7 @@ export default function HowItWorksLayout({
                   "px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 hidden md:block",
                   "bg-gradient-to-r from-blue-600 to-purple-600",
                   "text-white hover:opacity-90 shadow-lg",
-                  "hover:scale-105 active:scale-95"
+                  "hover:scale-105 active:scale-95",
                 )}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -213,7 +213,7 @@ export default function HowItWorksLayout({
           className={cn(
             "border-t backdrop-blur-lg",
             colors.navBorder,
-            colors.navBackground
+            colors.navBackground,
           )}
         >
           <nav className="flex justify-around items-center">
@@ -227,7 +227,7 @@ export default function HowItWorksLayout({
                     "flex flex-col items-center py-3 px-2 flex-1 min-w-0 transition-all duration-200",
                     isActive
                       ? "text-blue-600 dark:text-blue-400"
-                      : colors.textMuted
+                      : colors.textMuted,
                   )}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -236,7 +236,7 @@ export default function HowItWorksLayout({
                       "p-2 rounded-full transition-all duration-200 mb-1",
                       isActive
                         ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
-                        : "bg-transparent"
+                        : "bg-transparent",
                     )}
                   >
                     {item.icon}
@@ -266,7 +266,7 @@ export default function HowItWorksLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <p className={cn("text-sm", colors.textMuted)}>
-              &copy; {new Date().getFullYear()} Gigup. All rights reserved.
+              &copy; {new Date().getFullYear()} gigUp. All rights reserved.
             </p>
             <div className="flex space-x-6">
               <Link
@@ -275,7 +275,7 @@ export default function HowItWorksLayout({
                   "text-sm transition-colors duration-200 hover:underline",
                   colors.textMuted,
                   colors.hoverBg,
-                  "px-2 py-1 rounded"
+                  "px-2 py-1 rounded",
                 )}
               >
                 Privacy
@@ -286,7 +286,7 @@ export default function HowItWorksLayout({
                   "text-sm transition-colors duration-200 hover:underline",
                   colors.textMuted,
                   colors.hoverBg,
-                  "px-2 py-1 rounded"
+                  "px-2 py-1 rounded",
                 )}
               >
                 Terms
@@ -297,7 +297,7 @@ export default function HowItWorksLayout({
                   "text-sm transition-colors duration-200 hover:underline",
                   colors.textMuted,
                   colors.hoverBg,
-                  "px-2 py-1 rounded"
+                  "px-2 py-1 rounded",
                 )}
               >
                 Contact

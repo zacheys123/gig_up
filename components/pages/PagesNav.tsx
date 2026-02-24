@@ -180,7 +180,7 @@ const PagesNav = () => {
 
   const handleDragEnd = (
     event: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo
+    info: PanInfo,
   ) => {
     const threshold = 50;
     const velocityThreshold = 500;
@@ -289,7 +289,7 @@ const PagesNav = () => {
           {/* Header */}
           <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800">
             <div className="flex items-center space-x-2">
-              <MdAccountCircle className="text-white text-2xl" />
+              <MdAccountCircle className="text-white text-xl" />
               <h2 className="text-xl font-bold text-white">
                 {user?.user?.username || "Menu"}
               </h2>
@@ -315,7 +315,7 @@ const PagesNav = () => {
                     whileHover="hover"
                     whileTap="tap"
                     className={`flex items-center justify-between p-3 relative rounded-lg transition-all ${linkStyles(
-                      pathname === href
+                      pathname === href,
                     )} ${extraStyle || ""}`}
                     onClick={() => {
                       controls.start({ x: "100%" });
@@ -333,7 +333,7 @@ const PagesNav = () => {
                     )}
                   </motion.div>
                 </Link>
-              )
+              ),
             )}
             {/* Settings Link */}
             <Link href={`/settings/${userId}`} className="block mt-4">
@@ -343,7 +343,7 @@ const PagesNav = () => {
                 whileHover="hover"
                 whileTap="tap"
                 className={`flex items-center p-3 relative rounded-lg transition-all ${linkStyles(
-                  pathname.includes("/settings")
+                  pathname.includes("/settings"),
                 )}`}
                 onClick={() => {
                   controls.start({ x: "100%" });
@@ -358,7 +358,7 @@ const PagesNav = () => {
               <button
                 onClick={toggleDashboard}
                 className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${linkStyles(
-                  pathname.includes("/dashboard")
+                  pathname.includes("/dashboard"),
                 )}`}
               >
                 <div className="flex items-center">
@@ -390,7 +390,7 @@ const PagesNav = () => {
                           whileHover="hover"
                           whileTap="tap"
                           className={`flex items-center p-2 rounded-lg text-sm ${linkStyles(
-                            pathname === href
+                            pathname === href,
                           )}
                           ${
                             label === "Payments" &&

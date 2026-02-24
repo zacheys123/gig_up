@@ -1,5 +1,6 @@
 // app/(ai)/@ai/(.)ai/page.tsx
 "use client";
+
 import { GigUpAssistantModal } from "@/components/ai/GigupAssistantModal";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";

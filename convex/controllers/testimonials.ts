@@ -94,7 +94,7 @@ function shouldAutoFeatureTestimonial(args: any): boolean {
     "love",
   ];
   const hasPositiveKeywords = positiveKeywords.some((keyword) =>
-    args.content.toLowerCase().includes(keyword)
+    args.content.toLowerCase().includes(keyword),
   );
 
   if (!hasPositiveKeywords) {
@@ -170,8 +170,8 @@ export const getEligibleForFeaturing = query({
         q.and(
           q.gte(q.field("rating"), FEATURING_CRITERIA.MIN_RATING),
           q.eq(q.field("featured"), false),
-          q.neq(q.field("verified"), false)
-        )
+          q.neq(q.field("verified"), false),
+        ),
       )
       .order("desc")
       .collect();
@@ -316,7 +316,7 @@ export const createMockTestimonials = mutation({
         userCity: "Miami, FL",
         rating: 5,
         content:
-          "Built my entire residency schedule through GigUp. Consistent bookings all season long. The payment system is reliable and the venue communication is professional. Perfect for serious DJs!",
+          "Built my entire residency schedule through gigUp. Consistent bookings all season long. The payment system is reliable and the venue communication is professional. Perfect for serious DJs!",
         stats: {
           bookings: 28,
           earnings: 12600,
@@ -406,7 +406,7 @@ export const getPlatformStats = query({
       successRate: `${successRate}%`,
       totalBookings: testimonials.reduce(
         (sum, t) => sum + (t.stats.bookings || 0),
-        0
+        0,
       ),
     };
   },

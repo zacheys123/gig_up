@@ -168,7 +168,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 
   const historyEntries = selectedGigData.gig.bookingHistory
     ? [...selectedGigData.gig.bookingHistory].sort(
-        (a: any, b: any) => b.timestamp - a.timestamp
+        (a: any, b: any) => b.timestamp - a.timestamp,
       )
     : [];
 
@@ -182,7 +182,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
           "text-center py-12 rounded-xl border-2 border-dashed",
           isDarkMode
             ? "bg-gray-900/50 border-gray-700"
-            : "bg-gray-50 border-gray-200"
+            : "bg-gray-50 border-gray-200",
         )}
       >
         <div className="relative inline-block mb-4">
@@ -191,7 +191,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4",
               isDarkMode
                 ? "bg-gradient-to-br from-gray-800 to-gray-900"
-                : "bg-gradient-to-br from-gray-100 to-gray-200"
+                : "bg-gradient-to-br from-gray-100 to-gray-200",
             )}
           >
             <HistoryIcon className="w-10 h-10 text-gray-400" />
@@ -212,7 +212,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
             "border-2 hover:scale-105 transition-transform",
             isDarkMode
               ? "border-gray-700 hover:bg-gray-800"
-              : "border-gray-300 hover:bg-gray-100"
+              : "border-gray-300 hover:bg-gray-100",
           )}
         >
           <Sparkles className="w-4 h-4 mr-2" />
@@ -236,7 +236,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
       {/* Header with stats */}
       <div className="space-y-4">
         <div>
-          <h2 className={cn("text-2xl font-bold mb-1", colors.text)}>
+          <h2 className={cn("text-xl font-bold mb-1", colors.text)}>
             Activity Timeline
           </h2>
           <p className={cn("text-sm mb-4", colors.textMuted)}>
@@ -251,10 +251,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               "p-3 rounded-lg border text-center",
               isDarkMode
                 ? "bg-gray-800/50 border-gray-700"
-                : "bg-gray-50 border-gray-200"
+                : "bg-gray-50 border-gray-200",
             )}
           >
-            <p className={cn("text-2xl font-bold mb-1", colors.text)}>
+            <p className={cn("text-xl font-bold mb-1", colors.text)}>
               {stats.total}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
@@ -264,10 +264,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               "p-3 rounded-lg border text-center",
               isDarkMode
                 ? "bg-green-900/20 border-green-800"
-                : "bg-green-50 border-green-200"
+                : "bg-green-50 border-green-200",
             )}
           >
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+            <p className="text-xl font-bold text-green-600 dark:text-green-400 mb-1">
               {stats.booked}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">Booked</p>
@@ -277,10 +277,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               "p-3 rounded-lg border text-center",
               isDarkMode
                 ? "bg-blue-900/20 border-blue-800"
-                : "bg-blue-50 border-blue-200"
+                : "bg-blue-50 border-blue-200",
             )}
           >
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-1">
               {stats.shortlisted}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -292,10 +292,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               "p-3 rounded-lg border text-center",
               isDarkMode
                 ? "bg-gray-800/50 border-gray-700"
-                : "bg-gray-50 border-gray-200"
+                : "bg-gray-50 border-gray-200",
             )}
           >
-            <p className="text-2xl font-bold mb-1 text-amber-600 dark:text-amber-400">
+            <p className="text-xl font-bold mb-1 text-amber-600 dark:text-amber-400">
               {stats.viewed}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">Viewed</p>
@@ -312,7 +312,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
             "gap-2",
             isDarkMode
               ? "border-gray-700 hover:bg-gray-800"
-              : "border-gray-300 hover:bg-gray-100"
+              : "border-gray-300 hover:bg-gray-100",
           )}
           onClick={() => {
             const data = JSON.stringify(historyEntries, null, 2);
@@ -335,7 +335,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
             "gap-2",
             isDarkMode
               ? "border-gray-700 hover:bg-gray-800"
-              : "border-gray-300 hover:bg-gray-100"
+              : "border-gray-300 hover:bg-gray-100",
           )}
         >
           <Filter className="w-4 h-4" />
@@ -356,7 +356,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
             "absolute left-5 top-0 bottom-0 w-0.5",
             isDarkMode
               ? "bg-gradient-to-b from-blue-900/50 via-purple-900/50 to-pink-900/50"
-              : "bg-gradient-to-b from-blue-100 via-purple-100 to-pink-100"
+              : "bg-gradient-to-b from-blue-100 via-purple-100 to-pink-100",
           )}
         />
 
@@ -386,13 +386,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                       "w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
                       isDarkMode
                         ? "bg-gradient-to-br from-gray-800 to-gray-900"
-                        : "bg-gradient-to-br from-white to-gray-100"
+                        : "bg-gradient-to-br from-white to-gray-100",
                     )}
                   >
                     <div
                       className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center border",
-                        getActionBgColor(entry)
+                        getActionBgColor(entry),
                       )}
                     >
                       {getActionIcon(entry)}
@@ -409,7 +409,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                   className={cn(
                     "flex-1 pb-4",
                     index !== historyEntries.length - 1 && "border-b",
-                    isDarkMode ? "border-gray-800" : "border-gray-200"
+                    isDarkMode ? "border-gray-800" : "border-gray-200",
                   )}
                 >
                   <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
@@ -442,7 +442,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                       ? "from-amber-500 to-orange-500"
                                       : userRole?.toLowerCase() === "booker"
                                         ? "from-emerald-500 to-teal-500"
-                                        : "from-blue-500 to-cyan-500"
+                                        : "from-blue-500 to-cyan-500",
                           )}
                         >
                           {userInitial}
@@ -452,7 +452,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                         <p
                           className={cn(
                             "font-semibold text-sm",
-                            isDarkMode ? "text-gray-200" : "text-gray-800"
+                            isDarkMode ? "text-gray-200" : "text-gray-800",
                           )}
                         >
                           {userName}
@@ -465,7 +465,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                 "text-xs px-2 py-0 h-5",
                                 isDarkMode
                                   ? "border-gray-700 bg-gray-800 text-gray-300"
-                                  : "border-gray-300 bg-gray-100 text-gray-700"
+                                  : "border-gray-300 bg-gray-100 text-gray-700",
                               )}
                             >
                               <Music className="w-3 h-3 mr-1" />
@@ -490,7 +490,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                       <Badge
                         className={cn(
                           "px-3 py-1 text-xs font-semibold shadow-sm",
-                          getStatusColor(entry.status)
+                          getStatusColor(entry.status),
                         )}
                       >
                         {entry.status?.charAt(0).toUpperCase() +
@@ -501,7 +501,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                           "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
                           isDarkMode
                             ? "bg-gray-800 text-gray-300"
-                            : "bg-gray-100 text-gray-700"
+                            : "bg-gray-100 text-gray-700",
                         )}
                       >
                         <Clock className="w-3 h-3" />
@@ -516,13 +516,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                       className={cn(
                         "mt-3 p-3 rounded-lg border shadow-sm transition-all duration-200",
                         getActionBgColor(entry),
-                        "group-hover:scale-[1.002] group-hover:shadow-md"
+                        "group-hover:scale-[1.002] group-hover:shadow-md",
                       )}
                     >
                       <p
                         className={cn(
                           "text-sm leading-relaxed",
-                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                          isDarkMode ? "text-gray-300" : "text-gray-700",
                         )}
                       >
                         {entry.notes}
@@ -538,7 +538,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                   "text-xs px-2 py-0 h-5",
                                   isDarkMode
                                     ? "border-gray-700 bg-gray-800/50 text-gray-400"
-                                    : "border-gray-300 bg-gray-100 text-gray-600"
+                                    : "border-gray-300 bg-gray-100 text-gray-600",
                                 )}
                               >
                                 <span className="font-medium">{key}:</span>
@@ -546,7 +546,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                                   {value?.toString()}
                                 </span>
                               </Badge>
-                            )
+                            ),
                           )}
                         </div>
                       )}
@@ -565,7 +565,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
           "rounded-xl p-4 border",
           isDarkMode
             ? "bg-gray-900/30 border-gray-800"
-            : "bg-gray-50 border-gray-200"
+            : "bg-gray-50 border-gray-200",
         )}
       >
         <p className={cn("text-sm mb-3", colors.textMuted)}>

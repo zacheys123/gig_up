@@ -93,7 +93,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useGigUpdate } from "@/lib/gigUpdates";
+import { usegigUpdate } from "@/lib/gigUpdates";
 import { fileupload } from "@/hooks/fileUpload";
 import GigCustomization from "../../../_components/gigs/GigCustomization";
 import BandSetupModal from "../../../_components/gigs/BandSetUpModal";
@@ -555,7 +555,7 @@ const BandSetupPreview = React.memo(
                   </span>
                   <p
                     className={cn(
-                      "text-2xl font-black tracking-tighter leading-none",
+                      "text-xl font-black tracking-tighter leading-none",
                       "text-zinc-900",
                     )}
                   >
@@ -1212,7 +1212,7 @@ export default function EditGigForm({
     gigId: gigId as Id<"gigs">,
   });
   const deleteGig = useMutation(api.controllers.gigs.deleteGig);
-  const { updateGig } = useGigUpdate();
+  const { updateGig } = usegigUpdate();
 
   // Check if user is the owner
   const isOwner = useMemo(() => {
@@ -2615,7 +2615,7 @@ export default function EditGigForm({
       >
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className={`text-2xl font-bold mb-2 ${colors.text}`}>
+          <h2 className={`text-xl font-bold mb-2 ${colors.text}`}>
             Gig Not Found
           </h2>
           <p className={`${colors.textMuted} mb-6`}>
@@ -2636,7 +2636,7 @@ export default function EditGigForm({
       >
         <div className="text-center">
           <Shield className="w-12 h-12 text-orange-500 mx-auto mb-4" />
-          <h2 className={`text-2xl font-bold mb-2 ${colors.text}`}>
+          <h2 className={`text-xl font-bold mb-2 ${colors.text}`}>
             Access Denied
           </h2>
           <p className={`${colors.textMuted} mb-6`}>
@@ -2740,9 +2740,7 @@ export default function EditGigForm({
                 Back
               </Button>
               <div>
-                <h1 className={`text-2xl font-bold ${colors.text}`}>
-                  Edit Gig
-                </h1>
+                <h1 className={`text-xl font-bold ${colors.text}`}>Edit Gig</h1>
                 <p className={`text-sm ${colors.textMuted}`}>{gig.title}</p>
               </div>
             </div>

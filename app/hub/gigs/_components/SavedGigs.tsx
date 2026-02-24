@@ -787,7 +787,7 @@ export const SavedGigs = ({ user }: { user: any }) => {
                     </p>
                     <p
                       className={cn(
-                        "text-2xl font-bold",
+                        "text-xl font-bold",
                         isDarkMode ? "text-white" : "text-gray-900",
                       )}
                     >

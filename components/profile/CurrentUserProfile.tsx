@@ -176,7 +176,7 @@ const CurrentUserProfile = () => {
           userId: user.clerkId,
           currentUserId: user.clerkId, // Add this to show owner all videos
         }
-      : "skip"
+      : "skip",
   );
 
   const [loading, setLoading] = useState(false);
@@ -267,7 +267,7 @@ const CurrentUserProfile = () => {
 
   // Validation
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
-    []
+    [],
   );
 
   // Constants
@@ -501,7 +501,7 @@ const CurrentUserProfile = () => {
               className={cn(
                 "flex items-center gap-1",
                 colors.border,
-                colors.text
+                colors.text,
               )}
             >
               {g}
@@ -517,7 +517,7 @@ const CurrentUserProfile = () => {
             onClick={() => setShowGenreModal(true)}
             className={cn(
               "text-amber-500 hover:text-amber-600 text-sm flex items-center",
-              colors.text
+              colors.text,
             )}
           >
             <Plus size={14} className="mr-1" /> Add Genre
@@ -556,7 +556,7 @@ const CurrentUserProfile = () => {
               className={cn(
                 "flex items-center gap-1",
                 colors.border,
-                colors.text
+                colors.text,
               )}
             >
               {g}
@@ -572,7 +572,7 @@ const CurrentUserProfile = () => {
             onClick={() => setShowGenreModal(true)}
             className={cn(
               "text-amber-500 hover:text-amber-600 text-sm flex items-center",
-              colors.text
+              colors.text,
             )}
           >
             <Plus size={14} className="mr-1" /> Add Genre
@@ -611,7 +611,7 @@ const CurrentUserProfile = () => {
               className={cn(
                 "flex items-center gap-1",
                 colors.border,
-                colors.text
+                colors.text,
               )}
             >
               {g}
@@ -627,7 +627,7 @@ const CurrentUserProfile = () => {
             onClick={() => setShowGenreModal(true)}
             className={cn(
               "text-amber-500 hover:text-amber-600 text-sm flex items-center",
-              colors.text
+              colors.text,
             )}
           >
             <Plus size={14} className="mr-1" /> Add Specialty
@@ -671,7 +671,7 @@ const CurrentUserProfile = () => {
               className={cn(
                 "flex items-center gap-1",
                 colors.border,
-                colors.text
+                colors.text,
               )}
             >
               {g}
@@ -687,7 +687,7 @@ const CurrentUserProfile = () => {
             onClick={() => setShowGenreModal(true)}
             className={cn(
               "text-amber-500 hover:text-amber-600 text-sm flex items-center",
-              colors.text
+              colors.text,
             )}
           >
             <Plus size={14} className="mr-1" /> Add Genre
@@ -768,7 +768,7 @@ const CurrentUserProfile = () => {
               className={cn(
                 "flex items-center gap-1",
                 colors.border,
-                colors.text
+                colors.text,
               )}
             >
               {g}
@@ -784,7 +784,7 @@ const CurrentUserProfile = () => {
             onClick={() => setShowGenreModal(true)}
             className={cn(
               "text-amber-500 hover:text-amber-600 text-sm flex items-center",
-              colors.text
+              colors.text,
             )}
           >
             <Plus size={14} className="mr-1" /> Add Genre
@@ -836,7 +836,7 @@ const CurrentUserProfile = () => {
               variant="outline"
               className={cn(
                 "flex items-center gap-1 bg-blue-500/10 text-blue-600 border-blue-200",
-                colors.text
+                colors.text,
               )}
             >
               {skill}
@@ -852,7 +852,7 @@ const CurrentUserProfile = () => {
             onClick={() => setShowBookerSkillsModal(true)}
             className={cn(
               "text-blue-500 hover:text-blue-600 text-sm flex items-center",
-              colors.text
+              colors.text,
             )}
           >
             <Plus size={14} className="mr-1" /> Add Skill
@@ -894,7 +894,7 @@ const CurrentUserProfile = () => {
   // Booker skill handlers
   const toggleBookerSkill = (skill: string) => {
     setBookerSkills((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
     );
   };
 
@@ -957,7 +957,7 @@ const CurrentUserProfile = () => {
 
   const formatRateDisplay = (
     value: string,
-    currency: string = "KES"
+    currency: string = "KES",
   ): string => {
     if (!value || !isValidRateValue(value)) return "Rate not set";
 
@@ -1087,7 +1087,7 @@ const CurrentUserProfile = () => {
       // Rate recommendation (not requirement)
       const hasBaseRate = rate.baseRate && rate.baseRate.trim() !== "";
       const hasCategoryRates = rate.categories.some(
-        (cat) => cat.rate && cat.rate.trim() !== ""
+        (cat) => cat.rate && cat.rate.trim() !== "",
       );
       const hasLegacyRates = Object.values({
         regular: rate.regular,
@@ -1154,7 +1154,7 @@ const CurrentUserProfile = () => {
     ];
 
     const missingEssential = essentialFields.filter(
-      (field) => !field.value?.trim()
+      (field) => !field.value?.trim(),
     );
     if (missingEssential.length > 0) {
       errors.push({
@@ -1204,7 +1204,7 @@ const CurrentUserProfile = () => {
             label: "View Tips",
             onClick: () => scrollToValidationSummary(),
           },
-        }
+        },
       );
       scrollToValidationSummary();
     }
@@ -1357,7 +1357,7 @@ const CurrentUserProfile = () => {
 
       // Remove undefined values to avoid type conflicts
       const cleanUpdateData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, value]) => value !== undefined)
+        Object.entries(updateData).filter(([_, value]) => value !== undefined),
       );
 
       await updateUser({
@@ -1397,7 +1397,7 @@ const CurrentUserProfile = () => {
         {
           duration: 2000,
           easing: "ease-in-out",
-        }
+        },
       );
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1475,7 +1475,7 @@ const CurrentUserProfile = () => {
           className={cn(
             "rounded-2xl border p-8 mb-8 bg-gradient-to-br from-amber-500/5 to-purple-500/5",
             colors.card,
-            colors.border
+            colors.border,
           )}
         >
           <div className="flex flex-col md:flex-row items-center justify-between">
@@ -1491,7 +1491,7 @@ const CurrentUserProfile = () => {
                   <div
                     className={cn(
                       "w-24 h-24 rounded-full flex items-center justify-center border-4 border-amber-400/30",
-                      colors.secondaryBackground
+                      colors.secondaryBackground,
                     )}
                   >
                     <User size={32} className={colors.textMuted} />
@@ -1508,7 +1508,7 @@ const CurrentUserProfile = () => {
                 <p
                   className={cn(
                     "flex items-center gap-2 mb-3",
-                    colors.textMuted
+                    colors.textMuted,
                   )}
                 >
                   <Globe size={16} /> @{username}
@@ -1524,7 +1524,7 @@ const CurrentUserProfile = () => {
                             ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
                             : isClient
                               ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white"
-                              : "bg-gradient-to-r from-gray-500 to-gray-600 text-white"
+                              : "bg-gradient-to-r from-gray-500 to-gray-600 text-white",
                     )}
                   >
                     {isBooker
@@ -1606,17 +1606,17 @@ const CurrentUserProfile = () => {
               className={cn(
                 "rounded-xl p-4 text-center border transition-all hover:scale-105",
                 colors.card,
-                colors.border
+                colors.border,
               )}
             >
               <div
                 className={cn(
-                  "p-2 rounded-lg bg-gradient-to-br from-amber-500/10 to-purple-500/10 mx-auto w-12 mb-2"
+                  "p-2 rounded-lg bg-gradient-to-br from-amber-500/10 to-purple-500/10 mx-auto w-12 mb-2",
                 )}
               >
                 {stat.icon}
               </div>
-              <p className={cn("text-2xl font-bold mb-1", colors.text)}>
+              <p className={cn("text-xl font-bold mb-1", colors.text)}>
                 {stat.value}
               </p>
               <p className={cn("text-sm", colors.textMuted)}>{stat.label}</p>
@@ -1642,17 +1642,19 @@ const CurrentUserProfile = () => {
                   }}
                   onRemoveVideo={(videoId: string) => {
                     setVideos((prev) =>
-                      prev.filter((video) => video._id !== videoId)
+                      prev.filter((video) => video._id !== videoId),
                     );
                   }}
                   onUpdateVideo={(
                     videoId: string,
-                    updates: Partial<VideoProfileProps>
+                    updates: Partial<VideoProfileProps>,
                   ) => {
                     setVideos((prev) =>
                       prev.map((video) =>
-                        video._id === videoId ? { ...video, ...updates } : video
-                      )
+                        video._id === videoId
+                          ? { ...video, ...updates }
+                          : video,
+                      ),
                     );
                   }}
                   loading={loading}
@@ -1686,7 +1688,7 @@ const CurrentUserProfile = () => {
                   colors.background,
                   colors.border,
                   colors.text,
-                  "focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  "focus:ring-2 focus:ring-amber-500 focus:border-transparent",
                 )}
               />
             </SectionContainer>
@@ -1821,7 +1823,7 @@ const CurrentUserProfile = () => {
                           "w-1/3",
                           colors.background,
                           colors.border,
-                          colors.text
+                          colors.text,
                         )}
                       />
                     </div>
@@ -1895,7 +1897,7 @@ const CurrentUserProfile = () => {
                       <span
                         className={cn(
                           "text-sm font-medium capitalize",
-                          colors.text
+                          colors.text,
                         )}
                       >
                         {handle.platform}:
@@ -1916,7 +1918,7 @@ const CurrentUserProfile = () => {
                   onClick={() => setShowSocialModal(true)}
                   className={cn(
                     "text-amber-500 hover:text-amber-600 text-sm flex items-center",
-                    colors.text
+                    colors.text,
                   )}
                 >
                   <Plus size={14} className="mr-1" /> Add Social Media

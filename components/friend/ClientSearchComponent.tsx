@@ -132,7 +132,7 @@ const ClientSearchComponent = () => {
     return friend?.user?.followers.some((follower) =>
       typeof follower === "string"
         ? follower === userId
-        : follower?._id === userId
+        : follower?._id === userId,
     );
   });
 
@@ -144,7 +144,7 @@ const ClientSearchComponent = () => {
     return friend?.user?.followers.some((follower) =>
       typeof follower === "string"
         ? follower === userId
-        : follower?._id === userId
+        : follower?._id === userId,
     );
   })();
 
@@ -200,7 +200,7 @@ const ClientSearchComponent = () => {
       <div className="mt-20 px-6 pb-10">
         {/* Name and Follow Button */}
         <div className="flex flex-col items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
+          <h1 className="text-xl font-bold text-gray-800">
             {friend?.user?.firstname} {friend?.user?.lastname}
           </h1>
           <p className="text-gray-500 text-sm mb-4">
@@ -276,7 +276,7 @@ const ClientSearchComponent = () => {
               router.push(
                 user?.user?.isClient
                   ? `/create/${userId}`
-                  : `/av_gigs/${userId}`
+                  : `/av_gigs/${userId}`,
               )
             }
             className="flex flex-col items-center text-gray-600 hover:text-indigo-600 transition-colors"
@@ -290,7 +290,7 @@ const ClientSearchComponent = () => {
           <button
             onClick={() =>
               router.push(
-                `/search/allvideos/${friend?.user?._id}/*${user?.user?.firstname}${user?.user?.lastname}`
+                `/search/allvideos/${friend?.user?._id}/*${user?.user?.firstname}${user?.user?.lastname}`,
               )
             }
             className="flex flex-col items-center text-gray-600 hover:text-indigo-600 transition-colors"
@@ -379,7 +379,7 @@ const ClientSearchComponent = () => {
                             handle.startsWith("http")
                               ? handle
                               : `https://${handle}`,
-                            "_blank"
+                            "_blank",
                           )
                         }
                         className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-yellow-500 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
@@ -394,7 +394,7 @@ const ClientSearchComponent = () => {
                             handle.startsWith("http")
                               ? handle
                               : `https://${handle}`,
-                            "_blank"
+                            "_blank",
                           )
                         }
                         className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
@@ -409,7 +409,7 @@ const ClientSearchComponent = () => {
                             handle.startsWith("http")
                               ? handle
                               : `https://${handle}`,
-                            "_blank"
+                            "_blank",
                           )
                         }
                         className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
@@ -424,7 +424,7 @@ const ClientSearchComponent = () => {
                             handle.startsWith("http")
                               ? handle
                               : `https://${handle}`,
-                            "_blank"
+                            "_blank",
                           )
                         }
                         className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
@@ -439,7 +439,7 @@ const ClientSearchComponent = () => {
                             handle.startsWith("http")
                               ? handle
                               : `https://${handle}`,
-                            "_blank"
+                            "_blank",
                           )
                         }
                         className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
@@ -459,13 +459,13 @@ const ClientSearchComponent = () => {
             </h2>
             <div className="flex justify-around">
               <div className="text-center">
-                <p className="text-2xl font-bold text-indigo-600">
+                <p className="text-xl font-bold text-indigo-600">
                   {friend?.user?.followers?.length || 0}
                 </p>
                 <p className="text-sm text-gray-500">Followers</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-xl font-bold text-purple-600">
                   {friend?.user?.followings?.length || 0}
                 </p>
                 <p className="text-sm text-gray-500">Following</p>
@@ -496,7 +496,7 @@ const ClientSearchComponent = () => {
 
         {/* Footer */}
         <div className="mt-10 text-center text-gray-400 text-sm">
-          <p>&copy; {new Date().getFullYear()} Gigup. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} gigUp. All rights reserved.</p>
         </div>
       </div>
     </div>

@@ -247,8 +247,9 @@ export const PracticeTools: React.FC = () => {
     // Simple metronome implementation
     if (typeof window !== "undefined") {
       try {
-        audioContextRef.current = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
+        audioContextRef.current = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )();
         const oscillator = audioContextRef.current.createOscillator();
         const gainNode = audioContextRef.current.createGain();
 
@@ -263,11 +264,11 @@ export const PracticeTools: React.FC = () => {
         metronomeRef.current = setInterval(() => {
           gainNode.gain.setValueAtTime(
             0.3,
-            audioContextRef.current!.currentTime
+            audioContextRef.current!.currentTime,
           );
           gainNode.gain.exponentialRampToValueAtTime(
             0.01,
-            audioContextRef.current!.currentTime + 0.1
+            audioContextRef.current!.currentTime + 0.1,
           );
         }, 60000 / 120); // 120 BPM
       } catch (error) {
@@ -316,29 +317,29 @@ export const PracticeTools: React.FC = () => {
 
   const totalPracticeTime = practiceHistory.reduce(
     (total, entry) => total + entry.duration,
-    0
+    0,
   );
   const averageScore =
     practiceHistory.length > 0
       ? Math.round(
           practiceHistory.reduce((sum, entry) => sum + entry.score, 0) /
-            practiceHistory.length
+            practiceHistory.length,
         )
       : 0;
 
   const getSessionStats = (sessionId: string) => {
     const sessionHistory = practiceHistory.filter(
-      (entry) => entry.session === sessionId
+      (entry) => entry.session === sessionId,
     );
     const totalTime = sessionHistory.reduce(
       (sum, entry) => sum + entry.duration,
-      0
+      0,
     );
     const avgScore =
       sessionHistory.length > 0
         ? Math.round(
             sessionHistory.reduce((sum, entry) => sum + entry.score, 0) /
-              sessionHistory.length
+              sessionHistory.length,
           )
         : 0;
 
@@ -352,7 +353,7 @@ export const PracticeTools: React.FC = () => {
         className={cn(
           "rounded-2xl p-6 md:p-8",
           "bg-gradient-to-br from-orange-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900",
-          colors.cardBorder
+          colors.cardBorder,
         )}
       >
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -374,7 +375,7 @@ export const PracticeTools: React.FC = () => {
               <span
                 className={cn(
                   "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold",
-                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
                 )}
               >
                 <Music className="h-4 w-4" />
@@ -384,7 +385,7 @@ export const PracticeTools: React.FC = () => {
                 className={cn(
                   "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold",
                   colors.backgroundMuted,
-                  colors.textSecondary
+                  colors.textSecondary,
                 )}
               >
                 <Award className="h-4 w-4" />
@@ -410,7 +411,7 @@ export const PracticeTools: React.FC = () => {
           className={cn(
             "rounded-xl p-5 border",
             colors.card,
-            colors.cardBorder
+            colors.cardBorder,
           )}
         >
           <div className="flex items-center gap-4">
@@ -418,7 +419,7 @@ export const PracticeTools: React.FC = () => {
               <Timer className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {formatTime(totalPracticeTime)}
               </div>
               <div className={cn("text-sm", colors.textMuted)}>
@@ -432,7 +433,7 @@ export const PracticeTools: React.FC = () => {
           className={cn(
             "rounded-xl p-5 border",
             colors.card,
-            colors.cardBorder
+            colors.cardBorder,
           )}
         >
           <div className="flex items-center gap-4">
@@ -440,7 +441,7 @@ export const PracticeTools: React.FC = () => {
               <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {practiceHistory.length}
               </div>
               <div className={cn("text-sm", colors.textMuted)}>Sessions</div>
@@ -452,7 +453,7 @@ export const PracticeTools: React.FC = () => {
           className={cn(
             "rounded-xl p-5 border",
             colors.card,
-            colors.cardBorder
+            colors.cardBorder,
           )}
         >
           <div className="flex items-center gap-4">
@@ -460,7 +461,7 @@ export const PracticeTools: React.FC = () => {
               <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {averageScore}%
               </div>
               <div className={cn("text-sm", colors.textMuted)}>Avg. Score</div>
@@ -472,7 +473,7 @@ export const PracticeTools: React.FC = () => {
           className={cn(
             "rounded-xl p-5 border",
             colors.card,
-            colors.cardBorder
+            colors.cardBorder,
           )}
         >
           <div className="flex items-center gap-4">
@@ -480,7 +481,7 @@ export const PracticeTools: React.FC = () => {
               <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
                 14
               </div>
               <div className={cn("text-sm", colors.textMuted)}>Day Streak</div>
@@ -495,7 +496,7 @@ export const PracticeTools: React.FC = () => {
           className={cn(
             "rounded-2xl p-6 border animate-in slide-in-from-bottom-4",
             "bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20",
-            "border-blue-200 dark:border-blue-700 shadow-lg"
+            "border-blue-200 dark:border-blue-700 shadow-lg",
           )}
         >
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
@@ -504,7 +505,7 @@ export const PracticeTools: React.FC = () => {
                 <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
                   {practiceSessions.find((s) => s.id === activeSession)?.icon}
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                   {practiceSessions.find((s) => s.id === activeSession)?.name}
                 </h3>
               </div>
@@ -557,7 +558,7 @@ export const PracticeTools: React.FC = () => {
                       ((practiceSessions.find((s) => s.id === activeSession)
                         ?.duration || 1) *
                         60)) *
-                    100
+                    100,
                 )}
                 %
               </span>
@@ -582,7 +583,7 @@ export const PracticeTools: React.FC = () => {
             "flex-1 py-3 px-4 font-semibold border-b-2 transition-all",
             selectedTab === "sessions"
               ? "border-blue-500 text-blue-600 dark:text-blue-400"
-              : cn("border-transparent", colors.textMuted, colors.hoverBg)
+              : cn("border-transparent", colors.textMuted, colors.hoverBg),
           )}
         >
           <div className="flex items-center justify-center gap-2">
@@ -596,7 +597,7 @@ export const PracticeTools: React.FC = () => {
             "flex-1 py-3 px-4 font-semibold border-b-2 transition-all",
             selectedTab === "history"
               ? "border-purple-500 text-purple-600 dark:text-purple-400"
-              : cn("border-transparent", colors.textMuted, colors.hoverBg)
+              : cn("border-transparent", colors.textMuted, colors.hoverBg),
           )}
         >
           <div className="flex items-center justify-center gap-2">
@@ -610,7 +611,7 @@ export const PracticeTools: React.FC = () => {
             "flex-1 py-3 px-4 font-semibold border-b-2 transition-all",
             selectedTab === "stats"
               ? "border-green-500 text-green-600 dark:text-green-400"
-              : cn("border-transparent", colors.textMuted, colors.hoverBg)
+              : cn("border-transparent", colors.textMuted, colors.hoverBg),
           )}
         >
           <div className="flex items-center justify-center gap-2">
@@ -638,8 +639,8 @@ export const PracticeTools: React.FC = () => {
                     : cn(
                         "border-gray-200 dark:border-gray-700",
                         colors.card,
-                        "hover:shadow-lg"
-                      )
+                        "hover:shadow-lg",
+                      ),
                 )}
               >
                 <div className="flex items-start justify-between mb-4">
@@ -657,7 +658,7 @@ export const PracticeTools: React.FC = () => {
                           ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                           : session.difficulty === "intermediate"
                             ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
                       )}
                     >
                       {session.difficulty}
@@ -718,8 +719,8 @@ export const PracticeTools: React.FC = () => {
                           : cn(
                               "bg-gradient-to-r",
                               color.gradient,
-                              "text-white hover:shadow-md hover:scale-105"
-                            )
+                              "text-white hover:shadow-md hover:scale-105",
+                            ),
                     )}
                   >
                     {isActive ? (
@@ -755,7 +756,7 @@ export const PracticeTools: React.FC = () => {
                   className={cn(
                     "px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2",
                     colors.backgroundMuted,
-                    colors.textSecondary
+                    colors.textSecondary,
                   )}
                 >
                   <Download className="h-4 w-4" />
@@ -765,7 +766,7 @@ export const PracticeTools: React.FC = () => {
                   className={cn(
                     "px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2",
                     colors.backgroundMuted,
-                    colors.textSecondary
+                    colors.textSecondary,
                   )}
                 >
                   <Share2 className="h-4 w-4" />
@@ -778,7 +779,7 @@ export const PracticeTools: React.FC = () => {
               <div className="space-y-3">
                 {practiceHistory.map((entry, index) => {
                   const session = practiceSessions.find(
-                    (s) => s.id === entry.session
+                    (s) => s.id === entry.session,
                   );
                   const color = session
                     ? colorClasses[session.color]
@@ -790,7 +791,7 @@ export const PracticeTools: React.FC = () => {
                       className={cn(
                         "flex items-center justify-between p-4 rounded-lg border",
                         colors.backgroundMuted,
-                        colors.border
+                        colors.border,
                       )}
                     >
                       <div className="flex items-center gap-4">
@@ -841,7 +842,7 @@ export const PracticeTools: React.FC = () => {
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                               : entry.score >= 70
                                 ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
                           )}
                         >
                           {entry.score >= 90
@@ -870,7 +871,7 @@ export const PracticeTools: React.FC = () => {
                   onClick={() =>
                     startSession(
                       practiceSessions[0].id,
-                      practiceSessions[0].duration
+                      practiceSessions[0].duration,
                     )
                   }
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
@@ -890,7 +891,7 @@ export const PracticeTools: React.FC = () => {
               className={cn(
                 "rounded-xl border p-6",
                 colors.card,
-                colors.cardBorder
+                colors.cardBorder,
               )}
             >
               <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
@@ -941,7 +942,7 @@ export const PracticeTools: React.FC = () => {
               className={cn(
                 "rounded-xl border p-6",
                 colors.card,
-                colors.cardBorder
+                colors.cardBorder,
               )}
             >
               <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
@@ -973,7 +974,7 @@ export const PracticeTools: React.FC = () => {
             className={cn(
               "rounded-xl border p-6",
               colors.card,
-              colors.cardBorder
+              colors.cardBorder,
             )}
           >
             <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
@@ -1025,7 +1026,7 @@ export const PracticeTools: React.FC = () => {
         className={cn(
           "rounded-xl border p-6",
           "bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900",
-          colors.cardBorder
+          colors.cardBorder,
         )}
       >
         <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
@@ -1037,7 +1038,7 @@ export const PracticeTools: React.FC = () => {
               "p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all hover:scale-105",
               colors.card,
               colors.cardBorder,
-              colors.hoverBg
+              colors.hoverBg,
             )}
           >
             <RefreshCw className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -1051,7 +1052,7 @@ export const PracticeTools: React.FC = () => {
               "p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all hover:scale-105",
               colors.card,
               colors.cardBorder,
-              colors.hoverBg
+              colors.hoverBg,
             )}
           >
             <Settings className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -1065,7 +1066,7 @@ export const PracticeTools: React.FC = () => {
               "p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all hover:scale-105",
               colors.card,
               colors.cardBorder,
-              colors.hoverBg
+              colors.hoverBg,
             )}
           >
             <Download className="h-6 w-6 text-green-600 dark:text-green-400" />

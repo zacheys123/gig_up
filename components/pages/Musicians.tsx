@@ -41,7 +41,7 @@ const Musicians = ({ _id }: UserProps & { isMobile: boolean }) => {
         default:
           return false;
       }
-    }
+    },
   );
 
   const normalizeString = (str?: string) =>
@@ -88,7 +88,7 @@ const Musicians = ({ _id }: UserProps & { isMobile: boolean }) => {
       }
 
       return false;
-    }
+    },
   );
 
   // const randomUser =
@@ -130,7 +130,7 @@ const Musicians = ({ _id }: UserProps & { isMobile: boolean }) => {
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <div>
-            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
+            <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
               Musicians Near You
             </h2>
             <p className="text-gray-400 mt-1">
@@ -178,7 +178,7 @@ const Musicians = ({ _id }: UserProps & { isMobile: boolean }) => {
                           height={64}
                         />
                       ) : (
-                        <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
+                        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-purple-400">
                           {musician.firstname?.[0]}
                           {musician.lastname?.[0]}
                         </span>
@@ -197,7 +197,7 @@ const Musicians = ({ _id }: UserProps & { isMobile: boolean }) => {
                     )}
                   </div>
                 </motion.div>
-              )
+              ),
             )}
           </div>
         </div>
