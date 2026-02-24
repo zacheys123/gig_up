@@ -116,6 +116,8 @@ import {
   LineChart,
   Zap,
   History,
+  Info,
+  FileText,
 } from "lucide-react";
 // Trust components
 import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
@@ -127,6 +129,11 @@ import PlatformActivitySidebar, {
 } from "../../_components/PlatformActivitySidebar";
 import ComingSoonGigs from "../../_components/ComingSoon";
 import { formatTimeAgo } from "@/utils";
+import { EngagingGigCard } from "../../_components/GigCard";
+import { SimilarGigCard } from "../../_components/SimilarGigCard";
+import { InfoChip } from "../../_components/InfoChip";
+import FollowButton from "@/components/pages/FollowButton";
+import { OnlineBadge } from "@/components/chat/OnlineBadge";
 
 // ============= COMPONENT PLACEHOLDERS =============
 
@@ -190,7 +197,7 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
                   {/* Location */}
                   <div
                     className={cn(
-                      "flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full",
+                      "flex items-center gap-1 text-[10px] md:text- px-2 py-1 rounded-full",
                       isDarkMode
                         ? "bg-slate-800 text-slate-300"
                         : "bg-slate-100 text-slate-600",
@@ -203,7 +210,7 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
                   {/* Date */}
                   <div
                     className={cn(
-                      "flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full",
+                      "flex items-center gap-1 text-[10px] md:text- px-2 py-1 rounded-full",
                       isDarkMode
                         ? "bg-slate-800 text-slate-300"
                         : "bg-slate-100 text-slate-600",
@@ -217,7 +224,7 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
                   {gig.time?.start && (
                     <div
                       className={cn(
-                        "flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full",
+                        "flex items-center gap-1 text-[10px] md:text- px-2 py-1 rounded-full",
                         isDarkMode
                           ? "bg-slate-800 text-slate-300"
                           : "bg-slate-100 text-slate-600",
@@ -235,7 +242,7 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
                 <div className="flex items-baseline gap-1">
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "text-[10px] font-medium",
                       isDarkMode ? "text-slate-400" : "text-slate-500",
                     )}
                   >
@@ -269,7 +276,7 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
         <div className="mt-6">
           <h3
             className={cn(
-              "text-xs font-semibold uppercase tracking-wider mb-2",
+              "text-[10px] font-semibold uppercase tracking-wider mb-2",
               isDarkMode ? "text-slate-400" : "text-slate-500",
             )}
           >
@@ -277,7 +284,7 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
           </h3>
           <p
             className={cn(
-              "text-sm leading-relaxed whitespace-pre-line",
+              "text- leading-relaxed whitespace-pre-line",
               isDarkMode ? "text-slate-300" : "text-slate-600",
             )}
           >
@@ -294,7 +301,7 @@ const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
                   key={i}
                   variant="secondary"
                   className={cn(
-                    "px-2 py-1 text-xs font-medium",
+                    "px-2 py-1 text-[10px] font-medium",
                     isDarkMode
                       ? "bg-slate-800 text-slate-300 border-slate-700"
                       : "bg-slate-100 text-slate-600 border-slate-200",
@@ -380,7 +387,7 @@ const PosterInfoCard = ({
               <Users2 className="w-4 h-4 text-emerald-500" />
               <h3
                 className={cn(
-                  "text-sm font-semibold",
+                  "text- font-semibold",
                   isDarkMode ? "text-white" : "text-slate-900",
                 )}
               >
@@ -392,7 +399,7 @@ const PosterInfoCard = ({
               {/* Reliability Badge */}
               <Badge
                 className={cn(
-                  "text-xs capitalize bg-gradient-to-r text-white border-0 flex items-center gap-1",
+                  "text-[10px] capitalize bg-gradient-to-r text-white border-0 flex items-center gap-1",
                   display.badge.color,
                 )}
               >
@@ -457,7 +464,7 @@ const PosterInfoCard = ({
                       </Badge>
                     )}
                     {poster.city && (
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
+                      <div className="flex items-center gap-1 text-[10px] text-slate-500">
                         <MapPin className="w-3 h-3" />
                         {poster.city}
                       </div>
@@ -580,7 +587,7 @@ const PosterInfoCard = ({
               )}
 
               {/* Simple Summary */}
-              <p className="text-xs text-slate-500 mt-3">
+              <p className="text-[10px] text-slate-500 mt-3">
                 {metrics?.summary ||
                   `${display.reliability.value}% reliable • ${display.response.icon} ${display.response.style}`}
               </p>
@@ -610,7 +617,7 @@ const RequirementsCard = ({ requirements, isDarkMode }: any) => (
       <CardContent className="p-4 md:p-6">
         <h3
           className={cn(
-            "text-sm font-semibold flex items-center gap-2 mb-4",
+            "text- font-semibold flex items-center gap-2 mb-4",
             isDarkMode ? "text-white" : "text-slate-900",
           )}
         >
@@ -624,13 +631,13 @@ const RequirementsCard = ({ requirements, isDarkMode }: any) => (
           {requirements.map((req: string, i: number) => (
             <div key={i} className="flex items-start gap-2 group">
               <div className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                <span className="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
                   {i + 1}
                 </span>
               </div>
               <span
                 className={cn(
-                  "text-sm flex-1",
+                  "text- flex-1",
                   isDarkMode ? "text-slate-300" : "text-slate-600",
                 )}
               >
@@ -660,7 +667,7 @@ const RoleCard = ({ role, index, isDarkMode, currentUser, onApply }: any) => {
       <div className="flex items-center justify-between mb-2">
         <h4
           className={cn(
-            "font-semibold text-sm",
+            "font-semibold text-[11px]",
             isDarkMode ? "text-white" : "text-slate-900",
           )}
         >
@@ -674,7 +681,7 @@ const RoleCard = ({ role, index, isDarkMode, currentUser, onApply }: any) => {
       {role.description && (
         <p
           className={cn(
-            "text-xs mb-3",
+            "text-[10px] mb-3",
             isDarkMode ? "text-slate-400" : "text-slate-500",
           )}
         >
@@ -1441,47 +1448,75 @@ export default function GigDetailsPage({ params }: PageProps) {
     }
   };
 
-  const [upcomingGigs, setUpcomingGigs] = useState<PlatformGig[]>([]);
+  // Memoize the filtered interest gigs
+  const upcomingInterestGigs = useMemo(() => {
+    if (!allGigsData) return [];
 
-  // Add this near your other states (around line 900)
-  const [filteredGigs, setFilteredGigs] = useState<any[]>([]);
+    const now = Date.now();
 
-  // Filter gigs based on active tab
-  useEffect(() => {
-    if (!allGigsData) return;
+    return allGigsData
+      .filter(
+        (gig) =>
+          gig._id !== gigId &&
+          gig.acceptInterestStartTime &&
+          gig.acceptInterestStartTime > now &&
+          !gig.isTaken &&
+          gig.isActive !== false,
+      )
+      .sort(
+        (a, b) =>
+          (a.acceptInterestStartTime || 0) - (b.acceptInterestStartTime || 0),
+      )
+      .slice(0, 8);
+  }, [allGigsData, gigId]);
+
+  // Memoize the filtered event gigs
+  const upcomingEventGigs = useMemo(() => {
+    if (!allGigsData) return [];
+
+    const now = Date.now();
+
+    return allGigsData
+      .filter(
+        (gig) =>
+          gig._id !== gigId &&
+          gig.date &&
+          gig.date > now &&
+          !gig.isTaken &&
+          gig.isActive !== false,
+      )
+      .sort((a, b) => (a.date || 0) - (b.date || 0))
+      .slice(0, 8);
+  }, [allGigsData, gigId]);
+  // REPLACE with this useMemo:
+  const filteredGigs = useMemo(() => {
+    if (!allGigsData) return [];
 
     let filtered = [...allGigsData];
 
     switch (activeTab) {
       case "trending":
-        // Trending: Gigs with most total interactions (interested + applied + booked + views)
+        // Trending: Gigs with most total interactions
         filtered = allGigsData
           .map((gig) => ({
             ...gig,
             interactionScore:
-              (gig.interestedUsers?.length || 0) * 2 + // Interested users weighted more
-              (gig.appliedUsers?.length || 0) * 3 + // Applied users weighted even more
-              (gig.bookedBy ? 10 : 0) + // Booked gigs get big boost
-              (gig.viewCount?.length || 0), // Views count
+              (gig.interestedUsers?.length || 0) * 2 +
+              (gig.appliedUsers?.length || 0) * 3 +
+              (gig.bookedBy ? 10 : 0) +
+              (gig.viewCount?.length || 0),
           }))
           .sort((a, b) => b.interactionScore - a.interactionScore)
           .slice(0, 10);
         break;
 
       case "hot":
-        // Hot: Gigs with most booking history entries (engagement)
+        // Hot: Gigs with most booking history entries
         filtered = allGigsData
           .map((gig) => {
-            // Count total booking history entries
             const bookingHistoryCount = gig.bookingHistory?.length || 0;
-
-            // Count band booking history
             const bandBookingCount = gig.bandBookingHistory?.length || 0;
-
-            // Count bookCount entries
             const bookCountEntries = gig.bookCount?.length || 0;
-
-            // Count shortlisted users
             const shortlistedCount = gig.shortlistedUsers?.length || 0;
 
             return {
@@ -1521,8 +1556,9 @@ export default function GigDetailsPage({ params }: PageProps) {
         filtered = allGigsData.slice(0, 10);
     }
 
-    setFilteredGigs(filtered);
-  }, [activeTab, allGigsData]);
+    return filtered;
+  }, [activeTab, allGigsData]); // Dependencies
+
   // Add these queries near your other useQuery hooks
   const onlineUsers = useQuery(api.controllers.user.getOnlineUsers, {
     thresholdMinutes: 5,
@@ -1611,7 +1647,7 @@ export default function GigDetailsPage({ params }: PageProps) {
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-evenly">
               <div className="hidden md:block">
                 {getMyStatusBadge && getMyStatusBadge()}
               </div>
@@ -1657,51 +1693,130 @@ export default function GigDetailsPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Gig Title - Mobile friendly */}
-          <div className="mb-6">
-            <h1
-              className={cn(
-                "text-xl sm:text-xl md:text-3xl font-bold mb-2",
-                isDarkMode ? "text-white" : "text-slate-900",
-              )}
-            >
-              {gig.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span
+          {/* Gig Title - Enhanced styling */}
+          <div className="mb-8">
+            {/* Title with gradient accent */}
+            <div className="relative mb-3">
+              <h1
                 className={cn(
-                  "px-2 py-1 rounded-lg text-xs",
-                  isDarkMode
-                    ? "bg-slate-800/50 text-slate-300"
-                    : "bg-slate-100/50 text-slate-600",
+                  "text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight",
+                  isDarkMode ? "text-white" : "text-slate-900",
                 )}
               >
-                {gig.bussinesscat || "Gig"}
-              </span>
-              <span
+                {gig.title}
+              </h1>
+
+              {/* Subtle underline accent */}
+              <div
                 className={cn(
-                  "flex items-center gap-1 text-xs",
-                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                  "absolute -bottom-1 left-0 w-16 h-1 rounded-full",
+                  "bg-gradient-to-r from-purple-500 to-pink-500",
+                )}
+              />
+            </div>
+
+            {/* Meta information chips */}
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              {/* Category Chip */}
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+                  "text-[10px] font-medium transition-all",
+                  "border",
+                  isDarkMode
+                    ? "bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20"
+                    : "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100",
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="capitalize">{gig.bussinesscat || "Gig"}</span>
+              </div>
+
+              {/* Location Chip */}
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+                  "text-[10px] font-medium transition-all",
+                  "border",
+                  isDarkMode
+                    ? "bg-blue-500/10 border-blue-500/30 text-blue-300 hover:bg-blue-500/20"
+                    : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
                 )}
               >
                 <MapPin className="w-3.5 h-3.5" />
-                {gig.location?.split(",")[0] || "Remote"}
-              </span>
-              <span
+                <span>{gig.location?.split(",")[0] || "Remote"}</span>
+              </div>
+
+              {/* Date Chip */}
+              <div
                 className={cn(
-                  "flex items-center gap-1 text-xs",
-                  isDarkMode ? "text-slate-400" : "text-slate-500",
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+                  "text-[10px] font-medium transition-all",
+                  "border",
+                  isDarkMode
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
                 )}
               >
                 <Calendar className="w-3.5 h-3.5" />
-                {formatDate(gig.date)}
-              </span>
+                <span>{formatDate(gig.date)}</span>
+              </div>
+
+              {/* Time Chip - if available */}
+              {gig.time?.start && (
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+                    "text-[10px] font-medium transition-all",
+                    "border",
+                    isDarkMode
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+                      : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
+                  )}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    {gig.time.start} - {gig.time.end}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Stats Row - Optional */}
+            <div className="flex items-center gap-4 mt-4 text-xs">
+              {/* Interested count */}
+              {gig.interestedUsers && gig.interestedUsers.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 rounded-full bg-rose-500/10">
+                    <Heart className="w-3 h-3 text-rose-500" />
+                  </div>
+                  <span
+                    className={isDarkMode ? "text-slate-300" : "text-slate-600"}
+                  >
+                    {gig.interestedUsers.length} interested
+                  </span>
+                </div>
+              )}
+
+              {/* Views count */}
+              {gig.viewCount && gig.viewCount.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 rounded-full bg-blue-500/10">
+                    <Eye className="w-3 h-3 text-blue-500" />
+                  </div>
+                  <span
+                    className={isDarkMode ? "text-slate-300" : "text-slate-600"}
+                  >
+                    {gig.viewCount.length} views
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Desktop Layout - Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* LEFT COLUMN - Platform Activity (Fixed & Enhanced) */}
+            {/* LEFT COLUMN - The Vibe */}
             <div className="hidden md:block md:col-span-1">
               {allGigsLoading ? (
                 <Card
@@ -1721,7 +1836,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </Card>
               ) : (
                 <div className="space-y-3 sticky top-24">
-                  {/* SECTION 1: Live Market Activity */}
+                  {/* SECTION 1: THE BUZZ - What's happening now */}
                   <div
                     className={cn(
                       "rounded-xl border-2 overflow-hidden transition-all duration-300",
@@ -1730,847 +1845,546 @@ export default function GigDetailsPage({ params }: PageProps) {
                         : "bg-gradient-to-b from-white via-purple-50/30 to-white border-purple-200 shadow-lg",
                     )}
                   >
-                    {/* Animated header with gradient */}
+                    {/* Header - Improved sizing */}
                     <div
                       className={cn(
-                        "px-3 py-2.5 border-b flex items-center justify-between relative overflow-hidden",
+                        "px-4 py-3 border-b flex items-center justify-between",
                         isDarkMode
                           ? "border-purple-500/20"
                           : "border-purple-200",
                       )}
                     >
-                      {/* Animated background effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-transparent animate-pulse" />
-
-                      <div className="flex items-center gap-2 relative z-10">
-                        <div className="relative">
-                          <Activity className="w-4 h-4 text-purple-500" />
-                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-ping" />
-                        </div>
-                        <div>
-                          <h3
-                            className={cn(
-                              "text-xs font-bold uppercase tracking-wider",
-                              isDarkMode ? "text-white" : "text-slate-900",
-                            )}
-                          >
-                            Social Pulse
-                          </h3>
-                          <p className="text-[8px] text-purple-500 font-mono">
-                            LIVE • REAL-TIME
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {/* Online Users Badge with live count */}
-                        <Badge
-                          variant="outline"
+                      <div className="flex items-center gap-2.5">
+                        <Sparkles className="w-5 h-5 text-purple-500" />
+                        <h3
                           className={cn(
-                            "text-[8px] h-5 px-1.5 font-mono flex items-center gap-1.5",
-                            isDarkMode
-                              ? "border-purple-500/30 text-purple-300"
-                              : "border-purple-300 text-purple-700",
+                            "text- font-bold uppercase tracking-wider",
+                            isDarkMode ? "text-white" : "text-slate-900",
                           )}
                         >
-                          <div className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="font-bold">
-                              {onlineStats?.total || 0}
-                            </span>
-                          </div>
-                          <span>ONLINE</span>
-                        </Badge>
-
-                        {/* "You're online" indicator - only show if current user is online */}
-                        {isCurrentUserOnline && (
-                          <Badge
-                            className={cn(
-                              "text-[7px] h-4 px-1.5 bg-emerald-500/20 text-emerald-500 border-emerald-500/30",
-                            )}
-                          >
-                            YOU'RE ONLINE
-                          </Badge>
-                        )}
+                          The Buzz
+                        </h3>
                       </div>
+
+                      {/* Who's Here - Improved badge */}
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] h-6 px-2 font-mono",
+                          isDarkMode
+                            ? "border-purple-500/30 text-purple-300"
+                            : "border-purple-300 text-purple-700",
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>{onlineStats?.total || 0} here now</span>
+                        </div>
+                      </Badge>
                     </div>
 
-                    {/* Live Activity Ticker - Enhanced with online users */}
+                    {/* Pulse - Live counters - Improved sizing */}
                     <div
                       className={cn(
-                        "px-2 py-1.5 border-b flex items-center gap-3 overflow-x-auto text-[8px] font-mono whitespace-nowrap scrollbar-hide",
+                        "px-4 py-2 border-b flex items-center gap-4 overflow-x-auto text-[10px] font-mono whitespace-nowrap",
                         isDarkMode
                           ? "bg-slate-800/50 border-slate-700"
                           : "bg-slate-100/50 border-slate-200",
                       )}
                     >
-                      {/* Online Users Avatars */}
-                      <div className="flex items-center gap-1.5 min-w-fit">
-                        <div className="flex -space-x-1.5">
-                          {onlineUsers
-                            ?.slice(0, 4)
-                            .map((user: any, i: number) => (
-                              <div
-                                key={user._id}
-                                className="relative group"
-                                style={{ zIndex: 10 - i }}
-                              >
-                                <Avatar className="w-5 h-5 border-2 border-white dark:border-slate-800">
-                                  <AvatarImage src={user.picture} />
-                                  <AvatarFallback className="text-[8px] bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-                                    {user.firstname?.charAt(0) ||
-                                      user.username?.charAt(0) ||
-                                      "U"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-slate-800" />
-
-                                {/* Tooltip on hover */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 hidden group-hover:block z-20">
-                                  <div
-                                    className={cn(
-                                      "text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap",
-                                      isDarkMode
-                                        ? "bg-slate-800 text-white"
-                                        : "bg-white text-slate-900",
-                                      "border shadow-lg",
-                                    )}
-                                  >
-                                    {user.firstname || user.username} •{" "}
-                                    {user.roleType || "Member"}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-
-                        {onlineUsers && onlineUsers.length > 4 && (
-                          <Badge
-                            variant="outline"
-                            className="text-[7px] h-4 px-1 ml-1"
-                          >
-                            +{onlineUsers.length - 4}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <span className="text-slate-400">|</span>
-
-                      {/* Role Breakdown */}
-                      {onlineStats && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-emerald-500">
-                            🎵 {onlineStats.musicians}
-                          </span>
-                          <span className="text-slate-400">•</span>
-                          <span className="text-blue-500">
-                            👔 {onlineStats.clients}
-                          </span>
-                          {onlineStats.bookers > 0 && (
-                            <>
-                              <span className="text-slate-400">•</span>
-                              <span className="text-purple-500">
-                                📅 {onlineStats.bookers}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      <span className="text-slate-400">|</span>
-
-                      {/* Activity Counts */}
-                      <span>
-                        <Heart className="w-2.5 h-2.5 inline text-rose-400" />{" "}
-                        {liveActivity.recentInterests}
+                      <span className="flex items-center gap-1.5">
+                        <Heart className="w-4 h-4 text-rose-400" />
+                        {liveActivity.recentInterests} feeling it
                       </span>
                       <span className="text-slate-400">•</span>
-                      <span>
-                        <Briefcase className="w-2.5 h-2.5 inline text-amber-400" />{" "}
-                        {liveActivity.recentApplications}
+                      <span className="flex items-center gap-1.5">
+                        <Briefcase className="w-4 h-4 text-amber-400" />
+                        {liveActivity.recentApplications} jumped in
                       </span>
                       <span className="text-slate-400">•</span>
-                      <span>
-                        <MapPin className="w-2.5 h-2.5 inline" />{" "}
-                        {liveActivity.topLocation}
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4" />
+                        {liveActivity.topLocation} popping
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      {/* Price ticker - Improved */}
+                      <span className="flex items-center gap-1.5 bg-slate-200/50 dark:bg-slate-700/50 px-2 py-0.5 rounded animate-pulse">
+                        <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-emerald-500 font-bold text-[11px]">
+                          {baseMetrics?.avgPrice || 0}
+                        </span>
+                        <span className="text-[10px] text-slate-400">avg</span>
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
                       </span>
                     </div>
 
-                    {/* Live Feed - Real Activity */}
-                    <div className="px-2 py-1 border-b">
-                      <div className="text-[7px] font-mono text-slate-500 mb-1">
-                        LIVE FEED
-                      </div>
-                      <div className="space-y-1 max-h-[60px] overflow-hidden">
-                        {liveFeed.map((item) => {
-                          // Get random online user for demo (in real app, this would be the actual user)
-                          const randomUser =
-                            onlineUsers?.[
-                              Math.floor(
-                                Math.random() * (onlineUsers?.length || 1),
-                              )
-                            ];
-
-                          return (
-                            <div
-                              key={item.id}
-                              className="flex items-center gap-1.5 text-[7px] animate-pulse group hover:bg-slate-100 dark:hover:bg-slate-800/50 p-0.5 rounded transition-all"
-                            >
-                              <div className="relative flex-shrink-0">
-                                <Avatar className="w-4 h-4">
-                                  <AvatarImage src={randomUser?.picture} />
-                                  <AvatarFallback className="text-[6px] bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-                                    U
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="absolute -bottom-0.5 -right-0.5 w-1 h-1 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-slate-800" />
-                              </div>
-                              <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[50px]">
-                                {randomUser?.firstname || "User"}
-                              </span>
-                              {getActivityIcon(item.type)}
-                              <span className="truncate max-w-[60px] text-slate-600 dark:text-slate-400">
-                                {item.gigTitle}
-                              </span>
-                              <span className="text-slate-400">•</span>
-                              <span className="text-slate-500">
-                                {Math.floor(
-                                  (Date.now() - item.timestamp) / 1000,
-                                )}
-                                s ago
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Quick Filters */}
-                    <div className="px-2 pt-2">
+                    {/* Fresh Drops - Live feed - Improved */}
+                    <div className="px-4 py-2 border-b">
                       <div
                         className={cn(
-                          "flex gap-1 p-1 rounded-xl backdrop-blur-sm border shadow-inner",
-                          isDarkMode
-                            ? "bg-gradient-to-b from-slate-800/80 to-slate-900/50 border-slate-700/50"
-                            : "bg-gradient-to-b from-slate-100/80 to-slate-200/50 border-slate-200/50",
+                          "text-[10px] font-mono mb-2 font-semibold",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        FRESH DROPS
+                      </div>
+                      <div className="space-y-1.5 max-h-[70px] overflow-hidden">
+                        {liveFeed.slice(0, 3).map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-1.5 text-xs"
+                          >
+                            {getActivityIcon(item.type)}
+                            <span
+                              className={cn(
+                                "truncate max-w-[120px]",
+                                isDarkMode
+                                  ? "text-slate-300"
+                                  : "text-slate-700",
+                              )}
+                            >
+                              {item.gigTitle}
+                            </span>
+                            <span className="text-slate-400">•</span>
+                            <span
+                              className={cn(
+                                "text-xs",
+                                isDarkMode
+                                  ? "text-slate-500"
+                                  : "text-slate-400",
+                              )}
+                            >
+                              {Math.floor((Date.now() - item.timestamp) / 1000)}
+                              s ago
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mood Filters - Improved */}
+                    <div className="px-4 pt-3">
+                      <div
+                        className={cn(
+                          "flex gap-2 p-1 rounded-lg",
+                          isDarkMode ? "bg-slate-800" : "bg-slate-100",
                         )}
                       >
                         {[
-                          {
-                            id: "trending",
-                            icon: TrendingUp,
-                            label: "Trending",
-                            color: "rose",
-                            description: "Most active gigs right now",
-                          },
-                          {
-                            id: "hot",
-                            icon: Sparkles,
-                            label: "Hot",
-                            color: "amber",
-                            description: "High demand, limited time",
-                          },
+                          { id: "trending", label: "🔥 Fire", color: "rose" },
+                          { id: "hot", label: "⚡ Lit", color: "amber" },
                           {
                             id: "closing",
-                            icon: Timer,
-                            label: "Closing",
+                            label: "⏰ Last Call",
                             color: "purple",
-                            description: "Applications ending soon",
                           },
-                        ].map((filter) => {
-                          const Icon = filter.icon;
-                          const isActive = activeTab === filter.id;
-
-                          // Dynamic color classes based on filter and dark mode
-                          const getActiveClasses = () => {
-                            if (isDarkMode) {
-                              switch (filter.id) {
-                                case "trending":
-                                  return "bg-gradient-to-br from-rose-600 to-rose-700 text-white shadow-lg shadow-rose-500/20";
-                                case "hot":
-                                  return "bg-gradient-to-br from-amber-600 to-amber-700 text-white shadow-lg shadow-amber-500/20";
-                                case "closing":
-                                  return "bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/20";
-                                default:
-                                  return "bg-slate-700 text-white";
-                              }
-                            } else {
-                              switch (filter.id) {
-                                case "trending":
-                                  return "bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-200";
-                                case "hot":
-                                  return "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md shadow-amber-200";
-                                case "closing":
-                                  return "bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md shadow-purple-200";
-                                default:
-                                  return "bg-slate-500 text-white";
-                              }
-                            }
-                          };
-
-                          const getInactiveClasses = () => {
-                            return isDarkMode
-                              ? "bg-slate-800/50 text-slate-300 hover:bg-slate-700/80 hover:text-white border border-slate-700/50"
-                              : "bg-white/50 text-slate-600 hover:bg-white hover:text-slate-900 border border-slate-200/50";
-                          };
-
-                          const getPingColor = () => {
-                            if (isDarkMode) {
-                              switch (filter.id) {
-                                case "trending":
-                                  return "bg-rose-400";
-                                case "hot":
-                                  return "bg-amber-400";
-                                case "closing":
-                                  return "bg-purple-400";
-                                default:
-                                  return "bg-slate-400";
-                              }
-                            } else {
-                              switch (filter.id) {
-                                case "trending":
-                                  return "bg-rose-500";
-                                case "hot":
-                                  return "bg-amber-500";
-                                case "closing":
-                                  return "bg-purple-500";
-                                default:
-                                  return "bg-slate-500";
-                              }
-                            }
-                          };
-
-                          const getDotColor = () => {
-                            if (isDarkMode) {
-                              switch (filter.id) {
-                                case "trending":
-                                  return "bg-rose-500";
-                                case "hot":
-                                  return "bg-amber-500";
-                                case "closing":
-                                  return "bg-purple-500";
-                                default:
-                                  return "bg-slate-500";
-                              }
-                            } else {
-                              switch (filter.id) {
-                                case "trending":
-                                  return "bg-rose-600";
-                                case "hot":
-                                  return "bg-amber-600";
-                                case "closing":
-                                  return "bg-purple-600";
-                                default:
-                                  return "bg-slate-600";
-                              }
-                            }
-                          };
-
-                          return (
-                            <Tooltip key={filter.id}>
-                              <TooltipTrigger asChild>
-                                <button
-                                  onClick={() => setActiveTab(filter.id)}
-                                  className={cn(
-                                    "group relative flex-1 py-2 rounded-lg text-[11px] font-semibold transition-all duration-200",
-                                    "flex items-center justify-center gap-1.5",
-                                    "hover:shadow-md hover:scale-[1.02] active:scale-[0.98]",
-                                    isActive
-                                      ? getActiveClasses()
-                                      : getInactiveClasses(),
-                                  )}
-                                >
-                                  {/* Animated indicator for active state */}
-                                  {isActive && (
-                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5">
-                                      <span
-                                        className={cn(
-                                          "absolute inline-flex h-full w-full rounded-full",
-                                          getPingColor(),
-                                          "animate-ping opacity-75",
-                                        )}
-                                      />
-                                      <span
-                                        className={cn(
-                                          "relative inline-flex rounded-full h-1.5 w-1.5",
-                                          getDotColor(),
-                                        )}
-                                      />
-                                    </span>
-                                  )}
-
-                                  <Icon
-                                    className={cn(
-                                      "w-3.5 h-3.5 transition-transform group-hover:scale-110",
-                                      isActive && "animate-bounce-small",
-                                      isActive && isDarkMode
-                                        ? "text-white"
-                                        : isActive
-                                          ? "text-white"
-                                          : "",
-                                    )}
-                                  />
-                                  <span className="hidden sm:inline">
-                                    {filter.label}
-                                  </span>
-
-                                  {/* Counter badge */}
-                                  {isActive && (
-                                    <span
-                                      className={cn(
-                                        "ml-1 px-1 py-0.5 rounded-full text-[8px] font-bold",
-                                        isDarkMode
-                                          ? "bg-white/20"
-                                          : "bg-white/30",
-                                      )}
-                                    >
-                                      ●
-                                    </span>
-                                  )}
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="top"
-                                className={cn(
-                                  "text-[10px] font-medium px-2 py-1 border",
-                                  isDarkMode
-                                    ? "bg-slate-800 text-slate-200 border-slate-700"
-                                    : "bg-white text-slate-700 border-slate-200",
-                                )}
-                              >
-                                <div className="flex flex-col items-center">
-                                  <span className="font-bold">
-                                    {filter.label}
-                                  </span>
-                                  <span
-                                    className={cn(
-                                      "text-[8px]",
-                                      isDarkMode
-                                        ? "text-slate-400"
-                                        : "text-slate-500",
-                                    )}
-                                  >
-                                    {filter.description}
-                                  </span>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        })}
+                        ].map((filter) => (
+                          <button
+                            key={filter.id}
+                            onClick={() => setActiveTab(filter.id)}
+                            className={cn(
+                              "flex-1 py-2 rounded-md text-[11px] font-medium transition-all",
+                              activeTab === filter.id
+                                ? isDarkMode
+                                  ? `bg-${filter.color}-600 text-white`
+                                  : `bg-${filter.color}-500 text-white`
+                                : isDarkMode
+                                  ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-200",
+                            )}
+                          >
+                            {filter.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Activity Feed - Compact Cards */}
-                    <div className="p-2 max-h-[320px] overflow-y-auto scrollbar-thin">
-                      <div className="space-y-1.5">
+                    {/* Trending Picks - Improved header */}
+                    <div className="p-3">
+                      <h4
+                        className={cn(
+                          "text-[10px] font-mono mb-2 font-semibold",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        TRENDING PICKS
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto scrollbar-hide">
                         {filteredGigs
                           .slice(0, 6)
-                          .map((gig: any, idx: number) => {
-                            // Calculate interaction stats for display
-                            const totalInteractions =
-                              (gig.interestedUsers?.length || 0) +
-                              (gig.appliedUsers?.length || 0) +
-                              (gig.bookingHistory?.length || 0) +
-                              (gig.viewCount?.length || 0);
+                          .map((gig: any, idx: number) => (
+                            <EngagingGigCard
+                              key={gig._id}
+                              gig={gig}
+                              activeTab={activeTab}
+                              index={idx}
+                              onViewGig={handleViewGig}
+                            />
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: COMING THROUGH */}
+                  <div className="space-y-4">
+                    {/* Dropping Soon - Enhanced */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className={cn(
+                        "rounded-xl border overflow-hidden transition-all duration-300",
+                        "hover:shadow-xl hover:shadow-purple-500/5",
+                        isDarkMode
+                          ? "bg-slate-900/80 border-purple-500/30 backdrop-blur-sm"
+                          : "bg-white/90 border-purple-200 shadow-lg hover:shadow-purple-500/10",
+                      )}
+                    >
+                      {/* Header with gradient */}
+                      <div
+                        className={cn(
+                          "px-4 py-3 border-b flex items-center justify-between",
+                          "bg-gradient-to-r",
+                          isDarkMode
+                            ? "from-purple-500/10 to-transparent border-purple-500/20"
+                            : "from-purple-50 to-transparent border-purple-200",
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <Timer className="w-5 h-5 text-purple-500" />
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-ping opacity-50" />
+                          </div>
+                          <div>
+                            <span
+                              className={cn(
+                                "text-sm font-bold uppercase tracking-wider",
+                                isDarkMode ? "text-white" : "text-slate-900",
+                              )}
+                            >
+                              Dropping Soon
+                            </span>
+                            <p
+                              className={cn(
+                                "text-[10px] font-mono",
+                                isDarkMode
+                                  ? "text-purple-300/70"
+                                  : "text-purple-600/70",
+                              )}
+                            >
+                              applications opening
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          className={cn(
+                            "text-xs h-6 px-3 font-bold shadow-lg",
+                            isDarkMode
+                              ? "bg-purple-500/20 text-purple-300 border-purple-500/30 backdrop-blur-sm"
+                              : "bg-purple-100 text-purple-700 border-purple-200",
+                          )}
+                        >
+                          {upcomingInterestGigs.length} upcoming
+                        </Badge>
+                      </div>
+
+                      {/* Info Bar */}
+                      <div
+                        className={cn(
+                          "px-4 py-2 border-b flex items-center gap-2",
+                          isDarkMode
+                            ? "bg-purple-500/5 border-purple-500/20"
+                            : "bg-purple-50/50 border-purple-200",
+                        )}
+                      >
+                        <Info className="w-3.5 h-3.5 text-purple-400" />
+                        <span
+                          className={cn(
+                            "text-[11px] font-mono",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
+                          ⏰ When you can apply • Interest window
+                        </span>
+                      </div>
+
+                      {/* Cards Grid */}
+                      <div className="p-4">
+                        <div className="grid grid-cols-3 gap-3">
+                          {upcomingInterestGigs.slice(0, 3).map((gig) => {
+                            const startTime = gig.acceptInterestStartTime!;
+                            const now = Date.now();
+                            const daysUntil = Math.ceil(
+                              (startTime - now) / (1000 * 60 * 60 * 24),
+                            );
+                            const hoursUntil = Math.floor(
+                              (startTime - now) / (1000 * 60 * 60),
+                            );
+
+                            const timeDisplay =
+                              daysUntil > 0
+                                ? `${daysUntil}d`
+                                : `${hoursUntil}h`;
 
                             return (
                               <motion.div
                                 key={gig._id}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileHover={{ y: -4, scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                                 onClick={() => handleViewGig(gig)}
                                 className={cn(
-                                  "p-2 rounded-lg border cursor-pointer transition-all group relative overflow-hidden",
+                                  "group relative flex flex-col items-center p-3 rounded-xl cursor-pointer transition-all",
+                                  "border shadow-sm hover:shadow-xl",
                                   isDarkMode
-                                    ? "bg-slate-800/40 border-slate-700/50 hover:border-purple-500/50 hover:bg-slate-800/60"
-                                    : "bg-white/40 border-slate-200/50 hover:border-purple-300 hover:bg-white/80",
+                                    ? "bg-slate-800/40 border-purple-500/20 hover:border-purple-500/40 hover:bg-slate-800/60 hover:shadow-purple-500/10"
+                                    : "bg-white/80 border-purple-200/60 hover:border-purple-300 hover:bg-white hover:shadow-purple-500/5",
                                 )}
                               >
-                                {/* Animated hover effect */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                                {/* Glow effect on hover */}
+                                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:via-purple-500/5 group-hover:to-transparent transition-all duration-500" />
 
-                                <div className="flex items-center gap-2 relative">
-                                  {/* Status indicator based on filter type */}
+                                {/* Day circle with countdown */}
+                                <div className="relative mb-2">
                                   <div
                                     className={cn(
-                                      "w-1 h-8 rounded-full",
-                                      activeTab === "trending" &&
-                                        totalInteractions > 20 &&
-                                        "bg-emerald-500",
-                                      activeTab === "trending" &&
-                                        totalInteractions > 10 &&
-                                        totalInteractions <= 20 &&
-                                        "bg-amber-500",
-                                      activeTab === "hot" &&
-                                        (gig.bookingHistory?.length || 0) > 5 &&
-                                        "bg-orange-500",
-                                      activeTab === "closing" &&
-                                        "bg-purple-500",
-                                      (!activeTab || activeTab === "all") &&
-                                        "bg-blue-500",
+                                      "w-12 h-12 rounded-full flex items-center justify-center",
+                                      "bg-gradient-to-br shadow-lg",
+                                      daysUntil <= 1
+                                        ? "from-orange-500 to-red-500 shadow-orange-500/30"
+                                        : "from-purple-500 to-pink-500 shadow-purple-500/30",
                                     )}
-                                  />
-
-                                  {/* Avatar */}
-                                  <Avatar className="w-6 h-6 rounded-md border border-white dark:border-slate-700">
-                                    <AvatarImage src={gig.logo} />
-                                    <AvatarFallback className="text-[9px] bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-                                      {gig.title?.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between">
-                                      <h4 className="font-medium text-[11px] truncate max-w-[100px] group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                                        {gig.title}
-                                      </h4>
-
-                                      {/* Show filter-specific badge */}
-                                      {activeTab === "trending" && (
-                                        <span className="text-[8px] px-1 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 font-mono">
-                                          🔥 {totalInteractions}
-                                        </span>
-                                      )}
-                                      {activeTab === "hot" && (
-                                        <span className="text-[8px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-mono">
-                                          ⚡{" "}
-                                          {(gig.bookingHistory?.length || 0) +
-                                            (gig.bandBookingHistory?.length ||
-                                              0)}
-                                        </span>
-                                      )}
-                                      {activeTab === "closing" && (
-                                        <span className="text-[8px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-mono">
-                                          ⏰{" "}
-                                          {Math.ceil(
-                                            (gig.acceptInterestEndTime! -
-                                              Date.now()) /
-                                              (1000 * 60 * 60),
-                                          )}
-                                          h
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Compact metrics row - shows different metrics based on filter */}
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      {activeTab === "trending" && (
-                                        <>
-                                          <div className="flex items-center gap-1">
-                                            <Heart className="w-2.5 h-2.5 text-rose-400" />
-                                            <span className="text-[8px] text-slate-500 font-mono">
-                                              {gig.interestedUsers?.length || 0}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-1">
-                                            <Briefcase className="w-2.5 h-2.5 text-amber-400" />
-                                            <span className="text-[8px] text-slate-500 font-mono">
-                                              {gig.appliedUsers?.length || 0}
-                                            </span>
-                                          </div>
-                                        </>
-                                      )}
-
-                                      {activeTab === "hot" && (
-                                        <>
-                                          <div className="flex items-center gap-1">
-                                            <History />
-                                            <span className="text-[8px] text-slate-500 font-mono">
-                                              {gig.bookingHistory?.length || 0}{" "}
-                                              actions
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-1">
-                                            <Users className="w-2.5 h-2.5 text-blue-400" />
-                                            <span className="text-[8px] text-slate-500 font-mono">
-                                              {gig.shortlistedUsers?.length ||
-                                                0}{" "}
-                                              shortlisted
-                                            </span>
-                                          </div>
-                                        </>
-                                      )}
-
-                                      {activeTab === "closing" && (
-                                        <>
-                                          <div className="flex items-center gap-1">
-                                            <Timer className="w-2.5 h-2.5 text-purple-400" />
-                                            <span className="text-[8px] text-slate-500 font-mono">
-                                              closes{" "}
-                                              {new Date(
-                                                gig.acceptInterestEndTime!,
-                                              ).toLocaleTimeString([], {
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                              })}
-                                            </span>
-                                          </div>
-                                        </>
-                                      )}
-
-                                      <div className="flex items-center gap-1 ml-auto">
-                                        <Clock className="w-2.5 h-2.5 text-slate-400" />
-                                        <span className="text-[7px] text-slate-500 font-mono">
-                                          {formatTimeAgo(gig._creationTime)}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* Price indicator */}
-                                    {gig.price && (
-                                      <div className="flex items-center gap-1 mt-0.5">
-                                        <DollarSign className="w-2 h-2 text-emerald-500" />
-                                        <span className="text-[7px] text-emerald-500 font-bold">
-                                          {gig.currency}{" "}
-                                          {gig.price.toLocaleString()}
-                                        </span>
-                                      </div>
-                                    )}
+                                  >
+                                    <span className="text-white text-sm font-bold">
+                                      {timeDisplay}
+                                    </span>
                                   </div>
+                                  {/* Live pulse for soonest gig */}
+                                  {daysUntil <= 1 && (
+                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500" />
+                                    </span>
+                                  )}
                                 </div>
+
+                                {/* Gig title */}
+                                <h5
+                                  className={cn(
+                                    "text-xs font-medium text-center line-clamp-2 mb-1",
+                                    isDarkMode
+                                      ? "text-slate-200"
+                                      : "text-slate-800",
+                                    "group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors",
+                                  )}
+                                >
+                                  {gig.title}
+                                </h5>
+
+                                {/* Location tag */}
+                                {gig.location && (
+                                  <div className="flex items-center gap-0.5 text-[9px] text-slate-500">
+                                    <MapPin className="w-2.5 h-2.5" />
+                                    <span className="truncate max-w-[70px]">
+                                      {gig.location.split(",")[0]}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Interest indicator */}
+                                {gig.interestedUsers &&
+                                  gig.interestedUsers.length > 0 && (
+                                    <div className="absolute top-2 right-2">
+                                      <div className="flex items-center gap-0.5 bg-rose-500/10 text-rose-500 rounded-full px-1.5 py-0.5 text-[8px] font-medium border border-rose-500/20">
+                                        <Heart className="w-2.5 h-2.5" />
+                                        <span>
+                                          {gig.interestedUsers.length}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
                               </motion.div>
                             );
                           })}
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
 
-                    {/* Live footer with social stats */}
-                    <div
+                    {/* On the Horizon - Enhanced */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
                       className={cn(
-                        "px-2 py-1.5 border-t flex items-center justify-between text-[7px] font-mono",
+                        "rounded-xl border overflow-hidden transition-all duration-300",
+                        "hover:shadow-xl hover:shadow-emerald-500/5",
                         isDarkMode
-                          ? "border-slate-700/50 bg-slate-800/30"
-                          : "border-slate-200/50 bg-slate-100/30",
+                          ? "bg-slate-900/80 border-emerald-500/30 backdrop-blur-sm"
+                          : "bg-white/90 border-emerald-200 shadow-lg hover:shadow-emerald-500/10",
                       )}
                     >
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse delay-150" />
-                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse delay-300" />
-                        </div>
-                        <span className="text-[8px] font-bold uppercase tracking-wider">
-                          SOCIAL FEED
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[8px] text-slate-500">
-                          <Users className="w-2.5 h-2.5 inline mr-1" />
-                          {onlineUsers?.length || 0} online
-                        </span>
-                        <span className="text-[8px] text-slate-500">•</span>
-                        <span className="text-[8px] text-slate-500">
-                          {new Date().toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SECTION 2: Coming Soon */}
-                  <div
-                    className={cn(
-                      "rounded-xl border-2 overflow-hidden transition-all duration-300",
-                      isDarkMode
-                        ? "bg-gradient-to-b from-slate-900 via-indigo-900/20 to-slate-900 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-                        : "bg-gradient-to-b from-white via-indigo-50/30 to-white border-indigo-200 shadow-lg",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "px-3 py-2 border-b flex items-center justify-between relative",
-                        isDarkMode
-                          ? "border-indigo-500/20"
-                          : "border-indigo-200",
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="relative">
-                          <Calendar className="w-4 h-4 text-indigo-500" />
-                          <div className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                        </div>
-                        <div>
-                          <h3
-                            className={cn(
-                              "text-xs font-bold uppercase tracking-wider",
-                              isDarkMode ? "text-white" : "text-slate-900",
-                            )}
-                          >
-                            Opening Soon
-                          </h3>
-                          <p className="text-[8px] text-indigo-500 font-mono">
-                            APPLICATIONS OPENING
-                          </p>
-                        </div>
-                      </div>
-                      <Badge
-                        className={cn(
-                          "text-[9px] px-1.5 py-0.5 font-mono",
-                          isDarkMode
-                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
-                            : "bg-indigo-100 text-indigo-700 border-indigo-200",
-                        )}
-                      >
-                        {upcomingGigs.length} NEW
-                      </Badge>
-                    </div>
-
-                    {/* Countdown Summary */}
-                    {upcomingGigs.length > 0 && (
+                      {/* Header with gradient */}
                       <div
                         className={cn(
-                          "px-2 py-1.5 border-b flex items-center justify-between text-[8px]",
+                          "px-4 py-3 border-b flex items-center justify-between",
+                          "bg-gradient-to-r",
                           isDarkMode
-                            ? "bg-indigo-900/20 border-indigo-800/30"
-                            : "bg-indigo-50 border-indigo-100",
+                            ? "from-emerald-500/10 to-transparent border-emerald-500/20"
+                            : "from-emerald-50 to-transparent border-emerald-200",
                         )}
                       >
-                        <span>Next opening in:</span>
-                        <span className="font-mono font-bold text-indigo-500">
-                          {Math.floor(
-                            (upcomingGigs[0]?.acceptInterestStartTime! -
-                              Date.now()) /
-                              (1000 * 60 * 60),
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <Calendar className="w-5 h-5 text-emerald-500" />
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-ping opacity-50" />
+                          </div>
+                          <div>
+                            <span
+                              className={cn(
+                                "text-sm font-bold uppercase tracking-wider",
+                                isDarkMode ? "text-white" : "text-slate-900",
+                              )}
+                            >
+                              On the Horizon
+                            </span>
+                            <p
+                              className={cn(
+                                "text-[10px] font-mono",
+                                isDarkMode
+                                  ? "text-emerald-300/70"
+                                  : "text-emerald-600/70",
+                              )}
+                            >
+                              event dates
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          className={cn(
+                            "text-xs h-6 px-3 font-bold shadow-lg",
+                            isDarkMode
+                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 backdrop-blur-sm"
+                              : "bg-emerald-100 text-emerald-700 border-emerald-200",
                           )}
-                          h{" "}
-                          {Math.floor(
-                            ((upcomingGigs[0]?.acceptInterestStartTime! -
-                              Date.now()) %
-                              (1000 * 60 * 60)) /
-                              (1000 * 60),
+                        >
+                          {upcomingEventGigs.length} upcoming
+                        </Badge>
+                      </div>
+
+                      {/* Info Bar */}
+                      <div
+                        className={cn(
+                          "px-4 py-2 border-b flex items-center gap-2",
+                          isDarkMode
+                            ? "bg-emerald-500/5 border-emerald-500/20"
+                            : "bg-emerald-50/50 border-emerald-200",
+                        )}
+                      >
+                        <Info className="w-3.5 h-3.5 text-emerald-400" />
+                        <span
+                          className={cn(
+                            "text-[11px] font-mono",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
                           )}
-                          m
+                        >
+                          📅 When the gig happens • Event date
                         </span>
                       </div>
-                    )}
 
-                    <div className="p-2 space-y-1 max-h-[180px] overflow-y-auto scrollbar-thin">
-                      {upcomingGigs.slice(0, 4).map((gig) => {
-                        const startTime = gig.acceptInterestStartTime!;
-                        const now = Date.now();
-                        const daysUntil = Math.ceil(
-                          (startTime - now) / (1000 * 60 * 60 * 24),
-                        );
-                        const hoursUntil = Math.floor(
-                          (startTime - now) / (1000 * 60 * 60),
-                        );
+                      {/* Cards Grid */}
+                      <div className="p-4">
+                        <div className="grid grid-cols-3 gap-3">
+                          {upcomingEventGigs.slice(0, 3).map((gig) => {
+                            const eventDate = gig.date;
+                            const now = Date.now();
+                            const daysUntil = Math.ceil(
+                              (eventDate - now) / (1000 * 60 * 60 * 24),
+                            );
 
-                        return (
-                          <motion.div
-                            key={gig._id}
-                            whileHover={{ x: 4 }}
-                            onClick={() => handleViewGig(gig)}
-                            className={cn(
-                              "p-1.5 rounded-lg border cursor-pointer transition-all group",
-                              isDarkMode
-                                ? "bg-slate-800/30 border-indigo-500/20 hover:border-indigo-500/50 hover:bg-slate-800/50"
-                                : "bg-white/30 border-indigo-200/50 hover:border-indigo-300 hover:bg-white/60",
-                            )}
-                          >
-                            <div className="flex items-center gap-2">
-                              {/* Timer Circle */}
-                              <div className="relative flex-shrink-0">
-                                <div
-                                  className={cn(
-                                    "w-8 h-8 rounded-md flex flex-col items-center justify-center",
-                                    daysUntil <= 1
-                                      ? "bg-gradient-to-br from-orange-500 to-red-500"
-                                      : "bg-gradient-to-br from-indigo-500 to-purple-500",
-                                  )}
-                                >
-                                  <span className="text-[10px] font-bold text-white leading-tight">
-                                    {daysUntil}d
-                                  </span>
-                                  <span className="text-[6px] text-white/80 uppercase tracking-wider">
-                                    {hoursUntil}h
-                                  </span>
-                                </div>
-                                {daysUntil <= 1 && (
-                                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-ping" />
+                            return (
+                              <motion.div
+                                key={gig._id}
+                                whileHover={{ y: -4, scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleViewGig(gig)}
+                                className={cn(
+                                  "group relative flex flex-col items-center p-3 rounded-xl cursor-pointer transition-all",
+                                  "border shadow-sm hover:shadow-xl",
+                                  isDarkMode
+                                    ? "bg-slate-800/40 border-emerald-500/20 hover:border-emerald-500/40 hover:bg-slate-800/60 hover:shadow-emerald-500/10"
+                                    : "bg-white/80 border-emerald-200/60 hover:border-emerald-300 hover:bg-white hover:shadow-emerald-500/5",
                                 )}
-                              </div>
+                              >
+                                {/* Glow effect on hover */}
+                                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/5 group-hover:to-transparent transition-all duration-500" />
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-medium text-[10px] truncate max-w-[90px] group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-                                    {gig.title}
-                                  </h4>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[7px] h-3 px-1 border-indigo-300 text-indigo-600 dark:border-indigo-700 dark:text-indigo-400"
-                                  >
-                                    {new Date(startTime).toLocaleDateString(
-                                      [],
-                                      {
-                                        month: "short",
-                                        day: "numeric",
-                                      },
+                                {/* Day circle with countdown */}
+                                <div className="relative mb-2">
+                                  <div
+                                    className={cn(
+                                      "w-12 h-12 rounded-full flex items-center justify-center",
+                                      "bg-gradient-to-br shadow-lg",
+                                      daysUntil <= 7
+                                        ? "from-amber-500 to-orange-500 shadow-amber-500/30"
+                                        : "from-emerald-500 to-teal-500 shadow-emerald-500/30",
                                     )}
-                                  </Badge>
-                                </div>
-
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-2 h-2 text-slate-400" />
-                                    <span className="text-[7px] text-slate-500 truncate max-w-[50px]">
-                                      {gig.location?.split(",")[0] || "Remote"}
+                                  >
+                                    <span className="text-white text-sm font-bold">
+                                      {daysUntil}d
                                     </span>
                                   </div>
+                                  {/* Soon indicator */}
+                                  {daysUntil <= 3 && (
+                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+                                    </span>
+                                  )}
+                                </div>
 
-                                  {/* Early interest indicator */}
-                                  {gig.interestedUsers &&
-                                    gig.interestedUsers.length > 0 && (
-                                      <div className="flex items-center gap-0.5 ml-auto">
-                                        <Users className="w-2 h-2 text-indigo-400" />
-                                        <span className="text-[7px] text-indigo-400 font-mono">
-                                          {gig.interestedUsers.length} waiting
+                                {/* Gig title */}
+                                <h5
+                                  className={cn(
+                                    "text-xs font-medium text-center line-clamp-2 mb-1",
+                                    isDarkMode
+                                      ? "text-slate-200"
+                                      : "text-slate-800",
+                                    "group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors",
+                                  )}
+                                >
+                                  {gig.title}
+                                </h5>
+
+                                {/* Location tag */}
+                                {gig.location && (
+                                  <div className="flex items-center gap-0.5 text-[9px] text-slate-500">
+                                    <MapPin className="w-2.5 h-2.5" />
+                                    <span className="truncate max-w-[70px]">
+                                      {gig.location.split(",")[0]}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Interest indicator */}
+                                {gig.interestedUsers &&
+                                  gig.interestedUsers.length > 0 && (
+                                    <div className="absolute top-2 right-2">
+                                      <div className="flex items-center gap-0.5 bg-rose-500/10 text-rose-500 rounded-full px-1.5 py-0.5 text-[8px] font-medium border border-rose-500/20">
+                                        <Heart className="w-2.5 h-2.5" />
+                                        <span>
+                                          {gig.interestedUsers.length}
                                         </span>
                                       </div>
-                                    )}
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-
-                      {upcomingGigs.length === 0 && (
-                        <div className="text-center py-4">
-                          <div className="w-8 h-8 mx-auto rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-2">
-                            <Calendar className="w-4 h-4 text-indigo-500" />
-                          </div>
-                          <p className="text-[9px] font-medium text-slate-600 dark:text-slate-400">
-                            No upcoming gigs
-                          </p>
-                          <p className="text-[7px] text-slate-500 mt-1">
-                            Check back later for new opportunities
-                          </p>
+                                    </div>
+                                  )}
+                              </motion.div>
+                            );
+                          })}
                         </div>
-                      )}
-                    </div>
-
-                    {/* View all link */}
-                    {upcomingGigs.length > 3 && (
-                      <div
-                        className={cn(
-                          "px-2 py-1 border-t text-center",
-                          isDarkMode
-                            ? "border-indigo-800/30"
-                            : "border-indigo-200",
-                        )}
-                      >
-                        <button className="text-[8px] text-indigo-500 hover:text-indigo-600 font-medium">
-                          +{upcomingGigs.length - 3} more opening soon →
-                        </button>
                       </div>
-                    )}
+                    </motion.div>
                   </div>
 
-                  {/* SECTION 3: Market Stats - Updated with online data */}
+                  {/* SECTION 3: THE SCENE - Improved */}
                   <div
                     className={cn(
                       "rounded-xl border overflow-hidden",
@@ -2581,30 +2395,42 @@ export default function GigDetailsPage({ params }: PageProps) {
                   >
                     <div className="grid grid-cols-3 divide-x divide-slate-200 dark:divide-slate-700">
                       <div className="py-2 text-center">
-                        <div className="text-[8px] text-slate-500 mb-0.5 flex items-center justify-center gap-1">
-                          <Users className="w-3 h-3" />
-                          ONLINE
+                        <div
+                          className={cn(
+                            "text-[10px] mb-1",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
+                          🎸 Artists
                         </div>
-                        <div className="text-xs font-bold text-emerald-500">
-                          {onlineStats?.total || 0}
-                        </div>
-                      </div>
-                      <div className="py-2 text-center">
-                        <div className="text-[8px] text-slate-500 mb-0.5 flex items-center justify-center gap-1">
-                          <Music className="w-3 h-3" />
-                          MUSICIANS
-                        </div>
-                        <div className="text-xs font-bold text-blue-500">
+                        <div className="text-base font-bold text-blue-500">
                           {onlineStats?.musicians || 0}
                         </div>
                       </div>
                       <div className="py-2 text-center">
-                        <div className="text-[8px] text-slate-500 mb-0.5 flex items-center justify-center gap-1">
-                          <Briefcase className="w-3 h-3" />
-                          CLIENTS
+                        <div
+                          className={cn(
+                            "text-[10px] mb-1",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
+                          🎩 Bookers
                         </div>
-                        <div className="text-xs font-bold text-purple-500">
+                        <div className="text-base font-bold text-purple-500">
                           {onlineStats?.clients || 0}
+                        </div>
+                      </div>
+                      <div className="py-2 text-center">
+                        <div
+                          className={cn(
+                            "text-[10px] mb-1",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
+                          ✨ In the House
+                        </div>
+                        <div className="text-base font-bold text-emerald-500">
+                          {onlineStats?.total || 0}
                         </div>
                       </div>
                     </div>
@@ -2612,41 +2438,347 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </div>
               )}
             </div>
-
-            {/* RIGHT COLUMN - Main Content */}
+            {/* RIGHT COLUMN - Main Content - Enhanced */}
             <div className="md:col-span-2 space-y-6">
-              {/* Gig Info Card */}
-              <GigInfoCard
-                gig={gig}
-                formatDate={formatDate}
-                formatTime={formatTime}
-                isDarkMode={isDarkMode}
-              />
+              {/* Gig Info Card - Enhanced */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="relative group"
+              >
+                {/* Background glow effect */}
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500" />
 
-              {/* Poster Info Card */}
-              {poster && (
-                <PosterInfoCard
-                  poster={poster}
-                  canMessageUser={canMessageUser}
-                  handleViewProfile={handleViewProfile}
-                  getTrustTierIcon={getTrustTierIcon}
-                  isDarkMode={isDarkMode}
-                />
-              )}
+                <Card
+                  className={cn(
+                    "relative border-2 overflow-hidden transition-all duration-300",
+                    "hover:shadow-2xl",
+                    isDarkMode
+                      ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700 hover:border-purple-500/50"
+                      : "bg-gradient-to-br from-white via-slate-50 to-white border-slate-200 hover:border-purple-300",
+                  )}
+                >
+                  {/* Animated gradient bar */}
+                  <motion.div
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "100%" }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                    className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"
+                  />
 
-              {/* Requirements */}
-              {gig.requirements && gig.requirements.length > 0 && (
-                <RequirementsCard
-                  requirements={gig.requirements}
-                  isDarkMode={isDarkMode}
-                />
-              )}
+                  <CardContent className="p-6">
+                    {/* Header with Poster Info and Follow Button */}
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-4">
+                        {/* Poster Avatar with live indicator */}
+                        <div className="relative">
+                          <FollowButton
+                            id={gig.postedBy}
+                            showText={true}
+                            className="animate-pulse"
+                          />
+                          <Avatar className="w-14 h-14 border-2 border-white dark:border-slate-700 shadow-xl">
+                            <AvatarImage src={gig.poster?.picture} />
+                            <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                              {gig.poster?.firstname?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {/* Online indicator */}
+                          <OnlineBadge
+                            userId={gig.postedBy}
+                            size="sm"
+                            showText={false}
+                            className="absolute -bottom-1 -right-1"
+                          />
+                        </div>
+
+                        {/* Poster Info */}
+                        <div>
+                          <h4
+                            className={cn(
+                              "font-semibold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            {gig.poster?.firstname} {gig.poster?.lastname}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <TrustStarsDisplay
+                              trustStars={
+                                gig.poster?.trustStars
+                                  ? gig.poster?.trustStars
+                                  : 0
+                              }
+                              size="sm"
+                            />
+                            {(gig.poster?.verifiedIdentity
+                              ? gig.poster?.verifiedIdentity
+                              : "") && (
+                              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-[10px]">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Verified
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Sticky Poster Mini Profile (Mobile) */}
+                      <div className="sticky top-0 z-40 md:hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-b p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={poster?.picture} />
+                            <AvatarFallback>
+                              {poster?.firstname?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {poster?.firstname}
+                            </p>
+                            <TrustStarsDisplay
+                              trustStars={poster?.trustStars || 0}
+                              size="sm"
+                            />
+                          </div>
+                        </div>
+                        <FollowButton
+                          _id={gig.postedBy}
+                          showText={false}
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Gig Title & Stats Row */}
+                    <div className="mb-4">
+                      <h2
+                        className={cn(
+                          "text-2xl font-bold mb-2",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {gig.title}
+                      </h2>
+
+                      {/* Live Stats Ticker */}
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <Eye className="w-4 h-4 text-blue-400" />
+                          <span
+                            className={cn(
+                              "font-mono",
+                              isDarkMode ? "text-slate-300" : "text-slate-600",
+                            )}
+                          >
+                            {gig.viewCount?.length || 0} views
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Heart className="w-4 h-4 text-rose-400" />
+                          <span
+                            className={cn(
+                              "font-mono",
+                              isDarkMode ? "text-slate-300" : "text-slate-600",
+                            )}
+                          >
+                            {gig.interestedUsers?.length || 0} interested
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Briefcase className="w-4 h-4 text-amber-400" />
+                          <span
+                            className={cn(
+                              "font-mono",
+                              isDarkMode ? "text-slate-300" : "text-slate-600",
+                            )}
+                          >
+                            {gig.appliedUsers?.length || 0} applied
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Info Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                      <InfoChip
+                        icon={MapPin}
+                        label="Location"
+                        value={gig.location || "Remote"}
+                        color="blue"
+                        isDarkMode={isDarkMode}
+                      />
+                      <InfoChip
+                        icon={Calendar}
+                        label="Date"
+                        value={formatDate(gig.date)}
+                        color="emerald"
+                        isDarkMode={isDarkMode}
+                      />
+                      <InfoChip
+                        icon={Clock}
+                        label="Time"
+                        value={`${gig.time?.start || "TBD"} - ${gig.time?.end || "TBD"}`}
+                        color="amber"
+                        isDarkMode={isDarkMode}
+                      />
+                      <InfoChip
+                        icon={DollarSign}
+                        label="Budget"
+                        value={
+                          gig.price
+                            ? `${gig.currency || "$"}${gig.price.toLocaleString()}`
+                            : "Negotiable"
+                        }
+                        color="purple"
+                        isDarkMode={isDarkMode}
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="mb-6">
+                      <h3
+                        className={cn(
+                          "text-sm font-semibold mb-3 flex items-center gap-2",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        <FileText className="w-4 h-4 text-purple-500" />
+                        Description
+                      </h3>
+                      <p
+                        className={cn(
+                          "text-sm leading-relaxed",
+                          isDarkMode ? "text-slate-300" : "text-slate-600",
+                        )}
+                      >
+                        {gig.description}
+                      </p>
+                    </div>
+
+                    {/* Tags */}
+                    {gig.tags && gig.tags.length > 0 && (
+                      <div className="mb-6">
+                        <h3
+                          className={cn(
+                            "text-sm font-semibold mb-3",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          Tags
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {gig.tags.map((tag: string, i: number) => (
+                            <Badge
+                              key={i}
+                              variant="secondary"
+                              className={cn(
+                                "px-3 py-1 text-xs font-medium",
+                                isDarkMode
+                                  ? "bg-slate-800 text-slate-300 border-slate-700"
+                                  : "bg-slate-100 text-slate-600 border-slate-200",
+                              )}
+                            >
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Requirements */}
+                    {gig.requirements && gig.requirements.length > 0 && (
+                      <div className="mb-6">
+                        <h3
+                          className={cn(
+                            "text-sm font-semibold mb-3 flex items-center gap-2",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          Requirements
+                        </h3>
+                        <ul className="space-y-2">
+                          {gig.requirements.map((req: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                  {i + 1}
+                                </span>
+                              </div>
+                              <span
+                                className={cn(
+                                  "text-sm",
+                                  isDarkMode
+                                    ? "text-slate-300"
+                                    : "text-slate-600",
+                                )}
+                              >
+                                {req}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      {/* Floating Action Button */}
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl flex items-center justify-center md:hidden"
+                      >
+                        <MessageSquare className="w-6 h-6" />
+                      </motion.button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-2 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Similar Gigs Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                <h3
+                  className={cn(
+                    "text-lg font-semibold mb-4",
+                    isDarkMode ? "text-white" : "text-slate-900",
+                  )}
+                >
+                  Similar Gigs You Might Like
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredGigs.slice(0, 2).map((similarGig: any) => (
+                    <SimilarGigCard
+                      key={similarGig._id}
+                      gig={similarGig}
+                      onView={handleViewGig}
+                      isDarkMode={isDarkMode}
+                    />
+                  ))}
+                </div>
+              </motion.div>
             </div>
           </div>
 
           {/* Mobile Stats Bar */}
           <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
+            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
               <Heart className="w-3.5 h-3.5 text-rose-500" />
               <span
                 className={isDarkMode ? "text-slate-300" : "text-slate-700"}
@@ -2659,7 +2791,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                 Interested
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
+            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
               <Briefcase className="w-3.5 h-3.5 text-amber-500" />
               <span
                 className={isDarkMode ? "text-slate-300" : "text-slate-700"}
@@ -2672,7 +2804,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                 Applied
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
+            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
               <Star className="w-3.5 h-3.5 text-emerald-500" />
               <span
                 className={isDarkMode ? "text-slate-300" : "text-slate-700"}
@@ -2685,7 +2817,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                 Shortlisted
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
+            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
               <CheckCircle className="w-3.5 h-3.5 text-purple-500" />
               <span
                 className={isDarkMode ? "text-slate-300" : "text-slate-700"}
@@ -2771,7 +2903,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                     <div className="flex items-center justify-between mb-4">
                       <h3
                         className={cn(
-                          "font-semibold text-sm",
+                          "font-semibold text-[11px]",
                           isDarkMode ? "text-white" : "text-slate-900",
                         )}
                       >
@@ -2845,7 +2977,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                     <div className="flex items-center justify-between mb-4">
                       <h3
                         className={cn(
-                          "font-semibold text-sm",
+                          "font-semibold text-[11px]",
                           isDarkMode ? "text-white" : "text-slate-900",
                         )}
                       >
@@ -2875,7 +3007,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-center text-slate-500 py-8 text-sm">
+                      <p className="text-center text-slate-500 py-8 text-[11px]">
                         No band roles available
                       </p>
                     )}
@@ -3015,7 +3147,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                     {selectedUser.roleType && (
                       <div
                         className={cn(
-                          "flex items-center gap-2 text-sm",
+                          "flex items-center gap-2 text-[11px]",
                           isDarkMode ? "text-slate-300" : "text-slate-600",
                         )}
                       >
@@ -3028,7 +3160,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                     {selectedUser.city && (
                       <div
                         className={cn(
-                          "flex items-center gap-2 text-sm",
+                          "flex items-center gap-2 text-[11px]",
                           isDarkMode ? "text-slate-300" : "text-slate-600",
                         )}
                       >
@@ -3039,7 +3171,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                     {selectedUser.instrument && (
                       <div
                         className={cn(
-                          "flex items-center gap-2 text-sm",
+                          "flex items-center gap-2 text-[11px]",
                           isDarkMode ? "text-slate-300" : "text-slate-600",
                         )}
                       >
@@ -3051,7 +3183,7 @@ export default function GigDetailsPage({ params }: PageProps) {
 
                   <div className="flex gap-3">
                     <Button
-                      className="flex-1 text-sm"
+                      className="flex-1 text-[11px]"
                       onClick={() => {
                         setShowProfileDialog(false);
                         router.push(`/profile/${selectedUser._id}`);
@@ -3128,7 +3260,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                 variant="destructive"
                 onClick={handleWithdraw}
                 disabled={loading}
-                className="text-sm"
+                className="text-[11px]"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 Withdraw
