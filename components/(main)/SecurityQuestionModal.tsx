@@ -716,86 +716,114 @@ export function SecurityQuestionSetupModal({
                 >
                   <div
                     className={cn(
-                      "rounded-xl p-5 border",
+                      "rounded-xl p-6 border-2 transition-all",
                       isDarkMode
-                        ? "bg-slate-800/30 border-slate-700"
-                        : "bg-white border-slate-200",
+                        ? "bg-slate-800/50 border-slate-700/50 hover:border-slate-600"
+                        : "bg-white border-slate-200/50 hover:border-slate-300",
                     )}
                   >
-                    <form className="space-y-6">
-                      {/* Question Type Toggle */}
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-lg">
-                          Security Question
-                        </h3>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant={!isCustom ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setIsCustom(false)}
-                            className={cn(
-                              "px-3",
-                              !isCustom &&
-                                `bg-gradient-to-r ${SIMPLE_PALETTE.primary}`,
-                            )}
-                          >
-                            Choose One
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={isCustom ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setIsCustom(true)}
-                            className={cn(
-                              "px-3",
-                              isCustom &&
-                                `bg-gradient-to-r ${SIMPLE_PALETTE.secondary}`,
-                            )}
-                          >
-                            Custom
-                          </Button>
+                    {/* Progress indicator inside */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <span className="text-sm font-bold text-blue-500">
+                            2
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            Choose Your Question
+                          </h3>
+                          <p className="text-xs text-slate-500">Step 2 of 3</p>
                         </div>
                       </div>
-                      {/* Question Selection */}
+
+                      {/* Question Type Toggle - Redesigned */}
+                      <div className="flex gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-700/50">
+                        <button
+                          type="button"
+                          onClick={() => setIsCustom(false)}
+                          className={cn(
+                            "px-4 py-1.5 rounded-md text-sm font-medium transition-all",
+                            !isCustom
+                              ? `bg-gradient-to-r ${SIMPLE_PALETTE.primary} text-white shadow-lg`
+                              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white",
+                          )}
+                        >
+                          Choose One
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsCustom(true)}
+                          className={cn(
+                            "px-4 py-1.5 rounded-md text-sm font-medium transition-all",
+                            isCustom
+                              ? `bg-gradient-to-r ${SIMPLE_PALETTE.secondary} text-white shadow-lg`
+                              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white",
+                          )}
+                        >
+                          Custom
+                        </button>
+                      </div>
+                    </div>
+
+                    <form className="space-y-6">
+                      {/* Question Selection with better styling */}
                       {isCustom ? (
-                        <div className="space-y-4">
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-4"
+                        >
                           <div>
                             <Label
                               htmlFor="custom-question"
-                              className="mb-2 block"
+                              className="text-sm font-medium mb-2 block"
                             >
                               Your Custom Question
                             </Label>
-                            <div className="flex gap-2 mb-3">
+                            <div className="relative">
+                              <Textarea
+                                id="custom-question"
+                                placeholder="Type your own security question..."
+                                value={customQuestion}
+                                onChange={(e) =>
+                                  setCustomQuestion(e.target.value)
+                                }
+                                className={cn(
+                                  "min-h-[120px] resize-none transition-all pr-20",
+                                  "focus:ring-2 focus:ring-blue-500/20",
+                                  customQuestion && "border-green-500",
+                                  isDarkMode
+                                    ? "bg-slate-900/50 border-slate-700 focus:border-blue-500"
+                                    : "bg-white border-slate-200 focus:border-blue-500",
+                                )}
+                              />
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 onClick={generateCustomQuestion}
-                                className="text-sm"
+                                className="absolute right-2 top-2 text-xs"
                               >
-                                <Sparkles className="w-4 h-4 mr-2" />
+                                <Sparkles className="w-3.5 h-3.5 mr-1" />
                                 Suggest
                               </Button>
                             </div>
-                            <Textarea
-                              id="custom-question"
-                              placeholder="Type your own security question..."
-                              value={customQuestion}
-                              onChange={(e) =>
-                                setCustomQuestion(e.target.value)
-                              }
-                              className={cn(
-                                "min-h-[100px] resize-none transition-all",
-                                customQuestion && "border-green-500",
-                              )}
-                            />
+                            <p className="text-xs text-slate-500 mt-2">
+                              ✨ Make it personal but not obvious
+                            </p>
                           </div>
-                        </div>
+                        </motion.div>
                       ) : (
-                        <div className="space-y-4">
-                          <Label>Select a Security Question</Label>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-4"
+                        >
+                          <Label className="text-sm font-medium">
+                            Select a Security Question
+                          </Label>
                           <Select
                             value={selectedQuestion}
                             onValueChange={(value) => {
@@ -803,42 +831,87 @@ export function SecurityQuestionSetupModal({
                               setSelectedQuestion(value);
                             }}
                           >
-                            <SelectTrigger className="w-full cursor-pointer">
-                              <SelectValue placeholder="Choose a question..." />
+                            <SelectTrigger
+                              className={cn(
+                                "w-full h-12 text-base",
+                                "transition-all duration-200",
+                                "focus:ring-2 focus:ring-blue-500/20",
+                                selectedQuestion ? "border-green-500" : "",
+                                isDarkMode
+                                  ? "bg-slate-900/50 border-slate-700"
+                                  : "bg-white border-slate-200",
+                              )}
+                            >
+                              <SelectValue placeholder="👇 Click to choose a question..." />
                             </SelectTrigger>
                             <SelectContent
                               position="popper"
                               className="max-h-[300px] z-[100]"
-                              onClick={(e) => e.stopPropagation()}
                             >
                               {SECURITY_QUESTIONS.map((question, index) => (
                                 <SelectItem
                                   key={index}
                                   value={question}
-                                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                  className={cn(
+                                    "py-3 cursor-pointer",
+                                    "transition-colors duration-150",
+                                    "hover:bg-blue-50 dark:hover:bg-blue-900/20",
+                                    selectedQuestion === question &&
+                                      "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+                                  )}
                                 >
-                                  {question}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm">{question}</span>
+                                    {selectedQuestion === question && (
+                                      <Check className="w-4 h-4 text-green-500 ml-auto" />
+                                    )}
+                                  </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <p className="text-sm text-slate-500">
-                            Choose a question only you know the answer to
-                          </p>
 
-                          {/* Show selected question for debugging - remove in production */}
+                          {/* Selected question indicator */}
                           {selectedQuestion && (
-                            <p className="text-xs text-green-500 mt-1">
-                              Selected: {selectedQuestion}
-                            </p>
+                            <motion.div
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center gap-2 text-xs text-green-500 bg-green-500/10 p-2 rounded-lg"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Selected: "{selectedQuestion}"</span>
+                            </motion.div>
                           )}
-                        </div>
+                        </motion.div>
                       )}
 
-                      {/* Answer Input */}
-                      <div className="space-y-4">
-                        <Label htmlFor="answer">Your Answer</Label>
-                        <div className="relative">
+                      {/* Answer Input with enhanced styling */}
+                      <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between">
+                          <Label
+                            htmlFor="answer"
+                            className="text-sm font-medium"
+                          >
+                            Your Secret Answer
+                          </Label>
+                          {answer && (
+                            <span
+                              className={cn(
+                                "text-xs font-medium px-2 py-1 rounded-full",
+                                answerStrength === "strong" &&
+                                  "bg-green-500/10 text-green-500",
+                                answerStrength === "medium" &&
+                                  "bg-yellow-500/10 text-yellow-500",
+                                answerStrength === "weak" &&
+                                  "bg-red-500/10 text-red-500",
+                              )}
+                            >
+                              {answerStrength} password
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="relative group">
                           <Input
                             id="answer"
                             type={showAnswer ? "text" : "password"}
@@ -846,22 +919,28 @@ export function SecurityQuestionSetupModal({
                             onChange={(e) => setAnswer(e.target.value)}
                             placeholder="Enter your answer..."
                             className={cn(
-                              "pr-10",
+                              "h-12 pr-12 text-base transition-all",
+                              "focus:ring-2 focus:ring-blue-500/20",
                               answer &&
                                 answerStrength === "strong" &&
-                                "border-green-500",
+                                "border-green-500 ring-2 ring-green-500/20",
                               answer &&
                                 answerStrength === "medium" &&
-                                "border-yellow-500",
+                                "border-yellow-500 ring-2 ring-yellow-500/20",
                               answer &&
                                 answerStrength === "weak" &&
-                                "border-red-500",
+                                "border-red-500 ring-2 ring-red-500/20",
+                              isDarkMode
+                                ? "bg-slate-900/50 border-slate-700"
+                                : "bg-white border-slate-200",
                             )}
                           />
                           <button
                             type="button"
                             onClick={() => setShowAnswer(!showAnswer)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 
+                       text-slate-400 hover:text-slate-600 dark:hover:text-slate-300
+                       transition-colors p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
                           >
                             {showAnswer ? (
                               <EyeOff className="w-4 h-4" />
@@ -871,75 +950,164 @@ export function SecurityQuestionSetupModal({
                           </button>
                         </div>
 
-                        {/* Answer Strength Indicator */}
+                        {/* Answer Strength Indicator - Enhanced */}
                         {answer && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm">Answer strength:</span>
-                              <span
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-slate-600 dark:text-slate-400">
+                                  Security level
+                                </span>
+                                <span
+                                  className={cn(
+                                    "font-medium",
+                                    getAnswerStrengthColor(),
+                                  )}
+                                >
+                                  {answerStrength === "strong" &&
+                                    "🔒 Very Secure"}
+                                  {answerStrength === "medium" && "⚠️ Moderate"}
+                                  {answerStrength === "weak" && "❌ Weak"}
+                                </span>
+                              </div>
+                              <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{
+                                    width:
+                                      answerStrength === "strong"
+                                        ? "100%"
+                                        : answerStrength === "medium"
+                                          ? "66%"
+                                          : "33%",
+                                  }}
+                                  className={cn(
+                                    "h-full rounded-full",
+                                    answerStrength === "strong" &&
+                                      "bg-gradient-to-r from-green-500 to-emerald-500",
+                                    answerStrength === "medium" &&
+                                      "bg-gradient-to-r from-yellow-500 to-orange-500",
+                                    answerStrength === "weak" &&
+                                      "bg-gradient-to-r from-red-500 to-rose-500",
+                                  )}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Requirements checklist */}
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div
                                 className={cn(
-                                  "text-sm font-medium",
-                                  getAnswerStrengthColor(),
+                                  "flex items-center gap-1",
+                                  answer.length >= 8
+                                    ? "text-green-500"
+                                    : "text-slate-400",
                                 )}
                               >
-                                {answerStrength.charAt(0).toUpperCase() +
-                                  answerStrength.slice(1)}
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{
-                                  width:
-                                    answerStrength === "strong"
-                                      ? "100%"
-                                      : answerStrength === "medium"
-                                        ? "66%"
-                                        : "33%",
-                                }}
-                                className={cn(
-                                  "h-full",
-                                  answerStrength === "strong" && "bg-green-500",
-                                  answerStrength === "medium" &&
-                                    "bg-yellow-500",
-                                  answerStrength === "weak" && "bg-red-500",
+                                {answer.length >= 8 ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <X className="w-3 h-3" />
                                 )}
-                              />
+                                <span>8+ characters</span>
+                              </div>
+                              <div
+                                className={cn(
+                                  "flex items-center gap-1",
+                                  /[a-zA-Z]/.test(answer)
+                                    ? "text-green-500"
+                                    : "text-slate-400",
+                                )}
+                              >
+                                {/[a-zA-Z]/.test(answer) ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <X className="w-3 h-3" />
+                                )}
+                                <span>Has letters</span>
+                              </div>
+                              <div
+                                className={cn(
+                                  "flex items-center gap-1",
+                                  /[0-9]/.test(answer)
+                                    ? "text-green-500"
+                                    : "text-slate-400",
+                                )}
+                              >
+                                {/[0-9]/.test(answer) ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <X className="w-3 h-3" />
+                                )}
+                                <span>Has numbers</span>
+                              </div>
+                              <div
+                                className={cn(
+                                  "flex items-center gap-1",
+                                  /[^a-zA-Z0-9]/.test(answer)
+                                    ? "text-green-500"
+                                    : "text-slate-400",
+                                )}
+                              >
+                                {/[^a-zA-Z0-9]/.test(answer) ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <X className="w-3 h-3" />
+                                )}
+                                <span>Special chars</span>
+                              </div>
                             </div>
-                            <p className="text-xs text-slate-500">
+
+                            <p
+                              className={cn(
+                                "text-xs mt-2",
+                                answerStrength === "strong" &&
+                                  "text-green-600 dark:text-green-400",
+                                answerStrength === "medium" &&
+                                  "text-yellow-600 dark:text-yellow-400",
+                                answerStrength === "weak" &&
+                                  "text-red-600 dark:text-red-400",
+                              )}
+                            >
                               {answerStrength === "weak" &&
-                                "Add numbers or special characters for stronger security"}
+                                "💡 Add numbers or special characters for stronger security"}
                               {answerStrength === "medium" &&
-                                "Good, but could be stronger with special characters"}
+                                "💡 Good! Add special characters to make it even stronger"}
                               {answerStrength === "strong" &&
-                                "Excellent! This answer is very secure"}
+                                "✅ Perfect! This answer is very secure"}
                             </p>
-                          </div>
+                          </motion.div>
                         )}
                       </div>
 
-                      {/* Navigation Buttons */}
-                      <div className="flex gap-3 pt-4">
+                      {/* Navigation Buttons - Enhanced */}
+                      <div className="flex gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setStep("info")}
-                          className="flex-1"
+                          className="flex-1 h-12 text-base group"
                         >
-                          <ChevronLeft className="w-4 h-4 mr-2" />
+                          <ChevronLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                           Back
                         </Button>
                         <Button
                           type="button"
                           onClick={() => setStep("confirm")}
                           className={cn(
-                            "flex-1",
-                            `bg-gradient-to-r ${SIMPLE_PALETTE.primary}`,
+                            "flex-1 h-12 text-base font-semibold group",
+                            `bg-gradient-to-r ${SIMPLE_PALETTE.primary} hover:opacity-90`,
+                            "shadow-lg hover:shadow-xl transition-all",
+                            "disabled:opacity-50 disabled:cursor-not-allowed",
                           )}
                           disabled={(!isCustom && !selectedQuestion) || !answer}
                         >
                           Continue
-                          <ChevronRight className="w-4 h-4 ml-2" />
+                          <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
                       </div>
                     </form>
@@ -957,48 +1125,89 @@ export function SecurityQuestionSetupModal({
                 >
                   <div
                     className={cn(
-                      "rounded-xl p-5 border",
+                      "rounded-xl p-6 border-2 transition-all",
                       isDarkMode
-                        ? "bg-slate-800/30 border-slate-700"
-                        : "bg-white border-slate-200",
+                        ? "bg-slate-800/50 border-green-500/30 hover:border-green-500/50"
+                        : "bg-white border-green-500/30 hover:border-green-500/50",
                     )}
                   >
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      {/* Summary */}
-                      <div
-                        className={cn(
-                          "p-4 rounded-lg",
-                          isDarkMode ? "bg-slate-800" : "bg-slate-50",
-                        )}
-                      >
-                        <h4 className="font-medium mb-3">
-                          Review Your Choice:
-                        </h4>
-                        <p className="text-sm mb-2">
-                          <span className="text-slate-500">Question:</span>
-                          <br />
-                          <span className="font-medium">
-                            {isCustom ? customQuestion : selectedQuestion}
-                          </span>
-                        </p>
-                        <p className="text-sm">
-                          <span className="text-slate-500">
-                            Answer strength:
-                          </span>{" "}
-                          <span
-                            className={cn(
-                              "font-medium",
-                              getAnswerStrengthColor(),
-                            )}
-                          >
-                            {answerStrength}
-                          </span>
+                    {/* Progress indicator */}
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <span className="text-sm font-bold text-green-500">
+                          3
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          Confirm & Activate
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Final step to secure your account
                         </p>
                       </div>
+                    </div>
 
-                      {/* Confirm Answer */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Summary Card - Enhanced */}
+                      <motion.div
+                        initial={{ scale: 0.95 }}
+                        animate={{ scale: 1 }}
+                        className={cn(
+                          "p-6 rounded-xl border-2",
+                          isDarkMode
+                            ? "bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700"
+                            : "bg-gradient-to-br from-slate-50 to-white border-slate-200",
+                        )}
+                      >
+                        <h4 className="font-medium mb-4 flex items-center gap-2">
+                          <FileTextIcon className="w-4 h-4 text-blue-500" />
+                          Review Your Security Settings
+                        </h4>
+
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+                              YOUR SECURITY QUESTION
+                            </p>
+                            <p className="font-medium text-base">
+                              {isCustom ? customQuestion : selectedQuestion}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              Answer strength:
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={cn(
+                                  "w-2 h-2 rounded-full",
+                                  answerStrength === "strong" && "bg-green-500",
+                                  answerStrength === "medium" &&
+                                    "bg-yellow-500",
+                                  answerStrength === "weak" && "bg-red-500",
+                                )}
+                              />
+                              <span
+                                className={cn(
+                                  "font-medium capitalize",
+                                  getAnswerStrengthColor(),
+                                )}
+                              >
+                                {answerStrength}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+
+                      {/* Confirm Answer - Enhanced */}
                       <div className="space-y-4">
-                        <Label htmlFor="confirm-answer">
+                        <Label
+                          htmlFor="confirm-answer"
+                          className="text-sm font-medium"
+                        >
                           Confirm Your Answer
                         </Label>
                         <div className="relative">
@@ -1007,15 +1216,19 @@ export function SecurityQuestionSetupModal({
                             type={showConfirmAnswer ? "text" : "password"}
                             value={confirmAnswer}
                             onChange={(e) => setConfirmAnswer(e.target.value)}
-                            placeholder="Re-enter your answer..."
+                            placeholder="Re-enter your answer to confirm..."
                             className={cn(
-                              "pr-10",
+                              "h-12 pr-12 text-base transition-all",
+                              "focus:ring-2",
                               confirmAnswer &&
                                 answer === confirmAnswer &&
-                                "border-green-500",
+                                "border-green-500 ring-2 ring-green-500/20",
                               confirmAnswer &&
                                 answer !== confirmAnswer &&
-                                "border-red-500",
+                                "border-red-500 ring-2 ring-red-500/20",
+                              isDarkMode
+                                ? "bg-slate-900/50 border-slate-700"
+                                : "bg-white border-slate-200",
                             )}
                           />
                           <button
@@ -1023,7 +1236,9 @@ export function SecurityQuestionSetupModal({
                             onClick={() =>
                               setShowConfirmAnswer(!showConfirmAnswer)
                             }
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 
+                       text-slate-400 hover:text-slate-600 dark:hover:text-slate-300
+                       transition-colors p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
                           >
                             {showConfirmAnswer ? (
                               <EyeOff className="w-4 h-4" />
@@ -1032,102 +1247,99 @@ export function SecurityQuestionSetupModal({
                             )}
                           </button>
                         </div>
-                        {confirmAnswer && answer !== confirmAnswer && (
-                          <p className="text-xs text-red-500 flex items-center gap-1">
-                            <X className="w-3 h-3" />
-                            Answers do not match
-                          </p>
-                        )}
-                        {confirmAnswer && answer === confirmAnswer && (
-                          <p className="text-xs text-green-500 flex items-center gap-1">
-                            <Check className="w-3 h-3" />
-                            Answers match
-                          </p>
+
+                        {/* Match indicator */}
+                        {confirmAnswer && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={cn(
+                              "flex items-center gap-2 text-xs p-3 rounded-lg",
+                              answer === confirmAnswer
+                                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                                : "bg-red-500/10 text-red-600 dark:text-red-400",
+                            )}
+                          >
+                            {answer === confirmAnswer ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                <span>
+                                  Answers match! You're ready to proceed.
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <X className="w-4 h-4" />
+                                <span>
+                                  Answers don't match. Please re-enter
+                                  carefully.
+                                </span>
+                              </>
+                            )}
+                          </motion.div>
                         )}
                       </div>
 
-                      {/* Security Tips - Role Specific */}
+                      {/* Security Tips - Enhanced with role-specific icons */}
                       <div
                         className={cn(
-                          "p-4 rounded-lg border",
+                          "p-5 rounded-xl border-2",
                           isDarkMode
-                            ? "bg-amber-900/20 border-amber-800"
-                            : "bg-amber-50 border-amber-200",
+                            ? "bg-gradient-to-br from-amber-900/20 to-amber-900/5 border-amber-500/30"
+                            : "bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200",
                         )}
                       >
                         <div className="flex items-start gap-3">
-                          <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <h4 className="font-medium text-amber-700 dark:text-amber-300 mb-2">
-                              Important Security Tips
+                          <div className="p-2 rounded-lg bg-amber-500/20">
+                            <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-amber-700 dark:text-amber-300 mb-3">
+                              Security Checklist
                             </h4>
-                            <ul className="text-sm text-amber-600 dark:text-amber-400 space-y-1">
-                              <li className="flex items-start gap-2">
-                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
-                                <span>
-                                  Pick an answer that's easy to remember
-                                </span>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
-                                <span>
-                                  Avoid answers that others could guess from
-                                  social media
-                                </span>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
-                                <span>
-                                  Don't use the same answer for multiple
-                                  accounts
-                                </span>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
-                                <span>
-                                  Your answer is encrypted and kept private
-                                </span>
-                              </li>
-                              {userRole === "client" ||
-                              userRole === "booker" ? (
-                                <li className="flex items-start gap-2">
-                                  <Key className="w-3 h-3 mt-1 flex-shrink-0" />
-                                  <span>
-                                    This question protects your payment methods
-                                    and event details
-                                  </span>
-                                </li>
-                              ) : (
-                                <li className="flex items-start gap-2">
-                                  <FileTextIcon className="w-3 h-3 mt-1 flex-shrink-0" />
-                                  <span>
-                                    This question secures your music files and
-                                    booking history
-                                  </span>
-                                </li>
-                              )}
-                            </ul>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {[
+                                "Easy to remember",
+                                "Hard to guess",
+                                "Not on social media",
+                                "Unique to this account",
+                                userRole === "client" || userRole === "booker"
+                                  ? "Protects payments"
+                                  : "Secures your music",
+                                "Case insensitive",
+                              ].map((tip, i) => (
+                                <div
+                                  key={i}
+                                  className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400"
+                                >
+                                  <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span>{tip}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
+                      {/* Action Buttons - Enhanced */}
                       <div className="flex gap-3 pt-4">
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setStep("setup")}
-                          className="flex-1"
+                          className="flex-1 h-12 text-base group"
                           disabled={isLoading}
                         >
-                          <ChevronLeft className="w-4 h-4 mr-2" />
+                          <ChevronLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                           Back
                         </Button>
                         <Button
                           type="submit"
                           className={cn(
-                            "flex-1 py-6 text-base font-semibold",
+                            "flex-1 h-12 text-base font-semibold group relative overflow-hidden",
                             `bg-gradient-to-r ${SIMPLE_PALETTE.success} hover:opacity-90`,
+                            "shadow-lg hover:shadow-xl transition-all",
+                            "disabled:opacity-50 disabled:cursor-not-allowed",
                           )}
                           disabled={
                             isLoading ||
@@ -1138,16 +1350,19 @@ export function SecurityQuestionSetupModal({
                           {isLoading ? (
                             <>
                               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                              Setting Up...
+                              Activating...
                             </>
                           ) : (
                             <>
-                              <Shield className="w-5 h-5 mr-2" />
+                              <Shield className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                               {userRole === "client" || userRole === "booker"
-                                ? "Secure My Events"
-                                : "Protect My Career"}
+                                ? "🔒 Secure My Events"
+                                : "🎵 Protect My Career"}
                             </>
                           )}
+
+                          {/* Shine effect */}
+                          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                         </Button>
                       </div>
                     </form>
