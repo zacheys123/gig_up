@@ -241,6 +241,7 @@ export function SecurityQuestionSetupModal({
 
     return true;
   };
+  // Update the handleSubmit function - replace the existing one with this:
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -254,7 +255,7 @@ export function SecurityQuestionSetupModal({
       await updateSecurity({
         securityQuestion: question,
         securityAnswer: answer.trim(),
-        userId: user?._id as Id<"users">,
+        clerkId: user?.clerkId || "", // Using clerkId as your schema expects
       });
 
       toast.success("Security question set successfully!", {
