@@ -136,6 +136,459 @@ import { OnlineBadge } from "@/components/chat/OnlineBadge";
 
 // ============= COMPONENT PLACEHOLDERS =============
 
+const GigModal = ({
+  isOpen,
+  onClose,
+  gig,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  gig: any;
+}) => {
+  const { isDarkMode } = useThemeColors();
+
+  console.log("GigModal rendering:", { isOpen, gig: gig?.title });
+
+  if (!gig) {
+    console.log("No gig data in modal");
+    return null;
+  }
+
+  // Helper function to check if a role is filled
+  const isRoleFilled = (role: any) => {
+    return role.filledSlots >= role.maxSlots;
+  };
+
+  // Helper function to get remaining slots
+  const getRemainingSlots = (role: any) => {
+    return role.maxSlots - role.filledSlots;
+  };
+
+  // Helper function to get slot status color
+  const getSlotStatusColor = (role: any) => {
+    const remaining = getRemainingSlots(role);
+    if (remaining === 0) return "text-red-500";
+    if (remaining <= 2) return "text-yellow-500";
+    return "text-green-500";
+  };
+
+  // Helper function to get slot status icon
+  const getSlotStatusIcon = (role: any) => {
+    const remaining = getRemainingSlots(role);
+    if (remaining === 0) return <XCircle className="w-4 h-4 text-red-500" />;
+    if (remaining <= 2)
+      return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+    return <CheckCircle className="w-4 h-4 text-green-500" />;
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className={cn(
+            "relative overflow-hidden",
+            isDarkMode
+              ? "bg-gradient-to-b from-slate-900 to-slate-800"
+              : "bg-gradient-to-b from-white to-slate-50",
+          )}
+        >
+          {/* Header with gradient */}
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16 border-2 border-white shadow-lg">
+                  <AvatarImage src={gig?.logo} />
+                  <AvatarFallback className="bg-white/20 text-white text-xl">
+                    {gig?.title?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    {gig?.title}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className="bg-white/20 text-white border-0">
+                      {gig?.bussinesscat || "Gig"}
+                    </Badge>
+                    {gig?.isTaken && (
+                      <Badge className="bg-red-500/20 text-white border-0">
+                        Fully Booked
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="text-white hover:bg-white/20"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
+            {/* Quick Info Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <InfoChip
+                icon={MapPin}
+                label="Location"
+                value={gig?.location || "Remote"}
+                color="blue"
+                isDarkMode={isDarkMode}
+              />
+              <InfoChip
+                icon={Calendar}
+                label="Date"
+                value={
+                  gig?.date ? new Date(gig.date).toLocaleDateString() : "TBD"
+                }
+                color="emerald"
+                isDarkMode={isDarkMode}
+              />
+              <InfoChip
+                icon={Clock}
+                label="Time"
+                value={
+                  gig?.time?.start
+                    ? `${gig.time.start} - ${gig.time.end}`
+                    : "TBD"
+                }
+                color="amber"
+                isDarkMode={isDarkMode}
+              />
+              <InfoChip
+                icon={DollarSign}
+                label="Budget"
+                value={
+                  gig?.price
+                    ? `${gig.currency || "$"}${gig.price.toLocaleString()}`
+                    : "Negotiable"
+                }
+                color="purple"
+                isDarkMode={isDarkMode}
+              />
+            </div>
+
+            {/* Band Roles - Show detailed slot information */}
+            {gig?.bandCategory && gig.bandCategory.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="w-4 h-4 text-purple-500" />
+                    Available Roles
+                  </h3>
+                  <Badge variant="outline" className="text-xs">
+                    {
+                      gig.bandCategory.filter(
+                        (r: any) => getRemainingSlots(r) > 0,
+                      ).length
+                    }{" "}
+                    open / {gig.bandCategory.length} total
+                  </Badge>
+                </div>
+
+                <div className="space-y-3">
+                  {gig.bandCategory.map((role: any, index: number) => {
+                    const remaining = getRemainingSlots(role);
+                    const isFilled = remaining === 0;
+                    const statusColor = getSlotStatusColor(role);
+                    const StatusIcon = getSlotStatusIcon(role);
+
+                    return (
+                      <div
+                        key={index}
+                        className={cn(
+                          "p-4 rounded-lg border transition-all",
+                          isFilled
+                            ? isDarkMode
+                              ? "bg-slate-800/50 border-slate-700 opacity-70"
+                              : "bg-slate-50 border-slate-200 opacity-70"
+                            : isDarkMode
+                              ? "bg-slate-800/30 border-slate-700 hover:border-purple-500/50"
+                              : "bg-white border-slate-200 hover:border-purple-300",
+                        )}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-base">
+                                {role.role}
+                              </h4>
+                              {role.requiredSkills &&
+                                role.requiredSkills.length > 0 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px]"
+                                  >
+                                    {role.requiredSkills.length} skills
+                                  </Badge>
+                                )}
+                            </div>
+
+                            {/* Slot Status */}
+                            <div className="flex items-center gap-2 mt-1">
+                              {StatusIcon}
+                              <span
+                                className={cn(
+                                  "text-sm font-medium",
+                                  statusColor,
+                                )}
+                              >
+                                {remaining === 0
+                                  ? "Filled"
+                                  : `${remaining} slot${remaining > 1 ? "s" : ""} remaining`}
+                              </span>
+                            </div>
+
+                            {/* Slot Progress Bar */}
+                            <div className="mt-2 space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-500">Progress</span>
+                                <span className={statusColor}>
+                                  {role.filledSlots}/{role.maxSlots} filled
+                                </span>
+                              </div>
+                              <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className={cn(
+                                    "h-full transition-all",
+                                    isFilled
+                                      ? "bg-red-500"
+                                      : remaining <= 2
+                                        ? "bg-yellow-500"
+                                        : "bg-green-500",
+                                  )}
+                                  style={{
+                                    width: `${(role.filledSlots / role.maxSlots) * 100}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Price if available */}
+                          {role.price && (
+                            <div className="text-right">
+                              <span className="text-xs text-slate-500">
+                                Budget
+                              </span>
+                              <p className="font-bold text-emerald-500">
+                                {role.currency || "$"}
+                                {role.price}
+                                {role.negotiable && (
+                                  <span className="text-xs text-slate-400 ml-1">
+                                    /neg
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Description */}
+                        {role.description && (
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 mb-2">
+                            {role.description}
+                          </p>
+                        )}
+
+                        {/* Skills */}
+                        {role.requiredSkills &&
+                          role.requiredSkills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {role.requiredSkills.map(
+                                (skill: string, i: number) => (
+                                  <Badge
+                                    key={i}
+                                    variant="secondary"
+                                    className="text-[10px]"
+                                  >
+                                    {skill}
+                                  </Badge>
+                                ),
+                              )}
+                            </div>
+                          )}
+
+                        {/* Applicants count if available */}
+                        {role.applicants && role.applicants.length > 0 && (
+                          <div className="mt-2 text-xs text-slate-500">
+                            {role.applicants.length} applicant
+                            {role.applicants.length > 1 ? "s" : ""}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Summary Card */}
+                <div
+                  className={cn(
+                    "mt-4 p-3 rounded-lg border",
+                    isDarkMode
+                      ? "bg-slate-800/30 border-slate-700"
+                      : "bg-slate-50 border-slate-200",
+                  )}
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Total Slots:
+                    </span>
+                    <span className="font-medium">
+                      {gig.bandCategory.reduce(
+                        (acc: number, role: any) => acc + role.maxSlots,
+                        0,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Filled Slots:
+                    </span>
+                    <span className="font-medium">
+                      {gig.bandCategory.reduce(
+                        (acc: number, role: any) => acc + role.filledSlots,
+                        0,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Remaining:
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium",
+                        gig.bandCategory.reduce(
+                          (acc: number, role: any) =>
+                            acc + (role.maxSlots - role.filledSlots),
+                          0,
+                        ) === 0
+                          ? "text-red-500"
+                          : "text-green-500",
+                      )}
+                    >
+                      {gig.bandCategory.reduce(
+                        (acc: number, role: any) =>
+                          acc + (role.maxSlots - role.filledSlots),
+                        0,
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Poster Info - if available */}
+            {gig?.poster && (
+              <div className={cn("mb-6 p-4 rounded-lg ",isDarkMode " bg-slate-50":"bg-slate-800/50")}>
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={gig.poster.picture} />
+                    <AvatarFallback>
+                      {gig.poster.firstname?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {gig.poster.firstname} {gig.poster.lastname}
+                    </p>
+                    <TrustStarsDisplay
+                      trustStars={gig.poster.trustStars || 0}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-purple-500" />
+                Description
+              </h3>
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                {gig?.description}
+              </p>
+            </div>
+
+            {/* Tags */}
+            {gig?.tags && gig.tags.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-3">Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {gig.tags.map((tag: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-xs">
+                      #{tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Requirements */}
+            {gig?.requirements && gig.requirements.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  Requirements
+                </h3>
+                <ul className="space-y-2">
+                  {gig.requirements.map((req: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                        <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                          {i + 1}
+                        </span>
+                      </div>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        {req}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <Button
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                onClick={() => {
+                  // Handle contact host
+                  onClose();
+                }}
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Contact Host
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  navigator.clipboard?.writeText(window.location.href);
+                  toast.success("Link copied!");
+                }}
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 // GigInfoCard Component
 const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
   <motion.div
@@ -763,6 +1216,8 @@ export default function GigDetailsPage({ params }: PageProps) {
   const [showRoleDrawer, setShowRoleDrawer] = useState(false);
   const [showApplicantSidebar, setShowApplicantSidebar] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isChangingGig, setIsChangingGig] = useState(false);
+  const [selectedGigId, setSelectedGigId] = useState<Id<"gigs"> | null>(null);
 
   // Check if mobile
   useEffect(() => {
@@ -848,246 +1303,29 @@ export default function GigDetailsPage({ params }: PageProps) {
     return userMap.get(selectedUserId);
   }, [selectedUserId, userMap]);
 
-  // Get user's own application status
-  const userApplication = useMemo(() => {
-    if (!currentUser?._id || !gig) return null;
+  // Add these state variables near your other state declarations
+  const [showGigModal, setShowGigModal] = useState(false);
+  const [selectedGigForModal, setSelectedGigForModal] = useState<any>(null);
 
-    if (gig.postedBy === currentUser._id) {
-      return { type: "poster", status: "owner" };
-    }
+  // Update handleViewGig to just open modal with the selected gig
+  // Update your handleViewGig function
+  const handleViewGig = useCallback(
+    (gig: any) => {
+      console.log("Clicked gig:", gig); // Check if this logs
+      console.log("Current gigId:", gigId); // Check if different
+      console.log("Selected gig ID:", gig?._id); // Check the ID
 
-    if (gig.interestedUsers?.includes(currentUser._id)) {
-      return { type: "interested", status: "pending" };
-    }
-
-    if (gig.appliedUsers?.includes(currentUser._id)) {
-      return { type: "applied", status: "pending" };
-    }
-
-    const shortlistedEntry = gig.shortlistedUsers?.find(
-      (item: any) => item.userId === currentUser._id,
-    );
-    if (shortlistedEntry) {
-      return { type: "shortlisted", status: "active" };
-    }
-
-    if (gig.bookedBy === currentUser._id) {
-      return { type: "booked", status: "confirmed" };
-    }
-
-    if (gig.bandCategory) {
-      for (const role of gig.bandCategory) {
-        if (role.applicants?.includes(currentUser._id)) {
-          return { type: "band-applicant", status: "pending", role: role.role };
-        }
-        if (role.bookedUsers?.includes(currentUser._id)) {
-          return { type: "band-booked", status: "booked", role: role.role };
-        }
+      if (!gig?._id || gig._id === gigId) {
+        console.log("Returning - same gig or no ID");
+        return;
       }
-    }
 
-    if (gig.bookCount) {
-      for (const booking of gig.bookCount) {
-        if (booking.appliedBy === currentUser._id) {
-          return { type: "band-booking", status: "applied" };
-        }
-      }
-    }
-
-    return null;
-  }, [gig, currentUser]);
-
-  // Get user's role in this gig
-  const getUserRoleInGig = (userId: Id<"users">) => {
-    if (!gig) return null;
-
-    if (gig.postedBy === userId) return "poster";
-    if (gig.bookedBy === userId) return "booked";
-    if (gig.interestedUsers?.includes(userId)) return "interested";
-    if (gig.appliedUsers?.includes(userId)) return "applied";
-
-    const shortlisted = gig.shortlistedUsers?.find(
-      (item) => item.userId === userId,
-    );
-    if (shortlisted) return "shortlisted";
-
-    for (const role of gig.bandCategory || []) {
-      if (role.applicants?.includes(userId)) return "band-applicant";
-      if (role.bookedUsers?.includes(userId)) return "band-booked";
-    }
-
-    for (const booking of gig.bookCount || []) {
-      if (booking.appliedBy === userId) return "band-booking";
-      if (booking.performingMembers?.some((m) => m.userId === userId))
-        return "band-member";
-    }
-
-    return null;
-  };
-
-  // Get status badge for a user
-  const getUserStatusBadge = (userId: Id<"users">) => {
-    const role = getUserRoleInGig(userId);
-
-    const styles = {
-      poster: {
-        bg: isDarkMode ? "bg-indigo-900/30" : "bg-indigo-50",
-        text: isDarkMode ? "text-indigo-300" : "text-indigo-700",
-        border: isDarkMode ? "border-indigo-800" : "border-indigo-200",
-        icon: <Crown className="w-3 h-3 mr-1" />,
-        label: "Gig Owner",
-      },
-      booked: {
-        bg: isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50",
-        text: isDarkMode ? "text-emerald-300" : "text-emerald-700",
-        border: isDarkMode ? "border-emerald-800" : "border-emerald-200",
-        icon: <CheckCircle className="w-3 h-3 mr-1" />,
-        label: "Booked",
-      },
-      shortlisted: {
-        bg: isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50",
-        text: isDarkMode ? "text-emerald-300" : "text-emerald-700",
-        border: isDarkMode ? "border-emerald-800" : "border-emerald-200",
-        icon: <Star className="w-3 h-3 mr-1" />,
-        label: "Shortlisted",
-      },
-      interested: {
-        bg: isDarkMode ? "bg-sky-900/30" : "bg-sky-50",
-        text: isDarkMode ? "text-sky-300" : "text-sky-700",
-        border: isDarkMode ? "border-sky-800" : "border-sky-200",
-        icon: <Heart className="w-3 h-3 mr-1" />,
-        label: "Interested",
-      },
-      applied: {
-        bg: isDarkMode ? "bg-amber-900/30" : "bg-amber-50",
-        text: isDarkMode ? "text-amber-300" : "text-amber-700",
-        border: isDarkMode ? "border-amber-800" : "border-amber-200",
-        icon: <Briefcase className="w-3 h-3 mr-1" />,
-        label: "Applied",
-      },
-      "band-applicant": {
-        bg: isDarkMode ? "bg-amber-900/30" : "bg-amber-50",
-        text: isDarkMode ? "text-amber-300" : "text-amber-700",
-        border: isDarkMode ? "border-amber-800" : "border-amber-200",
-        icon: <Briefcase className="w-3 h-3 mr-1" />,
-        label: "Applied",
-      },
-      "band-booking": {
-        bg: isDarkMode ? "bg-amber-900/30" : "bg-amber-50",
-        text: isDarkMode ? "text-amber-300" : "text-amber-700",
-        border: isDarkMode ? "border-amber-800" : "border-amber-200",
-        icon: <Users2 className="w-3 h-3 mr-1" />,
-        label: "Band Applied",
-      },
-      "band-booked": {
-        bg: isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50",
-        text: isDarkMode ? "text-emerald-300" : "text-emerald-700",
-        border: isDarkMode ? "border-emerald-800" : "border-emerald-200",
-        icon: <CheckCircle className="w-3 h-3 mr-1" />,
-        label: "Booked",
-      },
-      "band-member": {
-        bg: isDarkMode ? "bg-sky-900/30" : "bg-sky-50",
-        text: isDarkMode ? "text-sky-300" : "text-sky-700",
-        border: isDarkMode ? "border-sky-800" : "border-sky-200",
-        icon: <Users className="w-3 h-3 mr-1" />,
-        label: "Band Member",
-      },
-    };
-
-    const style = styles[role as keyof typeof styles];
-    if (!style) return null;
-
-    return {
-      ...style,
-      className: cn(
-        "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border",
-        style.bg,
-        style.text,
-        style.border,
-      ),
-    };
-  };
-
-  // Check if user can message another user
-  const canMessageUser = (targetUserId: Id<"users">) => {
-    if (!currentUser?._id) return false;
-    if (targetUserId === currentUser._id) return false;
-
-    if (targetUserId === gig?.postedBy) return true;
-    if (gig?.postedBy === currentUser._id) return true;
-
-    return false;
-  };
-
-  // Format helpers
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatTime = (timeStr: string) => {
-    return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
-
-  const formatRelativeTime = (timestamp: number) => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    return "just now";
-  };
-
-  // Get trust tier icon
-  const getTrustTierIcon = (tier?: string) => {
-    switch (tier) {
-      case "elite":
-        return <Crown className="w-4 h-4 text-amber-500" />;
-      case "trusted":
-        return <Medal className="w-4 h-4 text-sky-500" />;
-      case "verified":
-        return <BadgeCheck className="w-4 h-4 text-emerald-500" />;
-      case "basic":
-        return <Shield className="w-4 h-4 text-gray-400" />;
-      default:
-        return null;
-    }
-  };
-
-  // Get role icon
-  const getRoleIcon = (roleType?: string) => {
-    switch (roleType?.toLowerCase()) {
-      case "vocalist":
-        return <Mic className="w-4 h-4 text-rose-500" />;
-      case "dj":
-        return <Volume2 className="w-4 h-4 text-violet-500" />;
-      case "mc":
-        return <Mic className="w-4 h-4 text-amber-500" />;
-      case "instrumentalist":
-        return <Music className="w-4 h-4 text-sky-500" />;
-      default:
-        return <UserRound className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
-  const { allGigs: allGigsData, isLoading: allGigsLoading } = useAllGigs({
-    limit: 100,
-  });
-
-  // Handle view gig
-  const handleViewGig = (gig: any) => {
-    router.push(`/hub/gigs/musician/${gig._id}/gig-info`);
-  };
+      console.log("Opening modal for:", gig.title);
+      setSelectedGigForModal(gig);
+      setShowGigModal(true);
+    },
+    [gigId],
+  );
 
   // Handle view profile
   const handleViewProfile = (userId: Id<"users">) => {
@@ -1113,7 +1351,6 @@ export default function GigDetailsPage({ params }: PageProps) {
       });
 
       toast.success(isBooked ? "Booking cancelled" : "Application withdrawn");
-
       setShowWithdrawDialog(false);
       setWithdrawReason("");
       router.refresh();
@@ -1124,7 +1361,49 @@ export default function GigDetailsPage({ params }: PageProps) {
     }
   };
 
-  // Get application status badge for current user
+  // Get user's own application status
+  const userApplication = useMemo(() => {
+    if (!currentUser?._id || !gig) return null;
+
+    if (gig.postedBy === currentUser._id) {
+      return { type: "poster", status: "owner" };
+    }
+    if (gig.interestedUsers?.includes(currentUser._id)) {
+      return { type: "interested", status: "pending" };
+    }
+    if (gig.appliedUsers?.includes(currentUser._id)) {
+      return { type: "applied", status: "pending" };
+    }
+    const shortlistedEntry = gig.shortlistedUsers?.find(
+      (item: any) => item.userId === currentUser._id,
+    );
+    if (shortlistedEntry) {
+      return { type: "shortlisted", status: "active" };
+    }
+    if (gig.bookedBy === currentUser._id) {
+      return { type: "booked", status: "confirmed" };
+    }
+    if (gig.bandCategory) {
+      for (const role of gig.bandCategory) {
+        if (role.applicants?.includes(currentUser._id)) {
+          return { type: "band-applicant", status: "pending", role: role.role };
+        }
+        if (role.bookedUsers?.includes(currentUser._id)) {
+          return { type: "band-booked", status: "booked", role: role.role };
+        }
+      }
+    }
+    if (gig.bookCount) {
+      for (const booking of gig.bookCount) {
+        if (booking.appliedBy === currentUser._id) {
+          return { type: "band-booking", status: "applied" };
+        }
+      }
+    }
+    return null;
+  }, [gig, currentUser]);
+
+  // Get application status badge
   const getMyStatusBadge = () => {
     if (!userApplication) return null;
 
@@ -1243,11 +1522,15 @@ export default function GigDetailsPage({ params }: PageProps) {
 
     return groups;
   }, [gig, userMap, currentUser]);
-  // Base metrics from real data (static baseline)
+
+  // Base metrics
+  const { allGigs: allGigsData, isLoading: allGigsLoading } = useAllGigs({
+    limit: 100,
+  });
+
   const baseMetrics = useMemo(() => {
     if (!allGigsData) return null;
 
-    // Calculate from REAL gig data
     const totalInterests = allGigsData.reduce(
       (sum, gig) => sum + (gig.interestedUsers?.length || 0),
       0,
@@ -1258,18 +1541,12 @@ export default function GigDetailsPage({ params }: PageProps) {
       0,
     );
 
-    // Category popularity
     const categoryCount: Record<string, number> = {};
     allGigsData.forEach((gig) => {
       const cat = gig.bussinesscat || "other";
       categoryCount[cat] = (categoryCount[cat] || 0) + 1;
     });
 
-    const topCategory =
-      Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-      "None";
-
-    // Location popularity
     const locationCount: Record<string, number> = {};
     allGigsData.forEach((gig) => {
       if (gig.location) {
@@ -1282,13 +1559,11 @@ export default function GigDetailsPage({ params }: PageProps) {
       Object.entries(locationCount).sort((a, b) => b[1] - a[1])[0]?.[0] ||
       "Remote";
 
-    // Average price
     const prices = allGigsData.filter((g) => g.price).map((g) => g.price || 0);
     const avgPrice = prices.length
       ? Math.floor(prices.reduce((a, b) => a + b, 0) / prices.length)
       : 0;
 
-    // Peak posting hour
     const hours = allGigsData.map((g) => new Date(g._creationTime).getHours());
     const hourCount: Record<number, number> = {};
     hours.forEach((h) => (hourCount[h] = (hourCount[h] || 0) + 1));
@@ -1305,27 +1580,12 @@ export default function GigDetailsPage({ params }: PageProps) {
       totalInterests,
       totalApplications,
       avgPrice,
-      topCategory,
       topLocation,
       peakHour,
-      bookedCount: allGigsData.filter((g) => g.isTaken).length,
     };
   }, [allGigsData]);
 
-  // Filtered applicants based on search
-  const filterUsers = (users: any[]) => {
-    if (!searchQuery) return users;
-    const query = searchQuery.toLowerCase();
-    return users.filter(
-      (user) =>
-        user.firstname?.toLowerCase().includes(query) ||
-        user.username?.toLowerCase().includes(query) ||
-        user.roleType?.toLowerCase().includes(query) ||
-        user.city?.toLowerCase().includes(query),
-    );
-  };
-
-  // Replace your current liveActivity useState with this:
+  // Live activity state
   const [liveActivity, setLiveActivity] = useState(() => {
     if (baseMetrics) {
       return {
@@ -1347,8 +1607,6 @@ export default function GigDetailsPage({ params }: PageProps) {
     };
   });
 
-  // Then DELETE the entire useEffect that was causing the error (lines 1350-1360)
-
   const [liveFeed, setLiveFeed] = useState<
     Array<{
       id: string;
@@ -1359,7 +1617,7 @@ export default function GigDetailsPage({ params }: PageProps) {
     }>
   >([]);
 
-  // Simulate LIVE activity using real data patterns
+  // Simulate live activity
   useEffect(() => {
     if (!baseMetrics || !allGigsData || allGigsData.length === 0) return;
 
@@ -1431,7 +1689,7 @@ export default function GigDetailsPage({ params }: PageProps) {
     }
   };
 
-  // Memoize the filtered interest gigs
+  // Upcoming gigs
   const upcomingInterestGigs = useMemo(() => {
     if (!allGigsData) return [];
 
@@ -1453,7 +1711,6 @@ export default function GigDetailsPage({ params }: PageProps) {
       .slice(0, 8);
   }, [allGigsData, gigId]);
 
-  // Memoize the filtered event gigs
   const upcomingEventGigs = useMemo(() => {
     if (!allGigsData) return [];
 
@@ -1472,7 +1729,7 @@ export default function GigDetailsPage({ params }: PageProps) {
       .slice(0, 8);
   }, [allGigsData, gigId]);
 
-  // Filtered gigs for trending picks
+  // Filtered gigs
   const filteredGigs = useMemo(() => {
     if (!allGigsData) return [];
 
@@ -1480,7 +1737,6 @@ export default function GigDetailsPage({ params }: PageProps) {
 
     switch (activeTab) {
       case "trending":
-        // Trending: Gigs with most total interactions
         filtered = allGigsData
           .map((gig) => ({
             ...gig,
@@ -1495,7 +1751,6 @@ export default function GigDetailsPage({ params }: PageProps) {
         break;
 
       case "hot":
-        // Hot: Gigs with most booking history entries
         filtered = allGigsData
           .map((gig) => {
             const bookingHistoryCount = gig.bookingHistory?.length || 0;
@@ -1517,7 +1772,6 @@ export default function GigDetailsPage({ params }: PageProps) {
         break;
 
       case "closing":
-        // Closing: Gigs where interest window is closing soon
         const now = Date.now();
         const threeDaysFromNow = now + 3 * 24 * 60 * 60 * 1000;
 
@@ -1543,58 +1797,41 @@ export default function GigDetailsPage({ params }: PageProps) {
     return filtered;
   }, [activeTab, allGigsData]);
 
-  // Online users queries
-  const onlineUsers = useQuery(api.controllers.user.getOnlineUsers, {
-    thresholdMinutes: 5,
-    limit: 50,
-  });
-
+  // Online stats
   const onlineStats = useQuery(api.controllers.user.getOnlineUsersStats, {
     thresholdMinutes: 5,
   });
 
-  // Get current user's online status
-  const isCurrentUserOnline = useMemo(() => {
-    if (!currentUser?._id || !onlineUsers) return false;
-    return onlineUsers.some((user: any) => user._id === currentUser._id);
-  }, [currentUser?._id, onlineUsers]);
-
-  const getTrendIcon = (change: number) => {
-    if (change > 0.5)
-      return <TrendingUp className="w-3 h-3 text-emerald-500" />;
-    if (change < -0.5)
-      return <TrendingDown className="w-3 h-3 text-rose-500" />;
-    return <Minus className="w-3 h-3 text-slate-400" />;
+  // Check if user can message
+  const canMessageUser = (targetUserId: Id<"users">) => {
+    if (!currentUser?._id) return false;
+    if (targetUserId === currentUser._id) return false;
+    if (targetUserId === gig?.postedBy) return true;
+    if (gig?.postedBy === currentUser._id) return true;
+    return false;
   };
 
-  const getTrendColor = (change: number) => {
-    if (change > 0.5) return "text-emerald-500";
-    if (change < -0.5) return "text-rose-500";
-    return "text-slate-400";
+  // Format helpers
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
-  const canWithdraw =
-    userApplication &&
-    ["interested", "applied", "band-applicant", "band-booking"].includes(
-      userApplication.type,
-    );
-
-  // Check if current user is booked in any role
+  // Check if user is booked
   const isUserBookedInAnyRole = useMemo(() => {
     if (!currentUser?._id || !gig) return false;
 
-    // Check direct booking
     if (gig.bookedBy === currentUser._id) return true;
-
-    // Check band category roles
     if (
       gig.bandCategory?.some((role: any) =>
         role.bookedUsers?.includes(currentUser._id),
       )
     )
       return true;
-
-    // Check band bookings
     if (
       gig.bookCount?.some(
         (booking: any) =>
@@ -1609,7 +1846,6 @@ export default function GigDetailsPage({ params }: PageProps) {
     return false;
   }, [gig, currentUser]);
 
-  // Get booked roles for current user
   const bookedRoles = useMemo(() => {
     if (!isUserBookedInAnyRole || !gig || !currentUser) return [];
 
@@ -1653,23 +1889,674 @@ export default function GigDetailsPage({ params }: PageProps) {
     return roles;
   }, [isUserBookedInAnyRole, gig, currentUser]);
 
+  const canWithdraw =
+    userApplication &&
+    ["interested", "applied", "band-applicant", "band-booking"].includes(
+      userApplication.type,
+    );
+
   // Loading state
   if (!gig || !users) {
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
-        <div className="max-w-7xl mx-auto space-y-4 w-full">
-          <Skeleton className="h-8 w-24" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Skeleton className="h-96 rounded-xl lg:col-span-1" />
-            <Skeleton className="h-96 rounded-xl lg:col-span-2" />
+      <TooltipProvider>
+        <div
+          className={cn(
+            "min-h-screen relative",
+            isDarkMode
+              ? "bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-slate-950/90"
+              : "bg-gradient-to-br from-slate-50/80 via-white/70 to-slate-50/80",
+          )}
+        >
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+              className={cn(
+                "absolute top-0 left-0 right-0 h-96 bg-gradient-to-b",
+                isDarkMode
+                  ? "from-indigo-500/5 via-transparent to-transparent"
+                  : "from-amber-500/5 via-transparent to-transparent",
+              )}
+            />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+            {/* Header skeleton */}
+            <div className="flex items-center justify-between mb-8">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <Skeleton className="h-10 w-32 rounded-xl" />
+            </div>
+
+            {/* Title skeleton */}
+            <div className="mb-8">
+              <Skeleton className="h-12 w-3/4 mb-4" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-8 w-24 rounded-full" />
+              </div>
+            </div>
+
+            {/* Grid layout with skeletons */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Left Column Skeleton */}
+              <div className="hidden md:block md:col-span-1">
+                <div className="space-y-3">
+                  <Skeleton className="h-96 w-full rounded-xl" />
+                  <Skeleton className="h-48 w-full rounded-xl" />
+                  <Skeleton className="h-24 w-full rounded-xl" />
+                </div>
+              </div>
+
+              {/* Right Column Skeleton */}
+              <div className="md:col-span-2 space-y-6">
+                <Skeleton className="h-[600px] w-full rounded-xl" />
+                <Skeleton className="h-48 w-full rounded-xl" />
+              </div>
+            </div>
+
+            {/* Mobile bottom bar skeleton */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800" />
           </div>
         </div>
-      </div>
+      </TooltipProvider>
     );
   }
 
+  // Changing gig loading state
+  if (isChangingGig) {
+    return (
+      <TooltipProvider>
+        <div
+          className={cn(
+            "min-h-screen relative",
+            isDarkMode
+              ? "bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-slate-950/90"
+              : "bg-gradient-to-br from-slate-50/80 via-white/70 to-slate-50/80",
+          )}
+        >
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+              className={cn(
+                "absolute top-0 left-0 right-0 h-96 bg-gradient-to-b",
+                isDarkMode
+                  ? "from-indigo-500/5 via-transparent to-transparent"
+                  : "from-amber-500/5 via-transparent to-transparent",
+              )}
+            />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+            {/* Header - keep interactive */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => router.back()}
+                className={cn(
+                  "p-2 rounded-xl transition-all hover:scale-105",
+                  isDarkMode
+                    ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
+                )}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2">
+                <div className="hidden md:block">{getMyStatusBadge()}</div>
+                <Skeleton className="md:hidden w-10 h-10 rounded-xl" />
+                <Skeleton className="hidden md:block w-32 h-10 rounded-xl" />
+              </div>
+            </div>
+
+            {/* Title - keep visible but dimmed */}
+            <div className="mb-8 opacity-50">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">
+                {gig.title}
+              </h1>
+            </div>
+
+            {/* Grid layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Left Column - keep fully interactive */}
+              <div className="hidden md:block md:col-span-1">
+                <div className="space-y-3 sticky top-24">
+                  {/* SECTION 1: THE BUZZ */}
+                  <div
+                    className={cn(
+                      "rounded-xl border-2 overflow-hidden",
+                      isDarkMode
+                        ? "bg-gradient-to-b from-slate-900 via-slate-800/90 to-slate-900 border-purple-500/30"
+                        : "bg-gradient-to-b from-white via-purple-50/30 to-white border-purple-200",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "px-4 py-3 border-b",
+                        isDarkMode
+                          ? "border-purple-500/20"
+                          : "border-purple-200",
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-purple-500" />
+                          <h3
+                            className={cn(
+                              "text-sm font-bold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            The Buzz
+                          </h3>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs",
+                            isDarkMode
+                              ? "border-purple-500/30 text-purple-300"
+                              : "border-purple-300 text-purple-700",
+                          )}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>{onlineStats?.total || 0} here now</span>
+                          </div>
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Live counters */}
+                    <div
+                      className={cn(
+                        "px-4 py-2 border-b flex flex-wrap gap-3 text-xs",
+                        isDarkMode
+                          ? "bg-slate-800/50 border-slate-700"
+                          : "bg-slate-100/50 border-slate-200",
+                      )}
+                    >
+                      <span className="flex items-center gap-1">
+                        <Heart className="w-3.5 h-3.5 text-rose-400" />
+                        {liveActivity.recentInterests} interested
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Briefcase className="w-3.5 h-3.5 text-amber-400" />
+                        {liveActivity.recentApplications} applied
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {liveActivity.topLocation}
+                      </span>
+                    </div>
+
+                    {/* Live feed */}
+                    <div className="px-4 py-2 border-b">
+                      <div
+                        className={cn(
+                          "text-xs font-semibold mb-2",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        LIVE ACTIVITY
+                      </div>
+                      <div className="space-y-1 max-h-[100px] overflow-hidden">
+                        {liveFeed.slice(0, 3).map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-1.5 text-xs"
+                          >
+                            {getActivityIcon(item.type)}
+                            <span
+                              className={cn(
+                                "truncate max-w-[120px]",
+                                isDarkMode
+                                  ? "text-slate-300"
+                                  : "text-slate-700",
+                              )}
+                            >
+                              {item.gigTitle}
+                            </span>
+                            <span className="text-slate-400">•</span>
+                            <span
+                              className={cn(
+                                "text-xs",
+                                isDarkMode
+                                  ? "text-slate-500"
+                                  : "text-slate-400",
+                              )}
+                            >
+                              {Math.floor((Date.now() - item.timestamp) / 1000)}
+                              s ago
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mood Filters */}
+                    <div className="px-4 pt-3">
+                      <div
+                        className={cn(
+                          "flex gap-1 p-1 rounded-lg",
+                          isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                        )}
+                      >
+                        {[
+                          { id: "trending", label: "🔥 Trending" },
+                          { id: "hot", label: "⚡ Hot" },
+                          { id: "closing", label: "⏰ Closing" },
+                        ].map((filter) => (
+                          <button
+                            key={filter.id}
+                            onClick={() => setActiveTab(filter.id)}
+                            className={cn(
+                              "flex-1 py-1.5 rounded-md text-xs font-medium transition-all",
+                              activeTab === filter.id
+                                ? isDarkMode
+                                  ? "bg-purple-600 text-white"
+                                  : "bg-purple-500 text-white"
+                                : isDarkMode
+                                  ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-200",
+                            )}
+                          >
+                            {filter.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Trending Picks */}
+                    <div className="p-3">
+                      <h4
+                        className={cn(
+                          "text-xs font-semibold mb-2",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        TRENDING PICKS
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
+                        {filteredGigs
+                          .slice(0, 6)
+                          .map((gig: any, idx: number) => (
+                            <div key={gig._id} className="relative">
+                              {isChangingGig && selectedGigId === gig._id && (
+                                <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center z-10">
+                                  <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                                </div>
+                              )}
+                              <EngagingGigCard
+                                gig={gig}
+                                activeTab={activeTab}
+                                index={idx}
+                                onViewGig={handleViewGig}
+                                isSelected={selectedGigId === gig._id}
+                              />
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: UPCOMING */}
+                  <div className="space-y-3">
+                    {/* Dropping Soon */}
+                    <div
+                      className={cn(
+                        "rounded-xl border p-3",
+                        isDarkMode
+                          ? "bg-slate-900/80 border-purple-500/30"
+                          : "bg-white/90 border-purple-200",
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-4 h-4 text-purple-500" />
+                          <span
+                            className={cn(
+                              "text-sm font-bold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            Dropping Soon
+                          </span>
+                        </div>
+                        <Badge
+                          className={cn(
+                            "text-xs",
+                            isDarkMode
+                              ? "bg-purple-500/20 text-purple-300"
+                              : "bg-purple-100 text-purple-700",
+                          )}
+                        >
+                          {upcomingInterestGigs.length}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {upcomingInterestGigs.slice(0, 3).map((gig) => {
+                          const startTime = gig.acceptInterestStartTime!;
+                          const daysUntil = Math.ceil(
+                            (startTime - Date.now()) / (1000 * 60 * 60 * 24),
+                          );
+                          return (
+                            <div
+                              key={gig._id}
+                              onClick={() => handleViewGig(gig)}
+                              className={cn(
+                                "relative text-center p-2 rounded-lg cursor-pointer transition-all",
+                                isChangingGig &&
+                                  selectedGigId === gig._id &&
+                                  "pointer-events-none opacity-70",
+                                isDarkMode
+                                  ? "bg-slate-800/40 hover:bg-slate-800"
+                                  : "bg-slate-50 hover:bg-slate-100",
+                              )}
+                            >
+                              {isChangingGig && selectedGigId === gig._id && (
+                                <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center">
+                                  <Loader2 className="w-3 h-3 animate-spin text-purple-500" />
+                                </div>
+                              )}
+                              <div className="w-10 h-10 mx-auto rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mb-1">
+                                {daysUntil}d
+                              </div>
+                              <div className="text-xs truncate">
+                                {gig.title}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* On the Horizon */}
+                    <div
+                      className={cn(
+                        "rounded-xl border p-3",
+                        isDarkMode
+                          ? "bg-slate-900/80 border-emerald-500/30"
+                          : "bg-white/90 border-emerald-200",
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-emerald-500" />
+                          <span
+                            className={cn(
+                              "text-sm font-bold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            On the Horizon
+                          </span>
+                        </div>
+                        <Badge
+                          className={cn(
+                            "text-xs",
+                            isDarkMode
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : "bg-emerald-100 text-emerald-700",
+                          )}
+                        >
+                          {upcomingEventGigs.length}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {upcomingEventGigs.slice(0, 3).map((gig) => {
+                          const daysUntil = Math.ceil(
+                            (gig.date - Date.now()) / (1000 * 60 * 60 * 24),
+                          );
+                          return (
+                            <div
+                              key={gig._id}
+                              onClick={() => handleViewGig(gig)}
+                              className={cn(
+                                "relative text-center p-2 rounded-lg cursor-pointer transition-all",
+                                isChangingGig &&
+                                  selectedGigId === gig._id &&
+                                  "pointer-events-none opacity-70",
+                                isDarkMode
+                                  ? "bg-slate-800/40 hover:bg-slate-800"
+                                  : "bg-slate-50 hover:bg-slate-100",
+                              )}
+                            >
+                              {isChangingGig && selectedGigId === gig._id && (
+                                <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center">
+                                  <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
+                                </div>
+                              )}
+                              <div className="w-10 h-10 mx-auto rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold mb-1">
+                                {daysUntil}d
+                              </div>
+                              <div className="text-xs truncate">
+                                {gig.title}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 3: ONLINE STATS */}
+                  <div
+                    className={cn(
+                      "rounded-xl border p-3",
+                      isDarkMode
+                        ? "bg-slate-900/60 border-slate-700"
+                        : "bg-white/60 border-slate-200",
+                    )}
+                  >
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <div className="text-xs text-slate-500">Artists</div>
+                        <div className="text-lg font-bold text-blue-500">
+                          {onlineStats?.musicians || 0}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500">Bookers</div>
+                        <div className="text-lg font-bold text-purple-500">
+                          {onlineStats?.clients || 0}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500">Online</div>
+                        <div className="text-lg font-bold text-emerald-500">
+                          {onlineStats?.total || 0}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN - Loading Overlay */}
+              <div className="md:col-span-2 space-y-6 relative">
+                {/* Loading overlay */}
+                <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-20 rounded-xl flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Loading gig details...
+                    </p>
+                  </div>
+                </div>
+
+                {/* Existing right column content - dimmed */}
+                <div className="opacity-30 pointer-events-none">
+                  {/* Gig Info Card */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative group"
+                  >
+                    <Card
+                      className={cn(
+                        "relative border-2 overflow-hidden",
+                        isDarkMode
+                          ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700"
+                          : "bg-gradient-to-br from-white via-slate-50 to-white border-slate-200",
+                      )}
+                    >
+                      <CardContent className="p-6 relative">
+                        {/* Poster Info */}
+                        <div className="flex items-start justify-between mb-6">
+                          <div className="flex items-center gap-4">
+                            <Avatar className="w-14 h-14 border-2 border-white dark:border-slate-700">
+                              <AvatarImage src={poster?.picture} />
+                              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                                {poster?.firstname?.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4
+                                className={cn(
+                                  "font-semibold",
+                                  isDarkMode ? "text-white" : "text-slate-900",
+                                )}
+                              >
+                                {poster?.firstname} {poster?.lastname}
+                              </h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <TrustStarsDisplay
+                                  trustStars={poster?.trustStars || 0}
+                                  size="sm"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Info Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                          <InfoChip
+                            icon={MapPin}
+                            label="Location"
+                            value={gig.location || "Remote"}
+                            color="blue"
+                            isDarkMode={isDarkMode}
+                          />
+                          <InfoChip
+                            icon={Calendar}
+                            label="Date"
+                            value={formatDate(gig.date)}
+                            color="emerald"
+                            isDarkMode={isDarkMode}
+                          />
+                          <InfoChip
+                            icon={Clock}
+                            label="Time"
+                            value={`${gig.time?.start || "TBD"} - ${gig.time?.end || "TBD"}`}
+                            color="amber"
+                            isDarkMode={isDarkMode}
+                          />
+                          <InfoChip
+                            icon={DollarSign}
+                            label="Budget"
+                            value={
+                              gig.price
+                                ? `${gig.currency || "$"}${gig.price.toLocaleString()}`
+                                : "Negotiable"
+                            }
+                            color="purple"
+                            isDarkMode={isDarkMode}
+                          />
+                        </div>
+
+                        {/* Description */}
+                        <div className="mb-6">
+                          <h3
+                            className={cn(
+                              "text-sm font-semibold mb-3 flex items-center gap-2",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            <FileText className="w-4 h-4 text-purple-500" />
+                            Description
+                          </h3>
+                          <p
+                            className={cn(
+                              "text-sm leading-relaxed",
+                              isDarkMode ? "text-slate-300" : "text-slate-600",
+                            )}
+                          >
+                            {gig.description}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Bottom Bar */}
+            <div
+              className={cn(
+                "fixed bottom-0 left-0 right-0 z-30 md:hidden",
+                "backdrop-blur-xl border-t p-3",
+                isDarkMode
+                  ? "bg-slate-900/80 border-slate-800"
+                  : "bg-white/80 border-slate-200",
+              )}
+            >
+              <div className="flex items-center justify-around">
+                <button
+                  onClick={() => setShowApplicantSidebar(true)}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <Activity className="w-5 h-5" />
+                  <span className="text-xs">Activity</span>
+                </button>
+                {gig.bandCategory?.length && gig.bandCategory?.length > 0 && (
+                  <button
+                    onClick={() => setShowRoleDrawer(true)}
+                    className="flex flex-col items-center gap-1"
+                  >
+                    <Music className="w-5 h-5" />
+                    <span className="text-xs">Roles</span>
+                  </button>
+                )}
+                {canWithdraw && (
+                  <button
+                    onClick={() => setShowWithdrawDialog(true)}
+                    className="flex flex-col items-center gap-1 text-rose-500"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    <span className="text-xs">Withdraw</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(window.location.href);
+                    toast.success("Link copied!");
+                  }}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <Share2 className="w-5 h-5" />
+                  <span className="text-xs">Share</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="h-16 md:hidden" />
+          </div>
+        </div>
+      </TooltipProvider>
+    );
+  }
+
+  // Main render - fully loaded
   return (
     <TooltipProvider>
+      <GigModal
+        isOpen={showGigModal}
+        onClose={() => {
+          setShowGigModal(false);
+          setSelectedGigForModal(null);
+        }}
+        gig={selectedGigForModal}
+      />
       <div
         className={cn(
           "min-h-screen relative",
@@ -2048,15 +2935,24 @@ export default function GigDetailsPage({ params }: PageProps) {
                         TRENDING PICKS
                       </h4>
                       <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
-                        {filteredGigs.slice(0, 6).map((gig: any) => (
-                          <EngagingGigCard
-                            key={gig._id}
-                            gig={gig}
-                            activeTab={activeTab}
-                            index={0}
-                            onViewGig={handleViewGig}
-                          />
-                        ))}
+                        {filteredGigs
+                          .slice(0, 6)
+                          .map((gig: any, idx: number) => (
+                            <div key={gig._id} className="relative">
+                              {isChangingGig && selectedGigId === gig._id && (
+                                <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center z-10">
+                                  <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                                </div>
+                              )}
+                              <EngagingGigCard
+                                gig={gig}
+                                activeTab={activeTab}
+                                index={idx}
+                                onViewGig={handleViewGig}
+                                isSelected={selectedGigId === gig._id}
+                              />
+                            </div>
+                          ))}
                       </div>
                     </div>
                   </div>
@@ -2106,12 +3002,20 @@ export default function GigDetailsPage({ params }: PageProps) {
                               key={gig._id}
                               onClick={() => handleViewGig(gig)}
                               className={cn(
-                                "text-center p-2 rounded-lg cursor-pointer",
+                                "relative text-center p-2 rounded-lg cursor-pointer transition-all",
+                                isChangingGig &&
+                                  selectedGigId === gig._id &&
+                                  "pointer-events-none opacity-70",
                                 isDarkMode
                                   ? "bg-slate-800/40 hover:bg-slate-800"
                                   : "bg-slate-50 hover:bg-slate-100",
                               )}
                             >
+                              {isChangingGig && selectedGigId === gig._id && (
+                                <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center">
+                                  <Loader2 className="w-3 h-3 animate-spin text-purple-500" />
+                                </div>
+                              )}
                               <div className="w-10 h-10 mx-auto rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mb-1">
                                 {daysUntil}d
                               </div>
@@ -2166,12 +3070,20 @@ export default function GigDetailsPage({ params }: PageProps) {
                               key={gig._id}
                               onClick={() => handleViewGig(gig)}
                               className={cn(
-                                "text-center p-2 rounded-lg cursor-pointer",
+                                "relative text-center p-2 rounded-lg cursor-pointer transition-all",
+                                isChangingGig &&
+                                  selectedGigId === gig._id &&
+                                  "pointer-events-none opacity-70",
                                 isDarkMode
                                   ? "bg-slate-800/40 hover:bg-slate-800"
                                   : "bg-slate-50 hover:bg-slate-100",
                               )}
                             >
+                              {isChangingGig && selectedGigId === gig._id && (
+                                <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center">
+                                  <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
+                                </div>
+                              )}
                               <div className="w-10 h-10 mx-auto rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold mb-1">
                                 {daysUntil}d
                               </div>
@@ -2591,7 +3503,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                 <Activity className="w-5 h-5" />
                 <span className="text-xs">Activity</span>
               </button>
-              {gig.bandCategory?.length && gig.bandCategory?.length > 0 && (
+              {gig?.bandCategory?.length && gig?.bandCategory?.length > 0 && (
                 <button
                   onClick={() => setShowRoleDrawer(true)}
                   className="flex flex-col items-center gap-1"
