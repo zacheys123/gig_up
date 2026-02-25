@@ -60,8 +60,8 @@ import {
   Users2,
   Award,
   Shield,
-  TrendingUp, // You already have this
-  Sparkles, // You already have this
+  TrendingUp,
+  Sparkles,
   Eye,
   Crown,
   Medal,
@@ -108,10 +108,8 @@ import {
   UsersRound,
   VerifiedIcon,
   ThumbsUp,
-  Activity, // You already have this
-  // ADD THESE NEW ONES
+  Activity,
   TrendingDown,
-  // You have Minus already, but adding for clarity
   BarChart3,
   LineChart,
   Zap,
@@ -119,6 +117,7 @@ import {
   Info,
   FileText,
 } from "lucide-react";
+
 // Trust components
 import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
 import { ChatIcon } from "@/components/chat/ChatIcon";
@@ -651,7 +650,7 @@ const RequirementsCard = ({ requirements, isDarkMode }: any) => (
   </motion.div>
 );
 
-// Then in your RoleCard component, use it:
+// RoleCard Component
 const RoleCard = ({ role, index, isDarkMode, currentUser, onApply }: any) => {
   const isQualified = isUserQualifiedForRole(currentUser, role);
 
@@ -737,6 +736,7 @@ const RoleCard = ({ role, index, isDarkMode, currentUser, onApply }: any) => {
     </div>
   );
 };
+
 // ============= MAIN COMPONENT =============
 // Types
 interface PageProps {
@@ -744,13 +744,14 @@ interface PageProps {
     gigId: string;
   }>;
 }
+
 export default function GigDetailsPage({ params }: PageProps) {
   const { gigId } = React.use(params);
 
   const router = useRouter();
   const { colors, isDarkMode } = useThemeColors();
   const { user: currentUser } = useCurrentUser();
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("trending");
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(
@@ -781,6 +782,11 @@ export default function GigDetailsPage({ params }: PageProps) {
   // Fetch gig data
   const gig = useQuery(api.controllers.gigs.getGigById, {
     gigId: gigId as Id<"gigs">,
+  });
+
+  // Fetch poster data separately
+  const poster = useQuery(api.controllers.user.getUserById, {
+    userId: gig?.postedBy as Id<"users">,
   });
 
   // Fetch ALL users that are involved in this gig
@@ -841,11 +847,6 @@ export default function GigDetailsPage({ params }: PageProps) {
     if (!selectedUserId) return null;
     return userMap.get(selectedUserId);
   }, [selectedUserId, userMap]);
-
-  // Get poster data
-  const poster = useMemo(() => {
-    return gig?.postedBy ? userMap.get(gig.postedBy as Id<"users">) : null;
-  }, [gig, userMap]);
 
   // Get user's own application status
   const userApplication = useMemo(() => {
@@ -1083,7 +1084,7 @@ export default function GigDetailsPage({ params }: PageProps) {
     limit: 100,
   });
 
-  // Add these handler functions inside your component:
+  // Handle view gig
   const handleViewGig = (gig: any) => {
     router.push(`/hub/gigs/musician/${gig._id}/gig-info`);
   };
@@ -1256,14 +1257,7 @@ export default function GigDetailsPage({ params }: PageProps) {
     );
   };
 
-  // Inside your GigDetailsPage component:
-
-  // 1. DELETE these old states (they're causing issues)
-  // const [priceChanges, setPriceChanges]...
-  // const [tickerData, setTickerData]...
-  // const [marketTrend, setMarketTrend]...
-
-  // 2. ADD these new states for live activity
+  // Live activity state
   const [liveActivity, setLiveActivity] = useState({
     recentInterests: 0,
     recentApplications: 0,
@@ -1283,7 +1277,7 @@ export default function GigDetailsPage({ params }: PageProps) {
     }>
   >([]);
 
-  // 3. Base metrics from real data (static baseline)
+  // Base metrics from real data (static baseline)
   const baseMetrics = useMemo(() => {
     if (!allGigsData) return null;
 
@@ -1352,11 +1346,10 @@ export default function GigDetailsPage({ params }: PageProps) {
     };
   }, [allGigsData]);
 
-  // 4. Initialize live activity with baseline data (only once)
+  // Initialize live activity with baseline data
   useEffect(() => {
     if (!baseMetrics) return;
 
-    // Only set initial values if they haven't been set yet
     setLiveActivity({
       recentInterests: Math.floor(baseMetrics.totalInterests * 0.1),
       recentApplications: Math.floor(baseMetrics.totalApplications * 0.1),
@@ -1365,27 +1358,20 @@ export default function GigDetailsPage({ params }: PageProps) {
       peakHour: baseMetrics.peakHour,
       topLocation: baseMetrics.topLocation,
     });
+  }, [baseMetrics]);
 
-    // This should only run once when baseMetrics becomes available
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseMetrics?.totalGigs]); // Only depend on a single primitive value
-
-  // 5. Simulate LIVE activity using real data patterns (separate effect)
+  // Simulate LIVE activity using real data patterns
   useEffect(() => {
     if (!baseMetrics || !allGigsData || allGigsData.length === 0) return;
 
-    // Live feed simulation using REAL gig data
     const feedInterval = setInterval(() => {
-      // Pick a random gig to "interact with"
       const randomGig =
         allGigsData[Math.floor(Math.random() * allGigsData.length)];
       if (!randomGig) return;
 
-      // Random activity type
       const types = ["interest", "apply", "view"] as const;
       const randomType = types[Math.floor(Math.random() * types.length)];
 
-      // Add to live feed
       const newFeedItem = {
         id: `${Date.now()}-${Math.random()}`,
         type: randomType,
@@ -1396,7 +1382,6 @@ export default function GigDetailsPage({ params }: PageProps) {
 
       setLiveFeed((prev) => [newFeedItem, ...prev].slice(0, 5));
 
-      // Update counters based on activity
       setLiveActivity((prev) => ({
         ...prev,
         recentInterests:
@@ -1411,7 +1396,6 @@ export default function GigDetailsPage({ params }: PageProps) {
       }));
     }, 8000);
 
-    // Smooth counter updates (for the live numbers)
     const counterInterval = setInterval(() => {
       setLiveActivity((prev) => ({
         ...prev,
@@ -1435,8 +1419,8 @@ export default function GigDetailsPage({ params }: PageProps) {
       clearInterval(feedInterval);
       clearInterval(counterInterval);
     };
-  }, [baseMetrics, allGigsData]); // Keep these dependencies
-  // 5. Use these in your UI
+  }, [baseMetrics, allGigsData]);
+
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "interest":
@@ -1488,7 +1472,8 @@ export default function GigDetailsPage({ params }: PageProps) {
       .sort((a, b) => (a.date || 0) - (b.date || 0))
       .slice(0, 8);
   }, [allGigsData, gigId]);
-  // REPLACE with this useMemo:
+
+  // Filtered gigs for trending picks
   const filteredGigs = useMemo(() => {
     if (!allGigsData) return [];
 
@@ -1557,9 +1542,9 @@ export default function GigDetailsPage({ params }: PageProps) {
     }
 
     return filtered;
-  }, [activeTab, allGigsData]); // Dependencies
+  }, [activeTab, allGigsData]);
 
-  // Add these queries near your other useQuery hooks
+  // Online users queries
   const onlineUsers = useQuery(api.controllers.user.getOnlineUsers, {
     thresholdMinutes: 5,
     limit: 50,
@@ -1569,12 +1554,12 @@ export default function GigDetailsPage({ params }: PageProps) {
     thresholdMinutes: 5,
   });
 
-  // Optional: Get current user's online status for "You're online" badge
+  // Get current user's online status
   const isCurrentUserOnline = useMemo(() => {
     if (!currentUser?._id || !onlineUsers) return false;
     return onlineUsers.some((user: any) => user._id === currentUser._id);
   }, [currentUser?._id, onlineUsers]);
-  // Add this before the return
+
   const getTrendIcon = (change: number) => {
     if (change > 0.5)
       return <TrendingUp className="w-3 h-3 text-emerald-500" />;
@@ -1588,11 +1573,86 @@ export default function GigDetailsPage({ params }: PageProps) {
     if (change < -0.5) return "text-rose-500";
     return "text-slate-400";
   };
+
   const canWithdraw =
     userApplication &&
     ["interested", "applied", "band-applicant", "band-booking"].includes(
       userApplication.type,
     );
+
+  // Check if current user is booked in any role
+  const isUserBookedInAnyRole = useMemo(() => {
+    if (!currentUser?._id || !gig) return false;
+
+    // Check direct booking
+    if (gig.bookedBy === currentUser._id) return true;
+
+    // Check band category roles
+    if (
+      gig.bandCategory?.some((role: any) =>
+        role.bookedUsers?.includes(currentUser._id),
+      )
+    )
+      return true;
+
+    // Check band bookings
+    if (
+      gig.bookCount?.some(
+        (booking: any) =>
+          booking.appliedBy === currentUser._id ||
+          booking.performingMembers?.some(
+            (m: any) => m.userId === currentUser._id,
+          ),
+      )
+    )
+      return true;
+
+    return false;
+  }, [gig, currentUser]);
+
+  // Get booked roles for current user
+  const bookedRoles = useMemo(() => {
+    if (!isUserBookedInAnyRole || !gig || !currentUser) return [];
+
+    const roles = [];
+
+    if (gig.bookedBy === currentUser?._id) {
+      roles.push({ type: "primary", role: "Main Act" });
+    }
+
+    gig.bandCategory?.forEach((role: any) => {
+      if (role.bookedUsers?.includes(currentUser?._id)) {
+        roles.push({
+          type: "band",
+          role: role.role,
+          details: role,
+        });
+      }
+    });
+
+    gig.bookCount?.forEach((booking: any) => {
+      if (booking.appliedBy === currentUser?._id) {
+        roles.push({
+          type: "band-booking",
+          role: "Band",
+          details: booking,
+        });
+      }
+      if (
+        booking.performingMembers?.some(
+          (m: any) => m.userId === currentUser?._id,
+        )
+      ) {
+        roles.push({
+          type: "band-member",
+          role: "Band Member",
+          details: booking,
+        });
+      }
+    });
+
+    return roles;
+  }, [isUserBookedInAnyRole, gig, currentUser]);
 
   // Loading state
   if (!gig || !users) {
@@ -1647,10 +1707,8 @@ export default function GigDetailsPage({ params }: PageProps) {
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 justify-evenly">
-              <div className="hidden md:block">
-                {getMyStatusBadge && getMyStatusBadge()}
-              </div>
+            <div className="flex items-center gap-2">
+              <div className="hidden md:block">{getMyStatusBadge()}</div>
 
               {/* Mobile menu buttons */}
               <button
@@ -1681,6 +1739,10 @@ export default function GigDetailsPage({ params }: PageProps) {
 
               {/* Share Button */}
               <button
+                onClick={() => {
+                  navigator.clipboard?.writeText(window.location.href);
+                  toast.success("Link copied to clipboard!");
+                }}
                 className={cn(
                   "hidden md:flex p-2 rounded-xl",
                   isDarkMode
@@ -1693,9 +1755,8 @@ export default function GigDetailsPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Gig Title - Enhanced styling */}
+          {/* Gig Title */}
           <div className="mb-8">
-            {/* Title with gradient accent */}
             <div className="relative mb-3">
               <h1
                 className={cn(
@@ -1705,8 +1766,6 @@ export default function GigDetailsPage({ params }: PageProps) {
               >
                 {gig.title}
               </h1>
-
-              {/* Subtle underline accent */}
               <div
                 className={cn(
                   "absolute -bottom-1 left-0 w-16 h-1 rounded-full",
@@ -1717,61 +1776,53 @@ export default function GigDetailsPage({ params }: PageProps) {
 
             {/* Meta information chips */}
             <div className="flex flex-wrap items-center gap-2 mt-4">
-              {/* Category Chip */}
               <div
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                  "text-[10px] font-medium transition-all",
-                  "border",
+                  "text-xs font-medium transition-all border",
                   isDarkMode
-                    ? "bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20"
-                    : "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100",
+                    ? "bg-purple-500/10 border-purple-500/30 text-purple-300"
+                    : "bg-purple-50 border-purple-200 text-purple-700",
                 )}
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span className="capitalize">{gig.bussinesscat || "Gig"}</span>
               </div>
 
-              {/* Location Chip */}
               <div
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                  "text-[10px] font-medium transition-all",
-                  "border",
+                  "text-xs font-medium transition-all border",
                   isDarkMode
-                    ? "bg-blue-500/10 border-blue-500/30 text-blue-300 hover:bg-blue-500/20"
-                    : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
+                    ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
+                    : "bg-blue-50 border-blue-200 text-blue-700",
                 )}
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span>{gig.location?.split(",")[0] || "Remote"}</span>
               </div>
 
-              {/* Date Chip */}
               <div
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                  "text-[10px] font-medium transition-all",
-                  "border",
+                  "text-xs font-medium transition-all border",
                   isDarkMode
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
-                    : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-700",
                 )}
               >
                 <Calendar className="w-3.5 h-3.5" />
                 <span>{formatDate(gig.date)}</span>
               </div>
 
-              {/* Time Chip - if available */}
               {gig.time?.start && (
                 <div
                   className={cn(
                     "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                    "text-[10px] font-medium transition-all",
-                    "border",
+                    "text-xs font-medium transition-all border",
                     isDarkMode
-                      ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
-                      : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                      : "bg-amber-50 border-amber-200 text-amber-700",
                   )}
                 >
                   <Clock className="w-3.5 h-3.5" />
@@ -1782,14 +1833,11 @@ export default function GigDetailsPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* Quick Stats Row - Optional */}
-            <div className="flex items-center gap-4 mt-4 text-xs">
-              {/* Interested count */}
+            {/* Stats Row */}
+            <div className="flex items-center gap-4 mt-4 text-sm">
               {gig.interestedUsers && gig.interestedUsers.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <div className="p-1 rounded-full bg-rose-500/10">
-                    <Heart className="w-3 h-3 text-rose-500" />
-                  </div>
+                  <Heart className="w-4 h-4 text-rose-500" />
                   <span
                     className={isDarkMode ? "text-slate-300" : "text-slate-600"}
                   >
@@ -1798,16 +1846,24 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </div>
               )}
 
-              {/* Views count */}
               {gig.viewCount && gig.viewCount.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <div className="p-1 rounded-full bg-blue-500/10">
-                    <Eye className="w-3 h-3 text-blue-500" />
-                  </div>
+                  <Eye className="w-4 h-4 text-blue-500" />
                   <span
                     className={isDarkMode ? "text-slate-300" : "text-slate-600"}
                   >
                     {gig.viewCount.length} views
+                  </span>
+                </div>
+              )}
+
+              {gig.appliedUsers && gig.appliedUsers.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <Briefcase className="w-4 h-4 text-amber-500" />
+                  <span
+                    className={isDarkMode ? "text-slate-300" : "text-slate-600"}
+                  >
+                    {gig.appliedUsers.length} applied
                   </span>
                 </div>
               )}
@@ -1836,99 +1892,86 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </Card>
               ) : (
                 <div className="space-y-3 sticky top-24">
-                  {/* SECTION 1: THE BUZZ - What's happening now */}
+                  {/* SECTION 1: THE BUZZ */}
                   <div
                     className={cn(
-                      "rounded-xl border-2 overflow-hidden transition-all duration-300",
+                      "rounded-xl border-2 overflow-hidden",
                       isDarkMode
-                        ? "bg-gradient-to-b from-slate-900 via-slate-800/90 to-slate-900 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
-                        : "bg-gradient-to-b from-white via-purple-50/30 to-white border-purple-200 shadow-lg",
+                        ? "bg-gradient-to-b from-slate-900 via-slate-800/90 to-slate-900 border-purple-500/30"
+                        : "bg-gradient-to-b from-white via-purple-50/30 to-white border-purple-200",
                     )}
                   >
-                    {/* Header - Improved sizing */}
                     <div
                       className={cn(
-                        "px-4 py-3 border-b flex items-center justify-between",
+                        "px-4 py-3 border-b",
                         isDarkMode
                           ? "border-purple-500/20"
                           : "border-purple-200",
                       )}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Sparkles className="w-5 h-5 text-purple-500" />
-                        <h3
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-purple-500" />
+                          <h3
+                            className={cn(
+                              "text-sm font-bold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            The Buzz
+                          </h3>
+                        </div>
+                        <Badge
+                          variant="outline"
                           className={cn(
-                            "text- font-bold uppercase tracking-wider",
-                            isDarkMode ? "text-white" : "text-slate-900",
+                            "text-xs",
+                            isDarkMode
+                              ? "border-purple-500/30 text-purple-300"
+                              : "border-purple-300 text-purple-700",
                           )}
                         >
-                          The Buzz
-                        </h3>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>{onlineStats?.total || 0} here now</span>
+                          </div>
+                        </Badge>
                       </div>
-
-                      {/* Who's Here - Improved badge */}
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px] h-6 px-2 font-mono",
-                          isDarkMode
-                            ? "border-purple-500/30 text-purple-300"
-                            : "border-purple-300 text-purple-700",
-                        )}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>{onlineStats?.total || 0} here now</span>
-                        </div>
-                      </Badge>
                     </div>
 
-                    {/* Pulse - Live counters - Improved sizing */}
+                    {/* Live counters */}
                     <div
                       className={cn(
-                        "px-4 py-2 border-b flex items-center gap-4 overflow-x-auto text-[10px] font-mono whitespace-nowrap",
+                        "px-4 py-2 border-b flex flex-wrap gap-3 text-xs",
                         isDarkMode
                           ? "bg-slate-800/50 border-slate-700"
                           : "bg-slate-100/50 border-slate-200",
                       )}
                     >
-                      <span className="flex items-center gap-1.5">
-                        <Heart className="w-4 h-4 text-rose-400" />
-                        {liveActivity.recentInterests} feeling it
+                      <span className="flex items-center gap-1">
+                        <Heart className="w-3.5 h-3.5 text-rose-400" />
+                        {liveActivity.recentInterests} interested
                       </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="flex items-center gap-1.5">
-                        <Briefcase className="w-4 h-4 text-amber-400" />
-                        {liveActivity.recentApplications} jumped in
+                      <span className="flex items-center gap-1">
+                        <Briefcase className="w-3.5 h-3.5 text-amber-400" />
+                        {liveActivity.recentApplications} applied
                       </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4" />
-                        {liveActivity.topLocation} popping
-                      </span>
-                      <span className="text-slate-400">•</span>
-                      {/* Price ticker - Improved */}
-                      <span className="flex items-center gap-1.5 bg-slate-200/50 dark:bg-slate-700/50 px-2 py-0.5 rounded animate-pulse">
-                        <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-emerald-500 font-bold text-[11px]">
-                          {baseMetrics?.avgPrice || 0}
-                        </span>
-                        <span className="text-[10px] text-slate-400">avg</span>
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {liveActivity.topLocation}
                       </span>
                     </div>
 
-                    {/* Fresh Drops - Live feed - Improved */}
+                    {/* Live feed */}
                     <div className="px-4 py-2 border-b">
                       <div
                         className={cn(
-                          "text-[10px] font-mono mb-2 font-semibold",
+                          "text-xs font-semibold mb-2",
                           isDarkMode ? "text-slate-400" : "text-slate-500",
                         )}
                       >
-                        FRESH DROPS
+                        LIVE ACTIVITY
                       </div>
-                      <div className="space-y-1.5 max-h-[70px] overflow-hidden">
+                      <div className="space-y-1 max-h-[100px] overflow-hidden">
                         {liveFeed.slice(0, 3).map((item) => (
                           <div
                             key={item.id}
@@ -1962,32 +2005,28 @@ export default function GigDetailsPage({ params }: PageProps) {
                       </div>
                     </div>
 
-                    {/* Mood Filters - Improved */}
+                    {/* Mood Filters */}
                     <div className="px-4 pt-3">
                       <div
                         className={cn(
-                          "flex gap-2 p-1 rounded-lg",
+                          "flex gap-1 p-1 rounded-lg",
                           isDarkMode ? "bg-slate-800" : "bg-slate-100",
                         )}
                       >
                         {[
-                          { id: "trending", label: "🔥 Fire", color: "rose" },
-                          { id: "hot", label: "⚡ Lit", color: "amber" },
-                          {
-                            id: "closing",
-                            label: "⏰ Last Call",
-                            color: "purple",
-                          },
+                          { id: "trending", label: "🔥 Trending" },
+                          { id: "hot", label: "⚡ Hot" },
+                          { id: "closing", label: "⏰ Closing" },
                         ].map((filter) => (
                           <button
                             key={filter.id}
                             onClick={() => setActiveTab(filter.id)}
                             className={cn(
-                              "flex-1 py-2 rounded-md text-[11px] font-medium transition-all",
+                              "flex-1 py-1.5 rounded-md text-xs font-medium transition-all",
                               activeTab === filter.id
                                 ? isDarkMode
-                                  ? `bg-${filter.color}-600 text-white`
-                                  : `bg-${filter.color}-500 text-white`
+                                  ? "bg-purple-600 text-white"
+                                  : "bg-purple-500 text-white"
                                 : isDarkMode
                                   ? "text-slate-400 hover:text-white hover:bg-slate-700"
                                   : "text-slate-500 hover:text-slate-900 hover:bg-slate-200",
@@ -1999,437 +2038,179 @@ export default function GigDetailsPage({ params }: PageProps) {
                       </div>
                     </div>
 
-                    {/* Trending Picks - Improved header */}
+                    {/* Trending Picks */}
                     <div className="p-3">
                       <h4
                         className={cn(
-                          "text-[10px] font-mono mb-2 font-semibold",
+                          "text-xs font-semibold mb-2",
                           isDarkMode ? "text-slate-400" : "text-slate-500",
                         )}
                       >
                         TRENDING PICKS
                       </h4>
-                      <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto scrollbar-hide">
-                        {filteredGigs
-                          .slice(0, 6)
-                          .map((gig: any, idx: number) => (
-                            <EngagingGigCard
-                              key={gig._id}
-                              gig={gig}
-                              activeTab={activeTab}
-                              index={idx}
-                              onViewGig={handleViewGig}
-                            />
-                          ))}
+                      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
+                        {filteredGigs.slice(0, 6).map((gig: any) => (
+                          <EngagingGigCard
+                            key={gig._id}
+                            gig={gig}
+                            activeTab={activeTab}
+                            index={0}
+                            onViewGig={handleViewGig}
+                          />
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* SECTION 2: COMING THROUGH */}
-                  <div className="space-y-4">
-                    {/* Dropping Soon - Enhanced */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
+                  {/* SECTION 2: UPCOMING */}
+                  <div className="space-y-3">
+                    {/* Dropping Soon */}
+                    <div
                       className={cn(
-                        "rounded-xl border overflow-hidden transition-all duration-300",
-                        "hover:shadow-xl hover:shadow-purple-500/5",
+                        "rounded-xl border p-3",
                         isDarkMode
-                          ? "bg-slate-900/80 border-purple-500/30 backdrop-blur-sm"
-                          : "bg-white/90 border-purple-200 shadow-lg hover:shadow-purple-500/10",
+                          ? "bg-slate-900/80 border-purple-500/30"
+                          : "bg-white/90 border-purple-200",
                       )}
                     >
-                      {/* Header with gradient */}
-                      <div
-                        className={cn(
-                          "px-4 py-3 border-b flex items-center justify-between",
-                          "bg-gradient-to-r",
-                          isDarkMode
-                            ? "from-purple-500/10 to-transparent border-purple-500/20"
-                            : "from-purple-50 to-transparent border-purple-200",
-                        )}
-                      >
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <div className="relative">
-                            <Timer className="w-5 h-5 text-purple-500" />
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-ping opacity-50" />
-                          </div>
-                          <div>
-                            <span
-                              className={cn(
-                                "text-sm font-bold uppercase tracking-wider",
-                                isDarkMode ? "text-white" : "text-slate-900",
-                              )}
-                            >
-                              Dropping Soon
-                            </span>
-                            <p
-                              className={cn(
-                                "text-[10px] font-mono",
-                                isDarkMode
-                                  ? "text-purple-300/70"
-                                  : "text-purple-600/70",
-                              )}
-                            >
-                              applications opening
-                            </p>
-                          </div>
+                          <Timer className="w-4 h-4 text-purple-500" />
+                          <span
+                            className={cn(
+                              "text-sm font-bold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            Dropping Soon
+                          </span>
                         </div>
                         <Badge
                           className={cn(
-                            "text-xs h-6 px-3 font-bold shadow-lg",
+                            "text-xs",
                             isDarkMode
-                              ? "bg-purple-500/20 text-purple-300 border-purple-500/30 backdrop-blur-sm"
-                              : "bg-purple-100 text-purple-700 border-purple-200",
+                              ? "bg-purple-500/20 text-purple-300"
+                              : "bg-purple-100 text-purple-700",
                           )}
                         >
-                          {upcomingInterestGigs.length} upcoming
+                          {upcomingInterestGigs.length}
                         </Badge>
                       </div>
-
-                      {/* Info Bar */}
-                      <div
-                        className={cn(
-                          "px-4 py-2 border-b flex items-center gap-2",
-                          isDarkMode
-                            ? "bg-purple-500/5 border-purple-500/20"
-                            : "bg-purple-50/50 border-purple-200",
-                        )}
-                      >
-                        <Info className="w-3.5 h-3.5 text-purple-400" />
-                        <span
-                          className={cn(
-                            "text-[11px] font-mono",
-                            isDarkMode ? "text-slate-400" : "text-slate-500",
-                          )}
-                        >
-                          ⏰ When you can apply • Interest window
-                        </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {upcomingInterestGigs.slice(0, 3).map((gig) => {
+                          const startTime = gig.acceptInterestStartTime!;
+                          const daysUntil = Math.ceil(
+                            (startTime - Date.now()) / (1000 * 60 * 60 * 24),
+                          );
+                          return (
+                            <div
+                              key={gig._id}
+                              onClick={() => handleViewGig(gig)}
+                              className={cn(
+                                "text-center p-2 rounded-lg cursor-pointer",
+                                isDarkMode
+                                  ? "bg-slate-800/40 hover:bg-slate-800"
+                                  : "bg-slate-50 hover:bg-slate-100",
+                              )}
+                            >
+                              <div className="w-10 h-10 mx-auto rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mb-1">
+                                {daysUntil}d
+                              </div>
+                              <div className="text-xs truncate">
+                                {gig.title}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
+                    </div>
 
-                      {/* Cards Grid */}
-                      <div className="p-4">
-                        <div className="grid grid-cols-3 gap-3">
-                          {upcomingInterestGigs.slice(0, 3).map((gig) => {
-                            const startTime = gig.acceptInterestStartTime!;
-                            const now = Date.now();
-                            const daysUntil = Math.ceil(
-                              (startTime - now) / (1000 * 60 * 60 * 24),
-                            );
-                            const hoursUntil = Math.floor(
-                              (startTime - now) / (1000 * 60 * 60),
-                            );
-
-                            const timeDisplay =
-                              daysUntil > 0
-                                ? `${daysUntil}d`
-                                : `${hoursUntil}h`;
-
-                            return (
-                              <motion.div
-                                key={gig._id}
-                                whileHover={{ y: -4, scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => handleViewGig(gig)}
-                                className={cn(
-                                  "group relative flex flex-col items-center p-3 rounded-xl cursor-pointer transition-all",
-                                  "border shadow-sm hover:shadow-xl",
-                                  isDarkMode
-                                    ? "bg-slate-800/40 border-purple-500/20 hover:border-purple-500/40 hover:bg-slate-800/60 hover:shadow-purple-500/10"
-                                    : "bg-white/80 border-purple-200/60 hover:border-purple-300 hover:bg-white hover:shadow-purple-500/5",
-                                )}
-                              >
-                                {/* Glow effect on hover */}
-                                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:via-purple-500/5 group-hover:to-transparent transition-all duration-500" />
-
-                                {/* Day circle with countdown */}
-                                <div className="relative mb-2">
-                                  <div
-                                    className={cn(
-                                      "w-12 h-12 rounded-full flex items-center justify-center",
-                                      "bg-gradient-to-br shadow-lg",
-                                      daysUntil <= 1
-                                        ? "from-orange-500 to-red-500 shadow-orange-500/30"
-                                        : "from-purple-500 to-pink-500 shadow-purple-500/30",
-                                    )}
-                                  >
-                                    <span className="text-white text-sm font-bold">
-                                      {timeDisplay}
-                                    </span>
-                                  </div>
-                                  {/* Live pulse for soonest gig */}
-                                  {daysUntil <= 1 && (
-                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500" />
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Gig title */}
-                                <h5
-                                  className={cn(
-                                    "text-xs font-medium text-center line-clamp-2 mb-1",
-                                    isDarkMode
-                                      ? "text-slate-200"
-                                      : "text-slate-800",
-                                    "group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors",
-                                  )}
-                                >
-                                  {gig.title}
-                                </h5>
-
-                                {/* Location tag */}
-                                {gig.location && (
-                                  <div className="flex items-center gap-0.5 text-[9px] text-slate-500">
-                                    <MapPin className="w-2.5 h-2.5" />
-                                    <span className="truncate max-w-[70px]">
-                                      {gig.location.split(",")[0]}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Interest indicator */}
-                                {gig.interestedUsers &&
-                                  gig.interestedUsers.length > 0 && (
-                                    <div className="absolute top-2 right-2">
-                                      <div className="flex items-center gap-0.5 bg-rose-500/10 text-rose-500 rounded-full px-1.5 py-0.5 text-[8px] font-medium border border-rose-500/20">
-                                        <Heart className="w-2.5 h-2.5" />
-                                        <span>
-                                          {gig.interestedUsers.length}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </motion.div>
-
-                    {/* On the Horizon - Enhanced */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
+                    {/* On the Horizon */}
+                    <div
                       className={cn(
-                        "rounded-xl border overflow-hidden transition-all duration-300",
-                        "hover:shadow-xl hover:shadow-emerald-500/5",
+                        "rounded-xl border p-3",
                         isDarkMode
-                          ? "bg-slate-900/80 border-emerald-500/30 backdrop-blur-sm"
-                          : "bg-white/90 border-emerald-200 shadow-lg hover:shadow-emerald-500/10",
+                          ? "bg-slate-900/80 border-emerald-500/30"
+                          : "bg-white/90 border-emerald-200",
                       )}
                     >
-                      {/* Header with gradient */}
-                      <div
-                        className={cn(
-                          "px-4 py-3 border-b flex items-center justify-between",
-                          "bg-gradient-to-r",
-                          isDarkMode
-                            ? "from-emerald-500/10 to-transparent border-emerald-500/20"
-                            : "from-emerald-50 to-transparent border-emerald-200",
-                        )}
-                      >
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <div className="relative">
-                            <Calendar className="w-5 h-5 text-emerald-500" />
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-ping opacity-50" />
-                          </div>
-                          <div>
-                            <span
-                              className={cn(
-                                "text-sm font-bold uppercase tracking-wider",
-                                isDarkMode ? "text-white" : "text-slate-900",
-                              )}
-                            >
-                              On the Horizon
-                            </span>
-                            <p
-                              className={cn(
-                                "text-[10px] font-mono",
-                                isDarkMode
-                                  ? "text-emerald-300/70"
-                                  : "text-emerald-600/70",
-                              )}
-                            >
-                              event dates
-                            </p>
-                          </div>
+                          <Calendar className="w-4 h-4 text-emerald-500" />
+                          <span
+                            className={cn(
+                              "text-sm font-bold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            On the Horizon
+                          </span>
                         </div>
                         <Badge
                           className={cn(
-                            "text-xs h-6 px-3 font-bold shadow-lg",
+                            "text-xs",
                             isDarkMode
-                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 backdrop-blur-sm"
-                              : "bg-emerald-100 text-emerald-700 border-emerald-200",
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : "bg-emerald-100 text-emerald-700",
                           )}
                         >
-                          {upcomingEventGigs.length} upcoming
+                          {upcomingEventGigs.length}
                         </Badge>
                       </div>
-
-                      {/* Info Bar */}
-                      <div
-                        className={cn(
-                          "px-4 py-2 border-b flex items-center gap-2",
-                          isDarkMode
-                            ? "bg-emerald-500/5 border-emerald-500/20"
-                            : "bg-emerald-50/50 border-emerald-200",
-                        )}
-                      >
-                        <Info className="w-3.5 h-3.5 text-emerald-400" />
-                        <span
-                          className={cn(
-                            "text-[11px] font-mono",
-                            isDarkMode ? "text-slate-400" : "text-slate-500",
-                          )}
-                        >
-                          📅 When the gig happens • Event date
-                        </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {upcomingEventGigs.slice(0, 3).map((gig) => {
+                          const daysUntil = Math.ceil(
+                            (gig.date - Date.now()) / (1000 * 60 * 60 * 24),
+                          );
+                          return (
+                            <div
+                              key={gig._id}
+                              onClick={() => handleViewGig(gig)}
+                              className={cn(
+                                "text-center p-2 rounded-lg cursor-pointer",
+                                isDarkMode
+                                  ? "bg-slate-800/40 hover:bg-slate-800"
+                                  : "bg-slate-50 hover:bg-slate-100",
+                              )}
+                            >
+                              <div className="w-10 h-10 mx-auto rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold mb-1">
+                                {daysUntil}d
+                              </div>
+                              <div className="text-xs truncate">
+                                {gig.title}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      {/* Cards Grid */}
-                      <div className="p-4">
-                        <div className="grid grid-cols-3 gap-3">
-                          {upcomingEventGigs.slice(0, 3).map((gig) => {
-                            const eventDate = gig.date;
-                            const now = Date.now();
-                            const daysUntil = Math.ceil(
-                              (eventDate - now) / (1000 * 60 * 60 * 24),
-                            );
-
-                            return (
-                              <motion.div
-                                key={gig._id}
-                                whileHover={{ y: -4, scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => handleViewGig(gig)}
-                                className={cn(
-                                  "group relative flex flex-col items-center p-3 rounded-xl cursor-pointer transition-all",
-                                  "border shadow-sm hover:shadow-xl",
-                                  isDarkMode
-                                    ? "bg-slate-800/40 border-emerald-500/20 hover:border-emerald-500/40 hover:bg-slate-800/60 hover:shadow-emerald-500/10"
-                                    : "bg-white/80 border-emerald-200/60 hover:border-emerald-300 hover:bg-white hover:shadow-emerald-500/5",
-                                )}
-                              >
-                                {/* Glow effect on hover */}
-                                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-emerald-500/5 group-hover:to-transparent transition-all duration-500" />
-
-                                {/* Day circle with countdown */}
-                                <div className="relative mb-2">
-                                  <div
-                                    className={cn(
-                                      "w-12 h-12 rounded-full flex items-center justify-center",
-                                      "bg-gradient-to-br shadow-lg",
-                                      daysUntil <= 7
-                                        ? "from-amber-500 to-orange-500 shadow-amber-500/30"
-                                        : "from-emerald-500 to-teal-500 shadow-emerald-500/30",
-                                    )}
-                                  >
-                                    <span className="text-white text-sm font-bold">
-                                      {daysUntil}d
-                                    </span>
-                                  </div>
-                                  {/* Soon indicator */}
-                                  {daysUntil <= 3 && (
-                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Gig title */}
-                                <h5
-                                  className={cn(
-                                    "text-xs font-medium text-center line-clamp-2 mb-1",
-                                    isDarkMode
-                                      ? "text-slate-200"
-                                      : "text-slate-800",
-                                    "group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors",
-                                  )}
-                                >
-                                  {gig.title}
-                                </h5>
-
-                                {/* Location tag */}
-                                {gig.location && (
-                                  <div className="flex items-center gap-0.5 text-[9px] text-slate-500">
-                                    <MapPin className="w-2.5 h-2.5" />
-                                    <span className="truncate max-w-[70px]">
-                                      {gig.location.split(",")[0]}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Interest indicator */}
-                                {gig.interestedUsers &&
-                                  gig.interestedUsers.length > 0 && (
-                                    <div className="absolute top-2 right-2">
-                                      <div className="flex items-center gap-0.5 bg-rose-500/10 text-rose-500 rounded-full px-1.5 py-0.5 text-[8px] font-medium border border-rose-500/20">
-                                        <Heart className="w-2.5 h-2.5" />
-                                        <span>
-                                          {gig.interestedUsers.length}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </motion.div>
+                    </div>
                   </div>
 
-                  {/* SECTION 3: THE SCENE - Improved */}
+                  {/* SECTION 3: ONLINE STATS */}
                   <div
                     className={cn(
-                      "rounded-xl border overflow-hidden",
+                      "rounded-xl border p-3",
                       isDarkMode
-                        ? "bg-slate-900/60 border-slate-700/50 backdrop-blur-sm"
-                        : "bg-white/60 border-slate-200/50 backdrop-blur-sm",
+                        ? "bg-slate-900/60 border-slate-700"
+                        : "bg-white/60 border-slate-200",
                     )}
                   >
-                    <div className="grid grid-cols-3 divide-x divide-slate-200 dark:divide-slate-700">
-                      <div className="py-2 text-center">
-                        <div
-                          className={cn(
-                            "text-[10px] mb-1",
-                            isDarkMode ? "text-slate-400" : "text-slate-500",
-                          )}
-                        >
-                          🎸 Artists
-                        </div>
-                        <div className="text-base font-bold text-blue-500">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <div className="text-xs text-slate-500">Artists</div>
+                        <div className="text-lg font-bold text-blue-500">
                           {onlineStats?.musicians || 0}
                         </div>
                       </div>
-                      <div className="py-2 text-center">
-                        <div
-                          className={cn(
-                            "text-[10px] mb-1",
-                            isDarkMode ? "text-slate-400" : "text-slate-500",
-                          )}
-                        >
-                          🎩 Bookers
-                        </div>
-                        <div className="text-base font-bold text-purple-500">
+                      <div>
+                        <div className="text-xs text-slate-500">Bookers</div>
+                        <div className="text-lg font-bold text-purple-500">
                           {onlineStats?.clients || 0}
                         </div>
                       </div>
-                      <div className="py-2 text-center">
-                        <div
-                          className={cn(
-                            "text-[10px] mb-1",
-                            isDarkMode ? "text-slate-400" : "text-slate-500",
-                          )}
-                        >
-                          ✨ In the House
-                        </div>
-                        <div className="text-base font-bold text-emerald-500">
+                      <div>
+                        <div className="text-xs text-slate-500">Online</div>
+                        <div className="text-lg font-bold text-emerald-500">
                           {onlineStats?.total || 0}
                         </div>
                       </div>
@@ -2438,66 +2219,71 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </div>
               )}
             </div>
-            {/* RIGHT COLUMN - Main Content - Enhanced */}
+
+            {/* RIGHT COLUMN - Main Content */}
             <div className="md:col-span-2 space-y-6">
-              {/* Gig Info Card - Enhanced */}
+              {/* Gig Info Card */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
                 className="relative group"
               >
-                {/* Background glow effect */}
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500" />
-
                 <Card
                   className={cn(
-                    "relative border-2 overflow-hidden transition-all duration-300",
-                    "hover:shadow-2xl",
+                    "relative border-2 overflow-hidden",
                     isDarkMode
-                      ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700 hover:border-purple-500/50"
-                      : "bg-gradient-to-br from-white via-slate-50 to-white border-slate-200 hover:border-purple-300",
+                      ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700"
+                      : "bg-gradient-to-br from-white via-slate-50 to-white border-slate-200",
                   )}
                 >
-                  {/* Animated gradient bar */}
-                  <motion.div
-                    initial={{ x: "-100%" }}
-                    animate={{ x: "100%" }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"
-                  />
+                  <CardContent className="p-6 relative">
+                    {/* BOOKED WATERMARK */}
+                    {gig.isTaken && (
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-10">
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rotate-[-30deg] text-6xl font-bold text-red-500 whitespace-nowrap">
+                          BOOKED
+                        </div>
+                      </div>
+                    )}
 
-                  <CardContent className="p-6">
-                    {/* Header with Poster Info and Follow Button */}
+                    {/* USER BOOKED STATUS */}
+                    {isUserBookedInAnyRole && (
+                      <div className="mb-6 p-4 rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle className="w-5 h-5 text-emerald-500" />
+                          <h4 className="font-semibold text-emerald-500">
+                            You're Booked! 🎉
+                          </h4>
+                        </div>
+                        <div className="space-y-2">
+                          {bookedRoles.map((role, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10"
+                            >
+                              <BadgeCheck className="w-4 h-4 text-emerald-500" />
+                              <span className="text-sm text-emerald-500">
+                                {role.role}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600">
+                          <Info className="w-3.5 h-3.5" />
+                          <span>Check your messages for event details</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Poster Info */}
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-center gap-4">
-                        {/* Poster Avatar with live indicator */}
-                        <div className="relative">
-                          <FollowButton
-                            id={gig.postedBy}
-                            showText={true}
-                            className="animate-pulse"
-                          />
-                          <Avatar className="w-14 h-14 border-2 border-white dark:border-slate-700 shadow-xl">
-                            <AvatarImage src={gig.poster?.picture} />
-                            <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-                              {gig.poster?.firstname?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          {/* Online indicator */}
-                          <OnlineBadge
-                            userId={gig.postedBy}
-                            size="sm"
-                            showText={false}
-                            className="absolute -bottom-1 -right-1"
-                          />
-                        </div>
-
-                        {/* Poster Info */}
+                        <Avatar className="w-14 h-14 border-2 border-white dark:border-slate-700">
+                          <AvatarImage src={poster?.picture} />
+                          <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                            {poster?.firstname?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           <h4
                             className={cn(
@@ -2505,21 +2291,15 @@ export default function GigDetailsPage({ params }: PageProps) {
                               isDarkMode ? "text-white" : "text-slate-900",
                             )}
                           >
-                            {gig.poster?.firstname} {gig.poster?.lastname}
+                            {poster?.firstname} {poster?.lastname}
                           </h4>
                           <div className="flex items-center gap-2 mt-1">
                             <TrustStarsDisplay
-                              trustStars={
-                                gig.poster?.trustStars
-                                  ? gig.poster?.trustStars
-                                  : 0
-                              }
+                              trustStars={poster?.trustStars || 0}
                               size="sm"
                             />
-                            {(gig.poster?.verifiedIdentity
-                              ? gig.poster?.verifiedIdentity
-                              : "") && (
-                              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-[10px]">
+                            {poster?.verifiedIdentity && (
+                              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Verified
                               </Badge>
@@ -2527,80 +2307,12 @@ export default function GigDetailsPage({ params }: PageProps) {
                           </div>
                         </div>
                       </div>
-                      {/* Sticky Poster Mini Profile (Mobile) */}
-                      <div className="sticky top-0 z-40 md:hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-b p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={poster?.picture} />
-                            <AvatarFallback>
-                              {poster?.firstname?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {poster?.firstname}
-                            </p>
-                            <TrustStarsDisplay
-                              trustStars={poster?.trustStars || 0}
-                              size="sm"
-                            />
-                          </div>
-                        </div>
-                        <FollowButton
-                          _id={gig.postedBy}
-                          showText={false}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Gig Title & Stats Row */}
-                    <div className="mb-4">
-                      <h2
+                      <FollowButton
+                        _id={gig.postedBy}
                         className={cn(
-                          "text-2xl font-bold mb-2",
-                          isDarkMode ? "text-white" : "text-slate-900",
+                          gig.isTaken && "opacity-50 pointer-events-none",
                         )}
-                      >
-                        {gig.title}
-                      </h2>
-
-                      {/* Live Stats Ticker */}
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <Eye className="w-4 h-4 text-blue-400" />
-                          <span
-                            className={cn(
-                              "font-mono",
-                              isDarkMode ? "text-slate-300" : "text-slate-600",
-                            )}
-                          >
-                            {gig.viewCount?.length || 0} views
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Heart className="w-4 h-4 text-rose-400" />
-                          <span
-                            className={cn(
-                              "font-mono",
-                              isDarkMode ? "text-slate-300" : "text-slate-600",
-                            )}
-                          >
-                            {gig.interestedUsers?.length || 0} interested
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Briefcase className="w-4 h-4 text-amber-400" />
-                          <span
-                            className={cn(
-                              "font-mono",
-                              isDarkMode ? "text-slate-300" : "text-slate-600",
-                            )}
-                          >
-                            {gig.appliedUsers?.length || 0} applied
-                          </span>
-                        </div>
-                      </div>
+                      />
                     </div>
 
                     {/* Quick Info Grid */}
@@ -2677,10 +2389,10 @@ export default function GigDetailsPage({ params }: PageProps) {
                               key={i}
                               variant="secondary"
                               className={cn(
-                                "px-3 py-1 text-xs font-medium",
+                                "px-3 py-1 text-xs",
                                 isDarkMode
-                                  ? "bg-slate-800 text-slate-300 border-slate-700"
-                                  : "bg-slate-100 text-slate-600 border-slate-200",
+                                  ? "bg-slate-800 text-slate-300"
+                                  : "bg-slate-100 text-slate-600",
                               )}
                             >
                               #{tag}
@@ -2726,19 +2438,81 @@ export default function GigDetailsPage({ params }: PageProps) {
                       </div>
                     )}
 
+                    {/* Band Roles */}
+                    {gig.bandCategory && gig.bandCategory.length > 0 && (
+                      <div className="mb-6">
+                        <h3
+                          className={cn(
+                            "text-sm font-semibold mb-3 flex items-center gap-2",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          <Users className="w-4 h-4 text-purple-500" />
+                          Band Roles
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          {gig.bandCategory.map((role: any, index: number) => (
+                            <div
+                              key={index}
+                              className={cn(
+                                "p-3 rounded-lg border",
+                                isDarkMode
+                                  ? "bg-slate-800/30 border-slate-700"
+                                  : "bg-slate-50 border-slate-200",
+                              )}
+                            >
+                              <p className="text-sm font-medium">{role.role}</p>
+                              <div className="flex items-center justify-between mt-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {role.filledSlots}/{role.maxSlots} slots
+                                </Badge>
+                                {role.price && (
+                                  <span className="text-xs text-emerald-500">
+                                    {role.currency} {role.price}
+                                  </span>
+                                )}
+                              </div>
+                              {role.requiredSkills &&
+                                role.requiredSkills.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {role.requiredSkills
+                                      .slice(0, 2)
+                                      .map((skill: string, i: number) => (
+                                        <Badge
+                                          key={i}
+                                          variant="outline"
+                                          className="text-[10px]"
+                                        >
+                                          {skill}
+                                        </Badge>
+                                      ))}
+                                  </div>
+                                )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Action Buttons */}
                     <div className="flex gap-3">
-                      {/* Floating Action Button */}
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl flex items-center justify-center md:hidden"
+                      <Button
+                        className={cn(
+                          "flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700",
+                          gig.isTaken && "opacity-50 cursor-not-allowed",
+                        )}
+                        disabled={gig.isTaken}
                       >
-                        <MessageSquare className="w-6 h-6" />
-                      </motion.button>
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        {gig.isTaken ? "Gig Booked" : "Message"}
+                      </Button>
                       <Button
                         variant="outline"
-                        className="flex-1 border-2 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                        className="flex-1"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(window.location.href);
+                          toast.success("Link copied!");
+                        }}
                       >
                         <Share2 className="w-4 h-4 mr-2" />
                         Share
@@ -2748,11 +2522,11 @@ export default function GigDetailsPage({ params }: PageProps) {
                 </Card>
               </motion.div>
 
-              {/* Similar Gigs Section */}
+              {/* Similar Gigs */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
+                transition={{ delay: 0.1 }}
               >
                 <h3
                   className={cn(
@@ -2760,7 +2534,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                     isDarkMode ? "text-white" : "text-slate-900",
                   )}
                 >
-                  Similar Gigs You Might Like
+                  Similar Gigs
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {filteredGigs.slice(0, 2).map((similarGig: any) => (
@@ -2777,86 +2551,54 @@ export default function GigDetailsPage({ params }: PageProps) {
           </div>
 
           {/* Mobile Stats Bar */}
-          <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
-              <Heart className="w-3.5 h-3.5 text-rose-500" />
-              <span
-                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
-              >
-                {groupedApplicants?.interested?.length || 0}
-              </span>
-              <span
-                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
-              >
-                Interested
+          <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2">
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <Heart className="w-4 h-4 text-rose-500" />
+              <span>
+                {groupedApplicants?.interested?.length || 0} interested
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
-              <Briefcase className="w-3.5 h-3.5 text-amber-500" />
-              <span
-                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
-              >
-                {groupedApplicants?.applied?.length || 0}
-              </span>
-              <span
-                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
-              >
-                Applied
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <Briefcase className="w-4 h-4 text-amber-500" />
+              <span>{groupedApplicants?.applied?.length || 0} applied</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <Star className="w-4 h-4 text-emerald-500" />
+              <span>
+                {groupedApplicants?.shortlisted?.length || 0} shortlisted
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
-              <Star className="w-3.5 h-3.5 text-emerald-500" />
-              <span
-                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
-              >
-                {groupedApplicants?.shortlisted?.length || 0}
-              </span>
-              <span
-                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
-              >
-                Shortlisted
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] shrink-0">
-              <CheckCircle className="w-3.5 h-3.5 text-purple-500" />
-              <span
-                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
-              >
-                {groupedApplicants?.booked?.length || 0}
-              </span>
-              <span
-                className={isDarkMode ? "text-slate-500" : "text-slate-400"}
-              >
-                Booked
-              </span>
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
+              <CheckCircle className="w-4 h-4 text-purple-500" />
+              <span>{groupedApplicants?.booked?.length || 0} booked</span>
             </div>
           </div>
 
-          {/* Bottom Action Bar - Mobile */}
+          {/* Mobile Bottom Bar */}
           <div
             className={cn(
               "fixed bottom-0 left-0 right-0 z-30 md:hidden",
-              "backdrop-blur-xl border-t",
+              "backdrop-blur-xl border-t p-3",
               isDarkMode
-                ? "bg-slate-900/80 border-slate-800/50"
-                : "bg-white/80 border-slate-200/50",
+                ? "bg-slate-900/80 border-slate-800"
+                : "bg-white/80 border-slate-200",
             )}
           >
-            <div className="flex items-center justify-around p-3">
+            <div className="flex items-center justify-around">
               <button
                 onClick={() => setShowApplicantSidebar(true)}
                 className="flex flex-col items-center gap-1"
               >
                 <Activity className="w-5 h-5" />
-                <span className="text-[10px]">Activity</span>
+                <span className="text-xs">Activity</span>
               </button>
-              {gig.bandCategory && gig.bandCategory.length > 0 && (
+              {gig.bandCategory?.length && gig.bandCategory?.length > 0 && (
                 <button
                   onClick={() => setShowRoleDrawer(true)}
                   className="flex flex-col items-center gap-1"
                 >
                   <Music className="w-5 h-5" />
-                  <span className="text-[10px]">Roles</span>
+                  <span className="text-xs">Roles</span>
                 </button>
               )}
               {canWithdraw && (
@@ -2865,17 +2607,23 @@ export default function GigDetailsPage({ params }: PageProps) {
                   className="flex flex-col items-center gap-1 text-rose-500"
                 >
                   <XCircle className="w-5 h-5" />
-                  <span className="text-[10px]">Withdraw</span>
+                  <span className="text-xs">Withdraw</span>
                 </button>
               )}
-              <button className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => {
+                  navigator.clipboard?.writeText(window.location.href);
+                  toast.success("Link copied!");
+                }}
+                className="flex flex-col items-center gap-1"
+              >
                 <Share2 className="w-5 h-5" />
-                <span className="text-[10px]">Share</span>
+                <span className="text-xs">Share</span>
               </button>
             </div>
           </div>
 
-          {/* Mobile Platform Activity Drawer */}
+          {/* Mobile Drawers */}
           <AnimatePresence>
             {showApplicantSidebar && (
               <>
@@ -2890,66 +2638,49 @@ export default function GigDetailsPage({ params }: PageProps) {
                   initial={{ x: "-100%" }}
                   animate={{ x: 0 }}
                   exit={{ x: "-100%" }}
-                  transition={{ type: "spring", damping: 25 }}
                   className={cn(
                     "fixed left-0 top-0 bottom-0 w-[85%] max-w-sm z-50 md:hidden",
-                    "backdrop-blur-xl border-r",
+                    "backdrop-blur-xl border-r p-4",
                     isDarkMode
-                      ? "bg-slate-900/95 border-slate-800/50"
-                      : "bg-white/95 border-slate-200/50",
+                      ? "bg-slate-900/95 border-slate-800"
+                      : "bg-white/95 border-slate-200",
                   )}
                 >
-                  <div className="p-4 h-full overflow-y-auto">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3
-                        className={cn(
-                          "font-semibold text-[11px]",
-                          isDarkMode ? "text-white" : "text-slate-900",
-                        )}
-                      >
-                        Platform Activity
-                      </h3>
-                      <button
-                        onClick={() => setShowApplicantSidebar(false)}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {allGigsLoading ? (
-                      <div className="space-y-3">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-20 w-full" />
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {/* TOP - Gig Tabs (Platform Activity) */}
-                        <PlatformActivitySidebar
-                          allGigs={allGigsData}
-                          currentGigId={gigId as Id<"gigs">}
-                          isDarkMode={isDarkMode}
-                          onViewGig={handleViewGig}
-                        />
-
-                        {/* BOTTOM - Coming Soon Gigs */}
-                        <ComingSoonGigs
-                          allGigs={allGigsData}
-                          currentGigId={gigId as Id<"gigs">}
-                          isDarkMode={isDarkMode}
-                          onViewGig={handleViewGig}
-                        />
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between mb-4">
+                    <h3
+                      className={cn(
+                        "font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      Platform Activity
+                    </h3>
+                    <button
+                      onClick={() => setShowApplicantSidebar(false)}
+                      className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <PlatformActivitySidebar
+                    allGigs={allGigsData}
+                    currentGigId={gigId as Id<"gigs">}
+                    isDarkMode={isDarkMode}
+                    onViewGig={handleViewGig}
+                  />
+                  <div className="mt-4">
+                    <ComingSoonGigs
+                      allGigs={allGigsData}
+                      currentGigId={gigId as Id<"gigs">}
+                      isDarkMode={isDarkMode}
+                      onViewGig={handleViewGig}
+                    />
                   </div>
                 </motion.div>
               </>
             )}
           </AnimatePresence>
 
-          {/* Role Drawer - Mobile */}
           <AnimatePresence>
             {showRoleDrawer && (
               <>
@@ -2964,64 +2695,51 @@ export default function GigDetailsPage({ params }: PageProps) {
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
-                  transition={{ type: "spring", damping: 25 }}
                   className={cn(
                     "fixed left-0 right-0 bottom-0 z-50 md:hidden",
-                    "backdrop-blur-xl border-t rounded-t-3xl",
+                    "backdrop-blur-xl border-t rounded-t-3xl p-4",
                     isDarkMode
-                      ? "bg-slate-900/95 border-slate-800/50"
-                      : "bg-white/95 border-slate-200/50",
+                      ? "bg-slate-900/95 border-slate-800"
+                      : "bg-white/95 border-slate-200",
                   )}
                 >
-                  <div className="p-4 max-h-[80vh] overflow-y-auto">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3
-                        className={cn(
-                          "font-semibold text-[11px]",
-                          isDarkMode ? "text-white" : "text-slate-900",
-                        )}
-                      >
-                        Band Roles
-                      </h3>
-                      <button
-                        onClick={() => setShowRoleDrawer(false)}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {gig.bandCategory && gig.bandCategory.length > 0 ? (
-                      <div className="space-y-3">
-                        {gig.bandCategory.map((role, index) => (
-                          <RoleCard
-                            key={index}
-                            role={role}
-                            index={index}
-                            isDarkMode={isDarkMode}
-                            currentUser={currentUser}
-                            onApply={() => {
-                              // Handle role application
-                              setShowRoleDrawer(false);
-                            }}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-center text-slate-500 py-8 text-[11px]">
-                        No band roles available
-                      </p>
-                    )}
+                  <div className="flex items-center justify-between mb-4">
+                    <h3
+                      className={cn(
+                        "font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      Band Roles
+                    </h3>
+                    <button
+                      onClick={() => setShowRoleDrawer(false)}
+                      className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="max-h-[60vh] overflow-y-auto space-y-3">
+                    {gig.bandCategory?.map((role, index) => (
+                      <RoleCard
+                        key={index}
+                        role={role}
+                        index={index}
+                        isDarkMode={isDarkMode}
+                        currentUser={currentUser}
+                        onApply={() => setShowRoleDrawer(false)}
+                      />
+                    ))}
                   </div>
                 </motion.div>
               </>
             )}
           </AnimatePresence>
 
-          {/* Add bottom padding for mobile nav */}
           <div className="h-16 md:hidden" />
         </div>
 
-        {/* Profile Dialog */}
+        {/* Dialogs */}
         <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
           <DialogContent
             className={cn(
@@ -3039,30 +2757,15 @@ export default function GigDetailsPage({ params }: PageProps) {
                   >
                     User Profile
                   </DialogTitle>
-                  <DialogDescription
-                    className={isDarkMode ? "text-slate-400" : "text-slate-500"}
-                  >
-                    {selectedUser.firstname || selectedUser.username}
-                  </DialogDescription>
                 </DialogHeader>
-
-                <div className="space-y-4 py-2">
+                <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className="w-16 h-16 border-2 border-slate-200 dark:border-slate-700">
+                    <Avatar className="w-16 h-16">
                       <AvatarImage src={selectedUser.picture} />
-                      <AvatarFallback
-                        className={cn(
-                          "bg-gradient-to-br from-slate-700 to-slate-800 text-white text-xl",
-                          isDarkMode
-                            ? "from-slate-700 to-slate-800"
-                            : "from-slate-200 to-slate-300",
-                        )}
-                      >
-                        {selectedUser.firstname?.charAt(0) ||
-                          selectedUser.username?.charAt(0)}
+                      <AvatarFallback>
+                        {selectedUser.firstname?.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-
                     <div>
                       <h3
                         className={cn(
@@ -3072,118 +2775,36 @@ export default function GigDetailsPage({ params }: PageProps) {
                       >
                         {selectedUser.firstname || selectedUser.username}
                       </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <TrustStarsDisplay
-                          trustStars={selectedUser.trustStars || 0}
-                          size="sm"
-                        />
-                        {selectedUser.verifiedIdentity && (
-                          <CheckCircle className="w-4 h-4 text-emerald-500" />
-                        )}
-                        {getTrustTierIcon(selectedUser.trustTier)}
-                      </div>
+                      <TrustStarsDisplay
+                        trustStars={selectedUser.trustStars || 0}
+                        size="sm"
+                      />
                     </div>
                   </div>
-
-                  <Separator
-                    className={isDarkMode ? "bg-slate-800" : "bg-slate-200"}
-                  />
-
+                  <Separator />
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <div
-                        className={cn(
-                          "text-base font-semibold",
-                          isDarkMode ? "text-white" : "text-slate-900",
-                        )}
-                      >
+                      <div className="text-lg font-bold">
                         {selectedUser.completedGigsCount || 0}
                       </div>
-                      <div
-                        className={
-                          isDarkMode ? "text-slate-400" : "text-slate-500"
-                        }
-                      >
-                        Gigs
-                      </div>
+                      <div className="text-xs text-slate-500">Gigs</div>
                     </div>
                     <div>
-                      <div
-                        className={cn(
-                          "text-base font-semibold",
-                          isDarkMode ? "text-white" : "text-slate-900",
-                        )}
-                      >
+                      <div className="text-lg font-bold">
                         {selectedUser.followers?.length || 0}
                       </div>
-                      <div
-                        className={
-                          isDarkMode ? "text-slate-400" : "text-slate-500"
-                        }
-                      >
-                        Followers
-                      </div>
+                      <div className="text-xs text-slate-500">Followers</div>
                     </div>
                     <div>
-                      <div
-                        className={cn(
-                          "text-base font-semibold",
-                          isDarkMode ? "text-white" : "text-slate-900",
-                        )}
-                      >
+                      <div className="text-lg font-bold">
                         {selectedUser.avgRating?.toFixed(1) || "0.0"}
                       </div>
-                      <div
-                        className={
-                          isDarkMode ? "text-slate-400" : "text-slate-500"
-                        }
-                      >
-                        Rating
-                      </div>
+                      <div className="text-xs text-slate-500">Rating</div>
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    {selectedUser.roleType && (
-                      <div
-                        className={cn(
-                          "flex items-center gap-2 text-[11px]",
-                          isDarkMode ? "text-slate-300" : "text-slate-600",
-                        )}
-                      >
-                        {getRoleIcon(selectedUser.roleType)}
-                        <span className="capitalize">
-                          {selectedUser.roleType}
-                        </span>
-                      </div>
-                    )}
-                    {selectedUser.city && (
-                      <div
-                        className={cn(
-                          "flex items-center gap-2 text-[11px]",
-                          isDarkMode ? "text-slate-300" : "text-slate-600",
-                        )}
-                      >
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        <span>{selectedUser.city}</span>
-                      </div>
-                    )}
-                    {selectedUser.instrument && (
-                      <div
-                        className={cn(
-                          "flex items-center gap-2 text-[11px]",
-                          isDarkMode ? "text-slate-300" : "text-slate-600",
-                        )}
-                      >
-                        <Music className="w-4 h-4 text-slate-400" />
-                        <span>{selectedUser.instrument}</span>
-                      </div>
-                    )}
-                  </div>
-
                   <div className="flex gap-3">
                     <Button
-                      className="flex-1 text-[11px]"
+                      className="flex-1"
                       onClick={() => {
                         setShowProfileDialog(false);
                         router.push(`/profile/${selectedUser._id}`);
@@ -3207,7 +2828,6 @@ export default function GigDetailsPage({ params }: PageProps) {
           </DialogContent>
         </Dialog>
 
-        {/* Withdraw Dialog */}
         <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
           <DialogContent
             className={cn(
@@ -3218,41 +2838,21 @@ export default function GigDetailsPage({ params }: PageProps) {
             )}
           >
             <DialogHeader>
-              <DialogTitle
-                className={isDarkMode ? "text-white" : "text-slate-900"}
-              >
-                Withdraw Application
-              </DialogTitle>
-              <DialogDescription
-                className={isDarkMode ? "text-slate-400" : "text-slate-500"}
-              >
+              <DialogTitle>Withdraw Application</DialogTitle>
+              <DialogDescription>
                 Are you sure you want to withdraw your application?
               </DialogDescription>
             </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <Textarea
-                placeholder="Reason (optional)"
-                value={withdrawReason}
-                onChange={(e) => setWithdrawReason(e.target.value)}
-                rows={3}
-                className={cn(
-                  isDarkMode
-                    ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-                    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
-                )}
-              />
-            </div>
-
+            <Textarea
+              placeholder="Reason (optional)"
+              value={withdrawReason}
+              onChange={(e) => setWithdrawReason(e.target.value)}
+              rows={3}
+            />
             <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => setShowWithdrawDialog(false)}
-                className={cn(
-                  isDarkMode
-                    ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                    : "",
-                )}
               >
                 Cancel
               </Button>
@@ -3260,7 +2860,6 @@ export default function GigDetailsPage({ params }: PageProps) {
                 variant="destructive"
                 onClick={handleWithdraw}
                 disabled={loading}
-                className="text-[11px]"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 Withdraw

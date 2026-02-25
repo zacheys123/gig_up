@@ -2948,6 +2948,8 @@ export const getAllActiveGigs = query({
                 firstname: poster.firstname,
                 picture: poster.picture,
                 city: poster.city,
+                trustStars: poster.trustStars,
+                verifiedIdentity: poster.verifiedIdentity,
               }
             : null,
         };

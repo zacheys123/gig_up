@@ -46,6 +46,8 @@ export interface PlatformGig {
   bandCategory?: BandRole[];
   bookCount?: BandApplication[];
   viewCount?: Id<"users">[];
+  trustStars?: number;
+  verifiedIdentity?: boolean;
   bookingHistory?: any;
   logo?: string;
   postedBy: Id<"users">;

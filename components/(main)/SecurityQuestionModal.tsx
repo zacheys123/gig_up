@@ -1,7 +1,7 @@
 // components/modals/SecurityQuestionSetupModal.tsx - UPDATED
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,21 +38,76 @@ import {
   X,
   AlertTriangle,
   Bell,
-  Cpu,
   Sparkles,
-  Zap,
-  Crown,
-  ArrowRight,
   Eye,
   EyeOff,
   CheckCircle,
   Loader2,
+  Info,
+  HelpCircle,
+  ChevronRight,
+  ChevronLeft,
+  Plus,
+  Minus,
+  User,
+  Phone,
+  Mail,
+  Github,
+  Globe,
+  Instagram,
+  Youtube,
+  Facebook,
+  Linkedin,
+  Camera,
+  Edit3,
+  MoreHorizontal,
+  Bookmark,
+  Share2,
+  Flag,
+  Ban,
+  Trash2,
+  ExternalLink,
+  Copy,
+  Search,
+  Filter,
+  SlidersHorizontal,
+  Grid,
+  List,
+  CalendarDays,
+  Clock3,
+  Timer,
+  UsersRound,
+  VerifiedIcon,
+  ThumbsUp,
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  LineChart,
+  Zap,
+  History,
+  FileText as FileTextIcon,
+  Briefcase,
+  Heart,
+  Star,
+  Crown,
+  Medal,
+  BadgeCheck,
+  UserRound,
+  UserRoundCheck,
+  UserRoundX,
+  UserRoundPlus,
+  UserRoundSearch,
+  MapPin,
+  Music,
+  Volume2,
+  DollarSign,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useTheme";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Id } from "@/convex/_generated/dataModel";
 
 interface SecurityQuestionSetupModalProps {
   isOpen: boolean;
@@ -63,10 +118,10 @@ interface SecurityQuestionSetupModalProps {
 
 // Simple gradient palette for better readability
 const SIMPLE_PALETTE = {
-  primary: "from-blue-500 to-cyan-500",
-  secondary: "from-purple-500 to-pink-500",
-  success: "from-green-500 to-emerald-500",
-  warning: "from-amber-500 to-orange-500",
+  primary: "from-blue-600 to-cyan-600",
+  secondary: "from-purple-600 to-pink-600",
+  success: "from-green-600 to-emerald-600",
+  warning: "from-amber-600 to-orange-600",
   light: "blue-50",
   dark: "blue-950",
 };
@@ -80,6 +135,8 @@ const SECURITY_QUESTIONS = [
   "What is your favorite book?",
   "What was the make of your first car?",
   "What is your favorite childhood memory?",
+  "What was your first job?",
+  "What is your favorite movie?",
 ];
 
 export function SecurityQuestionSetupModal({
@@ -91,47 +148,126 @@ export function SecurityQuestionSetupModal({
   const [selectedQuestion, setSelectedQuestion] = useState("");
   const [customQuestion, setCustomQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [confirmAnswer, setConfirmAnswer] = useState("");
   const [isCustom, setIsCustom] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showConfirmAnswer, setShowConfirmAnswer] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<"info" | "setup" | "confirm">("info");
+  const [answerStrength, setAnswerStrength] = useState<
+    "weak" | "medium" | "strong"
+  >("weak");
   const { colors, isDarkMode } = useThemeColors();
 
   const updateSecurity = useMutation(
     api.controllers.user.updateSecurityQuestion,
   );
   const { user } = useCurrentUser();
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedQuestion("");
+      setCustomQuestion("");
+      setAnswer("");
+      setConfirmAnswer("");
+      setIsCustom(false);
+      setShowAnswer(false);
+      setShowConfirmAnswer(false);
+      setStep("info");
+      setAnswerStrength("weak");
+    }
+  }, [isOpen]);
+
+  // Check answer strength
+  useEffect(() => {
+    if (!answer) {
+      setAnswerStrength("weak");
+      return;
+    }
+
+    const hasLetter = /[a-zA-Z]/.test(answer);
+    const hasNumber = /[0-9]/.test(answer);
+    const hasSpecial = /[^a-zA-Z0-9]/.test(answer);
+    const length = answer.length;
+
+    if (length >= 8 && hasLetter && hasNumber && hasSpecial) {
+      setAnswerStrength("strong");
+    } else if (length >= 5 && (hasLetter || hasNumber)) {
+      setAnswerStrength("medium");
+    } else {
+      setAnswerStrength("weak");
+    }
+  }, [answer]);
+
+  const getAnswerStrengthColor = () => {
+    switch (answerStrength) {
+      case "strong":
+        return "text-green-500";
+      case "medium":
+        return "text-yellow-500";
+      default:
+        return "text-red-500";
+    }
+  };
+
+  const validateForm = () => {
     const question = isCustom ? customQuestion.trim() : selectedQuestion;
 
     if (!question) {
       toast.error("Please select or enter a security question");
-      return;
+      return false;
     }
 
     if (!answer.trim()) {
       toast.error("Please enter your answer");
-      return;
+      return false;
     }
 
     if (answer.length < 3) {
       toast.error("Answer must be at least 3 characters");
-      return;
+      return false;
     }
+
+    if (answer !== confirmAnswer) {
+      toast.error("Answers do not match");
+      return false;
+    }
+
+    if (answer.toLowerCase() === question.toLowerCase()) {
+      toast.error("Answer cannot be the same as the question");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    if (!validateForm()) return;
 
     setIsLoading(true);
     try {
+      const question = isCustom ? customQuestion.trim() : selectedQuestion;
+
       await updateSecurity({
         securityQuestion: question,
         securityAnswer: answer.trim(),
-        clerkId: user?.clerkId || "",
+        userId: user?._id as Id<"users">,
       });
 
-      toast.success("Security question set successfully!");
+      toast.success("Security question set successfully!", {
+        icon: <Shield className="w-4 h-4 text-green-500" />,
+        duration: 5000,
+      });
+
       onSuccess();
       onClose();
     } catch (error: any) {
-      toast.error(error.message || "Failed to set security question");
+      toast.error(error.message || "Failed to set security question", {
+        icon: <AlertTriangle className="w-4 h-4 text-red-500" />,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -140,13 +276,18 @@ export function SecurityQuestionSetupModal({
   const handleSnooze = (hours: number) => {
     const snoozeTime = new Date(Date.now() + hours * 60 * 60 * 1000);
     localStorage.setItem("security_reminder_snooze", snoozeTime.toISOString());
-    toast.success(`Reminder snoozed for ${hours} hours`);
+    toast.success(`Reminder snoozed for ${hours} hour${hours > 1 ? "s" : ""}`, {
+      icon: <Clock className="w-4 h-4 text-blue-500" />,
+    });
     onClose();
   };
 
   const handleSkip = () => {
     localStorage.setItem("security_question_skipped", "true");
-    toast.info("You can set up security later in your profile settings");
+    toast.info("You can set up security later in your profile settings", {
+      icon: <Info className="w-4 h-4 text-blue-500" />,
+      duration: 4000,
+    });
     onClose();
   };
 
@@ -157,6 +298,9 @@ export function SecurityQuestionSetupModal({
       "What was your first concert?",
       "What is your favorite sports team?",
       "What was your first job?",
+      "What is your mother's favorite color?",
+      "What was the model of your first phone?",
+      "What is your favorite restaurant?",
     ];
     setCustomQuestion(
       suggestions[Math.floor(Math.random() * suggestions.length)],
@@ -169,46 +313,54 @@ export function SecurityQuestionSetupModal({
       return [
         {
           icon: Lock,
-          title: "Protect Gigs",
+          title: "Protect Your Gigs",
           description: "Secure your event postings from unauthorized changes",
+          color: "from-blue-500 to-cyan-500",
         },
         {
           icon: Key,
           title: "Recover Access",
           description: "Regain access if you forget gig secret keys",
+          color: "from-purple-500 to-pink-500",
         },
         {
           icon: Users,
           title: "Build Trust",
           description: "Show musicians you take security seriously",
+          color: "from-green-500 to-emerald-500",
         },
         {
           icon: Building,
           title: "Prevent Issues",
           description: "Stop unauthorized booking modifications",
+          color: "from-amber-500 to-orange-500",
         },
       ];
     } else {
       return [
         {
-          icon: FileText,
+          icon: FileTextIcon,
           title: "Secure Auditions",
           description: "Protect your music submissions and materials",
+          color: "from-blue-500 to-cyan-500",
         },
         {
           icon: Calendar,
           title: "Performance Safety",
           description: "Keep your gig schedules and details secure",
+          color: "from-purple-500 to-pink-500",
         },
         {
           icon: Key,
           title: "Gig Recovery",
           description: "Recover access to your booked performances",
+          color: "from-green-500 to-emerald-500",
         },
         {
           icon: Award,
           title: "Build Credibility",
           description: "Show venues you're a professional artist",
+          color: "from-amber-500 to-orange-500",
         },
       ];
     }
@@ -216,274 +368,605 @@ export function SecurityQuestionSetupModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden p-0 ">
-        {/* Main Container - Simpler Design */}
-        <div
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden p-0">
+        {/* Main Container */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
           className={cn(
-            "relative ",
+            "relative",
             isDarkMode
-              ? "bg-gradient-to-b from-gray-900 to-gray-800"
-              : "bg-gradient-to-b from-white to-gray-50",
+              ? "bg-gradient-to-b from-slate-900 to-slate-800"
+              : "bg-gradient-to-b from-white to-slate-50",
           )}
         >
-          {/* Header */}
-          <div className={`bg-gradient-to-r ${SIMPLE_PALETTE.primary} p-8`}>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl font-bold text-white">
-                  Secure Your Account
-                </DialogTitle>
-                <DialogDescription className="text-blue-100">
-                  Protect your gigs with a security question
-                </DialogDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-blue-200">
-              <Clock className="w-4 h-4" />
-              <span>Reminder appears every 5 minutes for your protection</span>
-            </div>
-          </div>
+          {/* Header with Progress Steps */}
+          <div
+            className={`bg-gradient-to-r ${SIMPLE_PALETTE.primary} p-6 relative overflow-hidden`}
+          >
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
 
-          {/* Content Area - Better Scroll */}
-          <div className="p-6 max-h-[calc(85vh-200px)] overflow-y-auto">
-            <div className="space-y-6">
-              {/* Quick Benefits */}
-              <div
-                className={cn(
-                  "rounded-xl p-5 border",
-                  isDarkMode
-                    ? "bg-gray-800/50 border-gray-700"
-                    : "bg-blue-50/50 border-blue-100",
-                )}
-              >
-                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-blue-500" />
-                  Why This Matters
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {getUserBenefits().map((benefit, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "p-3 rounded-lg flex items-start gap-3",
-                        isDarkMode
-                          ? "bg-gray-800/80 hover:bg-gray-700/80"
-                          : "bg-white hover:bg-blue-50",
-                      )}
-                    >
-                      <div
-                        className={`p-2 rounded-lg bg-gradient-to-r ${SIMPLE_PALETTE.primary}`}
-                      >
-                        <benefit.icon className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{benefit.title}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {benefit.description}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold text-white">
+                    Secure Your Account
+                  </DialogTitle>
+                  <DialogDescription className="text-blue-100">
+                    Add an extra layer of protection to your gigs
+                  </DialogDescription>
                 </div>
               </div>
 
-              {/* Main Form */}
-              <div
-                className={cn(
-                  "rounded-xl p-5 border",
-                  isDarkMode
-                    ? "bg-gray-800/30 border-gray-700"
-                    : "bg-white border-gray-200",
-                )}
-              >
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Question Type Toggle */}
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-lg">Security Question</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={!isCustom ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setIsCustom(false)}
-                        className={cn(
-                          "px-3",
-                          !isCustom &&
-                            `bg-gradient-to-r ${SIMPLE_PALETTE.primary}`,
-                        )}
-                      >
-                        Choose One
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={isCustom ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setIsCustom(true)}
-                        className={cn(
-                          "px-3",
-                          isCustom &&
-                            `bg-gradient-to-r ${SIMPLE_PALETTE.secondary}`,
-                        )}
-                      >
-                        Custom
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Question Selection */}
-                  {isCustom ? (
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="custom-question" className="mb-2 block">
-                          Your Custom Question
-                        </Label>
-                        <div className="flex gap-2 mb-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={generateCustomQuestion}
-                            className="text-sm"
-                          >
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Suggest a Question
-                          </Button>
-                        </div>
-                        <Textarea
-                          id="custom-question"
-                          placeholder="Type your own security question..."
-                          value={customQuestion}
-                          onChange={(e) => setCustomQuestion(e.target.value)}
-                          className="min-h-[80px] resize-none"
-                          required
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <Label>Select a Security Question</Label>
-                      <Select
-                        value={selectedQuestion}
-                        onValueChange={setSelectedQuestion}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose a question..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SECURITY_QUESTIONS.map((question, index) => (
-                            <SelectItem key={index} value={question}>
-                              {question}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-sm text-gray-500">
-                        Choose a question only you know the answer to
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Answer Input */}
-                  <div className="space-y-4">
-                    <Label htmlFor="answer">Your Answer</Label>
-                    <div className="relative">
-                      <Input
-                        id="answer"
-                        type={showAnswer ? "text" : "password"}
-                        value={answer}
-                        onChange={(e) => setAnswer(e.target.value)}
-                        placeholder="Enter your answer..."
-                        className="pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAnswer(!showAnswer)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showAnswer ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                      This helps recover access if you forget gig secrets. Case
-                      doesn't matter.
-                    </p>
-                  </div>
-
-                  {/* Security Tips */}
-                  <div
-                    className={cn(
-                      "p-4 rounded-lg border",
-                      isDarkMode
-                        ? "bg-amber-900/20 border-amber-800"
-                        : "bg-amber-50 border-amber-200",
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-medium text-amber-700 dark:text-amber-300 mb-2">
-                          Security Tips
-                        </h4>
-                        <ul className="text-sm text-amber-600 dark:text-amber-400 space-y-1">
-                          <li>• Pick an answer that's easy to remember</li>
-                          <li>• Avoid answers that others could guess</li>
-                          <li>• Don't use the same answer everywhere</li>
-                          <li>• Your answer is kept private and secure</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Main Action Button - NOW VISIBLE! */}
-                  <div className="pt-4">
-                    <Button
-                      type="submit"
+              {/* Progress Steps */}
+              <div className="flex items-center gap-2 mt-4">
+                {["info", "setup", "confirm"].map((s, index) => (
+                  <div key={s} className="flex items-center">
+                    <button
+                      onClick={() => setStep(s as any)}
                       className={cn(
-                        "w-full py-6 text-base font-semibold",
-                        `bg-gradient-to-r ${SIMPLE_PALETTE.primary} hover:opacity-90`,
+                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                        step === s
+                          ? "bg-white text-blue-600 shadow-lg scale-110"
+                          : index < ["info", "setup", "confirm"].indexOf(step)
+                            ? "bg-white/30 text-white"
+                            : "bg-white/10 text-white/70",
                       )}
-                      disabled={
-                        isLoading || (!isCustom && !selectedQuestion) || !answer
-                      }
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Setting Up Security...
-                        </>
-                      ) : (
-                        <>
-                          <Shield className="w-5 h-5 mr-2" />
-                          Activate Account Security
-                        </>
-                      )}
-                    </Button>
+                      {index + 1}
+                    </button>
+                    {index < 2 && (
+                      <ChevronRight className="w-4 h-4 mx-1 text-white/50" />
+                    )}
                   </div>
-                </form>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-blue-200 mt-3">
+                <Clock className="w-4 h-4" />
+                <span>
+                  Reminder appears every 5 minutes for your protection
+                </span>
               </div>
             </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="p-6 max-h-[calc(85vh-200px)] overflow-y-auto">
+            <AnimatePresence mode="wait">
+              {step === "info" && (
+                <motion.div
+                  key="info"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-6"
+                >
+                  {/* Benefits Grid */}
+                  <div
+                    className={cn(
+                      "rounded-xl p-5 border",
+                      isDarkMode
+                        ? "bg-slate-800/50 border-slate-700"
+                        : "bg-blue-50/50 border-blue-100",
+                    )}
+                  >
+                    <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <Bell className="w-5 h-5 text-blue-500" />
+                      Why This Matters
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {getUserBenefits().map((benefit, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className={cn(
+                            "p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-105",
+                            isDarkMode
+                              ? "bg-slate-800 hover:bg-slate-700"
+                              : "bg-white hover:shadow-md",
+                          )}
+                        >
+                          <div
+                            className={`p-2.5 rounded-lg bg-gradient-to-r ${benefit.color} shadow-lg`}
+                          >
+                            <benefit.icon className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm mb-1">
+                              {benefit.title}
+                            </p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                              {benefit.description}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Stats Card */}
+                  <div
+                    className={cn(
+                      "rounded-xl p-5 border",
+                      isDarkMode
+                        ? "bg-slate-800/30 border-slate-700"
+                        : "bg-white border-slate-200",
+                    )}
+                  >
+                    <h3 className="font-semibold text-lg mb-3">
+                      Security Impact
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-2xl font-bold text-green-500">
+                          99.9%
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Account Safety
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-blue-500">
+                          24/7
+                        </div>
+                        <div className="text-xs text-slate-500">Protection</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-purple-500">
+                          100%
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Recovery Rate
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Continue Button */}
+                  <Button
+                    onClick={() => setStep("setup")}
+                    className={cn(
+                      "w-full py-6 text-base font-semibold",
+                      `bg-gradient-to-r ${SIMPLE_PALETTE.primary} hover:opacity-90`,
+                    )}
+                  >
+                    <Shield className="w-5 h-5 mr-2" />
+                    Get Started
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </motion.div>
+              )}
+
+              {step === "setup" && (
+                <motion.div
+                  key="setup"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-6"
+                >
+                  <div
+                    className={cn(
+                      "rounded-xl p-5 border",
+                      isDarkMode
+                        ? "bg-slate-800/30 border-slate-700"
+                        : "bg-white border-slate-200",
+                    )}
+                  >
+                    <form className="space-y-6">
+                      {/* Question Type Toggle */}
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-lg">
+                          Security Question
+                        </h3>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={!isCustom ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setIsCustom(false)}
+                            className={cn(
+                              "px-3",
+                              !isCustom &&
+                                `bg-gradient-to-r ${SIMPLE_PALETTE.primary}`,
+                            )}
+                          >
+                            Choose One
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={isCustom ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setIsCustom(true)}
+                            className={cn(
+                              "px-3",
+                              isCustom &&
+                                `bg-gradient-to-r ${SIMPLE_PALETTE.secondary}`,
+                            )}
+                          >
+                            Custom
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Question Selection */}
+                      {isCustom ? (
+                        <div className="space-y-4">
+                          <div>
+                            <Label
+                              htmlFor="custom-question"
+                              className="mb-2 block"
+                            >
+                              Your Custom Question
+                            </Label>
+                            <div className="flex gap-2 mb-3">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={generateCustomQuestion}
+                                className="text-sm"
+                              >
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                Suggest
+                              </Button>
+                            </div>
+                            <Textarea
+                              id="custom-question"
+                              placeholder="Type your own security question..."
+                              value={customQuestion}
+                              onChange={(e) =>
+                                setCustomQuestion(e.target.value)
+                              }
+                              className={cn(
+                                "min-h-[100px] resize-none transition-all",
+                                customQuestion && "border-green-500",
+                              )}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <Label>Select a Security Question</Label>
+                          <Select
+                            value={selectedQuestion}
+                            onValueChange={setSelectedQuestion}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Choose a question..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SECURITY_QUESTIONS.map((question, index) => (
+                                <SelectItem key={index} value={question}>
+                                  {question}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-sm text-slate-500">
+                            Choose a question only you know the answer to
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Answer Input */}
+                      <div className="space-y-4">
+                        <Label htmlFor="answer">Your Answer</Label>
+                        <div className="relative">
+                          <Input
+                            id="answer"
+                            type={showAnswer ? "text" : "password"}
+                            value={answer}
+                            onChange={(e) => setAnswer(e.target.value)}
+                            placeholder="Enter your answer..."
+                            className={cn(
+                              "pr-10",
+                              answer &&
+                                answerStrength === "strong" &&
+                                "border-green-500",
+                              answer &&
+                                answerStrength === "medium" &&
+                                "border-yellow-500",
+                              answer &&
+                                answerStrength === "weak" &&
+                                "border-red-500",
+                            )}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowAnswer(!showAnswer)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                          >
+                            {showAnswer ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Answer Strength Indicator */}
+                        {answer && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Answer strength:</span>
+                              <span
+                                className={cn(
+                                  "text-sm font-medium",
+                                  getAnswerStrengthColor(),
+                                )}
+                              >
+                                {answerStrength.charAt(0).toUpperCase() +
+                                  answerStrength.slice(1)}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{
+                                  width:
+                                    answerStrength === "strong"
+                                      ? "100%"
+                                      : answerStrength === "medium"
+                                        ? "66%"
+                                        : "33%",
+                                }}
+                                className={cn(
+                                  "h-full",
+                                  answerStrength === "strong" && "bg-green-500",
+                                  answerStrength === "medium" &&
+                                    "bg-yellow-500",
+                                  answerStrength === "weak" && "bg-red-500",
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Navigation Buttons */}
+                      <div className="flex gap-3 pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setStep("info")}
+                          className="flex-1"
+                        >
+                          <ChevronLeft className="w-4 h-4 mr-2" />
+                          Back
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => setStep("confirm")}
+                          className={cn(
+                            "flex-1",
+                            `bg-gradient-to-r ${SIMPLE_PALETTE.primary}`,
+                          )}
+                          disabled={(!isCustom && !selectedQuestion) || !answer}
+                        >
+                          Continue
+                          <ChevronRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === "confirm" && (
+                <motion.div
+                  key="confirm"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-6"
+                >
+                  <div
+                    className={cn(
+                      "rounded-xl p-5 border",
+                      isDarkMode
+                        ? "bg-slate-800/30 border-slate-700"
+                        : "bg-white border-slate-200",
+                    )}
+                  >
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Summary */}
+                      <div
+                        className={cn(
+                          "p-4 rounded-lg",
+                          isDarkMode ? "bg-slate-800" : "bg-slate-50",
+                        )}
+                      >
+                        <h4 className="font-medium mb-3">
+                          Review Your Choice:
+                        </h4>
+                        <p className="text-sm mb-2">
+                          <span className="text-slate-500">Question:</span>
+                          <br />
+                          <span className="font-medium">
+                            {isCustom ? customQuestion : selectedQuestion}
+                          </span>
+                        </p>
+                        <p className="text-sm">
+                          <span className="text-slate-500">
+                            Answer strength:
+                          </span>{" "}
+                          <span
+                            className={cn(
+                              "font-medium",
+                              getAnswerStrengthColor(),
+                            )}
+                          >
+                            {answerStrength}
+                          </span>
+                        </p>
+                      </div>
+
+                      {/* Confirm Answer */}
+                      <div className="space-y-4">
+                        <Label htmlFor="confirm-answer">
+                          Confirm Your Answer
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="confirm-answer"
+                            type={showConfirmAnswer ? "text" : "password"}
+                            value={confirmAnswer}
+                            onChange={(e) => setConfirmAnswer(e.target.value)}
+                            placeholder="Re-enter your answer..."
+                            className={cn(
+                              "pr-10",
+                              confirmAnswer &&
+                                answer === confirmAnswer &&
+                                "border-green-500",
+                              confirmAnswer &&
+                                answer !== confirmAnswer &&
+                                "border-red-500",
+                            )}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmAnswer(!showConfirmAnswer)
+                            }
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                          >
+                            {showConfirmAnswer ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                        {confirmAnswer && answer !== confirmAnswer && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <X className="w-3 h-3" />
+                            Answers do not match
+                          </p>
+                        )}
+                        {confirmAnswer && answer === confirmAnswer && (
+                          <p className="text-xs text-green-500 flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Answers match
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Security Tips */}
+                      <div
+                        className={cn(
+                          "p-4 rounded-lg border",
+                          isDarkMode
+                            ? "bg-amber-900/20 border-amber-800"
+                            : "bg-amber-50 border-amber-200",
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <h4 className="font-medium text-amber-700 dark:text-amber-300 mb-2">
+                              Important Security Tips
+                            </h4>
+                            <ul className="text-sm text-amber-600 dark:text-amber-400 space-y-1">
+                              <li className="flex items-start gap-2">
+                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
+                                <span>
+                                  Pick an answer that's easy to remember
+                                </span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
+                                <span>
+                                  Avoid answers that others could guess from
+                                  social media
+                                </span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
+                                <span>
+                                  Don't use the same answer for multiple
+                                  accounts
+                                </span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Check className="w-3 h-3 mt-1 flex-shrink-0" />
+                                <span>
+                                  Your answer is encrypted and kept private
+                                </span>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setStep("setup")}
+                          className="flex-1"
+                          disabled={isLoading}
+                        >
+                          <ChevronLeft className="w-4 h-4 mr-2" />
+                          Back
+                        </Button>
+                        <Button
+                          type="submit"
+                          className={cn(
+                            "flex-1 py-6 text-base font-semibold",
+                            `bg-gradient-to-r ${SIMPLE_PALETTE.success} hover:opacity-90`,
+                          )}
+                          disabled={
+                            isLoading ||
+                            !confirmAnswer ||
+                            answer !== confirmAnswer
+                          }
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                              Setting Up...
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="w-5 h-5 mr-2" />
+                              Activate Security
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Footer - Secondary Actions */}
           <div
             className={cn(
-              "p-6 border-t mb-10",
+              "p-6 border-t",
               isDarkMode
-                ? "border-gray-700 bg-gray-900/50"
-                : "border-gray-200 bg-gray-50",
+                ? "border-slate-700 bg-slate-900/50"
+                : "border-slate-200 bg-slate-50",
             )}
           >
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                <p>This helps protect your gigs and bookings</p>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                <p className="flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  This helps protect your gigs and bookings
+                </p>
               </div>
 
               <div className="flex items-center gap-3">
@@ -494,20 +977,29 @@ export function SecurityQuestionSetupModal({
                   disabled={isLoading}
                 >
                   <Clock className="w-4 h-4 mr-2" />
-                  Remind Later
+                  Remind in 1h
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleSnooze(24)}
+                  className="text-sm"
+                  disabled={isLoading}
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Remind Tomorrow
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={handleSkip}
-                  className="text-sm text-gray-600 hover:text-gray-800"
+                  className="text-sm text-slate-600 hover:text-slate-800"
                   disabled={isLoading}
                 >
-                  Skip for Now
+                  Skip
                 </Button>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );
