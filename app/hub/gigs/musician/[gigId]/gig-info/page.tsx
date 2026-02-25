@@ -1243,40 +1243,6 @@ export default function GigDetailsPage({ params }: PageProps) {
 
     return groups;
   }, [gig, userMap, currentUser]);
-
-  // Filtered applicants based on search
-  const filterUsers = (users: any[]) => {
-    if (!searchQuery) return users;
-    const query = searchQuery.toLowerCase();
-    return users.filter(
-      (user) =>
-        user.firstname?.toLowerCase().includes(query) ||
-        user.username?.toLowerCase().includes(query) ||
-        user.roleType?.toLowerCase().includes(query) ||
-        user.city?.toLowerCase().includes(query),
-    );
-  };
-
-  // Live activity state
-  const [liveActivity, setLiveActivity] = useState({
-    recentInterests: 0,
-    recentApplications: 0,
-    recentViews: 0,
-    activeUsers: 0,
-    peakHour: "",
-    topLocation: "",
-  });
-
-  const [liveFeed, setLiveFeed] = useState<
-    Array<{
-      id: string;
-      type: "interest" | "apply" | "view";
-      gigTitle: string;
-      timestamp: number;
-      category: string;
-    }>
-  >([]);
-
   // Base metrics from real data (static baseline)
   const baseMetrics = useMemo(() => {
     if (!allGigsData) return null;
@@ -1346,19 +1312,52 @@ export default function GigDetailsPage({ params }: PageProps) {
     };
   }, [allGigsData]);
 
-  // Initialize live activity with baseline data
-  useEffect(() => {
-    if (!baseMetrics) return;
+  // Filtered applicants based on search
+  const filterUsers = (users: any[]) => {
+    if (!searchQuery) return users;
+    const query = searchQuery.toLowerCase();
+    return users.filter(
+      (user) =>
+        user.firstname?.toLowerCase().includes(query) ||
+        user.username?.toLowerCase().includes(query) ||
+        user.roleType?.toLowerCase().includes(query) ||
+        user.city?.toLowerCase().includes(query),
+    );
+  };
 
-    setLiveActivity({
-      recentInterests: Math.floor(baseMetrics.totalInterests * 0.1),
-      recentApplications: Math.floor(baseMetrics.totalApplications * 0.1),
-      recentViews: Math.floor(baseMetrics.totalGigs * 3),
-      activeUsers: Math.floor(baseMetrics.totalGigs * 1.5),
-      peakHour: baseMetrics.peakHour,
-      topLocation: baseMetrics.topLocation,
-    });
-  }, [baseMetrics]);
+  // Replace your current liveActivity useState with this:
+  const [liveActivity, setLiveActivity] = useState(() => {
+    if (baseMetrics) {
+      return {
+        recentInterests: Math.floor(baseMetrics.totalInterests * 0.1),
+        recentApplications: Math.floor(baseMetrics.totalApplications * 0.1),
+        recentViews: Math.floor(baseMetrics.totalGigs * 3),
+        activeUsers: Math.floor(baseMetrics.totalGigs * 1.5),
+        peakHour: baseMetrics.peakHour,
+        topLocation: baseMetrics.topLocation,
+      };
+    }
+    return {
+      recentInterests: 0,
+      recentApplications: 0,
+      recentViews: 0,
+      activeUsers: 0,
+      peakHour: "",
+      topLocation: "",
+    };
+  });
+
+  // Then DELETE the entire useEffect that was causing the error (lines 1350-1360)
+
+  const [liveFeed, setLiveFeed] = useState<
+    Array<{
+      id: string;
+      type: "interest" | "apply" | "view";
+      gigTitle: string;
+      timestamp: number;
+      category: string;
+    }>
+  >([]);
 
   // Simulate LIVE activity using real data patterns
   useEffect(() => {

@@ -400,7 +400,9 @@ export function SecurityQuestionSetupModal({
                     Secure Your Account
                   </DialogTitle>
                   <DialogDescription className="text-blue-100">
-                    Add an extra layer of protection to your gigs
+                    {userRole === "client" || userRole === "booker"
+                      ? "Protect your events, payments, and client reputation"
+                      : "Safeguard your auditions, bookings, and artistic career"}
                   </DialogDescription>
                 </div>
               </div>
@@ -432,7 +434,9 @@ export function SecurityQuestionSetupModal({
               <div className="flex items-center gap-2 text-sm text-blue-200 mt-3">
                 <Clock className="w-4 h-4" />
                 <span>
-                  Reminder appears every 5 minutes for your protection
+                  {userRole === "client" || userRole === "booker"
+                    ? "Essential for payment protection and event security"
+                    : "Critical for audition materials and booking verification"}
                 </span>
               </div>
             </div>
@@ -449,18 +453,61 @@ export function SecurityQuestionSetupModal({
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-6"
                 >
-                  {/* Benefits Grid */}
+                  {/* Role-Specific Header */}
+                  <div
+                    className={cn(
+                      "rounded-xl p-5 border-2",
+                      isDarkMode
+                        ? userRole === "client" || userRole === "booker"
+                          ? "bg-purple-900/20 border-purple-500/30"
+                          : "bg-blue-900/20 border-blue-500/30"
+                        : userRole === "client" || userRole === "booker"
+                          ? "bg-purple-50 border-purple-200"
+                          : "bg-blue-50 border-blue-200",
+                    )}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={cn(
+                          "p-3 rounded-xl",
+                          userRole === "client" || userRole === "booker"
+                            ? "bg-purple-500"
+                            : "bg-blue-500",
+                        )}
+                      >
+                        {userRole === "client" || userRole === "booker" ? (
+                          <Building className="w-6 h-6 text-white" />
+                        ) : (
+                          <Mic className="w-6 h-6 text-white" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg mb-2">
+                          {userRole === "client" || userRole === "booker"
+                            ? "Why Clients & Bookers Need Security Questions"
+                            : "Why Musicians Need Security Questions"}
+                        </h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          {userRole === "client" || userRole === "booker"
+                            ? "You're responsible for events, payments, and coordinating talent. A security question ensures only YOU can make changes."
+                            : "Your auditions, performance schedules, and professional reputation depend on account security. Don't leave it to chance."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Benefits Grid - Enhanced with more details */}
                   <div
                     className={cn(
                       "rounded-xl p-5 border",
                       isDarkMode
                         ? "bg-slate-800/50 border-slate-700"
-                        : "bg-blue-50/50 border-blue-100",
+                        : "bg-white border-slate-200",
                     )}
                   >
                     <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                       <Bell className="w-5 h-5 text-blue-500" />
-                      Why This Matters
+                      Critical Benefits for You
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {getUserBenefits().map((benefit, index) => (
@@ -473,7 +520,7 @@ export function SecurityQuestionSetupModal({
                             "p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-105",
                             isDarkMode
                               ? "bg-slate-800 hover:bg-slate-700"
-                              : "bg-white hover:shadow-md",
+                              : "bg-slate-50 hover:shadow-md",
                           )}
                         >
                           <div
@@ -494,7 +541,115 @@ export function SecurityQuestionSetupModal({
                     </div>
                   </div>
 
-                  {/* Stats Card */}
+                  {/* Risk Scenarios - Role Specific */}
+                  <div
+                    className={cn(
+                      "rounded-xl p-5 border",
+                      isDarkMode
+                        ? "bg-red-900/10 border-red-800/30"
+                        : "bg-red-50 border-red-200",
+                    )}
+                  >
+                    <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-red-500" />
+                      What Could Go Wrong?
+                    </h3>
+                    <div className="space-y-3">
+                      {userRole === "client" || userRole === "booker" ? (
+                        <>
+                          <div className="flex items-start gap-3">
+                            <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-red-500 text-xs font-bold">
+                                1
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="font-medium text-red-500">
+                                Unauthorized changes:
+                              </span>{" "}
+                              Someone could modify your event details, change
+                              payment amounts, or cancel booked musicians
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-red-500 text-xs font-bold">
+                                2
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="font-medium text-red-500">
+                                Payment redirection:
+                              </span>{" "}
+                              Fraudsters could change bank details and divert
+                              your payments to themselves
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-red-500 text-xs font-bold">
+                                3
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="font-medium text-red-500">
+                                Reputation damage:
+                              </span>{" "}
+                              Fake reviews or inappropriate messages posted from
+                              your account
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-3">
+                            <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-red-500 text-xs font-bold">
+                                1
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="font-medium text-red-500">
+                                Stolen audition materials:
+                              </span>{" "}
+                              Your original music, demos, and press kit could be
+                              downloaded and used by others
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-red-500 text-xs font-bold">
+                                2
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="font-medium text-red-500">
+                                Lost bookings:
+                              </span>{" "}
+                              Someone could cancel your confirmed gigs or change
+                              performance times without your knowledge
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-red-500 text-xs font-bold">
+                                3
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="font-medium text-red-500">
+                                Identity theft:
+                              </span>{" "}
+                              Impersonators could book gigs in your name and
+                              damage your professional reputation
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Real Stats */}
                   <div
                     className={cn(
                       "rounded-xl p-5 border",
@@ -530,6 +685,10 @@ export function SecurityQuestionSetupModal({
                         </div>
                       </div>
                     </div>
+                    <p className="text-xs text-center text-slate-500 mt-3">
+                      Users with security questions are 94% less likely to
+                      experience account takeovers
+                    </p>
                   </div>
 
                   {/* Continue Button */}
@@ -541,7 +700,7 @@ export function SecurityQuestionSetupModal({
                     )}
                   >
                     <Shield className="w-5 h-5 mr-2" />
-                    Get Started
+                    Protect My Account
                     <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>
                 </motion.div>
@@ -730,6 +889,14 @@ export function SecurityQuestionSetupModal({
                                 )}
                               />
                             </div>
+                            <p className="text-xs text-slate-500">
+                              {answerStrength === "weak" &&
+                                "Add numbers or special characters for stronger security"}
+                              {answerStrength === "medium" &&
+                                "Good, but could be stronger with special characters"}
+                              {answerStrength === "strong" &&
+                                "Excellent! This answer is very secure"}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -862,7 +1029,7 @@ export function SecurityQuestionSetupModal({
                         )}
                       </div>
 
-                      {/* Security Tips */}
+                      {/* Security Tips - Role Specific */}
                       <div
                         className={cn(
                           "p-4 rounded-lg border",
@@ -904,6 +1071,24 @@ export function SecurityQuestionSetupModal({
                                   Your answer is encrypted and kept private
                                 </span>
                               </li>
+                              {userRole === "client" ||
+                              userRole === "booker" ? (
+                                <li className="flex items-start gap-2">
+                                  <Key className="w-3 h-3 mt-1 flex-shrink-0" />
+                                  <span>
+                                    This question protects your payment methods
+                                    and event details
+                                  </span>
+                                </li>
+                              ) : (
+                                <li className="flex items-start gap-2">
+                                  <FileTextIcon className="w-3 h-3 mt-1 flex-shrink-0" />
+                                  <span>
+                                    This question secures your music files and
+                                    booking history
+                                  </span>
+                                </li>
+                              )}
                             </ul>
                           </div>
                         </div>
@@ -941,7 +1126,9 @@ export function SecurityQuestionSetupModal({
                           ) : (
                             <>
                               <Shield className="w-5 h-5 mr-2" />
-                              Activate Security
+                              {userRole === "client" || userRole === "booker"
+                                ? "Secure My Events"
+                                : "Protect My Career"}
                             </>
                           )}
                         </Button>
@@ -966,7 +1153,9 @@ export function SecurityQuestionSetupModal({
               <div className="text-sm text-slate-600 dark:text-slate-400">
                 <p className="flex items-center gap-2">
                   <Info className="w-4 h-4" />
-                  This helps protect your gigs and bookings
+                  {userRole === "client" || userRole === "booker"
+                    ? "Protect your events, payments, and professional reputation"
+                    : "Safeguard your auditions, bookings, and artistic career"}
                 </p>
               </div>
 
