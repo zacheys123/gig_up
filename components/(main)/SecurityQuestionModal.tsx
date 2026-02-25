@@ -757,7 +757,6 @@ export function SecurityQuestionSetupModal({
                           </Button>
                         </div>
                       </div>
-
                       {/* Question Selection */}
                       {isCustom ? (
                         <div className="space-y-4">
@@ -799,14 +798,25 @@ export function SecurityQuestionSetupModal({
                           <Label>Select a Security Question</Label>
                           <Select
                             value={selectedQuestion}
-                            onValueChange={setSelectedQuestion}
+                            onValueChange={(value) => {
+                              console.log("Selected:", value);
+                              setSelectedQuestion(value);
+                            }}
                           >
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger className="w-full cursor-pointer">
                               <SelectValue placeholder="Choose a question..." />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent
+                              position="popper"
+                              className="max-h-[300px] z-[100]"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {SECURITY_QUESTIONS.map((question, index) => (
-                                <SelectItem key={index} value={question}>
+                                <SelectItem
+                                  key={index}
+                                  value={question}
+                                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
                                   {question}
                                 </SelectItem>
                               ))}
@@ -815,6 +825,13 @@ export function SecurityQuestionSetupModal({
                           <p className="text-sm text-slate-500">
                             Choose a question only you know the answer to
                           </p>
+
+                          {/* Show selected question for debugging - remove in production */}
+                          {selectedQuestion && (
+                            <p className="text-xs text-green-500 mt-1">
+                              Selected: {selectedQuestion}
+                            </p>
+                          )}
                         </div>
                       )}
 
