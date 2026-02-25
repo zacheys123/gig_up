@@ -10,7 +10,6 @@ import {
 } from "../createNotificationInternal";
 import { updateUserTrust } from "../trustHelper";
 import { normalizeSecurityAnswer } from "../verifyUtil";
-import { AnyChildComponents } from "convex/server";
 
 // Helper function to create type-safe user data with admin defaults
 const createUserData = (args: any, now: number) => {
