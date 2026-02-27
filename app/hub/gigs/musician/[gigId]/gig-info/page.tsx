@@ -46,16 +46,17 @@ import {
   MapPin,
   DollarSign,
   Users,
-  Music,
   Mic,
   Volume2,
   Star,
-  CheckCircle,
   XCircle,
-  AlertCircle,
   MessageSquare,
-  Heart,
+  HeartIcon,
   Briefcase,
+  StarIcon, // Filled star
+  CheckCircle,
+  Music,
+  AlertCircle,
   User as UserIcon,
   Users2,
   Award,
@@ -489,7 +490,12 @@ const GigModal = ({
 
             {/* Poster Info - if available */}
             {gig?.poster && (
-              <div className={cn("mb-6 p-4 rounded-lg ",isDarkMode " bg-slate-50":"bg-slate-800/50")}>
+              <div
+                className={cn(
+                  "mb-6 p-4 rounded-lg ",
+                  isDarkMode ? " bg-slate-50" : "bg-slate-800/50",
+                )}
+              >
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarImage src={gig.poster.picture} />
@@ -589,519 +595,6 @@ const GigModal = ({
     </Dialog>
   );
 };
-// GigInfoCard Component
-const GigInfoCard = ({ gig, formatDate, formatTime, isDarkMode }: any) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3 }}
-  >
-    <Card
-      className={cn(
-        "border shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300",
-        isDarkMode
-          ? "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700"
-          : "bg-gradient-to-br from-white to-slate-50 border-slate-200",
-      )}
-    >
-      {/* Gradient Accent Bar */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
-
-      <CardContent className="p-4 md:p-6">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-start gap-4">
-          {/* Logo/Avatar */}
-          <div className="flex-shrink-0">
-            <div className="relative">
-              <Avatar className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-4 border-white dark:border-slate-700 shadow-lg">
-                <AvatarImage src={gig.logo} />
-                <AvatarFallback className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white text-xl md:text-xl font-bold">
-                  {gig.title?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Live Badge */}
-              {gig.isActive && (
-                <div className="absolute -top-2 -right-2">
-                  <span className="flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white"></span>
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Title & Meta */}
-          <div className="flex-1">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
-              <div>
-                <h2
-                  className={cn(
-                    "text-xl md:text-xl font-bold tracking-tight mb-2",
-                    isDarkMode ? "text-white" : "text-slate-900",
-                  )}
-                >
-                  {gig.title}
-                </h2>
-
-                <div className="flex flex-wrap gap-2">
-                  {/* Location */}
-                  <div
-                    className={cn(
-                      "flex items-center gap-1 text-[10px] md:text- px-2 py-1 rounded-full",
-                      isDarkMode
-                        ? "bg-slate-800 text-slate-300"
-                        : "bg-slate-100 text-slate-600",
-                    )}
-                  >
-                    <MapPin className="w-3 h-3" />
-                    {gig.location || "Remote"}
-                  </div>
-
-                  {/* Date */}
-                  <div
-                    className={cn(
-                      "flex items-center gap-1 text-[10px] md:text- px-2 py-1 rounded-full",
-                      isDarkMode
-                        ? "bg-slate-800 text-slate-300"
-                        : "bg-slate-100 text-slate-600",
-                    )}
-                  >
-                    <Calendar className="w-3 h-3" />
-                    {formatDate(gig.date)}
-                  </div>
-
-                  {/* Time */}
-                  {gig.time?.start && (
-                    <div
-                      className={cn(
-                        "flex items-center gap-1 text-[10px] md:text- px-2 py-1 rounded-full",
-                        isDarkMode
-                          ? "bg-slate-800 text-slate-300"
-                          : "bg-slate-100 text-slate-600",
-                      )}
-                    >
-                      <Clock className="w-3 h-3" />
-                      {gig.time.start} - {gig.time.end}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Price Section */}
-              <div className="flex flex-col items-start md:items-end">
-                <div className="flex items-baseline gap-1">
-                  <span
-                    className={cn(
-                      "text-[10px] font-medium",
-                      isDarkMode ? "text-slate-400" : "text-slate-500",
-                    )}
-                  >
-                    {gig.currency || "$"}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xl md:text-3xl font-bold",
-                      isDarkMode ? "text-emerald-400" : "text-emerald-600",
-                    )}
-                  >
-                    {gig.price?.toLocaleString()}
-                  </span>
-                </div>
-                {gig.negotiable && (
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "mt-1 border-emerald-500 text-emerald-600 dark:text-emerald-400 text-xs",
-                    )}
-                  >
-                    Negotiable
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="mt-6">
-          <h3
-            className={cn(
-              "text-[10px] font-semibold uppercase tracking-wider mb-2",
-              isDarkMode ? "text-slate-400" : "text-slate-500",
-            )}
-          >
-            Description
-          </h3>
-          <p
-            className={cn(
-              "text- leading-relaxed whitespace-pre-line",
-              isDarkMode ? "text-slate-300" : "text-slate-600",
-            )}
-          >
-            {gig.description}
-          </p>
-        </div>
-
-        {/* Tags */}
-        {gig.tags && gig.tags.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="flex flex-wrap gap-2">
-              {gig.tags.map((tag: string, i: number) => (
-                <Badge
-                  key={i}
-                  variant="secondary"
-                  className={cn(
-                    "px-2 py-1 text-[10px] font-medium",
-                    isDarkMode
-                      ? "bg-slate-800 text-slate-300 border-slate-700"
-                      : "bg-slate-100 text-slate-600 border-slate-200",
-                  )}
-                >
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  </motion.div>
-);
-
-// PosterInfoCard Component
-const PosterInfoCard = ({
-  poster,
-  metrics,
-  canMessageUser,
-  handleViewProfile,
-  getTrustTierIcon,
-  isDarkMode,
-}: any) => {
-  const display = metrics?.display || {
-    reliability: {
-      value: 0,
-      label: "Reliability",
-      icon: "🛡️",
-      color: "text-slate-500",
-    },
-    completion: {
-      value: 0,
-      label: "Completed",
-      icon: "✅",
-      color: "text-slate-500",
-    },
-    myCancellations: {
-      value: 0,
-      label: "My Cancellations",
-      icon: "❌",
-      color: "text-slate-500",
-    },
-    otherCancellations: {
-      value: 0,
-      label: "Other's Cancellations",
-      icon: "🤷",
-      color: "text-slate-500",
-    },
-    response: { hours: null, style: "unknown", icon: "⏳" },
-    badge: {
-      tier: "new",
-      label: "New",
-      emoji: "🌱",
-      color: "from-purple-500 to-pink-500",
-    },
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: 0.1 }}
-    >
-      <Card
-        className={cn(
-          "border shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300",
-          isDarkMode
-            ? "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700"
-            : "bg-gradient-to-br from-white to-slate-50 border-slate-200",
-        )}
-      >
-        {/* Badge gradient bar */}
-        <div
-          className={cn("h-1 w-full bg-gradient-to-r", display.badge.color)}
-        />
-
-        <CardContent className="p-4 md:p-6">
-          {/* Header with badge */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users2 className="w-4 h-4 text-emerald-500" />
-              <h3
-                className={cn(
-                  "text- font-semibold",
-                  isDarkMode ? "text-white" : "text-slate-900",
-                )}
-              >
-                Gig Owner
-              </h3>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Reliability Badge */}
-              <Badge
-                className={cn(
-                  "text-[10px] capitalize bg-gradient-to-r text-white border-0 flex items-center gap-1",
-                  display.badge.color,
-                )}
-              >
-                <span>{display.badge.emoji}</span>
-                <span>{display.badge.label}</span>
-              </Badge>
-
-              {/* Verified Badge */}
-              {poster.verifiedIdentity && (
-                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Verified
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          {/* Avatar and Basic Info */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Avatar Section */}
-            <div className="flex-shrink-0 text-center sm:text-left">
-              <div className="relative inline-block">
-                <Avatar className="w-20 h-20 sm:w-24 sm:h-24 mx-auto sm:mx-0 border-4 border-white dark:border-slate-700 shadow-lg">
-                  <AvatarImage src={poster.picture} />
-                  <AvatarFallback className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white text-xl sm:text-2xl font-bold">
-                    {poster.firstname?.charAt(0) || poster.username?.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800" />
-              </div>
-
-              <div className="mt-3">
-                <TrustStarsDisplay
-                  trustStars={poster.trustStars || 0}
-                  size="md"
-                />
-              </div>
-
-              <p className="text-[10px] text-slate-500 mt-2">
-                Member since {new Date(poster._creationTime).getFullYear()}
-              </p>
-            </div>
-
-            {/* Info Section */}
-            <div className="flex-1">
-              {/* Name and Actions */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h4
-                    className={cn(
-                      "text-lg sm:text-xl font-bold",
-                      isDarkMode ? "text-white" : "text-slate-900",
-                    )}
-                  >
-                    {poster.firstname || poster.username}
-                  </h4>
-
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    {poster.roleType && (
-                      <Badge variant="outline" className="text-xs">
-                        {poster.roleType}
-                      </Badge>
-                    )}
-                    {poster.city && (
-                      <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                        <MapPin className="w-3 h-3" />
-                        {poster.city}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  {canMessageUser(poster._id) && (
-                    <ChatIcon
-                      userId={poster._id}
-                      size="sm"
-                      variant="default"
-                      showPulse
-                    />
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewProfile(poster._id)}
-                    className="gap-1 text-xs"
-                  >
-                    <Eye className="w-3 h-3" />
-                    Profile
-                  </Button>
-                </div>
-              </div>
-
-              {/* Simple Metrics Grid */}
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {/* Completion Rate */}
-                <div
-                  className={cn(
-                    "text-center p-2 rounded-lg",
-                    isDarkMode ? "bg-slate-800" : "bg-slate-50",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "text-lg font-bold",
-                      display.completion.color,
-                    )}
-                  >
-                    {display.completion.value}%
-                  </div>
-                  <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-                    <span>{display.completion.icon}</span>
-                    {display.completion.label}
-                  </div>
-                </div>
-
-                {/* My Cancellations */}
-                <div
-                  className={cn(
-                    "text-center p-2 rounded-lg",
-                    isDarkMode ? "bg-slate-800" : "bg-slate-50",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "text-lg font-bold",
-                      display.myCancellations.color,
-                    )}
-                  >
-                    {display.myCancellations.value}%
-                  </div>
-                  <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-                    <span>{display.myCancellations.icon}</span>
-                    {display.myCancellations.label}
-                  </div>
-                </div>
-
-                {/* Response Style */}
-                <div
-                  className={cn(
-                    "text-center p-2 rounded-lg",
-                    isDarkMode ? "bg-slate-800" : "bg-slate-50",
-                  )}
-                >
-                  <div className="text-lg font-bold text-slate-900 dark:text-white">
-                    {display.response.icon}
-                  </div>
-                  <div className="text-[10px] text-slate-500 capitalize">
-                    {display.response.style === "quick" && "Quick"}
-                    {display.response.style === "thoughtful" && "Thoughtful"}
-                    {display.response.style === "fast" && "Fast"}
-                    {display.response.style === "patient" && "Patient"}
-                    {display.response.style === "unknown" && "—"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Visual Breakdown Bar */}
-              {metrics?.totalGigs > 0 && (
-                <div className="mt-3">
-                  <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                    <span>Gig History</span>
-                    <span>
-                      {metrics.completedByMe} completed •{" "}
-                      {metrics.cancelledByMe} cancelled by me •{" "}
-                      {metrics.cancelledByOther} cancelled by others
-                    </span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                    <div
-                      className="h-full bg-emerald-500"
-                      style={{ width: `${metrics.completionRate}%` }}
-                    />
-                    <div
-                      className="h-full bg-rose-500"
-                      style={{ width: `${metrics.myCancellationRate}%` }}
-                    />
-                    <div
-                      className="h-full bg-slate-400"
-                      style={{ width: `${metrics.otherCancellationRate}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Simple Summary */}
-              <p className="text-[10px] text-slate-500 mt-3">
-                {metrics?.summary ||
-                  `${display.reliability.value}% reliable • ${display.response.icon} ${display.response.style}`}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-};
-
-// RequirementsCard Component
-const RequirementsCard = ({ requirements, isDarkMode }: any) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3, delay: 0.2 }}
-  >
-    <Card
-      className={cn(
-        "border shadow-lg",
-        isDarkMode
-          ? "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700"
-          : "bg-gradient-to-br from-white to-slate-50 border-slate-200",
-      )}
-    >
-      <CardContent className="p-4 md:p-6">
-        <h3
-          className={cn(
-            "text- font-semibold flex items-center gap-2 mb-4",
-            isDarkMode ? "text-white" : "text-slate-900",
-          )}
-        >
-          <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          Requirements
-        </h3>
-
-        <div className="space-y-2">
-          {requirements.map((req: string, i: number) => (
-            <div key={i} className="flex items-start gap-2 group">
-              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                  {i + 1}
-                </span>
-              </div>
-              <span
-                className={cn(
-                  "text- flex-1",
-                  isDarkMode ? "text-slate-300" : "text-slate-600",
-                )}
-              >
-                {req}
-              </span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  </motion.div>
-);
 
 // RoleCard Component
 const RoleCard = ({ role, index, isDarkMode, currentUser, onApply }: any) => {
@@ -1402,8 +895,6 @@ export default function GigDetailsPage({ params }: PageProps) {
     }
     return null;
   }, [gig, currentUser]);
-
-  // Get application status badge
   const getMyStatusBadge = () => {
     if (!userApplication) return null;
 
@@ -1412,26 +903,50 @@ export default function GigDetailsPage({ params }: PageProps) {
         gradient: "from-indigo-600 via-purple-600 to-pink-600",
         icon: Crown,
         label: "Gig Owner",
+        description: "You created this gig",
+        iconColor: "text-pink-300 group-hover:text-pink-200",
       },
       interested: {
         gradient: "from-sky-600 via-blue-600 to-indigo-600",
-        icon: Heart,
+        icon: HeartIcon,
         label: "Interested",
+        description: "You've shown interest in this gig",
+        iconColor: "text-sky-300 group-hover:text-sky-200",
       },
       applied: {
         gradient: "from-amber-600 via-orange-600 to-red-600",
         icon: Briefcase,
         label: "Applied",
+        description: "Your application is pending",
+        iconColor: "text-amber-300 group-hover:text-amber-200",
       },
       shortlisted: {
         gradient: "from-emerald-600 via-teal-600 to-cyan-600",
         icon: Star,
         label: "Shortlisted ✨",
+        description: "You've been shortlisted!",
+        iconColor: "text-emerald-300 group-hover:text-emerald-200",
       },
       booked: {
         gradient: "from-emerald-600 via-teal-600 to-cyan-600",
         icon: CheckCircle,
         label: "Booked ✓",
+        description: "You're booked for this gig",
+        iconColor: "text-emerald-300 group-hover:text-emerald-200",
+      },
+      "band-applicant": {
+        gradient: "from-amber-600 via-orange-600 to-red-600",
+        icon: Music,
+        label: "Band Applicant",
+        description: `Applied as ${userApplication.role}`,
+        iconColor: "text-amber-300 group-hover:text-amber-200",
+      },
+      "band-booked": {
+        gradient: "from-emerald-600 via-teal-600 to-cyan-600",
+        icon: CheckCircle,
+        label: "Band Booked",
+        description: `Booked as ${userApplication.role}`,
+        iconColor: "text-emerald-300 group-hover:text-emerald-200",
       },
     };
 
@@ -1441,30 +956,49 @@ export default function GigDetailsPage({ params }: PageProps) {
     const Icon = badge.icon;
 
     return (
-      <div className="relative group">
-        <div
-          className={cn(
-            "absolute -inset-0.5 rounded-full opacity-75 group-hover:opacity-100",
-            "bg-gradient-to-r blur transition duration-500 group-hover:duration-200",
-            badge.gradient,
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative group cursor-help">
+            {/* Simple glow */}
+            <div
+              className={cn(
+                "absolute -inset-0.5 rounded-full opacity-50 group-hover:opacity-75",
+                "bg-gradient-to-r blur-sm transition",
+                badge.gradient,
+              )}
+            />
+
+            {/* Badge */}
+            <Badge
+              className={cn(
+                "relative px-4 py-2 rounded-full border-0",
+                "bg-gradient-to-r",
+                badge.gradient,
+                "text-white flex items-center gap-2",
+                "shadow-md text-sm font-medium",
+              )}
+            >
+              <Icon className={cn("w-4 h-4", badge.iconColor)} />
+              <span>
+                {badge.label}
+                {userApplication.role && (
+                  <>
+                    <span className="mx-1 opacity-50">•</span>
+                    <span className="opacity-90">{userApplication.role}</span>
+                  </>
+                )}
+              </span>
+            </Badge>
+          </div>
+        </TooltipTrigger>
+
+        <TooltipContent>
+          <p>{badge.description}</p>
+          {canWithdraw && (
+            <p className="text-xs text-rose-400 mt-1">Click to withdraw</p>
           )}
-        />
-        <Badge
-          className={cn(
-            "relative px-3 py-1.5 rounded-full border-0",
-            "bg-slate-900 dark:bg-slate-950",
-            "text-white",
-            "flex items-center gap-1.5",
-            "shadow-xl text-xs",
-          )}
-        >
-          <Icon className="w-3.5 h-3.5" />
-          <span className="font-medium">
-            {badge.label}
-            {userApplication.role && ` • ${userApplication.role}`}
-          </span>
-        </Badge>
-      </div>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 
@@ -1681,7 +1215,7 @@ export default function GigDetailsPage({ params }: PageProps) {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "interest":
-        return <Heart className="w-3 h-3 text-rose-400" />;
+        return <HeartIcon className="w-3 h-3 text-rose-400" />;
       case "apply":
         return <Briefcase className="w-3 h-3 text-amber-400" />;
       default:
@@ -1985,7 +1519,7 @@ export default function GigDetailsPage({ params }: PageProps) {
           </div>
 
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-            {/* Header - keep interactive */}
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => router.back()}
@@ -2001,8 +1535,69 @@ export default function GigDetailsPage({ params }: PageProps) {
 
               <div className="flex items-center gap-2">
                 <div className="hidden md:block">{getMyStatusBadge()}</div>
-                <Skeleton className="md:hidden w-10 h-10 rounded-xl" />
-                <Skeleton className="hidden md:block w-32 h-10 rounded-xl" />
+
+                {/* Desktop Withdraw Button - Quick Action */}
+                {canWithdraw && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowWithdrawDialog(true)}
+                        className="hidden md:flex border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                      >
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Withdraw
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Withdraw your application</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
+                {/* Mobile menu buttons */}
+                <button
+                  onClick={() => setShowApplicantSidebar(true)}
+                  className={cn(
+                    "md:hidden p-2 rounded-xl",
+                    isDarkMode
+                      ? "bg-slate-800/50 text-slate-300"
+                      : "bg-slate-100/50 text-slate-600",
+                  )}
+                >
+                  <Activity className="w-5 h-5" />
+                </button>
+
+                {gig.bandCategory && gig.bandCategory.length > 0 && (
+                  <button
+                    onClick={() => setShowRoleDrawer(true)}
+                    className={cn(
+                      "md:hidden p-2 rounded-xl",
+                      isDarkMode
+                        ? "bg-slate-800/50 text-slate-300"
+                        : "bg-slate-100/50 text-slate-600",
+                    )}
+                  >
+                    <Music className="w-5 h-5" />
+                  </button>
+                )}
+
+                {/* Share Button */}
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(window.location.href);
+                    toast.success("Link copied to clipboard!");
+                  }}
+                  className={cn(
+                    "hidden md:flex p-2 rounded-xl",
+                    isDarkMode
+                      ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
+                  )}
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
@@ -2074,7 +1669,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                       )}
                     >
                       <span className="flex items-center gap-1">
-                        <Heart className="w-3.5 h-3.5 text-rose-400" />
+                        <HeartIcon className="w-3.5 h-3.5 text-rose-400" />
                         {liveActivity.recentInterests} interested
                       </span>
                       <span className="flex items-center gap-1">
@@ -2545,7 +2140,6 @@ export default function GigDetailsPage({ params }: PageProps) {
       </TooltipProvider>
     );
   }
-
   // Main render - fully loaded
   return (
     <TooltipProvider>
@@ -2660,6 +2254,39 @@ export default function GigDetailsPage({ params }: PageProps) {
               />
             </div>
 
+            {/* BOOKING DISCLAIMER - ADDED HERE */}
+            {isUserBookedInAnyRole && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4"
+              >
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-2 px-4 py-2 rounded-full",
+                    "bg-gradient-to-r from-emerald-500/10 to-teal-500/10",
+                    "border border-emerald-500/30",
+                    "shadow-lg shadow-emerald-500/5",
+                  )}
+                >
+                  <div className="relative">
+                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 rounded-full bg-emerald-500/20"
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                    You've already booked this gig • Viewing booking details
+                  </span>
+                  <Badge className="bg-emerald-500 text-white text-xs ml-2">
+                    Confirmed
+                  </Badge>
+                </div>
+              </motion.div>
+            )}
+
             {/* Meta information chips */}
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <div
@@ -2713,7 +2340,9 @@ export default function GigDetailsPage({ params }: PageProps) {
                 >
                   <Clock className="w-3.5 h-3.5" />
                   <span>
-                    {gig.time.start} - {gig.time.end}
+                    {gig.time.start}
+                    {gig.time.durationFrom} - {gig.time.end}
+                    {gig?.time?.durationTo}
                   </span>
                 </div>
               )}
@@ -2723,7 +2352,7 @@ export default function GigDetailsPage({ params }: PageProps) {
             <div className="flex items-center gap-4 mt-4 text-sm">
               {gig.interestedUsers && gig.interestedUsers.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <Heart className="w-4 h-4 text-rose-500" />
+                  <HeartIcon className="w-4 h-4 text-rose-500" />
                   <span
                     className={isDarkMode ? "text-slate-300" : "text-slate-600"}
                   >
@@ -2834,7 +2463,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                       )}
                     >
                       <span className="flex items-center gap-1">
-                        <Heart className="w-3.5 h-3.5 text-rose-400" />
+                        <HeartIcon className="w-3.5 h-3.5 text-rose-400" />
                         {liveActivity.recentInterests} interested
                       </span>
                       <span className="flex items-center gap-1">
@@ -3406,17 +3035,19 @@ export default function GigDetailsPage({ params }: PageProps) {
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3">
-                      <Button
-                        className={cn(
-                          "flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700",
-                          gig.isTaken && "opacity-50 cursor-not-allowed",
-                        )}
-                        disabled={gig.isTaken}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        {gig.isTaken ? "Gig Booked" : "Message"}
-                      </Button>
+                    <div className="flex gap-3 items-center">
+                      {currentUser?.instrument === gig?.category && (
+                        <Button
+                          className={cn(
+                            "flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700",
+                            gig.isTaken && "opacity-50 cursor-not-allowed",
+                          )}
+                          disabled={gig.isTaken}
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          {gig.isTaken ? "Gig Booked" : "Message"}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -3429,6 +3060,23 @@ export default function GigDetailsPage({ params }: PageProps) {
                         Share
                       </Button>
                     </div>
+
+                    {/* DESKTOP WITHDRAW BUTTON - Add this right after action buttons */}
+                    {canWithdraw && (
+                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <Button
+                          variant="destructive"
+                          onClick={() => setShowWithdrawDialog(true)}
+                          className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600"
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Withdraw Application
+                        </Button>
+                        <p className="text-xs text-center mt-2 text-slate-500">
+                          Withdraw your interest or application from this gig
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -3464,7 +3112,7 @@ export default function GigDetailsPage({ params }: PageProps) {
           {/* Mobile Stats Bar */}
           <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2">
             <div className="flex items-center gap-1.5 text-xs shrink-0">
-              <Heart className="w-4 h-4 text-rose-500" />
+              <HeartIcon className="w-4 h-4 text-rose-500" />
               <span>
                 {groupedApplicants?.interested?.length || 0} interested
               </span>
