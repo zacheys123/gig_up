@@ -834,18 +834,20 @@ const CompactGigCard = ({
     e.stopPropagation();
     setShowActions(!showActions);
   };
-
-  const handleViewDetails = () => {
+  const handleViewDetails = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (onViewDetails) {
-      onViewDetails(gig);
-    } else {
-      router.push(`/hub/gigs/${gig._id}`);
+      onViewDetails(gig); // This will open the modal
     }
   };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     router.push(`/hub/gigs/client/edit/${gig._id}`);
+  };
+  const handleViewGig = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/hub/gigs?tab=pre-booking`);
   };
 
   return (
@@ -856,7 +858,7 @@ const CompactGigCard = ({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className="relative cursor-pointer"
-      onClick={handleViewDetails}
+      onClick={handleViewGig}
     >
       <Card
         className={cn(
@@ -995,7 +997,10 @@ const CompactGigCard = ({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={handleViewDetails}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetails(e);
+                        }}
                         className={cn(
                           "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
                           isDarkMode
@@ -1011,7 +1016,6 @@ const CompactGigCard = ({
                       View full details
                     </TooltipContent>
                   </Tooltip>
-
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <motion.button
@@ -1031,7 +1035,6 @@ const CompactGigCard = ({
                     </TooltipTrigger>
                     <TooltipContent side="bottom">Edit this gig</TooltipContent>
                   </Tooltip>
-
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <motion.button
@@ -1097,7 +1100,8 @@ export const MyGigs = ({ user }: { user: any }) => {
   const [showModal, setShowModal] = useState(false);
 
   const handleViewDetails = (gig: any) => {
-    router.push("/hub/gigs?tab=pre-booking");
+    setSelectedGig(gig);
+    setShowModal(true);
   };
   // Check scroll position for arrows
   const checkScroll = () => {
