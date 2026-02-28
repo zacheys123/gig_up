@@ -138,6 +138,8 @@ import {
   MoreHorizontal,
   Info,
   Activity,
+  RefreshCw,
+  Search,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
