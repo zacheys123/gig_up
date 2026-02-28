@@ -150,22 +150,16 @@ const GigModal = ({
 
   console.log("GigModal rendering:", { isOpen, gig: gig?.title });
 
-  if (!gig) {
-    console.log("No gig data in modal");
-    return null;
-  }
+  // Helper functions for roles
+  const isRoleFilled = (role: any) => role.filledSlots >= role.maxSlots;
+  const getRemainingSlots = (role: any) => role.maxSlots - role.filledSlots;
+  const getTotalSlots = (roles: any[]) =>
+    roles.reduce((acc, role) => acc + role.maxSlots, 0);
+  const getTotalFilled = (roles: any[]) =>
+    roles.reduce((acc, role) => acc + role.filledSlots, 0);
+  const getTotalRemaining = (roles: any[]) =>
+    roles.reduce((acc, role) => acc + (role.maxSlots - role.filledSlots), 0);
 
-  // Helper function to check if a role is filled
-  const isRoleFilled = (role: any) => {
-    return role.filledSlots >= role.maxSlots;
-  };
-
-  // Helper function to get remaining slots
-  const getRemainingSlots = (role: any) => {
-    return role.maxSlots - role.filledSlots;
-  };
-
-  // Helper function to get slot status color
   const getSlotStatusColor = (role: any) => {
     const remaining = getRemainingSlots(role);
     if (remaining === 0) return "text-red-500";
@@ -173,7 +167,13 @@ const GigModal = ({
     return "text-green-500";
   };
 
-  // Helper function to get slot status icon
+  const getSlotStatusBg = (role: any) => {
+    const remaining = getRemainingSlots(role);
+    if (remaining === 0) return "bg-red-500";
+    if (remaining <= 2) return "bg-yellow-500";
+    return "bg-green-500";
+  };
+
   const getSlotStatusIcon = (role: any) => {
     const remaining = getRemainingSlots(role);
     if (remaining === 0) return <XCircle className="w-4 h-4 text-red-500" />;
@@ -182,61 +182,133 @@ const GigModal = ({
     return <CheckCircle className="w-4 h-4 text-green-500" />;
   };
 
+  // Format date
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Get overall gig status
+  const overallStatus = useMemo(() => {
+    if (!gig?.bandCategory?.length) return null;
+    const total = getTotalRemaining(gig.bandCategory);
+    if (total === 0)
+      return { color: "red", text: "Fully Booked", icon: XCircle };
+    if (total <= 3)
+      return { color: "yellow", text: "Almost Full", icon: AlertCircle };
+    return { color: "green", text: "Open for Applications", icon: CheckCircle };
+  }, [gig]);
+
+  if (!gig) {
+    console.log("No gig data in modal");
+    return null;
+  }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           className={cn(
-            "relative overflow-hidden",
+            "relative overflow-hidden h-full",
             isDarkMode
-              ? "bg-gradient-to-b from-slate-900 to-slate-800"
-              : "bg-gradient-to-b from-white to-slate-50",
+              ? "bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900"
+              : "bg-gradient-to-b from-white via-slate-50 to-white",
           )}
         >
-          {/* Header with gradient */}
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16 border-2 border-white shadow-lg">
-                  <AvatarImage src={gig?.logo} />
-                  <AvatarFallback className="bg-white/20 text-white text-xl">
-                    {gig?.title?.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    {gig?.title}
-                  </h2>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge className="bg-white/20 text-white border-0">
-                      {gig?.bussinesscat || "Gig"}
-                    </Badge>
-                    {gig?.isTaken && (
-                      <Badge className="bg-red-500/20 text-white border-0">
-                        Fully Booked
+          {/* Header with gradient - Responsive */}
+          <div className="relative">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-90" />
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay" />
+
+            <div className="relative p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  {/* Avatar - Responsive sizing */}
+                  <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-white/50 shadow-xl">
+                    <AvatarImage src={gig?.logo} />
+                    <AvatarFallback className="bg-white/20 text-white text-base sm:text-xl">
+                      {gig?.title?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  {/* Title and badges - Responsive text */}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-bold text-white truncate">
+                      {gig?.title}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-2">
+                      <Badge className="bg-white/20 text-white border-0 text-[10px] sm:text-xs">
+                        {gig?.bussinesscat || "Gig"}
                       </Badge>
-                    )}
+
+                      {/* Overall Status Badge */}
+                      {overallStatus && (
+                        <Badge
+                          className={cn(
+                            "border-0 text-[10px] sm:text-xs",
+                            overallStatus.color === "red" &&
+                              "bg-red-500/20 text-white",
+                            overallStatus.color === "yellow" &&
+                              "bg-yellow-500/20 text-white",
+                            overallStatus.color === "green" &&
+                              "bg-green-500/20 text-white",
+                          )}
+                        >
+                          {overallStatus.text}
+                        </Badge>
+                      )}
+
+                      {gig?.isTaken && (
+                        <Badge className="bg-red-500/20 text-white border-0 text-[10px] sm:text-xs">
+                          Fully Booked
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Close button - Always visible */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="absolute top-2 right-2 sm:relative sm:top-0 sm:right-0 text-white hover:bg-white/20 shrink-0"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="text-white hover:bg-white/20"
-              >
-                <X className="w-5 h-5" />
-              </Button>
+
+              {/* Quick Stats under header */}
+              {gig?.bandCategory?.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-white/80 text-xs sm:text-sm">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5" />
+                    <span>{getTotalSlots(gig.bandCategory)} total slots</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>{getTotalFilled(gig.bandCategory)} filled</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{getTotalRemaining(gig.bandCategory)} remaining</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
-            {/* Quick Info Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {/* Content - Responsive scrolling */}
+          <div className="p-4 sm:p-6 max-h-[calc(90vh-180px)] overflow-y-auto">
+            {/* Quick Info Grid - Responsive grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
               <InfoChip
                 icon={MapPin}
                 label="Location"
@@ -247,9 +319,7 @@ const GigModal = ({
               <InfoChip
                 icon={Calendar}
                 label="Date"
-                value={
-                  gig?.date ? new Date(gig.date).toLocaleDateString() : "TBD"
-                }
+                value={gig?.date ? formatDate(gig.date) : "TBD"}
                 color="emerald"
                 isDarkMode={isDarkMode}
               />
@@ -277,22 +347,63 @@ const GigModal = ({
               />
             </div>
 
-            {/* Band Roles - Show detailed slot information */}
+            {/* Stats Row */}
+            {(gig?.interestedUsers?.length > 0 ||
+              gig?.viewCount?.length > 0 ||
+              gig?.appliedUsers?.length > 0) && (
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                {gig?.interestedUsers?.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <HeartIcon className="w-4 h-4 text-rose-500" />
+                    <span className="text-xs sm:text-sm font-medium">
+                      {gig.interestedUsers.length} interested
+                    </span>
+                  </div>
+                )}
+                {gig?.viewCount?.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs sm:text-sm font-medium">
+                      {gig.viewCount.length} views
+                    </span>
+                  </div>
+                )}
+                {gig?.appliedUsers?.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Briefcase className="w-4 h-4 text-amber-500" />
+                    <span className="text-xs sm:text-sm font-medium">
+                      {gig.appliedUsers.length} applied
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Band Roles - Enhanced with individual role checking */}
             {gig?.bandCategory && gig.bandCategory.length > 0 && (
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Users className="w-4 h-4 text-purple-500" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                  <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                      <Users className="w-4 h-4 text-purple-500" />
+                    </div>
                     Available Roles
                   </h3>
-                  <Badge variant="outline" className="text-xs">
-                    {
-                      gig.bandCategory.filter(
-                        (r: any) => getRemainingSlots(r) > 0,
-                      ).length
-                    }{" "}
-                    open / {gig.bandCategory.length} total
-                  </Badge>
+
+                  {/* Role summary */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {
+                        gig.bandCategory.filter(
+                          (r: any) => getRemainingSlots(r) > 0,
+                        ).length
+                      }{" "}
+                      open roles
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {getTotalRemaining(gig.bandCategory)} slots left
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -300,240 +411,269 @@ const GigModal = ({
                     const remaining = getRemainingSlots(role);
                     const isFilled = remaining === 0;
                     const statusColor = getSlotStatusColor(role);
+                    const statusBg = getSlotStatusBg(role);
                     const StatusIcon = getSlotStatusIcon(role);
+                    const fillPercentage =
+                      (role.filledSlots / role.maxSlots) * 100;
 
                     return (
-                      <div
+                      <motion.div
                         key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
                         className={cn(
-                          "p-4 rounded-lg border transition-all",
+                          "p-4 rounded-xl border transition-all",
                           isFilled
                             ? isDarkMode
                               ? "bg-slate-800/50 border-slate-700 opacity-70"
                               : "bg-slate-50 border-slate-200 opacity-70"
                             : isDarkMode
-                              ? "bg-slate-800/30 border-slate-700 hover:border-purple-500/50"
-                              : "bg-white border-slate-200 hover:border-purple-300",
+                              ? "bg-slate-800/30 border-slate-700 hover:border-purple-500/50 hover:shadow-lg"
+                              : "bg-white border-slate-200 hover:border-purple-300 hover:shadow-md",
                         )}
                       >
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                          {/* Left side - Role info */}
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-base">
-                                {role.role}
-                              </h4>
-                              {role.requiredSkills &&
-                                role.requiredSkills.length > 0 && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px]"
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold text-sm sm:text-base">
+                                    {role.role}
+                                  </h4>
+                                  {role.requiredSkills?.length > 0 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] sm:text-xs"
+                                    >
+                                      {role.requiredSkills.length} skills
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {/* Slot Status with Icon */}
+                                <div className="flex items-center gap-2 mt-2">
+                                  {StatusIcon}
+                                  <span
+                                    className={cn(
+                                      "text-xs sm:text-sm font-medium",
+                                      statusColor,
+                                    )}
                                   >
-                                    {role.requiredSkills.length} skills
-                                  </Badge>
-                                )}
+                                    {remaining === 0
+                                      ? "Position filled"
+                                      : `${remaining} slot${remaining > 1 ? "s" : ""} available`}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Price - Mobile friendly */}
+                              {role.price && (
+                                <div className="text-right sm:hidden">
+                                  <span className="text-xs text-slate-500">
+                                    Budget
+                                  </span>
+                                  <p className="font-bold text-emerald-500 text-sm">
+                                    {role.currency || "$"}
+                                    {role.price}
+                                    {role.negotiable && (
+                                      <span className="text-xs text-slate-400 ml-1">
+                                        /neg
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              )}
                             </div>
 
-                            {/* Slot Status */}
-                            <div className="flex items-center gap-2 mt-1">
-                              {StatusIcon}
-                              <span
-                                className={cn(
-                                  "text-sm font-medium",
-                                  statusColor,
-                                )}
-                              >
-                                {remaining === 0
-                                  ? "Filled"
-                                  : `${remaining} slot${remaining > 1 ? "s" : ""} remaining`}
-                              </span>
-                            </div>
-
-                            {/* Slot Progress Bar */}
-                            <div className="mt-2 space-y-1">
+                            {/* Progress Bar with details */}
+                            <div className="mt-3 space-y-1">
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500">Progress</span>
-                                <span className={statusColor}>
-                                  {role.filledSlots}/{role.maxSlots} filled
+                                <span className="text-slate-500">Filled</span>
+                                <span
+                                  className={cn("font-medium", statusColor)}
+                                >
+                                  {role.filledSlots}/{role.maxSlots} positions
                                 </span>
                               </div>
                               <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                <div
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${fillPercentage}%` }}
+                                  transition={{
+                                    duration: 0.5,
+                                    delay: index * 0.1,
+                                  }}
                                   className={cn(
                                     "h-full transition-all",
-                                    isFilled
-                                      ? "bg-red-500"
-                                      : remaining <= 2
-                                        ? "bg-yellow-500"
-                                        : "bg-green-500",
+                                    statusBg,
                                   )}
-                                  style={{
-                                    width: `${(role.filledSlots / role.maxSlots) * 100}%`,
-                                  }}
                                 />
                               </div>
                             </div>
+
+                            {/* Description - if available */}
+                            {role.description && (
+                              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-3">
+                                {role.description}
+                              </p>
+                            )}
+
+                            {/* Skills */}
+                            {role.requiredSkills?.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-3">
+                                {role.requiredSkills.map(
+                                  (skill: string, i: number) => (
+                                    <Badge
+                                      key={i}
+                                      variant="secondary"
+                                      className="text-[8px] sm:text-[10px] px-1.5 py-0"
+                                    >
+                                      {skill}
+                                    </Badge>
+                                  ),
+                                )}
+                              </div>
+                            )}
+
+                            {/* Applicants count */}
+                            {role.applicants?.length > 0 && (
+                              <div className="mt-3 text-xs text-slate-500 flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {role.applicants.length} applicant
+                                {role.applicants.length > 1 ? "s" : ""}
+                              </div>
+                            )}
                           </div>
 
-                          {/* Price if available */}
+                          {/* Right side - Price (Desktop) */}
                           {role.price && (
-                            <div className="text-right">
+                            <div className="hidden sm:block text-right min-w-[100px]">
                               <span className="text-xs text-slate-500">
-                                Budget
+                                Budget per slot
                               </span>
-                              <p className="font-bold text-emerald-500">
+                              <p className="font-bold text-emerald-500 text-lg">
                                 {role.currency || "$"}
                                 {role.price}
-                                {role.negotiable && (
-                                  <span className="text-xs text-slate-400 ml-1">
-                                    /neg
-                                  </span>
-                                )}
                               </p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Description */}
-                        {role.description && (
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 mb-2">
-                            {role.description}
-                          </p>
-                        )}
-
-                        {/* Skills */}
-                        {role.requiredSkills &&
-                          role.requiredSkills.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {role.requiredSkills.map(
-                                (skill: string, i: number) => (
-                                  <Badge
-                                    key={i}
-                                    variant="secondary"
-                                    className="text-[10px]"
-                                  >
-                                    {skill}
-                                  </Badge>
-                                ),
+                              {role.negotiable && (
+                                <span className="text-xs text-slate-400">
+                                  Negotiable
+                                </span>
                               )}
                             </div>
                           )}
-
-                        {/* Applicants count if available */}
-                        {role.applicants && role.applicants.length > 0 && (
-                          <div className="mt-2 text-xs text-slate-500">
-                            {role.applicants.length} applicant
-                            {role.applicants.length > 1 ? "s" : ""}
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      </motion.div>
                     );
                   })}
                 </div>
 
-                {/* Summary Card */}
+                {/* Overall Summary Card */}
                 <div
                   className={cn(
-                    "mt-4 p-3 rounded-lg border",
+                    "mt-4 p-4 rounded-xl border",
                     isDarkMode
                       ? "bg-slate-800/30 border-slate-700"
                       : "bg-slate-50 border-slate-200",
                   )}
                 >
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      Total Slots:
-                    </span>
-                    <span className="font-medium">
-                      {gig.bandCategory.reduce(
-                        (acc: number, role: any) => acc + role.maxSlots,
-                        0,
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      Filled Slots:
-                    </span>
-                    <span className="font-medium">
-                      {gig.bandCategory.reduce(
-                        (acc: number, role: any) => acc + role.filledSlots,
-                        0,
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      Remaining:
-                    </span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        gig.bandCategory.reduce(
-                          (acc: number, role: any) =>
-                            acc + (role.maxSlots - role.filledSlots),
-                          0,
-                        ) === 0
-                          ? "text-red-500"
-                          : "text-green-500",
-                      )}
-                    >
-                      {gig.bandCategory.reduce(
-                        (acc: number, role: any) =>
-                          acc + (role.maxSlots - role.filledSlots),
-                        0,
-                      )}
-                    </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <span className="text-xs text-slate-500">
+                        Total Roles
+                      </span>
+                      <p className="text-lg font-bold">
+                        {gig.bandCategory.length}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">
+                        Total Slots
+                      </span>
+                      <p className="text-lg font-bold">
+                        {getTotalSlots(gig.bandCategory)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">Filled</span>
+                      <p className="text-lg font-bold text-emerald-500">
+                        {getTotalFilled(gig.bandCategory)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">Remaining</span>
+                      <p
+                        className={cn(
+                          "text-lg font-bold",
+                          getTotalRemaining(gig.bandCategory) === 0
+                            ? "text-red-500"
+                            : "text-green-500",
+                        )}
+                      >
+                        {getTotalRemaining(gig.bandCategory)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Poster Info - if available */}
+            {/* Poster Info */}
             {gig?.poster && (
               <div
                 className={cn(
-                  "mb-6 p-4 rounded-lg ",
-                  isDarkMode ? " bg-slate-50" : "bg-slate-800/50",
+                  "mb-6 p-4 rounded-xl flex items-center gap-3",
+                  isDarkMode ? "bg-slate-800/30" : "bg-slate-50",
                 )}
               >
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={gig.poster.picture} />
-                    <AvatarFallback>
-                      {gig.poster.firstname?.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
-                      {gig.poster.firstname} {gig.poster.lastname}
-                    </p>
-                    <TrustStarsDisplay
-                      trustStars={gig.poster.trustStars || 0}
-                      size="sm"
-                    />
-                  </div>
+                <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
+                  <AvatarImage src={gig.poster.picture} />
+                  <AvatarFallback>
+                    {gig.poster.firstname?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-medium text-sm sm:text-base">
+                    {gig.poster.firstname} {gig.poster.lastname}
+                  </p>
+                  <TrustStarsDisplay
+                    trustStars={gig.poster.trustStars || 0}
+                    size="sm"
+                  />
                 </div>
+                {gig.poster.verifiedIdentity && (
+                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Verified
+                  </Badge>
+                )}
               </div>
             )}
 
             {/* Description */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-semibold mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-purple-500" />
                 Description
               </h3>
-              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              <p className="text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                 {gig?.description}
               </p>
             </div>
 
             {/* Tags */}
-            {gig?.tags && gig.tags.length > 0 && (
+            {gig?.tags?.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold mb-3">Tags</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {gig.tags.map((tag: string, i: number) => (
-                    <Badge key={i} variant="secondary" className="text-xs">
+                    <Badge
+                      key={i}
+                      variant="secondary"
+                      className="text-[10px] sm:text-xs"
+                    >
                       #{tag}
                     </Badge>
                   ))}
@@ -542,21 +682,21 @@ const GigModal = ({
             )}
 
             {/* Requirements */}
-            {gig?.requirements && gig.requirements.length > 0 && (
+            {gig?.requirements?.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-semibold mb-3 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-500" />
                   Requirements
                 </h3>
                 <ul className="space-y-2">
                   {gig.requirements.map((req: string, i: number) => (
                     <li key={i} className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold">
                           {i + 1}
                         </span>
                       </div>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                         {req}
                       </span>
                     </li>
@@ -565,10 +705,10 @@ const GigModal = ({
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            {/* Action Buttons - Stack on mobile, row on desktop */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
               <Button
-                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white order-2 sm:order-1"
                 onClick={() => {
                   // Handle contact host
                   onClose();
@@ -579,7 +719,7 @@ const GigModal = ({
               </Button>
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 order-1 sm:order-2"
                 onClick={() => {
                   navigator.clipboard?.writeText(window.location.href);
                   toast.success("Link copied!");
@@ -712,6 +852,7 @@ export default function GigDetailsPage({ params }: PageProps) {
   const [isChangingGig, setIsChangingGig] = useState(false);
   const [selectedGigId, setSelectedGigId] = useState<Id<"gigs"> | null>(null);
 
+  console.log(currentUser?.firstname);
   // Check if mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -911,7 +1052,7 @@ export default function GigDetailsPage({ params }: PageProps) {
         icon: HeartIcon,
         label: "Interested",
         description: "You've shown interest in this gig",
-        iconColor: "text-sky-300 group-hover:text-sky-200",
+        iconColor: "text-orange-400 group-hover:text-sky-200",
       },
       applied: {
         gradient: "from-amber-600 via-orange-600 to-red-600",
@@ -922,7 +1063,7 @@ export default function GigDetailsPage({ params }: PageProps) {
       },
       shortlisted: {
         gradient: "from-emerald-600 via-teal-600 to-cyan-600",
-        icon: Star,
+        icon: StarIcon,
         label: "Shortlisted ✨",
         description: "You've been shortlisted!",
         iconColor: "text-emerald-300 group-hover:text-emerald-200",
@@ -937,7 +1078,7 @@ export default function GigDetailsPage({ params }: PageProps) {
       "band-applicant": {
         gradient: "from-amber-600 via-orange-600 to-red-600",
         icon: Music,
-        label: "Band Applicant",
+        label: "Band Applicant For",
         description: `Applied as ${userApplication.role}`,
         iconColor: "text-amber-300 group-hover:text-amber-200",
       },
@@ -959,26 +1100,29 @@ export default function GigDetailsPage({ params }: PageProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="relative group cursor-help">
-            {/* Simple glow */}
+            {/* Glow effect behind badge */}
             <div
               className={cn(
-                "absolute -inset-0.5 rounded-full opacity-50 group-hover:opacity-75",
-                "bg-gradient-to-r blur-sm transition",
+                "absolute -inset-0.5 rounded-full opacity-75 group-hover:opacity-100",
+                "bg-gradient-to-r blur transition duration-500 group-hover:duration-200",
                 badge.gradient,
               )}
             />
-
-            {/* Badge */}
+            {/* Main badge */}
             <Badge
               className={cn(
                 "relative px-4 py-2 rounded-full border-0",
                 "bg-gradient-to-r",
-                badge.gradient,
-                "text-white flex items-center gap-2",
-                "shadow-md text-sm font-medium",
+                badge.gradient, // This is sky blue for interested
+                "text-white", // This makes text white
+                "flex items-center gap-2",
+                "shadow-xl text-sm font-medium",
+                "transition-all duration-300 group-hover:scale-105",
               )}
             >
-              <Icon className={cn("w-4 h-4", badge.iconColor)} />
+              {/* Icon with orange color - overrides the white text color */}
+              <Icon className="w-4 h-4  [&>path]:fill-current" />
+
               <span>
                 {badge.label}
                 {userApplication.role && (
@@ -992,10 +1136,13 @@ export default function GigDetailsPage({ params }: PageProps) {
           </div>
         </TooltipTrigger>
 
-        <TooltipContent>
-          <p>{badge.description}</p>
+        <TooltipContent side="bottom" className="max-w-xs">
+          <p className="text-sm">{badge.description}</p>
           {canWithdraw && (
-            <p className="text-xs text-rose-400 mt-1">Click to withdraw</p>
+            <p className="text-xs text-rose-400 mt-1 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              You can withdraw your application
+            </p>
           )}
         </TooltipContent>
       </Tooltip>
@@ -1330,6 +1477,36 @@ export default function GigDetailsPage({ params }: PageProps) {
 
     return filtered;
   }, [activeTab, allGigsData]);
+  // Add this near your other useMemo hooks
+  const similarGigs = useMemo(() => {
+    if (!allGigsData || !gig) return [];
+
+    // Get current gig's business category
+    const currentCategory = gig.bussinesscat;
+
+    // Filter gigs that:
+    // 1. Are not the current gig
+    // 2. Have the same business category
+    // 3. Are active/not taken
+    // 4. Sort by relevance (interested count, views, etc.)
+    return allGigsData
+      .filter(
+        (g) =>
+          g._id !== gig._id &&
+          g.bussinesscat === currentCategory &&
+          !g.isTaken &&
+          g.isActive !== false,
+      )
+      .map((g) => ({
+        ...g,
+        relevanceScore:
+          (g.interestedUsers?.length || 0) * 2 +
+          (g.viewCount?.length || 0) +
+          (g.appliedUsers?.length || 0) * 1.5,
+      }))
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, 4); // Show top 4 similar gigs
+  }, [allGigsData, gig]);
 
   // Online stats
   const onlineStats = useQuery(api.controllers.user.getOnlineUsersStats, {
@@ -1599,13 +1776,6 @@ export default function GigDetailsPage({ params }: PageProps) {
                   <Share2 className="w-5 h-5" />
                 </button>
               </div>
-            </div>
-
-            {/* Title - keep visible but dimmed */}
-            <div className="mb-8 opacity-50">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">
-                {gig.title}
-              </h1>
             </div>
 
             {/* Grid layout */}
@@ -2173,129 +2343,232 @@ export default function GigDetailsPage({ params }: PageProps) {
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => router.back()}
-              className={cn(
-                "p-2 rounded-xl transition-all hover:scale-105",
-                isDarkMode
-                  ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
-              )}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+          {/* Modern Header - Sticky & Integrated */}
+          <div
+            className={cn(
+              "sticky top-0 z-30 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 mb-6",
+              "backdrop-blur-xl",
+              isDarkMode
+                ? "bg-slate-900/80 border-b border-slate-800/50"
+                : "bg-white/80 border-b border-slate-200/50",
+              "shadow-lg shadow-slate-200/20 dark:shadow-slate-900/20",
+            )}
+          >
+            <div className="max-w-7xl mx-auto">
+              {/* Top Row: Navigation + Actions */}
+              <div className="flex items-center justify-between">
+                {/* Left: Back button with context */}
+                <div className="flex items-center gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => router.back()}
+                    className={cn(
+                      "p-2.5 rounded-xl transition-all",
+                      "border",
+                      isDarkMode
+                        ? "bg-slate-800/50 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-600"
+                        : "bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300",
+                      "shadow-sm hover:shadow-md",
+                    )}
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </motion.button>
 
-            <div className="flex items-center gap-2">
-              <div className="hidden md:block">{getMyStatusBadge()}</div>
+                  {/* Breadcrumb */}
+                  <div className="hidden sm:block">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span
+                        className={cn(
+                          "text-xs",
+                          isDarkMode ? "text-slate-500" : "text-slate-400",
+                        )}
+                      >
+                        Gigs / {gig.bussinesscat || "Talent"} /
+                      </span>
+                      <span
+                        className={cn(
+                          "font-medium text-sm max-w-[200px] truncate",
+                          isDarkMode ? "text-slate-300" : "text-slate-700",
+                        )}
+                      >
+                        {gig.title}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-              {/* Mobile menu buttons */}
-              <button
-                onClick={() => setShowApplicantSidebar(true)}
-                className={cn(
-                  "md:hidden p-2 rounded-xl",
-                  isDarkMode
-                    ? "bg-slate-800/50 text-slate-300"
-                    : "bg-slate-100/50 text-slate-600",
-                )}
-              >
-                <Activity className="w-5 h-5" />
-              </button>
+                {/* Center: Status Badge - Hidden on mobile */}
+                <div className="absolute left-1/2 -translate-x-1/2 hidden lg:block">
+                  {getMyStatusBadge()}
+                </div>
 
-              {gig.bandCategory && gig.bandCategory.length > 0 && (
-                <button
-                  onClick={() => setShowRoleDrawer(true)}
-                  className={cn(
-                    "md:hidden p-2 rounded-xl",
-                    isDarkMode
-                      ? "bg-slate-800/50 text-slate-300"
-                      : "bg-slate-100/50 text-slate-600",
+                {/* Right: Action Buttons */}
+                <div className="flex items-center gap-2">
+                  {/* Desktop Withdraw Button */}
+                  {canWithdraw && (
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="hidden md:block"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowWithdrawDialog(true)}
+                        className={cn(
+                          "gap-2 border shadow-sm",
+                          isDarkMode
+                            ? "border-rose-800/50 text-rose-400 hover:bg-rose-950/30 hover:border-rose-700"
+                            : "border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300",
+                        )}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        <span>Withdraw</span>
+                      </Button>
+                    </motion.div>
                   )}
-                >
-                  <Music className="w-5 h-5" />
-                </button>
-              )}
 
-              {/* Share Button */}
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  toast.success("Link copied to clipboard!");
-                }}
-                className={cn(
-                  "hidden md:flex p-2 rounded-xl",
-                  isDarkMode
-                    ? "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/50",
-                )}
-              >
-                <Share2 className="w-5 h-5" />
-              </button>
+                  {/* Mobile menu buttons */}
+                  <button
+                    onClick={() => setShowApplicantSidebar(true)}
+                    className={cn(
+                      "md:hidden p-2.5 rounded-xl border transition-all",
+                      isDarkMode
+                        ? "bg-slate-800/50 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                        : "bg-white border-slate-200 text-slate-600 hover:text-slate-900",
+                      "shadow-sm",
+                    )}
+                  >
+                    <Activity className="w-5 h-5" />
+                  </button>
+
+                  {gig.bandCategory && gig.bandCategory.length > 0 && (
+                    <button
+                      onClick={() => setShowRoleDrawer(true)}
+                      className={cn(
+                        "md:hidden p-2.5 rounded-xl border transition-all",
+                        isDarkMode
+                          ? "bg-slate-800/50 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                          : "bg-white border-slate-200 text-slate-600 hover:text-slate-900",
+                        "shadow-sm",
+                      )}
+                    >
+                      <Music className="w-5 h-5" />
+                    </button>
+                  )}
+
+                  {/* Share Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      navigator.clipboard?.writeText(window.location.href);
+                      toast.success("Link copied!");
+                    }}
+                    className={cn(
+                      "p-2.5 rounded-xl border transition-all",
+                      isDarkMode
+                        ? "bg-slate-800/50 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                        : "bg-white border-slate-200 text-slate-600 hover:text-slate-900",
+                      "shadow-sm hover:shadow-md",
+                    )}
+                  >
+                    <Share2 className="w-5 h-5" />
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Mobile Status Badge - Visible only on mobile */}
+              <div className="mt-3 flex justify-center md:hidden">
+                {getMyStatusBadge()}
+              </div>
             </div>
           </div>
 
-          {/* Gig Title */}
+          {/* Gig Title Section - Now separate from header */}
           <div className="mb-8">
-            <div className="relative mb-3">
-              <h1
-                className={cn(
-                  "text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight",
-                  isDarkMode ? "text-white" : "text-slate-900",
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
+              <div className="relative">
+                <div
+                  className={cn(
+                    "absolute -bottom-2 left-0 w-20 h-1.5 rounded-full",
+                    "bg-gradient-to-r from-purple-500 to-pink-500",
+                  )}
+                />
+              </div>
+
+              {/* Quick action chips */}
+              <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium",
+                    "bg-purple-100 dark:bg-purple-900/30",
+                    "text-purple-700 dark:text-purple-300",
+                    "border border-purple-200 dark:border-purple-800",
+                  )}
+                >
+                  ID: #{gig._id.slice(-6)}
+                </div>
+                {gig.isTaken && (
+                  <div className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                    Booked
+                  </div>
                 )}
-              >
-                {gig.title}
-              </h1>
-              <div
-                className={cn(
-                  "absolute -bottom-1 left-0 w-16 h-1 rounded-full",
-                  "bg-gradient-to-r from-purple-500 to-pink-500",
-                )}
-              />
+              </div>
             </div>
 
-            {/* BOOKING DISCLAIMER - ADDED HERE */}
+            {/* BOOKING DISCLAIMER */}
             {isUserBookedInAnyRole && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-4"
+                className="mb-6"
               >
                 <div
                   className={cn(
-                    "inline-flex items-center gap-2 px-4 py-2 rounded-full",
+                    "inline-flex items-center gap-3 px-5 py-3 rounded-2xl",
                     "bg-gradient-to-r from-emerald-500/10 to-teal-500/10",
                     "border border-emerald-500/30",
-                    "shadow-lg shadow-emerald-500/5",
+                    "shadow-lg shadow-emerald-500/10",
+                    "backdrop-blur-sm",
                   )}
                 >
                   <div className="relative">
-                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    </div>
                     <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
+                      animate={{ scale: [1, 1.3, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
                       className="absolute inset-0 rounded-full bg-emerald-500/20"
                     />
                   </div>
-                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                    You've already booked this gig • Viewing booking details
-                  </span>
-                  <Badge className="bg-emerald-500 text-white text-xs ml-2">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                      You've already booked this gig
+                    </p>
+                    <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">
+                      Viewing booking details • {formatDate(gig.date)}
+                    </p>
+                  </div>
+                  <Badge className="bg-emerald-500 text-white border-0 px-3 py-1">
                     Confirmed
                   </Badge>
                 </div>
               </motion.div>
             )}
 
-            {/* Meta information chips */}
+            {/* Meta information chips - Enhanced */}
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <div
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                  "text-xs font-medium transition-all border",
+                  "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl",
+                  "text-xs font-medium transition-all",
                   isDarkMode
-                    ? "bg-purple-500/10 border-purple-500/30 text-purple-300"
-                    : "bg-purple-50 border-purple-200 text-purple-700",
+                    ? "bg-purple-500/10 text-purple-300 border border-purple-500/20"
+                    : "bg-purple-50 text-purple-700 border border-purple-200",
+                  "shadow-sm",
                 )}
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -2304,11 +2577,12 @@ export default function GigDetailsPage({ params }: PageProps) {
 
               <div
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                  "text-xs font-medium transition-all border",
+                  "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl",
+                  "text-xs font-medium transition-all",
                   isDarkMode
-                    ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
-                    : "bg-blue-50 border-blue-200 text-blue-700",
+                    ? "bg-blue-500/10 text-blue-300 border border-blue-500/20"
+                    : "bg-blue-50 text-blue-700 border border-blue-200",
+                  "shadow-sm",
                 )}
               >
                 <MapPin className="w-3.5 h-3.5" />
@@ -2317,11 +2591,12 @@ export default function GigDetailsPage({ params }: PageProps) {
 
               <div
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                  "text-xs font-medium transition-all border",
+                  "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl",
+                  "text-xs font-medium transition-all",
                   isDarkMode
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                    : "bg-emerald-50 border-emerald-200 text-emerald-700",
+                    ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                  "shadow-sm",
                 )}
               >
                 <Calendar className="w-3.5 h-3.5" />
@@ -2331,11 +2606,12 @@ export default function GigDetailsPage({ params }: PageProps) {
               {gig.time?.start && (
                 <div
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                    "text-xs font-medium transition-all border",
+                    "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl",
+                    "text-xs font-medium transition-all",
                     isDarkMode
-                      ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
-                      : "bg-amber-50 border-amber-200 text-amber-700",
+                      ? "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                      : "bg-amber-50 text-amber-700 border border-amber-200",
+                    "shadow-sm",
                   )}
                 >
                   <Clock className="w-3.5 h-3.5" />
@@ -2348,38 +2624,83 @@ export default function GigDetailsPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* Stats Row */}
-            <div className="flex items-center gap-4 mt-4 text-sm">
+            {/* Stats Row - Enhanced */}
+            <div className="flex items-center gap-6 mt-6">
               {gig.interestedUsers && gig.interestedUsers.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <HeartIcon className="w-4 h-4 text-rose-500" />
-                  <span
-                    className={isDarkMode ? "text-slate-300" : "text-slate-600"}
-                  >
-                    {gig.interestedUsers.length} interested
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/30">
+                    <HeartIcon className="w-4 h-4 text-rose-500" />
+                  </div>
+                  <div>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      {gig.interestedUsers.length}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs ml-1",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      interested
+                    </span>
+                  </div>
                 </div>
               )}
 
               {gig.viewCount && gig.viewCount.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-blue-500" />
-                  <span
-                    className={isDarkMode ? "text-slate-300" : "text-slate-600"}
-                  >
-                    {gig.viewCount.length} views
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <Eye className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      {gig.viewCount.length}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs ml-1",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      views
+                    </span>
+                  </div>
                 </div>
               )}
 
               {gig.appliedUsers && gig.appliedUsers.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Briefcase className="w-4 h-4 text-amber-500" />
-                  <span
-                    className={isDarkMode ? "text-slate-300" : "text-slate-600"}
-                  >
-                    {gig.appliedUsers.length} applied
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                    <Briefcase className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      {gig.appliedUsers.length}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs ml-1",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      applied
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -2850,6 +3171,13 @@ export default function GigDetailsPage({ params }: PageProps) {
                       <FollowButton
                         _id={gig.postedBy}
                         className={cn(
+                          "px-4 py-2 rounded-lg text-sm font-medium",
+                          "transition-all duration-200",
+                          colors.primaryBg,
+                          "text-white",
+                          colors.primaryBgHover,
+                          "shadow-sm hover:shadow",
+                          "active:scale-95",
                           gig.isTaken && "opacity-50 pointer-events-none",
                         )}
                       />
@@ -3036,7 +3364,7 @@ export default function GigDetailsPage({ params }: PageProps) {
 
                     {/* Action Buttons */}
                     <div className="flex gap-3 items-center">
-                      {currentUser?.instrument === gig?.category && (
+                      {/* {currentUser?.instrument === gig?.category && (
                         <Button
                           className={cn(
                             "flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700",
@@ -3047,7 +3375,7 @@ export default function GigDetailsPage({ params }: PageProps) {
                           <MessageSquare className="w-4 h-4 mr-2" />
                           {gig.isTaken ? "Gig Booked" : "Message"}
                         </Button>
-                      )}
+                      )} */}
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -3096,42 +3424,256 @@ export default function GigDetailsPage({ params }: PageProps) {
                   Similar Gigs
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredGigs.slice(0, 2).map((similarGig: any) => (
-                    <SimilarGigCard
-                      key={similarGig._id}
-                      gig={similarGig}
-                      onView={handleViewGig}
-                      isDarkMode={isDarkMode}
-                    />
-                  ))}
+                  {similarGigs.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3
+                          className={cn(
+                            "text-lg font-semibold",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          Similar {gig.bussinesscat} Gigs
+                        </h3>
+                        <Badge variant="outline" className="text-xs">
+                          {similarGigs.length} available
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {similarGigs.map((similarGig: any) => (
+                          <SimilarGigCard
+                            key={similarGig._id}
+                            gig={similarGig}
+                            onView={handleViewGig}
+                            isDarkMode={isDarkMode}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                  {similarGigs.length === 0 && allGigsData && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-center p-8 rounded-xl border border-dashed"
+                    >
+                      <p
+                        className={cn(
+                          "text-sm",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
+                        No other {gig.bussinesscat} gigs available right now
+                      </p>
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             </div>
           </div>
 
-          {/* Mobile Stats Bar */}
-          <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2">
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
-              <HeartIcon className="w-4 h-4 text-rose-500" />
-              <span>
-                {groupedApplicants?.interested?.length || 0} interested
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
-              <Briefcase className="w-4 h-4 text-amber-500" />
-              <span>{groupedApplicants?.applied?.length || 0} applied</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
-              <Star className="w-4 h-4 text-emerald-500" />
-              <span>
-                {groupedApplicants?.shortlisted?.length || 0} shortlisted
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs shrink-0">
-              <CheckCircle className="w-4 h-4 text-purple-500" />
-              <span>{groupedApplicants?.booked?.length || 0} booked</span>
-            </div>
+          {/* Mobile Stats Bar - Updated to match desktop */}
+          <div className="md:hidden mt-4 flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            {/* Optional: Show count of visible stats */}
+            {gig.interestedUsers?.length +
+              gig.viewCount?.length +
+              gig.appliedUsers?.length >
+              3 && (
+              <div className="shrink-0">
+                <div
+                  className={cn(
+                    "px-2 py-1 rounded-lg text-xs font-medium",
+                    isDarkMode
+                      ? "bg-slate-800 text-slate-300"
+                      : "bg-slate-100 text-slate-600",
+                  )}
+                >
+                  +
+                  {gig.interestedUsers?.length +
+                    gig.viewCount?.length +
+                    gig.appliedUsers?.length -
+                    3}{" "}
+                  more
+                </div>
+              </div>
+            )}
+            {/* Interested count - matches desktop */}
+            {gig.interestedUsers && gig.interestedUsers.length > 0 && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="p-1 rounded-lg bg-rose-100 dark:bg-rose-900/30">
+                  <HeartIcon className="w-3.5 h-3.5 text-rose-500" />
+                </div>
+                <div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {gig.interestedUsers.length}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs ml-1",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
+                  >
+                    interested
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Views count - matches desktop */}
+            {gig.viewCount && gig.viewCount.length > 0 && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="p-1 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Eye className="w-3.5 h-3.5 text-blue-500" />
+                </div>
+                <div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {gig.viewCount.length}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs ml-1",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
+                  >
+                    views
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Applied count - matches desktop */}
+            {gig.appliedUsers && gig.appliedUsers.length > 0 && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="p-1 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                  <Briefcase className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+                <div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {gig.appliedUsers.length}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs ml-1",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
+                  >
+                    applied
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Shortlisted count - if available */}
+            {gig.shortlistedUsers && gig.shortlistedUsers.length > 0 && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                  <StarIcon className="w-3.5 h-3.5 text-emerald-500" />
+                </div>
+                <div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {gig.shortlistedUsers.length}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs ml-1",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
+                  >
+                    shortlisted
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Booked count - if available */}
+            {gig.bookedBy && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="p-1 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <CheckCircle className="w-3.5 h-3.5 text-purple-500" />
+                </div>
+                <div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    1
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs ml-1",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
+                  >
+                    booked
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Band roles count - additional info for mobile */}
+            {gig.bandCategory && gig.bandCategory.length > 0 && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+                  <Users className="w-3.5 h-3.5 text-indigo-500" />
+                </div>
+                <div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {gig.bandCategory.length}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs ml-1",
+                      isDarkMode ? "text-slate-400" : "text-slate-500",
+                    )}
+                  >
+                    roles
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Add scrollbar hiding styles */}
+          <style jsx>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+            .scrollbar-hide {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+          `}</style>
 
           {/* Mobile Bottom Bar */}
           <div

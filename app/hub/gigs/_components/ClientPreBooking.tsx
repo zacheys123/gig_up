@@ -1804,28 +1804,12 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                             size="sm"
                             onClick={() => handleApplicantViewChange("active")}
                             className={cn(
-                              "h-7 text-xs px-2",
-                              applicantView === "active" && "bg-blue-600",
+                              "h-7 text-xs px-2 text-white",
+                              applicantView === "active" && "bg-orange-700",
                             )}
                           >
                             <Users className="w-3 h-3 mr-1" />
                             Active ({filteredActiveApplicants.length})
-                          </Button>
-                          <Button
-                            variant={
-                              applicantView === "history"
-                                ? "default"
-                                : "outline"
-                            }
-                            size="sm"
-                            onClick={() => handleApplicantViewChange("history")}
-                            className={cn(
-                              "h-7 text-xs px-2",
-                              applicantView === "history" && "bg-slate-600",
-                            )}
-                          >
-                            <Archive className="w-3 h-3 mr-1" />
-                            History ({filteredHistoryApplicants.length})
                           </Button>
                         </div>
 

@@ -125,7 +125,8 @@ export type NotificationSettings = {
   bookingConfirmations: boolean;
   gigReminders: boolean;
   bandInvites: boolean; // NEW
-
+  paymentConfirmations: boolean; // ADD THIS - For payment confirmations
+  paymentDisputes: boolean; // ADD THIS - For payment disputes
   // Messages & Communication
   newMessages: boolean;
   messageRequests: boolean;
@@ -163,20 +164,22 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
 > = {
   // Profile & Social
   profileViews: true,
-  likes: true, // Changed from false
+  likes: true,
   shares: false,
-  reviews: true, // Changed from false
-  followRequests: true, // Changed from false
-  comments: true, // Changed from false
+  reviews: true,
+  followRequests: true,
+  comments: true,
 
   // Gigs & Bookings
-  gigInvites: true,
-  gigOpportunities: true, // NEW
-  gigUpdates: true, // NEW
-  bookingRequests: true,
-  bookingConfirmations: true,
-  gigReminders: true,
-  bandInvites: true, // NEW
+  gigInvites: false,
+  gigOpportunities: false,
+  gigUpdates: false,
+  bookingRequests: false,
+  bookingConfirmations: false,
+  gigReminders: false,
+  bandInvites: false,
+  paymentConfirmations: true, // ADD THIS
+  paymentDisputes: true, // ADD THIS
 
   // Messages & Communication
   newMessages: true,

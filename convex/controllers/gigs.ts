@@ -227,7 +227,6 @@ const calculateTrustPenalty = (gigDate: string | number | Date): number => {
   }
   return 0; // More than 3 days - no penalty
 };
-
 export const removeInterestFromGig = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -239,7 +238,6 @@ export const removeInterestFromGig = mutation({
     const { gigId, userId, reason, isFromBooked } = args;
 
     const user = await ctx.db.get(userId);
-
     const gig = await ctx.db.get(gigId);
 
     if (!user) throw new Error("User not found");
@@ -252,8 +250,12 @@ export const removeInterestFromGig = mutation({
     // Check user involvement
     const isBookedMusician = gig.bookedBy === userId;
     const isInterestedMusician = gig.interestedUsers?.includes(userId) || false;
+    const isShortlisted =
+      gig.shortlistedUsers?.some((item: any) => item.userId === userId) ||
+      false;
 
-    const isInvolved = isBookedMusician || isInterestedMusician;
+    const isInvolved =
+      isBookedMusician || isInterestedMusician || isShortlisted;
 
     if (!isInvolved) {
       throw new Error("You are not involved in this gig");
@@ -277,7 +279,7 @@ export const removeInterestFromGig = mutation({
         timestamp: now,
         userId: userId,
         userRole: user.roleType || "musician",
-        status: "cancelled" as const, // ✅ Add 'as const'
+        status: "cancelled" as const,
         gigType: "regular" as const,
         actionBy: userId,
         reason: reason || "Cancelled booking",
@@ -300,14 +302,14 @@ export const removeInterestFromGig = mutation({
       await ctx.db.patch(userId, {
         cancelgigCount: (user.cancelgigCount || 0) + 1,
       });
+
       // Update the updateWeeklyGigCount function with explicit typing
       const updateWeeklyGigCount = (
         currentWeeklyData: WeeklyGigData | null,
       ): WeeklyGigData => {
-        // Get current week start (Monday)
         const now = new Date();
         const currentWeekStart = new Date(now);
-        currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+        currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
         currentWeekStart.setHours(0, 0, 0, 0);
 
         const weekStartTimestamp = currentWeekStart.getTime();
@@ -316,7 +318,6 @@ export const removeInterestFromGig = mutation({
           weekStart: 0,
         };
 
-        // Reset if new week
         if (currentGigsThisWeek.weekStart !== weekStartTimestamp) {
           return {
             count: 1,
@@ -324,25 +325,23 @@ export const removeInterestFromGig = mutation({
           };
         }
 
-        // Increment if same week
         return {
           count: currentGigsThisWeek.count + 1,
           weekStart: weekStartTimestamp,
         };
       };
 
-      // Update user's weekly gig count
       const updatedWeeklyData = updateWeeklyGigCount(
         user.gigsBookedThisWeek as WeeklyGigData | null,
       );
-      // Update user stats
+
       await ctx.db.patch(userId, {
         gigsBooked: (user.gigsBooked || 0) + 1,
         gigsBookedThisWeek: updatedWeeklyData,
         cancelgigCount: (user.cancelgigCount || 0) + 1,
         updatedAt: Date.now(),
       });
-      // Trigger trust recalculation
+
       await updateUserTrust(ctx, userId);
 
       // Send notification to client
@@ -385,6 +384,7 @@ export const removeInterestFromGig = mutation({
     // Remove user from appropriate fields
     let updatedBookedBy = gig.bookedBy;
     let updatedInterestedUsers = gig.interestedUsers || [];
+    let updatedShortlistedUsers = gig.shortlistedUsers || [];
 
     if (isBookedMusician) {
       updatedBookedBy = undefined;
@@ -396,13 +396,20 @@ export const removeInterestFromGig = mutation({
       );
     }
 
+    // ✅ ALWAYS remove from shortlist regardless of where they were removed from
+    if (isShortlisted) {
+      updatedShortlistedUsers = updatedShortlistedUsers.filter(
+        (item: any) => item.userId !== userId,
+      );
+    }
+
     const maxSlots = gig.maxSlots || 10;
     const totalInterested = [
       ...(updatedBookedBy ? [updatedBookedBy] : []),
       ...updatedInterestedUsers,
     ];
     const isStillFull = totalInterested.length >= maxSlots;
-    // Explicitly type the status variable
+
     const statusValue: "cancelled" | "rejected" = isBookedMusician
       ? "cancelled"
       : "rejected";
@@ -413,7 +420,7 @@ export const removeInterestFromGig = mutation({
       timestamp: now,
       userId: userId,
       userRole: user.roleType || "musician",
-      status: statusValue, // Now correctly typed
+      status: statusValue,
       gigType: "regular" as const,
       actionBy: userId,
       actionFor: userId,
@@ -426,6 +433,8 @@ export const removeInterestFromGig = mutation({
         musicianName: user.firstname || user.username,
         previousBookedBy: gig.bookedBy,
         previousInterestedCount: (gig.interestedUsers || []).length,
+        previousShortlistedCount: (gig.shortlistedUsers || []).length,
+        removedFromShortlist: isShortlisted, // ✅ Track if removed from shortlist
         remainingInterestedCount: totalInterested.length,
         wasFull:
           (gig.interestedUsers || []).length + (gig.bookedBy ? 1 : 0) >=
@@ -436,7 +445,9 @@ export const removeInterestFromGig = mutation({
           ? "bookedBy"
           : isInterestedMusician
             ? "interestedUsers"
-            : "client",
+            : isShortlisted
+              ? "shortlistedUsers"
+              : "client",
         hoursUntilGig: isBookedMusician ? Math.floor(hoursDifference) : null,
       },
     };
@@ -445,6 +456,7 @@ export const removeInterestFromGig = mutation({
     await ctx.db.patch(gigId, {
       ...(isBookedMusician && { bookedBy: undefined }),
       ...(isInterestedMusician && { interestedUsers: updatedInterestedUsers }),
+      ...(isShortlisted && { shortlistedUsers: updatedShortlistedUsers }), // ✅ Update shortlist
       bookingHistory: [...(gig.bookingHistory || []), removalEntry],
       updatedAt: now,
       isPending: isStillFull,
@@ -539,6 +551,7 @@ export const removeInterestFromGig = mutation({
             musicianId: userId,
             musicianName: user.firstname || user.username,
             reason: reason || "",
+            removedFromShortlist: isShortlisted, // ✅ Include in metadata
             remainingInterested: totalInterested.length,
             wasBooked: isBookedMusician,
           },
@@ -554,6 +567,7 @@ export const removeInterestFromGig = mutation({
       musicianName: user.firstname || user.username,
       isFromBooked,
       wasBooked: isBookedMusician,
+      removedFromShortlist: isShortlisted, // ✅ Return this info
     };
   },
 });
@@ -940,15 +954,19 @@ export const removeUserInterest = mutation({
     // Check if user is involved
     const isInterested = gig.interestedUsers?.includes(userIdToRemove) || false;
     const isBooked = gig.bookedBy === userIdToRemove;
+    const isShortlisted =
+      gig.shortlistedUsers?.some(
+        (item: any) => item.userId === userIdToRemove,
+      ) || false;
 
-    if (!isInterested && !isBooked) {
+    if (!isInterested && !isBooked && !isShortlisted) {
       throw new Error("This user is not involved with the gig");
     }
 
     const now = Date.now();
 
     // Determine status based on whether they were booked or just interested
-    const status = isBooked ? "cancelled" : ("rejected" as const); // ✅ Add 'as const'
+    const status = isBooked ? "cancelled" : ("rejected" as const);
 
     // Prepare updates object with proper typing
     const updates: Record<string, any> = {
@@ -960,7 +978,7 @@ export const removeUserInterest = mutation({
           timestamp: now,
           userId: userIdToRemove,
           userRole: musician.roleType || "musician",
-          status: status, // Now correctly typed as "cancelled" | "rejected"
+          status: status,
           gigType: "regular" as const,
           actionBy: clientId,
           actionFor: userIdToRemove,
@@ -978,6 +996,8 @@ export const removeUserInterest = mutation({
             clientName: client.firstname || client.username,
             wasBooked: isBooked,
             wasInterested: isInterested,
+            wasShortlisted: isShortlisted, // ✅ Track shortlist status
+            removedFromShortlist: isShortlisted, // ✅ Track if removed from shortlist
           },
         },
       ],
@@ -989,6 +1009,16 @@ export const removeUserInterest = mutation({
         gig.interestedUsers?.filter((id) => id !== userIdToRemove) || [];
     } else {
       updates.interestedUsers = gig.interestedUsers || [];
+    }
+
+    // ✅ ALWAYS remove from shortlist regardless
+    if (isShortlisted) {
+      updates.shortlistedUsers =
+        gig.shortlistedUsers?.filter(
+          (item: any) => item.userId !== userIdToRemove,
+        ) || [];
+    } else {
+      updates.shortlistedUsers = gig.shortlistedUsers || [];
     }
 
     // Handle bookedBy
@@ -1012,7 +1042,6 @@ export const removeUserInterest = mutation({
           },
         );
 
-        // Check if musician still has active bookings with this client
         const musicianStillHasActiveBookings = updatedMusicianBookings.some(
           (booking) => booking.clientId === client._id && !booking.cancelled,
         );
@@ -1025,7 +1054,6 @@ export const removeUserInterest = mutation({
           bookedByClients: updatedMusicianBookings,
           bookedByClientIds: updatedMusicianBookedByClientIds,
           updatedAt: now,
-          // Increment cancellation count
           cancelgigCount: (musician.cancelgigCount || 0) + 1,
         });
       }
@@ -1047,7 +1075,6 @@ export const removeUserInterest = mutation({
           return hiring;
         });
 
-        // Check if client still has active bookings with this musician
         const clientStillHasActiveBookings = updatedClientBookings.some(
           (hiring) => hiring.musicianId === userIdToRemove && !hiring.cancelled,
         );
@@ -1104,6 +1131,7 @@ export const removeUserInterest = mutation({
         clientName: client.firstname || client.username,
         reason: reason || "",
         wasBooked: isBooked,
+        removedFromShortlist: isShortlisted, // ✅ Include in metadata
       },
     });
 
@@ -1114,6 +1142,7 @@ export const removeUserInterest = mutation({
       wasBooked: isBooked,
       status: status,
       remainingCount: updates.interestedUsers.length,
+      removedFromShortlist: isShortlisted, // ✅ Return this info
     };
   },
 });

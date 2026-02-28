@@ -2,10 +2,8 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { motion, AnimatePresence, Variants } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { useThemeColors } from "@/hooks/useTheme";
 import { useRouter } from "next/navigation";
 import { useGigs } from "@/hooks/useAllGigs";
 import clsx from "clsx";
@@ -14,7 +12,7 @@ import clsx from "clsx";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -36,56 +34,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-
-// Icons
-import {
-  Music,
-  Search,
-  RefreshCw,
-  Grid3x3,
-  List,
-  Plus,
-  X,
-  Sparkles,
-  TrendingUp,
-  Calendar,
-  MapPin,
-  DollarSign,
-  Clock,
-  CheckCircle,
-  Zap,
-  Users,
-  Package,
-  ChevronUp,
-  ChevronDown,
-  Activity,
-  CalendarDays,
-  Kanban,
-  Filter,
-  Info,
-  History,
-  Sun,
-  Star,
-  Briefcase,
-  Eye,
-  Edit,
-  Copy,
-  Trash2,
-  MoreHorizontal,
-  Heart,
-  Send,
-  Bookmark,
-  User,
-  Users2,
-  Mic,
-  Volume2,
-  ChevronLeft,
-  ChevronRight,
-  AlertTriangle,
-} from "lucide-react";
 
 // Types
 type DisplayMode = "grid" | "list" | "timeline" | "calendar" | "kanban";
@@ -142,16 +90,664 @@ const filterVariants = {
     transition: { type: "spring", stiffness: 400, damping: 30 },
   },
 };
+import { AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { useThemeColors } from "@/hooks/useTheme";
+import {
+  X,
+  Calendar,
+  MapPin,
+  DollarSign,
+  Clock,
+  Heart,
+  Eye,
+  Users,
+  Users2,
+  Music,
+  Mic,
+  Volume2,
+  User,
+  Edit3,
+  Copy,
+  Share2,
+  Star,
+  Briefcase,
+  Award,
+  CheckCircle,
+  AlertCircle,
+  Phone,
+  Mail,
+  Globe,
+  Instagram,
+  Twitter,
+  Youtube,
+  Facebook,
+  MessageSquare,
+  Bookmark,
+  Send,
+  Download,
+  ChevronLeft,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Grid3x3,
+  List,
+  CalendarDays,
+  Kanban,
+  ChevronUp,
+  MoreHorizontal,
+  Info,
+  Activity,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Compact Gig Card Component
-const CompactGigCard = ({
-  gig,
-  onClick,
-}: {
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { TrustStarsDisplay } from "@/components/trust/TrustStarsDisplay";
+
+interface GigDetailModalProps {
   gig: any;
-  onClick: () => void;
+  onClose: () => void;
+  onEdit?: () => void;
+  onShare?: () => void;
+}
+
+const GigDetailModal: React.FC<GigDetailModalProps> = ({
+  gig,
+  onClose,
+  onEdit,
+  onShare,
 }) => {
   const { isDarkMode } = useThemeColors();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Mock images for gallery (you can replace with actual gig images)
+  const images = gig.gallery || [gig.logo, gig.logo, gig.logo].filter(Boolean);
+
+  // Determine gig type
+  const gigType = gig.bussinesscat?.toLowerCase() || "";
+  const isVocalistGig = gigType === "vocalist";
+  const isMcGig = gigType === "mc";
+  const isDjGig = gigType === "dj";
+  const isPersonalGig = gigType === "personal";
+  const isFullBandGig = gigType === "full";
+  const isBandCreationGig = gigType === "other";
+
+  // Get gig type icon and color
+  const getGigTypeInfo = () => {
+    if (isVocalistGig)
+      return {
+        icon: Music,
+        color: "text-pink-500",
+        bg: "bg-pink-500/10",
+        label: "Vocalist",
+      };
+    if (isMcGig)
+      return {
+        icon: Mic,
+        color: "text-orange-500",
+        bg: "bg-orange-500/10",
+        label: "MC",
+      };
+    if (isDjGig)
+      return {
+        icon: Volume2,
+        color: "text-purple-500",
+        bg: "bg-purple-500/10",
+        label: "DJ",
+      };
+    if (isPersonalGig)
+      return {
+        icon: User,
+        color: "text-emerald-500",
+        bg: "bg-emerald-500/10",
+        label: "Personal",
+      };
+    if (isFullBandGig)
+      return {
+        icon: Users2,
+        color: "text-blue-500",
+        bg: "bg-blue-500/10",
+        label: "Full Band",
+      };
+    if (isBandCreationGig)
+      return {
+        icon: Users,
+        color: "text-indigo-500",
+        bg: "bg-indigo-500/10",
+        label: "Band Creation",
+      };
+    return {
+      icon: Music,
+      color: "text-slate-500",
+      bg: "bg-slate-500/10",
+      label: "Gig",
+    };
+  };
+
+  const gigTypeInfo = getGigTypeInfo();
+  const TypeIcon = gigTypeInfo.icon;
+
+  // Format date
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  // Format time
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return "TBD";
+    return timeStr;
+  };
+
+  // Handle share
+  const handleShare = () => {
+    if (onShare) {
+      onShare();
+    } else {
+      navigator.clipboard.writeText(
+        window.location.origin + `/hub/gigs/${gig._id}`,
+      );
+      toast.success("Link copied to clipboard!");
+    }
+  };
+
+  // Handle next/prev image
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className={cn(
+          "relative w-full max-w-5xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl",
+          isDarkMode ? "bg-slate-900" : "bg-white",
+        )}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className={cn(
+            "absolute top-4 right-4 z-20 p-2 rounded-full transition-all",
+            "bg-black/50 hover:bg-black/70 text-white",
+            "backdrop-blur-sm",
+          )}
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex flex-col h-full">
+          {/* Hero Section with Image Gallery */}
+          <div className="relative h-64 md:h-80 lg:h-96 bg-gradient-to-br from-slate-900 to-slate-800">
+            {images.length > 0 ? (
+              <>
+                <img
+                  src={images[currentImageIndex]}
+                  alt={gig.title}
+                  className="w-full h-full object-cover"
+                />
+                {/* Image navigation */}
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    {/* Image indicators */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                      {images.map((_: any, i: number) => (
+                        <button
+                          key={i}
+                          onClick={() => setCurrentImageIndex(i)}
+                          className={cn(
+                            "w-2 h-2 rounded-full transition-all",
+                            i === currentImageIndex
+                              ? "bg-white w-4"
+                              : "bg-white/50 hover:bg-white/80",
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <TypeIcon className="w-24 h-24 text-white/20" />
+              </div>
+            )}
+
+            {/* Status badge overlay */}
+            <div className="absolute top-4 left-4 flex gap-2">
+              <Badge
+                className={cn(
+                  "px-3 py-1 text-xs font-medium",
+                  gig.isTaken
+                    ? "bg-red-500 text-white"
+                    : gig.isPending
+                      ? "bg-amber-500 text-white"
+                      : "bg-emerald-500 text-white",
+                )}
+              >
+                {gig.isTaken ? "Booked" : gig.isPending ? "Pending" : "Active"}
+              </Badge>
+              <Badge
+                className={cn(
+                  "px-3 py-1 text-xs font-medium",
+                  gigTypeInfo.bg,
+                  gigTypeInfo.color,
+                  "border-0",
+                )}
+              >
+                <TypeIcon className="w-3 h-3 mr-1" />
+                {gigTypeInfo.label}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Content Section */}
+          <div className="flex-1 overflow-hidden">
+            <div className="p-6">
+              {/* Title and quick actions */}
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2
+                    className={cn(
+                      "text-2xl font-bold",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {gig.title}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-2">
+                    <TrustStarsDisplay
+                      trustStars={gig.poster?.trustStars || 0}
+                      size="sm"
+                    />
+                    {gig.poster?.verifiedIdentity && (
+                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Verified
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                    className="gap-2"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share
+                  </Button>
+                  {onEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onEdit}
+                      className="gap-2"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Info Chips */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                <div
+                  className={cn(
+                    "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs",
+                    isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                  )}
+                >
+                  <Calendar className="w-3 h-3 text-blue-500" />
+                  <span>{formatDate(gig.date)}</span>
+                </div>
+
+                {gig.time?.start && (
+                  <div
+                    className={cn(
+                      "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs",
+                      isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                    )}
+                  >
+                    <Clock className="w-3 h-3 text-amber-500" />
+                    <span>
+                      {gig.time.start} - {gig.time.end}
+                    </span>
+                  </div>
+                )}
+
+                <div
+                  className={cn(
+                    "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs",
+                    isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                  )}
+                >
+                  <MapPin className="w-3 h-3 text-purple-500" />
+                  <span>{gig.location || "Remote"}</span>
+                </div>
+
+                {gig.price > 0 && (
+                  <div
+                    className={cn(
+                      "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+                    )}
+                  >
+                    <DollarSign className="w-3 h-3" />
+                    <span>
+                      {gig.currency || "KES"} {gig.price.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Stats Row */}
+              <div className="grid grid-cols-4 gap-3 mb-6">
+                <div
+                  className={cn(
+                    "text-center p-2 rounded-lg",
+                    isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
+                  )}
+                >
+                  <Heart
+                    className={cn(
+                      "w-4 h-4 mx-auto mb-1",
+                      gig.interestedUsers?.length > 0
+                        ? "text-rose-500"
+                        : "text-slate-400",
+                    )}
+                  />
+                  <div className="text-sm font-bold">
+                    {gig.interestedUsers?.length || 0}
+                  </div>
+                  <div className="text-[10px] text-slate-500">Interested</div>
+                </div>
+
+                <div
+                  className={cn(
+                    "text-center p-2 rounded-lg",
+                    isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
+                  )}
+                >
+                  <Eye className="w-4 h-4 mx-auto mb-1 text-blue-500" />
+                  <div className="text-sm font-bold">
+                    {gig.viewCount?.length || 0}
+                  </div>
+                  <div className="text-[10px] text-slate-500">Views</div>
+                </div>
+
+                <div
+                  className={cn(
+                    "text-center p-2 rounded-lg",
+                    isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
+                  )}
+                >
+                  <Briefcase className="w-4 h-4 mx-auto mb-1 text-amber-500" />
+                  <div className="text-sm font-bold">
+                    {gig.appliedUsers?.length || 0}
+                  </div>
+                  <div className="text-[10px] text-slate-500">Applied</div>
+                </div>
+
+                <div
+                  className={cn(
+                    "text-center p-2 rounded-lg",
+                    isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
+                  )}
+                >
+                  <Award className="w-4 h-4 mx-auto mb-1 text-purple-500" />
+                  <div className="text-sm font-bold">{gig.maxSlots || 1}</div>
+                  <div className="text-[10px] text-slate-500">Slots</div>
+                </div>
+              </div>
+
+              {/* Tabs for detailed info */}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="poster">Poster</TabsTrigger>
+                </TabsList>
+
+                <ScrollArea className="h-[200px] mt-4 pr-4">
+                  <TabsContent value="overview" className="space-y-4">
+                    <div>
+                      <h4
+                        className={cn(
+                          "font-semibold mb-2",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        Description
+                      </h4>
+                      <p
+                        className={cn(
+                          "text-sm",
+                          isDarkMode ? "text-slate-300" : "text-slate-600",
+                        )}
+                      >
+                        {gig.description || "No description provided."}
+                      </p>
+                    </div>
+
+                    {gig.requirements && gig.requirements.length > 0 && (
+                      <div>
+                        <h4
+                          className={cn(
+                            "font-semibold mb-2",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          Requirements
+                        </h4>
+                        <ul className="list-disc list-inside space-y-1">
+                          {gig.requirements.map((req: string, i: number) => (
+                            <li
+                              key={i}
+                              className={cn(
+                                "text-sm",
+                                isDarkMode
+                                  ? "text-slate-300"
+                                  : "text-slate-600",
+                              )}
+                            >
+                              {req}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="details" className="space-y-4">
+                    {gig.bandCategory && gig.bandCategory.length > 0 && (
+                      <div>
+                        <h4
+                          className={cn(
+                            "font-semibold mb-2",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          Band Roles
+                        </h4>
+                        <div className="space-y-2">
+                          {gig.bandCategory.map((role: any, i: number) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "p-3 rounded-lg border",
+                                isDarkMode
+                                  ? "bg-slate-800/50 border-slate-700"
+                                  : "bg-slate-50 border-slate-200",
+                              )}
+                            >
+                              <div className="flex justify-between">
+                                <span className="font-medium">{role.role}</span>
+                                <Badge variant="outline">
+                                  {role.filledSlots || 0}/{role.maxSlots} filled
+                                </Badge>
+                              </div>
+                              {role.description && (
+                                <p className="text-xs mt-1 text-slate-500">
+                                  {role.description}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {gig.tags && gig.tags.length > 0 && (
+                      <div>
+                        <h4
+                          className={cn(
+                            "font-semibold mb-2",
+                            isDarkMode ? "text-white" : "text-slate-900",
+                          )}
+                        >
+                          Tags
+                        </h4>
+                        <div className="flex flex-wrap gap-1">
+                          {gig.tags.map((tag: string, i: number) => (
+                            <Badge
+                              key={i}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="poster" className="space-y-4">
+                    {gig.poster && (
+                      <div className="flex items-start gap-4">
+                        <Avatar className="w-16 h-16">
+                          <AvatarImage src={gig.poster.picture} />
+                          <AvatarFallback className="text-lg">
+                            {gig.poster.firstname?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h4
+                            className={cn(
+                              "font-semibold",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            {gig.poster.firstname} {gig.poster.lastname}
+                          </h4>
+                          <TrustStarsDisplay
+                            trustStars={gig.poster.trustStars || 0}
+                            size="sm"
+                          />
+
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              Message
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Profile
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                </ScrollArea>
+              </Tabs>
+            </div>
+          </div>
+
+          {/* Footer with actions */}
+          <div
+            className={cn(
+              "p-4 border-t",
+              isDarkMode ? "border-slate-800" : "border-slate-200",
+            )}
+          >
+            <div className="flex gap-3">
+              <Button className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Contact Host
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleShare}
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Link
+              </Button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const CompactGigCard = ({
+  gig,
+  onViewDetails,
+}: {
+  gig: any;
+  onViewDetails?: (gig: any) => void;
+}) => {
+  const { isDarkMode } = useThemeColors();
+  const router = useRouter();
+  const [showActions, setShowActions] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
   const dateStatus = useMemo(() => {
     const gigDate = new Date(gig.date);
     const now = new Date();
@@ -180,12 +776,87 @@ const CompactGigCard = ({
     return "Past";
   };
 
+  // Determine gig type based on bussinesscat
+  const gigType = gig.bussinesscat?.toLowerCase() || "";
+
+  const isVocalistGig = gigType === "vocalist";
+  const isMcGig = gigType === "mc";
+  const isDjGig = gigType === "dj";
+  const isPersonalGig = gigType === "personal";
+  const isFullBandGig = gigType === "full";
+  const isBandCreationGig = gigType === "other";
+  const isRegularGig =
+    isVocalistGig || isMcGig || isDjGig || isPersonalGig || isFullBandGig;
+
+  // Calculate metrics
+  const interestedCount = isRegularGig ? gig.interestedUsers?.length || 0 : 0;
+  const bandRoleApplicantsCount = isBandCreationGig
+    ? gig.bandCategory?.reduce(
+        (total: number, role: any) => total + (role.applicants?.length || 0),
+        0,
+      ) || 0
+    : 0;
+  const bandApplicationsCount = isFullBandGig ? gig.bookCount?.length || 0 : 0;
+
+  // Get primary info icon
+  const getPrimaryInfo = () => {
+    if (isBandCreationGig && bandRoleApplicantsCount > 0) {
+      return {
+        icon: Users,
+        count: bandRoleApplicantsCount,
+        label: "roles",
+        color: "text-indigo-500",
+      };
+    }
+    if (isFullBandGig && bandApplicationsCount > 0) {
+      return {
+        icon: Users2,
+        count: bandApplicationsCount,
+        label: "bands",
+        color: "text-purple-500",
+      };
+    }
+    if (interestedCount > 0) {
+      return {
+        icon: Heart,
+        count: interestedCount,
+        label: "interested",
+        color: "text-rose-500",
+      };
+    }
+    return null;
+  };
+
+  const primaryInfo = getPrimaryInfo();
+  const PrimaryIcon = primaryInfo?.icon || Music;
+
+  const handleMoreClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowActions(!showActions);
+  };
+
+  const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails(gig);
+    } else {
+      router.push(`/hub/gigs/${gig._id}`);
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/hub/gigs/client/edit/${gig._id}`);
+  };
+
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="cursor-pointer"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      className="relative cursor-pointer"
+      onClick={handleViewDetails}
     >
       <Card
         className={cn(
@@ -193,15 +864,17 @@ const CompactGigCard = ({
           isDarkMode
             ? "bg-slate-900/90 border-slate-800 hover:border-slate-700"
             : "bg-white border-slate-200 hover:border-slate-300",
+          isHovered &&
+            (isDarkMode ? "shadow-lg shadow-slate-800/50" : "shadow-lg"),
         )}
       >
         {/* Status indicator line */}
         <div className={cn("h-1 w-full", getStatusColor())} />
 
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
+        <CardContent className="p-3">
+          <div className="flex items-start gap-2">
             {/* Icon/Avatar */}
-            <Avatar className="w-10 h-10 rounded-lg">
+            <Avatar className="w-10 h-10 rounded-lg shrink-0">
               <AvatarImage src={gig.logo} />
               <AvatarFallback
                 className={cn(
@@ -215,10 +888,10 @@ const CompactGigCard = ({
 
             <div className="flex-1 min-w-0">
               {/* Title and Status */}
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-1">
                 <h3
                   className={cn(
-                    "font-semibold text-sm truncate",
+                    "font-semibold text-sm truncate max-w-[100px]",
                     isDarkMode ? "text-white" : "text-slate-900",
                   )}
                 >
@@ -226,7 +899,7 @@ const CompactGigCard = ({
                 </h3>
                 <Badge
                   className={cn(
-                    "text-[10px] px-1.5 py-0.5",
+                    "text-[8px] px-1.5 py-0 h-4",
                     isDarkMode ? "bg-slate-800" : "bg-slate-100",
                   )}
                 >
@@ -234,87 +907,162 @@ const CompactGigCard = ({
                 </Badge>
               </div>
 
-              {/* Date & Location */}
-              <div className="flex items-center gap-2 mt-1 text-xs">
-                <div
-                  className={cn(
-                    "flex items-center gap-1",
-                    isDarkMode ? "text-slate-400" : "text-slate-500",
-                  )}
+              {/* Date & Location - One line */}
+              <div className="flex items-center gap-1 mt-1 text-[10px]">
+                <Calendar className="w-2.5 h-2.5 text-slate-400" />
+                <span
+                  className={isDarkMode ? "text-slate-400" : "text-slate-500"}
                 >
-                  <Calendar className="w-3 h-3" />
-                  <span>{new Date(gig.date).toLocaleDateString()}</span>
-                </div>
+                  {new Date(gig.date).toLocaleDateString()}
+                </span>
                 {gig.location && (
                   <>
-                    <span className="text-slate-300 dark:text-slate-700">
-                      •
+                    <span className="text-slate-400">•</span>
+                    <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                    <span className="truncate max-w-[60px]">
+                      {gig.location.split(",")[0]}
                     </span>
-                    <div
-                      className={cn(
-                        "flex items-center gap-1 truncate",
-                        isDarkMode ? "text-slate-400" : "text-slate-500",
-                      )}
-                    >
-                      <MapPin className="w-3 h-3 shrink-0" />
-                      <span className="truncate">
-                        {gig.location.split(",")[0]}
-                      </span>
-                    </div>
                   </>
                 )}
               </div>
 
-              {/* Price & Role */}
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-1">
-                  {gig.isClientBand ? (
-                    <Users2 className="w-3 h-3 text-purple-500" />
-                  ) : (
-                    <User className="w-3 h-3 text-blue-500" />
-                  )}
-                  <span
-                    className={cn(
-                      "text-xs",
-                      isDarkMode ? "text-slate-300" : "text-slate-600",
-                    )}
-                  >
-                    {gig.isClientBand ? "Band Gig" : "Regular Gig"}
+              {/* Info Icons Row */}
+              <div className="flex items-center gap-2 mt-2">
+                {/* Primary info icon */}
+                {primaryInfo && (
+                  <div className="flex items-center gap-0.5">
+                    <PrimaryIcon className={cn("w-3 h-3", primaryInfo.color)} />
+                    <span
+                      className={cn("text-xs font-medium", primaryInfo.color)}
+                    >
+                      {primaryInfo.count}
+                    </span>
+                  </div>
+                )}
+
+                {/* Views */}
+                <div className="flex items-center gap-0.5">
+                  <Eye className="w-3 h-3 text-slate-400" />
+                  <span className="text-xs text-slate-500">
+                    {gig.viewCount?.length || 0}
                   </span>
                 </div>
+
+                {/* Price - if exists */}
                 {gig.price > 0 && (
-                  <div className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                    <DollarSign className="w-3 h-3" />
-                    <span className="text-xs">
+                  <div className="flex items-center gap-0.5 ml-auto">
+                    <DollarSign className="w-3 h-3 text-emerald-500" />
+                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                       {gig.price.toLocaleString()}
                     </span>
                   </div>
                 )}
               </div>
-
-              {/* Quick Stats */}
-              <div className="flex items-center gap-3 mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-1">
-                  <Heart className="w-3 h-3 text-rose-400" />
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {gig.interestedUsers?.length || 0}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Send className="w-3 h-3 text-amber-400" />
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {gig.appliedUsers?.length || 0}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Eye className="w-3 h-3 text-blue-400" />
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {gig.viewCount?.length || 0}
-                  </span>
-                </div>
-              </div>
             </div>
+
+            {/* More button - Netflix style */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleMoreClick}
+              className={cn(
+                "p-1 rounded-full transition-colors shrink-0",
+                isDarkMode
+                  ? "hover:bg-slate-800 text-slate-400 hover:text-white"
+                  : "hover:bg-slate-200 text-slate-500 hover:text-slate-900",
+                showActions &&
+                  (isDarkMode
+                    ? "bg-slate-800 text-white"
+                    : "bg-slate-200 text-slate-900"),
+              )}
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </motion.button>
           </div>
+
+          {/* Netflix-style action menu */}
+          <AnimatePresence>
+            {showActions && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleViewDetails}
+                        className={cn(
+                          "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
+                          isDarkMode
+                            ? "bg-slate-800 hover:bg-slate-700 text-slate-300"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-600",
+                        )}
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Details</span>
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      View full details
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleEdit}
+                        className={cn(
+                          "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
+                          isDarkMode
+                            ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
+                            : "bg-blue-100 hover:bg-blue-200 text-blue-600",
+                        )}
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Edit</span>
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Edit this gig</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            window.location.origin + `/hub/gigs/${gig._id}`,
+                          );
+                          toast.success("Link copied!");
+                        }}
+                        className={cn(
+                          "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
+                          isDarkMode
+                            ? "bg-purple-500/20 hover:bg-purple-500/30 text-purple-400"
+                            : "bg-purple-100 hover:bg-purple-200 text-purple-600",
+                        )}
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Share</span>
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      Copy share link
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
     </motion.div>
@@ -345,6 +1093,12 @@ export const MyGigs = ({ user }: { user: any }) => {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
+  const [selectedGig, setSelectedGig] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const handleViewDetails = (gig: any) => {
+    router.push("/hub/gigs?tab=pre-booking");
+  };
   // Check scroll position for arrows
   const checkScroll = () => {
     if (statsScrollRef.current) {
@@ -709,7 +1463,7 @@ export const MyGigs = ({ user }: { user: any }) => {
             <CompactGigCard
               key={gig._id}
               gig={gig}
-              onClick={() => router.push(`/hub/gigs/client/edit/${gig._id}`)}
+              onViewDetails={handleViewDetails}
             />
           ))}
         </div>
@@ -723,7 +1477,7 @@ export const MyGigs = ({ user }: { user: any }) => {
             <CompactGigCard
               key={gig._id}
               gig={gig}
-              onClick={() => router.push(`/hub/gigs/client/edit/${gig._id}`)}
+              onViewDetails={handleViewDetails}
             />
           ))}
         </div>
@@ -737,7 +1491,7 @@ export const MyGigs = ({ user }: { user: any }) => {
           <CompactGigCard
             key={gig._id}
             gig={gig}
-            onClick={() => router.push(`/hub/gigs/client/edit/${gig._id}`)}
+            onViewDetails={handleViewDetails}
           />
         ))}
       </div>
@@ -1430,7 +2184,7 @@ export const MyGigs = ({ user }: { user: any }) => {
                 {[
                   { mode: "grid", icon: Grid3x3 },
                   { mode: "list", icon: List },
-                  { mode: "timeline", icon: Activity },
+                  { mode: "timeline", icon: Activity }, // Use ActivityIcon instead
                   { mode: "calendar", icon: CalendarDays },
                   { mode: "kanban", icon: Kanban },
                 ].map(({ mode, icon: Icon }) => (
@@ -1619,6 +2373,14 @@ export const MyGigs = ({ user }: { user: any }) => {
             </div>
           </DialogContent>
         </Dialog>
+        <AnimatePresence>
+          {showModal && selectedGig && (
+            <GigDetailModal
+              gig={selectedGig}
+              onClose={() => setShowModal(false)}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </TooltipProvider>
   );
