@@ -357,7 +357,7 @@ export const markApplicantViewed = mutation({
     applicantId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(applicantId);
+    const user = await ctx.db.get(args.applicantId);
     if (!user) throw new Error("User not found");
 
     const gig = await ctx.db.get(args.gigId);
