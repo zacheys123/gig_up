@@ -894,17 +894,17 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
       // Get the user data to access their username
       const user = selectedGigData?.userDetails.get(applicantId);
       if (user?.username) {
-        router.push(`/search/${user.username}`, "_blank");
+        router.push(`/search/${user.username}`);
       } else {
         // Fallback to ID if username not available
-        window.open(`/search/${user.username}`, "_blank");
+        window.open(`/search/${user.username}`,);
       }
     } catch (error) {
       console.error("Failed to mark as viewed:", error);
       // Fallback to ID on error
       const user = selectedGigData?.userDetails.get(applicantId);
       if (user?.username) {
-        router.push(`/search/${user.username}`, "_blank");
+        router.push(`/search/${user.username}`, );
       } else {
         return null;
       }

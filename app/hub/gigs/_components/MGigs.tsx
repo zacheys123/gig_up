@@ -749,6 +749,7 @@ const CompactGigCard = ({
   const router = useRouter();
   const [showActions, setShowActions] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showNoApplicantsDialog, setShowNoApplicantsDialog] = useState(false);
 
   const dateStatus = useMemo(() => {
     const gigDate = new Date(gig.date);
@@ -777,6 +778,26 @@ const CompactGigCard = ({
     if (dateStatus.isFuture) return "Upcoming";
     return "Past";
   };
+
+  // Check if gig has any applicants/interested users
+  const hasApplicants = useMemo(() => {
+    const interestedCount = gig.interestedUsers?.length || 0;
+    const appliedCount = gig.appliedUsers?.length || 0;
+    const bandApplicantsCount =
+      gig.bandCategory?.reduce(
+        (total: number, role: any) => total + (role.applicants?.length || 0),
+        0,
+      ) || 0;
+    const bandApplicationsCount = gig.bookCount?.length || 0;
+
+    return (
+      interestedCount +
+        appliedCount +
+        bandApplicantsCount +
+        bandApplicationsCount >
+      0
+    );
+  }, [gig]);
 
   // Determine gig type based on bussinesscat
   const gigType = gig.bussinesscat?.toLowerCase() || "";
@@ -836,6 +857,7 @@ const CompactGigCard = ({
     e.stopPropagation();
     setShowActions(!showActions);
   };
+
   const handleViewDetails = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (onViewDetails) {
@@ -847,230 +869,321 @@ const CompactGigCard = ({
     e.stopPropagation();
     router.push(`/hub/gigs/client/edit/${gig._id}`);
   };
+
   const handleViewGig = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/hub/gigs?tab=pre-booking`);
+
+    // Check if gig has applicants before routing
+    if (hasApplicants) {
+      router.push(`/hub/gigs?tab=pre-booking`);
+    } else {
+      setShowNoApplicantsDialog(true);
+    }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      className="relative cursor-pointer"
-      onClick={handleViewGig}
-    >
-      <Card
-        className={cn(
-          "overflow-hidden border-2 transition-all duration-200",
-          isDarkMode
-            ? "bg-slate-900/90 border-slate-800 hover:border-slate-700"
-            : "bg-white border-slate-200 hover:border-slate-300",
-          isHovered &&
-            (isDarkMode ? "shadow-lg shadow-slate-800/50" : "shadow-lg"),
-        )}
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -4 }}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+        className="relative cursor-pointer"
+        onClick={handleViewGig}
       >
-        {/* Status indicator line */}
-        <div className={cn("h-1 w-full", getStatusColor())} />
+        <Card
+          className={cn(
+            "overflow-hidden border-2 transition-all duration-200",
+            isDarkMode
+              ? "bg-slate-900/90 border-slate-800 hover:border-slate-700"
+              : "bg-white border-slate-200 hover:border-slate-300",
+            isHovered &&
+              (isDarkMode ? "shadow-lg shadow-slate-800/50" : "shadow-lg"),
+          )}
+        >
+          {/* Status indicator line */}
+          <div className={cn("h-1 w-full", getStatusColor())} />
 
-        <CardContent className="p-3">
-          <div className="flex items-start gap-2">
-            {/* Icon/Avatar */}
-            <Avatar className="w-10 h-10 rounded-lg shrink-0">
-              <AvatarImage src={gig.logo} />
-              <AvatarFallback
-                className={cn(
-                  "text-lg",
-                  isDarkMode ? "bg-slate-800" : "bg-slate-200",
-                )}
-              >
-                {gig.title?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex-1 min-w-0">
-              {/* Title and Status */}
-              <div className="flex items-start justify-between gap-1">
-                <h3
+          <CardContent className="p-3">
+            <div className="flex items-start gap-2">
+              {/* Icon/Avatar */}
+              <Avatar className="w-10 h-10 rounded-lg shrink-0">
+                <AvatarImage src={gig.logo} />
+                <AvatarFallback
                   className={cn(
-                    "font-semibold text-sm truncate max-w-[100px]",
-                    isDarkMode ? "text-white" : "text-slate-900",
+                    "text-lg",
+                    isDarkMode ? "bg-slate-800" : "bg-slate-200",
                   )}
                 >
-                  {gig.title}
-                </h3>
-                <Badge
-                  className={cn(
-                    "text-[8px] px-1.5 py-0 h-4",
-                    isDarkMode ? "bg-slate-800" : "bg-slate-100",
-                  )}
-                >
-                  {getStatusLabel()}
-                </Badge>
-              </div>
+                  {gig.title?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
 
-              {/* Date & Location - One line */}
-              <div className="flex items-center gap-1 mt-1 text-[10px]">
-                <Calendar className="w-2.5 h-2.5 text-slate-400" />
-                <span
-                  className={isDarkMode ? "text-slate-400" : "text-slate-500"}
-                >
-                  {new Date(gig.date).toLocaleDateString()}
-                </span>
-                {gig.location && (
-                  <>
-                    <span className="text-slate-400">•</span>
-                    <MapPin className="w-2.5 h-2.5 text-slate-400" />
-                    <span className="truncate max-w-[60px]">
-                      {gig.location.split(",")[0]}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {/* Info Icons Row */}
-              <div className="flex items-center gap-2 mt-2">
-                {/* Primary info icon */}
-                {primaryInfo && (
-                  <div className="flex items-center gap-0.5">
-                    <PrimaryIcon className={cn("w-3 h-3", primaryInfo.color)} />
-                    <span
-                      className={cn("text-xs font-medium", primaryInfo.color)}
-                    >
-                      {primaryInfo.count}
-                    </span>
-                  </div>
-                )}
-
-                {/* Views */}
-                <div className="flex items-center gap-0.5">
-                  <Eye className="w-3 h-3 text-slate-400" />
-                  <span className="text-xs text-slate-500">
-                    {gig.viewCount?.length || 0}
-                  </span>
+              <div className="flex-1 min-w-0">
+                {/* Title and Status */}
+                <div className="flex items-start justify-between gap-1">
+                  <h3
+                    className={cn(
+                      "font-semibold text-sm truncate max-w-[100px]",
+                      isDarkMode ? "text-white" : "text-slate-900",
+                    )}
+                  >
+                    {gig.title}
+                  </h3>
+                  <Badge
+                    className={cn(
+                      "text-[8px] px-1.5 py-0 h-4",
+                      isDarkMode ? "bg-slate-800" : "bg-slate-100",
+                    )}
+                  >
+                    {getStatusLabel()}
+                  </Badge>
                 </div>
 
-                {/* Price - if exists */}
-                {gig.price > 0 && (
-                  <div className="flex items-center gap-0.5 ml-auto">
-                    <DollarSign className="w-3 h-3 text-emerald-500" />
-                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                      {gig.price.toLocaleString()}
+                {/* Date & Location - One line */}
+                <div className="flex items-center gap-1 mt-1 text-[10px]">
+                  <Calendar className="w-2.5 h-2.5 text-slate-400" />
+                  <span
+                    className={isDarkMode ? "text-slate-400" : "text-slate-500"}
+                  >
+                    {new Date(gig.date).toLocaleDateString()}
+                  </span>
+                  {gig.location && (
+                    <>
+                      <span className="text-slate-400">•</span>
+                      <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                      <span className="truncate max-w-[60px]">
+                        {gig.location.split(",")[0]}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Info Icons Row */}
+                <div className="flex items-center gap-2 mt-2">
+                  {/* Primary info icon */}
+                  {primaryInfo && (
+                    <div className="flex items-center gap-0.5">
+                      <PrimaryIcon
+                        className={cn("w-3 h-3", primaryInfo.color)}
+                      />
+                      <span
+                        className={cn("text-xs font-medium", primaryInfo.color)}
+                      >
+                        {primaryInfo.count}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Views */}
+                  <div className="flex items-center gap-0.5">
+                    <Eye className="w-3 h-3 text-slate-400" />
+                    <span className="text-xs text-slate-500">
+                      {gig.viewCount?.length || 0}
                     </span>
                   </div>
-                )}
+
+                  {/* Price - if exists */}
+                  {gig.price > 0 && (
+                    <div className="flex items-center gap-0.5 ml-auto">
+                      <DollarSign className="w-3 h-3 text-emerald-500" />
+                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        {gig.price.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* More button - Netflix style */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleMoreClick}
+                className={cn(
+                  "p-1 rounded-full transition-colors shrink-0",
+                  isDarkMode
+                    ? "hover:bg-slate-800 text-slate-400 hover:text-white"
+                    : "hover:bg-slate-200 text-slate-500 hover:text-slate-900",
+                  showActions &&
+                    (isDarkMode
+                      ? "bg-slate-800 text-white"
+                      : "bg-slate-200 text-slate-900"),
+                )}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </motion.button>
             </div>
 
-            {/* More button - Netflix style */}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleMoreClick}
+            {/* Netflix-style action menu */}
+            <AnimatePresence>
+              {showActions && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetails(e);
+                          }}
+                          className={cn(
+                            "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
+                            isDarkMode
+                              ? "bg-slate-800 hover:bg-slate-700 text-slate-300"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-600",
+                          )}
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Details</span>
+                        </motion.button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        View full details
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleEdit}
+                          className={cn(
+                            "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
+                            isDarkMode
+                              ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
+                              : "bg-blue-100 hover:bg-blue-200 text-blue-600",
+                          )}
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </motion.button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        Edit this gig
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              window.location.origin + `/hub/gigs/${gig._id}`,
+                            );
+                            toast.success("Link copied!");
+                          }}
+                          className={cn(
+                            "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
+                            isDarkMode
+                              ? "bg-purple-500/20 hover:bg-purple-500/30 text-purple-400"
+                              : "bg-purple-100 hover:bg-purple-200 text-purple-600",
+                          )}
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Share</span>
+                        </motion.button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        Copy share link
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* No Applicants Dialog */}
+      <Dialog
+        open={showNoApplicantsDialog}
+        onOpenChange={setShowNoApplicantsDialog}
+      >
+        <DialogContent
+          className={cn(
+            "sm:max-w-md",
+            isDarkMode
+              ? "bg-slate-900 border-slate-800"
+              : "bg-white border-slate-200",
+          )}
+        >
+          <div className="text-center py-4">
+            <div
               className={cn(
-                "p-1 rounded-full transition-colors shrink-0",
-                isDarkMode
-                  ? "hover:bg-slate-800 text-slate-400 hover:text-white"
-                  : "hover:bg-slate-200 text-slate-500 hover:text-slate-900",
-                showActions &&
-                  (isDarkMode
-                    ? "bg-slate-800 text-white"
-                    : "bg-slate-200 text-slate-900"),
+                "w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4",
+                isDarkMode ? "bg-slate-800" : "bg-amber-100",
               )}
             >
-              <MoreHorizontal className="w-4 h-4" />
-            </motion.button>
-          </div>
+              <AlertCircle className="w-10 h-10 text-amber-500" />
+            </div>
+            <DialogTitle
+              className={cn(
+                "text-xl font-bold mb-2",
+                isDarkMode ? "text-white" : "text-slate-900",
+              )}
+            >
+              No Applicants Yet
+            </DialogTitle>
+            <DialogDescription
+              className={cn(
+                "text-sm mb-4",
+                isDarkMode ? "text-slate-400" : "text-slate-500",
+              )}
+            >
+              This gig doesn't have any applicants or interested users yet.
+              Share your gig to attract talent!
+            </DialogDescription>
 
-          {/* Netflix-style action menu */}
-          <AnimatePresence>
-            {showActions && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
+            <div className="flex flex-col gap-3 mt-4">
+              <Button
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    window.location.origin + `/hub/gigs/${gig._id}`,
+                  );
+                  toast.success("Link copied!");
+                  setShowNoApplicantsDialog(false);
+                }}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
               >
-                <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDetails(e);
-                        }}
-                        className={cn(
-                          "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
-                          isDarkMode
-                            ? "bg-slate-800 hover:bg-slate-700 text-slate-300"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-600",
-                        )}
-                      >
-                        <Eye className="w-3 h-3" />
-                        <span>Details</span>
-                      </motion.button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      View full details
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleEdit}
-                        className={cn(
-                          "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
-                          isDarkMode
-                            ? "bg-blue-500/20 hover:bg-blue-500/30 text-blue-400"
-                            : "bg-blue-100 hover:bg-blue-200 text-blue-600",
-                        )}
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        <span>Edit</span>
-                      </motion.button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">Edit this gig</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            window.location.origin + `/hub/gigs/${gig._id}`,
-                          );
-                          toast.success("Link copied!");
-                        }}
-                        className={cn(
-                          "flex-1 p-1.5 rounded-md text-xs flex items-center justify-center gap-1",
-                          isDarkMode
-                            ? "bg-purple-500/20 hover:bg-purple-500/30 text-purple-400"
-                            : "bg-purple-100 hover:bg-purple-200 text-purple-600",
-                        )}
-                      >
-                        <Copy className="w-3 h-3" />
-                        <span>Share</span>
-                      </motion.button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      Copy share link
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-    </motion.div>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Share Link
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  router.push(`/hub/gigs/client/edit/${gig._id}`);
+                  setShowNoApplicantsDialog(false);
+                }}
+              >
+                <Edit3 className="w-4 h-4 mr-2" />
+                Edit Gig Details
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={() => setShowNoApplicantsDialog(false)}
+                className="text-slate-500"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
@@ -1939,7 +2052,6 @@ export const MyGigs = ({ user }: { user: any }) => {
                         </div>
                       </>
                     )}
-
                     {/* Search Bar - Compact - MATCHING BOOKEDGIPS */}
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
