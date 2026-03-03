@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
+  DialogHeader,DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
