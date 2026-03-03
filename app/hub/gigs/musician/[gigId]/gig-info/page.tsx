@@ -3408,70 +3408,176 @@ export default function GigDetailsPage({ params }: PageProps) {
                   </CardContent>
                 </Card>
               </motion.div>
-
               {/* Similar Gigs */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
+                className="mt-8"
               >
-                <h3
-                  className={cn(
-                    "text-lg font-semibold mb-4",
-                    isDarkMode ? "text-white" : "text-slate-900",
-                  )}
-                >
-                  Similar Gigs
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {similarGigs.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <h3
+                      className={cn(
+                        "text-base font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
                     >
-                      <div className="flex items-center justify-between mb-4">
-                        <h3
-                          className={cn(
-                            "text-lg font-semibold",
-                            isDarkMode ? "text-white" : "text-slate-900",
-                          )}
-                        >
-                          Similar {gig.bussinesscat} Gigs
-                        </h3>
-                        <Badge variant="outline" className="text-xs">
-                          {similarGigs.length} available
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {similarGigs.map((similarGig: any) => (
-                          <SimilarGigCard
-                            key={similarGig._id}
-                            gig={similarGig}
-                            onView={handleViewGig}
-                            isDarkMode={isDarkMode}
-                          />
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                  {similarGigs.length === 0 && allGigsData && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-center p-8 rounded-xl border border-dashed"
-                    >
-                      <p
+                      Similar {gig.bussinesscat} Gigs
+                    </h3>
+                    {similarGigs.length > 0 && (
+                      <Badge
+                        variant="outline"
                         className={cn(
-                          "text-sm",
-                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                          "text-[10px] px-2 py-0.5",
+                          isDarkMode
+                            ? "border-slate-700 text-slate-400"
+                            : "border-slate-200 text-slate-500",
                         )}
                       >
-                        No other {gig.bussinesscat} gigs available right now
-                      </p>
-                    </motion.div>
-                  )}
+                        {similarGigs.length} available
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+
+                {similarGigs.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {similarGigs.slice(0, 2).map((similarGig: any) => (
+                      <motion.div
+                        key={similarGig._id}
+                        whileHover={{ y: -2 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Card
+                          onClick={() => handleViewGig(similarGig)}
+                          className={cn(
+                            "cursor-pointer overflow-hidden border transition-all duration-200",
+                            isDarkMode
+                              ? "bg-slate-900/50 border-slate-800 hover:border-slate-700"
+                              : "bg-white border-slate-200 hover:border-slate-300",
+                            "hover:shadow-sm",
+                          )}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-start gap-2">
+                              {/* Icon/Avatar */}
+                              <Avatar className="w-8 h-8 rounded-md">
+                                <AvatarImage src={similarGig.logo} />
+                                <AvatarFallback
+                                  className={cn(
+                                    "text-xs",
+                                    isDarkMode
+                                      ? "bg-slate-800"
+                                      : "bg-slate-200",
+                                  )}
+                                >
+                                  {similarGig.title?.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-1">
+                                  <h4
+                                    className={cn(
+                                      "font-medium text-xs truncate max-w-[100px]",
+                                      isDarkMode
+                                        ? "text-white"
+                                        : "text-slate-900",
+                                    )}
+                                  >
+                                    {similarGig.title}
+                                  </h4>
+                                  <Badge
+                                    className={cn(
+                                      "text-[8px] px-1 py-0 h-4",
+                                      isDarkMode
+                                        ? "bg-slate-800"
+                                        : "bg-slate-100",
+                                    )}
+                                  >
+                                    {new Date(similarGig.date) > new Date()
+                                      ? "Upcoming"
+                                      : "Active"}
+                                  </Badge>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-1">
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                                    <span
+                                      className={cn(
+                                        "text-[8px] truncate max-w-[60px]",
+                                        isDarkMode
+                                          ? "text-slate-400"
+                                          : "text-slate-500",
+                                      )}
+                                    >
+                                      {similarGig.location?.split(",")[0] ||
+                                        "Remote"}
+                                    </span>
+                                  </div>
+                                  {similarGig.price > 0 && (
+                                    <>
+                                      <span className="text-slate-300 dark:text-slate-700">
+                                        •
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          "text-[8px] font-medium",
+                                          isDarkMode
+                                            ? "text-emerald-400"
+                                            : "text-emerald-600",
+                                        )}
+                                      >
+                                        KES {similarGig.price.toLocaleString()}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <div className="flex items-center gap-0.5">
+                                    <Heart className="w-2.5 h-2.5 text-rose-400" />
+                                    <span className="text-[8px] text-slate-500">
+                                      {similarGig.interestedUsers?.length || 0}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-0.5">
+                                    <Eye className="w-2.5 h-2.5 text-blue-400" />
+                                    <span className="text-[8px] text-slate-500">
+                                      {similarGig.viewCount?.length || 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={cn(
+                      "text-center py-6 px-4 rounded-lg border border-dashed",
+                      isDarkMode
+                        ? "border-slate-800 bg-slate-900/20"
+                        : "border-slate-200 bg-slate-50/50",
+                    )}
+                  >
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      No similar {gig.bussinesscat} gigs found
+                    </p>
+                  </motion.div>
+                )}
               </motion.div>
             </div>
           </div>
