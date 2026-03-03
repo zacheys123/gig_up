@@ -1481,33 +1481,22 @@ export default function GigDetailsPage({ params }: PageProps) {
   const similarGigs = useMemo(() => {
     if (!allGigsData || !gig) return [];
 
-    // Get current gig's business category
     const currentCategory = gig.bussinesscat;
 
-    // Filter gigs that:
-    // 1. Are not the current gig
-    // 2. Have the same business category
-    // 3. Are active/not taken
-    // 4. Sort by relevance (interested count, views, etc.)
-    return allGigsData
-      .filter(
-        (g) =>
-          g._id !== gig._id &&
-          g.bussinesscat === currentCategory &&
-          !g.isTaken &&
-          g.isActive !== false,
-      )
-      .map((g) => ({
-        ...g,
-        relevanceScore:
-          (g.interestedUsers?.length || 0) * 2 +
-          (g.viewCount?.length || 0) +
-          (g.appliedUsers?.length || 0) * 1.5,
-      }))
-      .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, 4); // Show top 4 similar gigs
-  }, [allGigsData, gig]);
+    // Filter gigs that match criteria
+    const filtered = allGigsData.filter(
+      (g) =>
+        g._id !== gig._id &&
+        g.bussinesscat === currentCategory &&
+        !g.isTaken &&
+        g.isActive !== false,
+    );
 
+    // Randomize and return up to 3
+    return filtered
+      .sort(() => 0.5 - Math.random()) // ← Random shuffle
+      .slice(0, 3); // ← Take 3 random gigs
+  }, [allGigsData, gig]);
   // Online stats
   const onlineStats = useQuery(api.controllers.user.getOnlineUsersStats, {
     thresholdMinutes: 5,
@@ -3426,9 +3415,17 @@ export default function GigDetailsPage({ params }: PageProps) {
                       Similar {gig.bussinesscat} Gigs
                     </h3>
                     {similarGigs.length > 0 && (
-     <Badge variant="outline" className="text-xs">
-  {Math.min(similarGigs.length, 2)} of {similarGigs.length} shown
-</Badge>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] px-2 py-0.5",
+                          isDarkMode
+                            ? "border-slate-700 text-slate-400"
+                            : "border-slate-200 text-slate-500",
+                        )}
+                      >
+                        {similarGigs.length} available
+                      </Badge>
                     )}
                   </div>
                 </div>
