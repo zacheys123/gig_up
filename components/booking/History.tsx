@@ -51,8 +51,8 @@ interface HistoryTabProps {
   formatTime: (timestamp: number) => string;
   getStatusColor: (status: string) => string;
   onViewProfile?: (userId: string) => void;
+  onReAdd?: (applicant: any) => void; // Add this line
 }
-
 // Format notes to be more informative
 const formatNotes = (notes: string, status: string) => {
   if (!notes) return null;
@@ -226,6 +226,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
   formatTime,
   getStatusColor,
   onViewProfile,
+  onReAdd,
 }) => {
   const { colors, isDarkMode } = useThemeColors();
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -507,6 +508,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                 getRoleBg={getRoleBg}
                 getRoleBorder={getRoleBorder}
                 formatRateSummary={formatRateSummary}
+                onReAdd={onReAdd} // Add this line
               />
             ) : (
               <BookingHistory
@@ -569,6 +571,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                   getRoleBg={getRoleBg}
                   getRoleBorder={getRoleBorder}
                   formatRateSummary={formatRateSummary}
+                  onReAdd={onReAdd} // Add this line
                 />
               </div>
 
@@ -640,12 +643,14 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 };
 
 // Applicant History Sub-component - Same style as regular gig cards
+
 const ApplicantHistory = ({
   applicants,
   selectedGigData,
   formatTime,
   getStatusColor,
   onViewProfile,
+  onReAdd,
   isDarkMode,
   expandedItems,
   toggleExpanded,
@@ -682,7 +687,7 @@ const ApplicantHistory = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       {applicants.map((applicant: any) => {
         const user = selectedGigData.userDetails.get(applicant.userId);
         if (!user) return null;
@@ -702,16 +707,16 @@ const ApplicantHistory = ({
             key={applicant.userId}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -2 }}
+            whileHover={{ scale: 1.01 }}
             transition={{ duration: 0.2 }}
           >
             <Card
               className={cn(
-                "cursor-pointer transition-all duration-200 overflow-hidden border",
+                "overflow-hidden border transition-all duration-200",
                 isSelected
                   ? isDarkMode
-                    ? "ring-2 ring-orange-500 bg-gradient-to-br from-slate-900 to-slate-800"
-                    : "ring-2 ring-orange-500 bg-gradient-to-br from-white to-slate-50"
+                    ? "ring-1 ring-orange-500 bg-slate-800"
+                    : "ring-1 ring-orange-500 bg-orange-50"
                   : isDarkMode
                     ? "border-slate-800 bg-slate-900/50 hover:border-slate-700"
                     : "border-slate-200 bg-white hover:border-slate-300",
@@ -720,49 +725,56 @@ const ApplicantHistory = ({
                 setSelectedApplicant(isSelected ? null : applicant)
               }
             >
-              <CardContent className="p-3">
-                {/* Minimal Card View */}
+              <CardContent className="p-2">
+                {/* Compact Header - Always visible */}
                 <div className="flex items-center gap-2">
-                  {/* Avatar */}
-                  <Avatar className="w-10 h-10 border-2 border-white shadow-md flex-shrink-0">
+                  {/* Tiny Avatar */}
+                  <Avatar className="w-8 h-8 rounded-md">
                     <AvatarImage src={user.picture} />
                     <AvatarFallback
                       className={cn(
-                        "bg-gradient-to-br text-white font-semibold text-sm",
-                        user.roleType?.toLowerCase() === "vocalist"
-                          ? "from-pink-500 to-rose-500"
-                          : user.roleType?.toLowerCase() === "dj"
-                            ? "from-purple-500 to-violet-500"
-                            : user.roleType?.toLowerCase() === "mc"
-                              ? "from-orange-500 to-amber-500"
-                              : "from-blue-500 to-cyan-500",
+                        "text-xs",
+                        isDarkMode ? "bg-slate-700" : "bg-slate-200",
                       )}
                     >
                       {user.firstname?.charAt(0)?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
 
-                  {/* Minimal Info */}
+                  {/* Main Info - Compact */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
                       <h4
                         className={cn(
-                          "font-medium text-sm truncate max-w-[100px]",
+                          "font-medium text-xs truncate max-w-[80px]",
                           isDarkMode ? "text-white" : "text-slate-900",
                         )}
                       >
                         {user.firstname} {user.lastname || user.username}
                       </h4>
                       {user.verifiedIdentity && (
-                        <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                        <CheckCircle className="w-2.5 h-2.5 text-green-500 flex-shrink-0" />
                       )}
+                      {/* Status Badge - Tiny */}
+                      <Badge
+                        className={cn(
+                          "text-[7px] px-1 py-0 h-3.5 ml-auto",
+                          getStatusColor(applicant.status),
+                        )}
+                      >
+                        {applicant.status === "cancelled"
+                          ? "CXL"
+                          : applicant.status === "rejected"
+                            ? "Previously Rejected"
+                            : applicant.status}
+                      </Badge>
                     </div>
 
+                    {/* Role & Time - One line */}
                     <div className="flex items-center gap-1 mt-0.5">
-                      {/* Role Badge */}
                       <Badge
                         variant="outline"
-                        className="text-[8px] px-1 py-0 h-4"
+                        className="text-[7px] px-1 py-0 h-3.5"
                         style={{
                           backgroundColor: getRoleBg(user.roleType, isDarkMode),
                           borderColor: getRoleBorder(user.roleType, isDarkMode),
@@ -771,25 +783,10 @@ const ApplicantHistory = ({
                       >
                         {user.roleType || "Musician"}
                       </Badge>
-
-                      {/* Status Badge */}
-                      <Badge
-                        className={cn(
-                          "text-[8px] px-1 py-0 h-4",
-                          getStatusColor(applicant.status),
-                        )}
-                      >
-                        {applicant.status === "cancelled"
-                          ? "CXL"
-                          : applicant.status === "rejected"
-                            ? "REJ"
-                            : applicant.status}
-                      </Badge>
-
-                      {/* Time */}
+                      <span className="text-slate-400 text-[6px]">•</span>
                       <span
                         className={cn(
-                          "text-[8px] ml-auto",
+                          "text-[7px]",
                           isDarkMode ? "text-slate-500" : "text-slate-400",
                         )}
                       >
@@ -798,11 +795,11 @@ const ApplicantHistory = ({
                     </div>
                   </div>
 
-                  {/* Expand/Collapse Button */}
+                  {/* Expand/Collapse Button - Tiny */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 rounded-full flex-shrink-0"
+                    className="h-5 w-5 rounded-full shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleExpanded(itemId);
@@ -817,26 +814,24 @@ const ApplicantHistory = ({
                   </Button>
                 </div>
 
-                {/* Reason Preview - Show on one line if not expanded */}
+                {/* Reason Preview - Ultra compact */}
                 {!isExpanded && applicant.notes && (
-                  <div className="mt-1.5 pl-12">
-                    <div className="flex items-center gap-1">
-                      {reasonIcon}
-                      <span
-                        className={cn(
-                          "text-[8px] truncate",
-                          isDarkMode ? "text-slate-400" : "text-slate-500",
-                        )}
-                      >
-                        {applicant.notes.length > 40
-                          ? applicant.notes.substring(0, 40) + "..."
-                          : applicant.notes}
-                      </span>
-                    </div>
+                  <div className="mt-1 ml-10 flex items-center gap-1">
+                    {reasonIcon}
+                    <span
+                      className={cn(
+                        "text-[7px] truncate max-w-[150px]",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      {applicant.notes.length > 30
+                        ? applicant.notes.substring(0, 30) + "..."
+                        : applicant.notes}
+                    </span>
                   </div>
                 )}
 
-                {/* Expanded View */}
+                {/* Expanded View - Compact */}
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div
@@ -846,74 +841,51 @@ const ApplicantHistory = ({
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="pt-3 mt-2 border-t border-slate-200 dark:border-slate-700 space-y-2">
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-4 gap-1">
+                      <div className="mt-2 pt-1 border-t border-slate-200 dark:border-slate-700 space-y-1">
+                        {/* Quick Stats - 4 in a row */}
+                        <div className="grid grid-cols-4 gap-0.5">
                           <div className="text-center">
                             <div className="flex items-center justify-center gap-0.5">
-                              <Star className="w-2.5 h-2.5 text-yellow-500" />
-                              <span className="text-[9px] font-bold">
-                                <TrustStarsDisplay
-                                  trustStars={
-                                    user.trustStars?.toFixed(1) || "4.5"
-                                  }
-                                  size="sm"
-                                  className="scale-75 -ml-1"
-                                />
+                              <Star className="w-2 h-2 text-yellow-500" />
+                              <span className="text-[7px] font-bold">
+                                {user.trustStars?.toFixed(1) || "4.5"}
                               </span>
                             </div>
-                            <span className="text-[7px] text-gray-500">
-                              Rating
-                            </span>
                           </div>
-
                           <div className="text-center">
                             <div className="flex items-center justify-center gap-0.5">
-                              <Briefcase className="w-2.5 h-2.5 text-blue-500" />
-                              <span className="text-[9px] font-bold">
+                              <Briefcase className="w-2 h-2 text-blue-500" />
+                              <span className="text-[7px] font-bold">
                                 {user.completedGigsCount || 0}
                               </span>
                             </div>
-                            <span className="text-[7px] text-gray-500">
-                              Gigs
-                            </span>
                           </div>
-
                           <div className="text-center">
                             <div className="flex items-center justify-center gap-0.5">
-                              <DollarSign className="w-2.5 h-2.5 text-green-500" />
-                              <span className="text-[9px] font-bold truncate max-w-[30px]">
+                              <DollarSign className="w-2 h-2 text-green-500" />
+                              <span className="text-[7px] font-bold truncate max-w-[20px]">
                                 {formatRateSummary(user)
                                   .split(" ")[1]
                                   ?.slice(0, 3) || "N/A"}
                               </span>
                             </div>
-                            <span className="text-[7px] text-gray-500">
-                              Rate
-                            </span>
                           </div>
-
                           <div className="text-center">
                             <div className="flex items-center justify-center gap-0.5">
-                              <MapPin className="w-2.5 h-2.5 text-purple-500" />
-                              <span className="text-[9px] font-bold truncate max-w-[25px]">
+                              <MapPin className="w-2 h-2 text-purple-500" />
+                              <span className="text-[7px] font-bold truncate max-w-[15px]">
                                 {user.city?.slice(0, 3) || "RMT"}
                               </span>
                             </div>
-                            <span className="text-[7px] text-gray-500">
-                              Loc
-                            </span>
                           </div>
                         </div>
 
-                        {/* Notes with Reason */}
+                        {/* Full Reason */}
                         {formattedNotes && (
                           <div
                             className={cn(
-                              "p-2 rounded text-[9px] border",
-                              isDarkMode
-                                ? "bg-slate-800/50 border-slate-700"
-                                : "bg-slate-50 border-slate-200",
+                              "p-1.5 rounded text-[7px]",
+                              isDarkMode ? "bg-slate-800/50" : "bg-slate-50",
                             )}
                           >
                             <p
@@ -926,30 +898,32 @@ const ApplicantHistory = ({
                           </div>
                         )}
 
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-1 pt-1">
+                        {/* Action Buttons - Horizontal */}
+                        <div className="flex items-center gap-1 pt-1">
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-6 text-[9px]"
+                            className="flex-1 h-5 text-[7px] gap-0.5"
                             onClick={(e) => {
                               e.stopPropagation();
                               onViewProfile?.(applicant.userId);
                             }}
                           >
-                            <Eye className="w-2.5 h-2.5 mr-1" />
-                            View
+                            <Eye className="w-2 h-2" />
+                            Profile
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-6 text-[9px]"
+                            className="flex-1 h-5 text-[7px] gap-0.5"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Add to shortlist action (if needed)
+                              if (onReAdd) {
+                                onReAdd(applicant);
+                              }
                             }}
                           >
-                            <Heart className="w-2.5 h-2.5 mr-1" />
+                            <Heart className="w-2 h-2" />
                             Re-add
                           </Button>
                         </div>

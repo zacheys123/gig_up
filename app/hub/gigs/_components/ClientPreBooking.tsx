@@ -403,7 +403,6 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
 
   const tabCounts = getTabCounts();
 
-  // Process gigs with proper null checks
   const processGigsWithApplicants = () => {
     if (!userGigs || !allUsers) {
       console.log("No gigs or users data available");
@@ -458,48 +457,60 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
         switch (activeGigTab) {
           case "regular":
             applicants = interestedUsers.map((userId: Id<"users">) => {
-              const statusHistory = bookingHistory.filter(
-                (entry: any) => entry.userId === userId,
-              );
+              // Get all status entries for this user, sorted by timestamp (newest first)
+              const userStatusHistory = bookingHistory
+                .filter((entry: any) => entry.userId === userId)
+                .sort(
+                  (a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0),
+                );
 
               let status: Applicant["status"] = "pending";
 
-              const hasCancelled = statusHistory.some(
-                (entry: any) => entry.status === "cancelled",
-              );
-              const hasRejected = statusHistory.some(
-                (entry: any) => entry.status === "rejected",
-              );
+              if (userStatusHistory.length > 0) {
+                const latestStatus = userStatusHistory[0].status;
 
-              if (hasCancelled) {
-                status = "cancelled";
-              } else if (hasRejected) {
-                status = "rejected";
-              } else {
-                if (statusHistory.length > 0) {
-                  const sortedHistory = [...statusHistory].sort(
-                    (a, b) => (b.timestamp || 0) - (a.timestamp || 0),
+                // If the latest status is "updated" (re-add)
+                if (latestStatus === "updated") {
+                  // Find the most recent non-updated status
+                  const previousStatusEntry = userStatusHistory.find(
+                    (entry: any) => entry.status !== "updated",
                   );
-                  const latestEntry = sortedHistory[0];
 
-                  if (latestEntry.status === "booked") {
-                    status = "booked";
-                  } else if (
-                    latestEntry.status === "updated" ||
-                    latestEntry.status === "viewed"
-                  ) {
-                    status = "viewed";
+                  if (previousStatusEntry) {
+                    const previousStatus = previousStatusEntry.status;
+
+                    // If they were previously rejected/cancelled and now re-added, they should be active
+                    if (["cancelled", "rejected"].includes(previousStatus)) {
+                      status = "pending"; // Active status
+                    } else {
+                      status = previousStatus;
+                    }
+                  } else {
+                    // No previous status, they're just updated (should be active)
+                    status = "pending";
                   }
                 }
-
-                if (status !== "booked") {
-                  const isShortlisted = shortlistedUsers.some(
-                    (item: any) => item.userId === userId,
-                  );
-                  if (isShortlisted) {
-                    status = "shortlisted";
-                  }
+                // Check if they're in history states
+                else if (["cancelled", "rejected"].includes(latestStatus)) {
+                  status = latestStatus; // They remain in history
+                } else if (["booked"].includes(latestStatus)) {
+                  status = "booked";
+                } else if (["viewed"].includes(latestStatus)) {
+                  status = "viewed";
+                } else {
+                  status = latestStatus; // Keep other statuses (applied, interviewed, offered, confirmed, completed)
                 }
+              }
+
+              // Check if they're shortlisted (overrides pending/viewed but not cancelled/rejected)
+              const isShortlisted = shortlistedUsers.some(
+                (item: any) => item.userId === userId,
+              );
+              if (
+                isShortlisted &&
+                !["cancelled", "rejected", "booked"].includes(status)
+              ) {
+                status = "shortlisted";
               }
 
               return {
@@ -517,47 +528,57 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
               const roleBookedUsers = role.bookedUsers || [];
 
               roleApplicants.forEach((userId: Id<"users">) => {
-                const statusHistory = bookingHistory.filter(
-                  (entry: any) =>
-                    entry.userId === userId &&
-                    entry.bandRoleIndex === roleIndex,
-                );
+                // Get all status entries for this user and role
+                const userStatusHistory = bookingHistory
+                  .filter(
+                    (entry: any) =>
+                      entry.userId === userId &&
+                      entry.bandRoleIndex === roleIndex,
+                  )
+                  .sort(
+                    (a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0),
+                  );
 
                 let status: Applicant["status"] = "pending";
 
-                const hasCancelled = statusHistory.some(
-                  (entry: any) => entry.status === "cancelled",
-                );
-                const hasRejected = statusHistory.some(
-                  (entry: any) => entry.status === "rejected",
-                );
+                if (userStatusHistory.length > 0) {
+                  const latestStatus = userStatusHistory[0].status;
 
-                if (hasCancelled) {
-                  status = "cancelled";
-                } else if (hasRejected) {
-                  status = "rejected";
-                } else {
-                  if (statusHistory.length > 0) {
-                    const sortedHistory = [...statusHistory].sort(
-                      (a, b) => (b.timestamp || 0) - (a.timestamp || 0),
+                  if (latestStatus === "updated") {
+                    const previousStatusEntry = userStatusHistory.find(
+                      (entry: any) => entry.status !== "updated",
                     );
-                    const latestEntry = sortedHistory[0];
 
-                    if (latestEntry.status === "booked") {
-                      status = "booked";
-                    }
-                  }
+                    if (previousStatusEntry) {
+                      const previousStatus = previousStatusEntry.status;
 
-                  if (status !== "booked") {
-                    const isShortlisted = shortlistedUsers.some(
-                      (item: any) =>
-                        item.userId === userId &&
-                        item.bandRoleIndex === roleIndex,
-                    );
-                    if (isShortlisted) {
-                      status = "shortlisted";
+                      if (["cancelled", "rejected"].includes(previousStatus)) {
+                        status = "pending";
+                      } else {
+                        status = previousStatus;
+                      }
+                    } else {
+                      status = "pending";
                     }
+                  } else if (["cancelled", "rejected"].includes(latestStatus)) {
+                    status = latestStatus;
+                  } else if (["booked"].includes(latestStatus)) {
+                    status = "booked";
+                  } else {
+                    status = latestStatus;
                   }
+                }
+
+                // Check if shortlisted for this role
+                const isShortlisted = shortlistedUsers.some(
+                  (item: any) =>
+                    item.userId === userId && item.bandRoleIndex === roleIndex,
+                );
+                if (
+                  isShortlisted &&
+                  !["cancelled", "rejected", "booked"].includes(status)
+                ) {
+                  status = "shortlisted";
                 }
 
                 applicants.push({
@@ -609,43 +630,50 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
             bookCount.forEach((bandApplication: any) => {
               const bandId = bandApplication.bandId;
 
-              const statusHistory = bookingHistory.filter(
-                (entry: any) => entry.userId === bandId,
-              );
+              const userStatusHistory = bookingHistory
+                .filter((entry: any) => entry.userId === bandId)
+                .sort(
+                  (a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0),
+                );
 
               let status: Applicant["status"] = "pending";
 
-              const hasCancelled = statusHistory.some(
-                (entry: any) => entry.status === "cancelled",
-              );
-              const hasRejected = statusHistory.some(
-                (entry: any) => entry.status === "rejected",
-              );
+              if (userStatusHistory.length > 0) {
+                const latestStatus = userStatusHistory[0].status;
 
-              if (hasCancelled) {
-                status = "cancelled";
-              } else if (hasRejected) {
-                status = "rejected";
-              } else {
-                if (statusHistory.length > 0) {
-                  const sortedHistory = [...statusHistory].sort(
-                    (a, b) => (b.timestamp || 0) - (a.timestamp || 0),
+                if (latestStatus === "updated") {
+                  const previousStatusEntry = userStatusHistory.find(
+                    (entry: any) => entry.status !== "updated",
                   );
-                  const latestEntry = sortedHistory[0];
 
-                  if (latestEntry.status === "booked") {
-                    status = "booked";
-                  }
-                }
+                  if (previousStatusEntry) {
+                    const previousStatus = previousStatusEntry.status;
 
-                if (status !== "booked") {
-                  const isShortlisted = shortlistedUsers.some(
-                    (item: any) => item.userId === bandId,
-                  );
-                  if (isShortlisted) {
-                    status = "shortlisted";
+                    if (["cancelled", "rejected"].includes(previousStatus)) {
+                      status = "pending";
+                    } else {
+                      status = previousStatus;
+                    }
+                  } else {
+                    status = "pending";
                   }
+                } else if (["cancelled", "rejected"].includes(latestStatus)) {
+                  status = latestStatus;
+                } else if (["booked"].includes(latestStatus)) {
+                  status = "booked";
+                } else {
+                  status = latestStatus;
                 }
+              }
+
+              const isShortlisted = shortlistedUsers.some(
+                (item: any) => item.userId === bandId,
+              );
+              if (
+                isShortlisted &&
+                !["cancelled", "rejected", "booked"].includes(status)
+              ) {
+                status = "shortlisted";
               }
 
               applicants.push({
@@ -690,6 +718,37 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     }
   };
 
+  // In ClientPreBooking component, add this mutation
+  const reAddApplicant = useMutation(api.controllers.prebooking.reAddApplicant);
+
+  // Add the handler function
+  const handleReAddApplicant = async (
+    gigId: Id<"gigs">,
+    applicantId: Id<"users">,
+    bandRoleIndex?: number,
+  ) => {
+    if (!user?.clerkId) {
+      toast.error("Authentication required");
+      return;
+    }
+
+    try {
+      await reAddApplicant({
+        gigId,
+        applicantId,
+        clerkId: user.clerkId,
+        bandRoleIndex,
+      });
+
+      toast.success("Applicant re-added to active list!");
+
+      // Refresh the data
+      processGigsWithApplicants();
+    } catch (error) {
+      console.error("Failed to re-add applicant:", error);
+      toast.error("Failed to re-add applicant");
+    }
+  };
   // Handlers
   const handleAddToShortlist = async (
     gigId: Id<"gigs">,
@@ -831,10 +890,24 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
   ) => {
     try {
       await markApplicantViewed({ gigId, applicantId });
-      window.open(`/profile/${applicantId}`, "_blank");
+
+      // Get the user data to access their username
+      const user = selectedGigData?.userDetails.get(applicantId);
+      if (user?.username) {
+        router.push(`/search/${user.username}`, "_blank");
+      } else {
+        // Fallback to ID if username not available
+        window.open(`/search/${user.username}`, "_blank");
+      }
     } catch (error) {
       console.error("Failed to mark as viewed:", error);
-      window.open(`/profile/${applicantId}`, "_blank");
+      // Fallback to ID on error
+      const user = selectedGigData?.userDetails.get(applicantId);
+      if (user?.username) {
+        router.push(`/search/${user.username}`, "_blank");
+      } else {
+        return null;
+      }
     }
   };
 
@@ -1988,6 +2061,13 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                           selectedGigData={selectedGigData}
                           formatTime={formatTime}
                           getStatusColor={getStatusColor}
+                          onReAdd={(applicant) =>
+                            handleReAddApplicant(
+                              selectedGigData.gig._id,
+                              applicant.userId,
+                              applicant.bandRoleIndex,
+                            )
+                          }
                         />
                       </TabsContent>
                     </Tabs>
