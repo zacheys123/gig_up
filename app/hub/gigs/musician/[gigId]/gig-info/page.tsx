@@ -3426,17 +3426,9 @@ export default function GigDetailsPage({ params }: PageProps) {
                       Similar {gig.bussinesscat} Gigs
                     </h3>
                     {similarGigs.length > 0 && (
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px] px-2 py-0.5",
-                          isDarkMode
-                            ? "border-slate-700 text-slate-400"
-                            : "border-slate-200 text-slate-500",
-                        )}
-                      >
-                        {similarGigs.length} available
-                      </Badge>
+     <Badge variant="outline" className="text-xs">
+  {Math.min(similarGigs.length, 2)} of {similarGigs.length} shown
+</Badge>
                     )}
                   </div>
                 </div>
