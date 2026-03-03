@@ -3538,7 +3538,7 @@ export default function GigDetailsPage({ params }: PageProps) {
 
                                 <div className="flex items-center gap-2 mt-1.5">
                                   <div className="flex items-center gap-0.5">
-                                    <Heart className="w-2.5 h-2.5 text-rose-400" />
+                                    <HeartIcon className="w-2.5 h-2.5 text-rose-400" />
                                     <span className="text-[8px] text-slate-500">
                                       {similarGig.interestedUsers?.length || 0}
                                     </span>
