@@ -138,4 +138,8 @@ export function formatPaymentData(data: ExtractedPaymentData | null) {
     phone: data.phoneNumber || "Not detected",
     confidence: `${data.confidence.toFixed(1)}%`,
   };
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d

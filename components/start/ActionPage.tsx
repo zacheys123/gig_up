@@ -147,8 +147,13 @@ const fadeInUp = {
 
 const staggerContainer = {
   animate: {
+<<<<<<< HEAD
     transition: { staggerChildren: 0.1 },
   },
+=======
+    transition: { staggerChildren: 0.1 }
+  }
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
 };
 
 // ============ STEP CONFIGURATION ============
@@ -197,21 +202,30 @@ const ActionPage = () => {
   const { isSignedIn } = useUser();
   const router = useRouter();
   const { user: myuser } = useCurrentUser();
+<<<<<<< HEAD
   const { registerAsMusician, registerAsClient, registerAsBooker } =
     useUserMutations();
   const { isTeacherEnabled, isBookerEnabled, isBothEnabled } =
     useFeatureFlags();
+=======
+  const { registerAsMusician, registerAsClient, registerAsBooker } = useUserMutations();
+  const { isTeacherEnabled, isBookerEnabled, isBothEnabled } = useFeatureFlags();
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
 
   const teacherEnabled = isTeacherEnabled();
   const bookerEnabled = isBookerEnabled();
   const bothEnabled = isBothEnabled();
 
   // ============ STATE ============
+<<<<<<< HEAD
   const [loading, setLoading] = useState({
     musician: false,
     client: false,
     booker: false,
   });
+=======
+  const [loading, setLoading] = useState({ musician: false, client: false, booker: false });
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [formData, setFormData] = useState({
@@ -234,6 +248,7 @@ const ActionPage = () => {
     skills: [] as string[],
   });
 
+<<<<<<< HEAD
   const [selectedBookerSkills, setSelectedBookerSkills] = useState<string[]>(
     [],
   );
@@ -241,18 +256,31 @@ const ActionPage = () => {
   const [selectedRole, setSelectedRole] = useState<
     "musician" | "client" | "booker" | "both" | null
   >(null);
+=======
+  const [selectedBookerSkills, setSelectedBookerSkills] = useState<string[]>([]);
+  const [error, setError] = useState<string[]>([]);
+  const [selectedRole, setSelectedRole] = useState<"musician" | "client" | "booker" | "both" | null>(null);
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
   const [roleType, setRoleType] = useState<RoleType>("instrumentalist");
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
   // ============ HELPERS ============
   const handleInputChange = (field: string, value: string) => {
+<<<<<<< HEAD
     setFormData((prev) => ({ ...prev, [field]: value }));
+=======
+    setFormData(prev => ({ ...prev, [field]: value }));
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
     if (error.length) setError([]);
   };
 
   const handleSkillsChange = (skills: string[]) => {
+<<<<<<< HEAD
     setFormData((prev) => ({ ...prev, skills }));
+=======
+    setFormData(prev => ({ ...prev, skills }));
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
     if (error.length) setError([]);
   };
 
@@ -270,6 +298,7 @@ const ActionPage = () => {
       dj: ["city", "genre", "equipment", "skills", "experience", "bio"],
       mc: ["city", "type", "languages", "skills", "experience", "bio"],
       vocalist: ["city", "vocalistgenre", "skills", "experience", "bio"],
+<<<<<<< HEAD
       teacher: [
         "city",
         "instrument",
@@ -289,12 +318,20 @@ const ActionPage = () => {
         "experience",
         "bio",
       ],
+=======
+      teacher: ["city", "instrument", "specialization", "teaching", "studentAge", "skills", "experience", "bio"],
+      booker: ["city", "organization", "bookerType", "bookerSkills", "skills", "experience", "bio"],
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
       client: ["city", "organization", "clientType", "bio"],
     };
 
     if (!selectedRole) return [];
+<<<<<<< HEAD
     if (selectedRole === "musician")
       return steps[roleType] || ["city", "skills", "bio"];
+=======
+    if (selectedRole === "musician") return steps[roleType] || ["city", "skills", "bio"];
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
     if (selectedRole === "client") return steps.client;
     return steps.booker;
   };
@@ -302,7 +339,11 @@ const ActionPage = () => {
   // ============ PROGRESS CALCULATION ============
   useEffect(() => {
     if (!selectedRole) return;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
     let requiredFields: number;
     let total: number;
 
@@ -313,6 +354,7 @@ const ActionPage = () => {
         roleType === "dj" ? formData.djGenre && formData.djEquipment : true,
         roleType === "vocalist" ? formData.vocalistGenre : true,
         roleType === "mc" ? formData.mcType && formData.mcLanguages : true,
+<<<<<<< HEAD
         roleType === "teacher"
           ? formData.teacherSpecialization &&
             formData.teachingStyle &&
@@ -322,6 +364,12 @@ const ActionPage = () => {
         formData.experience,
         formData.talentbio,
         formData.skills.length > 0,
+=======
+        roleType === "teacher" ? formData.teacherSpecialization && formData.teachingStyle && formData.lessonFormat && formData.studentAgeGroup : true,
+        formData.experience,
+        formData.talentbio,
+        formData.skills.length > 0
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
       ].filter(Boolean).length;
       total = 7;
     } else if (selectedRole === "client") {
@@ -329,7 +377,11 @@ const ActionPage = () => {
         formData.city,
         formData.organization,
         formData.clientType,
+<<<<<<< HEAD
         formData.talentbio,
+=======
+        formData.talentbio
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
       ].filter(Boolean).length;
       total = 4;
     } else {
@@ -340,7 +392,11 @@ const ActionPage = () => {
         formData.experience,
         selectedBookerSkills.length > 0,
         formData.talentbio,
+<<<<<<< HEAD
         formData.skills.length > 0,
+=======
+        formData.skills.length > 0
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
       ].filter(Boolean).length;
       total = 7;
     }
@@ -403,6 +459,7 @@ const ActionPage = () => {
   }, [formData, selectedBookerSkills]);
 
   // ============ REGISTRATION ============
+<<<<<<< HEAD
   const registerUser = useCallback(
     async (role: "musician" | "client" | "booker") => {
       if (!isSignedIn) {
@@ -541,6 +598,127 @@ const ActionPage = () => {
     },
   ].filter((card) => card.enabled);
 
+=======
+  const registerUser = useCallback(async (role: "musician" | "client" | "booker") => {
+    if (!isSignedIn) {
+      toast.error("Please sign in to continue");
+      return false;
+    }
+
+    const errors = role === "musician" ? validateMusicianFields() :
+                   role === "client" ? validateClientFields() :
+                   validateBookerFields();
+
+    if (errors.length > 0) {
+      setError(errors);
+      return false;
+    }
+
+    setLoading(prev => ({ ...prev, [role]: true }));
+
+    try {
+      if (role === "musician") {
+        await registerAsMusician({
+          city: formData.city,
+          instrument: formData.instrument,
+          experience: formData.experience,
+          roleType,
+          djGenre: formData.djGenre,
+          djEquipment: formData.djEquipment,
+          mcType: formData.mcType,
+          mcLanguages: formData.mcLanguages,
+          talentbio: formData.talentbio,
+          vocalistGenre: formData.vocalistGenre,
+          organization: formData.organization || "",
+          teacherSpecialization: formData.teacherSpecialization,
+          teachingStyle: formData.teachingStyle,
+          lessonFormat: formData.lessonFormat,
+          studentAgeGroup: formData.studentAgeGroup,
+          skills: formData.skills,
+        });
+      } else if (role === "client") {
+        await registerAsClient({
+          city: formData.city,
+          organization: formData.organization,
+          talentbio: formData.talentbio,
+          clientType: formData.clientType,
+        });
+      } else if (role === "booker") {
+        await registerAsBooker({
+          city: formData.city,
+          organization: formData.organization,
+          experience: formData.experience,
+          bookerSkills: selectedBookerSkills,
+          talentbio: formData.talentbio,
+          bookerType: formData.bookerType,
+          skills: formData.skills,
+        });
+      }
+
+      setShowConfetti(true);
+      toast.success("Registration completed successfully!");
+      
+      setTimeout(() => {
+        setShowConfetti(false);
+        router.push("/dashboard");
+      }, 3000);
+      
+      return true;
+    } catch (err) {
+      console.error(err);
+      toast.error("Registration failed. Please try again.");
+      return false;
+    } finally {
+      setLoading(prev => ({ ...prev, [role]: false }));
+    }
+  }, [isSignedIn, validateMusicianFields, validateClientFields, validateBookerFields, formData, roleType, selectedBookerSkills, registerAsMusician, registerAsClient, registerAsBooker, router]);
+
+  // ============ ROLE CARD CONFIG ============
+  const roleCards = [
+    {
+      role: "client",
+      title: "Hire Talent",
+      icon: Users,
+      gradient: "from-orange-500 to-amber-500",
+      description: "Create gigs and book top-tier performers",
+      stats: "500+ active",
+      enabled: true,
+      isUser: myuser?.isClient,
+    },
+    {
+      role: "musician",
+      title: "Find Gigs",
+      icon: Music,
+      gradient: "from-blue-500 to-cyan-500",
+      description: "Showcase your talent and connect with opportunities",
+      stats: "2,000+ musicians",
+      enabled: true,
+      isUser: myuser?.isMusician,
+    },
+    {
+      role: "booker",
+      title: "Manage Talent",
+      icon: Briefcase,
+      gradient: "from-emerald-500 to-teal-500",
+      description: "Book and manage bands, build your roster",
+      stats: "100+ bookers",
+      enabled: bookerEnabled,
+      isUser: myuser?.isBooker,
+    },
+    {
+      role: "both",
+      title: "Dual Role",
+      icon: HiSwitchHorizontal,
+      gradient: "from-purple-500 to-pink-500",
+      description: "Switch between hiring and being hired",
+      stats: "Coming Soon",
+      enabled: bothEnabled,
+      isUser: myuser?.isBoth,
+      comingSoon: true,
+    },
+  ].filter(card => card.enabled);
+
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
   // ============ RENDER ============
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0B1120] to-[#0A0F1C]">
@@ -570,14 +748,22 @@ const ActionPage = () => {
             >
               <Zap className="w-8 h-8 md:w-10 md:h-10 text-white" />
             </motion.div>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
             <motion.h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 md:mb-4">
               Welcome to{" "}
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 gigUp
               </span>
             </motion.h1>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
             <motion.p className="text-base md:text-xl text-gray-400 max-w-2xl mx-auto px-4">
               Join the future of music collaboration and event booking
             </motion.p>
@@ -609,6 +795,7 @@ const ActionPage = () => {
                 className={cn(
                   "group relative cursor-pointer",
                   card.isUser && "opacity-50 cursor-not-allowed",
+<<<<<<< HEAD
                   card.comingSoon && "opacity-60",
                 )}
               >
@@ -636,6 +823,22 @@ const ActionPage = () => {
                           key={i}
                           className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]"
                         />
+=======
+                  card.comingSoon && "opacity-60"
+                )}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient} rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl`} />
+                <div className={`relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-${card.gradient.split(' ')[1]}/50 transition-all`}>
+                  <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r ${card.gradient} flex items-center justify-center mb-3 md:mb-4`}>
+                    <card.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">{card.title}</h3>
+                  <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">{card.description}</p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="flex -space-x-2">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                       ))}
                     </div>
                     <span>{card.stats}</span>
@@ -673,6 +876,7 @@ const ActionPage = () => {
                   className="relative w-full max-w-2xl bg-[#0F172A] rounded-2xl border border-gray-800 shadow-2xl overflow-hidden"
                 >
                   {/* Modal Header */}
+<<<<<<< HEAD
                   <div
                     className={cn(
                       "p-4 md:p-6 relative overflow-hidden",
@@ -684,11 +888,17 @@ const ActionPage = () => {
                         "bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent",
                     )}
                   >
+=======
+                  <div className={cn(
+                    "p-4 md:p-6 relative overflow-hidden",
+                    selectedRole === "client" && "bg-gradient-to-r from-orange-500/20 via-orange-500/5 to-transparent",
+                    selectedRole === "musician" && "bg-gradient-to-r from-blue-500/20 via-blue-500/5 to-transparent",
+                    selectedRole === "booker" && "bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent",
+                  )}>
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h2 className="text-xl md:text-2xl font-bold text-white">
-                          Complete Your Profile
-                        </h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-white">Complete Your Profile</h2>
                         <p className="text-sm text-gray-400 mt-1">
                           {selectedRole === "musician" &&
                             "Showcase your musical talent"}
@@ -698,10 +908,14 @@ const ActionPage = () => {
                             "Set up your booking services"}
                         </p>
                       </div>
+<<<<<<< HEAD
                       <button
                         onClick={() => setMoreInfo(false)}
                         className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700"
                       >
+=======
+                      <button onClick={() => setMoreInfo(false)} className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700">
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                         <X className="w-4 h-4 text-gray-400" />
                       </button>
                     </div>
@@ -720,12 +934,18 @@ const ActionPage = () => {
                         <motion.div
                           className={cn(
                             "h-full rounded-full",
+<<<<<<< HEAD
                             selectedRole === "client" &&
                               "bg-gradient-to-r from-orange-500 to-amber-500",
                             selectedRole === "musician" &&
                               "bg-gradient-to-r from-blue-500 to-cyan-500",
                             selectedRole === "booker" &&
                               "bg-gradient-to-r from-emerald-500 to-teal-500",
+=======
+                            selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500",
+                            selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500",
+                            selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500"
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                           )}
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
@@ -739,6 +959,7 @@ const ActionPage = () => {
                       {getSteps().map((step, index) => {
                         const Icon = stepIcons[step] || ChevronRight;
                         return (
+<<<<<<< HEAD
                           <div
                             key={index}
                             className="flex items-center flex-shrink-0"
@@ -757,6 +978,16 @@ const ActionPage = () => {
                               <span className="hidden sm:inline">
                                 {stepTitles[step] || step}
                               </span>
+=======
+                          <div key={index} className="flex items-center flex-shrink-0">
+                            <div className={cn(
+                              "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs",
+                              index < currentStep ? "bg-blue-500/20 text-blue-400" :
+                              index === currentStep ? "bg-gray-800 text-white" : "text-gray-600"
+                            )}>
+                              <Icon className="w-3 h-3" />
+                              <span className="hidden sm:inline">{stepTitles[step] || step}</span>
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                             </div>
                             {index < getSteps().length - 1 && (
                               <ChevronRight className="w-3 h-3 text-gray-700 mx-1" />
@@ -767,7 +998,7 @@ const ActionPage = () => {
                     </div>
                   </div>
 
-                  {/* Modal Content */}
+                  {/* Modal Content - All your input fields remain the same */}
                   <div className="p-4 md:p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
                     <AnimatePresence mode="wait">
                       <motion.div
@@ -777,6 +1008,7 @@ const ActionPage = () => {
                         exit={{ opacity: 0, x: -20 }}
                         className="space-y-4"
                       >
+<<<<<<< HEAD
                         {/* City Input */}
                         {getSteps()[currentStep] === "city" && (
                           <div className="space-y-2">
@@ -1336,6 +1568,10 @@ const ActionPage = () => {
                             </div>
                           </div>
                         )}
+=======
+                        {/* All your step content remains exactly the same */}
+                        {/* ... (keep all the input fields from your original) */}
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                       </motion.div>
                     </AnimatePresence>
                   </div>
@@ -1352,9 +1588,7 @@ const ActionPage = () => {
                           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                           <div className="space-y-1">
                             {error.map((err, index) => (
-                              <p key={index} className="text-xs text-red-400">
-                                • {err}
-                              </p>
+                              <p key={index} className="text-xs text-red-400">• {err}</p>
                             ))}
                           </div>
                         </div>
@@ -1363,11 +1597,15 @@ const ActionPage = () => {
 
                     <div className="flex gap-3">
                       <button
+<<<<<<< HEAD
                         onClick={() =>
                           currentStep > 0
                             ? setCurrentStep((prev) => prev - 1)
                             : setMoreInfo(false)
                         }
+=======
+                        onClick={() => currentStep > 0 ? setCurrentStep(prev => prev - 1) : setMoreInfo(false)}
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                         className="flex-1 py-3 px-4 rounded-xl font-medium bg-gray-800 text-white hover:bg-gray-700 flex items-center justify-center gap-2"
                       >
                         <ChevronLeft className="w-4 h-4" />
@@ -1387,6 +1625,7 @@ const ActionPage = () => {
                         }
                         className={cn(
                           "flex-1 py-3 px-4 rounded-xl font-medium flex items-center justify-center gap-2",
+<<<<<<< HEAD
                           selectedRole === "client" &&
                             "bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:opacity-90",
                           selectedRole === "musician" &&
@@ -1394,6 +1633,12 @@ const ActionPage = () => {
                           selectedRole === "booker" &&
                             "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90",
                           "disabled:opacity-50 disabled:cursor-not-allowed",
+=======
+                          selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:opacity-90",
+                          selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90",
+                          selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90",
+                          "disabled:opacity-50 disabled:cursor-not-allowed"
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
                         )}
                       >
                         {loading.musician ||
@@ -1437,6 +1682,7 @@ const ActionPage = () => {
       </div>
 
       <style jsx global>{`
+<<<<<<< HEAD
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
         }
@@ -1451,6 +1697,12 @@ const ActionPage = () => {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #6b7280;
         }
+=======
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1F2937; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+>>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
       `}</style>
     </div>
   );
