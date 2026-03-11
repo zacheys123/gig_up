@@ -264,6 +264,9 @@ export const gigModel = defineTable({
 
   // === PAYMENT CONFIRMATION SYSTEM (DUAL-CONFIRMATION) ===
 
+  // In your convex/schema.ts or gigs.ts file
+
+  // Update the musicianConfirmPayment object
   musicianConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
@@ -278,9 +281,24 @@ export const gigModel = defineTable({
         v.literal("other"),
       ),
       notes: v.optional(v.string()),
+      // ADD THIS - extracted OCR data
+      extractedData: v.optional(
+        v.object({
+          transactionId: v.optional(v.string()),
+          amount: v.optional(v.number()),
+          date: v.optional(v.string()),
+          time: v.optional(v.string()),
+          phoneNumber: v.optional(v.string()),
+          sender: v.optional(v.string()),
+          receiver: v.optional(v.string()),
+          fullText: v.optional(v.string()),
+          confidence: v.number(),
+        }),
+      ),
     }),
   ),
 
+  // Update the clientConfirmPayment object
   clientConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
@@ -295,9 +313,24 @@ export const gigModel = defineTable({
         v.literal("other"),
       ),
       notes: v.optional(v.string()),
+      // ADD THIS - extracted OCR data
+      extractedData: v.optional(
+        v.object({
+          transactionId: v.optional(v.string()),
+          amount: v.optional(v.number()),
+          date: v.optional(v.string()),
+          time: v.optional(v.string()),
+          phoneNumber: v.optional(v.string()),
+          sender: v.optional(v.string()),
+          receiver: v.optional(v.string()),
+          fullText: v.optional(v.string()),
+          confidence: v.number(),
+        }),
+      ),
     }),
   ),
 
+  // Your paymentVerification object is already good with extractedData
   paymentVerification: v.optional(
     v.object({
       gigId: v.id("gigs"),
@@ -315,7 +348,6 @@ export const gigModel = defineTable({
       ),
       notes: v.optional(v.string()),
       ocrConfidence: v.optional(
-        // ADD THIS
         v.object({
           musician: v.number(),
           client: v.number(),
