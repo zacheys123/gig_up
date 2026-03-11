@@ -3,7 +3,6 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 
-// Define proper types for client and booker types
 type ClientType = "individual" | "event_planner" | "venue" | "corporate";
 type BookerType = "talent_agent" | "booking_manager";
 
@@ -33,20 +32,17 @@ export function useUserMutations() {
     talentbio: string;
     vocalistGenre?: string;
     organization?: string;
-    // Teacher specific fields (when roleType === 'teacher')
     teacherSpecialization?: string;
     teachingStyle?: string;
     lessonFormat?: string;
     studentAgeGroup?: string;
-    // NEW: Skills array
     skills: string[];
   }) => {
     if (!userId) throw new Error("No user ID available");
 
     const updates = {
-      isMusician: true as const,
-      isClient: false as const,
-      isBooker: false as const,
+      isMusician: true,
+      isClient: false,
       city: musicianData.city,
       instrument: musicianData.instrument,
       experience: musicianData.experience,
@@ -58,9 +54,7 @@ export function useUserMutations() {
       talentbio: musicianData.talentbio,
       vocalistGenre: musicianData.vocalistGenre,
       organization: musicianData.organization,
-      // NEW: Add skills
       skills: musicianData.skills,
-      // Teacher fields - only store if roleType is teacher
       teacherSpecialization:
         musicianData.roleType === "teacher"
           ? musicianData.teacherSpecialization
@@ -86,12 +80,11 @@ export function useUserMutations() {
       lastBookingDate: Date.now(),
       earnings: 0,
       totalSpent: 0,
-      firstLogin: true as const,
-      onboardingComplete: false as const,
+      firstLogin: true,
+      onboardingComplete: false,
       lastActive: Date.now(),
-      isBanned: false as const,
+      isBanned: false,
       banReason: "",
-      bannedAt: undefined,
       lastAdminAction: Date.now(),
       theme: "light" as const,
     };
@@ -104,22 +97,20 @@ export function useUserMutations() {
     organization: string;
     talentbio: string;
     clientType: string;
-    // NEW: Skills array
-    skills: string[];
+    skills?: string[]; // Make skills optional
   }) => {
     if (!userId) throw new Error("No user ID available");
     const validClientType = clientData.clientType as ClientType;
 
     const updates = {
-      isMusician: false as const,
-      isClient: true as const,
-      isBooker: false as const,
+      isMusician: false,
+      isClient: true,
       city: clientData.city,
       organization: clientData.organization,
       talentbio: clientData.talentbio,
       clientType: validClientType,
-      // NEW: Add skills
-      skills: clientData.skills,
+      // Only include skills if they exist
+      ...(clientData.skills && clientData.skills.length > 0 ? { skills: clientData.skills } : {}),
       tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
@@ -129,12 +120,11 @@ export function useUserMutations() {
       lastBookingDate: Date.now(),
       earnings: 0,
       totalSpent: 0,
-      firstLogin: true as const,
-      onboardingComplete: false as const,
+      firstLogin: true,
+      onboardingComplete: false,
       lastActive: Date.now(),
-      isBanned: false as const,
+      isBanned: false,
       banReason: "",
-      bannedAt: undefined,
       lastAdminAction: Date.now(),
       theme: "light" as const,
     };
@@ -149,26 +139,23 @@ export function useUserMutations() {
     bookerSkills: string[];
     talentbio: string;
     bookerType: string;
-    // NEW: Skills array
     skills: string[];
   }) => {
     if (!userId) throw new Error("No user ID available");
     const validBookerType = bookerData.bookerType as BookerType;
 
     const updates = {
-      isMusician: false as const,
-      isClient: false as const,
-      isBooker: true as const,
+      isMusician: false,
+      isClient: false,
+      isBooker: true,
       city: bookerData.city,
       organization: bookerData.organization,
       experience: bookerData.experience,
       bookerSkills: bookerData.bookerSkills,
       talentbio: bookerData.talentbio,
       bookerType: validBookerType,
-      // NEW: Add skills
       skills: bookerData.skills,
-      tier: "free" as const,
-      nextBillingDate: Date.now(),
+      tier: "free" as const,      nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
       monthlyMessages: 0,
       monthlyGigsBooked: 0,
@@ -176,12 +163,11 @@ export function useUserMutations() {
       lastBookingDate: Date.now(),
       earnings: 0,
       totalSpent: 0,
-      firstLogin: true as const,
-      onboardingComplete: false as const,
+      firstLogin: true,
+      onboardingComplete: false,
       lastActive: Date.now(),
-      isBanned: false as const,
+      isBanned: false,
       banReason: "",
-      bannedAt: undefined,
       lastAdminAction: Date.now(),
       theme: "light" as const,
     };

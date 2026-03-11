@@ -312,7 +312,7 @@ await registerAsClient({
   organization: formData.organization,
   talentbio: formData.talentbio,
   clientType: formData.clientType,
-  skills: [], // Empty array for clients
+nts
 });
 
 // Option 2: Update your mutation to make skills optional

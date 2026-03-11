@@ -1,4 +1,4 @@
-// components/ManualConfetti.tsx
+// components/start/ManualConfetti.tsx
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -37,13 +37,13 @@ export const ManualConfetti: React.FC<ManualConfettiProps> = ({
       for (let i = 0; i < pieceCount; i++) {
         newPieces.push({
           id: i,
-          left: Math.random() * 100, // random horizontal position
-          width: Math.random() * 8 + 4, // 4-12px
-          height: Math.random() * 12 + 6, // 6-18px
+          left: Math.random() * 100,
+          width: Math.random() * 8 + 4,
+          height: Math.random() * 12 + 6,
           background: colors[Math.floor(Math.random() * colors.length)],
           rotation: Math.random() * 360,
-          delay: Math.random() * 0.5, // 0-0.5s delay
-          duration: Math.random() * 2 + 1.5, // 1.5-3.5s
+          delay: Math.random() * 0.5,
+          duration: Math.random() * 2 + 1.5,
         });
       }
       setPieces(newPieces);
@@ -55,10 +55,12 @@ export const ManualConfetti: React.FC<ManualConfettiProps> = ({
       }, duration);
 
       return () => clearTimeout(timer);
-    } else {
-      setPieces([]);
     }
-  }, [active, duration, pieceCount, colors, onComplete]);
+    // Only clear pieces when active becomes false
+    return () => {
+      setPieces([]);
+    };
+  }, [active, duration, pieceCount, colors, onComplete]); // Keep dependencies
 
   if (!active || pieces.length === 0) return null;
 
@@ -83,7 +85,7 @@ export const ManualConfetti: React.FC<ManualConfettiProps> = ({
             transition={{
               duration: piece.duration,
               delay: piece.delay,
-              ease: [0.23, 0.98, 0.32, 1], // custom easing for natural fall
+              ease: [0.23, 0.98, 0.32, 1],
             }}
             style={{
               position: 'absolute',
