@@ -738,41 +738,42 @@ const ActionPage = () => {
                 </div>
               </motion.div>
             )}
-{bothEnabled &&
             {/* Dual Role Card */}
-            <motion.div
-              variants={fadeInUp}
-              whileHover={{ y: -5 }}
-              onClick={() => {
-                if (myuser?.isBoth) {
-                  setMoreInfo(true);
-                } else {
-                  toast.info("Dual role coming soon!");
-                }
-              }}
-              className="group relative cursor-pointer opacity-60"
-            >
-              <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
-              <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-3 md:mb-4">
-                  <HiSwitchHorizontal className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-                <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">
-                  Dual Role
-                </h3>
-                <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">
-                  Switch between hiring and being hired
-                </p>
-                <span className="inline-block px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded-full">
-                  Coming Soon
-                </span>
-                {myuser?.isBoth && (
-                  <div className="absolute top-3 right-3">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
+            {bothEnabled && (
+              <motion.div
+                variants={fadeInUp}
+                whileHover={{ y: -5 }}
+                onClick={() => {
+                  if (myuser?.isBoth) {
+                    setMoreInfo(true);
+                  } else {
+                    toast.info("Dual role coming soon!");
+                  }
+                }}
+                className="group relative cursor-pointer opacity-60"
+              >
+                <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+                <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-3 md:mb-4">
+                    <HiSwitchHorizontal className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
-                )}
-              </div>
-            </motion.div>}
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">
+                    Dual Role
+                  </h3>
+                  <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">
+                    Switch between hiring and being hired
+                  </p>
+                  <span className="inline-block px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded-full">
+                    Coming Soon
+                  </span>
+                  {myuser?.isBoth && (
+                    <div className="absolute top-3 right-3">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Registration Modal */}
