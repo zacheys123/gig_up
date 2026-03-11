@@ -1,13 +1,13 @@
 // utils/paymentTypes.ts
 export interface ExtractedPaymentData {
-  transactionId: string | null;
-  amount: number | null;
-  date: string | null;
-  time: string | null;
-  phoneNumber: string | null;
-  sender: string | null;
-  receiver: string | null;
-  fullText: string;
+  transactionId: string | null | undefined; // Allow undefined
+  amount: number | null | undefined; // Allow undefined
+  date: string | null | undefined;
+  time: string | null | undefined;
+  phoneNumber: string | null | undefined;
+  sender: string | null | undefined;
+  receiver: string | null | undefined;
+  fullText: string | null | undefined;
   confidence: number;
 }
 
@@ -122,7 +122,8 @@ export function compareConfirmations(
       musician: extractedMusician,
       client: extractedClient,
     },
-  };}
+  };
+}
 export function formatPaymentData(data: ExtractedPaymentData | null) {
   if (!data) return "No data extracted";
 
@@ -135,5 +136,5 @@ export function formatPaymentData(data: ExtractedPaymentData | null) {
     time: data.time || "Not detected",
     phone: data.phoneNumber || "Not detected",
     confidence: `${data.confidence.toFixed(1)}%`,
-  }
-};
+  };
+}
