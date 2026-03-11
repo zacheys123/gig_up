@@ -263,23 +263,20 @@ export const gigModel = defineTable({
   cancellationReason: v.optional(v.string()),
 
   // === PAYMENT CONFIRMATION SYSTEM (DUAL-CONFIRMATION) ===
+
   musicianConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
-      confirmPayment: v.boolean(), // true = payment received, false = dispute
+      confirmed: v.boolean(), // true = payment received
       confirmedAt: v.number(),
-      paymentCode: v.string(), // M-Pesa transaction code (first 4-6 chars) or cash code
-      fullTransactionId: v.optional(v.string()), // Full transaction ID for M-Pesa
-      amountConfirmed: v.number(), // Amount they confirm receiving/sending
+      screenshot: v.string(), // Storage ID of the screenshot
+      amount: v.number(),
       paymentMethod: v.union(
         v.literal("mpesa"),
         v.literal("cash"),
         v.literal("bank"),
         v.literal("other"),
       ),
-      temporaryConfirm: v.optional(v.boolean()),
-      finalizedAt: v.optional(v.number()),
-      verified: v.optional(v.boolean()), // Whether code was verified against other party
       notes: v.optional(v.string()),
     }),
   ),
@@ -287,21 +284,43 @@ export const gigModel = defineTable({
   clientConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
-      confirmPayment: v.boolean(),
+      confirmed: v.boolean(), // true = payment sent
       confirmedAt: v.number(),
-      paymentCode: v.string(), // M-Pesa transaction code (first 4-6 chars) or cash code
-      fullTransactionId: v.optional(v.string()),
-      amountConfirmed: v.number(),
+      screenshot: v.string(), // Storage ID of the screenshot
+      amount: v.number(),
       paymentMethod: v.union(
         v.literal("mpesa"),
         v.literal("cash"),
         v.literal("bank"),
         v.literal("other"),
       ),
-      temporaryConfirm: v.optional(v.boolean()),
-      finalizedAt: v.optional(v.number()),
-      verified: v.optional(v.boolean()),
       notes: v.optional(v.string()),
+    }),
+  ),
+
+  paymentVerification: v.optional(
+    v.object({
+      gigId: v.id("gigs"),
+      verifiedAt: v.number(),
+      verifiedBy: v.id("users"),
+      match: v.boolean(),
+      extractedData: v.optional(
+        v.object({
+          transactionId: v.string(),
+          amount: v.number(),
+          timestamp: v.number(),
+          sender: v.string(),
+          receiver: v.string(),
+        }),
+      ),
+      notes: v.optional(v.string()),
+      ocrConfidence: v.optional(
+        // ADD THIS
+        v.object({
+          musician: v.number(),
+          client: v.number(),
+        }),
+      ),
     }),
   ),
 

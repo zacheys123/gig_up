@@ -42,8 +42,12 @@ export default function GigInvitation() {
     inviterId ? { userId: inviterId } : "skip",
   );
 
-  const acceptInvitation = useMutation(api.gigs.acceptGigInvitation);
-  const declineInvitation = useMutation(api.gigs.declineGigInvitation);
+  const acceptInvitation = useMutation(
+    api.controllers.gigs.acceptGigInvitation,
+  );
+  const declineInvitation = useMutation(
+    api.controllers.gigs.declineGigInvitation,
+  );
 
   const handleAccept = async () => {
     if (!currentUser?._id || !gigId) return;

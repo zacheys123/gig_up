@@ -227,7 +227,6 @@ const calculateTrustPenalty = (gigDate: string | number | Date): number => {
   }
   return 0; // More than 3 days - no penalty
 };
-
 export const removeInterestFromGig = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -239,7 +238,6 @@ export const removeInterestFromGig = mutation({
     const { gigId, userId, reason, isFromBooked } = args;
 
     const user = await ctx.db.get(userId);
-
     const gig = await ctx.db.get(gigId);
 
     if (!user) throw new Error("User not found");
@@ -252,8 +250,12 @@ export const removeInterestFromGig = mutation({
     // Check user involvement
     const isBookedMusician = gig.bookedBy === userId;
     const isInterestedMusician = gig.interestedUsers?.includes(userId) || false;
+    const isShortlisted =
+      gig.shortlistedUsers?.some((item: any) => item.userId === userId) ||
+      false;
 
-    const isInvolved = isBookedMusician || isInterestedMusician;
+    const isInvolved =
+      isBookedMusician || isInterestedMusician || isShortlisted;
 
     if (!isInvolved) {
       throw new Error("You are not involved in this gig");
@@ -277,7 +279,7 @@ export const removeInterestFromGig = mutation({
         timestamp: now,
         userId: userId,
         userRole: user.roleType || "musician",
-        status: "cancelled" as const, // ✅ Add 'as const'
+        status: "cancelled" as const,
         gigType: "regular" as const,
         actionBy: userId,
         reason: reason || "Cancelled booking",
@@ -300,14 +302,14 @@ export const removeInterestFromGig = mutation({
       await ctx.db.patch(userId, {
         cancelgigCount: (user.cancelgigCount || 0) + 1,
       });
+
       // Update the updateWeeklyGigCount function with explicit typing
       const updateWeeklyGigCount = (
         currentWeeklyData: WeeklyGigData | null,
       ): WeeklyGigData => {
-        // Get current week start (Monday)
         const now = new Date();
         const currentWeekStart = new Date(now);
-        currentWeekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+        currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
         currentWeekStart.setHours(0, 0, 0, 0);
 
         const weekStartTimestamp = currentWeekStart.getTime();
@@ -316,7 +318,6 @@ export const removeInterestFromGig = mutation({
           weekStart: 0,
         };
 
-        // Reset if new week
         if (currentGigsThisWeek.weekStart !== weekStartTimestamp) {
           return {
             count: 1,
@@ -324,25 +325,23 @@ export const removeInterestFromGig = mutation({
           };
         }
 
-        // Increment if same week
         return {
           count: currentGigsThisWeek.count + 1,
           weekStart: weekStartTimestamp,
         };
       };
 
-      // Update user's weekly gig count
       const updatedWeeklyData = updateWeeklyGigCount(
         user.gigsBookedThisWeek as WeeklyGigData | null,
       );
-      // Update user stats
+
       await ctx.db.patch(userId, {
         gigsBooked: (user.gigsBooked || 0) + 1,
         gigsBookedThisWeek: updatedWeeklyData,
         cancelgigCount: (user.cancelgigCount || 0) + 1,
         updatedAt: Date.now(),
       });
-      // Trigger trust recalculation
+
       await updateUserTrust(ctx, userId);
 
       // Send notification to client
@@ -385,6 +384,7 @@ export const removeInterestFromGig = mutation({
     // Remove user from appropriate fields
     let updatedBookedBy = gig.bookedBy;
     let updatedInterestedUsers = gig.interestedUsers || [];
+    let updatedShortlistedUsers = gig.shortlistedUsers || [];
 
     if (isBookedMusician) {
       updatedBookedBy = undefined;
@@ -396,13 +396,20 @@ export const removeInterestFromGig = mutation({
       );
     }
 
+    // ✅ ALWAYS remove from shortlist regardless of where they were removed from
+    if (isShortlisted) {
+      updatedShortlistedUsers = updatedShortlistedUsers.filter(
+        (item: any) => item.userId !== userId,
+      );
+    }
+
     const maxSlots = gig.maxSlots || 10;
     const totalInterested = [
       ...(updatedBookedBy ? [updatedBookedBy] : []),
       ...updatedInterestedUsers,
     ];
     const isStillFull = totalInterested.length >= maxSlots;
-    // Explicitly type the status variable
+
     const statusValue: "cancelled" | "rejected" = isBookedMusician
       ? "cancelled"
       : "rejected";
@@ -413,7 +420,7 @@ export const removeInterestFromGig = mutation({
       timestamp: now,
       userId: userId,
       userRole: user.roleType || "musician",
-      status: statusValue, // Now correctly typed
+      status: statusValue,
       gigType: "regular" as const,
       actionBy: userId,
       actionFor: userId,
@@ -426,6 +433,8 @@ export const removeInterestFromGig = mutation({
         musicianName: user.firstname || user.username,
         previousBookedBy: gig.bookedBy,
         previousInterestedCount: (gig.interestedUsers || []).length,
+        previousShortlistedCount: (gig.shortlistedUsers || []).length,
+        removedFromShortlist: isShortlisted, // ✅ Track if removed from shortlist
         remainingInterestedCount: totalInterested.length,
         wasFull:
           (gig.interestedUsers || []).length + (gig.bookedBy ? 1 : 0) >=
@@ -436,7 +445,9 @@ export const removeInterestFromGig = mutation({
           ? "bookedBy"
           : isInterestedMusician
             ? "interestedUsers"
-            : "client",
+            : isShortlisted
+              ? "shortlistedUsers"
+              : "client",
         hoursUntilGig: isBookedMusician ? Math.floor(hoursDifference) : null,
       },
     };
@@ -445,6 +456,7 @@ export const removeInterestFromGig = mutation({
     await ctx.db.patch(gigId, {
       ...(isBookedMusician && { bookedBy: undefined }),
       ...(isInterestedMusician && { interestedUsers: updatedInterestedUsers }),
+      ...(isShortlisted && { shortlistedUsers: updatedShortlistedUsers }), // ✅ Update shortlist
       bookingHistory: [...(gig.bookingHistory || []), removalEntry],
       updatedAt: now,
       isPending: isStillFull,
@@ -539,6 +551,7 @@ export const removeInterestFromGig = mutation({
             musicianId: userId,
             musicianName: user.firstname || user.username,
             reason: reason || "",
+            removedFromShortlist: isShortlisted, // ✅ Include in metadata
             remainingInterested: totalInterested.length,
             wasBooked: isBookedMusician,
           },
@@ -554,6 +567,7 @@ export const removeInterestFromGig = mutation({
       musicianName: user.firstname || user.username,
       isFromBooked,
       wasBooked: isBookedMusician,
+      removedFromShortlist: isShortlisted, // ✅ Return this info
     };
   },
 });
@@ -940,15 +954,19 @@ export const removeUserInterest = mutation({
     // Check if user is involved
     const isInterested = gig.interestedUsers?.includes(userIdToRemove) || false;
     const isBooked = gig.bookedBy === userIdToRemove;
+    const isShortlisted =
+      gig.shortlistedUsers?.some(
+        (item: any) => item.userId === userIdToRemove,
+      ) || false;
 
-    if (!isInterested && !isBooked) {
+    if (!isInterested && !isBooked && !isShortlisted) {
       throw new Error("This user is not involved with the gig");
     }
 
     const now = Date.now();
 
     // Determine status based on whether they were booked or just interested
-    const status = isBooked ? "cancelled" : ("rejected" as const); // ✅ Add 'as const'
+    const status = isBooked ? "cancelled" : ("rejected" as const);
 
     // Prepare updates object with proper typing
     const updates: Record<string, any> = {
@@ -960,7 +978,7 @@ export const removeUserInterest = mutation({
           timestamp: now,
           userId: userIdToRemove,
           userRole: musician.roleType || "musician",
-          status: status, // Now correctly typed as "cancelled" | "rejected"
+          status: status,
           gigType: "regular" as const,
           actionBy: clientId,
           actionFor: userIdToRemove,
@@ -978,6 +996,8 @@ export const removeUserInterest = mutation({
             clientName: client.firstname || client.username,
             wasBooked: isBooked,
             wasInterested: isInterested,
+            wasShortlisted: isShortlisted, // ✅ Track shortlist status
+            removedFromShortlist: isShortlisted, // ✅ Track if removed from shortlist
           },
         },
       ],
@@ -989,6 +1009,16 @@ export const removeUserInterest = mutation({
         gig.interestedUsers?.filter((id) => id !== userIdToRemove) || [];
     } else {
       updates.interestedUsers = gig.interestedUsers || [];
+    }
+
+    // ✅ ALWAYS remove from shortlist regardless
+    if (isShortlisted) {
+      updates.shortlistedUsers =
+        gig.shortlistedUsers?.filter(
+          (item: any) => item.userId !== userIdToRemove,
+        ) || [];
+    } else {
+      updates.shortlistedUsers = gig.shortlistedUsers || [];
     }
 
     // Handle bookedBy
@@ -1012,7 +1042,6 @@ export const removeUserInterest = mutation({
           },
         );
 
-        // Check if musician still has active bookings with this client
         const musicianStillHasActiveBookings = updatedMusicianBookings.some(
           (booking) => booking.clientId === client._id && !booking.cancelled,
         );
@@ -1025,7 +1054,6 @@ export const removeUserInterest = mutation({
           bookedByClients: updatedMusicianBookings,
           bookedByClientIds: updatedMusicianBookedByClientIds,
           updatedAt: now,
-          // Increment cancellation count
           cancelgigCount: (musician.cancelgigCount || 0) + 1,
         });
       }
@@ -1047,7 +1075,6 @@ export const removeUserInterest = mutation({
           return hiring;
         });
 
-        // Check if client still has active bookings with this musician
         const clientStillHasActiveBookings = updatedClientBookings.some(
           (hiring) => hiring.musicianId === userIdToRemove && !hiring.cancelled,
         );
@@ -1104,6 +1131,7 @@ export const removeUserInterest = mutation({
         clientName: client.firstname || client.username,
         reason: reason || "",
         wasBooked: isBooked,
+        removedFromShortlist: isShortlisted, // ✅ Include in metadata
       },
     });
 
@@ -1114,11 +1142,279 @@ export const removeUserInterest = mutation({
       wasBooked: isBooked,
       status: status,
       remainingCount: updates.interestedUsers.length,
+      removedFromShortlist: isShortlisted, // ✅ Return this info
     };
   },
 });
 // =================== SAVE/FAVORITE/VIEW MUTATIONS ===================
+// convex/controllers/prebooking.ts
+// =================== INVITATION MUTATIONS ===================
 
+// =================== INVITATION MUTATIONS ===================
+
+/**
+ * Accept a gig invitation
+ */
+export const acceptGigInvitation = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    musicianId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, musicianId } = args;
+
+    const musician = await ctx.db.get(musicianId);
+    const gig = await ctx.db.get(gigId);
+
+    if (!musician) throw new Error("Musician not found");
+    if (!gig) throw new Error("Gig not found");
+
+    // Get the client who invited
+    const client = await ctx.db.get(gig.postedBy);
+    if (!client) throw new Error("Client not found");
+
+    const now = Date.now();
+
+    // FIX: Determine gig type with proper typing and default
+    const gigType =
+      gig.isClientBand === true ? ("band" as const) : ("regular" as const);
+
+    // Create booking entry - using existing status types
+    const bookingEntry = {
+      entryId: `${gigId}_${musicianId}_invitation_${now}`,
+      timestamp: now,
+      userId: musicianId,
+      userRole: musician.roleType || "musician",
+      status: "booked" as const,
+      gigType: gigType, // Now properly typed
+      actionBy: musicianId,
+      actionFor: gig.postedBy,
+      reason: "Accepted invitation",
+      metadata: {
+        action: "invitation_accepted",
+        gigTitle: gig.title,
+        musicianName: musician.firstname || musician.username,
+        clientName: client.firstname || client.username,
+        invitationAccepted: true,
+      },
+    };
+
+    // Update gig
+    await ctx.db.patch(gigId, {
+      isTaken: true,
+      isPending: false,
+      bookedBy: musicianId,
+      interestedUsers: gig.interestedUsers || [],
+      bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+      updatedAt: now,
+    });
+
+    // Update musician's stats
+    await ctx.db.patch(musicianId, {
+      gigsBooked: (musician.gigsBooked || 0) + 1,
+      updatedAt: now,
+    });
+
+    // Notify client
+    try {
+      await createNotificationInternal(ctx, {
+        userDocumentId: gig.postedBy,
+        type: "invitation_accepted",
+        title: "✅ Invitation Accepted!",
+        message: `${musician.firstname || musician.username} accepted your invitation for "${gig.title}"`,
+        image: musician.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: musicianId,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          musicianId,
+          musicianName: musician.firstname || musician.username,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to notify client:", error);
+    }
+
+    return {
+      success: true,
+      message: "Invitation accepted successfully",
+      gigId,
+      musicianName: musician.firstname || musician.username,
+    };
+  },
+});
+
+/**
+ * Decline a gig invitation
+ */
+export const declineGigInvitation = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    musicianId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, musicianId } = args;
+
+    const musician = await ctx.db.get(musicianId);
+    const gig = await ctx.db.get(gigId);
+
+    if (!musician) throw new Error("Musician not found");
+    if (!gig) throw new Error("Gig not found");
+
+    const client = await ctx.db.get(gig.postedBy);
+    if (!client) throw new Error("Client not found");
+
+    const now = Date.now();
+
+    // FIX: Determine gig type with proper typing and default
+    const gigType =
+      gig.isClientBand === true ? ("band" as const) : ("regular" as const);
+
+    // Create decline entry
+    const declineEntry = {
+      entryId: `${gigId}_${musicianId}_decline_${now}`,
+      timestamp: now,
+      userId: musicianId,
+      userRole: musician.roleType || "musician",
+      status: "rejected" as const,
+      gigType: gigType, // Now properly typed
+      actionBy: musicianId,
+      actionFor: gig.postedBy,
+      reason: "Declined invitation",
+      metadata: {
+        action: "invitation_declined",
+        gigTitle: gig.title,
+        musicianName: musician.firstname || musician.username,
+        clientName: client.firstname || client.username,
+      },
+    };
+
+    // Add to booking history
+    await ctx.db.patch(gigId, {
+      bookingHistory: [...(gig.bookingHistory || []), declineEntry],
+      updatedAt: now,
+    });
+
+    // Notify client
+    try {
+      await createNotificationInternal(ctx, {
+        userDocumentId: gig.postedBy,
+        type: "invitation_declined",
+        title: "❌ Invitation Declined",
+        message: `${musician.firstname || musician.username} declined your invitation for "${gig.title}"`,
+        image: musician.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: musicianId,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          musicianId,
+          musicianName: musician.firstname || musician.username,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to notify client:", error);
+    }
+
+    return {
+      success: true,
+      message: "Invitation declined",
+      gigId,
+      musicianName: musician.firstname || musician.username,
+    };
+  },
+});
+/**
+ * Send a gig invitation to a musician
+ */
+export const sendGigInvitation = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    clientId: v.id("users"),
+    musicianId: v.id("users"),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, clientId, musicianId, message } = args;
+
+    const client = await ctx.db.get(clientId);
+    const musician = await ctx.db.get(musicianId);
+    const gig = await ctx.db.get(gigId);
+
+    if (!client) throw new Error("Client not found");
+    if (!musician) throw new Error("Musician not found");
+    if (!gig) throw new Error("Gig not found");
+
+    // Verify client owns the gig
+    if (gig.postedBy !== clientId) {
+      throw new Error("Only the gig owner can send invitations");
+    }
+
+    const now = Date.now();
+
+    // Determine gig type with proper typing
+    // Explicitly type the variable
+    const gigType: "regular" | "band" =
+      gig.isClientBand === true ? "band" : "regular";
+    // Create invitation entry
+    const invitationEntry = {
+      entryId: `${gigId}_${musicianId}_invitation_sent_${now}`,
+      timestamp: now,
+      userId: musicianId,
+      userRole: musician.roleType || "musician",
+      status: "applied" as const,
+      gigType: gigType, // Now properly typed
+      actionBy: clientId,
+      actionFor: musicianId,
+      reason: message || "Invitation sent",
+      metadata: {
+        action: "invitation_sent",
+        gigTitle: gig.title,
+        clientName: client.firstname || client.username,
+        musicianName: musician.firstname || musician.username,
+        message: message || "",
+      },
+    };
+
+    // Add to booking history
+    await ctx.db.patch(gigId, {
+      bookingHistory: [...(gig.bookingHistory || []), invitationEntry],
+      updatedAt: now,
+    });
+
+    // Create invitation link
+    const invitationLink = `/gigs/invitations/${gigId}?inviter=${clientId}`;
+
+    // Notify musician
+    try {
+      await createNotificationInternal(ctx, {
+        userDocumentId: musicianId,
+        type: "gig_invitation",
+        title: "🎵 You've Been Invited!",
+        message: `${client.firstname || client.username} invited you to "${gig.title}"`,
+        image: client.picture,
+        actionUrl: invitationLink,
+        relatedUserDocumentId: clientId,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          clientId,
+          clientName: client.firstname || client.username,
+          message: message || "",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to send invitation notification:", error);
+    }
+
+    return {
+      success: true,
+      message: "Invitation sent successfully",
+      invitationLink,
+    };
+  },
+});
 /**
  * Save a gig for later viewing
  * Adds gig ID to user's savedGigs array

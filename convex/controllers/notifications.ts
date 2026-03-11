@@ -173,7 +173,6 @@ export const getNotificationSettings = query({
   },
 });
 
-// convex/controllers/notifications.ts
 export const updateNotificationSettings = mutation({
   args: {
     userId: v.string(),
@@ -186,14 +185,16 @@ export const updateNotificationSettings = mutation({
       followRequests: v.boolean(),
       comments: v.boolean(),
 
-      // Gigs & Bookings (ADD ALL NEW FIELDS)
+      // Gigs & Bookings
       gigInvites: v.boolean(),
-      gigOpportunities: v.boolean(), // NEW FIELD
-      gigUpdates: v.boolean(), // NEW FIELD
+      gigOpportunities: v.boolean(),
+      gigUpdates: v.boolean(),
       bookingRequests: v.boolean(),
       bookingConfirmations: v.boolean(),
       gigReminders: v.boolean(),
-      bandInvites: v.boolean(), // NEW FIELD
+      bandInvites: v.boolean(),
+      paymentConfirmations: v.boolean(), // ADD THIS
+      paymentDisputes: v.boolean(), // ADD THIS
 
       // Messages & Communication
       newMessages: v.boolean(),

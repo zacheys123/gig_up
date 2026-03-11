@@ -357,13 +357,7 @@ export const markApplicantViewed = mutation({
     applicantId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const user = await ctx.db.get(args.applicantId);
     if (!user) throw new Error("User not found");
 
     const gig = await ctx.db.get(args.gigId);
@@ -1715,6 +1709,114 @@ export const bookAndCreateCrewChat = mutation({
         isPending: false,
         isActive: true,
       },
+    };
+  },
+});
+
+export const reAddApplicant = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    applicantId: v.id("users"),
+    clerkId: v.string(),
+    bandRoleIndex: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, applicantId, clerkId, bandRoleIndex } = args;
+
+    // Get the gig
+    const gig = await ctx.db.get(gigId);
+    if (!gig) throw new Error("Gig not found");
+
+    // Verify client owns this gig using their clerkId
+    const client = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
+    if (!client) throw new Error("Client not found");
+    if (gig.postedBy !== client._id) throw new Error("Not authorized");
+
+    // Get the applicant
+    const applicant = await ctx.db.get(applicantId);
+    if (!applicant) throw new Error("Applicant not found");
+
+    const now = Date.now();
+
+    // Find the last rejection/cancellation entry
+    const lastStatusEntry = gig.bookingHistory
+      ?.filter(
+        (entry: any) =>
+          entry.userId === applicantId &&
+          ["rejected", "cancelled"].includes(entry.status),
+      )
+      .sort((a: any, b: any) => b.timestamp - a.timestamp)[0];
+
+    // Add a re-add entry to booking history
+    const reAddEntry = {
+      entryId: `${gigId}_${applicantId}_readd_${now}`,
+      timestamp: now,
+      userId: applicantId,
+      userRole: applicant.roleType || "musician",
+      status: "updated",
+      gigType: gig.isClientBand ? "band" : "regular",
+      actionBy: client._id,
+      actionFor: applicantId,
+      reason: "Re-added to active applicants",
+      metadata: {
+        previousStatus: lastStatusEntry?.status || "unknown",
+        previousEntryId: lastStatusEntry?.entryId,
+      },
+    };
+
+    // Update the gig
+    const updates: any = {
+      bookingHistory: [...(gig.bookingHistory || []), reAddEntry],
+      updatedAt: now,
+    };
+
+    // Add back to appropriate array based on gig type
+    if (gig.isClientBand && bandRoleIndex !== undefined) {
+      // For band role gigs
+      if (gig.bandCategory && gig.bandCategory[bandRoleIndex]) {
+        const updatedBandCategory = [...gig.bandCategory];
+        const currentApplicants =
+          updatedBandCategory[bandRoleIndex].applicants || [];
+        if (!currentApplicants.includes(applicantId)) {
+          updatedBandCategory[bandRoleIndex] = {
+            ...updatedBandCategory[bandRoleIndex],
+            applicants: [...currentApplicants, applicantId],
+          };
+          updates.bandCategory = updatedBandCategory;
+        }
+      }
+    } else if (!gig.isClientBand) {
+      // For regular gigs
+      const currentInterested = gig.interestedUsers || [];
+      if (!currentInterested.includes(applicantId)) {
+        updates.interestedUsers = [...currentInterested, applicantId];
+      }
+    }
+
+    await ctx.db.patch(gigId, updates);
+
+    // Optional: Send notification to the musician
+    await createNotificationInternal(ctx, {
+      userDocumentId: applicantId,
+      type: "gig_opportunity",
+      title: "🎉 You've been re-added!",
+      message: `You've been re-added to "${gig.title}" as an active applicant.`,
+      image: gig.logo,
+      actionUrl: `/hub/gigs/${gigId}/gig-info`,
+      relatedUserDocumentId: client._id,
+      metadata: {
+        gigId,
+        gigTitle: gig.title,
+        previousStatus: lastStatusEntry?.status,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Applicant re-added successfully",
     };
   },
 });

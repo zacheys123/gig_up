@@ -1771,9 +1771,18 @@ export const getPendingFollowRequests = query({
   },
 });
 
+// In convex/controllers/user.ts
+
+// In convex/controllers/user.ts
 export const getUserById = query({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.optional(v.id("users")),
+  },
   handler: async (ctx, args) => {
+    if (!args.userId) {
+      console.warn("getUserById called without userId");
+      return null;
+    }
     return await ctx.db.get(args.userId);
   },
 });

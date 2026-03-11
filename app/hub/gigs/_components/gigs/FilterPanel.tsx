@@ -1,5 +1,7 @@
+"use client";
+
 // components/gig/FiltersPanel.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Filter,
@@ -80,343 +82,152 @@ interface FiltersPanelProps {
   availableLocations?: string[];
 }
 
-const FiltersPanel: React.FC<FiltersPanelProps> = ({
-  isOpen,
-  onClose,
-  onApplyFilters,
-  currentFilters = {},
-  availableCategories = [],
-  availableLocations = [],
-}) => {
-  const { colors } = useThemeColors();
+// Constants outside component to prevent recreation
+const TALENT_TYPES = [
+  {
+    id: "mc",
+    label: "MC",
+    icon: Mic,
+    color: "red",
+    description: "Master of Ceremonies",
+  },
+  {
+    id: "dj",
+    label: "DJ",
+    icon: Volume2,
+    color: "pink",
+    description: "Disc Jockey",
+  },
+  {
+    id: "vocalist",
+    label: "Vocalist",
+    icon: Music,
+    color: "green",
+    description: "Singer",
+  },
+  {
+    id: "personal",
+    label: "Individual",
+    icon: User,
+    color: "blue",
+    description: "Solo performer",
+  },
+  {
+    id: "full",
+    label: "Full Band",
+    icon: Users2,
+    color: "orange",
+    description: "Complete band",
+  },
+  {
+    id: "other",
+    label: "Create Band",
+    icon: Briefcase,
+    color: "purple",
+    description: "Custom band setup",
+  },
+  {
+    id: "guitarist",
+    label: "Guitarist",
+    icon: Guitar,
+    color: "amber",
+    description: "Guitar player",
+  },
+  {
+    id: "pianist",
+    label: "Pianist",
+    icon: Piano,
+    color: "indigo",
+    description: "Piano player",
+  },
+  {
+    id: "drummer",
+    label: "Drummer",
+    icon: Drum,
+    color: "cyan",
+    description: "Drum player",
+  },
+];
 
-  const [localFilters, setLocalFilters] = useState({
-    search: "",
-    category: "all",
-    location: "all",
-    talentTypes: [] as string[],
-    priceRange: "",
-    status: "",
-    negotiable: false,
-    showOnlyActive: true,
-    sortBy: "newest",
-    dateRange: "",
-    priceMin: 0,
-    priceMax: 10000,
-    tags: [] as string[],
-    rating: 0,
-    distance: 50,
-    experienceLevel: [] as string[],
-    equipmentRequired: false,
-    travelIncluded: false,
-    depositRequired: false,
-    urgency: "",
-    clientType: "",
-    eventType: "",
-    audienceSize: "",
-    duration: "",
-    timeOfDay: "",
-    dayOfWeek: [] as string[],
-    language: [] as string[],
-    genre: [] as string[],
-    instruments: [] as string[],
-    ...currentFilters,
-  });
+const STATUS_OPTIONS = [
+  { id: "all", label: "All Status" },
+  { id: "available", label: "Available" },
+  { id: "booked", label: "Booked" },
+  { id: "pending", label: "Pending" },
+] as const;
 
-  const [expandedSections, setExpandedSections] = useState<
-    Record<string, boolean>
-  >({
-    talent: true,
-    price: true,
-    location: true,
-    requirements: false,
-    advanced: false,
-  });
+const PRICE_RANGES = [
+  { id: "all", label: "Any Price" },
+  { id: "0-500", label: "Under $500" },
+  { id: "500-1000", label: "$500 - $1,000" },
+  { id: "1000-2500", label: "$1,000 - $2,500" },
+  { id: "2500-5000", label: "$2,500 - $5,000" },
+  { id: "5000+", label: "$5,000+" },
+] as const;
 
-  const [isLoading, setIsLoading] = useState(false);
+const EVENT_TYPES = [
+  { id: "all", label: "Any Event" },
+  { id: "wedding", label: "Wedding" },
+  { id: "corporate", label: "Corporate" },
+  { id: "concert", label: "Concert" },
+  { id: "festival", label: "Festival" },
+  { id: "party", label: "Party" },
+  { id: "club", label: "Club" },
+  { id: "private", label: "Private" },
+] as const;
 
-  // Talent types
-  const talentTypes = [
-    {
-      id: "mc",
-      label: "MC",
-      icon: Mic,
-      color: "red",
-      description: "Master of Ceremonies",
-    },
-    {
-      id: "dj",
-      label: "DJ",
-      icon: Volume2,
-      color: "pink",
-      description: "Disc Jockey",
-    },
-    {
-      id: "vocalist",
-      label: "Vocalist",
-      icon: Music,
-      color: "green",
-      description: "Singer",
-    },
-    {
-      id: "personal",
-      label: "Individual",
-      icon: User,
-      color: "blue",
-      description: "Solo performer",
-    },
-    {
-      id: "full",
-      label: "Full Band",
-      icon: Users2,
-      color: "orange",
-      description: "Complete band",
-    },
-    {
-      id: "other",
-      label: "Create Band",
-      icon: Briefcase,
-      color: "purple",
-      description: "Custom band setup",
-    },
-    {
-      id: "guitarist",
-      label: "Guitarist",
-      icon: Guitar,
-      color: "amber",
-      description: "Guitar player",
-    },
-    {
-      id: "pianist",
-      label: "Pianist",
-      icon: Piano,
-      color: "indigo",
-      description: "Piano player",
-    },
-    {
-      id: "drummer",
-      label: "Drummer",
-      icon: Drum,
-      color: "cyan",
-      description: "Drum player",
-    },
-  ];
+const DAYS_OF_WEEK = [
+  { id: "monday", label: "Monday", short: "Mon" },
+  { id: "tuesday", label: "Tuesday", short: "Tue" },
+  { id: "wednesday", label: "Wednesday", short: "Wed" },
+  { id: "thursday", label: "Thursday", short: "Thu" },
+  { id: "friday", label: "Friday", short: "Fri" },
+  { id: "saturday", label: "Saturday", short: "Sat" },
+  { id: "sunday", label: "Sunday", short: "Sun" },
+] as const;
 
-  // Status options
-  const statusOptions = [
-    { id: "all", label: "All Status" },
-    { id: "available", label: "Available" },
-    { id: "booked", label: "Booked" },
-    { id: "pending", label: "Pending" },
-  ];
+const DEFAULT_FILTERS = {
+  search: "",
+  category: "all",
+  location: "all",
+  talentTypes: [] as string[],
+  priceRange: "",
+  status: "",
+  negotiable: false,
+  showOnlyActive: true,
+  sortBy: "newest",
+  dateRange: "",
+  priceMin: 0,
+  priceMax: 10000,
+  tags: [] as string[],
+  rating: 0,
+  distance: 50,
+  experienceLevel: [] as string[],
+  equipmentRequired: false,
+  travelIncluded: false,
+  depositRequired: false,
+  urgency: "",
+  clientType: "",
+  eventType: "",
+  audienceSize: "",
+  duration: "",
+  timeOfDay: "",
+  dayOfWeek: [] as string[],
+  language: [] as string[],
+  genre: [] as string[],
+  instruments: [] as string[],
+};
 
-  // Price ranges
-  const priceRanges = [
-    { id: "all", label: "Any Price" },
-    { id: "0-500", label: "Under $500" },
-    { id: "500-1000", label: "$500 - $1,000" },
-    { id: "1000-2500", label: "$1,000 - $2,500" },
-    { id: "2500-5000", label: "$2,500 - $5,000" },
-    { id: "5000+", label: "$5,000+" },
-  ];
-
-  // Event types
-  const eventTypes = [
-    { id: "all", label: "Any Event" },
-    { id: "wedding", label: "Wedding" },
-    { id: "corporate", label: "Corporate" },
-    { id: "concert", label: "Concert" },
-    { id: "festival", label: "Festival" },
-    { id: "party", label: "Party" },
-    { id: "club", label: "Club" },
-    { id: "private", label: "Private" },
-  ];
-
-  // Days of week
-  const daysOfWeek = [
-    { id: "monday", label: "Monday", short: "Mon" },
-    { id: "tuesday", label: "Tuesday", short: "Tue" },
-    { id: "wednesday", label: "Wednesday", short: "Wed" },
-    { id: "thursday", label: "Thursday", short: "Thu" },
-    { id: "friday", label: "Friday", short: "Fri" },
-    { id: "saturday", label: "Saturday", short: "Sat" },
-    { id: "sunday", label: "Sunday", short: "Sun" },
-  ];
-
-  // Initialize with current filters
-  useEffect(() => {
-    if (isOpen) {
-      setLocalFilters((prev: any) => ({
-        ...prev,
-        ...currentFilters,
-      }));
-    }
-  }, [isOpen, currentFilters]);
-
-  // Add refs to track scroll position
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [scrollPosition, setScrollPosition] = useState(0);
-
-  // ... rest of your state ...
-  const handleResetFilters = () => {
-    const resetFilters = {
-      search: "",
-      category: "all",
-      location: "all",
-      talentTypes: [] as string[],
-      priceRange: "all",
-      status: "all",
-      negotiable: false,
-      showOnlyActive: true,
-      sortBy: "newest",
-      dateRange: "",
-      priceMin: 0,
-      priceMax: 10000,
-      tags: [] as string[],
-      rating: 0,
-      distance: 50,
-      experienceLevel: [] as string[],
-      equipmentRequired: false,
-      travelIncluded: false,
-      depositRequired: false,
-      urgency: "",
-      clientType: "",
-      eventType: "all",
-      audienceSize: "",
-      duration: "",
-      timeOfDay: "",
-      dayOfWeek: [] as string[],
-      language: [] as string[],
-      genre: [] as string[],
-      instruments: [] as string[],
-    };
-
-    setLocalFilters(resetFilters);
-    toast.info("All filters have been reset");
-  };
-  // Save scroll position before state changes
-  const saveScrollPosition = () => {
-    if (scrollAreaRef.current) {
-      setScrollPosition(scrollAreaRef.current.scrollTop);
-    }
-  };
-
-  // Restore scroll position after render
-  useEffect(() => {
-    if (scrollAreaRef.current && scrollPosition > 0) {
-      scrollAreaRef.current.scrollTop = scrollPosition;
-    }
-  });
-
-  // components/gig/FiltersPanel.tsx
-  // Fix the arrow function syntax errors:
-
-  // WRONG: (prev:any => ...)
-  // CORRECT: ((prev: any) => ...)
-
-  // In your useEffect:
-  useEffect(() => {
-    if (isOpen) {
-      setLocalFilters((prev: any) => ({
-        ...prev,
-        ...currentFilters,
-      }));
-    }
-  }, [isOpen, currentFilters]);
-
-  // Initialize with current filters - FIXED
-  useEffect(() => {
-    if (isOpen) {
-      setLocalFilters((prev: any) => ({
-        ...prev,
-        ...currentFilters,
-      }));
-    }
-  }, [isOpen, currentFilters]);
-
-  // Update handleFilterChange to save scroll position - FIXED
-  const handleFilterChange = (key: string, value: any) => {
-    saveScrollPosition(); // Save before state change
-    setLocalFilters((prev: any) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  // Update handleArrayFilterChange to save scroll position - FIXED
-  const handleArrayFilterChange = (key: string, itemId: string) => {
-    saveScrollPosition(); // Save before state change
-    setLocalFilters((prev: any) => {
-      const currentArray = (prev[key as keyof typeof prev] as string[]) || [];
-      const newArray = currentArray.includes(itemId)
-        ? currentArray.filter((id) => id !== itemId)
-        : [...currentArray, itemId];
-      return {
-        ...prev,
-        [key]: newArray,
-      };
-    });
-  };
-
-  // Update your toggleSection function - FIXED
-  const toggleSection = (sectionId: string) => {
-    saveScrollPosition(); // Save before state change
-    setExpandedSections((prev: any) => ({
-      ...prev,
-      [sectionId]: !prev[sectionId],
-    }));
-  };
-
-  const handleApplyFilters = () => {
-    setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      onApplyFilters(localFilters);
-      setIsLoading(false);
-      toast.success("Filters applied successfully!");
-    }, 500);
-  };
-
-  const getActiveFiltersCount = () => {
-    let count = 0;
-
-    if (localFilters.search) count++;
-    if (localFilters.category !== "all") count++;
-    if (localFilters.location !== "all") count++;
-    if (localFilters.talentTypes.length > 0) count++;
-    if (localFilters.priceRange) count++;
-    if (localFilters.status) count++;
-    if (localFilters.negotiable) count++;
-    if (localFilters.dateRange) count++;
-    if (localFilters.priceMin > 0 || localFilters.priceMax < 10000) count++;
-    if (localFilters.rating > 0) count++;
-    if (localFilters.distance < 50) count++;
-    if (localFilters.experienceLevel.length > 0) count++;
-    if (localFilters.equipmentRequired) count++;
-    if (localFilters.travelIncluded) count++;
-    if (localFilters.depositRequired) count++;
-    if (localFilters.urgency) count++;
-    if (localFilters.clientType) count++;
-    if (localFilters.eventType) count++;
-    if (localFilters.audienceSize) count++;
-    if (localFilters.duration) count++;
-    if (localFilters.timeOfDay) count++;
-    if (localFilters.dayOfWeek.length > 0) count++;
-    if (localFilters.language.length > 0) count++;
-    if (localFilters.genre.length > 0) count++;
-    if (localFilters.instruments.length > 0) count++;
-
-    return count;
-  };
-
-  const FilterSection = ({
+// Memoized section component
+const FilterSection = memo(
+  ({
     title,
     icon: Icon,
     isOpen,
     onToggle,
     children,
     badge,
+    colors,
   }: {
     title: string;
     icon: any;
@@ -424,6 +235,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onToggle: () => void;
     children: React.ReactNode;
     badge?: string;
+    colors: any;
   }) => (
     <div
       className="rounded-xl border overflow-hidden mb-4"
@@ -480,18 +292,31 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         )}
       </AnimatePresence>
     </div>
-  );
+  ),
+);
 
-  const renderTalentTypeGrid = () => (
+FilterSection.displayName = "FilterSection";
+
+// Memoized talent type grid
+const TalentTypeGrid = memo(
+  ({
+    selectedTypes,
+    onToggle,
+    colors,
+  }: {
+    selectedTypes: string[];
+    onToggle: (id: string) => void;
+    colors: any;
+  }) => (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {talentTypes.map((talent) => {
+      {TALENT_TYPES.map((talent) => {
         const Icon = talent.icon;
-        const isSelected = localFilters.talentTypes.includes(talent.id);
+        const isSelected = selectedTypes.includes(talent.id);
 
         return (
           <button
             key={talent.id}
-            onClick={() => handleArrayFilterChange("talentTypes", talent.id)}
+            onClick={() => onToggle(talent.id)}
             className={cn(
               "p-3 rounded-lg border flex flex-col items-center gap-2 transition-all duration-200 hover:scale-105",
               isSelected
@@ -507,30 +332,33 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
             <span className="text-sm font-medium text-center">
               {talent.label}
             </span>
-            {talent.description && (
-              <span
-                className={cn(
-                  "text-xs text-center",
-                  isSelected ? "text-white/80" : colors.textMuted,
-                )}
-              >
-                {talent.description}
-              </span>
-            )}
           </button>
         );
       })}
     </div>
-  );
+  ),
+);
 
-  const renderDayOfWeekPills = () => (
+TalentTypeGrid.displayName = "TalentTypeGrid";
+
+// Memoized day pills component
+const DayPills = memo(
+  ({
+    selectedDays,
+    onToggle,
+    colors,
+  }: {
+    selectedDays: string[];
+    onToggle: (id: string) => void;
+    colors: any;
+  }) => (
     <div className="flex flex-wrap gap-2">
-      {daysOfWeek.map((day) => {
-        const isSelected = localFilters.dayOfWeek.includes(day.id);
+      {DAYS_OF_WEEK.map((day) => {
+        const isSelected = selectedDays.includes(day.id);
         return (
           <button
             key={day.id}
-            onClick={() => handleArrayFilterChange("dayOfWeek", day.id)}
+            onClick={() => onToggle(day.id)}
             className={cn(
               "px-3 py-1.5 rounded-full text-sm font-medium transition-all",
               isSelected
@@ -542,35 +370,45 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     "hover:border-orange-500/50",
                   ),
             )}
-            style={{
-              color: isSelected ? colors.primaryContrast : colors.text,
-            }}
+            style={{ color: isSelected ? colors.primaryContrast : colors.text }}
           >
             {day.short}
           </button>
         );
       })}
     </div>
-  );
+  ),
+);
 
-  const renderActiveFilters = () => {
-    const activeFilters = [];
+DayPills.displayName = "DayPills";
 
-    if (localFilters.search)
-      activeFilters.push(`Search: "${localFilters.search}"`);
-    if (localFilters.category !== "all")
-      activeFilters.push(`Category: ${localFilters.category}`);
-    if (localFilters.location !== "all")
-      activeFilters.push(`Location: ${localFilters.location}`);
-    if (localFilters.talentTypes.length > 0)
-      activeFilters.push(`${localFilters.talentTypes.length} talent types`);
-    if (localFilters.priceRange)
-      activeFilters.push(`Price: ${localFilters.priceRange}`);
-    if (localFilters.status)
-      activeFilters.push(`Status: ${localFilters.status}`);
-    if (localFilters.negotiable) activeFilters.push(`Negotiable only`);
-    if (localFilters.dayOfWeek.length > 0)
-      activeFilters.push(`${localFilters.dayOfWeek.length} days selected`);
+// Memoized active filters display
+const ActiveFiltersDisplay = memo(
+  ({
+    filters,
+    onClearAll,
+    colors,
+  }: {
+    filters: any;
+    onClearAll: () => void;
+    colors: any;
+  }) => {
+    const activeFilters = useMemo(() => {
+      const filtersList = [];
+      if (filters.search) filtersList.push(`Search: "${filters.search}"`);
+      if (filters.category !== "all")
+        filtersList.push(`Category: ${filters.category}`);
+      if (filters.location !== "all")
+        filtersList.push(`Location: ${filters.location}`);
+      if (filters.talentTypes.length > 0)
+        filtersList.push(`${filters.talentTypes.length} talent types`);
+      if (filters.priceRange) filtersList.push(`Price: ${filters.priceRange}`);
+      if (filters.status) filtersList.push(`Status: ${filters.status}`);
+      if (filters.negotiable) filtersList.push(`Negotiable only`);
+      if (filters.dayOfWeek.length > 0)
+        filtersList.push(`${filters.dayOfWeek.length} days selected`);
+      return filtersList;
+    }, [filters]);
 
     if (activeFilters.length === 0) return null;
 
@@ -593,7 +431,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleResetFilters}
+            onClick={onClearAll}
             className="gap-1 text-xs h-7"
             style={{ color: colors.textMuted }}
           >
@@ -611,80 +449,200 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         </div>
       </div>
     );
-  };
+  },
+);
+
+ActiveFiltersDisplay.displayName = "ActiveFiltersDisplay";
+
+export const FiltersPanel: React.FC<FiltersPanelProps> = ({
+  isOpen,
+  onClose,
+  onApplyFilters,
+  currentFilters = {},
+  availableCategories = [],
+  availableLocations = [],
+}) => {
+  const { colors } = useThemeColors();
+  const [localFilters, setLocalFilters] = useState(() => ({
+    ...DEFAULT_FILTERS,
+    ...currentFilters,
+  }));
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Reset filters when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setLocalFilters((prev: any) => ({
+        ...prev,
+        ...currentFilters,
+      }));
+    }
+  }, [isOpen, currentFilters]);
+
+  // Memoized handlers
+  const handleFilterChange = useCallback((key: string, value: any) => {
+    setLocalFilters((prev: any) => {
+      // Skip update if value hasn't changed
+      if (prev[key as keyof typeof prev] === value) return prev;
+      return { ...prev, [key]: value };
+    });
+  }, []);
+
+  const handleArrayFilterChange = useCallback((key: string, itemId: string) => {
+    setLocalFilters((prev: any) => {
+      const currentArray = (prev[key as keyof typeof prev] as string[]) || [];
+      // Skip update if array state hasn't changed
+      const newArray = currentArray.includes(itemId)
+        ? currentArray.filter((id) => id !== itemId)
+        : [...currentArray, itemId];
+
+      // Only update if array actually changed
+      if (
+        newArray.length === currentArray.length &&
+        newArray.every((v, i) => v === currentArray[i])
+      ) {
+        return prev;
+      }
+
+      return { ...prev, [key]: newArray };
+    });
+  }, []);
+
+  const [expandedSections, setExpandedSections] = useState({
+    talent: false,
+    price: false,
+    location: false,
+    requirements: false,
+    advanced: false,
+  });
+
+  type SectionId = keyof typeof expandedSections;
+
+  const toggleSection = useCallback((sectionId: SectionId) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setLocalFilters(DEFAULT_FILTERS);
+    toast.info("All filters have been reset");
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    setIsLoading(true);
+    // Simulate API call delay
+    setTimeout(() => {
+      onApplyFilters(localFilters);
+      setIsLoading(false);
+      toast.success("Filters applied successfully!");
+    }, 500);
+  }, [localFilters, onApplyFilters]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (localFilters.search) count++;
+    if (localFilters.category !== "all") count++;
+    if (localFilters.location !== "all") count++;
+    if (localFilters.talentTypes.length > 0) count++;
+    if (localFilters.priceRange) count++;
+    if (localFilters.status) count++;
+    if (localFilters.negotiable) count++;
+    if (localFilters.dayOfWeek.length > 0) count++;
+    return count;
+  }, [localFilters]);
+
+  // Memoized filter badge
+  const talentBadge = useMemo(
+    () =>
+      localFilters.talentTypes.length > 0
+        ? `${localFilters.talentTypes.length} selected`
+        : undefined,
+    [localFilters.talentTypes.length],
+  );
+
+  const dayBadge = useMemo(
+    () =>
+      localFilters.dayOfWeek.length > 0
+        ? `${localFilters.dayOfWeek.length} days`
+        : undefined,
+    [localFilters.dayOfWeek.length],
+  );
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-          />
+    <TooltipProvider>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+            />
 
-          {/* Panel */}
-          <motion.div
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 25 }}
-            className="fixed left-0 top-0 h-full w-full max-w-md z-50 overflow-hidden shadow-2xl"
-            style={{ backgroundColor: colors.background }}
-          >
-            {/* Header */}
-            <div
-              className="border-b p-6"
-              style={{ borderColor: colors.border }}
+            {/* Panel */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25 }}
+              className={cn(
+                "fixed left-0 top-0 h-full w-full max-w-md z-50 overflow-hidden shadow-2xl",
+                colors.background,
+              )}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <SlidersHorizontal
-                    className="w-6 h-6"
-                    style={{ color: colors.primary }}
-                  />
-                  <div>
-                    <h2
-                      className="text-xl font-bold"
-                      style={{ color: colors.text }}
-                    >
-                      Advanced Filters
-                    </h2>
-                    <p
-                      className="text-sm mt-1"
-                      style={{ color: colors.textMuted }}
-                    >
-                      Refine your gig search with precision
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-lg hover:opacity-80 transition-all"
-                  style={{ backgroundColor: colors.hoverBg }}
-                >
-                  <X className="w-5 h-5" style={{ color: colors.textMuted }} />
-                </button>
-              </div>
-            </div>
-
-            {/* Content Area */}
-            <div className="h-[calc(100%-180px)] overflow-y-auto">
-              <ScrollArea
-                className="h-full"
-                ref={scrollAreaRef}
-                onScroll={(e) => {
-                  // You can optionally save scroll position on scroll
-                  const target = e.target as HTMLDivElement;
-                  setScrollPosition(target.scrollTop);
-                }}
+              {/* Header */}
+              <div
+                className="border-b p-6"
+                style={{ borderColor: colors.border }}
               >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <SlidersHorizontal
+                      className="w-6 h-6"
+                      style={{ color: colors.primary }}
+                    />
+                    <div>
+                      <h2
+                        className="text-xl font-bold"
+                        style={{ color: colors.text }}
+                      >
+                        Advanced Filters
+                      </h2>
+                      <p
+                        className="text-sm mt-1"
+                        style={{ color: colors.textMuted }}
+                      >
+                        Refine your gig search with precision
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={onClose}
+                    className="p-2 rounded-lg hover:opacity-80 transition-all"
+                    style={{ backgroundColor: colors.hoverBg }}
+                  >
+                    <X
+                      className="w-5 h-5"
+                      style={{ color: colors.textMuted }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Area */}
+              <ScrollArea className="h-[calc(100%-180px)]">
                 <div className="p-6">
-                  {/* Active Filters Display */}
-                  {renderActiveFilters()}
+                  <ActiveFiltersDisplay
+                    filters={localFilters}
+                    onClearAll={handleResetFilters}
+                    colors={colors}
+                  />
 
                   {/* Search */}
                   <div className="mb-6">
@@ -724,9 +682,16 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     icon={Users}
                     isOpen={expandedSections.talent}
                     onToggle={() => toggleSection("talent")}
-                    badge={`${localFilters.talentTypes.length} selected`}
+                    badge={talentBadge}
+                    colors={colors}
                   >
-                    {renderTalentTypeGrid()}
+                    <TalentTypeGrid
+                      selectedTypes={localFilters.talentTypes}
+                      onToggle={(id) =>
+                        handleArrayFilterChange("talentTypes", id)
+                      }
+                      colors={colors}
+                    />
                   </FilterSection>
 
                   {/* Price & Budget */}
@@ -735,6 +700,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     icon={DollarSign}
                     isOpen={expandedSections.price}
                     onToggle={() => toggleSection("price")}
+                    colors={colors}
                   >
                     <div className="space-y-4">
                       <Select
@@ -758,23 +724,19 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                             borderColor: colors.border,
                           }}
                         >
-                          {statusOptions.map((status) => (
+                          {STATUS_OPTIONS.map((status) => (
                             <SelectItem key={status.id} value={status.id}>
-                              {" "}
-                              {/* Now status.id is never empty */}
                               {status.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
 
-                      {/* Price Range Select - Fix example */}
                       <Select
                         value={localFilters.priceRange}
-                        onValueChange={(value) => {
-                          saveScrollPosition();
-                          handleFilterChange("priceRange", value);
-                        }}
+                        onValueChange={(value) =>
+                          handleFilterChange("priceRange", value)
+                        }
                       >
                         <SelectTrigger
                           style={{
@@ -791,43 +753,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                             borderColor: colors.border,
                           }}
                         >
-                          {priceRanges.map((range) => (
+                          {PRICE_RANGES.map((range) => (
                             <SelectItem key={range.id} value={range.id}>
-                              {" "}
-                              {/* Now range.id is never empty */}
                               {range.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      {/* Event Type Select - Fix example */}
-                      <Select
-                        value={localFilters.eventType}
-                        onValueChange={(value) =>
-                          handleFilterChange("eventType", value)
-                        }
-                      >
-                        <SelectTrigger
-                          style={{
-                            borderColor: colors.border,
-                            backgroundColor: colors.background,
-                            color: colors.text,
-                          }}
-                        >
-                          <SelectValue placeholder="Select event type" />
-                        </SelectTrigger>
-                        <SelectContent
-                          style={{
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                          }}
-                        >
-                          {eventTypes.map((event) => (
-                            <SelectItem key={event.id} value={event.id}>
-                              {" "}
-                              {/* Now event.id is never empty */}
-                              {event.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -861,50 +789,26 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="negotiable"
-                            checked={localFilters.negotiable}
-                            onCheckedChange={(checked) =>
-                              handleFilterChange("negotiable", checked)
-                            }
-                            style={{
-                              backgroundColor: localFilters.negotiable
-                                ? colors.primary
-                                : colors.border,
-                            }}
-                          />
-                          <Label
-                            htmlFor="negotiable"
-                            className="text-sm"
-                            style={{ color: colors.text }}
-                          >
-                            Negotiable Only
-                          </Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="depositRequired"
-                            checked={localFilters.depositRequired}
-                            onCheckedChange={(checked) =>
-                              handleFilterChange("depositRequired", checked)
-                            }
-                            style={{
-                              backgroundColor: localFilters.depositRequired
-                                ? colors.primary
-                                : colors.border,
-                            }}
-                          />
-                          <Label
-                            htmlFor="depositRequired"
-                            className="text-sm"
-                            style={{ color: colors.text }}
-                          >
-                            Deposit Required
-                          </Label>
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="negotiable"
+                          checked={localFilters.negotiable}
+                          onCheckedChange={(checked) =>
+                            handleFilterChange("negotiable", checked)
+                          }
+                          style={{
+                            backgroundColor: localFilters.negotiable
+                              ? colors.primary
+                              : colors.border,
+                          }}
+                        />
+                        <Label
+                          htmlFor="negotiable"
+                          className="text-sm"
+                          style={{ color: colors.text }}
+                        >
+                          Negotiable Only
+                        </Label>
                       </div>
                     </div>
                   </FilterSection>
@@ -915,6 +819,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     icon={MapPin}
                     isOpen={expandedSections.location}
                     onToggle={() => toggleSection("location")}
+                    colors={colors}
                   >
                     <div className="space-y-4">
                       <div>
@@ -962,53 +867,35 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                         >
                           Days of Week
                         </Label>
-                        {renderDayOfWeekPills()}
+                        <DayPills
+                          selectedDays={localFilters.dayOfWeek}
+                          onToggle={(id) =>
+                            handleArrayFilterChange("dayOfWeek", id)
+                          }
+                          colors={colors}
+                        />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="equipmentRequired"
-                            checked={localFilters.equipmentRequired}
-                            onCheckedChange={(checked) =>
-                              handleFilterChange("equipmentRequired", checked)
-                            }
-                            style={{
-                              backgroundColor: localFilters.equipmentRequired
-                                ? colors.primary
-                                : colors.border,
-                            }}
-                          />
-                          <Label
-                            htmlFor="equipmentRequired"
-                            className="text-sm"
-                            style={{ color: colors.text }}
-                          >
-                            Equipment Provided
-                          </Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="travelIncluded"
-                            checked={localFilters.travelIncluded}
-                            onCheckedChange={(checked) =>
-                              handleFilterChange("travelIncluded", checked)
-                            }
-                            style={{
-                              backgroundColor: localFilters.travelIncluded
-                                ? colors.primary
-                                : colors.border,
-                            }}
-                          />
-                          <Label
-                            htmlFor="travelIncluded"
-                            className="text-sm"
-                            style={{ color: colors.text }}
-                          >
-                            Travel Included
-                          </Label>
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="equipmentRequired"
+                          checked={localFilters.equipmentRequired}
+                          onCheckedChange={(checked) =>
+                            handleFilterChange("equipmentRequired", checked)
+                          }
+                          style={{
+                            backgroundColor: localFilters.equipmentRequired
+                              ? colors.primary
+                              : colors.border,
+                          }}
+                        />
+                        <Label
+                          htmlFor="equipmentRequired"
+                          className="text-sm"
+                          style={{ color: colors.text }}
+                        >
+                          Equipment Provided
+                        </Label>
                       </div>
                     </div>
                   </FilterSection>
@@ -1019,82 +906,37 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     icon={Calendar}
                     isOpen={expandedSections.requirements}
                     onToggle={() => toggleSection("requirements")}
+                    colors={colors}
                   >
                     <div className="space-y-4">
-                      <div>
-                        <Label
-                          className="text-sm mb-2 block"
-                          style={{ color: colors.text }}
-                        >
-                          Event Type
-                        </Label>
-                        <Select
-                          value={localFilters.eventType}
-                          onValueChange={(value) =>
-                            handleFilterChange("eventType", value)
-                          }
-                        >
-                          <SelectTrigger
-                            style={{
-                              borderColor: colors.border,
-                              backgroundColor: colors.background,
-                              color: colors.text,
-                            }}
-                          >
-                            <SelectValue placeholder="Select event type" />
-                          </SelectTrigger>
-                          <SelectContent
-                            style={{
-                              backgroundColor: colors.background,
-                              borderColor: colors.border,
-                            }}
-                          >
-                            {eventTypes.map((event) => (
-                              <SelectItem key={event.id} value={event.id}>
-                                {event.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label
-                          className="text-sm mb-2 block"
-                          style={{ color: colors.text }}
-                        >
-                          Status
-                        </Label>
-                        <Select
-                          value={localFilters.status}
-                          onValueChange={(value) => {
-                            saveScrollPosition();
-                            handleFilterChange("status", value);
+                      <Select
+                        value={localFilters.eventType}
+                        onValueChange={(value) =>
+                          handleFilterChange("eventType", value)
+                        }
+                      >
+                        <SelectTrigger
+                          style={{
+                            borderColor: colors.border,
+                            backgroundColor: colors.background,
+                            color: colors.text,
                           }}
                         >
-                          <SelectTrigger
-                            style={{
-                              borderColor: colors.border,
-                              backgroundColor: colors.background,
-                              color: colors.text,
-                            }}
-                          >
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent
-                            style={{
-                              backgroundColor: colors.background,
-                              borderColor: colors.border,
-                            }}
-                          >
-                            {statusOptions.map((status) => (
-                              <SelectItem key={status.id} value={status.id}>
-                                {status.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          <SelectValue placeholder="Select event type" />
+                        </SelectTrigger>
+                        <SelectContent
+                          style={{
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                          }}
+                        >
+                          {EVENT_TYPES.map((event) => (
+                            <SelectItem key={event.id} value={event.id}>
+                              {event.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
                       <div className="flex items-center space-x-2">
                         <Switch
@@ -1126,6 +968,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     icon={Settings}
                     isOpen={expandedSections.advanced}
                     onToggle={() => toggleSection("advanced")}
+                    colors={colors}
                   >
                     <div className="space-y-4">
                       <div>
@@ -1190,53 +1033,53 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   </FilterSection>
                 </div>
               </ScrollArea>
-            </div>
 
-            {/* Footer */}
-            <div
-              className="absolute bottom-0 left-0 right-0 border-t p-4"
-              style={{
-                borderColor: colors.border,
-                backgroundColor: colors.background,
-              }}
-            >
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleResetFilters}
-                  className="flex-1 gap-2"
-                  style={{
-                    borderColor: colors.border,
-                    color: colors.text,
-                  }}
-                  disabled={getActiveFiltersCount() === 0}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset All
-                </Button>
-                <Button
-                  onClick={handleApplyFilters}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Applying...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Apply Filters ({getActiveFiltersCount()})
-                    </>
-                  )}
-                </Button>
+              {/* Footer */}
+              <div
+                className="absolute bottom-0 left-0 right-0 border-t p-4"
+                style={{
+                  borderColor: colors.border,
+                  backgroundColor: colors.background,
+                }}
+              >
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleResetFilters}
+                    className="flex-1 gap-2"
+                    style={{
+                      borderColor: colors.border,
+                      color: colors.text,
+                    }}
+                    disabled={activeFiltersCount === 0}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset All
+                  </Button>
+                  <Button
+                    onClick={handleApplyFilters}
+                    disabled={isLoading}
+                    className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Applying...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Apply Filters ({activeFiltersCount})
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </TooltipProvider>
   );
 };
 

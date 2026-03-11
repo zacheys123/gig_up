@@ -25,6 +25,7 @@ interface EngagingGigCardProps {
   activeTab: string;
   index: number;
   onViewGig: (gig: any) => void;
+  isSelected?: boolean;
 }
 
 export const EngagingGigCard = ({
@@ -32,6 +33,7 @@ export const EngagingGigCard = ({
   activeTab,
   index,
   onViewGig,
+  isSelected,
 }: EngagingGigCardProps) => {
   const { isDarkMode } = useThemeColors();
 
@@ -133,6 +135,8 @@ export const EngagingGigCard = ({
           ? "bg-slate-800/30 border-slate-700/30 hover:border-slate-600 hover:bg-slate-800/40 hover:shadow-lg hover:shadow-slate-900/30"
           : "bg-white/40 border-slate-200/40 hover:border-slate-300 hover:bg-white/60 hover:shadow-md",
         isPulsing && "ring-2 ring-blue-400/30 animate-pulse",
+        isSelected &&
+          "ring-2 ring-blue-400/30 border-red-300 border-2 rounded-xl",
       )}
     >
       {/* Subtle gradient overlay */}

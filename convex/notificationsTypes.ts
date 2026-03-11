@@ -37,6 +37,12 @@ export const NOTIFICATION_TYPES = [
   "interest_removed",
   "band_member_left",
   "band_member_removed",
+
+  "payment_confirmed_musician", // ADD - Musician confirmed payment
+  "payment_confirmed_client", // ADD - Client confirmed payment
+  "payment_verified", // ADD - Payment verified (both match)
+  "payment_dispute", // ADD - Payment mismatch/dispute
+  "payment_reminder", // ADD - Payment reminder
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -54,14 +60,16 @@ export const notificationSettingsSchema = {
   followRequests: v.boolean(),
   comments: v.boolean(),
 
-  // Gigs & Bookings (UPDATED - Add missing settings)
+  // Gigs & Bookings (ADD THESE TWO NEW PAYMENT SETTINGS)
   gigInvites: v.boolean(),
-  gigOpportunities: v.boolean(), // NEW: For gig_opportunity notifications
-  gigUpdates: v.boolean(), // NEW: For most gig-related updates
+  gigOpportunities: v.boolean(),
+  gigUpdates: v.boolean(),
   bookingRequests: v.boolean(),
   bookingConfirmations: v.boolean(),
   gigReminders: v.boolean(),
-  bandInvites: v.boolean(), // NEW: For band-related notifications
+  bandInvites: v.boolean(),
+  paymentConfirmations: v.boolean(), // ADD THIS - For payment confirmations
+  paymentDisputes: v.boolean(), // ADD THIS - For payment disputes
 
   // Messages & Communication
   newMessages: v.boolean(),
@@ -117,14 +125,16 @@ export type NotificationSettings = {
   followRequests: boolean;
   comments: boolean;
 
-  // Gigs & Bookings (UPDATED)
+  // Gigs & Bookings (ADD THESE)
   gigInvites: boolean;
-  gigOpportunities: boolean; // NEW
-  gigUpdates: boolean; // NEW
+  gigOpportunities: boolean;
+  gigUpdates: boolean;
   bookingRequests: boolean;
   bookingConfirmations: boolean;
   gigReminders: boolean;
-  bandInvites: boolean; // NEW
+  bandInvites: boolean;
+  paymentConfirmations: boolean; // ADD THIS
+  paymentDisputes: boolean; // ADD THIS
 
   // Messages & Communication
   newMessages: boolean;
@@ -156,27 +166,28 @@ export type Notification = {
 };
 
 // ==================== DEFAULT SETTINGS ====================
-// convex/types/notificationTypes.ts
 export const DEFAULT_NOTIFICATION_SETTINGS: Omit<
   NotificationSettings,
   "userId"
 > = {
   // Profile & Social
   profileViews: true,
-  likes: true, // Changed from false
+  likes: true,
   shares: false,
-  reviews: true, // Changed from false
-  followRequests: true, // Changed from false
-  comments: true, // Changed from false
+  reviews: true,
+  followRequests: true,
+  comments: true,
 
-  // Gigs & Bookings
+  // Gigs & Bookings (ADD THESE WITH SENSIBLE DEFAULTS)
   gigInvites: false,
-  gigOpportunities: false, // NEW
-  gigUpdates: false, // NEW
+  gigOpportunities: false,
+  gigUpdates: false,
   bookingRequests: false,
   bookingConfirmations: false,
   gigReminders: false,
-  bandInvites: false, // NEW
+  bandInvites: false,
+  paymentConfirmations: true, // ADD - Default to ON (important for payments)
+  paymentDisputes: true, // ADD - Default to ON (important for disputes)
 
   // Messages & Communication
   newMessages: true,
@@ -236,7 +247,12 @@ export const NOTIFICATION_TYPE_TO_SETTING_MAP: Record<
   removed_from_band: "bandInvites",
   band_member_left: "bandInvites",
   band_member_removed: "bandInvites",
-
+  // PAYMENT NOTIFICATIONS - ADD THESE
+  payment_confirmed_musician: "paymentConfirmations",
+  payment_confirmed_client: "paymentConfirmations",
+  payment_verified: "paymentConfirmations",
+  payment_dispute: "paymentDisputes",
+  payment_reminder: "paymentConfirmations",
   // System
   system_updates: "systemUpdates",
   feature_announcement: "featureAnnouncements",

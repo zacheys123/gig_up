@@ -320,7 +320,7 @@ export default function NotificationSettingsPage() {
     "followRequests",
     "comments",
 
-    // Gigs & Bookings
+    // Gigs & Bookings (ADD THESE TWO)
     "gigInvites",
     "gigOpportunities",
     "gigUpdates",
@@ -328,6 +328,8 @@ export default function NotificationSettingsPage() {
     "bookingConfirmations",
     "gigReminders",
     "bandInvites",
+    "paymentConfirmations", // ADD THIS
+    "paymentDisputes", // ADD THIS
 
     // Messages
     "newMessages",
@@ -587,6 +589,28 @@ export default function NotificationSettingsPage() {
               icon={Users}
               color="green"
               isEnabled={settings.bandInvites}
+              isLoading={isLoading}
+              onToggle={handleToggle}
+            />
+            {/* ADD THESE TWO NEW TOGGLES */}
+            <ToggleRow
+              label="Payment Confirmations"
+              description="Get notified when payments are confirmed or verified"
+              inAppKey="paymentConfirmations"
+              icon={CheckCircle}
+              color="green"
+              isEnabled={settings.paymentConfirmations}
+              isLoading={isLoading}
+              onToggle={handleToggle}
+            />
+
+            <ToggleRow
+              label="Payment Disputes"
+              description="Important alerts about payment mismatches or disputes"
+              inAppKey="paymentDisputes"
+              icon={AlertCircle}
+              color="green"
+              isEnabled={settings.paymentDisputes}
               isLoading={isLoading}
               onToggle={handleToggle}
             />
