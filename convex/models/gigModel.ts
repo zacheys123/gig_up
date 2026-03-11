@@ -316,7 +316,7 @@ export const gigModel = defineTable({
       // ADD THIS - extracted OCR data
       extractedData: v.optional(
         v.object({
-          transactionId: v.optional(v.string()),
+          transactionId: v.union(v.string(), v.null()),
           amount: v.optional(v.number()),
           date: v.optional(v.string()),
           time: v.optional(v.string()),
@@ -339,7 +339,7 @@ export const gigModel = defineTable({
       match: v.boolean(),
       extractedData: v.optional(
         v.object({
-          transactionId: v.string(),
+          transactionId: v.union(v.string(), v.null()),
           amount: v.number(),
           timestamp: v.number(),
           sender: v.string(),

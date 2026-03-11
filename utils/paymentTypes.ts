@@ -1,13 +1,15 @@
-// utils/paymentTypes.ts
+// utils/paymentTypes.ts  ← 🔥 YOUR COMPARISON FUNCTION LIVES HERE
+import { v } from "convex/values"; // Only if using Convex validators
+
 export interface ExtractedPaymentData {
-  transactionId: string | null | undefined; // Allow undefined
-  amount: number | null | undefined; // Allow undefined
-  date: string | null | undefined;
-  time: string | null | undefined;
-  phoneNumber: string | null | undefined;
-  sender: string | null | undefined;
-  receiver: string | null | undefined;
-  fullText: string | null | undefined;
+  transactionId: string | null;
+  amount: number | null;
+  date: string | null;
+  time: string | null;
+  phoneNumber: string | null;
+  sender: string | null;
+  receiver: string | null;
+  fullText: string;
   confidence: number;
 }
 
@@ -18,9 +20,10 @@ export interface PaymentConfirmation {
   paymentMethod: "mpesa" | "cash" | "bank" | "other";
   screenshot: string;
   notes?: string;
-  extractedData?: ExtractedPaymentData; // Add this
+  extractedData?: ExtractedPaymentData;
 }
 
+// 🔥 THIS IS YOUR COMPARISON FUNCTION 🔥
 export function compareConfirmations(
   musicianConfirm: PaymentConfirmation,
   clientConfirm: PaymentConfirmation,
@@ -41,7 +44,7 @@ export function compareConfirmations(
     details: {} as any,
   };
 
-  // Compare amounts
+  // Compare amounts from user input
   if (musicianConfirm.amount !== clientConfirm.amount) {
     results.match = false;
     results.reasons.push(
@@ -124,6 +127,7 @@ export function compareConfirmations(
     },
   };
 }
+
 export function formatPaymentData(data: ExtractedPaymentData | null) {
   if (!data) return "No data extracted";
 

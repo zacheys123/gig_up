@@ -1,6 +1,7 @@
 // app/api/ocr/extract/route.ts
 import { NextResponse } from "next/server";
 import { createWorker } from "tesseract.js";
+import type { ExtractedPaymentData } from "@/utils/paymentTypes";
 
 // M-Pesa message patterns
 const MPESA_PATTERNS = {
@@ -19,21 +20,17 @@ export async function POST(req: Request) {
     if (!imageUrl) {
       return NextResponse.json(
         { success: false, error: "No image URL provided" },
-
         { status: 400 },
-
       );
     }
 
     // Initialize worker
     const worker = await createWorker("eng");
 
-
-
-    
     // Recognize text from image
-    const { data: { text, confidence } } = await worker.recognize(imageUrl);
-    
+    const {
+      data: { text, confidence },
+    } = await worker.recognize(imageUrl);
 
     // Terminate worker
     await worker.terminate();
@@ -60,12 +57,11 @@ export async function POST(req: Request) {
     }
 
     // Extract sender/receiver
-
-    const namePattern = /(?:to|from|sent to|received from)\s+([A-Za-z\s]+?)(?:\s+on|\s+at|\s+\d|$)/i;
-
+    const namePattern =
+      /(?:to|from|sent to|received from)\s+([A-Za-z\s]+?)(?:\s+on|\s+at|\s+\d|$)/i;
     const nameMatch = cleanText.match(namePattern);
 
-    const extractedData = {
+    const extractedData: ExtractedPaymentData = {
       transactionId: transactionIdMatch?.[0] || null,
       amount: amount,
       date: dateMatch?.[0] || null,
@@ -77,20 +73,15 @@ export async function POST(req: Request) {
       confidence,
     };
 
-
     return NextResponse.json({
       success: true,
       data: extractedData,
     });
-
-
-
   } catch (error) {
     console.error("OCR extraction failed:", error);
     return NextResponse.json(
       { success: false, error: "OCR processing failed" },
- { status: 500 },
+      { status: 500 },
     );
   }
 }
-    
