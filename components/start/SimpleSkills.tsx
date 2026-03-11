@@ -36,7 +36,7 @@ export const SimpleSkillsInput: React.FC<SimpleSkillsInputProps> = ({
   };
 
   const removeSkill = (skillToRemove: string) => {
-    onChange(value.filter(skill => skill !== skillToRemove));
+    onChange(value.filter((skill) => skill !== skillToRemove));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -54,12 +54,14 @@ export const SimpleSkillsInput: React.FC<SimpleSkillsInputProps> = ({
           <Tag className="w-4 h-4 text-blue-400" />
           {label}
         </label>
-        <span className={cn(
-          "text-xs px-2 py-1 rounded-full",
-          value.length >= maxSkills 
-            ? "bg-red-500/20 text-red-400"
-            : "bg-gray-800 text-gray-400"
-        )}>
+        <span
+          className={cn(
+            "text-xs px-2 py-1 rounded-full",
+            value.length >= maxSkills
+              ? "bg-red-500/20 text-red-400"
+              : "bg-gray-800 text-gray-400",
+          )}
+        >
           {value.length}/{maxSkills}
         </span>
       </div>
@@ -78,7 +80,8 @@ export const SimpleSkillsInput: React.FC<SimpleSkillsInputProps> = ({
             "text-white placeholder:text-gray-600 text-sm",
             "focus:outline-none focus:ring-2 focus:ring-blue-500/20",
             error ? "border-red-500/50" : "border-gray-700",
-            (disabled || value.length >= maxSkills) && "opacity-50 cursor-not-allowed"
+            (disabled || value.length >= maxSkills) &&
+              "opacity-50 cursor-not-allowed",
           )}
         />
         <button
@@ -88,7 +91,7 @@ export const SimpleSkillsInput: React.FC<SimpleSkillsInputProps> = ({
             "px-4 py-2.5 rounded-lg transition-all",
             "bg-blue-500 text-white hover:bg-blue-600",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            "flex items-center justify-center"
+            "flex items-center justify-center",
           )}
         >
           <Plus className="w-4 h-4" />
