@@ -25,47 +25,19 @@ import {
   Zap,
   ArrowRight,
   X,
-  Check,
-  UserPlus,
-  Calendar,
-  Clock,
   Award,
-  TrendingUp,
-  Globe,
-  Hash,
   Tag,
   PenTool,
   Briefcase as BriefcaseIcon,
-  Home,
-  Music2,
-  Mic2,
-  Disc,
   Headphones,
-  RadioTower,
-  Palette,
-  Code,
-  Camera,
-  Video,
+  Globe,
   BookOpen,
-  Heart,
-  ThumbsUp,
-  Shield,
-  Lock,
-  Mail,
-  Phone,
-  Instagram,
-  Youtube,
-  Facebook,
-  Twitter,
-  Linkedin,
-  ExternalLink
 } from "lucide-react";
 import { HiSwitchHorizontal } from "react-icons/hi";
 import { useUser } from "@clerk/nextjs";
 import { experiences, instruments } from "@/data";
 import { useUserMutations } from "@/hooks/useUserMutation";
 import { useFeatureFlags } from "@/hooks/useFeatureFlag";
-
 import { cn } from "@/lib/utils";
 import { ManualConfetti } from "./ManualConfetti";
 import { SimpleSkillsInput } from "./SimpleSkills";
@@ -196,7 +168,7 @@ const ActionPage = () => {
       roleType === "dj" ? formData.djGenre && formData.djEquipment : true,
       roleType === "vocalist" ? formData.vocalistGenre : true,
       roleType === "mc" ? formData.mcType && formData.mcLanguages : true,
-      roleType === "teacher" ? formData.teacherSpecialization && formData.teachingStyle && formData.lessonFormat : true,
+      roleType === "teacher" ? formData.teacherSpecialization && formData.teachingStyle && formData.lessonFormat && formData.studentAgeGroup : true,
       formData.experience,
       formData.talentbio,
       formData.skills.length > 0
@@ -216,7 +188,7 @@ const ActionPage = () => {
       formData.skills.length > 0
     ].filter(Boolean).length;
 
-    const total = selectedRole === "musician" ? 6 : selectedRole === "client" ? 5 : 7;
+    const total = selectedRole === "musician" ? 7 : selectedRole === "client" ? 5 : 7;
     setProgress(Math.min((requiredFields / total) * 100, 100));
   }, [formData, selectedRole, roleType, selectedBookerSkills]);
 
@@ -243,8 +215,8 @@ const ActionPage = () => {
     if (roleType === "dj" && (!formData.djGenre || !formData.djEquipment)) errors.push("DJ Genre and Equipment are required");
     if (roleType === "vocalist" && !formData.vocalistGenre) errors.push("Vocal genre is required");
     if (roleType === "mc" && (!formData.mcType || !formData.mcLanguages)) errors.push("MC type and languages are required");
-    if (roleType === "teacher" && (!formData.teacherSpecialization || !formData.teachingStyle || !formData.lessonFormat))
-      errors.push("Teaching specialization, style, and format are required");
+    if (roleType === "teacher" && (!formData.teacherSpecialization || !formData.teachingStyle || !formData.lessonFormat || !formData.studentAgeGroup))
+      errors.push("All teacher fields are required");
     if (!formData.talentbio) errors.push("Bio is required");
     if (formData.skills.length === 0) errors.push("Add at least one skill");
     if (formData.talentbio.length > 500) errors.push("Bio is too long (max 500 characters)");
@@ -420,10 +392,10 @@ const ActionPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-[#0B1120] to-[#0A0F1C]">
+    <div className="min-h-screen bg-gradient-to-br from-[#0B1120] to-[#0A0F1C]">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
-      <div className="absolute inset-0 bg-linear-to-t from-[#0B1120] via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] via-transparent to-transparent" />
       
       {/* Floating Orbs */}
       <div className="absolute top-20 left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
@@ -449,7 +421,7 @@ const ActionPage = () => {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-linear-to-br from-blue-500 to-purple-600 mb-4 md:mb-6 shadow-2xl shadow-blue-500/20"
+              className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 md:mb-6 shadow-2xl shadow-blue-500/20"
             >
               <Zap className="w-8 h-8 md:w-10 md:h-10 text-white" />
             </motion.div>
@@ -461,7 +433,7 @@ const ActionPage = () => {
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 md:mb-4"
             >
               Welcome to{" "}
-              <span className="bg-linear-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 gigUp
               </span>
             </motion.h1>
@@ -501,9 +473,9 @@ const ActionPage = () => {
                 myuser?.isClient && "opacity-50 cursor-not-allowed"
               )}
             >
-              <div className="absolute inset-0 bg-linear-to-r from-orange-500 to-amber-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
               <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-orange-500/50 transition-all">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-orange-500 to-amber-500 flex items-center justify-center mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center mb-3 md:mb-4">
                   <Users className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Hire Talent</h3>
@@ -511,7 +483,7 @@ const ActionPage = () => {
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <div className="flex -space-x-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-linear-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
                     ))}
                   </div>
                   <span>500+ active</span>
@@ -542,9 +514,9 @@ const ActionPage = () => {
                 myuser?.isMusician && "opacity-50 cursor-not-allowed"
               )}
             >
-              <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
               <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-blue-500/50 transition-all">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-3 md:mb-4">
                   <Music className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Find Gigs</h3>
@@ -552,7 +524,7 @@ const ActionPage = () => {
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <div className="flex -space-x-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-linear-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
                     ))}
                   </div>
                   <span>2,000+ musicians</span>
@@ -584,9 +556,9 @@ const ActionPage = () => {
                   myuser?.isBooker && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <div className="absolute inset-0 bg-linear-to-r from-emerald-500 to-teal-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
                 <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-emerald-500/50 transition-all">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 flex items-center justify-center mb-3 md:mb-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center mb-3 md:mb-4">
                     <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Manage Talent</h3>
@@ -594,7 +566,7 @@ const ActionPage = () => {
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <div className="flex -space-x-2">
                       {[...Array(3)].map((_, i) => (
-                        <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-linear-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                        <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
                       ))}
                     </div>
                     <span>100+ bookers</span>
@@ -621,9 +593,9 @@ const ActionPage = () => {
               }}
               className="group relative cursor-pointer opacity-60"
             >
-              <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
               <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-3 md:mb-4">
                   <HiSwitchHorizontal className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Dual Role</h3>
@@ -658,10 +630,10 @@ const ActionPage = () => {
                   {/* Modal Header with Progress */}
                   <div className={cn(
                     "p-4 md:p-6 relative overflow-hidden",
-                    selectedRole === "client" && "bg-linear-to-r from-orange-500/20 via-orange-500/5 to-transparent",
-                    selectedRole === "musician" && "bg-linear-to-r from-blue-500/20 via-blue-500/5 to-transparent",
-                    selectedRole === "booker" && "bg-linear-to-r from-emerald-500/20 via-emerald-500/5 to-transparent",
-                    selectedRole === "both" && "bg-linear-to-r from-purple-500/20 via-purple-500/5 to-transparent"
+                    selectedRole === "client" && "bg-gradient-to-r from-orange-500/20 via-orange-500/5 to-transparent",
+                    selectedRole === "musician" && "bg-gradient-to-r from-blue-500/20 via-blue-500/5 to-transparent",
+                    selectedRole === "booker" && "bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent",
+                    selectedRole === "both" && "bg-gradient-to-r from-purple-500/20 via-purple-500/5 to-transparent"
                   )}>
                     <div className="flex items-start justify-between mb-4">
                       <div>
@@ -692,9 +664,9 @@ const ActionPage = () => {
                         <motion.div
                           className={cn(
                             "h-full rounded-full",
-                            selectedRole === "client" && "bg-linear-to-r from-orange-500 to-amber-500",
-                            selectedRole === "musician" && "bg-linear-to-r from-blue-500 to-cyan-500",
-                            selectedRole === "booker" && "bg-linear-to-r from-emerald-500 to-teal-500"
+                            selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500",
+                            selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500",
+                            selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500"
                           )}
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
@@ -708,7 +680,7 @@ const ActionPage = () => {
                       {getSteps().map((step, index) => {
                         const Icon = getStepIcon(step);
                         return (
-                          <div key={index} className="flex items-center shrink-0">
+                          <div key={index} className="flex items-center flex-shrink-0">
                             <div className={cn(
                               "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs",
                               index < currentStep ? "bg-blue-500/20 text-blue-400" :
@@ -833,8 +805,310 @@ const ActionPage = () => {
                           />
                         )}
 
-                        {/* All other input fields - DJ Genre, Equipment, MC Type, etc. */}
-                        {/* ... (keep all your existing input fields) */}
+                        {/* DJ Genre */}
+                        {getSteps()[currentStep] === "genre" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              DJ Genre <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.djGenre}
+                              onChange={(e) => handleInputChange("djGenre", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select genre</option>
+                              {djGenres.map((genre) => (
+                                <option key={genre} value={genre.toLowerCase()}>
+                                  {genre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* DJ Equipment */}
+                        {getSteps()[currentStep] === "equipment" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              DJ Equipment <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., Pioneer CDJs, Mixer, Speakers"
+                              value={formData.djEquipment}
+                              onChange={(e) => handleInputChange("djEquipment", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+                        )}
+
+                        {/* MC Type */}
+                        {getSteps()[currentStep] === "type" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              MC Type <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.mcType}
+                              onChange={(e) => handleInputChange("mcType", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select MC type</option>
+                              {mcTypes.map((type) => (
+                                <option key={type} value={type.toLowerCase().replace(/\s+/g, "")}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* MC Languages */}
+                        {getSteps()[currentStep] === "languages" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Languages Spoken <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., English, Spanish"
+                              value={formData.mcLanguages}
+                              onChange={(e) => handleInputChange("mcLanguages", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+                        )}
+
+                        {/* Vocalist Genre */}
+                        {getSteps()[currentStep] === "vocalistgenre" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Vocal Genre <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.vocalistGenre}
+                              onChange={(e) => handleInputChange("vocalistGenre", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select genre</option>
+                              {vocalistGenres.map((genre) => (
+                                <option key={genre} value={genre.toLowerCase()}>
+                                  {genre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Teacher Specialization */}
+                        {getSteps()[currentStep] === "specialization" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Teaching Specialization <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.teacherSpecialization}
+                              onChange={(e) => handleInputChange("teacherSpecialization", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                            >
+                              <option value="">Select specialization</option>
+                              {teacherSpecializations.map((spec) => (
+                                <option key={spec} value={spec.toLowerCase().replace(/\s+/g, "")}>
+                                  {spec}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Teaching Style */}
+                        {getSteps()[currentStep] === "teaching" && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-white">
+                                Teaching Style <span className="text-red-400">*</span>
+                              </label>
+                              <select
+                                value={formData.teachingStyle}
+                                onChange={(e) => handleInputChange("teachingStyle", e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                              >
+                                <option value="">Select teaching style</option>
+                                {teachingStyles.map((style) => (
+                                  <option key={style} value={style.toLowerCase().replace(/\s+/g, "")}>
+                                    {style}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-white">
+                                Lesson Format <span className="text-red-400">*</span>
+                              </label>
+                              <select
+                                value={formData.lessonFormat}
+                                onChange={(e) => handleInputChange("lessonFormat", e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                              >
+                                <option value="">Select lesson format</option>
+                                {lessonFormats.map((format) => (
+                                  <option key={format} value={format.toLowerCase().replace(/\s+/g, "")}>
+                                    {format}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Student Age Group */}
+                        {getSteps()[currentStep] === "studentAge" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Student Age Group <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.studentAgeGroup}
+                              onChange={(e) => handleInputChange("studentAgeGroup", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                            >
+                              <option value="">Select age group</option>
+                              {studentAgeGroups.map((group) => (
+                                <option key={group} value={group.toLowerCase().replace(/\s+/g, "")}>
+                                  {group}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Organization */}
+                        {getSteps()[currentStep] === "organization" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              {selectedRole === "booker" ? "Company/Organization Name" : "Organization/Company Name"}
+                              <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={selectedRole === "booker" ? "e.g., Talent Agency Inc." : "e.g., Event Co."}
+                              value={formData.organization}
+                              onChange={(e) => handleInputChange("organization", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+                        )}
+
+                        {/* Client Type */}
+                        {getSteps()[currentStep] === "clientType" && (
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-white">
+                              What type of client are you? <span className="text-red-400">*</span>
+                            </label>
+                            <div className="space-y-2">
+                              {clientTypes.map((type) => (
+                                <button
+                                  key={type}
+                                  onClick={() => handleInputChange("clientType", type)}
+                                  className={cn(
+                                    "w-full p-4 rounded-xl border text-left transition-all",
+                                    formData.clientType === type
+                                      ? "border-orange-500 bg-orange-500/10"
+                                      : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                                  )}
+                                >
+                                  <div className="font-medium text-white capitalize">
+                                    {type.replace("_", " ")}
+                                  </div>
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {type === "individual" && "Looking to hire talent for personal events"}
+                                    {type === "event_planner" && "Professional event planning company"}
+                                    {type === "venue" && "Music venue, bar, club, or restaurant"}
+                                    {type === "corporate" && "Corporate events and company functions"}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Booker Type */}
+                        {getSteps()[currentStep] === "bookerType" && (
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-white">
+                              What type of booker are you? <span className="text-red-400">*</span>
+                            </label>
+                            <div className="space-y-2">
+                              {bookerTypes.map((type) => (
+                                <button
+                                  key={type}
+                                  onClick={() => handleInputChange("bookerType", type)}
+                                  className={cn(
+                                    "w-full p-4 rounded-xl border text-left transition-all",
+                                    formData.bookerType === type
+                                      ? "border-emerald-500 bg-emerald-500/10"
+                                      : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                                  )}
+                                >
+                                  <div className="font-medium text-white capitalize">
+                                    {type.replace("_", " ")}
+                                  </div>
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {type === "talent_agent" && "Represent and manage artists, negotiate contracts"}
+                                    {type === "booking_manager" && "Book talent for venues, festivals, and events"}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Booker Skills */}
+                        {getSteps()[currentStep] === "bookerSkills" && (
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-white">
+                              Select your booker skills <span className="text-red-400">*</span>
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {bookerSkillsList.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => toggleBookerSkill(skill)}
+                                  className={cn(
+                                    "p-3 rounded-xl border text-left text-xs transition-all",
+                                    selectedBookerSkills.includes(skill)
+                                      ? "border-emerald-500 bg-emerald-500/10 text-white"
+                                      : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600"
+                                  )}
+                                >
+                                  {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Experience */}
+                        {getSteps()[currentStep] === "experience" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Experience Level <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.experience}
+                              onChange={(e) => handleInputChange("experience", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select experience</option>
+                              {experiences().map((exp) => (
+                                <option key={exp.id} value={exp.name}>
+                                  {exp.val}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
 
                         {/* Bio */}
                         {getSteps()[currentStep] === "bio" && (
@@ -851,7 +1125,7 @@ const ActionPage = () => {
                               value={formData.talentbio}
                               onChange={(e) => handleInputChange("talentbio", e.target.value)}
                               rows={4}
-                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all resize-none"
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
                             />
                             <div className="text-xs text-gray-500 text-right">
                               {formData.talentbio.length}/500
@@ -911,9 +1185,9 @@ const ActionPage = () => {
                         disabled={loading.musician || loading.client || loading.booker}
                         className={cn(
                           "flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2",
-                          selectedRole === "client" && "bg-linear-to-r from-orange-500 to-amber-500 text-white hover:opacity-90",
-                          selectedRole === "musician" && "bg-linear-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90",
-                          selectedRole === "booker" && "bg-linear-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90",
+                          selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:opacity-90",
+                          selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90",
+                          selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90",
                           "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                       >
