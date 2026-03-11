@@ -213,12 +213,15 @@ export const BookedGigs = ({ user }: { user: any }) => {
     includeInactive: true,
     limit: 100,
   });
-
+  // In your BookedGigs component, add this mutation
   const removeInterestFromGig = useMutation(
-    api.controllers.gigs.removeInterestFromGig,
+    api.controllers.gigs.removeInterestFromGig, // For musicians
+  );
+  const removeUserInterest = useMutation(
+    api.controllers.gigs.removeUserInterest, // For clients
   );
   const unbookFromBandRole = useMutation(
-    api.controllers.bookings.unbookFromBandRole,
+    api.controllers.bookings.unbookFromBandRole, // For band roles
   );
 
   // Preferences
@@ -713,10 +716,18 @@ export const BookedGigs = ({ user }: { user: any }) => {
   };
 
   const openCancelDialog = (gig: any) => {
+    console.log("openCancelDialog called with gig:", gig);
     const warning = getCancellationWarning(gig);
+    console.log("Cancellation warning:", warning);
+
     setSelectedGig(gig);
+    console.log("Selected gig set");
+
     setCancellationReason("");
+    console.log("Cancellation reason cleared");
+
     setCancelDialogOpen(true);
+    console.log("cancelDialogOpen set to true, current state should be:", true);
 
     if (warning.severity !== "none") {
       setTimeout(() => {
@@ -724,7 +735,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
       }, 300);
     }
   };
-
   const handleCancelBooking = async () => {
     if (!selectedGig || !cancellationReason.trim()) {
       toast.error("Please provide a cancellation reason");
@@ -736,8 +746,27 @@ export const BookedGigs = ({ user }: { user: any }) => {
       const userRole = getUserRoleInGig(selectedGig);
       const warning = getCancellationWarning(selectedGig);
 
+      // CASE 1: CLIENT canceling their own gig
       if (userRole.cancellationType === "client") {
-        toast.info("Client cancellation logic would go here");
+        // For clients, we need to find WHO is booked in this gig
+        const bookedUserId = selectedGig.bookedBy; // The musician who is booked
+
+        if (!bookedUserId) {
+          toast.error("No musician is booked for this gig");
+          return;
+        }
+
+        // Use removeUserInterest for client cancellations
+        await removeUserInterest({
+          gigId: selectedGig._id,
+          userIdToRemove: bookedUserId, // The musician to remove
+          clientId: user._id, // The client doing the removing
+          reason: cancellationReason,
+        });
+
+        toast.success("Booking cancelled successfully");
+
+        // CASE 2: MUSICIAN leaving a band role
       } else if (userRole.cancellationType === "band") {
         const roleIndex = selectedGig.bandCategory?.findIndex(
           (role: any) =>
@@ -757,6 +786,8 @@ export const BookedGigs = ({ user }: { user: any }) => {
         } else {
           throw new Error("Could not find band role");
         }
+
+        // CASE 3: MUSICIAN canceling regular gig booking
       } else {
         await removeInterestFromGig({
           gigId: selectedGig._id,
@@ -766,6 +797,7 @@ export const BookedGigs = ({ user }: { user: any }) => {
         });
       }
 
+      // Show appropriate warning based on timing
       if (warning.severity !== "none") {
         toast.warning(`Booking cancelled. ${warning.message}`, {
           duration: 5000,
@@ -903,7 +935,9 @@ export const BookedGigs = ({ user }: { user: any }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => (window.location.href = `/gigs/${gig._id}`)}
+                    onClick={() =>
+                      (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
+                    }
                     className={cn(
                       "text-xs gap-1 px-2",
                       isDarkMode
@@ -2171,6 +2205,95 @@ export const BookedGigs = ({ user }: { user: any }) => {
           </DialogContent>
         </Dialog>
       </div>
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent
+          className={cn(
+            "max-w-md",
+            isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white",
+          )}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle
+              className={isDarkMode ? "text-white" : "text-slate-900"}
+            >
+              Cancel Booking
+            </AlertDialogTitle>
+            <AlertDialogDescription
+              className={isDarkMode ? "text-slate-400" : "text-slate-500"}
+            >
+              Are you sure you want to cancel this booking? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {selectedGig && (
+            <>
+              {/* Cancellation warning */}
+              {getCancellationWarning(selectedGig).severity !== "none" && (
+                <div
+                  className={cn(
+                    "p-3 rounded-lg border text-sm",
+                    getCancellationWarning(selectedGig).bgColor,
+                  )}
+                >
+                  <div className="flex items-center gap-2 font-medium mb-1">
+                    {getCancellationWarning(selectedGig).icon}
+                    <span className={getCancellationWarning(selectedGig).color}>
+                      {getCancellationWarning(selectedGig).message}
+                    </span>
+                  </div>
+                  <p className="text-xs opacity-70">
+                    {getCancellationWarning(selectedGig).description}
+                  </p>
+                </div>
+              )}
+
+              {/* Reason input */}
+              <div className="py-4">
+                <Textarea
+                  placeholder="Please provide a reason for cancellation..."
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  className={cn(
+                    "min-h-[100px]",
+                    isDarkMode
+                      ? "bg-slate-800 border-slate-700 text-white"
+                      : "bg-white",
+                  )}
+                />
+              </div>
+            </>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setCancelDialogOpen(false)}
+              className={
+                isDarkMode
+                  ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  : ""
+              }
+            >
+              Keep Booking
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelBooking}
+              disabled={!cancellationReason.trim() || isCancelling}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Confirm Cancellation"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 };

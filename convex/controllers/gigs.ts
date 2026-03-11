@@ -1148,7 +1148,273 @@ export const removeUserInterest = mutation({
 });
 // =================== SAVE/FAVORITE/VIEW MUTATIONS ===================
 // convex/controllers/prebooking.ts
+// =================== INVITATION MUTATIONS ===================
 
+// =================== INVITATION MUTATIONS ===================
+
+/**
+ * Accept a gig invitation
+ */
+export const acceptGigInvitation = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    musicianId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, musicianId } = args;
+
+    const musician = await ctx.db.get(musicianId);
+    const gig = await ctx.db.get(gigId);
+
+    if (!musician) throw new Error("Musician not found");
+    if (!gig) throw new Error("Gig not found");
+
+    // Get the client who invited
+    const client = await ctx.db.get(gig.postedBy);
+    if (!client) throw new Error("Client not found");
+
+    const now = Date.now();
+
+    // FIX: Determine gig type with proper typing and default
+    const gigType =
+      gig.isClientBand === true ? ("band" as const) : ("regular" as const);
+
+    // Create booking entry - using existing status types
+    const bookingEntry = {
+      entryId: `${gigId}_${musicianId}_invitation_${now}`,
+      timestamp: now,
+      userId: musicianId,
+      userRole: musician.roleType || "musician",
+      status: "booked" as const,
+      gigType: gigType, // Now properly typed
+      actionBy: musicianId,
+      actionFor: gig.postedBy,
+      reason: "Accepted invitation",
+      metadata: {
+        action: "invitation_accepted",
+        gigTitle: gig.title,
+        musicianName: musician.firstname || musician.username,
+        clientName: client.firstname || client.username,
+        invitationAccepted: true,
+      },
+    };
+
+    // Update gig
+    await ctx.db.patch(gigId, {
+      isTaken: true,
+      isPending: false,
+      bookedBy: musicianId,
+      interestedUsers: gig.interestedUsers || [],
+      bookingHistory: [...(gig.bookingHistory || []), bookingEntry],
+      updatedAt: now,
+    });
+
+    // Update musician's stats
+    await ctx.db.patch(musicianId, {
+      gigsBooked: (musician.gigsBooked || 0) + 1,
+      updatedAt: now,
+    });
+
+    // Notify client
+    try {
+      await createNotificationInternal(ctx, {
+        userDocumentId: gig.postedBy,
+        type: "invitation_accepted",
+        title: "✅ Invitation Accepted!",
+        message: `${musician.firstname || musician.username} accepted your invitation for "${gig.title}"`,
+        image: musician.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: musicianId,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          musicianId,
+          musicianName: musician.firstname || musician.username,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to notify client:", error);
+    }
+
+    return {
+      success: true,
+      message: "Invitation accepted successfully",
+      gigId,
+      musicianName: musician.firstname || musician.username,
+    };
+  },
+});
+
+/**
+ * Decline a gig invitation
+ */
+export const declineGigInvitation = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    musicianId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, musicianId } = args;
+
+    const musician = await ctx.db.get(musicianId);
+    const gig = await ctx.db.get(gigId);
+
+    if (!musician) throw new Error("Musician not found");
+    if (!gig) throw new Error("Gig not found");
+
+    const client = await ctx.db.get(gig.postedBy);
+    if (!client) throw new Error("Client not found");
+
+    const now = Date.now();
+
+    // FIX: Determine gig type with proper typing and default
+    const gigType =
+      gig.isClientBand === true ? ("band" as const) : ("regular" as const);
+
+    // Create decline entry
+    const declineEntry = {
+      entryId: `${gigId}_${musicianId}_decline_${now}`,
+      timestamp: now,
+      userId: musicianId,
+      userRole: musician.roleType || "musician",
+      status: "rejected" as const,
+      gigType: gigType, // Now properly typed
+      actionBy: musicianId,
+      actionFor: gig.postedBy,
+      reason: "Declined invitation",
+      metadata: {
+        action: "invitation_declined",
+        gigTitle: gig.title,
+        musicianName: musician.firstname || musician.username,
+        clientName: client.firstname || client.username,
+      },
+    };
+
+    // Add to booking history
+    await ctx.db.patch(gigId, {
+      bookingHistory: [...(gig.bookingHistory || []), declineEntry],
+      updatedAt: now,
+    });
+
+    // Notify client
+    try {
+      await createNotificationInternal(ctx, {
+        userDocumentId: gig.postedBy,
+        type: "invitation_declined",
+        title: "❌ Invitation Declined",
+        message: `${musician.firstname || musician.username} declined your invitation for "${gig.title}"`,
+        image: musician.picture,
+        actionUrl: `/gigs/${gigId}`,
+        relatedUserDocumentId: musicianId,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          musicianId,
+          musicianName: musician.firstname || musician.username,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to notify client:", error);
+    }
+
+    return {
+      success: true,
+      message: "Invitation declined",
+      gigId,
+      musicianName: musician.firstname || musician.username,
+    };
+  },
+});
+/**
+ * Send a gig invitation to a musician
+ */
+export const sendGigInvitation = mutation({
+  args: {
+    gigId: v.id("gigs"),
+    clientId: v.id("users"),
+    musicianId: v.id("users"),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { gigId, clientId, musicianId, message } = args;
+
+    const client = await ctx.db.get(clientId);
+    const musician = await ctx.db.get(musicianId);
+    const gig = await ctx.db.get(gigId);
+
+    if (!client) throw new Error("Client not found");
+    if (!musician) throw new Error("Musician not found");
+    if (!gig) throw new Error("Gig not found");
+
+    // Verify client owns the gig
+    if (gig.postedBy !== clientId) {
+      throw new Error("Only the gig owner can send invitations");
+    }
+
+    const now = Date.now();
+
+    // Determine gig type with proper typing
+    // Explicitly type the variable
+    const gigType: "regular" | "band" =
+      gig.isClientBand === true ? "band" : "regular";
+    // Create invitation entry
+    const invitationEntry = {
+      entryId: `${gigId}_${musicianId}_invitation_sent_${now}`,
+      timestamp: now,
+      userId: musicianId,
+      userRole: musician.roleType || "musician",
+      status: "applied" as const,
+      gigType: gigType, // Now properly typed
+      actionBy: clientId,
+      actionFor: musicianId,
+      reason: message || "Invitation sent",
+      metadata: {
+        action: "invitation_sent",
+        gigTitle: gig.title,
+        clientName: client.firstname || client.username,
+        musicianName: musician.firstname || musician.username,
+        message: message || "",
+      },
+    };
+
+    // Add to booking history
+    await ctx.db.patch(gigId, {
+      bookingHistory: [...(gig.bookingHistory || []), invitationEntry],
+      updatedAt: now,
+    });
+
+    // Create invitation link
+    const invitationLink = `/gigs/invitations/${gigId}?inviter=${clientId}`;
+
+    // Notify musician
+    try {
+      await createNotificationInternal(ctx, {
+        userDocumentId: musicianId,
+        type: "gig_invitation",
+        title: "🎵 You've Been Invited!",
+        message: `${client.firstname || client.username} invited you to "${gig.title}"`,
+        image: client.picture,
+        actionUrl: invitationLink,
+        relatedUserDocumentId: clientId,
+        metadata: {
+          gigId,
+          gigTitle: gig.title,
+          clientId,
+          clientName: client.firstname || client.username,
+          message: message || "",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to send invitation notification:", error);
+    }
+
+    return {
+      success: true,
+      message: "Invitation sent successfully",
+      invitationLink,
+    };
+  },
+});
 /**
  * Save a gig for later viewing
  * Adds gig ID to user's savedGigs array
