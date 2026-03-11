@@ -123,6 +123,8 @@ const ActionPage = () => {
   const teacherEnabled = isTeacherEnabled();
   const bookerEnabled = isBookerEnabled();
 
+    const bothEnabled = isbothEnabled();
+
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [formData, setFormData] = useState({
@@ -581,6 +583,9 @@ const ActionPage = () => {
             )}
 
             {/* Dual Role Card */}
+
+
+            {bothEnabled && 
             <motion.div
               variants={fadeInUp}
               whileHover={{ y: -5 }}
@@ -607,7 +612,7 @@ const ActionPage = () => {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </motion.div>}
           </motion.div>
 
           {/* Registration Modal */}
