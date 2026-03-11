@@ -122,9 +122,7 @@ export function compareConfirmations(
       musician: extractedMusician,
       client: extractedClient,
     },
-  };
-}
-
+  };}
 export function formatPaymentData(data: ExtractedPaymentData | null) {
   if (!data) return "No data extracted";
 
@@ -137,9 +135,5 @@ export function formatPaymentData(data: ExtractedPaymentData | null) {
     time: data.time || "Not detected",
     phone: data.phoneNumber || "Not detected",
     confidence: `${data.confidence.toFixed(1)}%`,
-  };
-<<<<<<< HEAD
-}
-=======
-}
->>>>>>> 3d2746b1b85a2c836e19d0277a2e1f201413248d
+  }
+};

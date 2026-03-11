@@ -2,7 +2,7 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
-import { compareConfirmations } from "../paymentTypes"; // Only import comparison, NOT extractMpesaData
+import { compareConfirmations } from "../payment";
 
 // Helper to create notifications
 async function createPaymentNotification(
