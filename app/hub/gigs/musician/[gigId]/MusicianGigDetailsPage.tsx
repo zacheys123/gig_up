@@ -1036,6 +1036,7 @@ export default function MusicianGigDetailsPage() {
   const router = useRouter();
   const { colors, isDarkMode } = useThemeColors();
   const { user: currentUser } = useCurrentUser();
+
   const [activeTab, setActiveTab] = useState("trending");
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
