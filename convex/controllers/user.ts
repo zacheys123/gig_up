@@ -543,12 +543,14 @@ export const updateUserAsMusician = mutation({
       talentbio: v.string(),
       vocalistGenre: v.optional(v.string()),
       organization: v.optional(v.string()),
+      // NEW: Skills array
+      skills: v.optional(v.array(v.string())),
       // Teacher specific fields
       teacherSpecialization: v.optional(v.string()),
       teachingStyle: v.optional(v.string()),
       lessonFormat: v.optional(v.string()),
       studentAgeGroup: v.optional(v.string()),
-      // NEW: Client and Booker types
+      // Client and Booker types
       clientType: v.optional(
         v.union(
           v.literal("individual"),
@@ -626,7 +628,7 @@ export const updateUserAsClient = mutation({
       city: v.string(),
       organization: v.string(),
       talentbio: v.string(),
-      // NEW: Client type
+      // Client type
       clientType: v.optional(
         v.union(
           v.literal("individual"),
@@ -635,6 +637,8 @@ export const updateUserAsClient = mutation({
           v.literal("corporate"),
         ),
       ),
+      // NEW: Skills array
+      skills: v.optional(v.array(v.string())),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
       monthlyGigsPosted: v.optional(v.number()),
@@ -704,10 +708,12 @@ export const updateUserAsBooker = mutation({
       experience: v.string(),
       bookerSkills: v.array(v.string()),
       talentbio: v.string(),
-      // NEW: Booker type
+      // Booker type
       bookerType: v.optional(
         v.union(v.literal("talent_agent"), v.literal("booking_manager")),
       ),
+      // NEW: Skills array
+      skills: v.optional(v.array(v.string())),
       tier: v.union(v.literal("free"), v.literal("pro")),
       nextBillingDate: v.optional(v.number()),
       monthlyGigsPosted: v.optional(v.number()),
@@ -764,7 +770,6 @@ export const updateUserAsBooker = mutation({
     }
   },
 });
-
 // convex/controllers/user.ts
 export const searchUsers = query({
   args: {

@@ -38,6 +38,8 @@ export function useUserMutations() {
     teachingStyle?: string;
     lessonFormat?: string;
     studentAgeGroup?: string;
+    // NEW: Skills array
+    skills: string[];
   }) => {
     if (!userId) throw new Error("No user ID available");
 
@@ -56,6 +58,8 @@ export function useUserMutations() {
       talentbio: musicianData.talentbio,
       vocalistGenre: musicianData.vocalistGenre,
       organization: musicianData.organization,
+      // NEW: Add skills
+      skills: musicianData.skills,
       // Teacher fields - only store if roleType is teacher
       teacherSpecialization:
         musicianData.roleType === "teacher"
@@ -99,10 +103,11 @@ export function useUserMutations() {
     city: string;
     organization: string;
     talentbio: string;
-    clientType: string; // Use the specific type
+    clientType: string;
+    // NEW: Skills array
+    skills: string[];
   }) => {
     if (!userId) throw new Error("No user ID available");
-    // Convert string to the specific type
     const validClientType = clientData.clientType as ClientType;
 
     const updates = {
@@ -112,7 +117,9 @@ export function useUserMutations() {
       city: clientData.city,
       organization: clientData.organization,
       talentbio: clientData.talentbio,
-      clientType: validClientType, // This now matches the expected type
+      clientType: validClientType,
+      // NEW: Add skills
+      skills: clientData.skills,
       tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,
@@ -141,7 +148,9 @@ export function useUserMutations() {
     experience: string;
     bookerSkills: string[];
     talentbio: string;
-    bookerType: string; // Use the specific type
+    bookerType: string;
+    // NEW: Skills array
+    skills: string[];
   }) => {
     if (!userId) throw new Error("No user ID available");
     const validBookerType = bookerData.bookerType as BookerType;
@@ -155,7 +164,9 @@ export function useUserMutations() {
       experience: bookerData.experience,
       bookerSkills: bookerData.bookerSkills,
       talentbio: bookerData.talentbio,
-      bookerType: validBookerType, // This now matches the expected type
+      bookerType: validBookerType,
+      // NEW: Add skills
+      skills: bookerData.skills,
       tier: "free" as const,
       nextBillingDate: Date.now(),
       monthlyGigsPosted: 0,

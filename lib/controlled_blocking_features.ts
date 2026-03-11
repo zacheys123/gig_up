@@ -22,6 +22,8 @@ export const FEATURE_FLAGS = {
   // adding deputies
   DEPUTY_CREATION: "deputy_creation" as FeatureFlagKey,
 
+
+  ADSCREATION:"ads_creation" as FeatureFlagKey,
   // DJ/MC Features
   DJ_EQUIPMENT_RENTAL: "dj_equipment_rental" as FeatureFlagKey,
   MC_EVENT_HOSTING: "mc_event_hosting" as FeatureFlagKey,

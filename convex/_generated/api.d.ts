@@ -8,9 +8,9 @@
  * @module
  */
 
+import type * as adminTypes from "../adminTypes.js";
 import type * as admin_auditlogs from "../admin/auditlogs.js";
 import type * as admin_users from "../admin/users.js";
-import type * as adminTypes from "../adminTypes.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as controllers_adminFuncs from "../controllers/adminFuncs.js";
 import type * as controllers_bandChat from "../controllers/bandChat.js";
@@ -70,9 +70,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  adminTypes: typeof adminTypes;
   "admin/auditlogs": typeof admin_auditlogs;
   "admin/users": typeof admin_users;
-  adminTypes: typeof adminTypes;
   cloudinary: typeof cloudinary;
   "controllers/adminFuncs": typeof controllers_adminFuncs;
   "controllers/bandChat": typeof controllers_bandChat;

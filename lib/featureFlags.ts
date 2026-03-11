@@ -86,7 +86,7 @@ export type FeatureFlagKey =
   // ========== CROSS-ROLE FEATURES ==========
   | "advanced_messaging"
   | "file_sharing"
-  | "calendar_sync";
+  | "calendar_sync" | "ads_creation";
 
 export const FEATURE_FLAGS_CONFIG: Record<
   FeatureFlagKey,
@@ -401,4 +401,13 @@ export const FEATURE_FLAGS_CONFIG: Record<
     targetRoles: ["all"],
     rolloutPercentage: 0,
   },
+  ads_creation:{
+    id:"ads_creation",
+    name :'Ads Creation',
+    description:"View Ads in the main home",
+    targetUsers:"pro",
+    targetRoles:["all"],
+    rolloutPercentage:100
+
+  }
 };

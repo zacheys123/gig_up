@@ -1,1199 +1,1208 @@
 "use client";
-import React, { useCallback, useEffect, useState, useMemo } from "react";
+
+import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MusicIcon,
-  Settings,
-  UsersIcon,
+  Music,
+  Users,
   Briefcase,
   GraduationCap,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  Sparkles,
+  MapPin,
+  Disc3,
+  Radio,
+  Guitar,
+  Mic,
+  Star,
+  Zap,
+  ArrowRight,
+  X,
+  Check,
+  UserPlus,
+  Calendar,
+  Clock,
+  Award,
+  TrendingUp,
+  Globe,
+  Hash,
+  Tag,
+  PenTool,
+  Briefcase as BriefcaseIcon,
+  Home,
+  Music2,
+  Mic2,
+  Disc,
+  Headphones,
+  RadioTower,
+  Palette,
+  Code,
+  Camera,
+  Video,
+  BookOpen,
+  Heart,
+  ThumbsUp,
   Shield,
+  Lock,
+  Mail,
+  Phone,
+  Instagram,
+  Youtube,
+  Facebook,
+  Twitter,
+  Linkedin,
+  ExternalLink
 } from "lucide-react";
 import { HiSwitchHorizontal } from "react-icons/hi";
-import { IoArrowBack } from "react-icons/io5";
 import { useUser } from "@clerk/nextjs";
 import { experiences, instruments } from "@/data";
-
 import { useUserMutations } from "@/hooks/useUserMutation";
-import { Modal } from "../modals/Modal";
 import { useFeatureFlags } from "@/hooks/useFeatureFlag";
+import confetti from "canvas-confetti";
+import { cn } from "@/lib/utils";
+import { SimpleSkillsInput } from "@/components/SimpleSkillsInput";
 
-// Add the arrays at the top of the file
+// Types and data arrays
 const djGenres = [
-  "Hip Hop",
-  "House",
-  "Techno",
-  "EDM",
-  "R&B",
-  "Afrobeats",
-  "Reggae",
-  "Dancehall",
-  "Pop",
-  "Electronic",
-  "mix",
+  "Hip Hop", "House", "Techno", "EDM", "R&B", "Afrobeats", 
+  "Reggae", "Dancehall", "Pop", "Electronic", "Mix"
 ];
 
 const mcTypes = [
-  "Event Host",
-  "Wedding MC",
-  "Corporate MC",
-  "Club MC",
-  "Concert Host",
-  "Radio Host",
-  "mix",
+  "Event Host", "Wedding MC", "Corporate MC", "Club MC", 
+  "Concert Host", "Radio Host", "Mix"
 ];
 
 const vocalistGenres = [
-  "Pop",
-  "R&B",
-  "Jazz",
-  "Soul",
-  "Gospel",
-  "Rock",
-  "Classical",
-  "Opera",
-  "Afrobeats",
-  "Reggae",
-  "mix",
+  "Pop", "R&B", "Jazz", "Soul", "Gospel", "Rock", 
+  "Classical", "Opera", "Afrobeats", "Reggae", "Mix"
 ];
 
 const teacherSpecializations = [
-  "Beginner Lessons",
-  "Advanced Techniques",
-  "Music Theory",
-  "Ear Training",
-  "Sight Reading",
-  "Improvisation",
-  "Performance Skills",
-  "Exam Preparation",
-  "Online Lessons",
-  "Group Classes",
+  "Beginner Lessons", "Advanced Techniques", "Music Theory", 
+  "Ear Training", "Sight Reading", "Improvisation", 
+  "Performance Skills", "Exam Preparation", "Online Lessons", 
+  "Group Classes"
 ];
 
 const teachingStyles = [
-  "Structured Curriculum",
-  "Student-Led",
-  "Performance Focused",
-  "Theory Intensive",
-  "Casual/Recreational",
-  "Exam Preparation",
-  "Jazz/Improvisation",
-  "Classical Training",
+  "Structured Curriculum", "Student-Led", "Performance Focused",
+  "Theory Intensive", "Casual/Recreational", "Exam Preparation",
+  "Jazz/Improvisation", "Classical Training"
 ];
 
 const lessonFormats = [
-  "One-on-One Private",
-  "Group Classes",
-  "Online Lessons",
-  "In-Person Only",
-  "Hybrid (Online & In-Person)",
-  "Workshops",
-  "Masterclasses",
+  "One-on-One Private", "Group Classes", "Online Lessons",
+  "In-Person Only", "Hybrid", "Workshops", "Masterclasses"
 ];
 
 const studentAgeGroups = [
-  "Children (5-12)",
-  "Teenagers (13-17)",
-  "Adults (18+)",
-  "All Ages",
-  "Seniors (65+)",
+  "Children (5-12)", "Teenagers (13-17)", "Adults (18+)",
+  "All Ages", "Seniors (65+)"
 ];
 
 const bookerSkillsList = [
-  "Band Management",
-  "Event Coordination",
-  "Talent Booking",
-  "Artist Management",
-  "Event Production",
-  "Venue Management",
+  "Band Management", "Event Coordination", "Talent Booking",
+  "Artist Management", "Event Production", "Venue Management",
+  "Contract Negotiation", "Tour Management", "Public Relations"
 ];
 
-// NEW: Client and Booker types
 const clientTypes = ["individual", "event_planner", "venue", "corporate"];
-
 const bookerTypes = ["talent_agent", "booking_manager"];
 
 type Error = string[];
-type RoleSteps = {
-  instrumentalist: string[];
-  dj: string[];
-  mc: string[];
-  vocalist: string[];
-  teacher: string[];
-  booker: string[];
-  client: string[];
-  default: string[];
+type RoleType = "instrumentalist" | "dj" | "mc" | "vocalist" | "teacher";
+
+// Animation variants
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 }
 };
 
-type RoleType = keyof Omit<RoleSteps, "default">;
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
 
 const ActionPage = () => {
-  const { user, isSignedIn } = useUser();
+  const { isSignedIn } = useUser();
   const router = useRouter();
-  const [musicianload, setMusicianLoad] = useState(false);
-  const [clientload, setClientLoad] = useState(false);
-  const [bookerload, setBookerLoad] = useState(false);
-  const [userload, setUserload] = useState(false);
+  const [loading, setLoading] = useState({
+    musician: false,
+    client: false,
+    booker: false
+  });
   const { user: myuser } = useCurrentUser();
-  const { registerAsMusician, registerAsClient, registerAsBooker } =
-    useUserMutations();
+  const { registerAsMusician, registerAsClient, registerAsBooker } = useUserMutations();
+  const { isTeacherEnabled, isBookerEnabled } = useFeatureFlags();
 
-  const { isTeacherEnabled, isBookerEnabled, isBothEnabled, isFeatureEnabled } =
-    useFeatureFlags();
-
-  // Simple usage
   const teacherEnabled = isTeacherEnabled();
   const bookerEnabled = isBookerEnabled();
-  const bothEnabled = isBothEnabled();
 
   const [showMoreInfo, setMoreInfo] = useState(false);
-  const [city, setCity] = useState("");
-  const [instrument, setInstrument] = useState("");
-  const [experience, setExperience] = useState("");
+  const [formData, setFormData] = useState({
+    city: "",
+    instrument: "",
+    experience: "",
+    organization: "",
+    talentbio: "",
+    djGenre: "",
+    djEquipment: "",
+    mcType: "",
+    mcLanguages: "",
+    vocalistGenre: "",
+    teacherSpecialization: "",
+    teachingStyle: "",
+    lessonFormat: "",
+    studentAgeGroup: "",
+    clientType: "",
+    bookerType: "",
+    skills: [] as string[],
+  });
+
+  const [selectedBookerSkills, setSelectedBookerSkills] = useState<string[]>([]);
   const [error, setError] = useState<Error>([]);
-
-  const [selectedRole, setSelectedRole] = useState<
-    "musician" | "client" | "booker" | "both" | null
-  >(null);
-
+  const [selectedRole, setSelectedRole] = useState<"musician" | "client" | "booker" | "both" | null>(null);
   const [roleType, setRoleType] = useState<RoleType>("instrumentalist");
-  const [djGenre, setDjGenre] = useState("");
-  const [vocalistGenre, setVocalistGenre] = useState("");
-  const [djEquipment, setDjEquipment] = useState("");
-  const [mcType, setMcType] = useState("");
-  const [mcLanguages, setMcLanguages] = useState("");
-  const [talentbio, setTalentbio] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [selectedBookerSkills, setSelectedBookerSkills] = useState<string[]>(
-    [],
-  );
-
-  // Teacher specific fields
-  const [teacherSpecialization, setTeacherSpecialization] = useState("");
-  const [teachingStyle, setTeachingStyle] = useState("");
-  const [lessonFormat, setLessonFormat] = useState("");
-  const [studentAgeGroup, setStudentAgeGroup] = useState("");
-
-  // NEW: Client and Booker type fields
-  const [clientType, setClientType] = useState("");
-  const [bookerType, setBookerType] = useState("");
-
-  // Validation including teacher, client and booker types
-  const validateMusicianFields = useCallback(() => {
-    const errors: string[] = [];
-    if (!city) errors.push("City is required");
-
-    if (roleType === "instrumentalist" && !instrument)
-      errors.push("Instrument is required");
-
-    if (roleType === "teacher" && !instrument)
-      errors.push("Instrument you teach is required");
-
-    if (!experience) errors.push("Experience is required");
-
-    if (roleType === "dj" && (!djGenre || !djEquipment))
-      errors.push("DJ Genre and Equipment are required");
-
-    if (roleType === "vocalist" && !vocalistGenre)
-      errors.push("Vocal genre is required");
-
-    if (roleType === "mc" && (!mcType || !mcLanguages))
-      errors.push("MC type and languages are required");
-
-    if (
-      roleType === "teacher" &&
-      (!teacherSpecialization || !teachingStyle || !lessonFormat)
-    )
-      errors.push("Teaching specialization, style, and format are required");
-
-    if (!talentbio) errors.push("Bio is required");
-
-    if (talentbio.length > 200)
-      errors.push("Bio is too long (max 200 characters)");
-
-    return errors;
-  }, [
-    city,
-    instrument,
-    experience,
-    roleType,
-    djGenre,
-    djEquipment,
-    mcType,
-    mcLanguages,
-    teacherSpecialization,
-    teachingStyle,
-    lessonFormat,
-    talentbio,
-    vocalistGenre,
-  ]);
-
-  const validateClientFields = useCallback(() => {
-    const errors: string[] = [];
-    if (!city) errors.push("City is required");
-    if (!organization) errors.push("Organization is required");
-    if (!clientType) errors.push("Client type is required");
-    if (!talentbio) errors.push("Bio is required");
-    return errors;
-  }, [city, organization, clientType, talentbio]);
-
-  const validateBookerFields = useCallback(() => {
-    const errors: string[] = [];
-    if (!city) errors.push("City is required");
-    if (!organization) errors.push("Company/Organization is required");
-    if (!bookerType) errors.push("Booker type is required");
-    if (!experience) errors.push("Experience level is required");
-    if (selectedBookerSkills.length === 0)
-      errors.push("At least one booker skill is required");
-    if (!talentbio) errors.push("Bio is required");
-    if (talentbio.length > 200)
-      errors.push("Bio is too long (max 200 characters)");
-    return errors;
-  }, [
-    city,
-    organization,
-    bookerType,
-    experience,
-    selectedBookerSkills,
-    talentbio,
-  ]);
-
-  // Registration function including teacher, client and booker types
-  const registerUser = useCallback(
-    async (role: "musician" | "client" | "booker") => {
-      if (!isSignedIn) {
-        console.error("Not signed in");
-        return false;
-      }
-
-      const errors =
-        role === "musician"
-          ? validateMusicianFields()
-          : role === "client"
-            ? validateClientFields()
-            : validateBookerFields();
-
-      if (errors.length > 0) {
-        setError(errors);
-        return false;
-      }
-
-      try {
-        if (role === "musician") {
-          await registerAsMusician({
-            city,
-            instrument,
-            experience,
-            roleType,
-            djGenre,
-            djEquipment,
-            mcType,
-            mcLanguages,
-            talentbio,
-            vocalistGenre,
-            organization: organization || "",
-            // Teacher fields
-            teacherSpecialization,
-            teachingStyle,
-            lessonFormat,
-            studentAgeGroup,
-          });
-        } else if (role === "client") {
-          await registerAsClient({
-            city,
-            organization,
-            talentbio,
-            clientType, // NEW: Include client type
-          });
-        } else if (role === "booker") {
-          await registerAsBooker({
-            city,
-            organization,
-            experience,
-            bookerSkills: selectedBookerSkills,
-            talentbio,
-            bookerType, // NEW: Include booker type
-          });
-        }
-
-        return true;
-      } catch (err) {
-        console.error(err);
-        toast.error("Registration failed");
-        return false;
-      }
-    },
-    [
-      isSignedIn,
-      validateMusicianFields,
-      validateClientFields,
-      validateBookerFields,
-      city,
-      instrument,
-      experience,
-      roleType,
-      djGenre,
-      djEquipment,
-      mcType,
-      mcLanguages,
-      talentbio,
-      vocalistGenre,
-      organization,
-      selectedBookerSkills,
-      teacherSpecialization,
-      teachingStyle,
-      lessonFormat,
-      studentAgeGroup,
-      clientType, // NEW: Add clientType dependency
-      bookerType, // NEW: Add bookerType dependency
-      registerAsMusician,
-      registerAsClient,
-      registerAsBooker,
-    ],
-  );
-
-  const [modal, setModal] = useState(false);
-
-  // Connection function including teacher success message
-  const connectAsMusician = useCallback(async () => {
-    setMusicianLoad(true);
-    try {
-      const success = await registerUser("musician");
-      if (success) {
-        setMoreInfo(false);
-        toast.success(
-          `${
-            roleType === "instrumentalist"
-              ? "Successfully Registered as an Instrumentalist"
-              : roleType === "dj"
-                ? "Successfully Registered as a DJ"
-                : roleType === "mc"
-                  ? "Successfully Registered as an MC"
-                  : roleType === "vocalist"
-                    ? "Successfully Registered as a Vocalist"
-                    : roleType === "teacher"
-                      ? "Successfully Registered as a Music Teacher"
-                      : ""
-          }`,
-        );
-        router.push("/dashboard");
-      }
-    } finally {
-      setMusicianLoad(false);
-    }
-  }, [registerUser, router, roleType]);
-
-  const connectAsClient = useCallback(async () => {
-    setClientLoad(true);
-    try {
-      const success = await registerUser("client");
-      if (success) {
-        toast.success("Successfully Registered as Client!");
-        router.push("/dashboard");
-      }
-    } finally {
-      setClientLoad(false);
-    }
-  }, [registerUser, router]);
-
-  const connectAsBooker = useCallback(async () => {
-    if (!bookerEnabled) {
-      toast.error(
-        "Booker registration is currently unavailable. Please check back later.",
-      );
-      return;
-    }
-    setBookerLoad(true);
-    try {
-      const success = await registerUser("booker");
-      if (success) {
-        toast.success("Successfully Registered as Booker/Manager!");
-        router.push("/dashboard");
-      }
-    } finally {
-      setBookerLoad(false);
-    }
-  }, [registerUser, router, bookerEnabled]);
-  useEffect(() => {
-    const timer = setTimeout(() => setUserload(true), 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (error.length > 0) {
-      const timer = setTimeout(() => setError([]), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
-  const handleRoleSelection = useCallback(
-    (role: "musician" | "client" | "booker" | "both") => {
-      if (
-        myuser?.isMusician ||
-        myuser?.isClient ||
-        myuser?.isBooker ||
-        myuser?.isBoth
-      ) {
-        setMoreInfo(true);
-        return;
-      }
-      setSelectedRole(role);
-      setMoreInfo(true);
-    },
-    [myuser],
-  );
-
-  const handleModal = () => {
-    setModal(true);
-  };
-  const handleOnClose = () => {
-    setModal(false);
-  };
-
   const [currentStep, setCurrentStep] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  const baseStyles = `
-  relative overflow-hidden rounded-xl border border-transparent
-  transition-all duration-300 hover:shadow-xl
-`;
+  // Handle skills change
+  const handleSkillsChange = (skills: string[]) => {
+    setFormData(prev => ({ ...prev, skills }));
+    if (error.length > 0) setError([]);
+  };
 
-  const accentStyles = {
-    orange: "hover:border-orange-500/30 hover:shadow-orange-500/10",
-    cyan: "hover:border-blue-500/30 hover:shadow-blue-500/10",
-    emerald: "hover:border-emerald-500/30 hover:shadow-emerald-500/10",
-    purple: "hover:border-purple-500/30 hover:shadow-purple-500/10",
-    default: "hover:border-gray-500/30",
+  // Update progress
+  useEffect(() => {
+    if (!selectedRole) return;
+    
+    const requiredFields = selectedRole === "musician" ? [
+      formData.city,
+      roleType === "instrumentalist" ? formData.instrument : true,
+      roleType === "dj" ? formData.djGenre && formData.djEquipment : true,
+      roleType === "vocalist" ? formData.vocalistGenre : true,
+      roleType === "mc" ? formData.mcType && formData.mcLanguages : true,
+      roleType === "teacher" ? formData.teacherSpecialization && formData.teachingStyle && formData.lessonFormat : true,
+      formData.experience,
+      formData.talentbio,
+      formData.skills.length > 0
+    ].filter(Boolean).length : selectedRole === "client" ? [
+      formData.city,
+      formData.organization,
+      formData.clientType,
+      formData.talentbio,
+      formData.skills.length > 0
+    ].filter(Boolean).length : [
+      formData.city,
+      formData.organization,
+      formData.bookerType,
+      formData.experience,
+      selectedBookerSkills.length > 0,
+      formData.talentbio,
+      formData.skills.length > 0
+    ].filter(Boolean).length;
+
+    const total = selectedRole === "musician" ? 6 : selectedRole === "client" ? 5 : 7;
+    setProgress(Math.min((requiredFields / total) * 100, 100));
+  }, [formData, selectedRole, roleType, selectedBookerSkills]);
+
+  // Handle input changes
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (error.length > 0) setError([]);
   };
 
   const toggleBookerSkill = (skill: string) => {
-    setSelectedBookerSkills((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
+    setSelectedBookerSkills(prev =>
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
     );
+    if (error.length > 0) setError([]);
   };
-  // Update your role cards array to include feature flag checks
-  const roleCards = [
-    {
-      role: "client",
-      title: "Hire Talent",
-      accent: "orange",
-      description:
-        "Create gigs and book top-tier musicians, DJs, and performers",
-      buttonText: "Join as Client",
-      disabled: !!myuser?.isClient,
-      onClick: () => handleRoleSelection("client"),
-    },
-    {
-      role: "musician",
-      title: "Find Gigs",
-      accent: "cyan",
-      description:
-        "Showcase your talent and connect with premium opportunities",
-      buttonText: "Join as Talent",
-      disabled: !!myuser?.isMusician,
-      onClick: () => handleRoleSelection("musician"),
-    },
-    {
-      role: "booker",
-      title: "Manage Talent",
-      accent: "emerald",
-      description:
-        "Book and manage bands, coordinate events, build your roster",
-      buttonText: "Join as Booker",
-      disabled: !!myuser?.isBooker || !bookerEnabled, // ADD FEATURE FLAG CHECK
-      onClick: () => handleRoleSelection("booker"),
-      hidden: !bookerEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
-    },
-    {
-      role: "both",
-      title: "Be a Client and Talent (Coming Soon)",
-      accent: "purple",
-      description: "Switch between hiring talent and being hired for gigs",
-      buttonText: "Join as Dual User",
-      disabled: true,
-      onClick: () => handleRoleSelection("both"),
-      hidden: !bookerEnabled, // ADD THIS TO COMPLETELY HIDE WHEN DISABLED
-    },
-  ].filter((card) => !card.hidden); // FILTER OUT HIDDEN CARDS
-  const renderMoreInfoModal = () => {
-    const roleSteps: RoleSteps = {
-      instrumentalist: ["city", "instrument", "experience", "talentbio"],
-      dj: ["city", "genre", "equipment", "experience", "talentbio"],
-      mc: ["city", "type", "languages", "experience", "talentbio"],
-      vocalist: ["city", "vocalistgenre", "experience", "talentbio"],
-      teacher: [
-        "city",
-        "instrument",
-        "specialization",
-        "teaching",
-        "studentAge",
-        "experience",
-        "talentbio",
-      ],
-      booker: [
-        "city",
-        "organization",
-        "bookerType", // NEW: Add booker type step
-        "bookerSkills",
-        "experience",
-        "talentbio",
-      ],
-      client: [
-        "city",
-        "organization",
-        "clientType", // NEW: Add client type step
-        "talentbio",
-      ],
-      default: ["city", "talentbio"],
-    };
 
-    // Determine steps based on selected role
-    const steps =
-      selectedRole === "musician"
-        ? roleSteps[roleType] || roleSteps.default
-        : selectedRole === "client"
-          ? roleSteps.client
-          : roleSteps.booker;
+  // Validation
+  const validateMusicianFields = useCallback(() => {
+    const errors: string[] = [];
+    if (!formData.city) errors.push("City is required");
+    if (roleType === "instrumentalist" && !formData.instrument) errors.push("Instrument is required");
+    if (roleType === "teacher" && !formData.instrument) errors.push("Instrument you teach is required");
+    if (!formData.experience) errors.push("Experience is required");
+    if (roleType === "dj" && (!formData.djGenre || !formData.djEquipment)) errors.push("DJ Genre and Equipment are required");
+    if (roleType === "vocalist" && !formData.vocalistGenre) errors.push("Vocal genre is required");
+    if (roleType === "mc" && (!formData.mcType || !formData.mcLanguages)) errors.push("MC type and languages are required");
+    if (roleType === "teacher" && (!formData.teacherSpecialization || !formData.teachingStyle || !formData.lessonFormat))
+      errors.push("Teaching specialization, style, and format are required");
+    if (!formData.talentbio) errors.push("Bio is required");
+    if (formData.skills.length === 0) errors.push("Add at least one skill");
+    if (formData.talentbio.length > 500) errors.push("Bio is too long (max 500 characters)");
+    return errors;
+  }, [formData, roleType]);
 
-    const handleNext = () => setCurrentStep((prev) => prev + 1);
-    const handleBack = () => setCurrentStep((prev) => prev - 1);
+  const validateClientFields = useCallback(() => {
+    const errors: string[] = [];
+    if (!formData.city) errors.push("City is required");
+    if (!formData.organization) errors.push("Organization is required");
+    if (!formData.clientType) errors.push("Client type is required");
+    if (!formData.talentbio) errors.push("Bio is required");
+    if (formData.skills.length === 0) errors.push("Add at least one skill");
+    return errors;
+  }, [formData]);
 
-    if (!myuser) {
-      return (
-        <div className="h-full w-full bg-black">
-          <span className="flex flex-col items-center justify-center">
-            Loading...
-          </span>
-        </div>
-      );
+  const validateBookerFields = useCallback(() => {
+    const errors: string[] = [];
+    if (!formData.city) errors.push("City is required");
+    if (!formData.organization) errors.push("Company/Organization is required");
+    if (!formData.bookerType) errors.push("Booker type is required");
+    if (!formData.experience) errors.push("Experience level is required");
+    if (selectedBookerSkills.length === 0) errors.push("At least one booker skill is required");
+    if (!formData.talentbio) errors.push("Bio is required");
+    if (formData.skills.length === 0) errors.push("Add at least one skill");
+    if (formData.talentbio.length > 500) errors.push("Bio is too long (max 500 characters)");
+    return errors;
+  }, [formData, selectedBookerSkills]);
+
+  // Registration
+  const registerUser = useCallback(async (role: "musician" | "client" | "booker") => {
+    if (!isSignedIn) {
+      toast.error("Please sign in to continue");
+      return false;
     }
 
-    const getFinalAction = () => {
-      if (selectedRole === "musician") return connectAsMusician;
-      if (selectedRole === "client") return connectAsClient;
-      if (selectedRole === "booker") return connectAsBooker;
-      return () => {};
+    const errors = role === "musician" ? validateMusicianFields() :
+                   role === "client" ? validateClientFields() :
+                   validateBookerFields();
+
+    if (errors.length > 0) {
+      setError(errors);
+      return false;
+    }
+
+    setLoading(prev => ({ ...prev, [role]: true }));
+
+    try {
+      if (role === "musician") {
+        await registerAsMusician({
+          city: formData.city,
+          instrument: formData.instrument,
+          experience: formData.experience,
+          roleType,
+          djGenre: formData.djGenre,
+          djEquipment: formData.djEquipment,
+          mcType: formData.mcType,
+          mcLanguages: formData.mcLanguages,
+          talentbio: formData.talentbio,
+          vocalistGenre: formData.vocalistGenre,
+          organization: formData.organization || "",
+          teacherSpecialization: formData.teacherSpecialization,
+          teachingStyle: formData.teachingStyle,
+          lessonFormat: formData.lessonFormat,
+          studentAgeGroup: formData.studentAgeGroup,
+          skills: formData.skills,
+        });
+      } else if (role === "client") {
+        await registerAsClient({
+          city: formData.city,
+          organization: formData.organization,
+          talentbio: formData.talentbio,
+          clientType: formData.clientType,
+          skills: formData.skills,
+        });
+      } else if (role === "booker") {
+        await registerAsBooker({
+          city: formData.city,
+          organization: formData.organization,
+          experience: formData.experience,
+          bookerSkills: selectedBookerSkills,
+          talentbio: formData.talentbio,
+          bookerType: formData.bookerType,
+          skills: formData.skills,
+        });
+      }
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b']
+      });
+
+      toast.success("Registration completed successfully!");
+      setTimeout(() => router.push("/dashboard"), 2000);
+      return true;
+    } catch (err) {
+      console.error(err);
+      toast.error("Registration failed. Please try again.");
+      return false;
+    } finally {
+      setLoading(prev => ({ ...prev, [role]: false }));
+    }
+  }, [isSignedIn, validateMusicianFields, validateClientFields, validateBookerFields, formData, roleType, selectedBookerSkills, registerAsMusician, registerAsClient, registerAsBooker, router]);
+
+  // Get steps
+  const getSteps = () => {
+    const steps: Record<string, string[]> = {
+      instrumentalist: ["city", "instrument", "skills", "experience", "bio"],
+      dj: ["city", "genre", "equipment", "skills", "experience", "bio"],
+      mc: ["city", "type", "languages", "skills", "experience", "bio"],
+      vocalist: ["city", "vocalistgenre", "skills", "experience", "bio"],
+      teacher: ["city", "instrument", "specialization", "teaching", "studentAge", "skills", "experience", "bio"],
+      booker: ["city", "organization", "bookerType", "bookerSkills", "skills", "experience", "bio"],
+      client: ["city", "organization", "clientType", "skills", "bio"],
     };
 
-    const getButtonText = () => {
-      if (musicianload || clientload || bookerload) return "Processing...";
-      if (currentStep === steps.length - 1) return "Complete Registration";
-      return "Next";
+    if (!selectedRole) return [];
+    if (selectedRole === "musician") return steps[roleType] || ["city", "skills", "bio"];
+    if (selectedRole === "client") return steps.client;
+    return steps.booker;
+  };
+
+  // Get step icon
+  const getStepIcon = (step: string) => {
+    const icons: Record<string, any> = {
+      city: MapPin,
+      instrument: Guitar,
+      skills: Tag,
+      experience: Award,
+      bio: PenTool,
+      genre: Disc3,
+      equipment: Headphones,
+      type: Mic,
+      languages: Globe,
+      specialization: GraduationCap,
+      teaching: BookOpen,
+      studentAge: Users,
+      organization: BriefcaseIcon,
+      clientType: Users,
+      bookerType: Briefcase,
+      bookerSkills: Star,
+      vocalistgenre: Mic2,
     };
+    return icons[step] || ChevronRight;
+  };
 
-    return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            {currentStep > 0 && (
-              <button onClick={handleBack} className="text-orange-400">
-                <IoArrowBack />
-              </button>
-            )}
-            <h3 className="text-orange-400 font-bold">
-              Step {currentStep + 1}/{steps.length}
-            </h3>
-            <div className="w-8"></div> {/* Spacer */}
-          </div>
-
-          {/* Current Step Content */}
-          <div className="mb-6 space-y-4">
-            {steps[currentStep] === "city" && (
-              <input
-                type="text"
-                placeholder="Your City"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              />
-            )}
-
-            {steps[currentStep] === "organization" &&
-              (selectedRole === "client" || selectedRole === "booker") && (
-                <input
-                  type="text"
-                  placeholder={
-                    selectedRole === "booker"
-                      ? "Your Company/Organization Name"
-                      : "Enter Your Organization/Company Name"
-                  }
-                  value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
-                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-                />
-              )}
-
-            {/* NEW: Client Type Selection */}
-            {steps[currentStep] === "clientType" && (
-              <div className="space-y-3">
-                <label className="block text-sm text-neutral-300 mb-2">
-                  What type of client are you?
-                </label>
-                <div className="grid grid-cols-1 gap-2">
-                  {clientTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setClientType(type)}
-                      className={`p-3 rounded border text-left text-[12px] transition-colors ${
-                        clientType === type
-                          ? "border-orange-500 bg-orange-500/20 text-white"
-                          : "border-gray-600 text-neutral-300 hover:bg-gray-700"
-                      }`}
-                    >
-                      <div className="font-medium capitalize">
-                        {type.replace("_", " ")}
-                      </div>
-                      <div className="text-xs text-neutral-400 mt-1">
-                        {type === "individual" &&
-                          "Looking to hire talent for personal events"}
-                        {type === "event_planner" &&
-                          "Professional event planning company"}
-                        {type === "venue" && "Music venue, bar, or club"}
-                        {type === "corporate" &&
-                          "Corporate events and functions"}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* NEW: Booker Type Selection */}
-            {steps[currentStep] === "bookerType" && (
-              <div className="space-y-3">
-                <label className="block text-sm text-neutral-300 mb-2">
-                  What type of booker are you?
-                </label>
-                <div className="grid grid-cols-1 gap-2">
-                  {bookerTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setBookerType(type)}
-                      className={`p-3 rounded border text-left text-[12px] transition-colors ${
-                        bookerType === type
-                          ? "border-blue-500 bg-blue-500/20 text-white"
-                          : "border-gray-600 text-neutral-300 hover:bg-gray-700"
-                      }`}
-                    >
-                      <div className="font-medium capitalize">
-                        {type.replace("_", " ")}
-                      </div>
-                      <div className="text-xs text-neutral-400 mt-1">
-                        {type === "talent_agent" &&
-                          "Represent and manage artists"}
-                        {type === "booking_manager" &&
-                          "Book talent for venues or events"}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Role Type Selection (Musicians only) */}
-
-            {selectedRole === "musician" && steps[currentStep] === "city" && (
-              <div className="mt-4">
-                <label className="block text-sm text-neutral-300 mb-2">
-                  What do you do?
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(
-                    [
-                      "instrumentalist",
-                      "dj",
-                      "mc",
-                      "vocalist",
-                      ...(teacherEnabled ? ["teacher"] : []), // CONDITIONALLY ADD TEACHER
-                    ] as RoleType[]
-                  ).map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => setRoleType(role)}
-                      className={`p-2 rounded border text-white text-[11px] ${
-                        roleType === role
-                          ? "border-orange-500 bg-orange-500/20"
-                          : "border-gray-600 hover:bg-gray-700"
-                      }`}
-                    >
-                      {role === "instrumentalist" && "Instrumentalist"}
-                      {role === "dj" && "DJ"}
-                      {role === "mc" && "MC/Host"}
-                      {role === "vocalist" && "Vocalist"}
-                      {role === "teacher" && "Music Teacher"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {steps[currentStep] === "instrument" && (
-              <select
-                value={instrument}
-                onChange={(e) => setInstrument(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              >
-                <option value="">
-                  {roleType === "teacher"
-                    ? "Select Instrument You Teach"
-                    : "Select Instrument"}
-                </option>
-                {instruments().map((inst) => (
-                  <option key={inst.id} value={inst.name}>
-                    {inst.val}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {steps[currentStep] === "genre" && (
-              <select
-                value={djGenre}
-                onChange={(e) => setDjGenre(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              >
-                <option value="">Select DJ Genre</option>
-                {djGenres.map((genre) => (
-                  <option key={genre} value={genre.toLowerCase()}>
-                    {genre}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {steps[currentStep] === "vocalistgenre" && (
-              <select
-                value={vocalistGenre}
-                onChange={(e) => setVocalistGenre(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              >
-                <option value="">Select Genre</option>
-                {vocalistGenres.map((genre) => (
-                  <option key={genre} value={genre.toLowerCase()}>
-                    {genre}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {steps[currentStep] === "equipment" && (
-              <input
-                type="text"
-                placeholder="DJ Equipment (e.g. Pioneer CDJs)"
-                value={djEquipment}
-                onChange={(e) => setDjEquipment(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              />
-            )}
-
-            {steps[currentStep] === "type" && (
-              <select
-                value={mcType}
-                onChange={(e) => setMcType(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              >
-                <option value="">Select MC Type</option>
-                {mcTypes.map((type) => (
-                  <option
-                    key={type}
-                    value={type.toLowerCase().replace(/\s+/g, "")}
-                  >
-                    {type}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {steps[currentStep] === "languages" && (
-              <input
-                type="text"
-                placeholder="Languages spoken (comma separated)"
-                value={mcLanguages}
-                onChange={(e) => setMcLanguages(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              />
-            )}
-
-            {/* TEACHER SPECIFIC FIELDS */}
-            {steps[currentStep] === "specialization" && (
-              <select
-                value={teacherSpecialization}
-                onChange={(e) => setTeacherSpecialization(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              >
-                <option value="">Select Teaching Specialization</option>
-                {teacherSpecializations.map((specialization) => (
-                  <option
-                    key={specialization}
-                    value={specialization.toLowerCase().replace(/\s+/g, "")}
-                  >
-                    {specialization}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {steps[currentStep] === "teaching" && (
-              <div className="space-y-3">
-                <select
-                  value={teachingStyle}
-                  onChange={(e) => setTeachingStyle(e.target.value)}
-                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-                >
-                  <option value="">Select Teaching Style</option>
-                  {teachingStyles.map((style) => (
-                    <option
-                      key={style}
-                      value={style.toLowerCase().replace(/\s+/g, "")}
-                    >
-                      {style}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={lessonFormat}
-                  onChange={(e) => setLessonFormat(e.target.value)}
-                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-                >
-                  <option value="">Select Lesson Format</option>
-                  {lessonFormats.map((format) => (
-                    <option
-                      key={format}
-                      value={format.toLowerCase().replace(/\s+/g, "")}
-                    >
-                      {format}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Use the main experience field for teachers too */}
-                <select
-                  value={experience}
-                  onChange={(e) => setExperience(e.target.value)}
-                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-                >
-                  <option value="">Select Experience Level</option>
-                  {experiences().map((exp) => (
-                    <option key={exp.id} value={exp.name}>
-                      {exp.val}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {steps[currentStep] === "studentAge" && (
-              <select
-                value={studentAgeGroup}
-                onChange={(e) => setStudentAgeGroup(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              >
-                <option value="">Select Student Age Group</option>
-                {studentAgeGroups.map((ageGroup) => (
-                  <option
-                    key={ageGroup}
-                    value={ageGroup.toLowerCase().replace(/\s+/g, "")}
-                  >
-                    {ageGroup}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {steps[currentStep] === "bookerSkills" && (
-              <div className="space-y-3">
-                <label className="block text-sm text-neutral-300 mb-2">
-                  Select your booker skills
-                </label>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
-                  {bookerSkillsList.map((skill) => (
-                    <button
-                      key={skill}
-                      type="button"
-                      onClick={() => toggleBookerSkill(skill)}
-                      className={`p-2 rounded border text-left text-[12px] transition-colors ${
-                        selectedBookerSkills.includes(skill)
-                          ? "border-blue-500 bg-blue-500/20 text-white"
-                          : "border-gray-600 text-neutral-300 hover:bg-gray-700"
-                      }`}
-                    >
-                      {skill}
-                    </button>
-                  ))}
-                </div>
-                {selectedBookerSkills.length > 0 && (
-                  <div className="text-xs text-neutral-400 mt-2">
-                    Selected: {selectedBookerSkills.join(", ")}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {steps[currentStep] === "experience" && (
-              <select
-                value={experience}
-                onChange={(e) => setExperience(e.target.value)}
-                className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-              >
-                <option value="">Select Experience Level</option>
-                {experiences().map((exp) => (
-                  <option key={exp.id} value={exp.name}>
-                    {exp.val}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {steps[currentStep] === "talentbio" && (
-              <div className="space-y-2">
-                <textarea
-                  placeholder={
-                    selectedRole === "booker"
-                      ? "Describe your booking services and experience..."
-                      : selectedRole === "client"
-                        ? "Tell us about your organization and what you're looking for..."
-                        : roleType === "teacher"
-                          ? "Describe your teaching philosophy, experience, and approach..."
-                          : "Brief description of your style/skills"
-                  }
-                  value={talentbio}
-                  onChange={(e) => setTalentbio(e.target.value)}
-                  rows={3}
-                  className="w-full p-2 rounded bg-gray-700 text-[12px] text-white"
-                  name="talentbio"
-                />
-                <div className="text-xs text-neutral-400 text-right">
-                  {talentbio.length}/200
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <button
-            onClick={
-              currentStep === steps.length - 1 ? getFinalAction() : handleNext
-            }
-            className="w-full py-2 bg-orange-500 rounded hover:bg-orange-600 text-white text-[13px] transition-colors"
-            disabled={musicianload || clientload || bookerload}
-          >
-            {getButtonText()}
-          </button>
-
-          {error.length > 0 && (
-            <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded">
-              <div className="text-red-400 text-sm space-y-1">
-                {error.map((err, index) => (
-                  <div key={index}>• {err}</div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  // Get step title
+  const getStepTitle = (step: string) => {
+    const titles: Record<string, string> = {
+      city: "Location",
+      instrument: "Primary Instrument",
+      skills: "Your Skills",
+      experience: "Experience Level",
+      bio: "About You",
+      genre: "DJ Genre",
+      equipment: "DJ Equipment",
+      type: "MC Type",
+      languages: "Languages",
+      specialization: "Teaching Specialization",
+      teaching: "Teaching Style",
+      studentAge: "Student Age Group",
+      organization: "Organization",
+      clientType: "Client Type",
+      bookerType: "Booker Type",
+      bookerSkills: "Booker Skills",
+      vocalistgenre: "Vocal Genre",
+    };
+    return titles[step] || step;
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#050505] px-4 py-16 overflow-hidden">
-      {/* Holographic grid background */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#0B1120] to-[#0A0F1C]">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] via-transparent to-transparent" />
+      
+      {/* Floating Orbs */}
+      <div className="absolute top-20 left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 right-10 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
-      {/* Animated border elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute left-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-orange-400/30 to-transparent"></div>
-        <div className="absolute right-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-blue-400/30 to-transparent"></div>
-      </div>
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
+        <div className="w-full max-w-7xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8 md:mb-16"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring" }}
+              className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 md:mb-6 shadow-2xl shadow-blue-500/20"
+            >
+              <Zap className="w-8 h-8 md:w-10 md:h-10 text-white" />
+            </motion.div>
+            
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 md:mb-4"
+            >
+              Welcome to{" "}
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                gigUp
+              </span>
+            </motion.h1>
+            
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-base md:text-xl text-gray-400 max-w-2xl mx-auto px-4"
+            >
+              Join the future of music collaboration and event booking
+            </motion.p>
+          </motion.div>
 
-      <AnimatePresence>
-        {showMoreInfo && (
+          {/* Role Cards */}
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 px-2 md:px-0"
+          >
+            {/* Client Card */}
+            <motion.div
+              variants={fadeInUp}
+              whileHover={{ y: -5 }}
+              onClick={() => setSelectedRole("client")}
+              className="group relative cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-orange-500/50 transition-all">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center mb-3 md:mb-4">
+                  <Users className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+                <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Hire Talent</h3>
+                <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">Create gigs and book top-tier performers</p>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="flex -space-x-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                    ))}
+                  </div>
+                  <span>500+ active</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Musician Card */}
+            <motion.div
+              variants={fadeInUp}
+              whileHover={{ y: -5 }}
+              onClick={() => setSelectedRole("musician")}
+              className="group relative cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-blue-500/50 transition-all">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-3 md:mb-4">
+                  <Music className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+                <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Find Gigs</h3>
+                <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">Showcase your talent and connect with opportunities</p>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="flex -space-x-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                    ))}
+                  </div>
+                  <span>2,000+ musicians</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Booker Card */}
+            {bookerEnabled && (
+              <motion.div
+                variants={fadeInUp}
+                whileHover={{ y: -5 }}
+                onClick={() => setSelectedRole("booker")}
+                className="group relative cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+                <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-emerald-500/50 transition-all">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center mb-3 md:mb-4">
+                    <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Manage Talent</h3>
+                  <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">Book and manage bands, build your roster</p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="flex -space-x-2">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                      ))}
+                    </div>
+                    <span>100+ bookers</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Dual Role Card */}
+            <motion.div
+              variants={fadeInUp}
+              whileHover={{ y: -5 }}
+              onClick={() => setSelectedRole("both")}
+              className="group relative cursor-pointer opacity-60"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-3 md:mb-4">
+                  <HiSwitchHorizontal className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+                <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Dual Role</h3>
+                <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">Switch between hiring and being hired</p>
+                <span className="inline-block px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded-full">Coming Soon</span>
+              </div>
+            </motion.div>
+          </motion.div>
+
+          {/* Registration Modal */}
+          <AnimatePresence>
+            {showMoreInfo && selectedRole && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                onClick={() => setMoreInfo(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative w-full max-w-2xl bg-[#0F172A] rounded-2xl border border-gray-800 shadow-2xl overflow-hidden"
+                >
+                  {/* Modal Header with Progress */}
+                  <div className={cn(
+                    "p-4 md:p-6 relative overflow-hidden",
+                    selectedRole === "client" && "bg-gradient-to-r from-orange-500/20 via-orange-500/5 to-transparent",
+                    selectedRole === "musician" && "bg-gradient-to-r from-blue-500/20 via-blue-500/5 to-transparent",
+                    selectedRole === "booker" && "bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent",
+                    selectedRole === "both" && "bg-gradient-to-r from-purple-500/20 via-purple-500/5 to-transparent"
+                  )}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h2 className="text-xl md:text-2xl font-bold text-white">
+                          Complete Your Profile
+                        </h2>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {selectedRole === "musician" && "Showcase your musical talent"}
+                          {selectedRole === "client" && "Tell us about your organization"}
+                          {selectedRole === "booker" && "Set up your booking services"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setMoreInfo(false)}
+                        className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+                      >
+                        <X className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-400">Profile Completion</span>
+                        <span className="text-white font-medium">{Math.round(progress)}%</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <motion.div
+                          className={cn(
+                            "h-full rounded-full",
+                            selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500",
+                            selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500",
+                            selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500"
+                          )}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Step Indicator */}
+                    <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
+                      {getSteps().map((step, index) => {
+                        const Icon = getStepIcon(step);
+                        return (
+                          <div key={index} className="flex items-center flex-shrink-0">
+                            <div className={cn(
+                              "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs",
+                              index < currentStep ? "bg-blue-500/20 text-blue-400" :
+                              index === currentStep ? "bg-gray-800 text-white" :
+                              "text-gray-600"
+                            )}>
+                              <Icon className="w-3 h-3" />
+                              <span className="hidden sm:inline">{getStepTitle(step)}</span>
+                            </div>
+                            {index < getSteps().length - 1 && (
+                              <ChevronRight className="w-3 h-3 text-gray-700 mx-1" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Modal Content */}
+                  <div className="p-4 md:p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentStep}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="space-y-4"
+                      >
+                        {/* City Input */}
+                        {getSteps()[currentStep] === "city" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Where are you located? <span className="text-red-400">*</span>
+                            </label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                              <input
+                                type="text"
+                                placeholder="e.g., New York, NY"
+                                value={formData.city}
+                                onChange={(e) => handleInputChange("city", e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Role Type Selection */}
+                        {selectedRole === "musician" && getSteps()[currentStep] === "city" && (
+                          <div className="space-y-3 mt-4">
+                            <label className="block text-sm font-medium text-white">
+                              What type of musician are you? <span className="text-red-400">*</span>
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {[
+                                { value: "instrumentalist", label: "Instrumentalist", icon: Guitar },
+                                { value: "vocalist", label: "Vocalist", icon: Mic },
+                                { value: "dj", label: "DJ", icon: Disc3 },
+                                { value: "mc", label: "MC/Host", icon: Radio },
+                                ...(teacherEnabled ? [{ value: "teacher", label: "Music Teacher", icon: GraduationCap }] : [])
+                              ].map((option) => {
+                                const Icon = option.icon;
+                                return (
+                                  <button
+                                    key={option.value}
+                                    onClick={() => setRoleType(option.value as RoleType)}
+                                    className={cn(
+                                      "p-3 rounded-xl border transition-all group",
+                                      roleType === option.value
+                                        ? "border-blue-500 bg-blue-500/10"
+                                        : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                                    )}
+                                  >
+                                    <Icon className={cn(
+                                      "w-4 h-4 mx-auto mb-1",
+                                      roleType === option.value ? "text-blue-400" : "text-gray-400"
+                                    )} />
+                                    <span className={cn(
+                                      "text-xs font-medium",
+                                      roleType === option.value ? "text-white" : "text-gray-400"
+                                    )}>
+                                      {option.label}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Instrument Selection */}
+                        {getSteps()[currentStep] === "instrument" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              {roleType === "teacher" ? "Instrument you teach" : "Primary instrument"}
+                              <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.instrument}
+                              onChange={(e) => handleInputChange("instrument", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select instrument</option>
+                              {instruments().map((inst) => (
+                                <option key={inst.id} value={inst.name}>
+                                  {inst.val}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Skills Input */}
+                        {getSteps()[currentStep] === "skills" && (
+                          <SimpleSkillsInput
+                            value={formData.skills}
+                            onChange={handleSkillsChange}
+                            label="Your Skills"
+                            placeholder="e.g., Guitar, Mixing, Live Looping..."
+                            maxSkills={10}
+                            error={error.includes("Add at least one skill") ? "Please add at least one skill" : undefined}
+                          />
+                        )}
+
+                        {/* DJ Genre */}
+                        {getSteps()[currentStep] === "genre" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              DJ Genre <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.djGenre}
+                              onChange={(e) => handleInputChange("djGenre", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select genre</option>
+                              {djGenres.map((genre) => (
+                                <option key={genre} value={genre.toLowerCase()}>
+                                  {genre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* DJ Equipment */}
+                        {getSteps()[currentStep] === "equipment" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              DJ Equipment <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., Pioneer CDJs, Mixer, Speakers"
+                              value={formData.djEquipment}
+                              onChange={(e) => handleInputChange("djEquipment", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+                        )}
+
+                        {/* MC Type */}
+                        {getSteps()[currentStep] === "type" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              MC Type <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.mcType}
+                              onChange={(e) => handleInputChange("mcType", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select MC type</option>
+                              {mcTypes.map((type) => (
+                                <option key={type} value={type.toLowerCase().replace(/\s+/g, "")}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* MC Languages */}
+                        {getSteps()[currentStep] === "languages" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Languages Spoken <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., English, Spanish"
+                              value={formData.mcLanguages}
+                              onChange={(e) => handleInputChange("mcLanguages", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+                        )}
+
+                        {/* Vocalist Genre */}
+                        {getSteps()[currentStep] === "vocalistgenre" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Vocal Genre <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.vocalistGenre}
+                              onChange={(e) => handleInputChange("vocalistGenre", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            >
+                              <option value="">Select genre</option>
+                              {vocalistGenres.map((genre) => (
+                                <option key={genre} value={genre.toLowerCase()}>
+                                  {genre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Teacher Specialization */}
+                        {getSteps()[currentStep] === "specialization" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Teaching Specialization <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.teacherSpecialization}
+                              onChange={(e) => handleInputChange("teacherSpecialization", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                            >
+                              <option value="">Select specialization</option>
+                              {teacherSpecializations.map((spec) => (
+                                <option key={spec} value={spec.toLowerCase().replace(/\s+/g, "")}>
+                                  {spec}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Teaching Style & Format */}
+                        {getSteps()[currentStep] === "teaching" && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-white">
+                                Teaching Style <span className="text-red-400">*</span>
+                              </label>
+                              <select
+                                value={formData.teachingStyle}
+                                onChange={(e) => handleInputChange("teachingStyle", e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                              >
+                                <option value="">Select teaching style</option>
+                                {teachingStyles.map((style) => (
+                                  <option key={style} value={style.toLowerCase().replace(/\s+/g, "")}>
+                                    {style}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-white">
+                                Lesson Format <span className="text-red-400">*</span>
+                              </label>
+                              <select
+                                value={formData.lessonFormat}
+                                onChange={(e) => handleInputChange("lessonFormat", e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                              >
+                                <option value="">Select lesson format</option>
+                                {lessonFormats.map((format) => (
+                                  <option key={format} value={format.toLowerCase().replace(/\s+/g, "")}>
+                                    {format}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Student Age Group */}
+                        {getSteps()[currentStep] === "studentAge" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Student Age Group <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.studentAgeGroup}
+                              onChange={(e) => handleInputChange("studentAgeGroup", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                            >
+                              <option value="">Select age group</option>
+                              {studentAgeGroups.map((group) => (
+                                <option key={group} value={group.toLowerCase().replace(/\s+/g, "")}>
+                                  {group}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Organization */}
+                        {getSteps()[currentStep] === "organization" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              {selectedRole === "booker" ? "Company/Organization Name" : "Organization/Company Name"}
+                              <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={selectedRole === "booker" ? "e.g., Talent Agency Inc." : "e.g., Event Co."}
+                              value={formData.organization}
+                              onChange={(e) => handleInputChange("organization", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all"
+                            />
+                          </div>
+                        )}
+
+                        {/* Client Type */}
+                        {getSteps()[currentStep] === "clientType" && (
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-white">
+                              What type of client are you? <span className="text-red-400">*</span>
+                            </label>
+                            <div className="space-y-2">
+                              {clientTypes.map((type) => (
+                                <button
+                                  key={type}
+                                  onClick={() => handleInputChange("clientType", type)}
+                                  className={cn(
+                                    "w-full p-4 rounded-xl border text-left transition-all",
+                                    formData.clientType === type
+                                      ? "border-orange-500 bg-orange-500/10"
+                                      : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                                  )}
+                                >
+                                  <div className="font-medium text-white capitalize">
+                                    {type.replace("_", " ")}
+                                  </div>
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {type === "individual" && "Looking to hire talent for personal events"}
+                                    {type === "event_planner" && "Professional event planning company"}
+                                    {type === "venue" && "Music venue, bar, club, or restaurant"}
+                                    {type === "corporate" && "Corporate events and company functions"}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Booker Type */}
+                        {getSteps()[currentStep] === "bookerType" && (
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-white">
+                              What type of booker are you? <span className="text-red-400">*</span>
+                            </label>
+                            <div className="space-y-2">
+                              {bookerTypes.map((type) => (
+                                <button
+                                  key={type}
+                                  onClick={() => handleInputChange("bookerType", type)}
+                                  className={cn(
+                                    "w-full p-4 rounded-xl border text-left transition-all",
+                                    formData.bookerType === type
+                                      ? "border-emerald-500 bg-emerald-500/10"
+                                      : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                                  )}
+                                >
+                                  <div className="font-medium text-white capitalize">
+                                    {type.replace("_", " ")}
+                                  </div>
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {type === "talent_agent" && "Represent and manage artists, negotiate contracts"}
+                                    {type === "booking_manager" && "Book talent for venues, festivals, and events"}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Booker Skills */}
+                        {getSteps()[currentStep] === "bookerSkills" && (
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-white">
+                              Select your booker skills <span className="text-red-400">*</span>
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {bookerSkillsList.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => toggleBookerSkill(skill)}
+                                  className={cn(
+                                    "p-3 rounded-xl border text-left text-xs transition-all",
+                                    selectedBookerSkills.includes(skill)
+                                      ? "border-emerald-500 bg-emerald-500/10 text-white"
+                                      : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600"
+                                  )}
+                                >
+                                  {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Experience */}
+                        {getSteps()[currentStep] === "experience" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              Experience Level <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={formData.experience}
+                              onChange={(e) => handleInputChange("experience", e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all"
+                            >
+                              <option value="">Select experience</option>
+                              {experiences().map((exp) => (
+                                <option key={exp.id} value={exp.name}>
+                                  {exp.val}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Bio */}
+                        {getSteps()[currentStep] === "bio" && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white">
+                              {selectedRole === "booker" ? "About your booking services" :
+                               selectedRole === "client" ? "About your organization" :
+                               roleType === "teacher" ? "About your teaching approach" :
+                               "About your musical style"}
+                              <span className="text-red-400">*</span>
+                            </label>
+                            <textarea
+                              placeholder="Tell us about yourself, your experience, and what makes you unique..."
+                              value={formData.talentbio}
+                              onChange={(e) => handleInputChange("talentbio", e.target.value)}
+                              rows={4}
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all resize-none"
+                            />
+                            <div className="text-xs text-gray-500 text-right">
+                              {formData.talentbio.length}/500
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="p-4 md:p-6 border-t border-gray-800 bg-gray-900/50">
+                    {/* Error Messages */}
+                    {error.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl"
+                      >
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            {error.map((err, index) => (
+                              <p key={index} className="text-xs text-red-400">
+                                • {err}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Navigation Buttons */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          if (currentStep > 0) {
+                            setCurrentStep(prev => prev - 1);
+                          } else {
+                            setMoreInfo(false);
+                          }
+                        }}
+                        className="flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 bg-gray-800 text-white hover:bg-gray-700"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        {currentStep === 0 ? "Cancel" : "Back"}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (currentStep === getSteps().length - 1) {
+                            registerUser(selectedRole as "musician" | "client" | "booker");
+                          } else {
+                            setCurrentStep(prev => prev + 1);
+                          }
+                        }}
+                        disabled={loading.musician || loading.client || loading.booker}
+                        className={cn(
+                          "flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2",
+                          selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:opacity-90",
+                          selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90",
+                          selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90",
+                          "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        {loading.musician || loading.client || loading.booker ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : currentStep === getSteps().length - 1 ? (
+                          <>
+                            Complete
+                            <CheckCircle className="w-4 h-4" />
+                          </>
+                        ) : (
+                          <>
+                            Next
+                            <ChevronRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Footer */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            transition={{ delay: 0.8 }}
+            className="mt-12 md:mt-20 text-center"
           >
-            {renderMoreInfoModal()}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="relative z-10 w-full max-w-6xl mx-auto">
-        {/* Header with animated underline */}
-        <div className="mb-16 text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="text-5xl md:text-6xl font-medium tracking-tight text-white"
-          >
-            <span className="relative inline-block">
-              Welcome to
-              <span className="absolute -bottom-2 left-0 h-0.5 w-full bg-gradient-to-r from-orange-400 to-amber-500"></span>
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">
-              gigUp
-            </span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-            className="mt-6 text-sm uppercase tracking-[0.3em] text-neutral-400"
-          >
-            The Future of Creative Collaboration
-          </motion.p>
-        </div>
-
-        {/* Role cards with teacher included */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {roleCards.map((card) => (
-            <div
-              key={card.role}
-              className={`
-              ${baseStyles} 
-              ${card.disabled ? "opacity-80" : "hover:-translate-y-1"} 
-              ${
-                accentStyles[card.accent as keyof typeof accentStyles] ||
-                accentStyles.default
-              }
-            `}
-              onClick={!card.disabled ? card.onClick : undefined}
-            >
-              {/* Gradient border effect */}
-              <div
-                className={`
-        absolute inset-0 bg-gradient-to-br rounded-xl
-        ${
-          card.accent === "orange"
-            ? "from-orange-500/20 to-amber-600/10"
-            : card.accent === "cyan"
-              ? "from-blue-500/20 to-cyan-600/10"
-              : card.accent === "emerald"
-                ? "from-emerald-500/20 to-emerald-600/10"
-                : card.accent === "purple"
-                  ? "from-purple-500/20 to-purple-600/10"
-                  : "from-gray-700/20 to-gray-800/10"
-        }
-      `}
-              ></div>
-
-              {/* Card content */}
-              <div className="relative flex h-full flex-col bg-neutral-900/80 backdrop-blur-sm p-6">
-                {/* Accent indicator */}
-                <div
-                  className={`
-          absolute -left-1 top-6 h-8 w-1 rounded-full
-          ${
-            card.accent === "orange"
-              ? "bg-orange-500"
-              : card.accent === "cyan"
-                ? "bg-blue-500"
-                : card.accent === "emerald"
-                  ? "bg-emerald-500"
-                  : card.accent === "purple"
-                    ? "bg-purple-500"
-                    : "bg-gray-600"
-          }
-        `}
-                ></div>
-
-                {/* Card header */}
-                <div className="flex items-start justify-between">
-                  <h3 className="text-xl font-medium text-white">
-                    {card.title}
-                  </h3>
-                  <div
-                    className={`
-            rounded-full p-2
-            ${
-              card.accent === "orange"
-                ? "bg-orange-500/10 text-orange-400"
-                : card.accent === "cyan"
-                  ? "bg-blue-500/10 text-blue-400"
-                  : card.accent === "emerald"
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : card.accent === "purple"
-                      ? "bg-purple-500/10 text-purple-400"
-                      : "bg-gray-600/10 text-gray-400"
-            }
-          `}
-                  >
-                    {card.accent === "orange" ? (
-                      <UsersIcon className="h-5 w-5" />
-                    ) : card.accent === "cyan" ? (
-                      <MusicIcon className="h-5 w-5" />
-                    ) : card.accent === "emerald" ? (
-                      <Briefcase className="h-5 w-5" />
-                    ) : card.accent === "purple" ? (
-                      <HiSwitchHorizontal className="h-5 w-5" />
-                    ) : (
-                      <GraduationCap className="h-5 w-5" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Description */}
-                <p className="mt-3 text-sm text-neutral-400">
-                  {card.description}
-                </p>
-
-                {/* Spacer */}
-                <div className="flex-grow"></div>
-
-                {/* Button */}
-                {userload && (
-                  <button
-                    onClick={card.onClick}
-                    disabled={card.disabled}
-                    className={`
-            mt-6 w-full rounded-lg py-2.5 text-sm font-medium transition-all
-            ${
-              card.disabled
-                ? "cursor-not-allowed bg-neutral-800 text-neutral-500"
-                : card.accent === "orange"
-                  ? "bg-orange-600 text-white hover:bg-orange-700"
-                  : card.accent === "cyan"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : card.accent === "emerald"
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : card.accent === "purple"
-                        ? "bg-purple-600 text-white hover:bg-purple-700"
-                        : "bg-neutral-800 text-neutral-400"
-            }
-          `}
-                  >
-                    {card.buttonText}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Futuristic footer */}
-        <div className="mt-20 text-center">
-          <div className="inline-flex items-center gap-2">
-            <div className="h-px w-8 bg-gradient-to-r from-transparent to-orange-400"></div>
-            <p className="text-xs font-mono tracking-widest text-neutral-500">
-              gigUppv2.0 • {new Date().getFullYear()}
+            <p className="text-xs md:text-sm text-gray-700 font-mono">
+              © 2024 gigUp • v2.0 • The Future of Music Collaboration
             </p>
-            <div className="h-px w-8 bg-gradient-to-r from-blue-400 to-transparent"></div>
-          </div>
+          </motion.div>
         </div>
       </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #1F2937;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #4B5563;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #6B7280;
+        }
+      `}</style>
     </div>
   );
 };
